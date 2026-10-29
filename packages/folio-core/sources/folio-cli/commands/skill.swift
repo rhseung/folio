@@ -1,8 +1,7 @@
 import ArgumentParser
 import Foundation
 
-/// The agent skill: one Markdown file in the open Agent Skills format (name and description frontmatter, then
-/// instructions), which Claude Code, Codex and other agents load from their skills folder. The binary holds the only
+/// The binary holds the only
 /// copy so an agent outside the repository can install it; the repository's `.claude/skills/folio/SKILL.md` is a test-
 /// checked copy of this text.
 enum Skill {

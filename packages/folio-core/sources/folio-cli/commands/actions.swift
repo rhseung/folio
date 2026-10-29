@@ -69,7 +69,6 @@ struct ActionsCommand: ParsableCommand {
         if check, !passed { throw ExitCode(Exit.coverage.rawValue) }
     }
 
-    /// The working copy the CLI runs in, else the one it was built from.
     static func repository() throws -> URL {
         let marker = "packages/folio-core/Package.swift"
         for start in [URL(filePath: FileManager.default.currentDirectoryPath), URL(filePath: #filePath)] {
@@ -92,7 +91,6 @@ struct ActionsCommand: ParsableCommand {
         }
     }
 
-    /// `(file name, contents)` of every Swift file under `root`.
     static func sources(_ root: URL) -> [(String, String)] {
         guard let files = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) else { return [] }
         return files.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }.compactMap { url in

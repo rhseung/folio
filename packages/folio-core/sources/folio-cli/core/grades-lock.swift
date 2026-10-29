@@ -22,7 +22,6 @@ enum GradesLock {
         return LAContext().canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
     }
 
-    /// `value` while unlocked, else a placeholder of the same job.
     static func masked(_ value: String) -> String { isUnlocked ? value : "••".styled(.dim) }
 
     /// For commands whose whole point is grades: asks for Touch ID or the Mac password when locked. The prompt is a

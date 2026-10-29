@@ -3,7 +3,6 @@ import FolioDomain
 import Foundation
 
 extension RequirementCommand {
-    /// The requirements page's decision cards, from the same RequirementAudit the app draws.
     struct Check: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: "졸업 요건에서 정할 것: 편람과 다른 분류, 이중 계산, 분류 없는 과목", discussion: """
             과목 인자를 빼면 졸업 요건 화면의 알림을 모두 보여 준다. 정할 것이 있으면 종료 코드 4로 끝나고, 없으면 0이다.

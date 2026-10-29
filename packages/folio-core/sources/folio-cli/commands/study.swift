@@ -8,7 +8,6 @@ extension Verdict: ExpressibleByArgument {}
 extension QuizAttemptEvent.Grader: ExpressibleByArgument {}
 
 extension Resolver {
-    /// A card by id or by its prompt, among the unit's cards.
     func card(_ ref: String, unit: FolioDomain.Unit, in c: CourseRef) throws -> QuizCard {
         guard let store = c.store else { throw CLIError(exit: .rule, message: "\(c.course.title)은(는) 과목 폴더가 없습니다") }
         return try pick(ref, try store.loadQuiz(unit: unit.id).model.cards, what: "카드", names: { [$0.prompt] }, ref: { $0.id.uuidString })

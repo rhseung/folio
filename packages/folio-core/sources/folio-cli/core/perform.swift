@@ -2,7 +2,6 @@ import FolioActions
 import FolioDomain
 import Foundation
 
-/// The result of a write command, as `--json` prints it.
 struct WriteResult: Encodable {
     var action: String
     var dryRun: Bool
@@ -11,8 +10,6 @@ struct WriteResult: Encodable {
     var notes: [String]
 }
 
-/// Runs one action the way every write command does: asks first when `confirm` says what would change, prints the
-/// changes, and leaves the files as the app would (docs/SPEC.md "쓰기와 안전").
 @discardableResult
 func perform<A: Action>(_ action: A, _ options: GlobalOptions, ctx given: ActionContext? = nil, done: @autoclosure () -> String, confirm: String? = nil) throws -> ActionContext {
     if let confirm, !options.dryRun { try ask(confirm, options) }

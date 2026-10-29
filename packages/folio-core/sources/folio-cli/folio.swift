@@ -42,7 +42,7 @@ struct Folio: ParsableCommand {
             .reduce(help) { $0.replacingOccurrences(of: $1.0, with: $1.1) }
     }
 
-    /// Headings bold, example commands green, option names cyan. Only the start of a line changes, so columns still line up.
+    /// Only the start of a line changes, so columns still line up.
     static func colored(_ help: String) -> String {
         guard Style.enabled else { return help }
         return help.split(separator: "\n", omittingEmptySubsequences: false).map { raw -> String in
@@ -73,7 +73,7 @@ struct Folio: ParsableCommand {
         Darwin.exit(run(Array(CommandLine.arguments.dropFirst())))
     }
 
-    /// Parses and runs one command line, returning the exit code (docs/SPEC.md "출력"). Tests call this in-process.
+    /// Tests call this in-process.
     static func run(_ arguments: [String]) -> Int32 {
         let json = arguments.contains("--json")
         if arguments.first == "help", arguments.count == 2 {

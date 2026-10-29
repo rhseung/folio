@@ -18,7 +18,6 @@ extension Resolver {
     }
 }
 
-/// A whole document read from a JSON file, for the catalog and settings that the app edits as one form.
 func readJSON<T: Decodable>(_ type: T.Type, _ path: String) throws -> T {
     let url = URL(filePath: (path as NSString).expandingTildeInPath)
     guard let data = try? Data(contentsOf: url) else { throw CLIError(exit: .usage, message: "파일을 읽지 못했습니다: \(path)") }

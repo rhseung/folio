@@ -14,7 +14,6 @@ struct CourseRef: Identifiable {
     var color = ""
 
     var id: UUID { course.id }
-    /// The code in the course's color, for tables and lists a person reads.
     var tag: String { code.course(color) }
 
     func requireFile() throws -> CourseFile {
@@ -23,7 +22,6 @@ struct CourseRef: Identifiable {
     }
 }
 
-/// Turns what people type (`EC4207`, `9주차-1`, `Quiz1`, a UUID) into ids (docs/SPEC.md "명령 구조").
 final class Resolver {
     let ctx: ActionContext
     init(_ ctx: ActionContext) { self.ctx = ctx }
@@ -182,7 +180,6 @@ enum Picker {
         run(lines, prompt: prompt, multi: true)
     }
 
-    /// The `show` that previews a picked line, by what is being picked.
     static let previews = ["과목": "course", "학기": "semester", "회차": "session", "시험": "exam", "단원": "unit", "과제": "assignment", "노트": "note", "자료": "material"]
 
     static func run(_ lines: [String], prompt: String, multi: Bool) -> [String] {

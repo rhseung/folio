@@ -34,7 +34,6 @@ struct RunCommand: ParsableCommand {
         try execute(type, json, try CLI.context(g))
     }
 
-    /// The action's fields say which kind of item each one names, and its spec says when to ask and what to say.
     func execute<A: Action>(_ type: A.Type, _ json: JSONValue, _ ctx: ActionContext) throws {
         guard case .object(var o) = json else { throw CLIError(exit: .usage, message: "입력은 JSON 객체여야 합니다") }
         let r = Resolver(ctx)

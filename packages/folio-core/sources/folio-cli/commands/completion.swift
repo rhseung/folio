@@ -22,7 +22,6 @@ struct CompletionCommand: ParsableCommand {
     }
 }
 
-/// Courses and `<course>/<item>` refs from the folder the CLI would open, for shell completion.
 enum Complete {
     /// A `GlobalOptions()` made by hand has no parsed values and traps when read, so `--gist` is taken from the words.
     static func resolver(_ words: [String] = []) -> Resolver? {
@@ -57,7 +56,6 @@ enum Complete {
 
     static func joined(_ parts: String...) -> String { parts.filter { !$0.isEmpty }.joined(separator: " · ") }
 
-    /// `kind` gives each item of a course with its note.
     static func items(_ kind: @escaping @Sendable (Resolver, CourseRef) -> [(String, String)]) -> CompletionKind {
         .custom { words, _, prefix in
             guard let r = resolver(words) else { return [] }

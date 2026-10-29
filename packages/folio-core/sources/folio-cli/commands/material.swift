@@ -12,7 +12,6 @@ extension CourseRef {
     }
 }
 
-/// An absolute path for a file argument, which may be relative to where the command runs.
 func absolute(_ path: String) -> String {
     URL(filePath: (path as NSString).expandingTildeInPath, relativeTo: URL(filePath: FileManager.default.currentDirectoryPath + "/")).standardizedFileURL.path
 }

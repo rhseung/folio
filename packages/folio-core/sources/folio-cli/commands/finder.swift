@@ -21,7 +21,7 @@ enum Finder {
         var score: Double
     }
 
-    /// Everyday words to command words. Keys match inside the request, so particles (`과제를`, `지워줘`) don't matter.
+    /// Keys match inside the request, so particles (`과제를`, `지워줘`) don't matter.
     static let synonyms: [(String, [String])] = [
         ("할 일", ["assignment", "plan"]), ("할일", ["assignment", "plan"]), ("과제", ["assignment"]), ("숙제", ["assignment"]),
         ("마감", ["assignment", "due"]), ("제출", ["assignment", "status"]),
@@ -43,8 +43,8 @@ enum Finder {
         ("기록", ["record", "add"]), ("옮기", ["move"]), ("순서", ["move"]),
     ]
 
-    /// "이럴 때": everyday ways to ask for each command. A test checks every command has some, so a new command
-    /// can't be left unfindable. Measured against the synonym table alone in FinderEvaluation.
+    /// A test checks every command has some, so a new command can't be left unfindable. Measured against the
+    /// synonym table alone in FinderEvaluation.
     static let phrases: [String: [String]] = written.merging(
         Actions.all.map { ($0.spec.command, $0.spec.phrases) }.filter { !$0.1.isEmpty }, uniquingKeysWith: { a, b in a + b.filter { !a.contains($0) } })
 
@@ -79,7 +79,6 @@ enum Finder {
     /// Built once: rendering every command's help is most of a search's time.
     static let allEntries = entries()
 
-    /// Every leaf command with its full help, which carries the option descriptions and examples.
     static func entries(_ type: ParsableCommand.Type = Folio.self, path: [String] = []) -> [Entry] {
         let config = type.configuration
         // Closures, not key paths: key paths on these metatypes crash the compiler (SILGen).
@@ -128,7 +127,6 @@ enum Finder {
         }
         return ranked.map { rowid, s in
             let e = entries[rowid - 1]
-            // Option lines naming a word of the request, so the answer says which flag to use.
             var options: [String] = []
             for line in e.help.split(separator: "\n") where line.trimmingCharacters(in: .whitespaces).hasPrefix("-") {
                 let l = line.lowercased()

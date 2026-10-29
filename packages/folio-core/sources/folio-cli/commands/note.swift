@@ -6,7 +6,6 @@ import FolioStorage
 import Foundation
 
 extension Resolver {
-    /// The note and its course-relative path, the form `note write`, `adopt` and `rm` take.
     func notePath(_ ref: String) throws -> (CourseRef, NoteFile, String) {
         let (c, name) = try split(ref)
         let n = try note(name, in: c)
@@ -19,7 +18,6 @@ func contentHash(_ text: String) -> String {
     SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
 }
 
-/// Text from a file, or from standard input for `-`.
 func readText(_ source: String) throws -> String {
     if source == "-" { return String(decoding: FileHandle.standardInput.readDataToEndOfFile(), as: UTF8.self) }
     do {

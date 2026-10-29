@@ -7,7 +7,6 @@ import Foundation
 // new action's command needs no code of its own.
 
 extension Resolver {
-    /// The id of the item `ref` names. Items inside a course are looked up in `course`.
     func id(_ kind: String, _ ref: String, in course: CourseRef? = nil) throws -> UUID {
         // A second item in the same course may be written with or without `<course>/` in front.
         let ref = course?.local(ref) ?? ref
@@ -44,7 +43,6 @@ extension Resolver {
         return id
     }
 
-    /// The course-relative path of the file `ref` names, for `X.Path` fields.
     func path(_ kind: String, _ ref: String, in course: CourseRef?) throws -> String {
         guard let course else { throw CLIError(exit: .usage, message: "과목을 함께 적어 주세요: <과목>/\(ref)") }
         guard kind == "NotePath" else { throw CLIError(exit: .usage, message: "이 종류는 경로로 가리킬 수 없습니다: \(kind)") }
@@ -71,8 +69,6 @@ extension Complete {
     }
 }
 
-/// Runs a declared action with the texts its spec gives: asks when it removes, moves, or touches several items, and
-/// says what it did by name.
 @discardableResult
 func perform<A: Action>(spec action: A, _ options: GlobalOptions, ctx: ActionContext) throws -> ActionContext {
     let spec = A.spec
