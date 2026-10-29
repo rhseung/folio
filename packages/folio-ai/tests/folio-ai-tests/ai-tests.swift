@@ -3,7 +3,6 @@ import FolioDomain
 import Foundation
 import Testing
 
-/// Captures the outgoing request and answers with a canned response.
 final class StubProtocol: URLProtocol, @unchecked Sendable {
     nonisolated(unsafe) static var captured: URLRequest?
     nonisolated(unsafe) static var body: Data?

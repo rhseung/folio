@@ -47,7 +47,6 @@ struct CourseStoreTests {
         try fm.copyItem(at: syllabusURL, to: copy)
         try fm.removeItem(at: syllabusURL)
 
-        // Deleted.
         let seating = try #require(before.first { $0.path == "Exams/Midterm/Seating.pdf" })
         try fm.removeItem(at: store.url.appending(path: seating.path))
 

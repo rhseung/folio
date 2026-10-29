@@ -7,7 +7,6 @@ struct MaterialTrackingTests {
     let t0 = Date(timeIntervalSince1970: 0)
     let t1 = Date(timeIntervalSince1970: 100)
 
-    /// Fake disk: path -> hash, plus which material's bookmark points where.
     func io(hashes: [String: String] = [:], bookmarks: [UUID: String] = [:]) -> TrackingIO {
         TrackingIO(
             resolveBookmark: { bookmarks[$0.id] },
