@@ -15,6 +15,7 @@ enum FormSnapshots {
             ("semester-add", AnyView(AddSemesterSheet { _ in })),
             ("course-add", AnyView(AddCourseSheet(semester: semester) { _ in })),
             ("course-edit", AnyView(EditCourseSheet(course: course))),
+            ("course-icon", AnyView(CourseIconPanel(icon: nil, color: workspace.accent(course.id).color) { _ in })),
             ("class-times", AnyView(ClassTimesSheet(course: course))),
             ("session-add", AnyView(AddSessionSheet(course: course))),
             ("exam-new", AnyView(ExamEditor(course: course, exam: Exam(device: device, at: .now, kind: .midterm, title: "")))),

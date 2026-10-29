@@ -282,62 +282,6 @@ struct EditCourseSheet: View {
     }
 }
 
-/// A course's icon from a grid of subject symbols, or none for the default book.
-struct CourseIconPicker: View {
-    @Binding var icon: String?
-    let color: Color
-    @State private var open = false
-
-    static let symbols = [
-        "function", "sum", "x.squareroot", "percent", "plus.forwardslash.minus", "point.3.filled.connected.trianglepath.dotted",
-        "chart.line.uptrend.xyaxis", "chart.pie", "atom", "flask", "testtube.2", "leaf",
-        "bolt", "waveform", "antenna.radiowaves.left.and.right", "cpu", "memorychip", "desktopcomputer",
-        "terminal", "chevron.left.forwardslash.chevron.right", "network", "cube", "gearshape.2", "wrench.and.screwdriver",
-        "hammer", "car", "airplane", "globe", "map", "building.columns",
-        "scalemass", "dollarsign.circle", "book", "books.vertical", "text.book.closed", "character.book.closed",
-        "pencil", "paintbrush", "music.note", "theatermasks", "camera", "film",
-        "bubble.left.and.bubble.right", "person.2", "brain.head.profile", "heart", "cross.case", "figure.walk",
-    ]
-
-    var body: some View {
-        Button { open = true } label: {
-            HStack(spacing: Theme.Space.tight) {
-                CourseMark(icon: icon, color: color)
-                Image(systemName: "chevron.up.chevron.down").font(Theme.Glyph.small).foregroundStyle(Theme.Palette.textTertiary)
-            }
-            .chip()
-        }
-        .buttonStyle(.pointing(.plain))
-        .help("아이콘 고르기")
-        .popover(isPresented: $open, arrowEdge: .bottom) {
-            VStack(alignment: .leading, spacing: Theme.Space.s) {
-                LazyVGrid(columns: Array(repeating: GridItem(.fixed(Theme.Size.toolbarButton), spacing: Theme.Space.xs), count: 6), spacing: Theme.Space.xs) {
-                    ForEach(Self.symbols, id: \.self) { symbol in cell(symbol) }
-                }
-                Button("기본 아이콘으로") { pick(nil) }.buttonStyle(.ghost).disabled(icon == nil)
-            }
-            .padding(Theme.Space.m)
-        }
-    }
-
-    func cell(_ symbol: String) -> some View {
-        Button { pick(symbol) } label: {
-            LineIcon(symbol: symbol)
-                .foregroundStyle(symbol == icon ? color : Theme.Palette.textSecondary)
-                .frame(width: Theme.Size.toolbarButton, height: Theme.Size.toolbarButton)
-                .background(symbol == icon ? color.opacity(Theme.Opacity.tint) : .clear, in: .rect(cornerRadius: Theme.Radius.control))
-                .contentShape(.rect)
-        }
-        .buttonStyle(.pointing(.plain))
-        .help(symbol)
-    }
-
-    func pick(_ symbol: String?) {
-        icon = symbol
-        open = false
-    }
-}
-
 /// The weekly class times, one row each. The next lecture is suggested from these.
 struct ClassTimesBlock: View {
     @Binding var schedule: [ClassTime]
