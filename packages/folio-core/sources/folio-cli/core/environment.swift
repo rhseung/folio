@@ -5,19 +5,19 @@ import FolioStorage
 import Foundation
 
 struct GlobalOptions: ParsableArguments {
-    @Option(help: ArgumentHelp("GIST 폴더. 없으면 FOLIO_GIST, 그다음 앱이 연 폴더", valueName: "path"))
+    @Option(help: ArgumentHelp(String(localized: .globalOptionsHelpGist), valueName: "path"))
     var gist: String?
 
-    @Flag(help: "결과를 JSON 하나로 출력")
+    @Flag(help: ArgumentHelp(String(localized: .globalOptionsHelpJson)))
     var json = false
 
-    @Flag(help: "쓰지 않고 바뀔 것만 보여 주기")
+    @Flag(help: ArgumentHelp(String(localized: .globalOptionsHelpDryRun)))
     var dryRun = false
 
-    @Flag(name: [.customShort("y"), .long], help: "확인 없이 실행. 이동과 삭제는 사용자 승인 뒤에만")
+    @Flag(name: [.customShort("y"), .long], help: ArgumentHelp(String(localized: .globalOptionsHelpYes)))
     var yes = false
 
-    @Flag(help: "항목을 fzf로 고르지 않기")
+    @Flag(help: ArgumentHelp(String(localized: .globalOptionsHelpNoPick)))
     var noPick = false
 }
 
@@ -56,7 +56,7 @@ enum CLI {
            let url = try? URL(resolvingBookmarkData: data, options: .withoutUI, bookmarkDataIsStale: &stale) {
             return GISTStore(url: url)
         }
-        throw CLIError(exit: .usage, message: "GIST 폴더를 모릅니다", hints: ["folio --gist <경로> …", "export FOLIO_GIST=<경로>"])
+        throw CLIError(exit: .usage, message: String(localized: .gistUnknown), hints: [String(localized: .gistUnknownHintOption), String(localized: .gistUnknownHintEnv)])
     }
 
     /// Its own ID, apart from the Mac app's, so the two never append to the same log file (docs/SPEC.md "쓰기와 안전").

@@ -14,7 +14,7 @@ let package = Package(
         .library(name: "FolioStorage", targets: ["FolioStorage"]),
         .library(name: "FolioActions", targets: ["FolioActions"]),
         .library(name: "FolioIndex", targets: ["FolioIndex"]),
-        .executable(name: "folio", targets: ["FolioCLI"]),
+        .executable(name: "folio", targets: ["FolioCommand"]),
         .executable(name: "folio-gen", targets: ["FolioGen"]),
         .executable(name: "folio-fixture", targets: ["FolioFixtureWriter"]),
     ],
@@ -37,7 +37,10 @@ let package = Package(
         ], path: "sources/folio-macros"),
         .target(name: "FolioActions", dependencies: ["FolioStorage", .product(name: "FolioMarkdown", package: "folio-markdown"), "FolioMacros"], path: "sources/folio-actions", resources: [.process("Localizable.xcstrings")]),
         .target(name: "FolioIndex", dependencies: ["FolioStorage", .product(name: "FolioMarkdown", package: "folio-markdown"), .product(name: "GRDB", package: "GRDB.swift")], path: "sources/folio-index"),
-        .executableTarget(name: "FolioCLI", dependencies: ["FolioActions", "FolioIndex", .product(name: "ArgumentParser", package: "swift-argument-parser"), .product(name: "GRDB", package: "GRDB.swift")], path: "sources/folio-cli", resources: [.process("Localizable.xcstrings")]),
+        .target(name: "FolioCLI", dependencies: ["FolioActions", "FolioIndex", .product(name: "ArgumentParser", package: "swift-argument-parser"), .product(name: "GRDB", package: "GRDB.swift")], path: "sources/folio-cli", resources: [.process("Localizable.xcstrings")]),
+        // Only the entry point: an executable target's test build gets no string-catalog symbols, so the commands live
+        // in the FolioCLI library that the tests import.
+        .executableTarget(name: "FolioCommand", dependencies: ["FolioCLI"], path: "sources/folio-command"),
         // Writes folio-cli/generated/commands.swift from the action specs. It must not need FolioCLI, so a broken
         // generated file can always be generated again.
         .executableTarget(name: "FolioGen", dependencies: ["FolioActions"], path: "sources/folio-gen"),

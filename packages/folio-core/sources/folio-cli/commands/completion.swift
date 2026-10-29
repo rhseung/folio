@@ -5,19 +5,13 @@ import Foundation
 
 struct CompletionCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "completion", abstract: "셸 완성 스크립트",
-        discussion: """
-            과목과 항목 이름도 실제 데이터에서 완성한다. 후보에는 과목 이름을 설명으로 붙인다.
-
-            예시:
-              folio completion zsh > ~/.zfunc/_folio
-              source <(folio completion bash)
-            """)
+        commandName: "completion", abstract: String(localized: .completionAbstract),
+        discussion: String(localized: .completionDiscussion))
 
     @Argument(help: "zsh, bash, fish") var shell: String
 
     func run() throws {
-        guard let s = CompletionShell(rawValue: shell) else { throw CLIError(exit: .usage, message: "셸은 zsh, bash, fish 중 하나입니다") }
+        guard let s = CompletionShell(rawValue: shell) else { throw CLIError(exit: .usage, message: String(localized: .completionUnknownShell)) }
         say(Folio.completionScript(for: s))
     }
 }
@@ -67,7 +61,7 @@ enum Complete {
     }
 
     static let sessions = items { r, c in
-        c.file.map { f in f.sessions.map { s in (f.name(of: s), joined(day(s.date, r), s.isCancelled ? "휴강" : s.topic)) } } ?? []
+        c.file.map { f in f.sessions.map { s in (f.name(of: s), joined(day(s.date, r), s.isCancelled ? String(localized: .completionCancelled) : s.topic)) } } ?? []
     }
     static let exams = items { r, c in c.file?.exams.map { ($0.title, joined($0.kind.rawValue, day($0.start, r))) } ?? [] }
     static let units = items { _, c in c.file?.units.map { ($0.title, "") } ?? [] }
@@ -86,7 +80,7 @@ enum Complete {
     static func semesters(_ words: [String], _ index: Int, _ prefix: String) -> [String] {
         guard let r = resolver(words) else { return [] }
         return described(r.semesters.compactMap { s in
-            s.folder.map { ($0.name, "과목 \(r.courses.filter { $0.course.semesterId == s.id }.count)개") }
+            s.folder.map { ($0.name, String(localized: .completionSemesterCourses(r.courses.filter { $0.course.semesterId == s.id }.count))) }
         })
     }
 

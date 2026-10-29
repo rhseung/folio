@@ -5,13 +5,7 @@ import FolioStorage
 import Foundation
 
 struct TodayCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "today", abstract: "오늘 화면과 같은 요약: 시험, 수업, 복습, 마감, 시험 계획", discussion: """
-        이번 학기 과목만 본다. 오늘의 범위는 설정의 하루 경계를 따른다.
-
-        예시:
-          folio today
-          folio today --json
-        """)
+    static let configuration = CommandConfiguration(commandName: "today", abstract: String(localized: .todayAbstract), discussion: String(localized: .todayDiscussion))
     @OptionGroup var g: GlobalOptions
 
     struct Summary: Encodable {
@@ -62,11 +56,11 @@ struct TodayCommand: ParsableCommand {
         func session(_ s: TodaySummary.SessionItem) -> Summary.Item {
             item(s.courseId, s.session.id, file[s.courseId]?.name(of: s.session) ?? "", at: s.session.date, s.session.topic.isEmpty ? nil : s.session.topic)
         }
-        let review = { (e: ReviewEntry) in item(e.courseId, e.item.unitId, e.unitTitle, e.item.overdueDays > 0 ? "\(e.item.overdueDays)일 밀림" : nil) }
+        let review = { (e: ReviewEntry) in item(e.courseId, e.item.unitId, e.unitTitle, e.item.overdueDays > 0 ? String(localized: .todayOverdue(e.item.overdueDays)) : nil) }
         let out = Summary(
             studyDay: summary.studyDay.description,
             ongoing: TodaySummary.ongoingClass(in: files, at: now, calendar: calendar).map {
-                item($0.courseId, $0.session.id, file[$0.courseId]?.name(of: $0.session) ?? "", at: $0.end, "\(Int(($0.end.timeIntervalSince(now) / 60).rounded(.up)))분 남음")
+                item($0.courseId, $0.session.id, file[$0.courseId]?.name(of: $0.session) ?? "", at: $0.end, String(localized: .todayMinutesLeft(Int(($0.end.timeIntervalSince(now) / 60).rounded(.up)))))
             },
             exams: summary.exams.map { item($0.courseId, $0.exam.id, $0.exam.title, at: $0.exam.start, $0.dDay == 0 ? "D-day" : "D-\($0.dDay)") },
             classes: summary.classesToday.map(session),
@@ -74,10 +68,10 @@ struct TodayCommand: ParsableCommand {
             reviews: queue.filter { $0.item.deferred == nil }.map(review),
             deferredReviews: queue.filter { $0.item.deferred != nil }.map(review),
             deadlines: summary.deadlines.map { item($0.courseId, $0.assignment.id, $0.assignment.title, at: $0.assignment.due) },
-            plan: ExamPlan.items(on: summary.studyDay, courses: files).map { item($0.courseId, $0.item.id, $0.item.title, $0.exam.title + (done.contains($0.item.id) ? " · 완료" : "")) },
+            plan: ExamPlan.items(on: summary.studyDay, courses: files).map { item($0.courseId, $0.item.id, $0.item.title, $0.exam.title + (done.contains($0.item.id) ? String(localized: .todayPlanDone) : "")) },
             attendance: courses.compactMap { c in
                 c.file!.capOneAway(at: now).map { w in
-                    item(c.id, c.id, c.course.title, "결석 \(w.absences)회 · 한 번 더 결석하면 최대 \((try? ctx.catalog())?.grade(w.cap.maxGrade)?.symbol ?? "상한")")
+                    item(c.id, c.id, c.course.title, String(localized: .todayAttendanceWarning(w.absences, (try? ctx.catalog())?.grade(w.cap.maxGrade)?.symbol ?? String(localized: .todayAttendanceCap))))
                 }
             },
             studyTime: courses.compactMap { c in
@@ -103,15 +97,15 @@ struct TodayCommand: ParsableCommand {
             // Each section's title says what the columns are; a header row per section would only repeat it.
             t.render().dropFirst().forEach { say($0) }
         }
-        if let o = out.ongoing { section("진행 중 수업", [o]) }
-        section("시험", out.exams)
-        section("오늘 수업", out.classes)
-        section("복습 노트 쓰기", out.reviewNotes)
-        section("오늘 복습", out.reviews, time: false)
-        section("하루 상한을 넘어 내일로 미룸", out.deferredReviews, time: false)
-        section("마감", out.deadlines)
-        section("시험 계획", out.plan, time: false)
-        section("결석 주의", out.attendance, time: false)
-        section("최근 2주 공부 시간", out.studyTime, time: false)
+        if let o = out.ongoing { section(String(localized: .todaySectionOngoing), [o]) }
+        section(String(localized: .todaySectionExams), out.exams)
+        section(String(localized: .todaySectionClasses), out.classes)
+        section(String(localized: .todaySectionReviewNotes), out.reviewNotes)
+        section(String(localized: .todaySectionReviews), out.reviews, time: false)
+        section(String(localized: .todaySectionDeferred), out.deferredReviews, time: false)
+        section(String(localized: .todaySectionDeadlines), out.deadlines)
+        section(String(localized: .todaySectionPlan), out.plan, time: false)
+        section(String(localized: .todaySectionAttendance), out.attendance, time: false)
+        section(String(localized: .todaySectionStudyTime), out.studyTime, time: false)
     }
 }

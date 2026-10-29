@@ -11,7 +11,7 @@ extension Resolver {
         // A second item in the same course may be written with or without `<course>/` in front.
         let ref = course?.local(ref) ?? ref
         func scoped() throws -> CourseRef {
-            guard let course else { throw CLIError(exit: .usage, message: "과목을 함께 적어 주세요: <과목>/\(ref)") }
+            guard let course else { throw CLIError(exit: .usage, message: String(localized: .resolveNeedCourse(ref))) }
             return course
         }
         return switch kind {
@@ -30,7 +30,7 @@ extension Resolver {
         case "CourseCode": try code(ref).id
         case "Person": try person(ref).id
         case "Category": try category(ref).id
-        default: throw CLIError(exit: .usage, message: "이 종류는 이름으로 가리킬 수 없습니다: \(kind)")
+        default: throw CLIError(exit: .usage, message: String(localized: .resolveKindNoName(kind)))
         }
     }
 
@@ -38,14 +38,14 @@ extension Resolver {
         let n = try note(ref, in: c)
         guard let id = n.meta.id else {
             let path = c.store?.coursePath(of: n.url) ?? ref
-            throw CLIError(exit: .rule, message: "노트에 아직 ID가 없습니다: \(path)", hints: ["folio note adopt \(c.code)/\(path)"])
+            throw CLIError(exit: .rule, message: String(localized: .resolveNoteNoId(path)), hints: ["folio note adopt \(c.code)/\(path)"])
         }
         return id
     }
 
     func path(_ kind: String, _ ref: String, in course: CourseRef?) throws -> String {
-        guard let course else { throw CLIError(exit: .usage, message: "과목을 함께 적어 주세요: <과목>/\(ref)") }
-        guard kind == "NotePath" else { throw CLIError(exit: .usage, message: "이 종류는 경로로 가리킬 수 없습니다: \(kind)") }
+        guard let course else { throw CLIError(exit: .usage, message: String(localized: .resolveNeedCourse(ref))) }
+        guard kind == "NotePath" else { throw CLIError(exit: .usage, message: String(localized: .resolveKindNoPath(kind))) }
         let n = try note(course.local(ref), in: course)
         return course.store?.coursePath(of: n.url) ?? ref
     }

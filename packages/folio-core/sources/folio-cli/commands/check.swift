@@ -4,14 +4,8 @@ import Foundation
 
 struct CheckCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "check", abstract: "GIST 폴더가 표준 구조를 따르는지 검사",
-        discussion: """
-            표준 구조와 다른 곳이 있으면 목록을 보여 주고 종료 코드 4로 끝난다. 없으면 0이다.
-
-            예시:
-              folio check
-              folio check --json
-            """)
+        commandName: "check", abstract: String(localized: .checkAbstract),
+        discussion: String(localized: .checkDiscussion))
 
     @OptionGroup var g: GlobalOptions
 
@@ -25,12 +19,12 @@ struct CheckCommand: ParsableCommand {
         if g.json {
             try printJSON(issues)
         } else if issues.isEmpty {
-            say("✓".styled(.green) + " 표준 구조를 따릅니다")
+            say("✓".styled(.green) + " " + String(localized: .checkOk))
         } else {
-            var t = Table(header: ["종류", "경로"])
+            var t = Table(header: [String(localized: .checkHeaderKind), String(localized: .checkHeaderPath)])
             t.rows = issues.map { [$0.kind, $0.path] }
             t.print()
         }
-        if !issues.isEmpty { throw CLIError(exit: .rule, message: "표준 구조와 다른 곳이 \(issues.count)개 있습니다") }
+        if !issues.isEmpty { throw CLIError(exit: .rule, message: String(localized: .checkIssues(issues.count))) }
     }
 }

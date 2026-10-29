@@ -143,11 +143,11 @@ enum Finder {
         let matches = find(request)
         if json { return try printJSON(matches) }
         guard !matches.isEmpty else {
-            warn("✗".styled(.red) + " \"\(request)\"에 맞는 명령을 찾지 못했습니다")
-            warn("  folio help로 전체 목록을 보세요".styled(.dim))
+            warn("✗".styled(.red) + " " + String(localized: .finderNoMatch(request)))
+            warn(String(localized: .finderNoMatchHint).styled(.dim))
             throw ExitCode(Exit.notFound.rawValue)
         }
-        say("\"\(request)\"에 맞는 명령".styled(.bold))
+        say(String(localized: .finderMatches(request)).styled(.bold))
         for m in matches {
             say("")
             say("  " + m.command.styled(.bold) + "  " + m.abstract.styled(.dim))
@@ -155,6 +155,6 @@ enum Finder {
             for x in m.examples { say("      " + x.styled(.green)) }
         }
         say("")
-        say("자세한 도움말: <명령> --help".styled(.dim))
+        say(String(localized: .finderMore).styled(.dim))
     }
 }

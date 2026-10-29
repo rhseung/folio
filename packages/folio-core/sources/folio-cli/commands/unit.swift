@@ -5,19 +5,15 @@ import Foundation
 
 struct UnitCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "unit", abstract: "단원: 트리, 추가, 옮기기, 회차 연결",
+        commandName: "unit", abstract: String(localized: .unitAbstract),
         subcommands: [List.self, Show.self] + GeneratedCommands.unit + [Move.self])
 
     struct List: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "과목의 단원 트리", discussion: """
-            예시:
-              folio unit list EC4207             그래프 이론의 단원 트리
-              folio unit list EC4207 --depth 1   맨 위 단원만
-            """)
+        static let configuration = CommandConfiguration(abstract: String(localized: .unitListAbstract), discussion: String(localized: .unitListDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("과목. 강의 코드, 폴더 이름, 과목 이름, UUID", valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
-        @Option(help: ArgumentHelp("보여 줄 깊이. 1이면 맨 위 단원만", valueName: "depth")) var depth: Int?
-        @Flag(help: "머리글 없이 한 줄에 하나, 탭으로 나눠서") var lines = false
+        @Argument(help: ArgumentHelp(String(localized: .unitListHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
+        @Option(help: ArgumentHelp(String(localized: .unitListHelpDepth), valueName: "depth")) var depth: Int?
+        @Flag(help: ArgumentHelp(String(localized: .commonHelpLines))) var lines = false
 
         func run() throws {
             let r = Resolver(try CLI.context(g))
@@ -26,24 +22,21 @@ struct UnitCommand: ParsableCommand {
             let outline = UnitTree.outline(f.units).filter { item in depth.map { item.depth < $0 } ?? true }
             if g.json { return try printJSON(outline.map(\.unit)) }
             if lines {
-                for (u, _) in outline { line(["\(c.code)/\(u.title)", u.title, "\(u.sessionIds.count)회차"]) }
+                for (u, _) in outline { line(["\(c.code)/\(u.title)", u.title, String(localized: .unitListSessions(u.sessionIds.count))]) }
                 return
             }
             courseHeader(c, catalog: try? r.ctx.catalog())
             for (i, item) in outline.enumerated() {
-                say(treePrefix(outline.map(\.depth), at: i) + item.unit.title + (item.unit.sessionIds.isEmpty ? "" : "  \(item.unit.sessionIds.count)회차".styled(.dim)))
+                say(treePrefix(outline.map(\.depth), at: i) + item.unit.title + (item.unit.sessionIds.isEmpty ? "" : String(localized: .unitListSessionsIndented(item.unit.sessionIds.count)).styled(.dim)))
             }
             footer(outline.count)
         }
     }
 
     struct Show: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "단원 하나의 자세한 내용", discussion: """
-            예시:
-              folio unit show EC4207/트리
-            """)
+        static let configuration = CommandConfiguration(abstract: String(localized: .unitShowAbstract), discussion: String(localized: .unitShowDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<단원>. 예: EC4207/트리", valueName: "unit"), completion: Complete.units) var unit: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .unitShowHelpUnit), valueName: "unit"), completion: Complete.units) var unit: String = ""
 
         func run() throws {
             let r = Resolver(try CLI.context(g))
@@ -53,11 +46,11 @@ struct UnitCommand: ParsableCommand {
             let f = try c.requireFile()
             courseHeader(c, catalog: try? r.ctx.catalog())
             say(u.title.styled(.bold))
-            if let parent = u.parentId.flatMap({ id in f.units.first { $0.id == id } }) { say("  상위  \(parent.title)") }
+            if let parent = u.parentId.flatMap({ id in f.units.first { $0.id == id } }) { say(String(localized: .unitShowParent(parent.title))) }
             let children = f.units.filter { $0.parentId == u.id }.sorted { $0.order < $1.order }
-            for (title, names) in [("하위 단원", children.map(\.title)),
-                                   ("회차", u.sessionIds.compactMap { id in f.sessions.first { $0.id == id }.map { f.name(of: $0) } }),
-                                   ("시험", u.examIds.compactMap { id in f.exams.first { $0.id == id }?.title })] where !names.isEmpty {
+            for (title, names) in [(String(localized: .unitShowChildren), children.map(\.title)),
+                                   (String(localized: .unitShowSessions), u.sessionIds.compactMap { id in f.sessions.first { $0.id == id }.map { f.name(of: $0) } }),
+                                   (String(localized: .unitShowExams), u.examIds.compactMap { id in f.exams.first { $0.id == id }?.title })] where !names.isEmpty {
                 say("  \(title)")
                 for n in names { say("    \(n)") }
             }
@@ -65,22 +58,17 @@ struct UnitCommand: ParsableCommand {
     }
 
     struct Move: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "단원을 형제 사이에서 옮기거나 다른 단원 아래로 옮기기", discussion: """
-            예시:
-              folio unit move EC4207/트리 --up
-              folio unit move EC4207/"스패닝 트리" --parent 그래프
-              folio unit move EC4207/"스패닝 트리" --top
-            """)
+        static let configuration = CommandConfiguration(abstract: String(localized: .unitMoveAbstract), discussion: String(localized: .unitMoveDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.units) var unit: String = ""
-        @Flag(help: "형제 중 한 칸 위로") var up = false
-        @Flag(help: "형제 중 한 칸 아래로") var down = false
-        @Option(help: ArgumentHelp("이 단원 아래로", valueName: "unit"), completion: Complete.units) var parent: String?
-        @Flag(help: "맨 위 단계로") var top = false
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpUnit), valueName: "unit"), completion: Complete.units) var unit: String = ""
+        @Flag(help: ArgumentHelp(String(localized: .unitMoveHelpUp))) var up = false
+        @Flag(help: ArgumentHelp(String(localized: .unitMoveHelpDown))) var down = false
+        @Option(help: ArgumentHelp(String(localized: .unitMoveHelpParent), valueName: "unit"), completion: Complete.units) var parent: String?
+        @Flag(help: ArgumentHelp(String(localized: .unitMoveHelpTop))) var top = false
 
         func run() throws {
             guard [up, down, parent != nil, top].filter({ $0 }).count == 1 else {
-                throw CLIError(exit: .usage, message: "--up, --down, --parent, --top 중 하나만 주세요")
+                throw CLIError(exit: .usage, message: String(localized: .unitMoveOneDirection))
             }
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)

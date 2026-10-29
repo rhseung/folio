@@ -11,9 +11,9 @@ func courseHeader(_ c: CourseRef, catalog: Catalog?) {
 func when(_ date: Date, now: Date, time: Bool = false, calendar: Calendar = .current) -> String {
     let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: date)).day ?? 0
     let day = switch days {
-    case 0: "오늘"
-    case 1: "내일"
-    case -1: "어제"
+    case 0: String(localized: .whenToday)
+    case 1: String(localized: .whenTomorrow)
+    case -1: String(localized: .whenYesterday)
     case 2...14: "D-\(days)"
     default: date.formatted(.dateTime.month().day().weekday(.abbreviated).locale(Locale(identifier: "ko_KR")))
     }
@@ -30,7 +30,7 @@ func when(_ date: Date, now: Date, time: Bool = false, calendar: Calendar = .cur
 
 /// `6개 · --all로 취소된 것까지`.
 func footer(_ count: Int, hidden: String? = nil) {
-    say(([("\(count)개")] + (hidden.map { [$0] } ?? [])).joined(separator: " · ").styled(.dim))
+    say(([String(localized: .commonCount(count))] + (hidden.map { [$0] } ?? [])).joined(separator: " · ").styled(.dim))
 }
 
 /// For `--lines`: one item per line, the first field a ref other commands take (docs/SPEC.md "줄 형식").

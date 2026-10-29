@@ -5,18 +5,14 @@ import Foundation
 
 struct ExamCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "exam", abstract: "시험: 목록, 추가, 범위 단원, 공부 계획, 종합 정리",
+        commandName: "exam", abstract: String(localized: .examAbstract),
         subcommands: [List.self, Show.self] + GeneratedCommands.exam + [Scope.self, Plan.self, PlanCheck.self])
 
     struct List: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "과목의 시험 목록", discussion: """
-            예시:
-              folio exam list EC4207
-              folio exam list EC4207 --lines
-            """)
+        static let configuration = CommandConfiguration(abstract: String(localized: .examListAbstract), discussion: String(localized: .examListDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("과목. 강의 코드, 폴더 이름, 과목 이름, UUID", valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
-        @Flag(help: "머리글 없이 한 줄에 하나, 탭으로 나눠서") var lines = false
+        @Argument(help: ArgumentHelp(String(localized: .examListHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
+        @Flag(help: ArgumentHelp(String(localized: .commonHelpLines))) var lines = false
 
         func run() throws {
             let r = Resolver(try CLI.context(g))
@@ -28,10 +24,10 @@ struct ExamCommand: ParsableCommand {
                 return
             }
             courseHeader(c, catalog: try? r.ctx.catalog())
-            var t = Table(header: ["시험", "일시", "종류", "장소", "범위"], shrink: [3])
+            var t = Table(header: [String(localized: .examListHeaderExam), String(localized: .examListHeaderTime), String(localized: .examListHeaderKind), String(localized: .examListHeaderLocation), String(localized: .examListHeaderScope)], shrink: [3])
             for e in exams {
                 let cells = [e.title, e.start.map { when($0, now: r.ctx.now, time: true) } ?? "-", e.kind.rawValue.toned, e.location,
-                             e.scopeUnitIds.isEmpty ? "" : "단원 \(e.scopeUnitIds.count)개"]
+                             e.scopeUnitIds.isEmpty ? "" : String(localized: .examListUnits(e.scopeUnitIds.count))]
                 t.rows.append((e.end ?? e.start).map { $0 < r.ctx.now } ?? false ? cells.map { $0.styled(.dim) } : cells)
             }
             t.print()
@@ -40,12 +36,9 @@ struct ExamCommand: ParsableCommand {
     }
 
     struct Show: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "시험 하나의 자세한 내용: 범위 단원, 공부 계획", discussion: """
-            예시:
-              folio exam show EC4207/중간고사
-            """)
+        static let configuration = CommandConfiguration(abstract: String(localized: .examShowAbstract), discussion: String(localized: .examShowDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<시험>. 예: EC4207/Quiz1", valueName: "exam"), completion: Complete.exams) var exam: String = ""
+        @Argument(help: ArgumentHelp(String(localized: .examShowHelpExam), valueName: "exam"), completion: Complete.exams) var exam: String = ""
 
         func run() throws {
             let r = Resolver(try CLI.context(g))
@@ -55,40 +48,33 @@ struct ExamCommand: ParsableCommand {
             let f = try c.requireFile()
             courseHeader(c, catalog: try? r.ctx.catalog())
             say(e.title.styled(.bold))
-            say("  종류  \(e.kind.rawValue)")
-            if let start = e.start { say("  일시  \(when(start, now: r.ctx.now, time: true))" + (e.end.map { " – \($0.formatted(date: .omitted, time: .shortened))" } ?? "")) }
-            if !e.location.isEmpty { say("  장소  \(e.location)") }
-            if let comp = e.componentId.flatMap({ id in f.components.first { $0.id == id } }) { say("  성적 항목  \(comp.name)") }
+            say(String(localized: .examShowKind(e.kind.rawValue)))
+            if let start = e.start { say(String(localized: .examShowTime(when(start, now: r.ctx.now, time: true))) + (e.end.map { " – \($0.formatted(date: .omitted, time: .shortened))" } ?? "")) }
+            if !e.location.isEmpty { say(String(localized: .examShowLocation(e.location))) }
+            if let comp = e.componentId.flatMap({ id in f.components.first { $0.id == id } }) { say(String(localized: .examShowComponent(comp.name))) }
             let units = UnitTree.outline(f.units).map(\.unit).filter { e.scopeUnitIds.contains($0.id) }
             if !units.isEmpty {
-                say("  범위 단원")
+                say(String(localized: .examShowScope))
                 for u in units { say("    \(u.title)") }
             }
             if !e.plan.isEmpty {
-                say("  공부 계획")
+                say(String(localized: .examShowPlan))
                 for item in e.plan.sorted(by: { $0.day < $1.day }) { say("    \(item.day)  \(item.title)") }
             }
         }
     }
 
     struct Scope: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "시험 범위에 단원 넣기, --off면 빼기", discussion: """
-            단원을 넣으면 그 하위 단원도 함께 들어간다. --taught는 시험 전에 지난 회차에 연결된 단원과 그 상위 단원을 모두 넣는다.
-
-            예시:
-              folio exam scope EC4207/Quiz1 --unit 트리 --unit 매칭
-              folio exam scope EC4207/중간고사 --taught --dry-run
-              folio exam scope EC4207/Quiz1 --unit 매칭 --off
-            """)
+        static let configuration = CommandConfiguration(abstract: String(localized: .examScopeAbstract), discussion: String(localized: .examScopeDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.exams) var exam: String = ""
-        @Option(name: .customLong("unit"), help: ArgumentHelp("단원. 여러 번 줄 수 있다", valueName: "unit"), completion: Complete.units) var units: [String] = []
-        @Flag(help: "범위에서 빼기") var off = false
-        @Flag(help: "시험 전에 배운 단원을 모두 넣기") var taught = false
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpExam), valueName: "exam"), completion: Complete.exams) var exam: String = ""
+        @Option(name: .customLong("unit"), help: ArgumentHelp(String(localized: .examScopeHelpUnits), valueName: "unit"), completion: Complete.units) var units: [String] = []
+        @Flag(help: ArgumentHelp(String(localized: .examScopeHelpOff))) var off = false
+        @Flag(help: ArgumentHelp(String(localized: .examScopeHelpTaught))) var taught = false
 
         func run() throws {
             guard !(taught && !units.isEmpty), !(taught && off) else {
-                throw CLIError(exit: .usage, message: "--unit이나 --taught 중 하나만 주세요")
+                throw CLIError(exit: .usage, message: String(localized: .examScopeUnitOrTaught))
             }
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
@@ -100,21 +86,18 @@ struct ExamCommand: ParsableCommand {
             }
             let ids = try r.many(units, from: try c.requireFile().units.map(\.title), what: "단원").map { try r.unit($0, in: c).id }
             try performAll(ids.map { ExamScope(course: c.id, exam: e.id, unit: $0, included: !off) }, g, ctx: ctx,
-                           done: off ? "단원 \(ids.count)개를 범위에서 뺐습니다" : "단원 \(ids.count)개를 범위에 넣었습니다")
+                           done: off ? String(localized: .examScopeRemoved(ids.count)) : String(localized: .examScopeAdded(ids.count)))
         }
     }
 
     struct Plan: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: "시험 공부 계획 항목 추가와 지우기", subcommands: GeneratedCommands.examPlan + [Remove.self])
+        static let configuration = CommandConfiguration(abstract: String(localized: .examPlanAbstract), subcommands: GeneratedCommands.examPlan + [Remove.self])
 
         struct Remove: ParsableCommand {
-            static let configuration = CommandConfiguration(commandName: "rm", abstract: "공부 계획 항목 지우기. 확인을 받는다", discussion: """
-                예시:
-                  folio exam plan rm EC4207/중간고사 "트리 단원 복습" --dry-run
-                """)
+            static let configuration = CommandConfiguration(commandName: "rm", abstract: String(localized: .examPlanRmAbstract), discussion: String(localized: .examPlanRmDiscussion))
             @OptionGroup var g: GlobalOptions
-            @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.exams) var exam: String
-            @Argument(help: ArgumentHelp("항목 제목이나 UUID", valueName: "item")) var item: String = ""
+            @Argument(help: ArgumentHelp(String(localized: .commonHelpExam), valueName: "exam"), completion: Complete.exams) var exam: String
+            @Argument(help: ArgumentHelp(String(localized: .commonHelpItem), valueName: "item")) var item: String = ""
 
             func run() throws {
                 let ctx = try CLI.context(g)
@@ -128,21 +111,18 @@ struct ExamCommand: ParsableCommand {
     }
 
     struct PlanCheck: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "plan-check", abstract: "공부 계획 항목 끝내기, --undo면 되돌리기", discussion: """
-            예시:
-              folio exam plan-check EC4207/중간고사 "트리 단원 복습"
-            """)
+        static let configuration = CommandConfiguration(commandName: "plan-check", abstract: String(localized: .examPlanCheckAbstract), discussion: String(localized: .examPlanCheckDiscussion))
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.exams) var exam: String
-        @Argument(help: ArgumentHelp("항목 제목이나 UUID", valueName: "item")) var item: String = ""
-        @Flag(help: "끝내지 않은 것으로 되돌리기") var undo = false
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpExam), valueName: "exam"), completion: Complete.exams) var exam: String
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpItem), valueName: "item")) var item: String = ""
+        @Flag(help: ArgumentHelp(String(localized: .examPlanCheckHelpUndo))) var undo = false
 
         func run() throws {
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let (c, name) = try r.split(exam)
             let i = try r.planItem(item, in: try r.exam(name, in: c), course: c)
-            try perform(ExamPlanCheck(course: c.id, item: i.id, done: !undo), g, ctx: ctx, done: undo ? "'\(i.title)'을(를) 끝내지 않은 것으로 되돌렸습니다" : "'\(i.title)'을(를) 끝냈습니다")
+            try perform(ExamPlanCheck(course: c.id, item: i.id, done: !undo), g, ctx: ctx, done: undo ? String(localized: .examPlanCheckUndone(i.title)) : String(localized: .examPlanCheckDone(i.title)))
         }
     }
 }

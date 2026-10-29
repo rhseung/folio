@@ -33,9 +33,9 @@ func perform<A: Action>(_ action: A, _ options: GlobalOptions, ctx given: Action
 }
 
 func renderChanges(_ changes: [Change], done: String, dryRun: Bool, root: URL) {
-    say(dryRun ? "미리보기".styled(.bold) + " · \(done)" : "✓".styled(.green) + " \(done)")
+    say(dryRun ? String(localized: .performPreview).styled(.bold) + " · \(done)" : "✓".styled(.green) + " \(done)")
     if changes.isEmpty {
-        say("  바뀐 것 없음".styled(.dim))
+        say(String(localized: .performNoChange).styled(.dim))
         return
     }
     for c in changes {
@@ -59,7 +59,7 @@ func renderChanges(_ changes: [Change], done: String, dryRun: Bool, root: URL) {
 func shown(_ v: JSONValue?) -> String {
     let text: String
     switch v {
-    case nil, .null?: return "없음"
+    case nil, .null?: return String(localized: .performNone)
     case .string(let s)?: text = s
     case .bool(let b)?: text = b ? "true" : "false"
     case .number(let n)?: text = n == n.rounded() && abs(n) < 1e15 ? String(Int64(n)) : String(n)
@@ -72,10 +72,10 @@ func shown(_ v: JSONValue?) -> String {
 func ask(_ question: String, _ options: GlobalOptions) throws {
     guard !options.yes else { return }
     guard Style.isTerminal, isatty(STDIN_FILENO) == 1, !options.json else {
-        throw CLIError(exit: .needsConfirmation, message: "확인이 필요합니다: \(question)", hints: ["사용자가 승인했으면 --yes를 붙여 다시 실행", "--dry-run으로 미리 보기"])
+        throw CLIError(exit: .needsConfirmation, message: String(localized: .performNeedsConfirmation(question)), hints: [String(localized: .performYesHint), String(localized: .performDryRunHint)])
     }
-    FileHandle.standardOutput.write(Data("\(question) 계속할까요? [y/N] ".utf8))
+    FileHandle.standardOutput.write(Data(String(localized: .performAsk(question)).utf8))
     guard let answer = readLine(), ["y", "yes", "ㅛ"].contains(answer.lowercased()) else {
-        throw CLIError(exit: .needsConfirmation, message: "취소했습니다")
+        throw CLIError(exit: .needsConfirmation, message: String(localized: .performCancelled))
     }
 }

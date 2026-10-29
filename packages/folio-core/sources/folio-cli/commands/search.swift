@@ -6,24 +6,14 @@ import Foundation
 extension SearchKind: ExpressibleByArgument {}
 
 struct SearchCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "search", abstract: "모든 과목의 노트, 자료와 PDF 본문, 과제, 회차, 단원, 퀴즈 카드 검색", discussion: """
-        모든 낱말이 제목이나 본문에 있는 항목을 찾는다. 제목에 맞은 항목이 먼저 나온다.
-        색인은 이 기기의 캐시이고, 검색할 때마다 바뀐 과목만 다시 읽는다.
-
-        예시:
-          folio search 매칭
-          folio search "Hall theorem" --kind material
-          folio search 트리 --course EC4207 --lines
-          folio search 중간 --semester 2026-3 --json
-          folio search 매칭 --kind quiz
-        """)
+    static let configuration = CommandConfiguration(commandName: "search", abstract: String(localized: .searchAbstract), discussion: String(localized: .searchDiscussion))
     @OptionGroup var g: GlobalOptions
-    @Argument(help: ArgumentHelp("찾을 낱말", valueName: "word")) var words: [String]
-    @Option(help: ArgumentHelp("이 과목에서만", valueName: "course"), completion: .custom(Complete.courses)) var course: [String] = []
-    @Option(help: ArgumentHelp("이 학기에서만. 예: 2026-3", valueName: "semester"), completion: .custom(Complete.semesters)) var semester: String?
-    @Option(help: "이 종류만. note, material, assignment, session, unit, quiz") var kind: [SearchKind] = []
-    @Option(help: "최대 개수") var limit = 60
-    @Flag(help: "머리글 없이 한 줄에 하나, 탭으로 나눠서") var lines = false
+    @Argument(help: ArgumentHelp(String(localized: .searchHelpWords), valueName: "word")) var words: [String]
+    @Option(help: ArgumentHelp(String(localized: .searchHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: [String] = []
+    @Option(help: ArgumentHelp(String(localized: .searchHelpSemester), valueName: "semester"), completion: .custom(Complete.semesters)) var semester: String?
+    @Option(help: ArgumentHelp(String(localized: .searchHelpKind))) var kind: [SearchKind] = []
+    @Option(help: ArgumentHelp(String(localized: .searchHelpLimit))) var limit = 60
+    @Flag(help: ArgumentHelp(String(localized: .commonHelpLines))) var lines = false
 
     func run() throws {
         let r = Resolver(try CLI.context(g))
@@ -39,7 +29,7 @@ struct SearchCommand: ParsableCommand {
         let showProgress = isatty(STDERR_FILENO) == 1 && !g.json
         try index.refresh(r.ctx.gist) { done, total in
             guard showProgress else { return }
-            FileHandle.standardError.write(Data((done < total ? "\r색인 중 \(done)/\(total) 과목" : "\r\u{1B}[2K").utf8))
+            FileHandle.standardError.write(Data((done < total ? "\r" + String(localized: .searchIndexing(done, total)) : "\r\u{1B}[2K").utf8))
         }
         let hits = try index.search(words.joined(separator: " "), kinds: kind.isEmpty ? nil : Set(kind), courses: courses, limit: limit)
         if g.json { return try printJSON(hits.map(Hit.init)) }
@@ -49,7 +39,7 @@ struct SearchCommand: ParsableCommand {
             for h in hits { line(["\(code[h.item.courseId] ?? h.item.courseId.uuidString)/\(h.item.id)", h.item.kind.rawValue, h.item.title, h.snippet ?? ""]) }
             return
         }
-        var t = Table(header: ["과목", "종류", "제목", "본문"], shrink: [3, 2])
+        var t = Table(header: [String(localized: .searchHeaderCourse), String(localized: .searchHeaderKind), String(localized: .searchHeaderTitle), String(localized: .searchHeaderBody)], shrink: [3, 2])
         for h in hits {
             t.rows.append([tag[h.item.courseId] ?? "", h.item.kind.rawValue.styled(.cyan), h.item.title.highlighting(words),
                            (h.snippet ?? "").highlighting(words)])
