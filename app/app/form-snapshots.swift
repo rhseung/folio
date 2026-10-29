@@ -12,20 +12,20 @@ enum FormSnapshots {
         let device = workspace.device
         let component = file.components.first ?? GradeComponent(device: device, at: .now, name: "과제", weight: 20)
         var forms: [(String, AnyView)] = [
-            ("semester-add", AnyView(AddSemesterSheet { _ in })),
-            ("course-add", AnyView(AddCourseSheet(semester: semester) { _ in })),
-            ("course-edit", AnyView(EditCourseSheet(course: course))),
+            ("semester-add", AnyView(AddSemesterSheet(workspace: workspace) { _ in })),
+            ("course-add", AnyView(AddCourseSheet(workspace: workspace, semester: semester) { _ in })),
+            ("course-edit", AnyView(EditCourseSheet(workspace: workspace, course: course))),
             ("course-icon", AnyView(CourseIconPanel(icon: nil, color: workspace.accent(course.id).color) { _ in })),
-            ("class-times", AnyView(ClassTimesSheet(course: course))),
+            ("class-times", AnyView(ClassTimesSheet(workspace: workspace, course: course))),
             ("session-add", AnyView(AddSessionSheet(course: course))),
-            ("exam-new", AnyView(ExamEditor(course: course, exam: Exam(device: device, at: .now, kind: .midterm, title: "")))),
-            ("assignment", AnyView(AssignmentSheet(course: course, assignment: file.assignments.first ?? Assignment(device: device, at: .now, title: "")))),
-            ("component", AnyView(ComponentSheet(course: course, component: component))),
-            ("score", AnyView(ScoreEntrySheet(course: course, entry: file.scores.first ?? ScoreEntry(device: device, at: .now, componentId: component.id, title: "", score: 0, max: 10)))),
-            ("policy", AnyView(PolicySheet(course: course))),
-            ("requirement", AnyView(RequirementSheet(category: workspace.requirementCatalog.categories.first ?? RequirementCategory(device: device, at: .now, name: "")))),
-            ("profile", AnyView(ProfileSheet())),
-            ("import-place", AnyView(ImportPlaceSheet(course: course, files: [URL(filePath: "/tmp/slides.pdf")],
+            ("exam-new", AnyView(ExamEditor(workspace: workspace, course: course, exam: Exam(device: device, at: .now, kind: .midterm, title: "")))),
+            ("assignment", AnyView(AssignmentSheet(workspace: workspace, course: course, assignment: file.assignments.first ?? Assignment(device: device, at: .now, title: "")))),
+            ("component", AnyView(ComponentSheet(workspace: workspace, course: course, component: component))),
+            ("score", AnyView(ScoreEntrySheet(workspace: workspace, course: course, entry: file.scores.first ?? ScoreEntry(device: device, at: .now, componentId: component.id, title: "", score: 0, max: 10)))),
+            ("policy", AnyView(PolicySheet(workspace: workspace, course: course))),
+            ("requirement", AnyView(RequirementSheet(workspace: workspace, category: workspace.requirementCatalog.categories.first ?? RequirementCategory(device: device, at: .now, name: "")))),
+            ("profile", AnyView(ProfileSheet(workspace: workspace))),
+            ("import-place", AnyView(ImportPlaceSheet(workspace: workspace, course: course, files: [URL(filePath: "/tmp/slides.pdf")],
                                                       places: MaterialIntake.places(assignmentFolders: ["HW01", "HW02", "SP01"]) + ["Exams/Midterm", "Exams/Final"]))),
         ]
         let users = workspace.allCourseRecords.flatMap(\.codes)
@@ -33,8 +33,8 @@ enum FormSnapshots {
             let courses = workspace.allCourseRecords.filter { $0.codes.contains(code.id) }.map(\.id)
             forms.append(("code", AnyView(CodeEditor(model: CodesModel(workspace: workspace), code: .constant(code), programs: [code.program], courses: courses) {})))
         }
-        if let exam = file.exams.first { forms.append(("exam-edit", AnyView(ExamEditor(course: course, exam: exam)))) }
-        if let unit = file.units.first { forms.append(("card", AnyView(CardEditorSheet(course: course, draft: CardDraft(unitId: unit.id), units: file.units) {}))) }
+        if let exam = file.exams.first { forms.append(("exam-edit", AnyView(ExamEditor(workspace: workspace, course: course, exam: exam)))) }
+        if let unit = file.units.first { forms.append(("card", AnyView(CardEditorSheet(workspace: workspace, course: course, draft: CardDraft(unitId: unit.id), units: file.units) {}))) }
         for (name, view) in forms {
             let host = NSHostingView(rootView: view.environment(workspace))
             let size = host.fittingSize

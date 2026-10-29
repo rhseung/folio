@@ -103,12 +103,12 @@ final class Workspace {
         catalog = loadedCatalog ?? catalog
         catalogLoaded = loadedCatalog != nil
         settings = attempt("settings.json") { try gist.loadSettings().model } ?? settings
-        let stores = attempt("과목 폴더") { try gist.courseStores() } ?? []
+        let stores = attempt(String(localized: .workspaceCourseFolders)) { try gist.courseStores() } ?? []
         var seen = Set<UUID>()
         courses = stores.compactMap { store in
             guard let course = attempt(store.url.lastPathComponent, { LoadedCourse(store: store, document: try store.load()) }) else { return nil }
             guard seen.insert(course.id).inserted else {
-                problems.append("\(store.url.lastPathComponent): 다른 과목 폴더와 같은 과목 ID라서 건너뜁니다")
+                problems.append(String(localized: .workspaceDuplicateCourseId(store.url.lastPathComponent)))
                 return nil
             }
             return course
@@ -117,7 +117,7 @@ final class Workspace {
             (c.id, (try? c.store.log.readAll().filter { $0.type == ReviewEvent.type }) ?? [])
         })
         // Never cleared here: callers reload right after a failed save, whose message must stay up.
-        if !problems.isEmpty { error = "읽지 못한 파일이 있습니다.\n" + problems.joined(separator: "\n") }
+        if !problems.isEmpty { error = String(localized: .workspaceUnreadableFiles) + "\n" + problems.joined(separator: "\n") }
         recoverRecordings()
     }
 
@@ -138,11 +138,6 @@ final class Workspace {
     var currentSemester: Semester? {
         let today = LocalDate(.now, in: calendar)
         return semesters.first { ($0.start ?? today) <= today } ?? semesters.last
-    }
-
-    /// Courses of a semester that live only in transcript.json (no folder).
-    func recordOnlyCourses(in semester: Semester) -> [Course] {
-        transcript.courses.filter { $0.semesterId == semester.id }
     }
 
     var currentCourses: [LoadedCourse] { currentSemester.map { courses(in: $0) } ?? [] }
@@ -184,42 +179,7 @@ final class Workspace {
                               settings: settings, calendar: calendar, now: now)
     }
 
-    // MARK: Unclassified files
-
-    /// The course folder relative to the GIST root, with a trailing slash.
-    func coursePrefix(_ id: UUID) -> String? {
-        guard let gist, let course = course(id) else { return nil }
-        let root = gist.url.standardizedFileURL.path
-        return String(course.store.url.standardizedFileURL.path.dropFirst(root.count + 1)) + "/"
-    }
-
-    /// The one-time cleanup's moves for files still left in this course, including the ones it was unsure about.
-    /// Reading the whole GIST tree is slow, so this runs off the main actor.
-    func cleanupSuggestions(for id: UUID) async -> [PlannedMove] {
-        guard let gist, let prefix = coursePrefix(id), let course = course(id) else { return [] }
-        let url = gist.url
-        let labs = [String(prefix.dropLast()): course.file.labNumbers]
-        let labWeeks = [String(prefix.dropLast()): course.file.labWeeks]
-        let moves = await Task.detached {
-            (try? GISTStore(url: url).readTree()).map { CleanupPlanner.plan($0, labs: labs, labWeeks: labWeeks).moves } ?? []
-        }.value
-        return moves.filter { $0.from.hasPrefix(prefix) }
-    }
-
-    /// Moves files only after the user approved this exact move; the batch goes to `moves.jsonl` so it can be undone.
-    func approve(_ moves: [PlannedMove], course id: UUID) -> UUID? {
-        run(CleanupApply(moves: moves, course: id))?.made
-    }
-
-    func undoMoves(_ batch: UUID, course id: UUID) {
-        run(CleanupUndo(batch: batch, course: id))
-    }
-
     // MARK: Semesters and courses
-
-    func addSemester(year: Int, term: Term, start: LocalDate?, end: LocalDate?) -> UUID? {
-        run(SemesterAdd(year: year, term: term, start: start, end: end))?.made
-    }
 
     /// `<main code><number> <title>`; nil when the codes are empty or the name breaks the naming rule.
     func folderName(title: String, codes: [UUID], number: String) -> String? {
@@ -239,7 +199,7 @@ final class Workspace {
 
     /// Why the action would be refused, or nil when it would go through. Nothing is written.
     func refusal(_ action: some Action) -> String? {
-        guard let ctx = checkContext() else { return "GIST 폴더를 고르지 않았습니다" }
+        guard let ctx = checkContext() else { return String(localized: .workspaceNoGist) }
         do {
             try action.run(ctx)
             return nil
@@ -268,7 +228,7 @@ final class Workspace {
     }
 
     func runThrowing(_ action: some Action) throws -> ActionContext {
-        guard let gist else { throw ActionError.notFound("GIST 폴더를 고르지 않았습니다") }
+        guard let gist else { throw ActionError.notFound(String(localized: .workspaceNoGist)) }
         let ctx = ActionContext(gist: gist, device: device, now: .now, calendar: calendar,
                                 courses: Dictionary(courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))
         // Shown even when the action fails halfway: what it already wrote is on disk.

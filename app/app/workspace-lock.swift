@@ -11,7 +11,7 @@ extension Workspace {
         var error: NSError?
         // With no password set on the device there is nothing to check against; locking would only shut the owner out.
         guard context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error) else { gradesUnlocked = true; return }
-        gradesUnlocked = (try? await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: String(localized: "성적을 보려면 잠금을 해제하세요"))) ?? false
+        gradesUnlocked = (try? await context.evaluatePolicy(.deviceOwnerAuthentication, localizedReason: String(localized: .workspaceUnlockReason))) ?? false
         guard gradesUnlocked else { return }
         gradeRelock?.cancel()
         gradeRelock = Task {

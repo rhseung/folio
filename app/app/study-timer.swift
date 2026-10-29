@@ -136,10 +136,10 @@ struct ManualTimerButton: View {
                         .padding(.horizontal, Theme.Space.s)
                 }
             }
-            .help("공부 타이머 멈추고 기록하기")
+            .help(Text(.timerStopHelp))
         } else {
-            Button("공부 타이머", systemImage: "timer") { tracker.startManual(courseID, workspace: workspace) }
-                .help("앱 밖에서 하는 공부 시간을 이 과목에 기록합니다")
+            Button(.timerStart, systemImage: "timer") { tracker.startManual(courseID, workspace: workspace) }
+                .help(Text(.timerStartHelp))
         }
     }
 }

@@ -1,35 +1,27 @@
-import FolioStorage
 import QuickLookThumbnailing
 import SwiftUI
-import UniformTypeIdentifiers
 
 struct AssetTray: View {
-    @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
-    let store: CourseStore
-    /// How a dragged asset is written from where the note sits, e.g. `assets/a.png` or `../assets/a.png`.
-    let link: (URL) -> String
-    let insert: (String) -> Void
-    /// Bumped by the editor when a pasted or dropped image lands in `assets/`, which this tray doesn't see happen.
-    var revision = 0
-    @State private var files: [URL] = []
+    let model: NoteEditorModel
     @State private var targeted = false
 
     var body: some View {
+        let files = model.assets
         ScrollView(.horizontal) {
             HStack(spacing: Theme.Space.s) {
                 if files.isEmpty {
-                    Label("Finder에서 이미지나 파일을 여기로 끌어 오면 노트 assets 폴더에 복사됩니다", systemImage: "square.and.arrow.down")
+                    Label(.notesAssetsEmpty, systemImage: "square.and.arrow.down")
                         .font(Theme.Typeface.caption)
                         .foregroundStyle(Theme.Palette.textTertiary)
                         .padding(.horizontal, Theme.Space.s)
                 }
                 ForEach(files, id: \.self) { file in
                     AssetTile(file: file)
-                        .onTapGesture { insert(link(file)) }
-                        .draggable(link(file)) { AssetTile(file: file).frame(width: 72) }
-                        .help("끌어서 본문에 넣거나 눌러서 커서 자리에 넣기")
-                        .contextMenu { Button("커서 자리에 넣기") { insert(link(file)) } }
+                        .onTapGesture { model.pendingInsert = model.assetLink(file) }
+                        .draggable(model.assetLink(file)) { AssetTile(file: file).frame(width: 72) }
+                        .help(Text(.notesAssetsTileHelp))
+                        .contextMenu { Button(.notesAssetsInsert) { model.pendingInsert = model.assetLink(file) } }
                 }
             }
             .padding(.horizontal, Theme.Space.xl)
@@ -48,25 +40,10 @@ struct AssetTray: View {
         .animation(.snappy(duration: 0.2), value: targeted)
         .animation(.snappy(duration: 0.25), value: files)
         .dropDestination(for: URL.self) { urls, _ in
-            workspace.perform {
-                for url in urls where url.isFileURL {
-                    // Files handed over from outside the sandbox stay readable only inside this scope.
-                    let scoped = url.startAccessingSecurityScopedResource()
-                    defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-                    try store.addNoteAsset(url)
-                }
-            }
-            files = store.noteAssets()
+            model.addAssets(urls)
             return true
         } isTargeted: { targeted = $0 }
-        .task(id: revision) { files = store.noteAssets() }
-    }
-
-    static func markdown(for file: URL, path: String) -> String {
-        let encoded = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? path
-        let isImage = UTType(filenameExtension: file.pathExtension)?.conforms(to: .image) ?? false
-        let name = file.deletingPathExtension().lastPathComponent
-        return isImage ? "![\(name)](\(encoded))" : "[\(file.lastPathComponent)](\(encoded))"
+        .task(id: model.assetsRevision) { model.reloadAssets() }
     }
 }
 

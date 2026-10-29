@@ -4,155 +4,126 @@ import SwiftUI
 
 /// Sessions are made as classes happen: the weekly schedule only suggests the next lecture, and the rest are added by hand (docs/SPEC.md "강의 회차").
 struct SessionsView: View {
-    @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
+    @State private var model: SessionsModel
     let course: LoadedCourse
     let openNote: (UUID) -> Void
     @State private var editingTimes = false
     @State private var adding = false
-    @State private var untouched: [Session] = []
     @State private var confirmingDelete = false
+
+    init(workspace: Workspace, course: LoadedCourse, openNote: @escaping (UUID) -> Void) {
+        _model = State(initialValue: SessionsModel(workspace: workspace, courseId: course.id))
+        self.course = course
+        self.openNote = openNote
+    }
 
     var body: some View {
         let file = course.file
-        let weeks = Dictionary(grouping: file.sessions, by: \.week).sorted { $0.key < $1.key }.map { $0.value.sorted { $0.date < $1.date } }
-        let exams = file.exams.filter { $0.kind == .midterm || $0.kind == .final }
-            .compactMap { e in e.start.map { (exam: e, date: $0) } }.sorted { $0.date < $1.date }
         Page {
-            let missing = file.sessions.filter { file.needsReviewNote($0, at: .now) }.count
-            let unlinked = file.units.isEmpty ? 0 : file.sessions.filter { file.needsUnits($0, at: .now) }.count
             HStack(alignment: .bottom) {
-                PageHeader(title: "회차", subtitle: file.sessions.isEmpty ? "회차가 아직 없습니다"
-                           : (["회차 \(file.sessions.count)개"] + (missing > 0 ? ["복습 노트 없음 \(missing)"] : [])
-                              + (unlinked > 0 ? ["단원 없음 \(unlinked)"] : [])).joined(separator: " · "))
+                PageHeader(title: String(localized: .sessionsTitle), subtitle: model.subtitle(file))
                 Spacer()
-                Button("회차 추가") { adding = true }.buttonStyle(.pointing(.borderedProminent))
-                    .help("리시테이션, 보강, 실험처럼 시간표에 없는 수업")
+                Button(.sessionsAdd) { adding = true }.buttonStyle(.pointing(.borderedProminent))
+                    .help(Text(.sessionsAddHelp))
             }
-            if file.course.schedule.isEmpty { schedule(file) }
-            if !untouched.isEmpty { untouchedCard }
+            if file.course.schedule.isEmpty { schedule }
+            if !model.untouched.isEmpty { untouchedCard }
             // shortcut: worked out when the page redraws, not on a timer, so a class ending while the page sits open
             // keeps its suggestion until the next change; a TimelineView left an empty gap whenever nothing was suggested.
-            if let item = workspace.suggestedSession(for: course, now: .now) {
-                Block("다음 강의", note: "시간표로 제안한 회차") { SuggestedSessionRow(item: item, openNote: openNote) { editingTimes = true } }
+            if let item = model.suggested(course) {
+                Block(String(localized: .sessionsNext), note: String(localized: .sessionsSuggested)) {
+                    SuggestedSessionRow(item: item, openNote: openNote) { editingTimes = true }
+                }
             }
-            if !weeks.isEmpty {
+            let rows = model.timeline(file)
+            if !rows.isEmpty {
                 // One timeline down the page instead of a card per week: a row gets the full width for its title. The rail
                 // is the course color as far as the term has come and gray beyond, so where now is reads at a glance.
-                let items = timeline(weeks: weeks, exams: exams)
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
-                        let above: Bool? = i == 0 ? nil : item.held
-                        let below: Bool? = i == items.count - 1 ? nil : items[i + 1].held
-                        switch item {
-                        case .week(let sessions, let month):
-                            let thisWeek = workspace.calendar.startOfWeek(containing: sessions[0].date) == workspace.calendar.startOfWeek(containing: .now)
-                            // Quieter than a session's title: it only divides; the dates are in the gutter.
-                            TimelineLine(above: above, below: below, month: month) {
-                                HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
-                                    Text("\(sessions[0].week)주차").font(Theme.Typeface.caption.weight(.semibold))
-                                        .foregroundStyle(thisWeek ? accent.ink : Theme.Palette.textTertiary)
-                                    if thisWeek { Chip("이번 주", tone: .accent) }
-                                }
-                                .padding(.top, i == 0 ? Theme.Space.s : Theme.Space.l)
-                                .padding(.bottom, Theme.Space.xs)
-                                .padding(.leading, SessionRow.rowPadding)
-                            }
-                        case .month(let date):
-                            TimelineLine(above: above, below: below, month: date) { Color.clear.frame(height: 18) }
-                        case .exam(let exam, let date):
-                            TimelineLine(above: above, below: below, marker: true) {
-                                Text((exam.title.isEmpty ? exam.kind.label : exam.title) + " · " + date.formatted(.dateTime.month().day().weekday()))
-                                    .font(Theme.Typeface.label).foregroundStyle(Theme.Palette.danger)
-                                    .padding(.vertical, Theme.Space.m).padding(.leading, SessionRow.rowPadding)
-                            }
-                        case .session(let session):
-                            let end = session.end(schedule: file.course.schedule, calendar: workspace.calendar)
-                            TimelineView(.periodic(from: .now, by: 30)) { context in
-                                SessionRow(course: course, session: session, now: context.date, end: end, openNote: openNote, above: above, below: below)
-                            }
-                            .fileDrop { workspace.importFiles($0, into: CourseFolder.lectures.rawValue, week: session.week, session: session.id, course: course.id) }
-                        }
-                    }
+                    ForEach(rows) { row in line(row, file: file) }
                 }
             }
         }
-        .sheet(isPresented: $editingTimes) { ClassTimesSheet(course: course) }
+        .sheet(isPresented: $editingTimes) { ClassTimesSheet(workspace: model.workspace, course: course) }
         .sheet(isPresented: $adding) { AddSessionSheet(course: course) }
-        // Reads the course's notes from disk, so not on every redraw.
-        .task(id: file.sessions) { untouched = workspace.untouchedFutureSessions(course, now: .now) }
+        .task(id: file.sessions) { model.loadUntouched(course) }
     }
 
-    /// Weeks, their sessions and the midterm and final where they fall, flattened so each line knows its neighbors.
-    func timeline(weeks: [[Session]], exams: [(exam: Exam, date: Date)]) -> [TimelineItem] {
-        var items: [TimelineItem] = []
-        var after = Date.distantPast
-        let cal = workspace.calendar
-        var month: Int?
-        // The gutter shows only the day, so the month is marked where it changes: on the week's line, or on a line of
-        // its own when it turns partway through a week.
-        func opens(_ date: Date) -> Bool {
-            let m = cal.component(.year, from: date) * 12 + cal.component(.month, from: date)
-            defer { month = m }
-            return m != month
-        }
-        for sessions in weeks {
-            items += exams.filter { $0.date > after && $0.date <= sessions[0].date }.map { .exam($0.exam, $0.date) }
-            items.append(.week(sessions, month: opens(sessions[0].date) ? sessions[0].date : nil))
-            for (i, s) in sessions.enumerated() {
-                if i > 0 && opens(s.date) { items.append(.month(s.date)) }
-                items.append(.session(s))
+    @ViewBuilder func line(_ row: SessionsModel.TimelineRow, file: CourseFile) -> some View {
+        let (above, below) = (row.above, row.below)
+        switch row.item {
+        case .week(let sessions, let month):
+            let thisWeek = model.isThisWeek(sessions[0].date)
+            // Quieter than a session's title: it only divides; the dates are in the gutter.
+            TimelineLine(above: above, below: below, month: month) {
+                HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
+                    Text(.sessionsWeek(sessions[0].week)).font(Theme.Typeface.caption.weight(.semibold))
+                        .foregroundStyle(thisWeek ? accent.ink : Theme.Palette.textTertiary)
+                    if thisWeek { Chip(String(localized: .sessionsThisWeek), tone: .accent) }
+                }
+                .padding(.top, row.first ? Theme.Space.s : Theme.Space.l)
+                .padding(.bottom, Theme.Space.xs)
+                .padding(.leading, SessionRow.rowPadding)
             }
-            after = sessions.last!.date
+        case .month(let date):
+            TimelineLine(above: above, below: below, month: date) { Color.clear.frame(height: 18) }
+        case .exam(let exam, let date):
+            TimelineLine(above: above, below: below, marker: true) {
+                Text(model.examLine(exam, date))
+                    .font(Theme.Typeface.label).foregroundStyle(Theme.Palette.danger)
+                    .padding(.vertical, Theme.Space.m).padding(.leading, SessionRow.rowPadding)
+            }
+        case .session(let session):
+            let end = model.end(of: session, in: file)
+            TimelineView(.periodic(from: .now, by: 30)) { context in
+                SessionRow(model: model, course: course, session: session, now: context.date, end: end, openNote: openNote, above: above, below: below)
+            }
+            .fileDrop { model.importFiles($0, into: session) }
         }
-        return items + exams.filter { $0.date > after }.map { .exam($0.exam, $0.date) }
     }
 
-    /// The weekly times are a course property, edited with the rest of the course; here they only suggest sessions.
-    func schedule(_ file: CourseFile) -> some View {
-        let slots = file.course.schedule
-        let summary = slots.map { "\(ClassTime.weekdayNames[$0.weekday - 1]) \(TimeMenu.range($0.startMinute, $0.endMinute))" + ($0.room.isEmpty ? "" : " \($0.room)") }
-        return Card {
+    /// Shown only while the course has no weekly times. They are a course property, edited with the rest of the
+    /// course; here they only suggest sessions.
+    var schedule: some View {
+        Card {
             CardRow(last: true) {
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text("수업 시간")
-                    Text(slots.isEmpty ? "수업 시간을 넣으면 다음 강의를 회차로 제안합니다" : summary.joined(separator: " · "))
+                    Text(.sessionsClassTimes)
+                    Text(.sessionsClassTimesEmpty)
                         .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                 }
                 Spacer(minLength: Theme.Space.m)
-                Button(slots.isEmpty ? "수업 시간 넣기" : "바꾸기") { editingTimes = true }.buttonStyle(.ghost)
+                Button(.sessionsClassTimesAdd) { editingTimes = true }.buttonStyle(.ghost)
             }
             .contentShape(.rect)
-            .contextMenu { Button(slots.isEmpty ? "수업 시간 넣기…" : "수업 시간 바꾸기…") { editingTimes = true } }
+            .contextMenu { Button(.sessionsClassTimesAddEllipsis) { editingTimes = true } }
         }
     }
 
     /// Left over from when whole terms were made ahead; deleted only once the user agrees.
     var untouchedCard: some View {
-        let shown = untouched.prefix(4)
-        return NoticeCard(title: "미리 만든 빈 회차 \(untouched.count)개",
-                          detail: "노트, 녹음, 출석, 자료, 단원이 하나도 연결되지 않은 앞으로의 회차입니다. 지우면 수업 때마다 제안되는 회차로 만들면 됩니다.",
+        let shown = model.untouchedShown
+        return NoticeCard(title: String(localized: .sessionsUntouchedTitle(model.untouched.count)),
+                          detail: String(localized: .sessionsUntouchedDetail),
                           systemImage: "calendar.badge.minus") {
-            Button("지우기…") { confirmingDelete = true }.buttonStyle(.pointing(.bordered))
+            Button(.sessionsRemoveEllipsis) { confirmingDelete = true }.buttonStyle(.pointing(.bordered))
         } rows: {
             ForEach(Array(shown.enumerated()), id: \.element.id) { i, s in
-                CardRow(last: i == shown.count - 1 && untouched.count <= shown.count) {
+                CardRow(last: i == shown.count - 1 && model.untouchedMore == 0) {
                     Text(s.date.formatted(.dateTime.month().day().weekday().hour().minute())).monospacedDigit()
                     Spacer()
                     Text(course.file.name(of: s)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                 }
             }
-            if untouched.count > shown.count {
-                CardRow(last: true) { EmptyLine("외 \(untouched.count - shown.count)개") }
+            if model.untouchedMore > 0 {
+                CardRow(last: true) { EmptyLine(String(localized: .commonMoreCount(model.untouchedMore))) }
             }
         }
-        .confirmationDialog("빈 회차 \(untouched.count)개를 지울까요?", isPresented: $confirmingDelete) {
-            Button("지우기", role: .destructive) {
-                let ids = Set(untouched.map(\.id))
-                workspace.run(SessionRemove(course: course.id, sessions: Array(ids)))
-            }
+        .confirmationDialog(String(localized: .sessionsUntouchedConfirm(model.untouched.count)), isPresented: $confirmingDelete) {
+            Button(.sessionsRemove, role: .destructive) { model.removeUntouched() }
         } message: {
-            Text("연결된 것이 없는 회차만 지웁니다.")
+            Text(.sessionsUntouchedConfirmMessage)
         }
     }
 }
@@ -175,7 +146,7 @@ struct SuggestedSessionRow: View {
                 Text(date.formatted(date: .omitted, time: .shortened)).timeColumn().font(Theme.Typeface.caption).monospacedDigit().fixedSize()
                 CourseDot(color: workspace.accent(item.courseId).color)
                 Text("\(workspace.course(item.courseId)?.title ?? "") · \(item.name)").lineLimit(1)
-                    .help("시간표로 제안한 회차")
+                    .help(Text(.sessionsSuggested))
             } else {
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     Text(date.formatted(.dateTime.month().day())).font(Theme.Typeface.bodyStrong).monospacedDigit()
@@ -183,7 +154,7 @@ struct SuggestedSessionRow: View {
                 }
                 .frame(width: 96, alignment: .leading)
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text("강의").font(Theme.Typeface.bodyStrong)
+                    Text(.sessionsLecture).font(Theme.Typeface.bodyStrong)
                     Text(item.name + (item.suggestion.room.isEmpty ? "" : " · \(item.suggestion.room)"))
                         .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                 }
@@ -214,12 +185,12 @@ struct SuggestedSessionActions: View {
         HStack(spacing: Theme.Space.s) {
             if today {
                 Button { SuggestedSessionItems.roughNote(item, workspace, openNote) } label: {
-                    if compact { Image(systemName: "square.and.pencil").accessibilityLabel("러프 노트") } else { Text("러프 노트") }
+                    if compact { Image(systemName: "square.and.pencil").accessibilityLabel(Text(.sessionsRoughNote)) } else { Text(.sessionsRoughNote) }
                 }
                 .buttonStyle(.pointing(.borderedProminent))
-                .help("회차를 만들고 러프 노트를 엽니다")
+                .help(Text(.sessionsRoughNoteHelp))
             } else {
-                Button("만들기") { SuggestedSessionItems.make(item, workspace) }.buttonStyle(.pointing(.bordered))
+                Button(.sessionsMake) { SuggestedSessionItems.make(item, workspace) }.buttonStyle(.pointing(.bordered))
             }
             Menu { SuggestedSessionItems(item: item, primary: false, openNote: openNote, editTimes: editTimes) } label: {
                 Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary).frame(width: 24, height: 24).contentShape(.rect)
@@ -228,7 +199,7 @@ struct SuggestedSessionActions: View {
             .menuIndicator(.hidden)
             .buttonStyle(.borderless).pointingHand()
             .fixedSize()
-            .help("녹음, 결석, 휴강")
+            .help(Text(.sessionsSuggestionMenuHelp))
         }
     }
 }
@@ -244,20 +215,20 @@ struct SuggestedSessionItems: View {
     var body: some View {
         let today = workspace.isStudyToday(item.suggestion.date)
         if primary {
-            if today { Button("러프 노트 열기") { Self.roughNote(item, workspace, openNote) } } else { Button("회차 만들기") { Self.make(item, workspace) } }
+            if today { Button(.sessionsOpenRoughNote) { Self.roughNote(item, workspace, openNote) } } else { Button(.sessionsMakeSession) { Self.make(item, workspace) } }
         }
-        if today { Button("회차만 만들기") { Self.make(item, workspace) } }
-        Button("녹음 시작 (한국어)") { record(Locale(identifier: "ko-KR")) }.disabled(workspace.recorder.isActive)
-        Button("녹음 시작 (영어)") { record(Locale(identifier: "en-US")) }.disabled(workspace.recorder.isActive)
+        if today { Button(.sessionsMakeSessionOnly) { Self.make(item, workspace) } }
+        Button(.sessionsRecordKorean) { record(Locale(identifier: "ko-KR")) }.disabled(workspace.recorder.isActive)
+        Button(.sessionsRecordEnglish) { record(Locale(identifier: "en-US")) }.disabled(workspace.recorder.isActive)
         Divider()
         // An absence known ahead makes the session, like 휴강 does, so it has something to hang on.
-        Button("결석으로 표시") { mark(.absent) }
-        Button("공결로 표시") { mark(.excused) }
+        Button(.sessionsMarkAbsent) { mark(.absent) }
+        Button(.sessionsMarkExcused) { mark(.excused) }
         Divider()
-        Button("휴강") { Self.make(item, workspace, cancelled: true) }
+        Button(.sessionsCancelled) { Self.make(item, workspace, cancelled: true) }
         if let editTimes {
             Divider()
-            Button("수업 시간 바꾸기…", action: editTimes)
+            Button(.sessionsClassTimesChangeEllipsis, action: editTimes)
         }
     }
 
@@ -293,9 +264,9 @@ struct AddSessionSheet: View {
     }
 
     var body: some View {
-        SheetForm(title: "회차 추가", confirm: "추가") {
-            FormRow(label: "날짜") { DateChip(date: $date) }
-            FormRow(label: "휴강", last: true) { Switch(isOn: $cancelled) }
+        SheetForm(title: String(localized: .sessionsAdd), confirm: String(localized: .commonAdd)) {
+            FormRow(label: String(localized: .sessionsDate)) { DateChip(date: $date) }
+            FormRow(label: String(localized: .sessionsCancelled), last: true) { Switch(isOn: $cancelled) }
         } onConfirm: {
             workspace.createSession(at: date, cancelled: cancelled, in: course.id)
             dismiss()
@@ -321,11 +292,11 @@ struct SessionUnitsPicker: View {
             SearchPicker(options: UnitTree.outline(file.units).map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) },
                          isSelected: { id in linked.contains { $0.id == id } },
                          pick: { id in workspace.run(UnitLink(course: course.id, unit: id, sessions: [session.id], linked: !session.unitIds.contains(id))) },
-                         multiple: true, prompt: "단원 검색", flexible: true) {
+                         multiple: true, prompt: String(localized: .sessionsUnitsSearch), flexible: true) {
                 HStack(spacing: Theme.Space.xs) {
                     Image(systemName: missing ? "exclamationmark.triangle.fill" : linked.isEmpty ? "plus" : "link")
                     if !compact {
-                        Text(shown.isEmpty ? (missing ? "단원 연결 필요" : "단원 연결") : shown.map(\.title).joined(separator: " · "))
+                        Text(shown.isEmpty ? String(localized: missing ? .sessionsUnitsNeeded : .sessionsUnitsLink) : shown.map(\.title).joined(separator: " · "))
                             .lineLimit(1).truncationMode(.tail)
                     }
                 }
@@ -334,35 +305,7 @@ struct SessionUnitsPicker: View {
                 .contentShape(.rect)
             }
             // The label truncates on a narrow row, so the tooltip carries every title.
-            .help(missing ? "연결된 단원이 없어 이 수업은 단원 복습에 잡히지 않습니다" : shown.isEmpty ? "이 회차가 다룬 단원" : shown.map(\.title).joined(separator: "\n"))
-        }
-    }
-}
-
-enum TimelineItem: Identifiable {
-    /// With the month when the week opens one.
-    case week([Session], month: Date?)
-    /// A month that begins partway through a week.
-    case month(Date)
-    case exam(Exam, Date)
-    case session(Session)
-
-    var id: String {
-        switch self {
-        case .week(let s, _): "week-\(s[0].week)"
-        case .month(let d): "month-\(d.timeIntervalSinceReferenceDate)"
-        case .exam(let e, _): "exam-\(e.id)"
-        case .session(let s): s.id.uuidString
-        }
-    }
-
-    /// Already reached, judged at draw time; the rail is colored up to here.
-    var held: Bool {
-        switch self {
-        case .week(let s, _): s[0].date <= .now
-        case .month(let d): d <= .now
-        case .exam(_, let d): d <= .now
-        case .session(let s): s.date <= .now
+            .help(missing ? String(localized: .sessionsUnitsMissingHelp) : shown.isEmpty ? String(localized: .sessionsUnitsHelp) : shown.map(\.title).joined(separator: "\n"))
         }
     }
 }
@@ -425,8 +368,8 @@ struct Rail<Dot: View>: View {
 /// Date, what the class covered, then only the notes that exist. Creating notes, attendance and cancelling live in one menu,
 /// except today's rough note, which is a single click away (docs/SPEC.md "강의 회차").
 struct SessionRow: View {
-    @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
+    let model: SessionsModel
     let course: LoadedCourse
     let session: Session
     var now = Date.now
@@ -447,14 +390,13 @@ struct SessionRow: View {
     static let dotY: CGFloat = rowPadding + 10
 
     var body: some View {
-        let cancelled = session.isCancelled
-        let ongoing = !cancelled && end.map { now >= session.date && now < $0 } ?? false
+        let ongoing = model.isOngoing(session, end: end, now: now)
         let ahead = session.date > now
         HStack(alignment: .top, spacing: 0) {
             // The day large, the weekday under it; the month is marked on the timeline where it changes.
             VStack(spacing: 0) {
                 // The bare number: Korean's day format adds 일.
-                Text("\(workspace.calendar.component(.day, from: session.date))").font(Theme.Typeface.figureMedium.weight(.semibold)).monospacedDigit()
+                Text("\(model.calendar.component(.day, from: session.date))").font(Theme.Typeface.figureMedium.weight(.semibold)).monospacedDigit()
                     .foregroundStyle(ongoing ? accent.ink : Theme.Palette.text)
                 Text(session.date.formatted(.dateTime.weekday())).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
             }
@@ -462,7 +404,7 @@ struct SessionRow: View {
             .padding(.top, Self.rowPadding - 2)
             .opacity(ahead ? 0.55 : 1)
             Rail(above: above, below: below, dotY: Self.dotY) {
-                dot(progress: ongoing ? end.map { now.timeIntervalSince(session.date) / $0.timeIntervalSince(session.date) } : nil, ahead: ahead, cancelled: cancelled)
+                dot(progress: model.progress(session, end: end, now: now), ahead: ahead, cancelled: session.isCancelled)
             }
             // One stack, so a right click anywhere on the row opens the ⋯ menu's items.
             HStack(alignment: .top, spacing: Theme.Space.m) { row }
@@ -475,43 +417,28 @@ struct SessionRow: View {
     }
 
     @ViewBuilder var row: some View {
-        let recordings = course.file.recordings.filter { $0.sessionId == session.id }
-        let recorder = workspace.recorder
+        let file = course.file
+        let recordings = model.recordings(of: session, in: file)
+        let recorder = model.workspace.recorder
         let recordingThis = recorder.isActive && recordings.contains { $0.id == recorder.recording?.id }
-        let attendance = course.file.attendance.first { $0.sessionId == session.id }?.state ?? .present
-        let calendar = workspace.calendar
         let cancelled = session.isCancelled
-        // Sessions imported from Notion carry a date only, stored at midnight.
-        let timeKnown = calendar.dateComponents([.hour, .minute], from: session.date) != DateComponents(hour: 0, minute: 0)
-        let today = workspace.isStudyToday(session.date)
-        let late = cancelled ? nil : AttendanceState.steps.first { $0.value == attendance && attendance != .present }
-        let ongoing = !cancelled && end.map { now >= session.date && now < $0 } ?? false
+        let today = model.isToday(session.date)
+        let late = model.lateMark(session, in: file)
         // Classes still ahead are drawn faint, like the suggested one, so the held ones read as the record.
         let ahead = session.date > now
-        let time = calendar.dateComponents([.hour, .minute], from: session.date)
-        let clock = timeKnown ? TimeMenu.label((time.hour ?? 0) * 60 + (time.minute ?? 0)) : ""
-        // The date and weekday are in the gutter, so the line under the title carries only the time and how far off.
-        let when: String? = ahead ? Self.ahead(session.date, clock: clock, now: now, calendar: calendar) : clock.isEmpty ? nil : clock
-        // The title says what the class covered: its topic, else its units, else its name (9주차-1), which only repeats
-        // the week line and otherwise lives in the tooltip. The kind (실험) is left out: a lab is a class like any other.
-        let name = course.file.name(of: session)
-        let units = UnitTree.deepest(course.file.units(of: session), in: course.file.units)
-        let title = !session.topic.isEmpty ? session.topic : !units.isEmpty ? units.map(\.title).joined(separator: " · ") : name
-        // Units that only restate the title (Lab04 Thin-layer chromatography under Thin-layer chromatography) shrink to their icon.
-        let unitsInTitle = !units.isEmpty && units.allSatisfy { session.topic.isEmpty || $0.title.localizedCaseInsensitiveContains(session.topic) || session.topic.localizedCaseInsensitiveContains($0.title) }
-        let left = ongoing ? end.map { Text("\(Int($0.timeIntervalSince(now) / 60) + 1)분 남음").fontWeight(.semibold).foregroundStyle(accent.ink) } : nil
+        let left = model.isOngoing(session, end: end, now: now)
+            ? end.map { Text(model.minutesLeft(until: $0, now: now)).fontWeight(.semibold).foregroundStyle(accent.ink) } : nil
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
             HStack(spacing: Theme.Space.s) {
-                Text(title).font(Theme.Typeface.bodyStrong).lineLimit(1).help(name)
+                Text(model.title(of: session, in: file)).font(Theme.Typeface.bodyStrong).lineLimit(1).help(file.name(of: session))
                     .strikethrough(cancelled).foregroundStyle(cancelled ? Theme.Palette.textTertiary : Theme.Palette.text)
-                // Only a class missed or late: present is the rule and says nothing.
                 if let late { Text(late.label).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(late.tint).fixedSize() }
             }
             HStack(spacing: Theme.Space.s) {
-                if let line = left ?? when.map({ Text($0) }) {
+                if let line = left ?? model.when(session, now: now).map({ Text($0) }) {
                     line.font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit().lineLimit(1).fixedSize()
                 }
-                if !cancelled { SessionUnitsPicker(course: course, session: session, compact: unitsInTitle) }
+                if !cancelled { SessionUnitsPicker(course: course, session: session, compact: model.unitsInTitle(session, in: file)) }
             }
         }
         // Takes the room the fixed slots leave, so the topic and units truncate before anything else moves.
@@ -520,15 +447,17 @@ struct SessionRow: View {
         if !cancelled {
             HStack(spacing: Theme.Space.s) {
                 if recordingThis {
-                    Label("녹음 중", systemImage: "waveform").foregroundStyle(Theme.Palette.danger)
+                    Label(.sessionsRecording, systemImage: "waveform").foregroundStyle(Theme.Palette.danger)
                         .symbolEffect(.variableColor.iterative, isActive: recorder.state == .recording)
                 } else if let last = recordings.last {
-                    SessionSlot(recordings.count > 1 ? "녹음 \(recordings.count)" : "녹음", symbol: "waveform", help: "녹음 듣기와 받아쓰기", fixed: false) { playing = last }
+                    SessionSlot(model.recordingsLabel(recordings.count), symbol: "waveform", help: String(localized: .sessionsRecordingPlayHelp), fixed: false) { playing = last }
                 } else if today && !recorder.isActive {
-                    SessionSlot("녹음", symbol: "record.circle", help: "이 수업을 녹음하고 받아씁니다", fixed: false) { record(Locale(identifier: "ko-KR")) }
+                    SessionSlot(String(localized: .sessionsRecordingShort), symbol: "record.circle", help: String(localized: .sessionsRecordHelp), fixed: false) {
+                        model.record(session, locale: Locale(identifier: "ko-KR"))
+                    }
                 }
                 // No empty recording slot: it sits leftmost, so the note slots line up without it and the topic keeps the room.
-                SessionNoteSlots(file: course.file, session: session, offersRough: today, openNote: openNote, create: open)
+                SessionNoteSlots(file: file, session: session, offersRough: today, openNote: openNote, create: open)
             }
         }
         Menu { menuItems } label: {
@@ -538,54 +467,46 @@ struct SessionRow: View {
         .menuIndicator(.hidden)
         .buttonStyle(.borderless).pointingHand()
         .fixedSize()
-        .help("노트, 출석, 녹음, 종류, 삭제")
-        .confirmationDialog("\(course.file.name(of: session)) 회차를 지울까요?", isPresented: $confirmingDelete) {
-            Button("지우기", role: .destructive) {
-                workspace.run(SessionRemove(course: course.id, sessions: [session.id]))
-            }
+        .help(Text(.sessionsMenuHelp))
+        .confirmationDialog(model.removeConfirmation(session, in: file), isPresented: $confirmingDelete) {
+            Button(.sessionsRemove, role: .destructive) { model.remove(session) }
         } message: {
-            Text("같은 주의 다른 회차 번호는 그대로입니다.")
+            Text(.sessionsRemoveMessage)
         }
-        .alert("이 회차는 지울 수 없습니다", isPresented: Binding(get: { deleteRefusal != nil }, set: { if !$0 { deleteRefusal = nil } })) {
-            Button("확인", role: .cancel) {}
+        .alert(Text(.sessionsRemoveRefused), isPresented: Binding(get: { deleteRefusal != nil }, set: { if !$0 { deleteRefusal = nil } })) {
+            Button(.commonOk, role: .cancel) {}
         } message: {
             Text(deleteRefusal ?? "")
         }
-        .sheet(item: $playing) { RecordingPlayer(courseId: course.id, store: course.store, recording: $0, title: "\(course.file.course.title) · \(course.file.name(of: session))") }
+        .sheet(item: $playing) { RecordingPlayer(workspace: model.workspace, courseId: course.id, store: course.store, recording: $0, title: model.playerTitle(session, in: file)) }
     }
 
     @ViewBuilder var menuItems: some View {
-        let recordings = course.file.recordings.filter { $0.sessionId == session.id }
-        let recorder = workspace.recorder
-        let attendance = course.file.attendance.first { $0.sessionId == session.id }?.state ?? .present
-        let cancelled = session.isCancelled
-        let takesAttendance = workspace.can(AttendanceSet(course: course.id, session: session.id, state: .absent))
-        Button(session.roughNoteId == nil ? "러프 노트 만들기" : "러프 노트 열기") { open(.rough) }
-        Button(session.reviewNoteId == nil ? "복습 노트 만들기" : "복습 노트 열기") { open(.review) }
-        Toggle("복습 필요 없음", isOn: Binding(get: { session.skipsReview }, set: { workspace.setSkipsReview($0, of: session.id, in: course.id) }))
+        let recordings = model.recordings(of: session, in: course.file)
+        let recorder = model.workspace.recorder
+        let attendance = model.attendance(of: session, in: course.file)
+        Button(String(localized: session.roughNoteId == nil ? .sessionsMakeRoughNote : .sessionsOpenRoughNote)) { open(.rough) }
+        Button(String(localized: session.reviewNoteId == nil ? .sessionsMakeReviewNote : .sessionsOpenReviewNote)) { open(.review) }
+        Toggle(String(localized: .sessionsSkipsReview), isOn: Binding(get: { session.skipsReview }, set: { model.setSkipsReview($0, of: session) }))
         // Also ahead of the class, for an absence known in advance; it counts toward the caps once the class starts.
-        if takesAttendance {
-            Picker("출석", selection: Binding(get: { attendance }, set: setAttendance)) {
+        if model.takesAttendance(session) {
+            Picker(String(localized: .sessionsAttendance), selection: Binding(get: { attendance }, set: { model.setAttendance($0, of: session) })) {
                 ForEach(AttendanceState.steps, id: \.value) { Text($0.label).tag($0.value) }
             }
         }
         Divider()
-        Button("녹음 시작 (한국어)") { record(Locale(identifier: "ko-KR")) }.disabled(recorder.isActive)
-        Button("녹음 시작 (영어)") { record(Locale(identifier: "en-US")) }.disabled(recorder.isActive)
+        Button(.sessionsRecordKorean) { model.record(session, locale: Locale(identifier: "ko-KR")) }.disabled(recorder.isActive)
+        Button(.sessionsRecordEnglish) { model.record(session, locale: Locale(identifier: "en-US")) }.disabled(recorder.isActive)
         ForEach(Array(recordings.enumerated()), id: \.element.id) { i, r in
-            Button("녹음 \(i + 1) 듣기 (\(RecordingTime.label(r.duration)))") { playing = r }
+            Button(model.playLabel(i, r)) { playing = r }
         }
         Divider()
-        Toggle("휴강", isOn: Binding(get: { cancelled }, set: { workspace.run(SessionSet(course: course.id, session: session.id, cancelled: .set($0))) }))
+        Toggle(String(localized: .sessionsCancelled), isOn: Binding(get: { session.isCancelled }, set: { model.setCancelled($0, of: session) }))
         Divider()
-        Button("회차 삭제…", role: .destructive) {
-            deleteRefusal = workspace.refusal(SessionRemove(course: course.id, sessions: [session.id]))
+        Button(.sessionsRemoveSessionEllipsis, role: .destructive) {
+            deleteRefusal = model.removalRefusal(session)
             if deleteRefusal == nil { confirmingDelete = true }
         }
-    }
-
-    func record(_ locale: Locale) {
-        workspace.record(session.id, in: course.id, locale: locale)
     }
 
     /// Filled in the course color once held, hollow while ahead or cancelled, and while under way a ring filling round as
@@ -609,21 +530,8 @@ struct SessionRow: View {
         }
     }
 
-    static func ahead(_ date: Date, clock: String, now: Date, calendar: Calendar) -> String {
-        let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: date)).day ?? 0
-        switch days {
-        case 0: return "오늘 \(clock)"
-        case 1: return "내일 \(clock)"
-        default: return "\(days)일 후"
-        }
-    }
-
     func open(_ kind: NoteKind) {
-        if let id = workspace.note(kind, of: session.id, in: course.id) { openNote(id) }
-    }
-
-    func setAttendance(_ state: AttendanceState) {
-        workspace.run(AttendanceSet(course: course.id, session: session.id, state: state))
+        if let id = model.note(kind, of: session) { openNote(id) }
     }
 }
 
@@ -674,23 +582,24 @@ struct SessionNoteSlots: View {
     var body: some View {
         HStack(spacing: Theme.Space.s) {
             if let id = session.roughNoteId {
-                SessionSlot("러프", symbol: "doc.text", help: "러프 노트 열기") { openNote(id) }
+                SessionSlot(String(localized: .sessionsSlotRough), symbol: "doc.text", help: String(localized: .sessionsOpenRoughNote)) { openNote(id) }
             } else if offersRough {
-                SessionSlot("러프", symbol: "plus", tint: accent.ink, help: "러프 노트를 만듭니다") { create(.rough) }
+                SessionSlot(String(localized: .sessionsSlotRough), symbol: "plus", tint: accent.ink, help: String(localized: .sessionsSlotRoughMakeHelp)) { create(.rough) }
             } else {
                 SessionSlot.empty
             }
             if let id = session.reviewNoteId {
                 // Made but not written yet: still in the missing note's warning color.
                 if session.reviewNoteUnfinished {
-                    SessionSlot("복습", symbol: "square.and.pencil", tint: Theme.Palette.warning, help: "복습 노트 열기 · 작성 중") { openNote(id) }
+                    SessionSlot(String(localized: .sessionsSlotReview), symbol: "square.and.pencil", tint: Theme.Palette.warning,
+                                help: String(localized: .sessionsSlotReviewDraftHelp)) { openNote(id) }
                 } else {
-                    SessionSlot("복습", symbol: "doc.text", help: "복습 노트 열기") { openNote(id) }
+                    SessionSlot(String(localized: .sessionsSlotReview), symbol: "doc.text", help: String(localized: .sessionsOpenReviewNote)) { openNote(id) }
                 }
             } else if file.needsReviewNote(session, at: .now) {
-                SessionSlot("복습", symbol: "plus", tint: Theme.Palette.warning, help: "복습 노트를 만듭니다") { create(.review) }
+                SessionSlot(String(localized: .sessionsSlotReview), symbol: "plus", tint: Theme.Palette.warning, help: String(localized: .sessionsSlotReviewMakeHelp)) { create(.review) }
             } else if session.skipsReview {
-                Text("복습 없음").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                Text(.sessionsSlotNoReview).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                     .frame(width: SessionSlot.width, alignment: .trailing)
             } else {
                 SessionSlot.empty
@@ -701,19 +610,18 @@ struct SessionNoteSlots: View {
 
 extension AttendanceState {
     @MainActor static let steps: [StepToggle<AttendanceState>.Option] = [
-        .init(value: .present, label: "출석", tint: Theme.Palette.success),
-        .init(value: .late, label: "지각", tint: Theme.Palette.warning),
-        .init(value: .absent, label: "결석", tint: Theme.Palette.danger),
-        .init(value: .excused, label: "공결", tint: Theme.Palette.textSecondary),
+        .init(value: .present, label: String(localized: .attendancePresent), tint: Theme.Palette.success),
+        .init(value: .late, label: String(localized: .attendanceLate), tint: Theme.Palette.warning),
+        .init(value: .absent, label: String(localized: .attendanceAbsent), tint: Theme.Palette.danger),
+        .init(value: .excused, label: String(localized: .attendanceExcused), tint: Theme.Palette.textSecondary),
     ]
 
     var label: String {
         switch self {
-        case .present: "출석"
-        case .late: "지각"
-        case .absent: "결석"
-        case .excused: "공결"
+        case .present: String(localized: .attendancePresent)
+        case .late: String(localized: .attendanceLate)
+        case .absent: String(localized: .attendanceAbsent)
+        case .excused: String(localized: .attendanceExcused)
         }
     }
 }
-

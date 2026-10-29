@@ -18,33 +18,12 @@ extension Workspace {
         }
     }
 
-    struct StudyBar: Identifiable, Sendable {
-        var id: String { "\(day)-\(courseId)" }
-        var day: LocalDate
-        var courseId: UUID
-        var seconds: TimeInterval
-    }
-
-    func recentStudyTime(days: Int, now: Date) async -> [StudyBar] {
-        let stores = currentCourses.map { ($0.id, $0.store) }
-        let settings = settings, calendar = calendar
-        let first = settings.studyDay(of: now, calendar: calendar).adding(days: -(days - 1))
-        return await Task.detached {
-            stores.flatMap { id, store in
-                let sessions = ((try? store.log.readAll()) ?? []).events(StudySessionEvent.self).map(\.event)
-                return StudyTime.perDay(sessions, settings: settings, calendar: calendar)
-                    .filter { $0.key >= first }
-                    .map { StudyBar(day: $0.key, courseId: id, seconds: $0.value) }
-            }
-        }.value
-    }
-
     // MARK: Catalog
 
     /// Saves catalog.json; rows that changed are stamped as edited from this device. Unknown keys in the file are kept.
     func saveCatalog(_ new: Catalog) {
         guard catalogLoaded else {
-            error = "catalog.json을 읽지 못해 저장하지 않았습니다. 파일을 확인한 뒤 다시 읽기를 누르세요."
+            error = String(localized: .workspaceCatalogUnreadable)
             return
         }
         run(CatalogSet(catalog: new))
@@ -70,7 +49,7 @@ extension Workspace {
             try await Task.detached { try BackupCreate().run(ActionContext(gist: gist, device: device, calendar: calendar)) }.value
             return true
         } catch {
-            self.error = "백업하지 못했습니다: \(error)"
+            self.error = String(localized: .workspaceBackupFailed("\(error)"))
             return false
         }
     }
@@ -94,7 +73,7 @@ extension Workspace {
             }.value
             return notes.last.map { URL(filePath: $0, directoryHint: .isDirectory) }
         } catch {
-            self.error = "복원하지 못했습니다: \(error)"
+            self.error = String(localized: .workspaceRestoreFailed("\(error)"))
             return nil
         }
     }

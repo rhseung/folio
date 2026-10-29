@@ -1,11 +1,28 @@
 import FolioDomain
 import SwiftUI
 
-enum CourseSection: String, CaseIterable, Identifiable {
-    case overview = "개요", sessions = "회차", units = "단원", notes = "노트", materials = "자료"
-    case quizSolve = "풀기", quizCards = "카드", quizStats = "오답과 통계", quizProblems = "문제 묶음"
-    case assignments = "과제", exams = "시험", grades = "성적"
+enum CourseSection: CaseIterable, Identifiable {
+    case overview, sessions, units, notes, materials
+    case quizSolve, quizCards, quizStats, quizProblems
+    case assignments, exams, grades
     var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .overview: String(localized: .courseSectionOverview)
+        case .sessions: String(localized: .courseSectionSessions)
+        case .units: String(localized: .courseSectionUnits)
+        case .notes: String(localized: .courseSectionNotes)
+        case .materials: String(localized: .courseSectionMaterials)
+        case .quizSolve: String(localized: .courseSectionQuizSolve)
+        case .quizCards: String(localized: .courseSectionQuizCards)
+        case .quizStats: String(localized: .courseSectionQuizStats)
+        case .quizProblems: String(localized: .courseSectionQuizProblems)
+        case .assignments: String(localized: .courseSectionAssignments)
+        case .exams: String(localized: .courseSectionExams)
+        case .grades: String(localized: .courseSectionGrades)
+        }
+    }
 
     var tab: CourseTab {
         switch self {
@@ -19,11 +36,22 @@ enum CourseSection: String, CaseIterable, Identifiable {
     }
 }
 
-enum CourseTab: String, CaseIterable, Identifiable {
-    case overview = "개요", classes = "수업", notes = "노트", materials = "자료", quiz = "퀴즈", assessment = "평가"
+enum CourseTab: CaseIterable, Identifiable {
+    case overview, classes, notes, materials, quiz, assessment
     var id: Self { self }
 
     var pages: [CourseSection] { CourseSection.allCases.filter { $0.tab == self } }
+
+    var title: String {
+        switch self {
+        case .overview: String(localized: .courseTabOverview)
+        case .classes: String(localized: .courseTabClasses)
+        case .notes: String(localized: .courseTabNotes)
+        case .materials: String(localized: .courseTabMaterials)
+        case .quiz: String(localized: .courseTabQuiz)
+        case .assessment: String(localized: .courseTabAssessment)
+        }
+    }
 
     var symbol: String {
         switch self {
@@ -38,22 +66,20 @@ enum CourseTab: String, CaseIterable, Identifiable {
 }
 
 struct CourseView: View {
-    @Environment(Workspace.self) private var workspace
-    let courseID: UUID
-    @State private var section: CourseSection = .overview
-    @State private var openNote: UUID?
+    @State private var model: CourseModel
     @State private var showClaude = false
-    /// An answer the Claude panel puts at the end of the open note; the editor takes it and clears it.
-    @State private var noteInsert: String?
     @State private var claudeWidth = Theme.Size.claudePanel
     @State private var pageReset = 0
     @State private var claudeDragBase: CGFloat?
     @Environment(\.searchTarget) private var searchTarget
 
+    init(workspace: Workspace, courseID: UUID) {
+        _model = State(initialValue: CourseModel(workspace: workspace, courseId: courseID))
+    }
+
     func claude(_ course: LoadedCourse) -> some View {
-        ClaudePanel(course: course, openNote: section == .notes ? openNote : nil, insertIntoNote: { noteInsert = $0 }) {
-            openNote = $0
-            section = .notes
+        ClaudePanel(workspace: model.workspace, course: course, openNote: model.section == .notes ? model.openNote : nil, insertIntoNote: { model.noteInsert = $0 }) {
+            model.show(note: $0)
         }
     }
 
@@ -77,15 +103,15 @@ struct CourseView: View {
             Button { showClaude.toggle() } label: {
                 Image(systemName: showClaude ? "xmark" : "sparkle")
                     .font(Theme.Glyph.fab)
-                    .foregroundStyle(showClaude ? Theme.Palette.textSecondary : workspace.accent(courseID).color)
+                    .foregroundStyle(showClaude ? Theme.Palette.textSecondary : model.accent.color)
                     .contentTransition(.symbolEffect(.replace))
                     .frame(width: Theme.Size.fab, height: Theme.Size.fab)
                     .glassEffect(.regular.interactive(), in: .circle)
                     .contentShape(.circle)
             }
             .buttonStyle(.pointing(.plain))
-            .help(showClaude ? "Claude 닫기" : "Claude에게 묻기")
-            .accessibilityLabel(showClaude ? "Claude 닫기" : "Claude")
+            .help(String(localized: showClaude ? .courseClaudeClose : .courseClaudeAsk))
+            .accessibilityLabel(showClaude ? String(localized: .courseClaudeClose) : "Claude")
         }
         .padding(Theme.Space.l)
     }
@@ -105,25 +131,26 @@ struct CourseView: View {
     }
 
     var body: some View {
-        if let course = workspace.course(courseID) {
+        if let course = model.course {
+            let workspace = model.workspace
             HStack(spacing: 0) {
-                CourseColumn(course: course, section: $section, selectedNote: $openNote)
+                CourseColumn(model: model, course: course)
                     .frame(width: Theme.Size.courseColumn)
                     // Back to the section's first screen from a file or unit opened in it.
-                    .crumb(section.rawValue, level: 1, symbol: section.tab.symbol) { pageReset += 1 }
+                    .crumb(model.section.title, level: 1, symbol: model.section.tab.symbol) { pageReset += 1 }
                 ColumnDivider()
                 Group {
-                    switch section {
-                    case .overview: CourseOverview(course: course, section: $section) { openNote = $0; section = .notes }
-                    case .sessions: SessionsView(course: course) { openNote = $0; section = .notes }
-                    case .units: UnitsView(course: course)
-                    case .notes: NotesView(course: course, selection: openNote, insert: $noteInsert) { openNote = $0 }
+                    switch model.section {
+                    case .overview: CourseOverview(model: model, course: course)
+                    case .sessions: SessionsView(workspace: workspace, course: course) { model.show(note: $0) }
+                    case .units: UnitsView(workspace: workspace, course: course)
+                    case .notes: NotesView(workspace: workspace, course: course, selection: model.openNote, insert: $model.noteInsert) { model.openNote = $0 }
                     // One branch for every quiz page, so the quiz model and a pending solve request survive switching pages.
-                    case .quizSolve, .quizCards, .quizStats, .quizProblems: QuizView(course: course, section: $section)
-                    case .materials: MaterialsView(course: course)
-                    case .assignments: AssignmentsView(course: course)
-                    case .grades: CourseGradesView(course: course)
-                    case .exams: ExamsView(course: course) { openNote = $0; section = .notes }
+                    case .quizSolve, .quizCards, .quizStats, .quizProblems: QuizView(workspace: model.workspace, course: course, section: $model.section)
+                    case .materials: MaterialsView(workspace: workspace, course: course)
+                    case .assignments: AssignmentsView(workspace: workspace, course: course)
+                    case .grades: CourseGradesView(workspace: workspace, course: course)
+                    case .exams: ExamsView(workspace: workspace, course: course) { model.show(note: $0) }
                     }
                 }
                 // A new identity drops what the page opened (a file, a unit), which is all its section crumb asks for.
@@ -137,51 +164,38 @@ struct CourseView: View {
                 .overlay(alignment: .bottomTrailing) { claudeFloat(course) }
             }
             .animation(.snappy(duration: 0.25), value: showClaude)
-            .environment(\.accent, workspace.accent(courseID))
-            .tint(workspace.accent(courseID).ink)
+            .environment(\.accent, model.accent)
+            .tint(model.accent.ink)
             .navigationTitle(course.title)
-            .navigationSubtitle(section.rawValue)
-            .studyTime(course: courseID)
+            .navigationSubtitle(model.section.title)
+            .studyTime(course: model.courseId)
             .onChange(of: searchTarget.wrappedValue, initial: true) { _, target in
-                guard let target, target.courseId == courseID else { return }
-                section = target.section
-                if let note = target.noteId { openNote = note }
-                // A material target is left for MaterialsView, which opens the file and then clears it.
-                if target.materialId == nil { searchTarget.wrappedValue = nil }
+                if let target, model.follow(target) { searchTarget.wrappedValue = nil }
             }
             #if DEBUG && os(macOS)
-            .onChange(of: SnapshotDriver.shared.section, initial: true) { _, new in if let new { section = new } }
+            .onChange(of: SnapshotDriver.shared.section, initial: true) { _, new in if let new { model.section = new } }
             .onChange(of: SnapshotDriver.shared.claudePanel, initial: true) { _, new in showClaude = new }
             #endif
         } else {
-            ContentUnavailableView("과목을 찾지 못했습니다", systemImage: "questionmark.folder")
+            ContentUnavailableView(String(localized: .courseNotFound), systemImage: "questionmark.folder")
         }
     }
 }
 
 struct CourseColumn: View {
-    @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
+    @Bindable var model: CourseModel
     let course: LoadedCourse
-    @Binding var section: CourseSection
-    @Binding var selectedNote: UUID?
-
-    func openNote(_ id: UUID) {
-        selectedNote = id
-        section = .notes
-    }
 
     var body: some View {
         let file = course.file
-        let score = GradeCalculator.score(components: file.components, entries: file.scores)
-        let unclassified = file.materials.filter { $0.status == .unclassified }.count
-        let recent = file.sessions.filter { $0.date <= .now && !$0.isCancelled }.sorted { $0.date > $1.date }.prefix(4)
+        let recent = model.recent(file)
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Space.l + 2) {
                 // Code and name only; credits, grading and professors are on the overview page.
                 // Laid out like a ColumnRow, the dot in the icon column, so the title and the rows below share their edges.
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text(course.codeLine(workspace)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                    Text(course.codeLine(model.workspace)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                         .padding(.leading, ColumnRow<EmptyView>.titleInset - Theme.Inset.listRow.leading)
                     HStack(spacing: ColumnRow<EmptyView>.gap) {
                         CourseMark(icon: course.file.course.icon, color: accent.color, font: Theme.Glyph.lineTitle)
@@ -192,19 +206,25 @@ struct CourseColumn: View {
 
                 VStack(spacing: Theme.Space.xxs) {
                     ForEach(CourseTab.allCases) { item in
-                        let chosen = section.tab == item
-                        Button { if !chosen { section = item.pages[0] } } label: {
-                            ColumnRow(title: item.rawValue, symbol: item.symbol, chosen: chosen, tint: accent.color, fill: accent.tint) {
-                                trailing(item, file: file, score: score, unclassified: unclassified)
+                        let chosen = model.section.tab == item
+                        Button { if !chosen { model.section = item.pages[0] } } label: {
+                            ColumnRow(title: item.title, symbol: item.symbol, chosen: chosen, tint: accent.color, fill: accent.tint) {
+                                if let trailing = model.trailing(item, file: file) {
+                                    if trailing.warning {
+                                        Chip(trailing.text, tone: .warning)
+                                    } else {
+                                        Text(trailing.text).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                                    }
+                                }
                             }
                         }
                         .buttonStyle(.pointing(.plain))
                         if chosen, item.pages.count > 1 {
                             ForEach(item.pages) { page in
-                                Button { section = page } label: {
-                                    Text(page.rawValue)
-                                        .foregroundStyle(section == page ? accent.ink : Theme.Palette.textSecondary)
-                                        .fontWeight(section == page ? .semibold : .regular)
+                                Button { model.section = page } label: {
+                                    Text(page.title)
+                                        .foregroundStyle(model.section == page ? accent.ink : Theme.Palette.textSecondary)
+                                        .fontWeight(model.section == page ? .semibold : .regular)
                                         .padding(.leading, ColumnRow<EmptyView>.titleInset)
                                         .padding(.vertical, Theme.Space.xs)
                                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -216,27 +236,27 @@ struct CourseColumn: View {
                     }
                 }
 
-                if section == .notes {
-                    NoteList(course: course, selection: $selectedNote)
+                if model.section == .notes {
+                    NoteList(workspace: model.workspace, course: course, selection: $model.openNote)
                 } else if !recent.isEmpty {
                     VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                        Caption("최근 강의").padding(.horizontal, Theme.Space.s).padding(.bottom, Theme.Space.tight)
-                        ForEach(Array(recent)) { session in
+                        Caption(String(localized: .courseRecent)).padding(.horizontal, Theme.Space.s).padding(.bottom, Theme.Space.tight)
+                        ForEach(recent) { session in
                             Button {
-                                if let id = session.roughNoteId ?? session.reviewNoteId { openNote(id) } else { section = .sessions }
+                                if let id = session.roughNoteId ?? session.reviewNoteId { model.show(note: id) } else { model.section = .sessions }
                             } label: {
                                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                                    Text(session.topic.isEmpty ? course.file.name(of: session) : "\(course.file.name(of: session)) · \(session.topic)").lineLimit(1)
-                                    Text(session.date.formatted(.dateTime.month().day().weekday()) + " · " + noteState(session))
+                                    Text(model.recentTitle(session, in: file)).lineLimit(1)
+                                    Text(model.recentDetail(session, in: file))
                                         .font(Theme.Typeface.label.weight(.regular))
-                                        .foregroundStyle(course.file.needsReviewNote(session, at: .now) ? Theme.Palette.danger : Theme.Palette.textTertiary)
+                                        .foregroundStyle(file.needsReviewNote(session, at: .now) ? Theme.Palette.danger : Theme.Palette.textTertiary)
                                 }
                                 .padding(Theme.Inset.listRow)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .contentShape(.rect)
                             }
                             .buttonStyle(.pointing(.plain))
-                            .contextMenu { SessionMenu(courseId: course.id, sessionId: session.id, openNote: openNote) { section = .sessions } }
+                            .contextMenu { SessionMenu(courseId: course.id, sessionId: session.id, openNote: model.show(note:)) { model.section = .sessions } }
                         }
                     }
                 }
@@ -248,65 +268,45 @@ struct CourseColumn: View {
         .foregroundStyle(Theme.Palette.text)
         .background(Theme.Palette.window)
     }
-
-    @ViewBuilder func trailing(_ item: CourseTab, file: CourseFile, score: GradeCalculator.CourseScore, unclassified: Int) -> some View {
-        switch item {
-        case .classes where !file.sessions.isEmpty: count("\(file.sessions.count)회")
-        case .materials where unclassified > 0: Chip("미분류 \(unclassified)", tone: .warning)
-        case .assessment: if workspace.gradesUnlocked, let p = score.projected { count("예상 \(p.oneDecimal)") }
-        default: EmptyView()
-        }
-    }
-
-    func count(_ text: String) -> some View {
-        Text(text).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
-    }
-
-    func noteState(_ session: Session) -> String {
-        if session.reviewNoteId != nil { return session.reviewNoteUnfinished ? "복습 노트 작성 중" : "복습 노트" }
-        if session.roughNoteId != nil { return "러프 노트" }
-        return course.file.needsReviewNote(session, at: .now) ? "복습 노트 없음" : "복습 필요 없음"
-    }
 }
 
 struct CourseOverview: View {
-    @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
+    let model: CourseModel
     let course: LoadedCourse
-    @Binding var section: CourseSection
-    let openNote: (UUID) -> Void
     @State private var editing = false
     @State private var wide = true
 
     var body: some View {
         let file = course.file
         let now = Date.now
-        let score = GradeCalculator.score(components: file.components, entries: file.scores)
-        let reviews = workspace.reviewQueue(now: now).filter { $0.courseId == course.id }
-        let suggested = workspace.suggestedSession(for: course, now: now)
-        let unclassified = file.materials.filter { $0.status == .unclassified }
+        let score = model.score(file)
+        let reviews = model.reviews(now: now)
+        let suggested = model.suggested(course, now: now)
+        let unclassified = model.unclassified(file)
         // Two columns that each run as long as their own blocks; a grid row made the short week card as tall as the units.
         let layout = wide ? AnyLayout(HStackLayout(alignment: .top, spacing: Theme.Space.xl)) : AnyLayout(VStackLayout(alignment: .leading, spacing: Theme.Space.xl))
 
         Page {
-            PageHeader(title: course.title, subtitle: [workspace.semester(of: file.course)?.title, scheduleLine(file.course.schedule)].compactMap { $0 }.joined(separator: " · ")) {
-                let code = course.codeLine(workspace)
+            PageHeader(title: course.title, subtitle: model.subtitle(file)) {
+                let code = course.codeLine(model.workspace)
                 if !code.isEmpty { Chip(code, tone: .accent) }
-                Chip("\(file.course.credits.formatted())학점")
+                Chip(model.credits(file.course))
                 Chip(file.course.gradingMode.label)
                 Spacer()
-                Button("과목 편집", systemImage: "slider.horizontal.3") { editing = true }.buttonStyle(.ghost)
+                Button(.courseEdit, systemImage: "slider.horizontal.3") { editing = true }.buttonStyle(.ghost)
             }
-            .sheet(isPresented: $editing) { EditCourseSheet(course: course) }
+            .sheet(isPresented: $editing) { EditCourseSheet(workspace: model.workspace, course: course) }
             #if DEBUG && os(macOS)
             .onChange(of: SnapshotDriver.shared.editCourse, initial: true) { _, on in editing = on }
             #endif
 
-            StatStrip(items: stats(file: file, reviews: reviews, suggested: suggested, now: now))
+            StatStrip(items: model.stats(file, reviews: reviews, suggested: suggested, now: now))
 
             if !unclassified.isEmpty {
-                NoticeCard(title: "자료 \(unclassified.count)건이 분류를 기다립니다", detail: "승인하기 전에는 옮기지 않습니다", systemImage: "tray.fill") {
-                    Button("검토하기") { section = .materials }.buttonStyle(.ghost)
+                NoticeCard(title: String(localized: .courseUnclassifiedNotice(unclassified.count)), detail: String(localized: .courseUnclassifiedDetail),
+                           systemImage: "tray.fill") {
+                    Button(.courseReviewMaterials) { model.section = .materials }.buttonStyle(.ghost)
                 }
             }
 
@@ -324,90 +324,82 @@ struct CourseOverview: View {
             }
             .onGeometryChange(for: Bool.self) { $0.size.width >= 620 } action: { wide = $0 }
 
-            InfoBlocks(course: course)
+            InfoBlocks(workspace: model.workspace, course: course)
         }
     }
 
     func weekBlock(_ file: CourseFile, suggested: Workspace.SuggestedSession?, now: Date) -> some View {
-        let calendar = workspace.calendar
-        // Monday-based like the app's weeks; the calendar's own week can start on Sunday.
-        let start = calendar.startOfWeek(containing: now)
-        let week = DateInterval(start: start, end: calendar.date(byAdding: .day, value: 7, to: start) ?? start)
-        let sessions = file.sessions.filter { week.contains($0.date) }.sorted { $0.date < $1.date }
-        let next = suggested.flatMap { week.contains($0.suggestion.date) ? $0 : nil }
-        return Block("이번 주 강의") {
+        let sessions = model.weekSessions(file, now: now)
+        let next = model.weekSuggestion(suggested, now: now)
+        return Block(String(localized: .courseThisWeek)) {
             if !sessions.isEmpty || next == nil {
                 Card {
-                    if sessions.isEmpty { CardRow(last: true) { EmptyLine("이번 주에는 수업이 없습니다") } }
+                    if sessions.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .courseNoClassThisWeek)) } }
                     ForEach(Array(sessions.enumerated()), id: \.element.id) { i, s in
                         CardRow(last: i == sessions.count - 1) {
                             VStack(spacing: 0) {
                                 Text(s.date.formatted(.dateTime.weekday(.abbreviated))).font(Theme.Typeface.label.weight(.regular)).foregroundStyle(Theme.Palette.textTertiary)
                                 // The bare number: Korean's day format adds 일, which overflowed the 34pt column.
-                                Text(verbatim: "\(calendar.component(.day, from: s.date))").font(Theme.Typeface.figureMedium).foregroundStyle(s.date > now ? accent.ink : Theme.Palette.text)
+                                Text(verbatim: "\(model.day(of: s.date))").font(Theme.Typeface.figureMedium).foregroundStyle(s.date > now ? accent.ink : Theme.Palette.text)
                             }
                             .frame(width: 34)
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                                Text(s.topic.isEmpty ? file.name(of: s) : "\(file.name(of: s)) · \(s.topic)").font(Theme.Typeface.bodyStrong).lineLimit(1)
+                                Text(model.recentTitle(s, in: file)).font(Theme.Typeface.bodyStrong).lineLimit(1)
                                     .strikethrough(s.isCancelled)
-                                Text(s.isCancelled ? "휴강" : s.date > now ? "예정" : s.reviewNoteId != nil ? (s.reviewNoteUnfinished ? "복습 노트 작성 중" : "복습 노트") : file.needsReviewNote(s, at: now) ? "복습 노트 없음" : "복습 필요 없음")
+                                Text(model.weekStatus(s, in: file, now: now))
                                     .font(Theme.Typeface.caption)
                                     .foregroundStyle(file.needsReviewNote(s, at: now) ? Theme.Palette.danger : Theme.Palette.textTertiary)
                             }
                             Spacer(minLength: 0)
                         }
-                        .contextMenu { SessionMenu(courseId: course.id, sessionId: s.id, openNote: openNote) { section = .sessions } }
+                        .contextMenu { SessionMenu(courseId: course.id, sessionId: s.id, openNote: model.show(note:)) { model.section = .sessions } }
                     }
                 }
-                .opens { section = .sessions }
+                .opens { model.section = .sessions }
             }
             // The class the timetable says comes next, before it is made: starting its note makes it, as on Today.
-            if let next { SuggestedSessionRow(item: next, openNote: openNote) }
+            if let next { SuggestedSessionRow(item: next, openNote: model.show(note:)) }
         }
     }
 
     func assignmentsBlock(_ file: CourseFile, now: Date) -> some View {
-        let open = file.assignments.filter(\.status.isOpen).sorted { ($0.due ?? .distantFuture) < ($1.due ?? .distantFuture) }
+        let open = model.openAssignments(file)
         let shown = Array(open.prefix(5))
-        let done = file.assignments.count - open.count
-        return Block("과제", note: file.assignments.isEmpty ? nil : "\(file.assignments.count)개 중 \(done)개 끝남") {
+        return Block(String(localized: .courseSectionAssignments), note: model.assignmentsNote(file)) {
             Card {
-                if shown.isEmpty { CardRow(last: true) { EmptyLine(file.assignments.isEmpty ? "과제가 없습니다" : "남은 과제가 없습니다") } }
+                if shown.isEmpty { CardRow(last: true) { EmptyLine(String(localized: file.assignments.isEmpty ? .courseNoAssignments : .courseNoOpenAssignments)) } }
                 ForEach(Array(shown.enumerated()), id: \.element.id) { i, a in
                     CardRow(last: i == shown.count - 1 && open.count == shown.count) {
                         Image(systemName: a.status.symbol).foregroundStyle(a.status.tint)
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                             Text(a.title).font(Theme.Typeface.bodyStrong).lineLimit(1)
-                            Text(a.due?.formatted(.dateTime.month().day().weekday().hour().minute()) ?? "마감 없음")
+                            Text(a.due?.formatted(.dateTime.month().day().weekday().hour().minute()) ?? String(localized: .courseNoDue))
                                 .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).monospacedDigit()
                         }
                         Spacer(minLength: Theme.Space.s)
                         if let due = a.due {
                             if due < now {
-                                Chip("마감 지남", tone: .danger)
+                                Chip(String(localized: .courseOverdue), tone: .danger)
                             } else {
-                                DdayChip(days: workspace.days(to: due))
+                                DdayChip(days: model.days(to: due))
                             }
                         }
                     }
-                    .contextMenu { Button("과제 보기", systemImage: "checklist") { section = .assignments } }
+                    .contextMenu { Button(.courseShowAssignments, systemImage: "checklist") { model.section = .assignments } }
                 }
                 if open.count > shown.count {
-                    CardRow(last: true) { EmptyLine("외 \(open.count - shown.count)개") }
+                    CardRow(last: true) { EmptyLine(String(localized: .commonMoreCount(open.count - shown.count))) }
                 }
             }
-            .opens { section = .assignments }
+            .opens { model.section = .assignments }
         }
     }
 
-    /// A glance, not the list: the units due first, then the ones taught most recently.
     func unitsBlock(_ file: CourseFile, reviews: [Workspace.ReviewEntry]) -> some View {
-        let due = reviews.compactMap { r in file.units.first { $0.id == r.item.unitId } }
-        let covered = UnitTree.outline(file.units).map(\.unit).filter { u in !u.sessionIds.isEmpty && !due.contains { $0.id == u.id } }
-        let shown = Array((due + covered.suffix(8).reversed()).prefix(8))
-        return Block("단원", note: file.units.count > shown.count ? "\(file.units.count)개 중 \(shown.count)개" : nil) {
+        let shown = model.glanceUnits(file, reviews: reviews)
+        return Block(String(localized: .courseSectionUnits), note: file.units.count > shown.count ? String(localized: .courseUnitsNote(file.units.count, shown.count)) : nil) {
             Card {
-                if shown.isEmpty { CardRow(last: true) { EmptyLine(file.units.isEmpty ? "단원이 없습니다" : "아직 다룬 단원이 없습니다") } }
+                if shown.isEmpty { CardRow(last: true) { EmptyLine(String(localized: file.units.isEmpty ? .courseNoUnits : .courseNoCoveredUnits)) } }
                 ForEach(Array(shown.enumerated()), id: \.element.id) { i, unit in
                     let entry = reviews.first { $0.item.unitId == unit.id }
                     ReviewOpener(courseId: course.id, unitId: unit.id) {
@@ -415,34 +407,35 @@ struct CourseOverview: View {
                             Text(unit.title).lineLimit(1)
                             Spacer(minLength: Theme.Space.s)
                             if let entry {
-                                Chip(entry.item.overdueDays > 0 ? "\(entry.item.overdueDays)일 밀림" : "오늘 복습", tone: entry.item.overdueDays > 0 ? .danger : .accent)
+                                Chip(String(localized: entry.item.overdueDays > 0 ? .unitsDaysLate(entry.item.overdueDays) : .courseReviewToday),
+                                     tone: entry.item.overdueDays > 0 ? .danger : .accent)
                             } else {
-                                Text("회차 \(unit.sessionIds.count)개").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                                Text(.sessionsCount(unit.sessionIds.count)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                             }
                         }
                     }
                     .contextMenu {
-                        Button("단원 보기", systemImage: "list.bullet") { section = .units }
+                        Button(.courseShowUnits, systemImage: "list.bullet") { model.section = .units }
                         if entry != nil {
-                            Button("오늘 복습 건너뛰기", systemImage: "forward") { workspace.skipReviews([(course.id, unit.id)]) }
+                            Button(.courseSkipReviewToday, systemImage: "forward") { model.skipReview(unit) }
                         }
                     }
                 }
             }
-            .opens { section = .units }
+            .opens { model.section = .units }
         }
     }
 
     func gradesBlock(_ file: CourseFile, score: GradeCalculator.CourseScore) -> some View {
-        Block("성적", note: file.components.isEmpty ? nil : "남은 비중 \(Int(score.remainingWeight.rounded()))%") {
+        Block(String(localized: .courseSectionGrades), note: file.components.isEmpty ? nil : String(localized: .courseRemainingWeight(Int(score.remainingWeight.rounded())))) {
             Card(padding: Theme.Space.l) {
                 if file.components.isEmpty {
-                    EmptyLine("평가 항목이 없습니다")
+                    EmptyLine(String(localized: .courseNoComponents))
                 } else {
                     VStack(alignment: .leading, spacing: Theme.Space.m) {
                         HStack(alignment: .firstTextBaseline, spacing: Theme.Space.l) {
-                            Figure("확보", score.secured.oneDecimal, font: Theme.Typeface.figureCompact)
-                            Figure("예상", score.projected.map(\.oneDecimal) ?? "-", tint: accent.ink, font: Theme.Typeface.figureCompact)
+                            Figure(String(localized: .courseSecured), score.secured.oneDecimal, font: Theme.Typeface.figureCompact)
+                            Figure(String(localized: .courseProjectedTitle), score.projected.map(\.oneDecimal) ?? "-", tint: accent.ink, font: Theme.Typeface.figureCompact)
                         }
                         .sensitive()
                         // Names live in the segment tooltips and on the grades page; listed here they swamp the card.
@@ -450,54 +443,8 @@ struct CourseOverview: View {
                     }
                 }
             }
-            .opens { section = .grades }
+            .opens { model.section = .grades }
         }
-    }
-
-    /// `월·수 13:00–14:15 자연과학동 203`: days sharing a time and room are written once.
-    func scheduleLine(_ schedule: [ClassTime]) -> String? {
-        var groups: [(key: String, days: [String])] = []
-        for slot in schedule.sorted(by: { ($0.weekday, $0.startMinute) < ($1.weekday, $1.startMinute) }) {
-            let key = "\(TimeMenu.range(slot.startMinute, slot.endMinute))" + (slot.room.isEmpty ? "" : " \(slot.room)")
-            let day = ClassTime.weekdayNames[slot.weekday - 1]
-            if let i = groups.firstIndex(where: { $0.key == key }) { groups[i].days.append(day) } else { groups.append((key, [day])) }
-        }
-        return groups.isEmpty ? nil : groups.map { $0.days.joined(separator: "·") + " " + $0.key }.joined(separator: ", ")
-    }
-
-    func stats(file: CourseFile, reviews: [Workspace.ReviewEntry], suggested: Workspace.SuggestedSession?, now: Date) -> [StatStrip.Item] {
-        // A class the timetable promises counts before it is made; without it a course that makes sessions as it goes
-        // never showed a next class.
-        let made: (date: Date, name: String)? = file.sessions.filter { $0.date > now && !$0.isCancelled }.min { $0.date < $1.date }
-            .map { (date: $0.date, name: file.name(of: $0)) }
-        let planned: (date: Date, name: String)? = suggested.flatMap { $0.suggestion.date > now ? (date: $0.suggestion.date, name: $0.name) : nil }
-        let nextClass = [made, planned].compactMap { $0 }.min { $0.date < $1.date }
-        let nextExam = file.exams.compactMap { e in e.start.map { (e, $0) } }.filter { $0.1 > now }.min { $0.1 < $1.1 }
-        let nextDue = file.assignments.compactMap { a in a.due.map { (a, $0) } }
-            .filter { $0.1 > now && $0.0.status.isOpen }.min { $0.1 < $1.1 }
-        let maxOverdue = reviews.map(\.item.overdueDays).max() ?? 0
-
-        var items: [StatStrip.Item] = []
-        if let next = nextClass {
-            // The weekday rides in the detail: with it the date was cut off in a narrow window.
-            items.append(.init(title: "다음 수업", value: next.date.formatted(.dateTime.month().day()),
-                               detail: "\(next.date.formatted(.dateTime.weekday())) \(next.date.formatted(date: .omitted, time: .shortened)) · \(next.name)"))
-        } else {
-            items.append(.init(title: "다음 수업", value: "-"))
-        }
-        if let (exam, start) = nextExam {
-            let d = workspace.days(to: start)
-            items.append(.init(title: "다음 시험", value: "\(exam.title.isEmpty ? exam.kind.label : exam.title) \(d == 0 ? "D-day" : "D-\(d)")",
-                               detail: start.formatted(.dateTime.month().day().weekday()), tone: d <= 7 ? .danger : .plain))
-        } else {
-            items.append(.init(title: "다음 시험", value: "-"))
-        }
-        items.append(.init(title: "오늘 복습", value: "\(reviews.count)단원", detail: maxOverdue > 0 ? "최대 \(maxOverdue)일 밀림" : nil,
-                           tone: maxOverdue > 0 ? .warning : .plain))
-        items.append(.init(title: "가까운 마감", value: nextDue?.0.title ?? "-", detail: nextDue?.1.formatted(.dateTime.month().day().weekday().hour().minute())))
-        // Each figure opens the page it sums up, in the order appended above.
-        for (i, target) in [CourseSection.sessions, .exams, .units, .assignments].enumerated() { items[i].action = { section = target } }
-        return items
     }
 }
 
@@ -509,16 +456,16 @@ struct SessionMenu: View {
     let showSessions: () -> Void
 
     var body: some View {
-        Button("러프 노트 열기", systemImage: "pencil.line") { if let id = workspace.note(.rough, of: sessionId, in: courseId) { openNote(id) } }
-        Button("복습 노트 열기", systemImage: "square.and.pencil") { if let id = workspace.note(.review, of: sessionId, in: courseId) { openNote(id) } }
+        Button(.sessionsOpenRoughNote, systemImage: "pencil.line") { if let id = workspace.note(.rough, of: sessionId, in: courseId) { openNote(id) } }
+        Button(.sessionsOpenReviewNote, systemImage: "square.and.pencil") { if let id = workspace.note(.review, of: sessionId, in: courseId) { openNote(id) } }
         if let session = workspace.course(courseId)?.file.sessions.first(where: { $0.id == sessionId }), session.reviewNoteId != nil {
             if session.reviewNoteUnfinished {
-                Button("복습 노트 작성 완료", systemImage: "checkmark.circle") { workspace.setReviewNoteUnfinished(false, of: sessionId, in: courseId) }
+                Button(.courseReviewNoteFinish, systemImage: "checkmark.circle") { workspace.setReviewNoteUnfinished(false, of: sessionId, in: courseId) }
             } else {
-                Button("복습 노트 작성 중으로", systemImage: "arrow.uturn.backward") { workspace.setReviewNoteUnfinished(true, of: sessionId, in: courseId) }
+                Button(.courseReviewNoteReopen, systemImage: "arrow.uturn.backward") { workspace.setReviewNoteUnfinished(true, of: sessionId, in: courseId) }
             }
         }
-        Button("회차 보기", systemImage: "calendar", action: showSessions)
+        Button(.courseShowSessions, systemImage: "calendar", action: showSessions)
     }
 }
 
@@ -556,15 +503,15 @@ extension LoadedCourse {
     func factChips(_ workspace: Workspace) -> [String] {
         let c = file.course
         let professors = c.instructorIds.compactMap { id in workspace.catalog.people.first { $0.id == id }?.name }
-        return ["\(c.credits.formatted())학점", c.gradingMode.label] + professors
+        return [String(localized: .courseCredits(c.credits.formatted())), c.gradingMode.label] + professors
     }
 }
 
 extension GradingMode {
     var label: String {
         switch self {
-        case .relative: "상대평가"
-        case .absolute: "절대평가"
+        case .relative: String(localized: .gradingModeRelative)
+        case .absolute: String(localized: .gradingModeAbsolute)
         case .passFail: "S/U"
         }
     }

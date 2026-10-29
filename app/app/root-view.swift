@@ -41,11 +41,11 @@ struct RootView: View {
         Group {
             if workspace.gist == nil {
                 ContentUnavailableView {
-                    Label("GIST 폴더를 고르세요", systemImage: "folder")
+                    Label(.rootPickGistTitle, systemImage: "folder")
                 } description: {
-                    Text("iCloud Drive의 GIST 폴더를 한 번 고르면 다음부터는 바로 엽니다.")
+                    Text(.rootPickGistDetail)
                 } actions: {
-                    Button("폴더 고르기") { pickingFolder = true }
+                    Button(.rootPickFolder) { pickingFolder = true }
                 }
             } else {
                 shell {
@@ -64,7 +64,7 @@ struct RootView: View {
                         #if os(macOS)
                         .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
                         #endif
-                        .background { Button("검색") { searching = true }.keyboardShortcut("k").opacity(0).accessibilityHidden(true) }
+                        .background { Button(.commonSearch) { searching = true }.keyboardShortcut("k").opacity(0).accessibilityHidden(true) }
                 }
                 .toolbar { globalTools }
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { windowWidth = $0 }
@@ -75,7 +75,7 @@ struct RootView: View {
                         // An explicit top-aligned stack: overlay content is centered otherwise, leaving the palette mid-window.
                         ZStack(alignment: .top) {
                             Theme.Palette.scrim.ignoresSafeArea().onTapGesture { searching = false }
-                            SearchPalette(close: { searching = false }) { target in
+                            SearchPalette(workspace: workspace, close: { searching = false }) { target in
                                 selection = .course(target.courseId)
                                 searchTarget = target
                             }
@@ -85,7 +85,7 @@ struct RootView: View {
                 }
                 .overlay(alignment: .bottom) {
                     if workspace.recorder.isActive {
-                        RecordingBar()
+                        RecordingBar(workspace: workspace)
                             .padding(.bottom, Theme.Space.xl)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
@@ -119,8 +119,8 @@ struct RootView: View {
             // Coming back picks up what other devices or the CLI changed meanwhile.
             if phase == .active { workspace.reload() }
         }
-        .alert("문제가 생겼습니다", isPresented: .constant(workspace.error != nil)) {
-            Button("확인") { workspace.error = nil }
+        .alert(Text(.rootErrorTitle), isPresented: .constant(workspace.error != nil)) {
+            Button(.commonOk) { workspace.error = nil }
         } message: {
             Text(workspace.error ?? "")
         }
@@ -142,12 +142,12 @@ struct RootView: View {
         // The places stay put and the terms scroll in the space under them, as the list of terms grows each term.
         VStack(spacing: 0) {
         List(selection: listSelection) {
-            Label { Text("오늘") } icon: { sidebarIcon("house", .today) }.sidebarRow(.today, $selection)
-            Label { Text("성적") } icon: { sidebarIcon("chart.line.uptrend.xyaxis", .grades) }.sidebarRow(.grades, $selection)
-            Label { Text("졸업 요건") } icon: { sidebarIcon("flag", .requirements) }.sidebarRow(.requirements, $selection)
-            Label { Text("교수와 조교") } icon: { sidebarIcon("person", .people) }.sidebarRow(.people, $selection)
-            Label { Text("강의 코드") } icon: { sidebarIcon("number", .codes) }.sidebarRow(.codes, $selection)
-            Label { Text("설정") } icon: { sidebarIcon("gearshape", .settings) }.sidebarRow(.settings, $selection)
+            Label { Text(.rootNavToday) } icon: { sidebarIcon("house", .today) }.sidebarRow(.today, $selection)
+            Label { Text(.rootNavGrades) } icon: { sidebarIcon("chart.line.uptrend.xyaxis", .grades) }.sidebarRow(.grades, $selection)
+            Label { Text(.rootNavRequirements) } icon: { sidebarIcon("flag", .requirements) }.sidebarRow(.requirements, $selection)
+            Label { Text(.rootNavPeople) } icon: { sidebarIcon("person", .people) }.sidebarRow(.people, $selection)
+            Label { Text(.rootNavCodes) } icon: { sidebarIcon("number", .codes) }.sidebarRow(.codes, $selection)
+            Label { Text(.rootNavSettings) } icon: { sidebarIcon("gearshape", .settings) }.sidebarRow(.settings, $selection)
         }
         .scrollDisabled(true)
         .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { _, height in
@@ -163,7 +163,7 @@ struct RootView: View {
                     let current = semester.id == workspace.currentSemester?.id
                     let open = !courses.isEmpty && current != toggledTerms.contains(semester.id)
                     semesterRow(semester, open: open)
-                        .rowTools(add: current ? "과목 추가" : nil, action: { addingCourse = true }, open: courses.isEmpty ? nil : openBinding(semester, current: current)) { over in
+                        .rowTools(add: current ? String(localized: .rootAddCourse) : nil, action: { addingCourse = true }, open: courses.isEmpty ? nil : openBinding(semester, current: current)) { over in
                             if over { hoveredTerm = semester.id } else if hoveredTerm == semester.id { hoveredTerm = nil }
                         }
                     if open {
@@ -174,12 +174,12 @@ struct RootView: View {
             } header: {
                 // Colored, not the list's own header gray, which faded into the dark frame; inset to start where the
                 // rows' icons do.
-                Text("학기").foregroundStyle(Theme.Palette.chromeText).frame(maxWidth: .infinity, alignment: .leading)
-                    .rowTools(add: "학기 추가") { addingSemester = true }
+                Text(.rootSemesters).foregroundStyle(Theme.Palette.chromeText).frame(maxWidth: .infinity, alignment: .leading)
+                    .rowTools(add: String(localized: .rootAddSemester)) { addingSemester = true }
                     .padding(.leading, Theme.Space.xs)
             }
             .sheet(isPresented: $addingCourse) {
-                if let current = workspace.currentSemester { AddCourseSheet(semester: current) { if let id = $0 { selection = .course(id) } } }
+                if let current = workspace.currentSemester { AddCourseSheet(workspace: workspace, semester: current) { if let id = $0 { selection = .course(id) } } }
             }
         }
         .onScrollGeometryChange(for: Edge.Set.self) { g in
@@ -207,7 +207,7 @@ struct RootView: View {
         .labelStyle(SidebarLabelStyle())
         }
         .sheet(isPresented: $addingSemester) {
-            AddSemesterSheet { id in
+            AddSemesterSheet(workspace: workspace) { id in
                 guard let id else { return }
                 selection = .semester(id)
             }
@@ -261,9 +261,9 @@ struct RootView: View {
     @ToolbarContentBuilder var globalTools: some ToolbarContent {
         #if os(macOS)
         ToolbarItem(placement: .navigation) {
-            Button(sidebarOpen ? "사이드바 접기" : "사이드바 펼치기", systemImage: "sidebar.leading") { sidebarOpen.toggle() }
+            Button(sidebarOpen ? .rootSidebarClose : .rootSidebarOpen, systemImage: "sidebar.leading") { sidebarOpen.toggle() }
                 .keyboardShortcut("s", modifiers: [.control, .command])
-                .help(sidebarOpen ? "사이드바 접기 ⌃⌘S" : "사이드바 펼치기 ⌃⌘S")
+                .help(Text(sidebarOpen ? .rootSidebarCloseHelp : .rootSidebarOpenHelp))
                 .buttonStyle(.toolbar)
                 .toolbarGroup()
         }
@@ -280,7 +280,7 @@ struct RootView: View {
                 // No Spacer inside: a toolbar item with one has no fixed width, and the row drops it.
                 HStack(spacing: Theme.Space.s) {
                     Image(systemName: "magnifyingglass")
-                    Text("검색")
+                    Text(.commonSearch)
                 }
                 .foregroundStyle(Theme.Palette.chromeText)
                 .frame(width: Theme.Size.searchField - Theme.Space.m * 2, alignment: .leading)
@@ -291,25 +291,25 @@ struct RootView: View {
                 .contentShape(.capsule)
             }
             .buttonStyle(.pointing(.plain))
-            .help("노트, 자료, 과제, 회차, 단원 검색 ⌘K")
+            .help(Text(.rootSearchHelp))
         }
         .sharedBackgroundVisibility(.hidden)
         ToolbarSpacer(.flexible)
         // One item for all the buttons, laid out here: as separate items the system spaces them far apart.
         ToolbarItem {
             HStack(spacing: Theme.Space.xxs) {
-                Button("빠른 추가", systemImage: "plus") { quickAdding = true }
-                    .help("과제나 할 일을 한 줄로 더하기")
+                Button(.rootQuickAdd, systemImage: "plus") { quickAdding = true }
+                    .help(Text(.rootQuickAddHelp))
                     .popover(isPresented: $quickAdding, arrowEdge: .bottom) {
-                        QuickAddField().padding(Theme.Space.l).frame(width: 440)
+                        QuickAddField(workspace: workspace).padding(Theme.Space.l).frame(width: 440)
                     }
                 recordButton
                 timerButton
-                Button(workspace.gradesUnlocked ? "성적 잠그기" : "성적 잠금 해제", systemImage: workspace.gradesUnlocked ? "lock.open" : "lock") {
+                Button(workspace.gradesUnlocked ? .rootLockGrades : .commonUnlockGrades, systemImage: workspace.gradesUnlocked ? "lock.open" : "lock") {
                     if workspace.gradesUnlocked { workspace.lockGrades() } else { Task { await workspace.unlockGrades() } }
                 }
-                .help(workspace.gradesUnlocked ? "성적 가리기" : "성적 보기")
-                Button("다시 읽기", systemImage: "arrow.clockwise") { workspace.reload() }.help("GIST 폴더 다시 읽기")
+                .help(Text(workspace.gradesUnlocked ? .rootHideGrades : .rootShowGrades))
+                Button(.rootReload, systemImage: "arrow.clockwise") { workspace.reload() }.help(Text(.rootReloadHelp))
             }
             .toolbarGroup()
             .buttonStyle(.toolbar)
@@ -324,12 +324,12 @@ struct RootView: View {
         case .semester(let id):
             { let semester = workspace.transcript.semesters.first { $0.id == id }
               return Crumb(title: semester?.title ?? "", symbol: semester?.term == .credited ? "checkmark.seal" : "folder") }()
-        case .grades: Crumb(title: "성적", symbol: "chart.line.uptrend.xyaxis")
-        case .requirements: Crumb(title: "졸업 요건", symbol: "flag")
-        case .people: Crumb(title: "교수와 조교", symbol: "person")
-        case .codes: Crumb(title: "강의 코드", symbol: "number")
-        case .settings: Crumb(title: "설정", symbol: "gearshape")
-        case .today, nil: Crumb(title: "오늘", symbol: "house")
+        case .grades: Crumb(title: String(localized: .rootNavGrades), symbol: "chart.line.uptrend.xyaxis")
+        case .requirements: Crumb(title: String(localized: .rootNavRequirements), symbol: "flag")
+        case .people: Crumb(title: String(localized: .rootNavPeople), symbol: "person")
+        case .codes: Crumb(title: String(localized: .rootNavCodes), symbol: "number")
+        case .settings: Crumb(title: String(localized: .rootNavSettings), symbol: "gearshape")
+        case .today, nil: Crumb(title: String(localized: .rootNavToday), symbol: "house")
         }
         let start = (sidebarOpen ? Theme.Size.sidebar : Theme.Size.panelInset) + Theme.Space.l
         // Folds before where a window-centered search field would begin, so the trail doesn't push it aside; truncates
@@ -358,17 +358,17 @@ struct RootView: View {
             let ongoing = workspace.ongoingClass(at: context.date)
             Menu {
                 if let ongoing {
-                    Button("녹음 시작 (한국어)") { workspace.record(ongoing.session.id, in: ongoing.courseId, locale: Locale(identifier: "ko-KR")) }
-                    Button("녹음 시작 (영어)") { workspace.record(ongoing.session.id, in: ongoing.courseId, locale: Locale(identifier: "en-US")) }
+                    Button(.rootRecordKorean) { workspace.record(ongoing.session.id, in: ongoing.courseId, locale: Locale(identifier: "ko-KR")) }
+                    Button(.rootRecordEnglish) { workspace.record(ongoing.session.id, in: ongoing.courseId, locale: Locale(identifier: "en-US")) }
                 }
             } label: {
-                Label("녹음", systemImage: "mic")
+                Label(.rootRecord, systemImage: "mic")
             }
             .menuIndicator(.hidden)
             .disabled(ongoing == nil || workspace.recorder.isActive)
-            .help(workspace.recorder.isActive ? "녹음 중입니다"
-                  : ongoing.flatMap { o in workspace.course(o.courseId).map { "\($0.title) \($0.file.name(of: o.session)) 녹음" } }
-                  ?? "수업 중일 때 녹음할 수 있습니다")
+            .help(workspace.recorder.isActive ? String(localized: .rootRecording)
+                  : ongoing.flatMap { o in workspace.course(o.courseId).map { String(localized: .rootRecordSession($0.title, $0.file.name(of: o.session))) } }
+                  ?? String(localized: .rootRecordUnavailable))
         }
     }
 
@@ -425,7 +425,7 @@ struct RootView: View {
                 Text(course.title).lineLimit(1)
                 if let ongoing {
                     Spacer(minLength: Theme.Space.xs)
-                    Text("\(Int(ongoing.end.timeIntervalSince(now) / 60) + 1)분").font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
+                    Text(.rootMinutesLeft(Int(ongoing.end.timeIntervalSince(now) / 60) + 1)).font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
                         .foregroundStyle(accent.ink)
                 }
             }
@@ -433,25 +433,25 @@ struct RootView: View {
             // A line icon, not a tile: with twenty-odd courses, tiles turn the sidebar into confetti.
             CourseMark(icon: course.file.course.icon, color: accent.color, filled: selection == .course(course.id))
         }
-        .help(ongoing.map { "\(course.file.name(of: $0.session)) 수업 중" } ?? "")
+        .help(ongoing.map { String(localized: .rootInClass(course.file.name(of: $0.session))) } ?? "")
         .padding(.leading, SidebarGuide.indent)
         .sidebarRow(.course(course.id), $selection, fill: accent.tint, guide: last ? .lastCourse : .course, progress: ongoing?.fraction(at: now))
     }
 
     @ViewBuilder var detail: some View {
         switch selection {
-        case .today, nil: TodayView()
-        case .course(let id): CourseView(courseID: id).id(id)
-        case .semester(let id): SemesterView(semesterID: id) { selection = .course($0) }.id(id)
-        case .grades: GradesView()
+        case .today, nil: TodayView(workspace: workspace)
+        case .course(let id): CourseView(workspace: workspace, courseID: id).id(id)
+        case .semester(let id): SemesterView(workspace: workspace, semesterID: id) { selection = .course($0) }.id(id)
+        case .grades: GradesView(workspace: workspace)
         case .requirements:
             // A course with a folder opens itself; a record-only one (credited terms) opens its semester.
-            RequirementsView { course in
+            RequirementsView(workspace: workspace) { course in
                 if workspace.course(course.id) != nil { selection = .course(course.id) } else if let id = course.semesterId { selection = .semester(id) }
             }
         case .people: PeopleView(workspace: workspace) { selection = .course($0) }
         case .codes: CodesView(workspace: workspace)
-        case .settings: SettingsView()
+        case .settings: SettingsView(workspace: workspace)
         }
     }
 
@@ -465,8 +465,13 @@ struct RootView: View {
 extension Semester {
     /// `2026 가을학기`, `인정학기`.
     var title: String {
-        let names: [Term: String] = [.spring: "봄", .summer: "여름", .fall: "가을", .winter: "겨울"]
-        return term == .credited ? "인정학기" : "\(year) \(names[term]!)학기"
+        switch term {
+        case .credited: String(localized: .semesterTitleCredited)
+        case .spring: String(localized: .semesterTitleSpring(String(year)))
+        case .summer: String(localized: .semesterTitleSummer(String(year)))
+        case .fall: String(localized: .semesterTitleFall(String(year)))
+        case .winter: String(localized: .semesterTitleWinter(String(year)))
+        }
     }
 }
 
@@ -518,8 +523,8 @@ private struct RowTools: ViewModifier {
                         Color.clear.frame(width: Theme.Size.tile, height: Theme.Size.tile).contentShape(Rectangle())
                     }
                     .buttonStyle(.pointing(.plain))
-                    .help(open.wrappedValue ? "접기" : "펼치기")
-                    .accessibilityLabel(open.wrappedValue ? "접기" : "펼치기")
+                    .help(Text(open.wrappedValue ? .commonCollapse : .commonExpand))
+                    .accessibilityLabel(Text(open.wrappedValue ? .commonCollapse : .commonExpand))
                     // This button lies over the folder, so the pointer on the folder is on it, not on the row.
                     .onHover(perform: folderHover)
                 }

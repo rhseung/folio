@@ -1,18 +1,22 @@
 import SwiftUI
 
 struct RecordingBar: View {
-    @Environment(Workspace.self) private var workspace
+    @State private var model: RecordingBarModel
     @State private var expanded = false
 
+    init(workspace: Workspace) {
+        _model = State(initialValue: RecordingBarModel(workspace: workspace))
+    }
+
     var body: some View {
-        let recorder = workspace.recorder
-        let recording = recorder.state == .recording
+        let recorder = model.recorder
+        let recording = model.recording
         VStack(alignment: .leading, spacing: Theme.Space.m) {
             if expanded {
                 ScrollViewReader { proxy in
                     ScrollView {
                         VStack(alignment: .leading, spacing: Theme.Space.s) {
-                            ForEach(Array(recorder.lines.suffix(40).enumerated()), id: \.offset) { _, line in
+                            ForEach(Array(model.recentLines.enumerated()), id: \.offset) { _, line in
                                 HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                                     Text(RecordingTime.label(line.start)).font(Theme.Typeface.label).monospacedDigit()
                                         .foregroundStyle(Theme.Palette.textTertiary).frame(width: 44, alignment: .leading)
@@ -37,9 +41,9 @@ struct RecordingBar: View {
                     .frame(width: 10, height: 10)
                     .phaseAnimator([1.0, 0.35]) { dot, phase in dot.opacity(recording ? phase : 1) } animation: { _ in .easeInOut(duration: 0.8) }
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text(recorder.state == .preparing ? "받아쓰기 준비 중…" : recorder.title)
+                    Text(model.title)
                         .font(Theme.Typeface.label).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
-                    Text(recorder.volatile.isEmpty ? (recorder.lines.last?.text ?? recorder.transcriptionNote ?? "듣는 중…") : recorder.volatile)
+                    Text(model.line)
                         .lineLimit(1).truncationMode(.head)
                         .foregroundStyle(recorder.volatile.isEmpty ? Theme.Palette.text : Theme.Palette.textSecondary)
                         .contentTransition(.opacity)
@@ -48,22 +52,22 @@ struct RecordingBar: View {
                 LevelMeter(level: recorder.level)
                 Text(RecordingTime.label(recorder.elapsed)).font(Theme.Typeface.bodyStrong).monospacedDigit().frame(width: 64)
                 Button { recorder.bookmark() } label: { Image(systemName: "bookmark") }
-                    .help("지금 이 지점 표시 (\(recorder.bookmarks.count)개)")
+                    .help(Text(.recordingBookmarkHelp(recorder.bookmarks.count)))
                     .symbolEffect(.bounce, value: recorder.bookmarks.count)
-                Button { if recording { recorder.pause() } else { workspace.perform { try recorder.resume() } } } label: {
+                Button { model.toggle() } label: {
                     Image(systemName: recording ? "pause.fill" : "record.circle").contentTransition(.symbolEffect(.replace))
                 }
-                .help(recording ? "일시 정지" : "이어서 녹음")
-                .disabled(recorder.state == .preparing)
-                Button { Task { await workspace.stopRecording() } } label: {
+                .help(Text(recording ? .recordingPause : .recordingResume))
+                .disabled(model.preparing)
+                Button { Task { await model.stop() } } label: {
                     Image(systemName: "stop.fill").foregroundStyle(Theme.Palette.danger)
                 }
-                .help("녹음 끝내기")
-                .disabled(recorder.state == .preparing)
+                .help(Text(.recordingStop))
+                .disabled(model.preparing)
                 Button { withAnimation(.snappy(duration: 0.3)) { expanded.toggle() } } label: {
                     Image(systemName: "chevron.up").rotationEffect(.degrees(expanded ? 180 : 0))
                 }
-                .help(expanded ? "받아쓰기 접기" : "받아쓰기 펼치기")
+                .help(Text(expanded ? .recordingCollapse : .recordingExpand))
             }
             .buttonStyle(.ghost)
         }

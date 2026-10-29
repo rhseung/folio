@@ -1,132 +1,111 @@
-import Algorithms
 import FolioActions
 import FolioDomain
 import FolioStorage
 import QuickLook
 import SwiftUI
 
-/// Unclassified files come first with the cleanup's suggested place; nothing moves until approved.
 struct MaterialsView: View {
-    @Environment(Workspace.self) private var workspace
+    @State private var model: MaterialsModel
     @Environment(\.accent) private var accent
     @Environment(\.searchTarget) private var target
-    let course: LoadedCourse
-    @State private var suggestions: [PlannedMove]?
-    @State private var lastBatch: UUID?
-    @State private var assignmentFolders: [String] = []
-    @State private var viewing: UUID?
-    @State private var preview: URL?
-    @State private var linking: UUID?
-    @State private var relinking: UUID?
-    @State private var disconnecting: FolioDomain.Material?
-    @State private var incoming: [URL] = []
     @State private var picking = false
-    @State private var renaming: FolioDomain.Material?
-    @State private var newName = ""
-    @State private var trashing: FolioDomain.Material?
-    /// Folder paths opened in the tree; folders start closed so a course with many reports stays short.
-    @State private var opened: Set<String> = []
+
+    init(workspace: Workspace, course: LoadedCourse) {
+        _model = State(initialValue: MaterialsModel(workspace: workspace, course: course))
+    }
 
     var body: some View {
         Group {
-            if let id = viewing, let m = course.file.materials.first(where: { $0.id == id }) {
-                MaterialViewer(course: course, material: m).id(m.id)  // another file starts over: page, zoom and search belong to the old one
+            if let m = model.viewed {
+                MaterialViewer(model: model, material: m).id(m.id)  // another file starts over: page, zoom and search belong to the old one
             } else {
                 list
             }
         }
-        .task { await load() }
-        .quickLookPreview($preview)
-        .fileImporter(isPresented: Binding(get: { relinking != nil }, set: { if !$0 { relinking = nil } }), allowedContentTypes: [.item]) { result in
-            if case .success(let url) = result, let id = relinking { workspace.relink(id, to: url, course: course.id) }
-            relinking = nil
+        .task { await model.load() }
+        .quickLookPreview($model.preview)
+        .fileImporter(isPresented: Binding(get: { model.relinking != nil }, set: { if !$0 { model.relinking = nil } }), allowedContentTypes: [.item]) { result in
+            if case .success(let url) = result { model.relink(to: url) }
+            model.relinking = nil
         }
-        .confirmationDialog("이 파일의 추적을 끊을까요?", isPresented: Binding(get: { disconnecting != nil }, set: { if !$0 { disconnecting = nil } }),
-                            presenting: disconnecting) { m in
-            Button("연결 끊기", role: .destructive) { workspace.run(MaterialUntrack(course: course.id, material: m.id)) }
+        .confirmationDialog(String(localized: .materialsUntrackConfirm), isPresented: Binding(get: { model.disconnecting != nil }, set: { if !$0 { model.disconnecting = nil } }),
+                            presenting: model.disconnecting) { m in
+            Button(.materialsUntrack, role: .destructive) { model.untrack(m) }
         } message: { m in
-            Text("\(m.path) 항목을 자료 목록에서 지웁니다. 회차, 단원, 노트에 걸린 참조는 그대로 남습니다.")
+            Text(.materialsUntrackMessage(m.path))
         }
-        .sheet(isPresented: Binding(get: { !incoming.isEmpty }, set: { if !$0 { incoming = [] } })) {
-            ImportPlaceSheet(course: course, files: incoming, places: places)
+        .sheet(isPresented: Binding(get: { !model.incoming.isEmpty }, set: { if !$0 { model.incoming = [] } })) {
+            ImportPlaceSheet(workspace: model.workspace, course: model.course, files: model.incoming, places: model.places)
         }
-        .confirmationDialog("휴지통으로 옮길까요?", isPresented: Binding(get: { trashing != nil }, set: { if !$0 { trashing = nil } }),
-                            presenting: trashing) { m in
-            Button("휴지통으로 옮기기", role: .destructive) { workspace.run(MaterialTrash(course: course.id, material: m.id)) }
+        .confirmationDialog(String(localized: .materialsTrashConfirm), isPresented: Binding(get: { model.trashing != nil }, set: { if !$0 { model.trashing = nil } }),
+                            presenting: model.trashing) { m in
+            Button(.materialsTrash, role: .destructive) { model.trash(m) }
         } message: { m in
-            Text("\(m.path) 파일을 휴지통으로 옮기고 자료 목록에서 지웁니다. 휴지통에서 되살릴 수 있습니다.")
+            Text(.materialsTrashMessage(m.path))
         }
-        .alert("이름 바꾸기", isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } }), presenting: renaming) { m in
-            TextField("이름", text: $newName)
-            Button("바꾸기") { rename(m) }
-            Button("취소", role: .cancel) {}
+        .alert(String(localized: .materialsRename), isPresented: Binding(get: { model.renaming != nil }, set: { if !$0 { model.renaming = nil } }), presenting: model.renaming) { m in
+            TextField(String(localized: .materialsRenameField), text: $model.newName)
+            Button(.materialsRenameConfirm) { model.rename(m) }
+            Button(.commonCancel, role: .cancel) {}
         } message: { m in
-            Text("확장자 .\((m.path as NSString).pathExtension)는 그대로 둡니다. 바꾼 이름은 되돌릴 수 있게 기록합니다.")
+            Text(model.renameMessage(m))
         }
         .onChange(of: target.wrappedValue, initial: true) { _, new in
-            guard let new, new.courseId == course.id, let id = new.materialId else { return }
+            guard let new, new.courseId == model.course.id, let id = new.materialId else { return }
             target.wrappedValue = nil
-            if let m = course.file.materials.first(where: { $0.id == id }) { open(m) }
+            if let m = model.materials.first(where: { $0.id == id }) { open(m) }
         }
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.openPDF, initial: true) { _, new in
             // Fixtures ship without tracked files; register them so there is a PDF to show.
-            if new, course.file.materials.isEmpty { workspace.run(MaterialTrack(course: course.id)) }
-            viewing = new ? workspace.course(course.id)?.file.materials.first { $0.isPDF && $0.status == .classified }?.id : nil
+            if new, model.materials.isEmpty { model.workspace.run(MaterialTrack(course: model.course.id)) }
+            model.viewing = new ? model.materials.first { $0.isPDF && $0.status == .classified }?.id : nil
         }
         #endif
     }
 
     var list: some View {
-        let materials = course.file.materials
-        let unclassified = materials.filter { $0.status == .unclassified }
+        let materials = model.materials
+        let unclassified = model.unclassified
         return Page {
-            let missing = materials.filter { $0.status == .missing }.count
-            PageHeader(title: "자료", subtitle: (["파일 \(materials.count)개"] + (unclassified.isEmpty ? [] : ["미분류 \(unclassified.count)개"])
-                                                + (missing == 0 ? [] : ["파일 없음 \(missing)개"])).joined(separator: " · "))
+            PageHeader(title: String(localized: .materialsTitle), subtitle: model.subtitle)
 
             if materials.isEmpty {
-                EmptyLine("아직 추적한 파일이 없습니다. 파일을 추가하거나 이 화면에 끌어다 놓으세요. 과목 폴더에 이미 있는 파일은 파일 추적 갱신으로 등록합니다.")
+                EmptyLine(String(localized: .materialsEmpty))
             }
             HStack {
-                Button("파일 추가") { picking = true }
-                    .help("파일을 골라 과목 폴더로 복사합니다. 이 화면에 끌어다 놓아도 됩니다.")
-                Button("파일 추적 갱신") { workspace.run(MaterialTrack(course: course.id)); Task { await load() } }
-                    .help("과목 폴더를 다시 읽어 새 파일을 등록하고 옮겨진 파일을 다시 연결합니다. 파일은 옮기지 않습니다.")
-                if let batch = lastBatch {
-                    Button("방금 옮긴 것 되돌리기") { workspace.undoMoves(batch, course: course.id); lastBatch = nil; Task { await load() } }
+                Button(.materialsAddFiles) { picking = true }
+                    .help(Text(.materialsAddFilesHelp))
+                Button(.materialsTrack) { model.track() }
+                    .help(Text(.materialsTrackHelp))
+                if model.lastBatch != nil {
+                    Button(.materialsUndoMove) { model.undo() }
                 }
             }
             // On the header row, not the page: two file importers on one view leave only the last one working.
             .fileImporter(isPresented: $picking, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
-                if case .success(let urls) = result { incoming = urls }
+                if case .success(let urls) = result { model.incoming = urls }
             }
 
             if !unclassified.isEmpty { inbox(unclassified) }
 
-            ForEach(MaterialRole.allCases, id: \.self) { role in
-                // A missing file that was never classified still needs a row to be re-pointed or dropped.
-                let items = materials.filter { $0.role == role && $0.status == .classified || ($0.role ?? .other) == role && $0.status == .missing }
-                if !items.isEmpty {
-                    let tree = PathTree(items) { $0.path }
-                    let rows = treeRows(tree, depth: 0)
-                    Block(role.label, note: tree.path.isEmpty ? "\(items.count)" : "\(items.count) · \(tree.path)") {
-                        Card {
-                            ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
-                                CardRow(last: i == rows.count - 1) {
-                                    switch row {
-                                    case .folder(let folder, let depth): folderRow(folder, depth: depth)
-                                    case .file(let m, let name, let depth):
-                                        // One stack, so the indent moves the row once rather than padding each of its parts.
-                                        HStack(spacing: Theme.Space.m) { fileRow(m, name: name) }.padding(.leading, CGFloat(depth) * Self.indent)
-                                    }
+            ForEach(model.sections(), id: \.role) { section in
+                Block(section.role.label, note: section.note) {
+                    Card {
+                        ForEach(Array(section.rows.enumerated()), id: \.element.id) { i, row in
+                            CardRow(last: i == section.rows.count - 1) {
+                                switch row {
+                                case .folder(let folder, let depth): folderRow(folder, depth: depth)
+                                case .file(let m, let name, let depth):
+                                    // One stack, so the indent moves the row once rather than padding each of its parts.
+                                    HStack(spacing: Theme.Space.m) { fileRow(m, name: name) }.padding(.leading, CGFloat(depth) * Self.indent)
                                 }
-                                .contentShape(.rect)
-                                .contextMenu {
-                                    switch row {
-                                    case .folder(let folder, _): folderMenu(folder)
-                                    case .file(let m, _, _): fileContextMenu(m)
-                                    }
+                            }
+                            .contentShape(.rect)
+                            .contextMenu {
+                                switch row {
+                                case .folder(let folder, _): folderMenu(folder)
+                                case .file(let m, _, _): fileContextMenu(m)
                                 }
                             }
                         }
@@ -134,30 +113,7 @@ struct MaterialsView: View {
                 }
             }
         }
-        .fileDrop { incoming = $0 }
-    }
-
-    /// Standard folders by hand, with each exam's prep folder; `Lectures` is offered with a session where it is needed.
-    var places: [String] {
-        let exams = course.file.exams.compactMap { MaterialIntake.folder(of: $0, among: course.file.exams) }
-        return Array((MaterialIntake.places(assignmentFolders: assignmentFolders) + exams).uniqued())
-    }
-
-    func rename(_ m: FolioDomain.Material) {
-        let ext = (m.path as NSString).pathExtension
-        let base = newName.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "/", with: "-")
-        let name = ext.isEmpty ? base : "\(base).\(ext)"
-        guard !base.isEmpty, name != (m.path as NSString).lastPathComponent else { return }
-        move(m, to: (dir(m.path) as NSString).appendingPathComponent(name))
-    }
-
-    func move(_ m: FolioDomain.Material, to path: String) {
-        if let batch = workspace.run(MaterialMove(course: course.id, material: m.id, to: path))?.made { lastBatch = batch }
-    }
-
-    func load() async {
-        assignmentFolders = (try? course.store.assignmentFolders()) ?? []
-        suggestions = await workspace.cleanupSuggestions(for: course.id)
+        .fileDrop { model.incoming = $0 }
     }
 
     // MARK: Opening
@@ -165,42 +121,18 @@ struct MaterialsView: View {
     func open(_ m: FolioDomain.Material) {
         #if os(macOS)
         if m.isFolder {
-            NSWorkspace.shared.open(course.store.fileURL(m.path))
+            NSWorkspace.shared.open(model.fileURL(m.path))
             return
         }
         #endif
-        if m.isPDF { viewing = m.id } else { Task { preview = try? await workspace.download(m, course: course.id) } }
-    }
-
-    func linkLine(_ m: FolioDomain.Material) -> String {
-        let file = course.file
-        let sessions = file.sessionLinks(of: m.id).map { s, link in course.file.name(of: s) + link.pageLabel }
-        let units = file.units.filter { m.unitIds.contains($0.id) }.map(\.title)
-        return (sessions + (units.isEmpty ? [] : ["단원: " + units.joined(separator: ", ")])).joined(separator: " · ")
-    }
-
-    enum TreeRow {
-        case folder(PathTree<FolioDomain.Material>, depth: Int)
-        case file(FolioDomain.Material, name: String, depth: Int)
-
-        var id: String {
-            switch self {
-            case .folder(let f, _): "folder:" + f.path
-            case .file(let m, _, _): m.id.uuidString
-            }
-        }
+        model.open(m)
     }
 
     /// The chevron and its gap, so a folder's files line up under its folder icon.
     static let indent: CGFloat = 14 + Theme.Space.m
 
-    func treeRows(_ tree: PathTree<FolioDomain.Material>, depth: Int) -> [TreeRow] {
-        tree.folders.flatMap { f in [TreeRow.folder(f, depth: depth)] + (opened.contains(f.path) ? treeRows(f, depth: depth + 1) : []) }
-            + tree.items.map { .file($0.item, name: $0.name, depth: depth) }
-    }
-
     func folderRow(_ folder: PathTree<FolioDomain.Material>, depth: Int) -> some View {
-        let open = opened.contains(folder.path)
+        let open = model.opened.contains(folder.path)
         return HStack(spacing: Theme.Space.m) {
             Image(systemName: "chevron.right").font(Theme.Glyph.regular)
                 .rotationEffect(.degrees(open ? 90 : 0)).foregroundStyle(Theme.Palette.textTertiary).frame(width: 14)
@@ -212,28 +144,28 @@ struct MaterialsView: View {
         .padding(.leading, CGFloat(depth) * Self.indent)
         .opens { toggle(folder) }
         .accessibilityAddTraits(.isButton)
-        .accessibilityValue(open ? "펼침" : "접힘")
+        .accessibilityValue(Text(open ? .materialsExpanded : .materialsCollapsed))
     }
 
     func toggle(_ folder: PathTree<FolioDomain.Material>) {
-        withAnimation(.snappy(duration: 0.2)) { if opened.contains(folder.path) { opened.remove(folder.path) } else { opened.insert(folder.path) } }
+        withAnimation(.snappy(duration: 0.2)) { model.toggle(folder) }
     }
 
     @ViewBuilder func folderMenu(_ folder: PathTree<FolioDomain.Material>) -> some View {
-        Button(opened.contains(folder.path) ? "접기" : "펼치기") { toggle(folder) }
+        Button(model.opened.contains(folder.path) ? .materialsCollapse : .materialsExpand) { toggle(folder) }
         #if os(macOS)
-        Button("Finder에서 보기") { NSWorkspace.shared.activateFileViewerSelecting([course.store.fileURL(folder.path)]) }
+        Button(.materialsShowInFinder) { NSWorkspace.shared.activateFileViewerSelecting([model.fileURL(folder.path)]) }
         #endif
     }
 
     @ViewBuilder func fileContextMenu(_ m: FolioDomain.Material) -> some View {
         if m.status == .missing {
-            Button("다른 파일 지정…") { relinking = m.id }
+            Button(.materialsRelinkEllipsis) { model.relinking = m.id }
             Divider()
-            Button("연결 끊기…", role: .destructive) { disconnecting = m }
+            Button(.materialsUntrackEllipsis, role: .destructive) { model.disconnecting = m }
         } else {
-            Button(m.isFolder ? "Finder에서 열기" : "열기") { open(m) }
-            Button("연결…") { linking = m.id }
+            Button(m.isFolder ? .materialsOpenInFinder : .materialsOpen) { open(m) }
+            Button(.materialsLinkEllipsis) { model.linking = m.id }
             if !m.isFolder {
                 Divider()
                 fileMenuItems(m)
@@ -243,18 +175,18 @@ struct MaterialsView: View {
 
     @ViewBuilder func fileMenuItems(_ m: FolioDomain.Material) -> some View {
         #if os(macOS)
-        Button("기본 앱으로 열기") { NSWorkspace.shared.open(course.store.fileURL(m.path)) }
-        Button("Finder에서 보기") { NSWorkspace.shared.activateFileViewerSelecting([course.store.fileURL(m.path)]) }
+        Button(.materialsOpenWithDefault) { NSWorkspace.shared.open(model.fileURL(m.path)) }
+        Button(.materialsShowInFinder) { NSWorkspace.shared.activateFileViewerSelecting([model.fileURL(m.path)]) }
         Divider()
         #endif
-        Button("이름 바꾸기…") { newName = ((m.path as NSString).lastPathComponent as NSString).deletingPathExtension; renaming = m }
-        Menu("다른 위치로 옮기기") {
-            ForEach(([CourseFolder.lectures.rawValue] + places).filter { $0 != dir(m.path) }, id: \.self) { place in
-                Button(place) { move(m, to: "\(place)/\((m.path as NSString).lastPathComponent)") }
+        Button(.materialsRenameEllipsis) { model.startRenaming(m) }
+        Menu(String(localized: .materialsMoveTo)) {
+            ForEach(model.moveTargets(m), id: \.self) { place in
+                Button(place) { model.move(m, into: place) }
             }
         }
         Divider()
-        Button("휴지통으로 옮기기…", role: .destructive) { trashing = m }
+        Button(.materialsTrashEllipsis, role: .destructive) { model.trashing = m }
     }
 
     @ViewBuilder func fileRow(_ m: FolioDomain.Material, name: String) -> some View {
@@ -263,22 +195,22 @@ struct MaterialsView: View {
             .foregroundStyle(missing ? Theme.Palette.danger : Theme.Palette.textSecondary)
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
             Text(name).lineLimit(1).help(m.path)
-            let links = linkLine(m)
+            let links = model.linkLine(m)
             if !links.isEmpty { Text(links).font(Theme.Typeface.caption).foregroundStyle(accent.ink).lineLimit(1) }
         }
-        .fileDrag(course.store.fileURL(m.path))
+        .fileDrag(model.fileURL(m.path))
         Spacer()
         if missing {
-            Chip("파일 없음", tone: .danger)
-            Button("다른 파일 지정") { relinking = m.id }.buttonStyle(.ghost)
-            Button("연결 끊기") { disconnecting = m }.buttonStyle(.ghost).tint(Theme.Palette.danger)
+            Chip(String(localized: .materialsMissing), tone: .danger)
+            Button(.materialsRelink) { model.relinking = m.id }.buttonStyle(.ghost)
+            Button(.materialsUntrack) { model.disconnecting = m }.buttonStyle(.ghost).tint(Theme.Palette.danger)
         } else {
-            Button("연결") { linking = m.id }
+            Button(.materialsLink) { model.linking = m.id }
                 .buttonStyle(.ghost)
-                .popover(isPresented: Binding(get: { linking == m.id }, set: { if !$0 { linking = nil } })) {
-                    MaterialLinksEditor(course: course, materialId: m.id)
+                .popover(isPresented: Binding(get: { model.linking == m.id }, set: { if !$0 { model.linking = nil } })) {
+                    MaterialLinksEditor(model: model, materialId: m.id)
                 }
-            Button(m.isFolder ? "Finder" : "열기") { open(m) }.buttonStyle(.ghost)
+            Button(m.isFolder ? "Finder" : String(localized: .materialsOpen)) { open(m) }.buttonStyle(.ghost)
             if !m.isFolder {
                 Menu { fileMenuItems(m) } label: {
                     Image(systemName: "ellipsis")
@@ -294,126 +226,102 @@ struct MaterialsView: View {
     // MARK: Unclassified inbox
 
     @ViewBuilder func inbox(_ unclassified: [FolioDomain.Material]) -> some View {
-        let prefix = workspace.coursePrefix(course.id) ?? ""
-        let moves = (suggestions ?? []).filter { move in unclassified.contains { covers(move, prefix + $0.path) } }
-        // One row per source folder, target folder and reason, so a folder of seven files is one decision.
-        let groups = Dictionary(grouping: moves) { [dir($0.from), dir($0.to), $0.review?.rawValue ?? ""] }
-            .values.map { $0.sorted { $0.from < $1.from } }.sorted { $0[0].from < $1[0].from }
-        let orphans = unclassified.filter { m in !moves.contains { covers($0, prefix + m.path) } }
-        NoticeCard(title: "자료 \(unclassified.count)건이 분류를 기다립니다", detail: "승인한 것만 옮기고, 옮긴 기록은 되돌릴 수 있게 남깁니다", systemImage: "tray.fill", trailing: { EmptyView() }) {
-                if suggestions == nil {
-                    CardRow(last: true) { ProgressView().controlSize(.small); Text("추천 위치를 계산하는 중").foregroundStyle(Theme.Palette.textTertiary) }
+        let inbox = model.inbox(unclassified)
+        let prefix = model.prefix
+        NoticeCard(title: String(localized: .materialsInboxTitle(unclassified.count)), detail: String(localized: .materialsInboxDetail),
+                   systemImage: "tray.fill", trailing: { EmptyView() }) {
+                if model.suggestions == nil {
+                    CardRow(last: true) { ProgressView().controlSize(.small); Text(.materialsInboxLoading).foregroundStyle(Theme.Palette.textTertiary) }
                 }
-                ForEach(Array(groups.enumerated()), id: \.element) { i, group in
-                    let files = unclassified.filter { m in group.contains { covers($0, prefix + m.path) } }
-                    let source = group.count == 1 ? group[0].from : dir(group[0].from)
-                    CardRow(last: i == groups.count - 1 && orphans.isEmpty) {
+                ForEach(Array(inbox.groups.enumerated()), id: \.element) { i, group in
+                    let files = model.files(in: group, among: unclassified)
+                    CardRow(last: i == inbox.groups.count - 1 && inbox.orphans.isEmpty) {
                         VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                            Text(String(source.dropFirst(prefix.count)) + (group.count > 1 ? " · 파일 \(group.count)개" : ""))
+                            Text(model.source(group))
                                 .font(Theme.Typeface.bodyStrong).lineLimit(1)
                             HStack(spacing: Theme.Space.tight) {
                                 Image(systemName: "arrow.turn.down.right").foregroundStyle(Theme.Palette.textTertiary)
-                                Text(String((group.count == 1 ? group[0].to : dir(group[0].to) + "/").dropFirst(prefix.count)))
+                                Text(model.target(group))
                                     .font(Theme.Typeface.mono).lineLimit(1)
                                 if let reason = group[0].review { Chip(reason.label, tone: .warning) }
                             }
                         }
                         Spacer()
-                        Button("승인") { approve(group) }.buttonStyle(.pointing(.borderedProminent))
+                        Button(.materialsApprove) { model.approve(group) }.buttonStyle(.pointing(.borderedProminent))
                         relocateMenu(group.map(\.from))
-                        Button("무시") { workspace.run(MaterialStatusSet(course: course.id, materials: files.map(\.id), status: .ignored)) }.buttonStyle(.ghost)
+                        Button(.materialsIgnore) { model.ignore(files) }.buttonStyle(.ghost)
                     }
                     .contentShape(.rect)
                     .contextMenu {
-                        Button("승인") { approve(group) }
+                        Button(.materialsApprove) { model.approve(group) }
                         relocateMenu(group.map(\.from))
                         Divider()
-                        Button("무시") { workspace.run(MaterialStatusSet(course: course.id, materials: files.map(\.id), status: .ignored)) }
+                        Button(.materialsIgnore) { model.ignore(files) }
                     }
                 }
-                ForEach(Array(orphans.enumerated()), id: \.element.id) { i, m in
-                    CardRow(last: i == orphans.count - 1) {
+                ForEach(Array(inbox.orphans.enumerated()), id: \.element.id) { i, m in
+                    CardRow(last: i == inbox.orphans.count - 1) {
                         Text(m.path).font(Theme.Typeface.bodyStrong).lineLimit(1)
                         Spacer()
                         relocateMenu([prefix + m.path])
-                        Button("무시") { workspace.run(MaterialStatusSet(course: course.id, materials: [m.id], status: .ignored)) }.buttonStyle(.ghost)
+                        Button(.materialsIgnore) { model.ignore([m.id]) }.buttonStyle(.ghost)
                     }
                     .contentShape(.rect)
                     .contextMenu {
                         relocateMenu([prefix + m.path])
                         Divider()
-                        Button("무시") { workspace.run(MaterialStatusSet(course: course.id, materials: [m.id], status: .ignored)) }
+                        Button(.materialsIgnore) { model.ignore([m.id]) }
                     }
                 }
         }
     }
 
-    func dir(_ path: String) -> String { (path as NSString).deletingLastPathComponent }
-
     func relocateMenu(_ sources: [String]) -> some View {
-        let prefix = workspace.coursePrefix(course.id) ?? ""
-        // Lectures stays here: an unclassified file keeps its name, and a lecture already named by week is common.
-        return Menu("다른 위치") {
-            ForEach([CourseFolder.lectures.rawValue] + places, id: \.self) { place in
-                Button(place) {
-                    approve(sources.map { PlannedMove(from: $0, to: "\(prefix)\(place)/\(($0 as NSString).lastPathComponent)") })
-                }
+        Menu(String(localized: .materialsRelocate)) {
+            ForEach(model.relocations, id: \.self) { place in
+                Button(place) { model.relocate(sources, to: place) }
             }
         }
         .fixedSize()
     }
-
-    func approve(_ moves: [PlannedMove]) {
-        if let batch = workspace.approve(moves, course: course.id) { lastBatch = batch }
-        Task { await load() }
-    }
-
-    func covers(_ move: PlannedMove, _ path: String) -> Bool {
-        path == move.from || path.hasPrefix(move.from + "/")
-    }
 }
 
 struct MaterialLinksEditor: View {
-    @Environment(Workspace.self) private var workspace
-    let course: LoadedCourse
+    let model: MaterialsModel
     let materialId: UUID
 
     var body: some View {
-        let file = course.file
-        let unitIds = file.materials.first { $0.id == materialId }?.unitIds ?? []
-        let sessions = file.sessions.sorted { ($0.week, $0.index) < ($1.week, $1.index) }
-        // Outline order: `order` counts among siblings only, so sorting by it alone interleaves chapters and their units.
-        let units = UnitTree.outline(file.units)
+        let unitIds = model.unitIds(of: materialId)
+        let sessions = model.sessions
+        let units = model.units
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Space.l) {
-                Block("강의 회차", note: "페이지를 비우면 전체") {
+                Block(String(localized: .materialsLinksSessions), note: String(localized: .materialsLinksSessionsNote)) {
                     Card {
-                        if sessions.isEmpty { CardRow(last: true) { EmptyLine("회차가 없습니다") } }
+                        if sessions.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .materialsLinksNoSessions)) } }
                         ForEach(Array(sessions.enumerated()), id: \.element.id) { i, s in
                             let link = s.materials.first { $0.materialId == materialId }
                             CardRow(last: i == sessions.count - 1) {
-                                CheckCircle(on: link != nil) {
-                                    workspace.run(MaterialLinkSession(course: course.id, material: materialId, session: s.id, linked: link == nil))
-                                }
-                                Text(s.topic.isEmpty ? course.file.name(of: s) : "\(course.file.name(of: s)) · \(s.topic)").lineLimit(1)
+                                CheckCircle(on: link != nil) { model.link(materialId, session: s.id, linked: link == nil) }
+                                Text(model.sessionTitle(s)).lineLimit(1)
                                 Spacer()
                                 if let link {
-                                    pageField("처음", link.firstPage) { setPages(s.id, $0, link.lastPage) }
+                                    pageField(String(localized: .materialsLinksFirstPage), link.firstPage) { model.setPages(materialId, session: s.id, $0, link.lastPage) }
                                     Text("–").foregroundStyle(Theme.Palette.textTertiary)
-                                    pageField("끝", link.lastPage) { setPages(s.id, link.firstPage, $0) }
+                                    pageField(String(localized: .materialsLinksLastPage), link.lastPage) { model.setPages(materialId, session: s.id, link.firstPage, $0) }
                                 }
                             }
                         }
                     }
                 }
-                Block("단원") {
+                Block(String(localized: .materialsLinksUnits)) {
                     Card {
-                        if units.isEmpty { CardRow(last: true) { EmptyLine("단원이 없습니다") } }
+                        if units.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .materialsLinksNoUnits)) } }
                         ForEach(Array(units.enumerated()), id: \.element.unit.id) { i, row in
                             let u = row.unit
                             let linked = unitIds.contains(u.id)
                             CardRow(last: i == units.count - 1) {
-                                CheckCircle(on: linked) { workspace.run(MaterialLinkUnit(course: course.id, material: materialId, unit: u.id, linked: !linked)) }
+                                CheckCircle(on: linked) { model.link(materialId, unit: u.id, linked: !linked) }
                                     .padding(.leading, CGFloat(row.depth) * Theme.Space.l)
                                 Text(u.title).lineLimit(1)
                                 Spacer()
@@ -433,10 +341,6 @@ struct MaterialLinksEditor: View {
         TextField(prompt, value: Binding(get: { value }, set: { set($0.flatMap { $0 > 0 ? $0 : nil }) }), format: .number)
             .pill(width: 64)
     }
-
-    func setPages(_ session: UUID, _ first: Int?, _ last: Int?) {
-        workspace.run(MaterialLinkSession(course: course.id, material: materialId, session: session, firstPage: first, lastPage: last))
-    }
 }
 
 extension SessionMaterial {
@@ -453,66 +357,41 @@ extension FolioDomain.Material {
     var isPDF: Bool { !isFolder && path.lowercased().hasSuffix(".pdf") }
 }
 
-/// Where files brought in from the materials screen go: one row per kind, and for a kind with several folders
-/// (assignments, exams) a second choice beneath it. A lecture needs its session, which names it by week and links it.
 struct ImportPlaceSheet: View {
-    @Environment(Workspace.self) private var workspace
+    @State private var model: ImportPlaceModel
     @Environment(\.dismiss) private var dismiss
-    let course: LoadedCourse
-    let files: [URL]
-    let places: [String]
-    @State private var place = CourseFolder.lectures.rawValue
-    @State private var session: UUID?
 
-    /// Places by kind label, in the order first met: `과제` → `Assignments/HW00`, `Assignments/HW01`, …
-    var kinds: [(label: String, places: [String])] {
-        var result: [(label: String, places: [String])] = []
-        for p in [CourseFolder.lectures.rawValue] + places {
-            let label = MaterialRole(path: p + "/_")?.label ?? p
-            if let i = result.firstIndex(where: { $0.label == label }) { result[i].places.append(p) } else { result.append((label, [p])) }
-        }
-        return result
+    init(workspace: Workspace, course: LoadedCourse, files: [URL], places: [String]) {
+        _model = State(initialValue: ImportPlaceModel(workspace: workspace, course: course, files: files, places: places))
     }
 
     var body: some View {
-        let kinds = kinds
-        let sessions = course.file.sessions.filter { !$0.isCancelled }.sorted { ($0.week, $0.index) < ($1.week, $1.index) }
-        SheetForm(title: files.count == 1 ? "\(files[0].lastPathComponent) 넣기" : "파일 \(files.count)개 넣기", confirm: "넣기",
-                  note: "원본은 그대로 두고 복사합니다. 같은 이름이 있으면 덮어쓰지 않고 뒤에 번호를 붙입니다.") {
+        let kinds = model.kinds
+        SheetForm(title: model.title, confirm: String(localized: .materialsImportConfirm), note: String(localized: .materialsImportNote)) {
             ForEach(Array(kinds.enumerated()), id: \.element.label) { i, kind in
-                let chosen = kind.places.contains(place)
-                let isLecture = kind.places == [CourseFolder.lectures.rawValue]
-                // Assignments and exams name which one even when there is one, so the choice reads plainly.
-                let perItem = kind.places[0].contains("/") && kind.places != ["\(CourseFolder.exams.rawValue)/\(StandardLayout.pastExamsFolder)"]
-                let sub = chosen && (isLecture || perItem)
+                let chosen = kind.places.contains(model.place)
+                let sub = chosen && (kind.isLecture || kind.perItem)
                 CardRow(last: i == kinds.count - 1 && !sub) {
-                    CheckCircle(on: chosen) { pick(kind.places) }
+                    CheckCircle(on: chosen) { model.pick(kind.places) }
                     Text(kind.label)
                     Spacer()
-                    Text(chosen ? place : perItem ? "\((kind.places[0] as NSString).deletingLastPathComponent)/…" : kind.places[0])
+                    Text(model.shown(kind))
                         .font(Theme.Typeface.mono).foregroundStyle(Theme.Palette.textTertiary)
                 }
-                .opens { pick(kind.places) }
-                if sub && isLecture {
-                    FormRow(label: "회차", last: i == kinds.count - 1) {
-                        ChoiceMenu(selection: $session, options: [(nil, "회차 없음")] + sessions.map { ($0.id, course.file.name(of: $0) + ($0.topic.isEmpty ? "" : " · \($0.topic)")) })
+                .opens { model.pick(kind.places) }
+                if sub && kind.isLecture {
+                    FormRow(label: String(localized: .materialsImportSession), last: i == kinds.count - 1) {
+                        ChoiceMenu(selection: $model.session, options: model.sessionOptions)
                     }
                 } else if sub {
                     FormRow(label: kind.label, last: i == kinds.count - 1) {
-                        ChoiceMenu(selection: $place, options: kind.places.map { ($0, ($0 as NSString).lastPathComponent) })
+                        ChoiceMenu(selection: Binding(get: { model.place }, set: { model.choose($0) }), options: kind.places.map { ($0, ($0 as NSString).lastPathComponent) })
                     }
                 }
             }
         } onConfirm: {
-            let picked = place == CourseFolder.lectures.rawValue ? sessions.first { $0.id == session } : nil
-            workspace.importFiles(files, into: place, week: picked?.week, session: picked?.id, course: course.id)
+            model.confirm()
             dismiss()
         }
-        .onAppear { session = sessions.last { $0.date <= .now }?.id }
-    }
-
-    /// The newest folder of a kind first: the latest assignment or exam is the likely one.
-    func pick(_ places: [String]) {
-        if !places.contains(place) { place = places.last ?? place }
     }
 }

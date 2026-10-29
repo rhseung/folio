@@ -60,8 +60,8 @@ final class LectureRecorder {
             var transcription: (SpeechTranscriber, AVAudioFormat, Locale)?
             switch await Self.transcriber(for: locale) {
             case .ready(let t, let format, let supported): transcription = (t, format, supported)
-            case .downloading: transcriptionNote = "받아쓰기 모델을 내려받는 중이라 이번에는 소리만 녹음합니다"
-            case .unsupported: transcriptionNote = "이 언어는 받아쓰기를 쓸 수 없어 소리만 녹음합니다"
+            case .downloading: transcriptionNote = String(localized: .recordingNoteDownloading)
+            case .unsupported: transcriptionNote = String(localized: .recordingNoteUnsupported)
             }
             var analyzerInput: AsyncStream<AnalyzerInput>.Continuation?
             if let (transcriber, _, _) = transcription {
@@ -237,9 +237,9 @@ enum RecorderError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .microphoneDenied: "마이크 사용이 허용되지 않았습니다. 시스템 설정 > 개인정보 보호 및 보안 > 마이크에서 Folio를 켜 주세요."
-        case .noMicrophone: "사용할 수 있는 마이크가 없습니다."
-        case .localeUnsupported: "이 기기에서 이 언어의 받아쓰기를 쓸 수 없습니다."
+        case .microphoneDenied: String(localized: .recordingErrorMicrophoneDenied)
+        case .noMicrophone: String(localized: .recordingErrorNoMicrophone)
+        case .localeUnsupported: String(localized: .recordingErrorLocaleUnsupported)
         }
     }
 }

@@ -49,7 +49,7 @@ struct StepToggle<Value: Hashable>: View {
                 Button(options[i].label) { selection = options[i].value }
             }
         }
-        .help("눌러서 다음 상태로, 오른쪽 클릭으로 바로 고르기")
+        .help(Text(.designStepToggleHelp))
         .accessibilityLabel(current.label)
     }
 }

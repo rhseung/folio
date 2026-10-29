@@ -151,7 +151,7 @@ struct SheetForm<Rows: View>: View {
                     Button(deleteTitle, role: .destructive, action: onDelete).buttonStyle(.pointing(.bordered)).foregroundStyle(Theme.Palette.danger)
                 }
                 Spacer()
-                Button("취소") { dismiss() }.keyboardShortcut(.cancelAction)
+                Button(.commonCancel) { dismiss() }.keyboardShortcut(.cancelAction)
                 Button(confirm, action: onConfirm).buttonStyle(.pointing(.borderedProminent)).keyboardShortcut(.defaultAction).disabled(disabled)
             }
         }

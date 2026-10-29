@@ -39,9 +39,9 @@ private struct Sensitive: ViewModifier {
                     .allowsHitTesting(false)
                     .overlay { Color.clear.contentShape(.rect).onTapGesture { unlock() } }
                     .pointingHand()
-                    .help("눌러서 성적 잠금 해제")
+                    .help(Text(.designUnlockHelp))
                     .accessibilityElement()
-                    .accessibilityLabel("잠긴 성적")
+                    .accessibilityLabel(Text(.designLockedGrade))
                     .accessibilityAddTraits(.isButton)
                     .accessibilityAction { unlock() }
             case .block, nil:
@@ -53,7 +53,7 @@ private struct Sensitive: ViewModifier {
                     }
                     .accessibilityHidden(true)
                     .overlay {
-                        Button { unlock() } label: { Label("성적 잠금 해제", systemImage: "lock.fill") }
+                        Button { unlock() } label: { Label(.commonUnlockGrades, systemImage: "lock.fill") }
                             .buttonStyle(.pointing(.glass))
                     }
             }

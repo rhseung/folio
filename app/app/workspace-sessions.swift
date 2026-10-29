@@ -54,12 +54,4 @@ extension Workspace {
         guard let course = course(courseId), let session = course.file.sessions.first(where: { $0.id == sessionId }) else { return }
         Task { await startRecording(session, in: course, locale: locale) }
     }
-
-    /// Sessions made ahead when the app filled whole terms that nothing has used yet; listed for the user to delete.
-    func untouchedFutureSessions(_ course: LoadedCourse, now: Date) -> [Session] {
-        // Unreadable notes might point at any of them, so none is offered then.
-        guard let notes = try? course.store.notes() else { return [] }
-        let noted = Set(notes.compactMap(\.meta.sessionId))
-        return course.file.untouchedFutureSessions(now: now, notedSessions: noted)
-    }
 }
