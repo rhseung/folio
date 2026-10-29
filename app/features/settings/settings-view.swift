@@ -80,7 +80,7 @@ struct SettingsView: View {
         case .profile:
             // No block title: the page header already says 내 정보.
             VStack(alignment: .leading, spacing: Theme.Space.s) {
-                ProfileCard()
+                ProfileCard(workspace: model.workspace)
                 Footnote(String(localized: .settingsProfileFootnote))
             }
         case .general: GeneralSettings(model: model)

@@ -441,12 +441,12 @@ struct RootView: View {
     @ViewBuilder var detail: some View {
         switch selection {
         case .today, nil: TodayView()
-        case .course(let id): CourseView(courseID: id).id(id)
+        case .course(let id): CourseView(workspace: workspace, courseID: id).id(id)
         case .semester(let id): SemesterView(semesterID: id) { selection = .course($0) }.id(id)
-        case .grades: GradesView()
+        case .grades: GradesView(workspace: workspace)
         case .requirements:
             // A course with a folder opens itself; a record-only one (credited terms) opens its semester.
-            RequirementsView { course in
+            RequirementsView(workspace: workspace) { course in
                 if workspace.course(course.id) != nil { selection = .course(course.id) } else if let id = course.semesterId { selection = .semester(id) }
             }
         case .people: PeopleView(workspace: workspace) { selection = .course($0) }

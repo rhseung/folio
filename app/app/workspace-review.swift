@@ -4,11 +4,6 @@ import FolioStorage
 import Foundation
 
 extension Workspace {
-    struct UnitQuizStats: Equatable {
-        var cards = 0
-        var openWrong = 0
-    }
-
     func reviews(of courseId: UUID) -> [(at: Date, event: ReviewEvent)] {
         (reviewEvents[courseId] ?? []).events(ReviewEvent.self)
     }
@@ -48,21 +43,6 @@ extension Workspace {
         let today = settings.studyDay(of: now, calendar: calendar)
         return reviewInputs(course, now: now, extra: extra).first { $0.unitId == unit }
             .flatMap { ReviewScheduler.state(of: $0, settings: settings.review, today: today).due }
-    }
-
-    func quizStats(of courseId: UUID) -> [UUID: UnitQuizStats] {
-        guard let course = course(courseId) else { return [:] }
-        var attempts: [UUID: [(day: LocalDate, verdict: Verdict)]] = [:]
-        for (at, attempt) in ((try? course.store.log.readAll()) ?? []).events(QuizAttemptEvent.self) {
-            attempts[attempt.cardId, default: []].append((settings.studyDay(of: at, calendar: calendar), attempt.verdict))
-        }
-        var result: [UUID: UnitQuizStats] = [:]
-        for unit in course.file.units {
-            let cards = (try? course.store.loadQuiz(unit: unit.id).model.cards) ?? []
-            guard !cards.isEmpty else { continue }
-            result[unit.id] = UnitQuizStats(cards: cards.count, openWrong: cards.filter { WrongFlow.isOpen(WrongFlow.status(attempts[$0.id] ?? [])) }.count)
-        }
-        return result
     }
 
     func notes(for unit: FolioDomain.Unit, in courseId: UUID) -> [NoteFile] {
