@@ -78,7 +78,7 @@ struct CourseView: View {
     }
 
     func claude(_ course: LoadedCourse) -> some View {
-        ClaudePanel(course: course, openNote: model.section == .notes ? model.openNote : nil, insertIntoNote: { model.noteInsert = $0 }) {
+        ClaudePanel(workspace: model.workspace, course: course, openNote: model.section == .notes ? model.openNote : nil, insertIntoNote: { model.noteInsert = $0 }) {
             model.show(note: $0)
         }
     }

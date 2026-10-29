@@ -12,8 +12,8 @@ enum FormSnapshots {
         let device = workspace.device
         let component = file.components.first ?? GradeComponent(device: device, at: .now, name: "과제", weight: 20)
         var forms: [(String, AnyView)] = [
-            ("semester-add", AnyView(AddSemesterSheet { _ in })),
-            ("course-add", AnyView(AddCourseSheet(semester: semester) { _ in })),
+            ("semester-add", AnyView(AddSemesterSheet(workspace: workspace) { _ in })),
+            ("course-add", AnyView(AddCourseSheet(workspace: workspace, semester: semester) { _ in })),
             ("course-edit", AnyView(EditCourseSheet(course: course))),
             ("course-icon", AnyView(CourseIconPanel(icon: nil, color: workspace.accent(course.id).color) { _ in })),
             ("class-times", AnyView(ClassTimesSheet(course: course))),

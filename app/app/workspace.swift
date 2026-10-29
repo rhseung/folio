@@ -140,11 +140,6 @@ final class Workspace {
         return semesters.first { ($0.start ?? today) <= today } ?? semesters.last
     }
 
-    /// Courses of a semester that live only in transcript.json (no folder).
-    func recordOnlyCourses(in semester: Semester) -> [Course] {
-        transcript.courses.filter { $0.semesterId == semester.id }
-    }
-
     var currentCourses: [LoadedCourse] { currentSemester.map { courses(in: $0) } ?? [] }
 
     func courses(in semester: Semester) -> [LoadedCourse] {
@@ -216,10 +211,6 @@ final class Workspace {
     }
 
     // MARK: Semesters and courses
-
-    func addSemester(year: Int, term: Term, start: LocalDate?, end: LocalDate?) -> UUID? {
-        run(SemesterAdd(year: year, term: term, start: start, end: end))?.made
-    }
 
     /// `<main code><number> <title>`; nil when the codes are empty or the name breaks the naming rule.
     func folderName(title: String, codes: [UUID], number: String) -> String? {

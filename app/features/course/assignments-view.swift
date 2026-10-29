@@ -20,7 +20,7 @@ struct AssignmentsView: View {
             let open = file.assignments.filter(\.status.isOpen)
             PageHeader(title: "과제", subtitle: (["과제 \(file.assignments.count)개"] + (open.isEmpty ? [] : ["남은 과제 \(open.count)개"])
                                                  + (open.contains { $0.due == nil } ? ["마감 없음 \(open.filter { $0.due == nil }.count)개"] : [])).joined(separator: " · "))
-            QuickAddField(fixedCourse: course.id)
+            QuickAddField(workspace: workspace, fixedCourse: course.id)
             if file.assignments.isEmpty {
                 Card { CardRow(last: true) { EmptyLine("과제가 없습니다. 위에서 한 줄로 추가하거나, Assignments 폴더를 만들면 여기에 생깁니다.") } }
             }

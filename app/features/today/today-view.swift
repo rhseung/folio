@@ -4,65 +4,54 @@ import FolioStorage
 import SwiftUI
 
 struct TodayView: View {
-    @Environment(Workspace.self) private var workspace
+    @State private var model: TodayModel
     @Environment(\.searchTarget) private var searchTarget
     @State private var skippingAll = false
 
-    var current: [LoadedCourse] {
-        workspace.currentCourses
+    init(workspace: Workspace) {
+        _model = State(initialValue: TodayModel(workspace: workspace))
     }
 
     var body: some View {
         // Redrawn at each day boundary, so a page left open overnight turns to the new study day.
-        TimelineView(.periodic(from: nextDayStart, by: 86_400)) { _ in page(now: .now) }
-            .navigationTitle("오늘")
-    }
-
-    var nextDayStart: Date {
-        let calendar = workspace.calendar
-        let start = workspace.today.date(in: calendar).flatMap { calendar.date(byAdding: .minute, value: workspace.settings.dayBoundaryMinutes, to: $0) }
-        return start.flatMap { calendar.date(byAdding: .day, value: 1, to: $0) } ?? .distantFuture
+        TimelineView(.periodic(from: model.nextDayStart, by: 86_400)) { _ in page(now: .now) }
+            .navigationTitle(.todayTitle)
     }
 
     func page(now: Date) -> some View {
-        let summary = TodaySummary.build(courses: current.map(\.file), now: now, settings: workspace.settings, calendar: workspace.calendar)
-        let queue = workspace.reviewQueue(now: now)
-        let todayQueue = queue.filter { $0.item.deferred == nil }
-        let deferred = queue.filter { $0.item.deferred != nil }
+        let summary = model.summary(now: now)
+        let reviews = model.reviews(now: now)
         // Narrower than other pages: a glance at today, not a table to read across.
         return Page(maxWidth: 780) {
-            // The study day, not the calendar date: until the day boundary the classes and reviews below are still
-            // the previous day's, and a title saying otherwise contradicts them.
-            PageHeader(title: (summary.studyDay.date(in: workspace.calendar) ?? now).formatted(.dateTime.month().day().weekday(.wide)),
-                       subtitle: workspace.currentSemester?.title)
+            PageHeader(title: model.heading(summary, now: now), subtitle: model.workspace.currentSemester?.title)
 
             // One slot for both: an empty NowClassCard still took a stack slot and left a double gap above the field.
             VStack(alignment: .leading, spacing: 0) {
-                NowClassCard()
-                QuickAddField()
+                NowClassCard(model: model)
+                QuickAddField(workspace: model.workspace)
             }
 
             if !summary.exams.isEmpty {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: Theme.Space.m - 2)], spacing: Theme.Space.m - 2) {
                     ForEach(summary.exams, id: \.exam.id) { item in
-                        let accent = workspace.accent(item.courseId)
+                        let accent = model.workspace.accent(item.courseId)
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                            Text("\(title(item.courseId)) · \(item.exam.title)").font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink).lineLimit(1)
-                            Text(item.dDay == 0 ? "D-day" : "D-\(item.dDay)").font(Theme.Typeface.figureCompact).foregroundStyle(DdayChip.heat(item.dDay))
-                            Text(item.exam.start?.formatted(.dateTime.month().day().weekday().hour().minute()) ?? "").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+                            Text(model.examTitle(item)).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink).lineLimit(1)
+                            Text(model.dDay(item)).font(Theme.Typeface.figureCompact).foregroundStyle(DdayChip.heat(item.dDay))
+                            Text(model.examStart(item)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
                         }
                         .padding(.horizontal, Theme.Inset.panel)
                         .padding(.vertical, Theme.Space.m)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(accent.tint, in: .rect(cornerRadius: Theme.Radius.card))
                         .opens { go(item.courseId, .exams) }
-                        .contextMenu { Button("시험 보기", systemImage: "calendar.badge.exclamationmark") { go(item.courseId, .exams) } }
+                        .contextMenu { Button(.commonShowExams, systemImage: "calendar.badge.exclamationmark") { go(item.courseId, .exams) } }
                     }
                 }
             }
 
-            ExamPlanTodayBlock(courses: current)
-            AttendanceWarnings()
+            ExamPlanTodayBlock(courses: model.current)
+            AttendanceWarnings(model: model)
 
             // Classes and deadlines are short lists of equal weight, side by side when there's room for their titles.
             // The review queue can run to dozens of rows, so it gets the full width below them instead of a column
@@ -71,35 +60,34 @@ struct TodayView: View {
                 classesBlock(summary, now: now)
                 deadlinesBlock(summary)
             }
-            reviewBlock(todayQueue, deferred: deferred, notes: summary.missingReviewNotes)
+            reviewBlock(reviews, notes: summary.missingReviewNotes)
 
-            StudyTimeBlock()
+            StudyTimeBlock(workspace: model.workspace)
         }
         .navigationSubtitle(summary.studyDay.description)
     }
 
     /// A class's review note comes first, then the units: writing the note is the day's review of that class
     /// (docs/SPEC.md "복습 스케줄러"), and a unit linked to it waits on the note anyway.
-    func reviewBlock(_ queue: [Workspace.ReviewEntry], deferred: [Workspace.ReviewEntry], notes: [TodaySummary.SessionItem]) -> some View {
-        let all = queue + deferred
-        let progress = workspace.reviewProgress(now: .now)
-        return Block(title: "오늘 복습", note: queue.isEmpty ? nil : "우선순위 순", trailing: {
+    func reviewBlock(_ reviews: TodayModel.Reviews, notes: [TodaySummary.SessionItem]) -> some View {
+        let queue = reviews.queue, deferred = reviews.deferred, all = reviews.all
+        return Block(title: String(localized: .todayReviews), note: queue.isEmpty ? nil : String(localized: .todayReviewsNote), trailing: {
             if !all.isEmpty {
-                Button("모두 건너뛰기") { skippingAll = true }
+                Button(.todayReviewsSkipAll) { skippingAll = true }
                     .buttonStyle(.ghost)
-                    .confirmationDialog("복습 \(all.count)단원을 건너뛸까요?", isPresented: $skippingAll) {
-                        Button("\(all.count)단원 건너뛰기") { workspace.skipReviews(all.map { ($0.courseId, $0.item.unitId) }) }
+                    .confirmationDialog(String(localized: .todayReviewsSkipAllConfirm(all.count)), isPresented: $skippingAll) {
+                        Button(.todayReviewsSkipAllButton(all.count)) { model.skip(all) }
                     } message: {
-                        Text("이미 공부한 것으로 보고 오늘 화면에서 뺍니다. 틀린 퀴즈 카드나 시험 계획이 생기면 다시 올라옵니다.")
+                        Text(.todayReviewsSkipAllMessage)
                     }
             }
         }) {
             Card {
                 // A day with nothing scheduled has no progress to show; a full "0 / 0" banner reads as a bug.
-                if progress.doneToday + queue.count > 0 {
-                    ReviewProgressBanner(done: progress.doneToday, left: queue.count, streak: progress.streak)
+                if reviews.doneToday + queue.count > 0 {
+                    ReviewProgressBanner(done: reviews.doneToday, left: queue.count, streak: reviews.streak)
                 } else if notes.isEmpty {
-                    CardRow(last: true) { EmptyLine("오늘 복습할 것이 없습니다") }
+                    CardRow(last: true) { EmptyLine(String(localized: .todayReviewsEmpty)) }
                 }
                 noteRows(notes, limit: 6, endsCard: queue.isEmpty)
                 ForEach(Array(queue.enumerated()), id: \.element.item.unitId) { i, entry in
@@ -108,27 +96,27 @@ struct TodayView: View {
                         Text("\(queue.count)").hidden()
                             .overlay(alignment: .trailing) { Text("\(i + 1)") }
                             .font(Theme.Typeface.caption).monospacedDigit().lineLimit(1).foregroundStyle(Theme.Palette.textTertiary)
-                        CourseDot(color: workspace.accent(entry.courseId).color)
+                        CourseDot(color: model.workspace.accent(entry.courseId).color)
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                             Text(entry.unitTitle).font(Theme.Typeface.bodyStrong).lineLimit(1)
-                            Text(entry.item.writeNoteFirst ? "\(title(entry.courseId)) · 복습 노트 작성부터" : title(entry.courseId))
+                            Text(model.reviewSubtitle(entry))
                                 .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
                         }
                         Spacer()
-                        if entry.item.overdueDays > 0 { Chip("\(entry.item.overdueDays)일 밀림", tone: .danger) }
+                        if entry.item.overdueDays > 0 { Chip(String(localized: .todayReviewsOverdue(entry.item.overdueDays)), tone: .danger) }
                     } }
                     .contextMenu { reviewMenu(entry) }
                 }
             }
             if !deferred.isEmpty {
                 VStack(alignment: .leading, spacing: Theme.Space.s) {
-                    Text("하루 상한을 넘어 내일로 미룸").font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(Theme.Palette.textSecondary)
+                    Text(.todayReviewsDeferred).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(Theme.Palette.textSecondary)
                     ForEach(deferred, id: \.item.unitId) { entry in
                         ReviewOpener(courseId: entry.courseId, unitId: entry.item.unitId) { HStack(spacing: Theme.Space.m) {
-                            CourseDot(color: workspace.accent(entry.courseId).color)
+                            CourseDot(color: model.workspace.accent(entry.courseId).color)
                             Text(entry.unitTitle)
                             Spacer()
-                            Text(title(entry.courseId)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+                            Text(model.title(entry.courseId)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
                         } }
                         .contextMenu { reviewMenu(entry) }
                     }
@@ -141,37 +129,35 @@ struct TodayView: View {
     }
 
     func deadlinesBlock(_ summary: TodaySummary) -> some View {
-        Block("마감", note: summary.deadlines.isEmpty ? nil : "\(summary.deadlines.count)개") {
+        Block(String(localized: .todayDeadlines), note: summary.deadlines.isEmpty ? nil : String(localized: .todayDeadlinesCount(summary.deadlines.count))) {
             Card {
-                if summary.deadlines.isEmpty { CardRow(last: true) { EmptyLine("남은 마감이 없습니다") } }
+                if summary.deadlines.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .todayDeadlinesEmpty)) } }
                 ForEach(Array(summary.deadlines.enumerated()), id: \.element.assignment.id) { i, item in
                     Button { go(item.courseId, .assignments) } label: { CardRow(last: i == summary.deadlines.count - 1) {
-                        CourseDot(color: workspace.accent(item.courseId).color)
+                        CourseDot(color: model.workspace.accent(item.courseId).color)
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                             Text(item.assignment.title).lineLimit(1)
-                            Text(title(item.courseId)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
+                            Text(model.title(item.courseId)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
                         }
                         Spacer(minLength: Theme.Space.s)
-                        Text(item.isToday ? item.assignment.due!.formatted(date: .omitted, time: .shortened) : item.assignment.due!.formatted(.dateTime.month().day().weekday()))
+                        Text(model.due(item))
                             .font(Theme.Typeface.caption.weight(item.isToday ? .bold : .regular)).monospacedDigit()
                             .foregroundStyle(item.isToday ? Theme.Palette.danger : Theme.Palette.textSecondary)
                             .fixedSize()
                     }.contentShape(.rect) }
                     .buttonStyle(.pointing(.plain))
-                    .contextMenu { Button("과제 보기", systemImage: "checklist") { go(item.courseId, .assignments) } }
+                    .contextMenu { Button(.todayDeadlinesShow, systemImage: "checklist") { go(item.courseId, .assignments) } }
                 }
             }
         }
     }
 
     func classesBlock(_ summary: TodaySummary, now: Date) -> some View {
-        Block("오늘 수업") {
-            let suggested = workspace.suggestedSessions(now: now).filter {
-                workspace.settings.studyDay(of: $0.suggestion.date, calendar: workspace.calendar) == summary.studyDay
-            }
+        Block(String(localized: .todayClasses)) {
+            let suggested = model.suggested(now: now, on: summary.studyDay)
             if !summary.classesToday.isEmpty || suggested.isEmpty {
                 Card {
-                    if summary.classesToday.isEmpty { CardRow(last: true) { EmptyLine("오늘은 수업이 없습니다") } }
+                    if summary.classesToday.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .todayClassesEmpty)) } }
                     ForEach(Array(summary.classesToday.enumerated()), id: \.element.session.id) { i, item in
                         classRow(item, last: i == summary.classesToday.count - 1)
                     }
@@ -184,8 +170,8 @@ struct TodayView: View {
 
     func classRow(_ item: TodaySummary.SessionItem, last: Bool) -> some View {
         let start = item.session.date
-        let end = item.session.end(schedule: workspace.course(item.courseId)?.file.course.schedule ?? [], calendar: workspace.calendar)
-        let accent = workspace.accent(item.courseId)
+        let end = model.end(of: item)
+        let accent = model.workspace.accent(item.courseId)
         return Button { go(item.courseId, .sessions) } label: { TimelineView(.periodic(from: .now, by: 30)) { context in
             let now = context.date
             let ongoing = end.map { now >= start && now < $0 } ?? false
@@ -193,14 +179,14 @@ struct TodayView: View {
                 Text(start.formatted(date: .omitted, time: .shortened)).timeColumn().font(Theme.Typeface.caption).monospacedDigit()
                 CourseDot(color: accent.color)
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text(title(item.courseId)).lineLimit(1)
-                    Text(sessionName(item.courseId, item.session)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+                    Text(model.title(item.courseId)).lineLimit(1)
+                    Text(model.sessionName(item.courseId, item.session)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
                 }
                 Spacer()
                 if ongoing {
-                    Text("지금").font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink)
+                    Text(.todayClassesNow).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink)
                 } else if now >= (end ?? start) {
-                    Text("끝남").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                    Text(.commonEnded).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                 }
             }
             // Progress and minutes stay on the 지금 수업 card above, so the row only marks which class it is.
@@ -212,25 +198,24 @@ struct TodayView: View {
     }
 
     @ViewBuilder func reviewMenu(_ entry: Workspace.ReviewEntry) -> some View {
-        Button("단원 보기", systemImage: "list.bullet") { go(entry.courseId, .units) }
-        Button("오늘 복습 건너뛰기", systemImage: "forward") { workspace.skipReviews([(entry.courseId, entry.item.unitId)]) }
+        Button(.todayReviewsShowUnits, systemImage: "list.bullet") { go(entry.courseId, .units) }
+        Button(.todayReviewsSkip, systemImage: "forward") { model.skip([entry]) }
     }
 
     @ViewBuilder func noteRows(_ items: [TodaySummary.SessionItem], limit: Int, endsCard: Bool) -> some View {
-        let shown = Array(items.suffix(limit).reversed())
-        let more = items.count - shown.count
+        let (shown, more) = model.noteRows(items, limit: limit)
         ForEach(Array(shown.enumerated()), id: \.element.session.id) { i, item in
             CardRow(last: endsCard && more == 0 && i == shown.count - 1) {
                 // The checkmark stays outside: a button inside another button's label never gets the click.
                 Button {
-                    if let id = workspace.note(.review, of: item.session.id, in: item.courseId) { openNote(in: item.courseId)(id) }
+                    if let id = model.reviewNote(of: item) { openNote(in: item.courseId)(id) }
                 } label: {
                     HStack(spacing: Theme.Space.m) {
                         Image(systemName: "square.and.pencil").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.warning)
-                        CourseDot(color: workspace.accent(item.courseId).color)
+                        CourseDot(color: model.workspace.accent(item.courseId).color)
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                            Text("\(title(item.courseId)) · \(sessionName(item.courseId, item.session))").font(Theme.Typeface.bodyStrong).lineLimit(1)
-                            Text((item.session.reviewNoteUnfinished ? "복습 노트 마저 쓰기 · " : "복습 노트 쓰기 · ") + item.session.date.formatted(.dateTime.month().day().weekday()))
+                            Text(model.noteTitle(item)).font(Theme.Typeface.bodyStrong).lineLimit(1)
+                            Text(model.noteSubtitle(item))
                                 .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
                         }
                         Spacer()
@@ -238,33 +223,29 @@ struct TodayView: View {
                     .contentShape(.rect)
                 }
                 .buttonStyle(.pointing(.plain))
-                .help(item.session.reviewNoteUnfinished ? "복습 노트를 엽니다" : "복습 노트를 만들어 엽니다")
+                .help(Text(item.session.reviewNoteUnfinished ? .todayNoteOpenHelp : .todayNoteCreateHelp))
                 // A note made from the template isn't written yet, so the checkmark finishes it; without a note it skips the session.
                 if item.session.reviewNoteUnfinished {
-                    Button { workspace.setReviewNoteUnfinished(false, of: item.session.id, in: item.courseId) } label: { Image(systemName: "checkmark.circle") }
+                    Button { model.finishReviewNote(item) } label: { Image(systemName: "checkmark.circle") }
                         .buttonStyle(.ghost)
-                        .help("복습 노트 작성 완료")
-                        .accessibilityLabel("복습 노트 작성 완료")
+                        .help(Text(.todayNoteFinish))
+                        .accessibilityLabel(Text(.todayNoteFinish))
                 } else {
-                    Button { workspace.setSkipsReview(true, of: item.session.id, in: item.courseId) } label: { Image(systemName: "checkmark.circle") }
+                    Button { model.skipReviewNote(item) } label: { Image(systemName: "checkmark.circle") }
                         .buttonStyle(.ghost)
-                        .help("복습 필요 없음: 진도 없이 채점만 한 날처럼 복습할 것이 없는 회차")
-                        .accessibilityLabel("복습 필요 없음")
+                        .help(Text(.todayNoteNoReviewHelp))
+                        .accessibilityLabel(Text(.todayNoteNoReview))
                 }
             }
             .contextMenu {
                 SessionMenu(courseId: item.courseId, sessionId: item.session.id, openNote: openNote(in: item.courseId)) { go(item.courseId, .sessions) }
                 Divider()
-                Button("복습 필요 없음", systemImage: "forward") { workspace.setSkipsReview(true, of: item.session.id, in: item.courseId) }
+                Button(.todayNoteNoReview, systemImage: "forward") { model.skipReviewNote(item) }
             }
         }
         if more > 0 {
-            CardRow(last: endsCard) { EmptyLine("복습 노트 없는 회차 외 \(more)개") }
+            CardRow(last: endsCard) { EmptyLine(String(localized: .todayNoteMore(more))) }
         }
-    }
-
-    func title(_ id: UUID) -> String {
-        workspace.course(id)?.title ?? ""
     }
 
     func go(_ course: UUID, _ section: CourseSection) {
@@ -274,46 +255,40 @@ struct TodayView: View {
     func openNote(in course: UUID) -> (UUID) -> Void {
         { searchTarget.wrappedValue = SearchTarget(courseId: course, section: .notes, noteId: $0) }
     }
-
-    func sessionName(_ course: UUID, _ session: Session) -> String {
-        workspace.course(course)?.file.name(of: session) ?? ""
-    }
 }
 
 struct NowClassCard: View {
-    @Environment(Workspace.self) private var workspace
+    let model: TodayModel
     @Environment(\.searchTarget) private var searchTarget
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let now = context.date
-            if let item = workspace.ongoingClass(at: now), let course = workspace.course(item.courseId) {
-                let room = course.file.course.schedule.first { $0.weekday == workspace.calendar.isoWeekday(of: item.session.date) }?.room ?? ""
-                card(courseId: item.courseId, name: course.file.name(of: item.session), room: room, start: item.session.date, end: item.end, now: now) { EmptyView() }
-            } else if let item = workspace.suggestedSessions(now: now).first(where: { $0.suggestion.date <= now }) {
-                // Under way but not made yet: the card offers what starting the class needs.
-                card(courseId: item.courseId, name: item.name, room: item.suggestion.room, start: item.suggestion.date, end: item.suggestion.end, now: now) {
-                    SuggestedSessionActions(item: item) { searchTarget.wrappedValue = SearchTarget(courseId: item.courseId, section: .notes, noteId: $0) }
+            if let item = model.nowClass(at: now) {
+                card(courseId: item.courseId, name: item.name, room: item.room, start: item.start, end: item.end, now: now) {
+                    if let suggested = item.suggested {
+                        SuggestedSessionActions(item: suggested) { searchTarget.wrappedValue = SearchTarget(courseId: suggested.courseId, section: .notes, noteId: $0) }
+                    }
                 }
             }
         }
     }
 
     func card(courseId: UUID, name: String, room: String, start: Date, end: Date, now: Date, @ViewBuilder actions: () -> some View) -> some View {
-        let accent = workspace.accent(courseId)
+        let accent = model.workspace.accent(courseId)
         let fraction = min(1, max(0, now.timeIntervalSince(start) / end.timeIntervalSince(start)))
         return HStack(alignment: .center, spacing: Theme.Space.l) {
             VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                Text("지금 수업" + (room.isEmpty ? "" : " · \(room)")).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink)
-                Text("\(workspace.course(courseId)?.title ?? "") · \(name)").font(Theme.Typeface.figureCompact).lineLimit(1)
+                Text(room.isEmpty ? .todayNowClass : .todayNowClassRoom(room)).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink)
+                Text("\(model.title(courseId)) · \(name)").font(Theme.Typeface.figureCompact).lineLimit(1)
                 Text("\(start.formatted(date: .omitted, time: .shortened)) – \(end.formatted(date: .omitted, time: .shortened))")
                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).monospacedDigit()
             }
             Spacer(minLength: Theme.Space.m)
             actions()
             VStack(alignment: .trailing, spacing: Theme.Space.xxs) {
-                Text("\(Int(end.timeIntervalSince(now) / 60) + 1)분").font(Theme.Typeface.figure).foregroundStyle(accent.ink)
-                Text("남음").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+                Text(.todayNowClassMinutes(Int(end.timeIntervalSince(now) / 60) + 1)).font(Theme.Typeface.figure).foregroundStyle(accent.ink)
+                Text(.todayNowClassLeft).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
             }
         }
         .padding(Theme.Inset.stat)
@@ -357,31 +332,28 @@ struct DateMarkRenderer: TextRenderer {
 }
 
 struct QuickAddField: View {
-    @Environment(Workspace.self) private var workspace
-    var fixedCourse: UUID?
-    @State private var text = ""
+    @State private var model: QuickAddModel
 
-    func parse(_ line: String) -> QuickAdd? {
-        let courses = workspace.currentCourses.map(\.file.course)
-        return line.trimmingCharacters(in: .whitespaces).isEmpty ? nil : QuickAdd.parse(line, courses: courses, codes: workspace.catalog.codes, fixedCourse: fixedCourse, now: .now, calendar: workspace.calendar)
+    init(workspace: Workspace, fixedCourse: UUID? = nil) {
+        _model = State(initialValue: QuickAddModel(workspace: workspace, fixedCourse: fixedCourse))
     }
 
     var body: some View {
-        let parsed = parse(text)
+        let parsed = model.parsed
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             HStack(spacing: Theme.Space.m) {
                 Image(systemName: "plus").foregroundStyle(Theme.Palette.textSecondary)
-                TextField("빠른 추가: 선대 HW5 금 23:59", text: $text)
+                TextField(String(localized: .todayQuickAddPrompt), text: $model.text)
                     .textFieldStyle(.plain)
                     .font(Theme.Typeface.bodyLarge)
                     // The marks are drawn behind the field instead of styling its text: rewriting the text while
                     // typing breaks Korean composition and eats characters.
                     .background(alignment: .leading) { marks(parsed?.dueRanges ?? []).allowsHitTesting(false) }
-                    .onSubmit { if let parsed { save(parsed) } }
+                    .onSubmit { if let parsed { model.add(parsed) } }
                 if let parsed {
-                    Button("저장") { save(parsed) }
+                    Button(.todayQuickAddSave) { model.add(parsed) }
                         .buttonStyle(.pointing(.glassProminent))
-                        .disabled(parsed.courseId == nil || parsed.title.isEmpty)
+                        .disabled(!model.canAdd(parsed))
                 }
             }
             .padding(.horizontal, Theme.Inset.panel)
@@ -393,16 +365,15 @@ struct QuickAddField: View {
     }
 
     func summary(_ parsed: QuickAdd) -> some View {
-        let due = parsed.due?.formatted(.dateTime.month(.defaultDigits).day().weekday(.abbreviated).hour().minute())
-        return HStack(spacing: Theme.Space.tight) {
-            if let id = parsed.courseId, let course = workspace.course(id) {
-                CourseDot(color: workspace.accent(id).color, size: 8)
-                Text(course.title).foregroundStyle(Theme.Palette.textSecondary)
+        HStack(spacing: Theme.Space.tight) {
+            if let id = parsed.courseId, let title = model.courseTitle(parsed) {
+                CourseDot(color: model.workspace.accent(id).color, size: 8)
+                Text(title).foregroundStyle(Theme.Palette.textSecondary)
             } else {
-                Text("과목을 찾지 못함").foregroundStyle(Theme.Palette.danger)
+                Text(.todayQuickAddNoCourse).foregroundStyle(Theme.Palette.danger)
             }
-            if let due { Text("· \(due)").foregroundStyle(Theme.Palette.textTertiary) }
-            if parsed.repeats == .weekly { Label("매주", systemImage: "repeat").foregroundStyle(Theme.Palette.textTertiary) }
+            if let due = model.due(parsed) { Text("· \(due)").foregroundStyle(Theme.Palette.textTertiary) }
+            if parsed.repeats == .weekly { Label(.todayQuickAddWeekly, systemImage: "repeat").foregroundStyle(Theme.Palette.textTertiary) }
             if !parsed.title.isEmpty { Text("· \(parsed.title)").foregroundStyle(Theme.Palette.textTertiary) }
         }
         .font(Theme.Typeface.caption).lineLimit(1)
@@ -410,6 +381,7 @@ struct QuickAddField: View {
 
     /// The line laid out again under the field, invisible, so `DateMarkRenderer` can draw a pill behind the deadline words.
     func marks(_ ranges: [Range<String.Index>]) -> some View {
+        let text = model.text
         var mirror = Text("")
         var at = text.startIndex
         for r in ranges {
@@ -418,12 +390,6 @@ struct QuickAddField: View {
         }
         mirror = mirror + Text(text[at...])
         return mirror.font(Theme.Typeface.bodyLarge).lineLimit(1).fixedSize().textRenderer(DateMarkRenderer())
-    }
-
-    func save(_ parsed: QuickAdd) {
-        guard let id = parsed.courseId, !parsed.title.isEmpty else { return }
-        guard workspace.run(AssignmentAdd(course: id, title: parsed.title, due: parsed.due, repeats: parsed.repeats)) != nil else { return }
-        text = ""
     }
 }
 
@@ -437,12 +403,12 @@ struct ReviewProgressBanner: View {
         let fraction = total == 0 ? 1 : Double(done) / Double(total)
         HStack(alignment: .firstTextBaseline, spacing: Theme.Space.xs) {
             Text("\(done)").font(Theme.Typeface.figureCompact).rolling("\(done)")
-            Text("/ \(total)단원").font(Theme.Typeface.bodyStrong).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
+            Text(.todayProgressTotal(total)).font(Theme.Typeface.bodyStrong).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
             Spacer(minLength: Theme.Space.m)
-            Text(left == 0 ? "오늘 복습 끝" : "\(left)단원 남음").font(Theme.Typeface.caption).monospacedDigit()
+            Text(left == 0 ? .todayProgressDone : .todayProgressLeft(left)).font(Theme.Typeface.caption).monospacedDigit()
                 .foregroundStyle(left == 0 ? Theme.Palette.success : Theme.Palette.textSecondary)
             if streak > 0 {
-                Label("\(streak)일 연속", systemImage: "flame.fill").labelStyle(.titleAndIcon)
+                Label(.todayProgressStreak(streak), systemImage: "flame.fill").labelStyle(.titleAndIcon)
                     .font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
                     .foregroundStyle(Theme.Palette.warning)
                     .symbolEffect(.bounce, value: streak)
@@ -471,6 +437,7 @@ struct ReviewProgressBanner: View {
 
 extension View {
     // As wide as the widest time in the column's font: a fixed width truncated or wrapped `오후 1:00`.
+    // Verbatim: it is a measuring sample of the formatted time, never shown.
     func timeColumn() -> some View {
         ZStack(alignment: .leading) { Text(verbatim: "오후 12:00").hidden(); self }.lineLimit(1)
     }

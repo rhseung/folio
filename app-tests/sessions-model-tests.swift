@@ -4,9 +4,6 @@ import Foundation
 import Testing
 @testable import Folio
 
-/// 그래프 이론 in the standard fixture: no sessions, units or class times to begin with.
-let graphTheory = UUID(uuidString: "C0000000-0000-4000-8000-000000000002")!
-
 @MainActor
 struct SessionsModelTests {
     func session(_ workspace: Workspace, daysFromNow days: Int) throws -> Session {

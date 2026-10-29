@@ -144,6 +144,446 @@
         }
       }
     },
+    "claude.add.help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트나 자료를 맥락에 더하기"
+          }
+        }
+      }
+    },
+    "claude.add.materials": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료"
+          }
+        }
+      }
+    },
+    "claude.add.notes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트"
+          }
+        }
+      }
+    },
+    "claude.add.prompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트나 자료 찾기"
+          }
+        }
+      }
+    },
+    "claude.add.unclassified": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미분류"
+          }
+        }
+      }
+    },
+    "claude.answer.card": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드로 만들기"
+          }
+        }
+      }
+    },
+    "claude.answer.card-off": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드는 단원에 속합니다. 단원을 먼저 만드세요"
+          }
+        }
+      }
+    },
+    "claude.answer.copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사"
+          }
+        }
+      }
+    },
+    "claude.answer.insert": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트에 넣기"
+          }
+        }
+      }
+    },
+    "claude.answer.new-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 노트로"
+          }
+        }
+      }
+    },
+    "claude.ask": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "질문하기"
+          }
+        }
+      }
+    },
+    "claude.ask.disabled": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude를 연결하면 쓸 수 있습니다"
+          }
+        }
+      }
+    },
+    "claude.context": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보낼 맥락"
+          }
+        }
+      }
+    },
+    "claude.context.dropped": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한도 초과로 뺌"
+          }
+        }
+      }
+    },
+    "claude.context.images": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그림 %lld장을 함께 보냅니다"
+          }
+        }
+      }
+    },
+    "claude.context.remove": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "맥락에서 빼기"
+          }
+        }
+      }
+    },
+    "claude.context.restore": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "뺀 항목 되돌리기"
+          }
+        }
+      }
+    },
+    "claude.context.tokens": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "약 %@ 토큰"
+          }
+        }
+      }
+    },
+    "claude.empty.detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위의 맥락과 함께 보냅니다. 보내기를 누르기 전에는 아무것도 전송하지 않습니다."
+          }
+        }
+      }
+    },
+    "claude.empty.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 과목에 대해 물어보세요"
+          }
+        }
+      }
+    },
+    "claude.error.auth": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인증에 실패했습니다. API 키나 Claude Code 로그인을 확인하세요."
+          }
+        }
+      }
+    },
+    "claude.error.failed-body": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "요청이 실패했습니다: %@"
+          }
+        }
+      }
+    },
+    "claude.error.http": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "요청이 실패했습니다 (HTTP %lld)."
+          }
+        }
+      }
+    },
+    "claude.error.missing-key": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "API 키가 없습니다. 설정에서 넣어 주세요."
+          }
+        }
+      }
+    },
+    "claude.error.refused": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude가 이 요청에는 답하지 않았습니다."
+          }
+        }
+      }
+    },
+    "claude.error.truncated": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "답이 길어 중간에 끊겼습니다. 질문을 나눠 보세요."
+          }
+        }
+      }
+    },
+    "claude.material-unreadable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 파일에서는 글자를 읽을 수 없습니다."
+          }
+        }
+      }
+    },
+    "claude.new-chat": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 대화"
+          }
+        }
+      }
+    },
+    "claude.open-settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정 열기"
+          }
+        }
+      }
+    },
+    "claude.resend": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 보내기"
+          }
+        }
+      }
+    },
+    "claude.send": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보내기"
+          }
+        }
+      }
+    },
+    "claude.setup.detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정의 Claude 항목에서 Claude Code 구독이나 API 키를 연결하면 이 과목의 맥락으로 대화할 수 있습니다."
+          }
+        }
+      }
+    },
+    "claude.setup.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude 연결이 필요합니다"
+          }
+        }
+      }
+    },
+    "claude.status.card-made": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드를 만들었습니다"
+          }
+        }
+      }
+    },
+    "claude.status.copied": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복사했습니다"
+          }
+        }
+      }
+    },
+    "claude.status.free-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자유 노트를 새로 만들어 넣었습니다"
+          }
+        }
+      }
+    },
+    "claude.status.inserted": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "열린 노트 끝에 넣었습니다. 저장하면 파일에 반영됩니다."
+          }
+        }
+      }
+    },
+    "claude.status.new-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 노트로 만들었습니다"
+          }
+        }
+      }
+    },
+    "claude.waiting": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "답을 기다리는 중…"
+          }
+        }
+      }
+    },
+    "claude.writing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "답을 쓰는 중…"
+          }
+        }
+      }
+    },
     "codes.add": {
       "extractionState": "manual",
       "localizations": {
@@ -408,6 +848,17 @@
         }
       }
     },
+    "common.ended": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끝남"
+          }
+        }
+      }
+    },
     "common.expand": {
       "extractionState": "manual",
       "localizations": {
@@ -525,6 +976,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "검색"
+          }
+        }
+      }
+    },
+    "common.show-exams": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 보기"
+          }
+        }
+      }
+    },
+    "common.show-in-finder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Finder에서 보기"
           }
         }
       }
@@ -6612,6 +7085,171 @@
         }
       }
     },
+    "review.course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 복습"
+          }
+        }
+      }
+    },
+    "review.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 끝"
+          }
+        }
+      }
+    },
+    "review.no-notes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 단원에 노트가 없습니다"
+          }
+        }
+      }
+    },
+    "review.no-notes.detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결된 회차의 복습 노트나 이 단원을 태그한 노트가 여기에 나옵니다. 노트 없이 복습했다면 결과만 고르세요."
+          }
+        }
+      }
+    },
+    "review.not-found": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원을 찾지 못했습니다"
+          }
+        }
+      }
+    },
+    "review.question": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "얼마나 기억났나요?"
+          }
+        }
+      }
+    },
+    "review.question.detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고른 결과로 다음 복습일이 정해집니다"
+          }
+        }
+      }
+    },
+    "review.skip": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "건너뛰기"
+          }
+        }
+      }
+    },
+    "review.skip.help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 공부한 단원입니다. 틀린 카드나 시험 계획이 생길 때만 다시 올라옵니다"
+          }
+        }
+      }
+    },
+    "review.source.close-side": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "옆에서 닫기"
+          }
+        }
+      }
+    },
+    "review.source.current": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보고 있는 노트"
+          }
+        }
+      }
+    },
+    "review.source.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "열 수 없습니다"
+          }
+        }
+      }
+    },
+    "review.source.open-side": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "옆에 펼치기"
+          }
+        }
+      }
+    },
+    "review.source.switch": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 노트로 바꾸기"
+          }
+        }
+      }
+    },
+    "review.timer-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공부 시간에 더해집니다"
+          }
+        }
+      }
+    },
     "role.assistant": {
       "extractionState": "manual",
       "localizations": {
@@ -7173,7 +7811,645 @@
         }
       }
     },
+    "search.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결과가 없습니다"
+          }
+        }
+      }
+    },
+    "search.empty.filtered": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결과가 없습니다. 거르는 조건을 넓혀 보세요"
+          }
+        }
+      }
+    },
+    "search.empty.indexing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 색인 중입니다. 다 읽으면 결과가 나올 수 있습니다"
+          }
+        }
+      }
+    },
+    "search.hint.move": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이동"
+          }
+        }
+      }
+    },
+    "search.indexing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "색인 중 %1$lld/%2$lld"
+          }
+        }
+      }
+    },
+    "search.indexing.help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "바뀐 과목의 노트와 PDF 본문을 읽고 있습니다. 결과가 더 늘어날 수 있습니다"
+          }
+        }
+      }
+    },
+    "search.kind.all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체"
+          }
+        }
+      }
+    },
+    "search.kind.assignment": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제"
+          }
+        }
+      }
+    },
+    "search.kind.material": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료"
+          }
+        }
+      }
+    },
+    "search.kind.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트"
+          }
+        }
+      }
+    },
+    "search.kind.quiz": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "퀴즈"
+          }
+        }
+      }
+    },
+    "search.kind.session": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차"
+          }
+        }
+      }
+    },
+    "search.kind.unit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원"
+          }
+        }
+      }
+    },
+    "search.more": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$lld개 더"
+          }
+        }
+      }
+    },
+    "search.prompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트, 자료, 과제, 회차, 단원 검색"
+          }
+        }
+      }
+    },
+    "search.scope.all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 과목"
+          }
+        }
+      }
+    },
+    "search.scope.courses": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목"
+          }
+        }
+      }
+    },
+    "search.scope.semesters": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기"
+          }
+        }
+      }
+    },
+    "semester.add-course.code": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "강의 코드"
+          }
+        }
+      }
+    },
+    "semester.add-course.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "강의 코드, 번호(예: 4207-01), 이름을 넣으면 폴더 이름이 정해집니다"
+          }
+        }
+      }
+    },
+    "semester.add-course.mode": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "평가 방식"
+          }
+        }
+      }
+    },
+    "semester.add-course.name": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름"
+          }
+        }
+      }
+    },
+    "semester.add-course.name-example": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예: 그래프 이론"
+          }
+        }
+      }
+    },
+    "semester.add-course.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 과목 추가"
+          }
+        }
+      }
+    },
+    "semester.add.exists": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 있는 학기입니다"
+          }
+        }
+      }
+    },
+    "semester.add.term": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기"
+          }
+        }
+      }
+    },
+    "semester.add.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기 추가"
+          }
+        }
+      }
+    },
+    "semester.add.year": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연도"
+          }
+        }
+      }
+    },
+    "semester.admin": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학사 자료"
+          }
+        }
+      }
+    },
+    "semester.courses": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목"
+          }
+        }
+      }
+    },
+    "semester.courses.add": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목 추가"
+          }
+        }
+      }
+    },
+    "semester.courses.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 과목이 없습니다"
+          }
+        }
+      }
+    },
+    "semester.courses.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오른쪽에서 최종 성적을 고릅니다"
+          }
+        }
+      }
+    },
+    "semester.courses.record-only": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더 없이 성적만 기록"
+          }
+        }
+      }
+    },
     "semester.credited": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인정받은 학점"
+          }
+        }
+      }
+    },
+    "semester.credits": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@학점"
+          }
+        }
+      }
+    },
+    "semester.credits-label": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학점"
+          }
+        }
+      }
+    },
+    "semester.date.set": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정하기"
+          }
+        }
+      }
+    },
+    "semester.end": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "종강"
+          }
+        }
+      }
+    },
+    "semester.exams": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 일정"
+          }
+        }
+      }
+    },
+    "semester.exams.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "등록된 시험이 없습니다"
+          }
+        }
+      }
+    },
+    "semester.final-week": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기말고사 주"
+          }
+        }
+      }
+    },
+    "semester.folder-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더 %@을 만듭니다"
+          }
+        }
+      }
+    },
+    "semester.grade.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "미정"
+          }
+        }
+      }
+    },
+    "semester.midterm-week": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "중간고사 주"
+          }
+        }
+      }
+    },
+    "semester.midterm-week.detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 주에는 회차를 제안하지 않습니다"
+          }
+        }
+      }
+    },
+    "semester.not-found": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기를 찾지 못했습니다"
+          }
+        }
+      }
+    },
+    "semester.period": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기간"
+          }
+        }
+      }
+    },
+    "semester.period.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기간 미정"
+          }
+        }
+      }
+    },
+    "semester.period.week": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · 지금 %2$lld주차"
+          }
+        }
+      }
+    },
+    "semester.start": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개강"
+          }
+        }
+      }
+    },
+    "semester.stat.course-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld개"
+          }
+        }
+      }
+    },
+    "semester.stat.courses": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목"
+          }
+        }
+      }
+    },
+    "semester.stat.gpa": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기 GPA"
+          }
+        }
+      }
+    },
+    "semester.stat.gpa-effective": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유효 %@학점"
+          }
+        }
+      }
+    },
+    "semester.stat.gpa-ongoing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "진행 중"
+          }
+        }
+      }
+    },
+    "semester.stat.graded": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "성적 확정"
+          }
+        }
+      }
+    },
+    "semester.stat.graded-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "W 포함"
+          }
+        }
+      }
+    },
+    "semester.term-label.credited": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -7184,7 +8460,84 @@
         }
       }
     },
-    "semester.fall": {
+    "semester.term-label.fall": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가을학기"
+          }
+        }
+      }
+    },
+    "semester.term-label.spring": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "봄학기"
+          }
+        }
+      }
+    },
+    "semester.term-label.summer": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여름학기"
+          }
+        }
+      }
+    },
+    "semester.term-label.winter": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "겨울학기"
+          }
+        }
+      }
+    },
+    "semester.timetable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "주간 시간표"
+          }
+        }
+      }
+    },
+    "semester.timetable.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목의 강의 화면에서 수업 시간을 넣으면 여기에 모입니다"
+          }
+        }
+      }
+    },
+    "semester.title-credited": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인정학기"
+          }
+        }
+      }
+    },
+    "semester.title-fall": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -7195,7 +8548,7 @@
         }
       }
     },
-    "semester.spring": {
+    "semester.title-spring": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -7206,7 +8559,7 @@
         }
       }
     },
-    "semester.summer": {
+    "semester.title-summer": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -7217,13 +8570,46 @@
         }
       }
     },
-    "semester.winter": {
+    "semester.title-winter": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
             "value": "%@ 겨울학기"
+          }
+        }
+      }
+    },
+    "semester.week": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld주차"
+          }
+        }
+      }
+    },
+    "semester.week.from": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld주차 · %2$@부터"
+          }
+        }
+      }
+    },
+    "semester.week.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "없음"
           }
         }
       }
@@ -8885,6 +10271,600 @@
           "stringUnit": {
             "state": "translated",
             "value": "공부 타이머 멈추고 기록하기"
+          }
+        }
+      }
+    },
+    "today.attendance.absences": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · 결석 %2$lld회"
+          }
+        }
+      }
+    },
+    "today.attendance.cap": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 번 더 결석하면 최대 %@"
+          }
+        }
+      }
+    },
+    "today.attendance.cap-fallback": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "상한"
+          }
+        }
+      }
+    },
+    "today.classes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 수업"
+          }
+        }
+      }
+    },
+    "today.classes.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘은 수업이 없습니다"
+          }
+        }
+      }
+    },
+    "today.classes.now": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금"
+          }
+        }
+      }
+    },
+    "today.deadlines": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마감"
+          }
+        }
+      }
+    },
+    "today.deadlines.count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld개"
+          }
+        }
+      }
+    },
+    "today.deadlines.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남은 마감이 없습니다"
+          }
+        }
+      }
+    },
+    "today.deadlines.show": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제 보기"
+          }
+        }
+      }
+    },
+    "today.note.continue": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 노트 마저 쓰기 · %@"
+          }
+        }
+      }
+    },
+    "today.note.create-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 노트를 만들어 엽니다"
+          }
+        }
+      }
+    },
+    "today.note.finish": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 노트 작성 완료"
+          }
+        }
+      }
+    },
+    "today.note.more": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 노트 없는 회차 외 %lld개"
+          }
+        }
+      }
+    },
+    "today.note.no-review": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 필요 없음"
+          }
+        }
+      }
+    },
+    "today.note.no-review-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 필요 없음: 진도 없이 채점만 한 날처럼 복습할 것이 없는 회차"
+          }
+        }
+      }
+    },
+    "today.note.open-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 노트를 엽니다"
+          }
+        }
+      }
+    },
+    "today.note.write": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 노트 쓰기 · %@"
+          }
+        }
+      }
+    },
+    "today.now-class": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 수업"
+          }
+        }
+      }
+    },
+    "today.now-class.left": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남음"
+          }
+        }
+      }
+    },
+    "today.now-class.minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld분"
+          }
+        }
+      }
+    },
+    "today.now-class.room": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 수업 · %@"
+          }
+        }
+      }
+    },
+    "today.progress.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 복습 끝"
+          }
+        }
+      }
+    },
+    "today.progress.left": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld단원 남음"
+          }
+        }
+      }
+    },
+    "today.progress.streak": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld일 연속"
+          }
+        }
+      }
+    },
+    "today.progress.total": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "/ %lld단원"
+          }
+        }
+      }
+    },
+    "today.quick-add.no-course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목을 찾지 못함"
+          }
+        }
+      }
+    },
+    "today.quick-add.prompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빠른 추가: 선대 HW5 금 23:59"
+          }
+        }
+      }
+    },
+    "today.quick-add.save": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장"
+          }
+        }
+      }
+    },
+    "today.quick-add.weekly": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "매주"
+          }
+        }
+      }
+    },
+    "today.reviews": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 복습"
+          }
+        }
+      }
+    },
+    "today.reviews.deferred": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하루 상한을 넘어 내일로 미룸"
+          }
+        }
+      }
+    },
+    "today.reviews.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 복습할 것이 없습니다"
+          }
+        }
+      }
+    },
+    "today.reviews.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "우선순위 순"
+          }
+        }
+      }
+    },
+    "today.reviews.overdue": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld일 밀림"
+          }
+        }
+      }
+    },
+    "today.reviews.show-units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 보기"
+          }
+        }
+      }
+    },
+    "today.reviews.skip": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 복습 건너뛰기"
+          }
+        }
+      }
+    },
+    "today.reviews.skip-all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 건너뛰기"
+          }
+        }
+      }
+    },
+    "today.reviews.skip-all.button": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld단원 건너뛰기"
+          }
+        }
+      }
+    },
+    "today.reviews.skip-all.confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 %lld단원을 건너뛸까요?"
+          }
+        }
+      }
+    },
+    "today.reviews.skip-all.message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이미 공부한 것으로 보고 오늘 화면에서 뺍니다. 틀린 퀴즈 카드나 시험 계획이 생기면 다시 올라옵니다."
+          }
+        }
+      }
+    },
+    "today.reviews.write-note-first": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 복습 노트 작성부터"
+          }
+        }
+      }
+    },
+    "today.study.axis.course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목"
+          }
+        }
+      }
+    },
+    "today.study.axis.day": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날짜"
+          }
+        }
+      }
+    },
+    "today.study.axis.end": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끝"
+          }
+        }
+      }
+    },
+    "today.study.axis.start": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시작"
+          }
+        }
+      }
+    },
+    "today.study.date": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld월 %2$lld일"
+          }
+        }
+      }
+    },
+    "today.study.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 기록된 공부 시간이 없습니다"
+          }
+        }
+      }
+    },
+    "today.study.hours": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@시간"
+          }
+        }
+      }
+    },
+    "today.study.minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld분"
+          }
+        }
+      }
+    },
+    "today.study.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최근 2주 공부 시간"
+          }
+        }
+      }
+    },
+    "today.study.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
+          }
+        }
+      }
+    },
+    "today.study.total": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "합계 %@"
+          }
+        }
+      }
+    },
+    "today.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
           }
         }
       }

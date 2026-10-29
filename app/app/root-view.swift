@@ -75,7 +75,7 @@ struct RootView: View {
                         // An explicit top-aligned stack: overlay content is centered otherwise, leaving the palette mid-window.
                         ZStack(alignment: .top) {
                             Theme.Palette.scrim.ignoresSafeArea().onTapGesture { searching = false }
-                            SearchPalette(close: { searching = false }) { target in
+                            SearchPalette(workspace: workspace, close: { searching = false }) { target in
                                 selection = .course(target.courseId)
                                 searchTarget = target
                             }
@@ -179,7 +179,7 @@ struct RootView: View {
                     .padding(.leading, Theme.Space.xs)
             }
             .sheet(isPresented: $addingCourse) {
-                if let current = workspace.currentSemester { AddCourseSheet(semester: current) { if let id = $0 { selection = .course(id) } } }
+                if let current = workspace.currentSemester { AddCourseSheet(workspace: workspace, semester: current) { if let id = $0 { selection = .course(id) } } }
             }
         }
         .onScrollGeometryChange(for: Edge.Set.self) { g in
@@ -207,7 +207,7 @@ struct RootView: View {
         .labelStyle(SidebarLabelStyle())
         }
         .sheet(isPresented: $addingSemester) {
-            AddSemesterSheet { id in
+            AddSemesterSheet(workspace: workspace) { id in
                 guard let id else { return }
                 selection = .semester(id)
             }
@@ -301,7 +301,7 @@ struct RootView: View {
                 Button(.rootQuickAdd, systemImage: "plus") { quickAdding = true }
                     .help(Text(.rootQuickAddHelp))
                     .popover(isPresented: $quickAdding, arrowEdge: .bottom) {
-                        QuickAddField().padding(Theme.Space.l).frame(width: 440)
+                        QuickAddField(workspace: workspace).padding(Theme.Space.l).frame(width: 440)
                     }
                 recordButton
                 timerButton
@@ -440,9 +440,9 @@ struct RootView: View {
 
     @ViewBuilder var detail: some View {
         switch selection {
-        case .today, nil: TodayView()
+        case .today, nil: TodayView(workspace: workspace)
         case .course(let id): CourseView(workspace: workspace, courseID: id).id(id)
-        case .semester(let id): SemesterView(semesterID: id) { selection = .course($0) }.id(id)
+        case .semester(let id): SemesterView(workspace: workspace, semesterID: id) { selection = .course($0) }.id(id)
         case .grades: GradesView(workspace: workspace)
         case .requirements:
             // A course with a folder opens itself; a record-only one (credited terms) opens its semester.
@@ -466,11 +466,11 @@ extension Semester {
     /// `2026 가을학기`, `인정학기`.
     var title: String {
         switch term {
-        case .credited: String(localized: .semesterCredited)
-        case .spring: String(localized: .semesterSpring(String(year)))
-        case .summer: String(localized: .semesterSummer(String(year)))
-        case .fall: String(localized: .semesterFall(String(year)))
-        case .winter: String(localized: .semesterWinter(String(year)))
+        case .credited: String(localized: .semesterTitleCredited)
+        case .spring: String(localized: .semesterTitleSpring(String(year)))
+        case .summer: String(localized: .semesterTitleSummer(String(year)))
+        case .fall: String(localized: .semesterTitleFall(String(year)))
+        case .winter: String(localized: .semesterTitleWinter(String(year)))
         }
     }
 }

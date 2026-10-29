@@ -18,27 +18,6 @@ extension Workspace {
         }
     }
 
-    struct StudyBar: Identifiable, Sendable {
-        var id: String { "\(day)-\(courseId)" }
-        var day: LocalDate
-        var courseId: UUID
-        var seconds: TimeInterval
-    }
-
-    func recentStudyTime(days: Int, now: Date) async -> [StudyBar] {
-        let stores = currentCourses.map { ($0.id, $0.store) }
-        let settings = settings, calendar = calendar
-        let first = settings.studyDay(of: now, calendar: calendar).adding(days: -(days - 1))
-        return await Task.detached {
-            stores.flatMap { id, store in
-                let sessions = ((try? store.log.readAll()) ?? []).events(StudySessionEvent.self).map(\.event)
-                return StudyTime.perDay(sessions, settings: settings, calendar: calendar)
-                    .filter { $0.key >= first }
-                    .map { StudyBar(day: $0.key, courseId: id, seconds: $0.value) }
-            }
-        }.value
-    }
-
     // MARK: Catalog
 
     /// Saves catalog.json; rows that changed are stamped as edited from this device. Unknown keys in the file are kept.

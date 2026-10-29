@@ -344,7 +344,7 @@ struct UnitDetail: View {
         .onChange(of: model.workspace.notesRevision) { model.loadNotes(unit) }
         .onDisappear { model.rename(unit) }
         .crumb(unit.title, level: 2, symbol: "list.bullet.indent")
-        .sheet(isPresented: $reviewing) { ReviewView(courseId: course.id, unitId: unit.id) }
+        .sheet(isPresented: $reviewing) { ReviewView(workspace: model.workspace, courseId: course.id, unitId: unit.id) }
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.unitStep, initial: true) { _, step in reviewing = step == "review" }
         #endif
