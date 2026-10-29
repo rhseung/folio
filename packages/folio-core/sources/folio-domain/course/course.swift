@@ -61,7 +61,8 @@ public struct ClassTime: Codable, Sendable, Hashable {
     /// ISO 8601 weekday: 1 = Monday ... 7 = Sunday.
     public var weekday: Int
     /// Indexed by `weekday - 1`.
-    public static let weekdayNames = ["월", "화", "수", "목", "금", "토", "일"]
+    public static let weekdayNames = [LocalizedStringResource.weekdayMon, .weekdayTue, .weekdayWed, .weekdayThu, .weekdayFri, .weekdaySat, .weekdaySun]
+        .map { String(localized: $0) }
     public var startMinute: Int
     public var endMinute: Int
     public var room: String

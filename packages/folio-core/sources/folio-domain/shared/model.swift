@@ -61,7 +61,7 @@ extension Document {
     public mutating func update<E: Identifiable & Sendable>(_ items: WritableKeyPath<Self, [E]>, _ id: UUID,
                                                            _ change: (inout E) throws -> Void) throws where E.ID == UUID {
         guard let i = self[keyPath: items].firstIndex(where: { $0.id == id }) else {
-            throw ModelError.notFound("\(Korean.object(Self.model.noun(of: E.self))) 찾지 못했습니다")
+            throw ModelError.notFound(String(localized: .modelNotFound(Korean.object(Self.model.noun(of: E.self)))))
         }
         try change(&self[keyPath: items][i])
     }
@@ -224,7 +224,7 @@ public func Pair<Doc: Sendable, A: Identifiable & Sendable, B: Identifiable & Se
             .map { p in
                 let a = index.names[p.a] ?? p.a.uuidString, b = index.names[p.b] ?? p.b.uuidString
                 let aNoun = index.nouns[ObjectIdentifier(A.self)] ?? "\(A.self)", bNoun = index.nouns[ObjectIdentifier(B.self)] ?? "\(B.self)"
-                return Violation(rule, subject: p.a, "\(aNoun) \(Korean.quoted(a, "과", "와")) \(bNoun) '\(b)'의 연결이 한쪽에만 있습니다")
+                return Violation(rule, subject: p.a, String(localized: .modelPairOneSided(aNoun, Korean.quoted(a, "과", "와"), bNoun, b)))
             }
     }
 }
@@ -253,7 +253,7 @@ private func collection<Doc: Sendable, E: Identifiable & Sendable>(
             var out: [Violation] = []
             var seen = Set<UUID>()
             for e in items where !seen.insert(e.id).inserted {
-                out.append(Violation(RuleID("\(type).id"), subject: e.id, "\(noun) ID가 겹칩니다: \(e.id)"))
+                out.append(Violation(RuleID("\(type).id"), subject: e.id, String(localized: .modelDuplicateId(noun, "\(e.id)"))))
             }
             for e in items {
                 let label = name(e, doc)
@@ -347,7 +347,7 @@ private func reference<Doc: Sendable, E: Identifiable & Sendable, T>(
             let noun = index.nouns[ObjectIdentifier(E.self)] ?? "\(E.self)"
             let what = label ?? index.nouns[kind] ?? "\(T.self)"
             return points(e).filter { !known.contains($0) }.map {
-                Violation(rule, subject: e.id, "\(noun) '\(name)'의 \(Korean.subject(what)) \(index.place) 없습니다: \($0)")
+                Violation(rule, subject: e.id, String(localized: .modelMissingTarget(noun, name, Korean.subject(what), index.place, "\($0)")))
             }
         },
         ref: RefInfo(target: kind, onDelete: onDelete, points: points, detach: detach))
@@ -395,13 +395,13 @@ extension Model {
 
     func remove(_ kind: ObjectIdentifier, _ id: UUID, in doc: inout Doc) throws {
         guard let items = items(of: kind), let name = items.all(doc).first(where: { $0.id == id })?.name else {
-            throw ModelError.notFound("\(Korean.object(items(of: kind)?.noun ?? "항목")) 찾지 못했습니다")
+            throw ModelError.notFound(String(localized: .modelNotFound(Korean.object(items(of: kind)?.noun ?? String(localized: .modelNounItem)))))
         }
         let pointing = collections.flatMap { c in c.refs.filter { $0.target == kind }.map { (c, $0) } }
         for (c, r) in pointing where r.onDelete == .restrict {
             guard let holder = r.holders(doc, id).first else { continue }
             let by = c.all(doc).first { $0.id == holder }?.name ?? ""
-            throw ModelError.rule("\(c.noun) \(Korean.quoted(by, "이", "가")) 가리키고 있어 \(items.noun) \(Korean.quoted(name, "을", "를")) 지울 수 없습니다")
+            throw ModelError.rule(String(localized: .modelDeleteRestricted(c.noun, Korean.quoted(by, "이", "가"), items.noun, Korean.quoted(name, "을", "를"))))
         }
         let cascaded = pointing.filter { $0.1.onDelete == .cascade }.map { ($0.0.kind, $0.1.holders(doc, id)) }
         let parent = pointing.first { $0.0.kind == kind && $0.1.onDelete == .reparent }.flatMap { $0.1.values(doc, id).first }

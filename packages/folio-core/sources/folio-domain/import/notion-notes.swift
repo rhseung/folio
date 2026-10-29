@@ -170,17 +170,17 @@ public enum NotionNotesImporter {
         let total = file.components.map(\.weight).reduce(0, +)
         if !hadComponents, total > 150 {
             for i in file.components.indices { file.components[i].weight *= 100 / total }
-            result.warnings.append("평가 비중 합계가 \(Int(total))이라 100으로 환산함")
+            result.warnings.append(String(localized: .importNotesWeightsScaled(Int(total))))
         }
 
         for row in rows where !hasChildren.contains(row.id) {
             guard let score = row.score else { continue }
             guard let componentId = ancestors(row.id).lazy.compactMap({ componentFor[$0] }).first else {
-                result.warnings.append("\(row.name): 맞는 평가 항목이 없어 점수를 건너뜀")
+                result.warnings.append(String(localized: .importNotesNoComponent(row.name)))
                 continue
             }
             guard let max = row.max, max > 0 else {
-                result.warnings.append("\(row.name): 만점이 없어 점수를 건너뜀")
+                result.warnings.append(String(localized: .importNotesNoMax(row.name)))
                 continue
             }
             let title = row.name.trimmingCharacters(in: .whitespaces)

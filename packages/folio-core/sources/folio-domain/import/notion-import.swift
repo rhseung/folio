@@ -164,7 +164,7 @@ public enum NotionImporter {
                 let hours = export.courses.filter { $0.semesterId == row.id }.reduce(0) { $0 + $1.credits }
                 semesters.append(Semester(id: row.id, device: device, at: now, year: regularYears.min() ?? 0, term: .credited, creditedHours: hours))
             } else {
-                warnings.append("알 수 없는 학기 이름: \(row.title)")
+                warnings.append(String(localized: .importNotionUnknownTerm(row.title)))
             }
         }
 
@@ -175,7 +175,7 @@ public enum NotionImporter {
 
         for row in export.courses {
             guard let semester = semesters.first(where: { $0.id == row.semesterId }) else {
-                warnings.append("학기를 찾지 못한 과목: \(row.title)")
+                warnings.append(String(localized: .importNotionNoSemester(row.title)))
                 continue
             }
             var course = Course(
@@ -209,7 +209,7 @@ public enum NotionImporter {
                     if let grade = gradeBySymbol[cap.grade] {
                         caps.append(AttendanceCap(absences: cap.absences, maxGrade: grade))
                     } else {
-                        warnings.append("\(row.title): 평어 \(cap.grade)를 찾지 못해 결석 상한을 건너뜀")
+                        warnings.append(String(localized: .importNotionCapGradeMissing(row.title, cap.grade)))
                     }
                 }
                 file.policy = GradePolicy(attendanceCap: caps, minAttendanceRatio: p.minAttendanceRatio, latePolicy: p.latePolicy, notes: p.notes ?? "")

@@ -37,7 +37,8 @@ public enum StudyTime {
     /// `40분`, `2시간`, `1시간 20분`.
     public static func label(_ seconds: TimeInterval) -> String {
         let minutes = Int(seconds / 60)
-        return minutes < 60 ? "\(minutes)분" : minutes % 60 == 0 ? "\(minutes / 60)시간" : "\(minutes / 60)시간 \(minutes % 60)분"
+        return minutes < 60 ? String(localized: .studyTimeMinutes(minutes)) : minutes % 60 == 0 ? String(localized: .studyTimeHours(minutes / 60))
+            : String(localized: .studyTimeHoursMinutes(minutes / 60, minutes % 60))
     }
 }
 
