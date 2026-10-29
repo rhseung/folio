@@ -179,37 +179,6 @@ final class Workspace {
                               settings: settings, calendar: calendar, now: now)
     }
 
-    // MARK: Unclassified files
-
-    /// The course folder relative to the GIST root, with a trailing slash.
-    func coursePrefix(_ id: UUID) -> String? {
-        guard let gist, let course = course(id) else { return nil }
-        let root = gist.url.standardizedFileURL.path
-        return String(course.store.url.standardizedFileURL.path.dropFirst(root.count + 1)) + "/"
-    }
-
-    /// The one-time cleanup's moves for files still left in this course, including the ones it was unsure about.
-    /// Reading the whole GIST tree is slow, so this runs off the main actor.
-    func cleanupSuggestions(for id: UUID) async -> [PlannedMove] {
-        guard let gist, let prefix = coursePrefix(id), let course = course(id) else { return [] }
-        let url = gist.url
-        let labs = [String(prefix.dropLast()): course.file.labNumbers]
-        let labWeeks = [String(prefix.dropLast()): course.file.labWeeks]
-        let moves = await Task.detached {
-            (try? GISTStore(url: url).readTree()).map { CleanupPlanner.plan($0, labs: labs, labWeeks: labWeeks).moves } ?? []
-        }.value
-        return moves.filter { $0.from.hasPrefix(prefix) }
-    }
-
-    /// Moves files only after the user approved this exact move; the batch goes to `moves.jsonl` so it can be undone.
-    func approve(_ moves: [PlannedMove], course id: UUID) -> UUID? {
-        run(CleanupApply(moves: moves, course: id))?.made
-    }
-
-    func undoMoves(_ batch: UUID, course id: UUID) {
-        run(CleanupUndo(batch: batch, course: id))
-    }
-
     // MARK: Semesters and courses
 
     /// `<main code><number> <title>`; nil when the codes are empty or the name breaks the naming rule.

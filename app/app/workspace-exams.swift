@@ -14,17 +14,4 @@ extension Workspace {
     func setPlanItem(_ item: UUID, done: Bool, course id: UUID) {
         run(ExamPlanCheck(course: id, item: item, done: done))
     }
-
-    func examSummaryNotes(course id: UUID) -> [UUID: UUID] {
-        let notes = (try? course(id)?.store.notes()) ?? []
-        return Dictionary(notes.compactMap { n in
-            guard n.meta.kind == .examSummary, let exam = n.meta.examId, let note = n.meta.id else { return nil }
-            return (exam, note)
-        }, uniquingKeysWith: { a, _ in a })
-    }
-
-    /// The exam's summary note, created from the template the first time.
-    func openExamSummary(_ exam: Exam, course id: UUID) -> UUID? {
-        run(ExamSummary(course: id, exam: exam.id))?.made
-    }
 }

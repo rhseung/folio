@@ -36,12 +36,6 @@ extension Workspace {
         }
     }
 
-    /// Sessions let go of the note first: a note left behind by a failed trash is harmless, a link to nothing is not.
-    func deleteNote(_ note: NoteFile, course: LoadedCourse) {
-        guard let path = course.store.coursePath(of: note.url) else { return }
-        run(NoteRemove(course: course.id, note: path))
-    }
-
     func monthlyAPIUsage() -> [MonthlyUsage] {
         let events = courses.flatMap { course in
             ((try? course.store.log.readAll()) ?? []).events(APIUsageEvent.self)

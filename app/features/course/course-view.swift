@@ -144,13 +144,13 @@ struct CourseView: View {
                     case .overview: CourseOverview(model: model, course: course)
                     case .sessions: SessionsView(workspace: workspace, course: course) { model.show(note: $0) }
                     case .units: UnitsView(workspace: workspace, course: course)
-                    case .notes: NotesView(course: course, selection: model.openNote, insert: $model.noteInsert) { model.openNote = $0 }
+                    case .notes: NotesView(workspace: workspace, course: course, selection: model.openNote, insert: $model.noteInsert) { model.openNote = $0 }
                     // One branch for every quiz page, so the quiz model and a pending solve request survive switching pages.
                     case .quizSolve, .quizCards, .quizStats, .quizProblems: QuizView(workspace: model.workspace, course: course, section: $model.section)
-                    case .materials: MaterialsView(course: course)
-                    case .assignments: AssignmentsView(course: course)
+                    case .materials: MaterialsView(workspace: workspace, course: course)
+                    case .assignments: AssignmentsView(workspace: workspace, course: course)
                     case .grades: CourseGradesView(workspace: workspace, course: course)
-                    case .exams: ExamsView(course: course) { model.show(note: $0) }
+                    case .exams: ExamsView(workspace: workspace, course: course) { model.show(note: $0) }
                     }
                 }
                 // A new identity drops what the page opened (a file, a unit), which is all its section crumb asks for.
@@ -237,7 +237,7 @@ struct CourseColumn: View {
                 }
 
                 if model.section == .notes {
-                    NoteList(course: course, selection: $model.openNote)
+                    NoteList(workspace: model.workspace, course: course, selection: $model.openNote)
                 } else if !recent.isEmpty {
                     VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                         Caption(String(localized: .courseRecent)).padding(.horizontal, Theme.Space.s).padding(.bottom, Theme.Space.tight)
