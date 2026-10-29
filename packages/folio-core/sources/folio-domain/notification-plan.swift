@@ -22,7 +22,7 @@ public struct PlannedNotification: Sendable, Equatable {
 }
 
 public enum NotificationPlan {
-    /// Future notifications, soonest first. Deadlines and exams use real time (docs/SPEC.md "하루 경계").
+    /// Deadlines and exams use real time (docs/SPEC.md "하루 경계").
     /// - Parameter reviewCount: units in the review queue at a given moment.
     public static func build(courses: [CourseFile], reviewCount: (Date) -> Int, settings: NotificationSettings,
                              now: Date, calendar: Calendar, reviewDays: Int = 7) -> [PlannedNotification] {

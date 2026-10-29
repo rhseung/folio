@@ -1,6 +1,5 @@
 import Foundation
 
-/// How an assignment relates to its `Assignments/<folder>/` files and its deadline.
 public enum AssignmentFiles {
     /// `HW 3` → `HW03`; titles that name no assignment kind are their own folder name.
     public static func folder(of assignment: Assignment) -> String {
@@ -25,7 +24,6 @@ public enum AssignmentFiles {
         return fileName.wholeMatch(of: pattern) != nil ? .submission : .problem
     }
 
-    /// Suggests marking the assignment submitted when a submission file is there but the status says otherwise.
     public static func suggestsSubmitted(_ assignment: Assignment, files: [Material]) -> Bool {
         (assignment.status == .todo || assignment.status == .doing)
             && files.contains { ($0.kind ?? guessKind(fileName: ($0.path as NSString).lastPathComponent)) == .submission }

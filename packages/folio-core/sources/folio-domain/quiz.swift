@@ -68,7 +68,6 @@ public enum Verdict: String, Codable, Sendable, CaseIterable {
     case correct, partial, wrong
 }
 
-/// `quiz_attempt` log event.
 public struct QuizAttemptEvent: LogEvent, Equatable {
     public static let type = "quiz_attempt"
     public var cardId: UUID

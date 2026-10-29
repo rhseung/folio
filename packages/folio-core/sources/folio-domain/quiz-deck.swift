@@ -7,7 +7,6 @@ public typealias AttemptHistory = [(day: LocalDate, verdict: Verdict)]
 /// Counts for a group of cards or problems under the wrong-answer flow (docs/SPEC.md "통계").
 public struct WrongTally: Equatable, Sendable {
     public var items = 0
-    /// Items tried at least once.
     public var attempted = 0
     public var correct = 0
     public var open = 0
@@ -32,7 +31,7 @@ public struct WrongTally: Equatable, Sendable {
 }
 
 public enum QuizStats {
-    /// Folds items into tallies by key. An item with several keys (a problem in two units) counts in each.
+    /// An item with several keys (a problem in two units) counts in each.
     public static func tally<Item, Key: Hashable>(_ items: [Item], keys: (Item) -> [Key], history: (Item) -> AttemptHistory) -> [Key: WrongTally] {
         var result: [Key: WrongTally] = [:]
         for item in items {
@@ -51,7 +50,6 @@ public enum QuizOrder: String, CaseIterable, Sendable {
     case unitOrder, random, wrongFirst
 }
 
-/// What to solve (docs/SPEC.md "풀기 설정").
 public struct QuizScope: Equatable, Sendable {
     public var unitIds: Set<UUID>
     /// Empty means every category.

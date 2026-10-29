@@ -49,12 +49,12 @@ public enum RequirementImporter {
         public var untouched: [String]
     }
 
-    /// Matches by name (or `renamedFrom`), keeping each category's ID so course assignments survive.
     /// The undergraduate code for a prefix; the code table also lists the graduate one under the same prefix.
     public static func code(_ prefix: String, in codes: [CourseCode]) -> CourseCode? {
         codes.first { $0.prefix == prefix && $0.program == "학사과정" } ?? codes.first { $0.prefix == prefix }
     }
 
+    /// Matches by name (or `renamedFrom`), keeping each category's ID so course assignments survive.
     public static func merge(_ rows: [RequirementSpec], into existing: [Category], codes: [CourseCode] = [], device: DeviceID, now: Date) -> Result {
         var categories = existing
         var added: [String] = [], changed: [String] = []

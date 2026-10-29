@@ -1,12 +1,10 @@
 import Foundation
 
-/// Items grouped into folders by their `/`-separated paths, for showing a file list as a tree.
 public struct PathTree<Item> {
     /// The folder's path; for the root, the folders every item shares (`Assignments`), or empty.
     public var path: String
     public var name: String { (path as NSString).lastPathComponent }
     public var folders: [PathTree]
-    /// Items directly in this folder, with their names.
     public var items: [(name: String, item: Item)]
 
     /// The shared leading folders are folded into the root, so a list all under `Lectures/` starts at its files.

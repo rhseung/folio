@@ -6,7 +6,6 @@ public enum ReviewResult: String, Codable, Sendable, CaseIterable {
     case skip
 }
 
-/// `review` log event (docs/SPEC.md "Event").
 public struct ReviewEvent: LogEvent, Equatable {
     public static let type = "review"
     public var unitId: UUID
@@ -28,7 +27,6 @@ public struct UnitReviewInput: Sendable {
     /// No review note yet: the first task is writing it, due on `startDay`.
     public var needsReviewNote: Bool
     public var reviews: [(day: LocalDate, result: ReviewResult)]
-    /// Days a quiz card of this unit was answered wrong.
     public var wrongCardDays: [LocalDate]
     /// Days of upcoming exams whose scope includes the unit.
     public var examDays: [LocalDate]

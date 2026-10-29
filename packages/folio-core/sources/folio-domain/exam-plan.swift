@@ -33,7 +33,6 @@ public struct ExamPlanItem: Codable, Sendable, Equatable, Identifiable {
     }
 }
 
-/// `plan_check` log event (docs/SPEC.md "Event").
 public struct PlanCheckEvent: LogEvent, Equatable {
     public static let type = "plan_check"
     public var itemId: UUID
@@ -64,7 +63,6 @@ public enum ExamPlan {
         return Set(latest.filter(\.value.done).keys)
     }
 
-    /// Plan items scheduled for `day` across courses, by exam start then title.
     public static func items(on day: LocalDate, courses: [CourseFile]) -> [DayItem] {
         courses.flatMap { file in
             file.exams.flatMap { exam in

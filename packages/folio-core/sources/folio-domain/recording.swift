@@ -28,10 +28,8 @@ public struct Recording: Entity {
         self.bookmarks = bookmarks
     }
 
-    /// The transcript's path: the audio's name with `.transcript.json`.
     public var transcriptFile: String { (file as NSString).deletingPathExtension + ".transcript.json" }
 
-    /// `<session>.m4a` in `Recordings/`, or `<session> 2.m4a`, ... when taken.
     public static func file(named base: String, taken: Set<String>) -> String {
         var name = "\(base).m4a"
         var n = 2

@@ -359,7 +359,6 @@ struct CoursePlanner {
     }
 }
 
-/// Name heuristics for the cleanup planner, kept in one place.
 enum Keywords {
     static let syllabus = ["syllabus", "강의계획서", "수업계획서", "orientation", "스케줄", "schedule", "클리닉", "clinic"]
     static let textbook = ["textbook", "교재", "edition", "solution manual", "introduction to"]

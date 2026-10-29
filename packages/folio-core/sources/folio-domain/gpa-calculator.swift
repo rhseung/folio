@@ -8,7 +8,6 @@ public enum GPACalculator {
     public struct Summary: Sendable, Equatable {
         /// Credits of courses whose grade counts toward credits (S counts; U, W don't).
         public var totalCredits: Double
-        /// Credits that enter the GPA.
         public var effectiveCredits: Double
         public var gradePoints: Double
 
@@ -43,7 +42,7 @@ public enum GPACalculator {
         }
     }
 
-    /// One semester. A credited term (인정학기) contributes only its credited hours, never GPA.
+    /// A credited term (인정학기) contributes only its credited hours, never GPA.
     public static func semester(_ semester: Semester, courses: [Course], catalog: Catalog) -> Summary {
         guard semester.term != .credited else {
             return Summary(totalCredits: semester.creditedHours ?? 0, effectiveCredits: 0, gradePoints: 0)

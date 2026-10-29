@@ -1,4 +1,4 @@
-/// A place where the GIST folder departs from the standard layout. `path` is relative to the GIST root.
+/// `path` is relative to the GIST root.
 public struct LayoutIssue: Hashable, Sendable {
     public enum Kind: Hashable, Sendable {
         case unexpectedRootItem

@@ -15,7 +15,7 @@ public struct QuickAdd: Equatable, Sendable {
     /// Deadline time when only a day is given.
     static let defaultMinute = 23 * 60 + 59
 
-    /// One word of the line. The rules read the shorthand Apple's detector misses or gets wrong (`금`, `3/2`, `1:00`
+    /// The rules read the shorthand Apple's detector misses or gets wrong (`금`, `3/2`, `1:00`
     /// read as 1 p.m.) and rewrite it into words the detector also reads, so a phrase like `다음 주 금 오후 3시` stays whole.
     struct Word {
         var text: String

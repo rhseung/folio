@@ -1,6 +1,5 @@
 // docs/SPEC.md "색인 제외 대상".
 public enum IndexRules {
-    /// A folder containing any of these is a code project: shown as one item, never descended into.
     public static let codeProjectMarkers: Set<String> = [".git", "node_modules", "__pycache__", ".venv", "build", "dist"]
 
     /// Folders with more files than this are not indexed until the user opts in.

@@ -68,7 +68,6 @@ extension Exam {
 public enum AssignmentStatus: String, Codable, Sendable, CaseIterable {
     case todo, doing, submitted, graded
 
-    /// Still to hand in.
     public var isOpen: Bool { self == .todo || self == .doing }
 }
 

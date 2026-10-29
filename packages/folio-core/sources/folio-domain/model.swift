@@ -71,12 +71,10 @@ extension Document {
         try Self.model.remove(ObjectIdentifier(type), id, in: &self)
     }
 
-    /// The display name of the item with this id, whatever its kind.
     public func name(of id: UUID) -> String? {
         Self.model.collections.lazy.compactMap { $0.all(self).first { $0.id == id }?.name }.first
     }
 
-    /// Every item of a kind with its display name, for looking items up by name.
     public func names<E>(_ type: E.Type) -> [(id: UUID, name: String)] {
         Self.model.items(of: ObjectIdentifier(type))?.all(self) ?? []
     }
@@ -307,7 +305,6 @@ public func Check<Doc: Sendable, E: Identifiable & Sendable>(
     }, ref: nil)
 }
 
-/// A text field that can't be blank.
 public func NonEmpty<Doc: Sendable, E: Identifiable & Sendable>(
     _ field: KeyPath<E, String> & Sendable, _ message: String
 ) -> Member<Doc, E> where E.ID == UUID {

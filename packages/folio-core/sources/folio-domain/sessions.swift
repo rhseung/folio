@@ -99,7 +99,6 @@ public struct Session: Entity {
     /// other class. Not stored, so names already written into notes and recordings stay as they were.
     public func name(among sessions: [Session]) -> String { "\(week)주차-\(index)" }
 
-    /// Held already, not cancelled or marked as needing no review, with no finished review note yet.
     public func needsReviewNote(at now: Date) -> Bool { !isCancelled && !skipsReview && date <= now && (reviewNoteId == nil || reviewNoteUnfinished) }
 }
 

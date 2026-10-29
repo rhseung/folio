@@ -13,7 +13,7 @@ public struct ActivitySpan: Sendable, Equatable {
         self.lastInput = start
     }
 
-    /// Records input at `date`. Returns the finished span when the user had been idle past the limit.
+    /// Returns the finished span when the user had been idle past the limit.
     public mutating func input(at date: Date) -> DateInterval? {
         defer { lastInput = date }
         guard date.timeIntervalSince(lastInput) > Self.idleLimit else { return nil }

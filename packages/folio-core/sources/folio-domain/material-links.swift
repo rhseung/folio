@@ -40,7 +40,6 @@ extension CourseFile {
         if linked { materials[m].unitIds.append(unit) }
     }
 
-    /// Sessions this material is linked to, with their page ranges, in session order.
     public func sessionLinks(of material: UUID) -> [(session: Session, link: SessionMaterial)] {
         sessions.sorted { ($0.week, $0.index) < ($1.week, $1.index) }
             .compactMap { s in s.materials.first { $0.materialId == material }.map { (s, $0) } }

@@ -25,7 +25,6 @@ public enum UnitImporter {
         public var added: [String]
         /// Session links made, as `unit ← session`.
         public var linked: [String]
-        /// Session names the file mentions that the course doesn't have.
         public var unknownSessions: [String]
     }
 

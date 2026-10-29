@@ -68,7 +68,6 @@ public struct ReviewSettings: Codable, Sendable, Equatable {
     public var dailyLimit: Int?
     /// Within this many days before an exam, intervals are capped at half the days left.
     public var examWindowDays: Int
-    /// Cards picked per review session.
     public var cardsPerReview: Int
     public var weights: PriorityWeights
 

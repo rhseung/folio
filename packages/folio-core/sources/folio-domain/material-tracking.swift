@@ -12,7 +12,6 @@ public struct ScannedEntry: Hashable, Sendable {
         self.size = size
     }
 
-    /// Entries that can become Material: everything except Notes, Ink and metadata.
     public static func materials(in course: FolderTree) -> [ScannedEntry] {
         func walk(_ node: FolderTree, _ path: String) -> [ScannedEntry] {
             switch node.content {

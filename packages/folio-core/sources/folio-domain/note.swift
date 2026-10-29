@@ -6,8 +6,7 @@ public enum NoteKind: String, Codable, Sendable, CaseIterable {
     case topic, free
 }
 
-/// Note metadata, stored in the markdown file's frontmatter (docs/SPEC.md "Note").
-/// How `$…$` in a note is written. Notes without the frontmatter key are LaTeX, as Obsidian and Notion write them.
+/// Notes without the frontmatter key are LaTeX, as Obsidian and Notion write them.
 public enum MathSyntax: String, Codable, Sendable, CaseIterable {
     case latex, asciimath
 }
