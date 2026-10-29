@@ -5,6 +5,8 @@ import PackageDescription
 // Layers: CLI, Gen -> Actions -> Storage -> Domain, Actions -> Macros (compile time only), CLI -> Index -> Storage, Storage and Actions -> Markdown (note frontmatter). Domain must stay free of file I/O and UI (see AGENTS.md "레이어").
 let package = Package(
     name: "FolioCore",
+    // UI strings live in each target's Localizable.xcstrings as keys; the catalog generates `.key` symbols.
+    defaultLocalization: "ko",
     // Keep in sync with deploymentTarget in project.yml.
     platforms: [.macOS(.v26), .iOS(.v26)],
     products: [
@@ -27,15 +29,15 @@ let package = Package(
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "604.0.0"),
     ],
     targets: [
-        .target(name: "FolioDomain", dependencies: [.product(name: "Algorithms", package: "swift-algorithms")], path: "sources/folio-domain"),
+        .target(name: "FolioDomain", dependencies: [.product(name: "Algorithms", package: "swift-algorithms")], path: "sources/folio-domain", resources: [.process("Localizable.xcstrings")]),
         .target(name: "FolioStorage", dependencies: ["FolioDomain", .product(name: "FolioMarkdown", package: "folio-markdown")], path: "sources/folio-storage"),
         .macro(name: "FolioMacros", dependencies: [
             .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
             .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
         ], path: "sources/folio-macros"),
-        .target(name: "FolioActions", dependencies: ["FolioStorage", .product(name: "FolioMarkdown", package: "folio-markdown"), "FolioMacros"], path: "sources/folio-actions"),
+        .target(name: "FolioActions", dependencies: ["FolioStorage", .product(name: "FolioMarkdown", package: "folio-markdown"), "FolioMacros"], path: "sources/folio-actions", resources: [.process("Localizable.xcstrings")]),
         .target(name: "FolioIndex", dependencies: ["FolioStorage", .product(name: "FolioMarkdown", package: "folio-markdown"), .product(name: "GRDB", package: "GRDB.swift")], path: "sources/folio-index"),
-        .executableTarget(name: "FolioCLI", dependencies: ["FolioActions", "FolioIndex", .product(name: "ArgumentParser", package: "swift-argument-parser"), .product(name: "GRDB", package: "GRDB.swift")], path: "sources/folio-cli"),
+        .executableTarget(name: "FolioCLI", dependencies: ["FolioActions", "FolioIndex", .product(name: "ArgumentParser", package: "swift-argument-parser"), .product(name: "GRDB", package: "GRDB.swift")], path: "sources/folio-cli", resources: [.process("Localizable.xcstrings")]),
         // Writes folio-cli/generated/commands.swift from the action specs. It must not need FolioCLI, so a broken
         // generated file can always be generated again.
         .executableTarget(name: "FolioGen", dependencies: ["FolioActions"], path: "sources/folio-gen"),

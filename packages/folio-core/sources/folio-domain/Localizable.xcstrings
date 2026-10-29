@@ -1,0 +1,17 @@
+{
+  "sourceLanguage": "ko",
+  "strings": {
+    "course.title-empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목 이름이 비었습니다"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

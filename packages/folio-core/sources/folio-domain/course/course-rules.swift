@@ -7,7 +7,7 @@ extension Course {
     /// Checks a course record keeps wherever it is stored: in its course file, or in the transcript when it has no folder.
     static func members<Doc: Sendable>() -> [Member<Doc, Course>] {
         [
-            NonEmpty(\.title, "과목 이름이 비었습니다"),
+            NonEmpty(\.title, String(localized: .courseTitleEmpty)),
             Check("Course.credits", "과목 '{name}'의 학점이 음수입니다") { c, _ in c.credits >= 0 },
             Check("Course.schedule", "과목 '{name}'의 수업 시간이 잘못되었습니다: 요일은 월~일, 끝은 시작보다 늦어야 합니다") { c, _ in
                 c.schedule.allSatisfy { (1...7).contains($0.weekday) && $0.startMinute >= 0 && $0.endMinute <= 24 * 60 && $0.endMinute > $0.startMinute }
