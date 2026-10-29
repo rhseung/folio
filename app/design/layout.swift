@@ -111,9 +111,9 @@ struct Breadcrumb: View {
             if folded, let first = crumbs.first, let last = crumbs.last {
                 step(first, at: 0)
                 separator
-                Button("가려진 경로", systemImage: "ellipsis") { showsHidden = true }
+                Button(.designHiddenPath, systemImage: "ellipsis") { showsHidden = true }
                     .buttonStyle(.toolbar)
-                    .help("가려진 경로")
+                    .help(Text(.designHiddenPath))
                     .popover(isPresented: $showsHidden, arrowEdge: .bottom) { hidden }
                 separator
                 step(last, at: crumbs.count - 1)
@@ -151,7 +151,7 @@ struct Breadcrumb: View {
                 }
             }
             if between, let action = crumb.action {
-                Button(crumb.title, action: action).buttonStyle(.pointing(.plain)).help("\(crumb.title) 처음으로")
+                Button(crumb.title, action: action).buttonStyle(.pointing(.plain)).help(Text(.designCrumbTopHelp(crumb.title)))
             } else {
                 Text(crumb.title)
             }

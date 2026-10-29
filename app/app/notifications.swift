@@ -42,20 +42,20 @@ enum NotificationScheduler {
         content.sound = .default
         switch item.kind {
         case .assignmentDue(let hours):
-            content.title = String(localized: "\(course) · \(item.subject) 마감 \(hours)시간 전")
-            content.body = String(localized: "마감 \(when)")
+            content.title = String(localized: .notifyDue(course, item.subject, hours))
+            content.body = String(localized: .notifyDueAt(when))
         case .examDayBefore:
-            content.title = String(localized: "내일 \(course) \(item.subject)")
+            content.title = String(localized: .notifyExamTomorrow(course, item.subject))
             content.body = when
         case .examMorning:
-            content.title = String(localized: "오늘 \(course) \(item.subject)")
+            content.title = String(localized: .notifyExamToday(course, item.subject))
             content.body = when
         case .dailyReview(let count):
-            content.title = String(localized: "오늘 복습할 단원 \(count)개")
-            content.body = String(localized: "오늘 화면에서 우선순위 순으로 볼 수 있습니다")
+            content.title = String(localized: .notifyReview(count))
+            content.body = String(localized: .notifyReviewDetail)
         case .attendanceOneAway(let absences):
-            content.title = String(localized: "\(course) 결석 \(absences)회")
-            content.body = String(localized: "한 번 더 결석하면 성적 상한이 적용됩니다")
+            content.title = String(localized: .notifyAbsences(course, absences))
+            content.body = String(localized: .notifyAbsencesDetail)
         }
         return content
     }

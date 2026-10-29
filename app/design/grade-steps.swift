@@ -33,7 +33,7 @@ struct GradeSteps: View {
                     .background(selection == e.id ? Theme.Palette.fill : .clear, in: .capsule)
             }
             track
-            Text(index.map { stops[$0].symbol } ?? extra?.symbol ?? "미정")
+            Text(index.map { stops[$0].symbol } ?? extra?.symbol ?? String(localized: .designUndecided))
                 .font(Theme.Typeface.bodyStrong)
                 .monospacedDigit()
                 .foregroundStyle(index.map(color) ?? (extra == nil ? Theme.Palette.textTertiary : Theme.Palette.text))
@@ -45,8 +45,8 @@ struct GradeSteps: View {
         .animation(.snappy(duration: 0.22), value: selection)
         .sensoryFeedback(.levelChange, trigger: selection)
         .accessibilityElement()
-        .accessibilityLabel("성적")
-        .accessibilityValue(index.map { stops[$0].symbol } ?? extra?.symbol ?? "미정")
+        .accessibilityLabel(Text(.designGrade))
+        .accessibilityValue(index.map { stops[$0].symbol } ?? extra?.symbol ?? String(localized: .designUndecided))
         .accessibilityAdjustableAction { direction in
             let i = index ?? -1
             let next = direction == .increment ? min(i + 1, stops.count - 1) : max(i - 1, 0)
@@ -91,7 +91,7 @@ struct GradeSteps: View {
                 }
         )
         .pointingHand()
-        .help("눌러서 고르고, 고른 칸을 다시 누르면 미정")
+        .help(Text(.designGradeStepsHelp))
     }
 
     func stop(at x: CGFloat) -> Int {

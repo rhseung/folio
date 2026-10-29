@@ -48,13 +48,13 @@ struct ScrubField: View {
                 #if os(macOS)
                 .pointerStyle(.columnResize)
                 #endif
-                .help("좌우로 끌어서 바꾸고, 눌러서 직접 입력")
+                .help(Text(.designDragOrTypeHelp))
             }
         }
         .pill(width: width)
         .sensoryFeedback(.levelChange, trigger: value)
         .accessibilityRepresentation {
-            Slider(value: $value, in: range, step: step) { Text("값") }
+            Slider(value: $value, in: range, step: step) { Text(.designValue) }
         }
     }
 }

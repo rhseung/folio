@@ -103,12 +103,12 @@ final class Workspace {
         catalog = loadedCatalog ?? catalog
         catalogLoaded = loadedCatalog != nil
         settings = attempt("settings.json") { try gist.loadSettings().model } ?? settings
-        let stores = attempt("과목 폴더") { try gist.courseStores() } ?? []
+        let stores = attempt(String(localized: .workspaceCourseFolders)) { try gist.courseStores() } ?? []
         var seen = Set<UUID>()
         courses = stores.compactMap { store in
             guard let course = attempt(store.url.lastPathComponent, { LoadedCourse(store: store, document: try store.load()) }) else { return nil }
             guard seen.insert(course.id).inserted else {
-                problems.append("\(store.url.lastPathComponent): 다른 과목 폴더와 같은 과목 ID라서 건너뜁니다")
+                problems.append(String(localized: .workspaceDuplicateCourseId(store.url.lastPathComponent)))
                 return nil
             }
             return course
@@ -117,7 +117,7 @@ final class Workspace {
             (c.id, (try? c.store.log.readAll().filter { $0.type == ReviewEvent.type }) ?? [])
         })
         // Never cleared here: callers reload right after a failed save, whose message must stay up.
-        if !problems.isEmpty { error = "읽지 못한 파일이 있습니다.\n" + problems.joined(separator: "\n") }
+        if !problems.isEmpty { error = String(localized: .workspaceUnreadableFiles) + "\n" + problems.joined(separator: "\n") }
         recoverRecordings()
     }
 
@@ -239,7 +239,7 @@ final class Workspace {
 
     /// Why the action would be refused, or nil when it would go through. Nothing is written.
     func refusal(_ action: some Action) -> String? {
-        guard let ctx = checkContext() else { return "GIST 폴더를 고르지 않았습니다" }
+        guard let ctx = checkContext() else { return String(localized: .workspaceNoGist) }
         do {
             try action.run(ctx)
             return nil
@@ -268,7 +268,7 @@ final class Workspace {
     }
 
     func runThrowing(_ action: some Action) throws -> ActionContext {
-        guard let gist else { throw ActionError.notFound("GIST 폴더를 고르지 않았습니다") }
+        guard let gist else { throw ActionError.notFound(String(localized: .workspaceNoGist)) }
         let ctx = ActionContext(gist: gist, device: device, now: .now, calendar: calendar,
                                 courses: Dictionary(courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))
         // Shown even when the action fails halfway: what it already wrote is on disk.

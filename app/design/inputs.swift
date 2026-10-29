@@ -70,7 +70,7 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
     let pick: (ID) -> Void
     /// Multiple choice keeps the popover open after a pick.
     var multiple = false
-    var prompt = "검색"
+    var prompt = String(localized: .commonSearch)
     /// For a label that should shrink and truncate with its row instead of holding its full width.
     var flexible = false
     @ViewBuilder let label: Label
@@ -107,7 +107,7 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
             .padding(Theme.Space.m)
             Theme.Palette.line.frame(height: 1)
             if rows.isEmpty {
-                EmptyLine("맞는 항목이 없습니다").padding(Theme.Space.m).frame(maxWidth: .infinity, alignment: .leading)
+                EmptyLine(String(localized: .designNoMatch)).padding(Theme.Space.m).frame(maxWidth: .infinity, alignment: .leading)
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -178,7 +178,7 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
 struct SearchSelect<Value: Hashable>: View {
     @Binding var selection: Value
     let options: [PickOption<Value>]
-    var placeholder = "고르기"
+    var placeholder = String(localized: .designPick)
 
     var body: some View {
         SearchPicker(options: options, isSelected: { $0 == selection }, pick: { selection = $0 }) {
@@ -191,7 +191,7 @@ struct SearchSelect<Value: Hashable>: View {
 struct SearchMultiSelect<Value: Hashable>: View {
     @Binding var selection: [Value]
     let options: [PickOption<Value>]
-    var placeholder = "고르기"
+    var placeholder = String(localized: .designPick)
     /// The chip text; defaults to the picked titles.
     var summary: String?
     /// For a tree: what picking or unpicking an option takes along with it, itself included.
@@ -209,7 +209,7 @@ struct SearchMultiSelect<Value: Hashable>: View {
         }, multiple: true) {
             let titles = selection.compactMap { id in options.first { $0.id == id }?.title }
             // The count, then one title (cut off first when long): every title joined pushed a form row, and the sheet with it, past its width.
-            ChipLabel(summary ?? titles.first.map { titles.count > 1 ? "\(titles.count)개 · \($0)" : $0 } ?? placeholder)
+            ChipLabel(summary ?? titles.first.map { titles.count > 1 ? String(localized: .designPickedMany(titles.count, $0)) : $0 } ?? placeholder)
         }
     }
 }
@@ -324,7 +324,7 @@ private struct TimePart: View {
             #if os(macOS)
             .pointerStyle(.columnResize)
             #endif
-            .help("좌우로 끌어서 바꾸고, 눌러서 고르기")
+            .help(Text(.designDragOrPickHelp))
             .sensoryFeedback(.selection, trigger: value)
             .popover(isPresented: $picking) {
                 LazyVGrid(columns: Array(repeating: GridItem(.fixed(cellWidth), spacing: Theme.Space.xs), count: columns), spacing: Theme.Space.xs) {
@@ -372,7 +372,7 @@ struct DateChip: View {
                 if showsTime {
                     Divider()
                     HStack(spacing: Theme.Space.s) {
-                        Text("시간").foregroundStyle(Theme.Palette.textSecondary)
+                        Text(.designTime).foregroundStyle(Theme.Palette.textSecondary)
                         Spacer()
                         TimeMenu(minute: Binding(get: { minuteOfDay }, set: { setMinute($0) }))
                     }
@@ -422,7 +422,7 @@ struct MonthCalendar: View {
             HStack {
                 Text(shown.formatted(.dateTime.year().month(.wide))).font(Theme.Typeface.bodyStrong)
                 Spacer()
-                Button("오늘") { month = nil; date = .now }
+                Button(.designToday) { month = nil; date = .now }
                     .font(Theme.Typeface.caption)
                     .foregroundStyle(Theme.Palette.textSecondary)
                 Button { month = calendar.date(byAdding: .month, value: -1, to: shown) } label: { Image(systemName: "chevron.left") }

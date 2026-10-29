@@ -31,7 +31,7 @@ private struct SettingsCommands: Commands {
 
     var body: some Commands {
         CommandGroup(replacing: .appSettings) {
-            Button("설정…") { showSettings?(nil) }
+            Button(.appSettingsMenu) { showSettings?(nil) }
                 .keyboardShortcut(",")
                 .disabled(showSettings == nil)
         }
