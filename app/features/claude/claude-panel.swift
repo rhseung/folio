@@ -5,14 +5,12 @@ import FolioStorage
 import SwiftUI
 import Synchronization
 
-/// The course's Claude panel: what will be sent, the conversation, and the question box.
 /// Nothing leaves the device until the user presses send (docs/SPEC.md "데이터 전송 원칙").
 struct ClaudePanel: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
     @Environment(\.showSettings) private var showSettings
     let course: LoadedCourse
-    /// The note shown in the notes section; nil on other sections.
     let openNote: UUID?
     let insertIntoNote: (String) -> Void
     let showNote: (UUID) -> Void
@@ -26,7 +24,6 @@ struct ClaudePanel: View {
     @State private var sending = false
     @State private var status: String?
     @State private var failed: String?
-    /// The answer so far while it is being written.
     @State private var partial: String?
     /// The chat that answer belongs to: switching chats mid-answer must not show it under another conversation.
     @State private var answering: UUID?
@@ -357,7 +354,7 @@ struct ClaudePanel: View {
     """
 }
 
-/// The question box, floating on glass. Keeps its own text so typing doesn't re-render the conversation.
+/// Keeps its own text so typing doesn't re-render the conversation.
 struct ChatComposer: View {
     let enabled: Bool
     let sending: Bool

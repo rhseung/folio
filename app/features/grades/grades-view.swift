@@ -2,7 +2,6 @@ import Charts
 import FolioDomain
 import SwiftUI
 
-/// Credits and GPA per semester, cumulative and major GPA, the trend, and the average needed for a target.
 struct GradesView: View {
     @Environment(Workspace.self) private var workspace
     @State private var target = 4.3
@@ -216,7 +215,6 @@ struct GradesView: View {
         }
     }
 
-    /// Semester GPA and the cumulative GPA after each semester, skipping the credited one and those without a GPA.
     /// Semester GPA as bars as wide as their credits and the running cumulative GPA as a line: same scale, so one axis, told apart by mark and hue.
     /// Values show on hover; a fixed label on the line sat over the bars and read as a bar's value.
     func trend(_ points: [Point]) -> some View {
@@ -355,6 +353,5 @@ struct GradesView: View {
 }
 
 extension Semester {
-    /// `2026 봄` for chart axes.
     var shortTitle: String { title.replacingOccurrences(of: "학기", with: "") }
 }

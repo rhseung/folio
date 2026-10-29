@@ -3,7 +3,6 @@ import QuickLookThumbnailing
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// The note folder's `assets/`, as thumbnails to drag into the text. Files dropped on it from Finder are copied in.
 struct AssetTray: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
@@ -63,7 +62,6 @@ struct AssetTray: View {
         .task(id: revision) { files = store.noteAssets() }
     }
 
-    /// `![name](path)` for images, a plain link for anything else.
     static func markdown(for file: URL, path: String) -> String {
         let encoded = path.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? path
         let isImage = UTType(filenameExtension: file.pathExtension)?.conforms(to: .image) ?? false

@@ -22,7 +22,6 @@ final class LectureRecorder {
     private(set) var volatile = ""
     private(set) var bookmarks: [TimeInterval] = []
     private(set) var locale = Locale(identifier: "ko-KR")
-    /// Why there is no transcript this time, shown in place of the words heard.
     private(set) var transcriptionNote: String?
 
     @ObservationIgnored private let engine = AVAudioEngine()
@@ -31,7 +30,6 @@ final class LectureRecorder {
     @ObservationIgnored private var resultsTask: Task<Void, Never>?
     @ObservationIgnored private var clockTask: Task<Void, Never>?
     @ObservationIgnored private var lastTranscriptSave = Date.distantPast
-    /// Writes the transcript so far; the workspace saves it beside the audio.
     @ObservationIgnored var saveTranscript: (Recording, LectureTranscript) -> Void = { _, _ in }
     /// Keeps the bookmarks beside the audio, so a crash doesn't lose them.
     @ObservationIgnored var saveProgress: (Recording) -> Void = { _ in }
@@ -171,7 +169,6 @@ final class LectureRecorder {
         saveProgress(recording)
     }
 
-    /// Stops, waits for the last words to settle and returns the finished recording and transcript.
     func stop() async -> (Recording, LectureTranscript)? {
         guard isActive, var recording else { return nil }
         engine.inputNode.removeTap(onBus: 0)

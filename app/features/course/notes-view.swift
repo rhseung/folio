@@ -4,8 +4,6 @@ import FolioMarkdown
 import FolioStorage
 import SwiftUI
 
-/// The course's notes, in the course column while the notes section is open: class notes newest class first with
-/// each rough note above its review note, then exam summaries, topic notes and free notes, each under its own heading.
 struct NoteList: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
@@ -180,7 +178,6 @@ struct NoteList: View {
     }
 }
 
-/// The open note, as one document that switches between reading and editing.
 struct NotesView: View {
     let course: LoadedCourse
     let selection: UUID?
@@ -205,7 +202,6 @@ struct NotesView: View {
     }
 }
 
-/// Edits in live preview by default (docs/SPEC.md "편집 방식"), with a raw source view and a read-only view.
 /// The frontmatter (tags, aliases, IDs) is kept aside and written back unchanged, except the math syntax set here.
 struct NoteEditor: View {
     enum Mode: Hashable { case read, live, source }
@@ -310,8 +306,6 @@ struct NoteEditor: View {
         }
     }
 
-    /// The note's kind and what it belongs to: a session for rough and review notes, an exam for an exam summary,
-    /// units for a topic note. Used, for one, to make a note written from a Claude answer a session's review note.
     var linkMenu: some View {
         let file = workspace.course(courseId)?.file
         let sessions = (file?.sessions ?? []).filter { !$0.isCancelled && $0.date <= .now }.sorted { $0.date > $1.date }

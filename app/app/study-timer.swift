@@ -96,7 +96,6 @@ final class StudyTracker {
 }
 
 extension View {
-    /// Counts the time this course screen is in front as study time.
     func studyTime(course id: UUID) -> some View {
         modifier(StudyTimeModifier(courseID: id))
     }
@@ -117,7 +116,7 @@ private struct StudyTimeModifier: ViewModifier {
     }
 }
 
-/// Start/stop for the manual timer. While it runs for another course, it shows that one so it can be stopped.
+/// While it runs for another course, it shows that one so it can be stopped.
 struct ManualTimerButton: View {
     @Environment(Workspace.self) private var workspace
     let courseID: UUID

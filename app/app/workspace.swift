@@ -4,7 +4,6 @@ import FolioStorage
 import Foundation
 import Observation
 
-/// One course as loaded from its folder.
 struct LoadedCourse: Identifiable {
     var store: CourseStore
     var document: StoredDocument<CourseFile>
@@ -178,7 +177,6 @@ final class Workspace {
         TodaySummary.ongoingClass(in: currentCourses.map(\.file), at: now, calendar: calendar)
     }
 
-    /// Today's review queue across the current semester.
     func reviewQueue(now: Date) -> [ReviewEntry] {
         ReviewScheduler.queue(courses: currentCourses.map { ($0.file, (reviewEvents[$0.id] ?? []).events(ReviewEvent.self)) },
                               settings: settings, calendar: calendar, now: now)

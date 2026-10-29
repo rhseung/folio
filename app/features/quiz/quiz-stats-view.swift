@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// The wrong list and statistics (docs/SPEC.md "오답 흐름", "통계").
 struct QuizStatsView: View {
     @Environment(Workspace.self) private var workspace
     let course: LoadedCourse
@@ -111,7 +110,6 @@ struct TallyRow: View {
     }
 }
 
-/// Attempts per study day as a row of bars.
 struct DailyBars: View {
     @Environment(\.accent) private var accent
     let days: [LocalDate]

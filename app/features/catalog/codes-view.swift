@@ -3,8 +3,6 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// Course codes from catalog.json as tiles: a prefix and its department at a glance, the ones my courses use in their
-/// colors. A tile opens its editor.
 struct CodesView: View {
     @Environment(Workspace.self) private var workspace
     @State private var query = ""
@@ -18,7 +16,6 @@ struct CodesView: View {
             Page {
                 PageHeader(title: "강의 코드", subtitle: "\(catalog.codes.count)개 · 과목에는 여러 코드를 붙일 수 있고 첫 번째가 대표 코드입니다")
                 SearchField(prompt: "접두어나 학과", text: $query).frame(maxWidth: 320)
-                // Grouped by program (학사과정, 대학원과정) in the order they first appear in the table.
                 let programs = Array(catalog.codes.map(\.program).uniqued())
                 ForEach(programs, id: \.self) { program in
                     let shown = catalog.codes.filter { c in
@@ -181,7 +178,6 @@ struct CodeEditor: View {
 }
 
 extension Workspace {
-    /// Why the code can't be removed (a course still uses it), by the catalog's own rules; nil when it can.
     func codeRemoval(_ id: UUID) -> String? {
         var c = catalog
         c.codes.removeAll { $0.id == id }

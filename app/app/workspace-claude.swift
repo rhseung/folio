@@ -5,7 +5,6 @@ import FolioMarkdown
 import FolioStorage
 import Foundation
 
-/// The Claude panel's reads and writes: chats, context items, notes made from answers, and API usage.
 extension Workspace {
     /// The Mac answers through the user's Claude Code subscription unless settings pick the API key; the iPad can't run it.
     var usesSubscription: Bool {
@@ -34,7 +33,6 @@ extension Workspace {
         perform { try course.store.save(chat) }
     }
 
-    /// A client whose usage events go to this device's log in the course folder.
     func claude(for course: LoadedCourse) -> ClaudeClient {
         #if os(macOS)
         if usesSubscription, let executable = CLIProvider.find() {
@@ -52,7 +50,6 @@ extension Workspace {
         ((try? course.store.notes()) ?? []).filter { $0.meta.id != nil }
     }
 
-    /// The note's saved body (without frontmatter) as a context item.
     func noteContext(_ id: UUID, course: LoadedCourse, open: Bool) -> ContextItem? {
         guard let note = try? course.store.note(id: id), let text = try? course.store.read(note) else { return nil }
         let body = Frontmatter.split(text).body
@@ -84,7 +81,6 @@ extension Workspace {
         run(NoteAdd(course: course.id, title: title, body: body))?.made
     }
 
-    /// API use per month across every course's logs, newest first, for the settings page.
     func monthlyAPIUsage() -> [MonthlyUsage] {
         let events = courses.flatMap { course in
             ((try? course.store.log.readAll()) ?? []).events(APIUsageEvent.self)

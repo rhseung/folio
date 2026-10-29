@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// Professors and assistants from catalog.json: a list on the left, the chosen person on the right.
 /// The courses each person taught are found from the courses' instructorIds, never stored on the person.
 struct PeopleView: View {
     @Environment(Workspace.self) private var workspace

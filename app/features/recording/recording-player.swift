@@ -3,7 +3,6 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
-/// A recording with its transcript: the line being spoken stays lit and in view, and a click on any line plays from it.
 struct RecordingPlayer: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(Workspace.self) private var workspace
@@ -104,7 +103,6 @@ struct RecordingPlayer: View {
         .buttonStyle(.ghost)
     }
 
-    /// A scrub bar drawn in the house style, with bookmarks as ticks on the track. Drag or click anywhere to seek.
     /// The marks live inside this fixed-height frame: in a stack beside the bar, their GeometryReader took all the height.
     var track: some View {
         GeometryReader { geo in
@@ -157,7 +155,6 @@ struct RecordingPlayer: View {
     }
 }
 
-/// AVAudioPlayer with a clock the view can watch.
 @MainActor @Observable
 final class AudioPlayback {
     private(set) var time: TimeInterval = 0

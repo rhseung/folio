@@ -2,7 +2,6 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// Components, scores, rules, converted score, what's needed for a target, and attendance against the caps.
 struct CourseGradesView: View {
     @Environment(Workspace.self) private var workspace
     let course: LoadedCourse
@@ -178,7 +177,6 @@ struct CourseGradesView: View {
         }
     }
 
-    /// Absences against the caps; rows a course has no rule for stay out.
     func attendance(_ file: CourseFile) -> some View {
         let policy = file.policy
         let absences = GradeCalculator.absences(in: file.heldAttendance(at: .now), policy: policy)
@@ -214,7 +212,6 @@ struct CourseGradesView: View {
         workspace.run(ScoreSet(course: course.id, score: entry.id, excused: .set(excused)))
     }
 
-    /// `6회 B0 · 9회 F`
     func capSummary(_ policy: GradePolicy) -> String {
         policy.attendanceCap.sorted { $0.absences < $1.absences }
             .map { "\($0.absences)회 \(workspace.catalog.grade($0.maxGrade)?.symbol ?? "?")" }
@@ -227,7 +224,6 @@ struct CourseGradesView: View {
     }
 }
 
-/// A score under its component: the title, how far from the class mean, and the score, ending under the percent column.
 private struct EntryRow: View {
     let entry: ScoreEntry
     let indented: Bool
@@ -251,7 +247,6 @@ private struct EntryRow: View {
     }
 }
 
-/// Secured, projected and remaining weight, then the target and a 0-100 bar, or the class curve when graded relatively.
 struct ScorePanel: View {
     @Environment(\.accent) private var accent
     let result: GradeCalculator.CourseScore
@@ -324,7 +319,6 @@ struct ScorePanel: View {
     }
 }
 
-/// The class as a normal curve: the A share shaded past its cut, and the weighted z marked where it falls.
 struct StandingCurve: View {
     @Environment(\.accent) private var accent
     let z: Double?

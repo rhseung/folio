@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Floats over every screen while a lecture records: what is being heard, the level, the time, and the controls.
 struct RecordingBar: View {
     @Environment(Workspace.self) private var workspace
     @State private var expanded = false
@@ -76,7 +75,6 @@ struct RecordingBar: View {
     }
 }
 
-/// Five bars that rise with the microphone level.
 private struct LevelMeter: View {
     let level: Float
 
@@ -96,7 +94,6 @@ private struct LevelMeter: View {
 }
 
 enum RecordingTime {
-    /// `12:05`, or `1:02:05` past an hour.
     static func label(_ seconds: TimeInterval) -> String {
         let s = Int(max(seconds, 0))
         return s >= 3600 ? String(format: "%d:%02d:%02d", s / 3600, s / 60 % 60, s % 60) : String(format: "%d:%02d", s / 60, s % 60)

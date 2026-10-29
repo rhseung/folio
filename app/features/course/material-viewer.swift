@@ -2,7 +2,6 @@ import FolioDomain
 import PDFKit
 import SwiftUI
 
-/// A PDF read inside the course: thumbnails, find, zoom, and the last page remembered across devices.
 struct MaterialViewer: View {
     @Environment(Workspace.self) private var workspace
     let course: LoadedCourse

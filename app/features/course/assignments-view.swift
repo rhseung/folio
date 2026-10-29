@@ -2,7 +2,6 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// Assignments grouped by where they stand, each with its deadline, files and score.
 struct AssignmentsView: View {
     @Environment(Workspace.self) private var workspace
     let course: LoadedCourse
@@ -56,7 +55,6 @@ struct AssignmentsView: View {
         }
     }
 
-    /// The status circle's menu and the row's right-click menu.
     @ViewBuilder func statusItems(_ a: Assignment) -> some View {
         ForEach([AssignmentStatus.todo, .doing, .submitted, .graded], id: \.self) { s in
             Button { setStatus(a, s) } label: { Label(s.label, systemImage: s == a.status ? "checkmark" : s.symbol) }
@@ -71,7 +69,6 @@ struct AssignmentsView: View {
         }
     }
 
-    /// Open work by deadline (undated last); finished work newest first.
     func sorted(_ items: [Assignment], group: Group) -> [Assignment] {
         switch group {
         case .overdue, .open: items.sorted { ($0.due ?? .distantFuture, $0.title) < ($1.due ?? .distantFuture, $1.title) }
@@ -153,12 +150,10 @@ struct AssignmentsView: View {
     }
 }
 
-/// What an assignment's score goes to: nothing, one component, or a group of them scored together.
 enum ScoreTarget: Hashable {
     case none, component(UUID), group(String)
 }
 
-/// Everything about one assignment: title, deadline, status, memo, the grade it counts toward, its score and its files.
 struct AssignmentSheet: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.dismiss) private var dismiss
@@ -277,7 +272,6 @@ struct AssignmentSheet: View {
         }
     }
 
-    /// Each group first as a whole, then every component on its own.
     // A group heads its components, indented under it, so picking the whole group or one part reads as a tree.
     var targetOptions: [PickOption<ScoreTarget>] {
         var options = [PickOption(id: ScoreTarget.none, title: "없음")]

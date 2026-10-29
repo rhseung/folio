@@ -5,8 +5,7 @@ import FolioStorage
 import QuickLook
 import SwiftUI
 
-/// Files by role. Unclassified files come first with the cleanup's suggested place; nothing moves until approved.
-/// PDFs open in the app; other files in Quick Look or their default app; code-project folders in Finder.
+/// Unclassified files come first with the cleanup's suggested place; nothing moves until approved.
 struct MaterialsView: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
@@ -173,7 +172,6 @@ struct MaterialsView: View {
         if m.isPDF { viewing = m.id } else { Task { preview = try? await workspace.download(m, course: course.id) } }
     }
 
-    /// `2주차-1 p.3–10 · 5주차-2 · 단원: Matchings`.
     func linkLine(_ m: FolioDomain.Material) -> String {
         let file = course.file
         let sessions = file.sessionLinks(of: m.id).map { s, link in course.file.name(of: s) + link.pageLabel }
@@ -196,7 +194,6 @@ struct MaterialsView: View {
     /// The chevron and its gap, so a folder's files line up under its folder icon.
     static let indent: CGFloat = 14 + Theme.Space.m
 
-    /// Folders first, then files, descending only into opened folders.
     func treeRows(_ tree: PathTree<FolioDomain.Material>, depth: Int) -> [TreeRow] {
         tree.folders.flatMap { f in [TreeRow.folder(f, depth: depth)] + (opened.contains(f.path) ? treeRows(f, depth: depth + 1) : []) }
             + tree.items.map { .file($0.item, name: $0.name, depth: depth) }
@@ -229,7 +226,6 @@ struct MaterialsView: View {
         #endif
     }
 
-    /// The row's buttons, then the ⋯ menu's items.
     @ViewBuilder func fileContextMenu(_ m: FolioDomain.Material) -> some View {
         if m.status == .missing {
             Button("다른 파일 지정…") { relinking = m.id }
@@ -354,7 +350,6 @@ struct MaterialsView: View {
 
     func dir(_ path: String) -> String { (path as NSString).deletingLastPathComponent }
 
-    /// Other standard places for `sources`, each keeping its name.
     func relocateMenu(_ sources: [String]) -> some View {
         let prefix = workspace.coursePrefix(course.id) ?? ""
         // Lectures stays here: an unclassified file keeps its name, and a lecture already named by week is common.
@@ -378,7 +373,6 @@ struct MaterialsView: View {
     }
 }
 
-/// Which sessions (with a page range) and units a material belongs to.
 struct MaterialLinksEditor: View {
     @Environment(Workspace.self) private var workspace
     let course: LoadedCourse
@@ -446,7 +440,6 @@ struct MaterialLinksEditor: View {
 }
 
 extension SessionMaterial {
-    /// ` p.3–10`, ` p.3–`, ` p.12`, or nothing for the whole file.
     var pageLabel: String {
         switch (firstPage, lastPage) {
         case (nil, nil): ""

@@ -17,7 +17,6 @@ final class SnapshotDriver {
     /// A narrower window (e.g. `1100`) to catch labels that wrap or truncate once the columns squeeze.
     static let width = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_WIDTH"].flatMap(Double.init) ?? 1440
 
-    /// The course tab to show; CourseView follows it.
     var section: CourseSection?
     /// Inside the units section: `detail` opens the first unit, `review` also opens its review sheet.
     var unitStep: String?
@@ -25,13 +24,9 @@ final class SnapshotDriver {
     var claudePanel = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_CLAUDE"] != nil
     /// Extra screens drawn outside the main window (the forms), run just before quitting.
     @ObservationIgnored var extraCaptures: ((URL) async -> Void)?
-    /// The overview opens 과목 편집 while this is set.
     var editCourse = false
-    /// The exams section opens its first exam's editor while this is set.
     var editExam = false
-    /// MaterialsView opens its first PDF while this is set.
     var openPDF = false
-    /// RootView shows the search palette with this query while it is set.
     var searchQuery: String?
 
     func run(select: (Destination) -> Void, courses: [UUID], semester: UUID?) async {
