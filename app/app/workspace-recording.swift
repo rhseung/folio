@@ -75,7 +75,7 @@ extension Workspace {
             }
             local.remove(id)
         } catch {
-            self.error = "녹음을 과목 폴더로 옮기지 못했습니다. 녹음은 이 기기에 남아 있고, 다음에 앱을 열 때 다시 옮깁니다.\n\(error.localizedDescription)"
+            self.error = String(localized: .recordingErrorInstallFailed(error.localizedDescription))
         }
     }
 

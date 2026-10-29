@@ -60,7 +60,7 @@ struct ClaudePanel: View {
         }
         .task(id: openNote) { openNoteItem = openNote.flatMap { workspace.noteContext($0, course: course, open: true) } }
         .sheet(item: $cardDraft) { draft in
-            CardEditorSheet(course: course, draft: draft, units: course.file.units) { status = "카드를 만들었습니다" }
+            CardEditorSheet(workspace: workspace, course: course, draft: draft, units: course.file.units) { status = "카드를 만들었습니다" }
         }
     }
 

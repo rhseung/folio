@@ -34,7 +34,7 @@ enum FormSnapshots {
             forms.append(("code", AnyView(CodeEditor(model: CodesModel(workspace: workspace), code: .constant(code), programs: [code.program], courses: courses) {})))
         }
         if let exam = file.exams.first { forms.append(("exam-edit", AnyView(ExamEditor(course: course, exam: exam)))) }
-        if let unit = file.units.first { forms.append(("card", AnyView(CardEditorSheet(course: course, draft: CardDraft(unitId: unit.id), units: file.units) {}))) }
+        if let unit = file.units.first { forms.append(("card", AnyView(CardEditorSheet(workspace: workspace, course: course, draft: CardDraft(unitId: unit.id), units: file.units) {}))) }
         for (name, view) in forms {
             let host = NSHostingView(rootView: view.environment(workspace))
             let size = host.fittingSize

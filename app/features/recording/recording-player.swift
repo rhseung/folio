@@ -5,100 +5,95 @@ import SwiftUI
 
 struct RecordingPlayer: View {
     @Environment(\.dismiss) private var dismiss
-    @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
-    let courseId: UUID
-    let store: CourseStore
-    let recording: Recording
     let title: String
-    @State private var player = AudioPlayback()
-    @State private var transcript: LectureTranscript?
-    @State private var query = ""
+    @State private var model: RecordingPlayerModel
     @State private var deleting = false
+    private var player: AudioPlayback { model.player }
+    private var recording: Recording { model.recording }
+
+    init(workspace: Workspace, courseId: UUID, store: CourseStore, recording: Recording, title: String) {
+        _model = State(initialValue: RecordingPlayerModel(workspace: workspace, courseId: courseId, store: store, recording: recording))
+        self.title = title
+    }
 
     var body: some View {
-        let current = transcript?.lineIndex(at: player.time)
+        let current = model.current
         VStack(alignment: .leading, spacing: Theme.Space.l) {
             HStack(alignment: .firstTextBaseline) {
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     Text(title).font(Theme.Typeface.columnTitle)
-                    Text(recording.startedAt.formatted(date: .abbreviated, time: .shortened) + " · " + RecordingTime.label(player.duration))
+                    Text(model.subtitle)
                         .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                 }
                 Spacer()
-                TextField("받아쓰기에서 찾기", text: $query).pill(width: 180)
+                TextField(String(localized: .recordingSearch), text: $model.query).pill(width: 180)
             }
             transport
             Card {
-                if let transcript, !transcript.lines.isEmpty {
+                if model.hasLines {
                     ScrollViewReader { proxy in
                         ScrollView {
                             LazyVStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                                ForEach(Array(transcript.lines.enumerated()), id: \.offset) { i, line in
-                                    if query.isEmpty || line.text.localizedCaseInsensitiveContains(query) {
-                                        row(line, playing: i == current, bookmarked: recording.bookmarks.contains { line.start <= $0 && $0 < line.end + 1 })
-                                            .id(i)
-                                    }
+                                ForEach(model.shownLines, id: \.index) { i, line, bookmarked in
+                                    row(line, playing: i == current, bookmarked: bookmarked)
+                                        .id(i)
                                 }
                             }
                             .padding(Theme.Space.s)
                         }
                         .onChange(of: current) { _, i in
-                            guard let i, query.isEmpty, player.playing else { return }
+                            guard let i, model.query.isEmpty, player.playing else { return }
                             withAnimation(.snappy(duration: 0.35)) { proxy.scrollTo(i, anchor: .center) }
                         }
                     }
                 } else {
-                    CardRow(last: true) { EmptyLine("받아쓴 내용이 없습니다.") }
+                    CardRow(last: true) { EmptyLine(String(localized: .recordingEmpty)) }
                 }
             }
             HStack {
-                Button("받아쓰기 복사", systemImage: "doc.on.doc") { copy(transcript?.text ?? "") }.disabled(transcript?.lines.isEmpty ?? true)
+                Button(.recordingCopy, systemImage: "doc.on.doc") { copy(model.transcript?.text ?? "") }.disabled(!model.hasLines)
                     .buttonStyle(.ghost)
-                Button("녹음 삭제", systemImage: "trash", role: .destructive) { deleting = true }
+                Button(.recordingRemove, systemImage: "trash", role: .destructive) { deleting = true }
                     .buttonStyle(.ghost)
-                    .confirmationDialog("이 녹음을 삭제할까요?", isPresented: $deleting) {
-                        Button("녹음과 받아쓰기 삭제", role: .destructive) {
-                            player.stop()
-                            workspace.deleteRecording(recording, course: courseId)
+                    .confirmationDialog(String(localized: .recordingRemoveConfirm), isPresented: $deleting) {
+                        Button(.recordingRemoveAction, role: .destructive) {
+                            model.remove()
                             dismiss()
                         }
                     } message: {
-                        Text("오디오 파일과 받아쓴 내용을 지웁니다. 되돌릴 수 없습니다.")
+                        Text(.recordingRemoveMessage)
                     }
                 Spacer()
-                Button("닫기") { dismiss() }.keyboardShortcut(.cancelAction).buttonStyle(.pointing(.borderedProminent))
+                Button(.commonClose) { dismiss() }.keyboardShortcut(.cancelAction).buttonStyle(.pointing(.borderedProminent))
             }
         }
         .padding(Theme.Space.xl)
         .frame(width: 640, height: 680)
         .background(Theme.Palette.page)
         .font(Theme.Typeface.body)
-        .task {
-            transcript = store.transcript(of: recording)
-            player.load(store.fileURL(recording.file))
-        }
+        .task { model.load() }
         .onDisappear { player.stop() }
     }
 
     var transport: some View {
         HStack(spacing: Theme.Space.m) {
-            Button { player.skip(-15) } label: { Image(systemName: "gobackward.15") }.help("15초 뒤로")
+            Button { player.skip(-15) } label: { Image(systemName: "gobackward.15") }.help(Text(.recordingBack15))
             Button { player.toggle() } label: {
                 Image(systemName: player.playing ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 34)).foregroundStyle(accent.color) // design: one-off, play is the player's one large control
                     .contentTransition(.symbolEffect(.replace))
             }
             .keyboardShortcut(.space, modifiers: [])
-            .help(player.playing ? "일시 정지" : "재생")
-            Button { player.skip(15) } label: { Image(systemName: "goforward.15") }.help("15초 앞으로")
+            .help(Text(player.playing ? .recordingPause : .recordingPlay))
+            Button { player.skip(15) } label: { Image(systemName: "goforward.15") }.help(Text(.recordingForward15))
             Text(RecordingTime.label(player.time)).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary).frame(width: 56, alignment: .trailing)
             track.frame(height: 20)
             Menu(String(format: "%gx", player.rate)) {
                 ForEach([1.0, 1.25, 1.5, 1.75, 2.0], id: \.self) { rate in Button(String(format: "%gx", rate)) { player.rate = Float(rate) } }
             }
             .menuStyle(.button).buttonStyle(.borderless).pointingHand().fixedSize()
-            .help("재생 속도")
+            .help(Text(.recordingRate))
         }
         .buttonStyle(.ghost)
     }

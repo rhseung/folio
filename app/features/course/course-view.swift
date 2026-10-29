@@ -119,7 +119,7 @@ struct CourseView: View {
                     case .units: UnitsView(course: course)
                     case .notes: NotesView(course: course, selection: openNote, insert: $noteInsert) { openNote = $0 }
                     // One branch for every quiz page, so the quiz model and a pending solve request survive switching pages.
-                    case .quizSolve, .quizCards, .quizStats, .quizProblems: QuizView(course: course, section: $section)
+                    case .quizSolve, .quizCards, .quizStats, .quizProblems: QuizView(workspace: workspace, course: course, section: $section)
                     case .materials: MaterialsView(course: course)
                     case .assignments: AssignmentsView(course: course)
                     case .grades: CourseGradesView(course: course)

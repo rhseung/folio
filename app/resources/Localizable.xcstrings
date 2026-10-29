@@ -254,6 +254,17 @@
         }
       }
     },
+    "common.close": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "닫기"
+          }
+        }
+      }
+    },
     "common.collapse": {
       "extractionState": "manual",
       "localizations": {
@@ -305,6 +316,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "펼치기"
+          }
+        }
+      }
+    },
+    "common.month-day": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld월 %2$lld일"
+          }
+        }
+      }
+    },
+    "common.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "없음"
           }
         }
       }
@@ -958,18 +991,1954 @@
         }
       }
     },
-    "recorder.locale-audio-only": {
+    "quiz.by-unit": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 언어는 받아쓰기를 쓸 수 없어 소리만 녹음합니다"
+            "value": "단원별"
           }
         }
       }
     },
-    "recorder.locale-unsupported": {
+    "quiz.card-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld장"
+          }
+        }
+      }
+    },
+    "quiz.card-type": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "형식"
+          }
+        }
+      }
+    },
+    "quiz.card-type.choice": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "객관식"
+          }
+        }
+      }
+    },
+    "quiz.card-type.fill": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빈칸"
+          }
+        }
+      }
+    },
+    "quiz.card-type.free": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "서술형"
+          }
+        }
+      }
+    },
+    "quiz.card-type.handwritten": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "손풀이"
+          }
+        }
+      }
+    },
+    "quiz.card-type.proof": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "증명"
+          }
+        }
+      }
+    },
+    "quiz.card-type.true-false": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참거짓"
+          }
+        }
+      }
+    },
+    "quiz.card.add": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 추가"
+          }
+        }
+      }
+    },
+    "quiz.card.answer": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정답"
+          }
+        }
+      }
+    },
+    "quiz.card.choose": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고르세요"
+          }
+        }
+      }
+    },
+    "quiz.card.edit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 편집"
+          }
+        }
+      }
+    },
+    "quiz.card.one-per-line": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 줄에 하나씩"
+          }
+        }
+      }
+    },
+    "quiz.card.options": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택지"
+          }
+        }
+      }
+    },
+    "quiz.card.prompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제"
+          }
+        }
+      }
+    },
+    "quiz.card.remove": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 삭제"
+          }
+        }
+      }
+    },
+    "quiz.card.remove-confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 카드를 삭제할까요?"
+          }
+        }
+      }
+    },
+    "quiz.card.remove-message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지난 풀이 기록은 로그에 남습니다."
+          }
+        }
+      }
+    },
+    "quiz.card.rubric": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "채점 기준"
+          }
+        }
+      }
+    },
+    "quiz.card.rubric-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 줄에 하나씩, 빠지면 틀리는 요소"
+          }
+        }
+      }
+    },
+    "quiz.cards.add-claude": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude로 만들기"
+          }
+        }
+      }
+    },
+    "quiz.cards.add-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에 카드 추가"
+          }
+        }
+      }
+    },
+    "quiz.cards.add-manual": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "직접 추가"
+          }
+        }
+      }
+    },
+    "quiz.cards.card-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 %lld장"
+          }
+        }
+      }
+    },
+    "quiz.cards.no-units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드는 단원에 속합니다. 단원 화면에서 단원을 먼저 만드세요."
+          }
+        }
+      }
+    },
+    "quiz.cards.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 없음"
+          }
+        }
+      }
+    },
+    "quiz.cards.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "퀴즈 카드"
+          }
+        }
+      }
+    },
+    "quiz.cards.unit-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 %lld개"
+          }
+        }
+      }
+    },
+    "quiz.cards.wrong-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오답 %lld장"
+          }
+        }
+      }
+    },
+    "quiz.category": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유형"
+          }
+        }
+      }
+    },
+    "quiz.category.computation": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "계산"
+          }
+        }
+      }
+    },
+    "quiz.category.concept": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개념"
+          }
+        }
+      }
+    },
+    "quiz.category.counterexample": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "반례"
+          }
+        }
+      }
+    },
+    "quiz.category.definition": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정의"
+          }
+        }
+      }
+    },
+    "quiz.category.design": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설계"
+          }
+        }
+      }
+    },
+    "quiz.category.proof": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "증명"
+          }
+        }
+      }
+    },
+    "quiz.category.theorem": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정리"
+          }
+        }
+      }
+    },
+    "quiz.generate.busy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude가 카드를 만드는 중"
+          }
+        }
+      }
+    },
+    "quiz.generate.candidate": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@ · 답: %3$@"
+          }
+        }
+      }
+    },
+    "quiz.generate.count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개수"
+          }
+        }
+      }
+    },
+    "quiz.generate.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쓸 수 있는 카드가 나오지 않았습니다. 다시 시도해 보세요."
+          }
+        }
+      }
+    },
+    "quiz.generate.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드를 만들지 못했습니다. (%@)"
+          }
+        }
+      }
+    },
+    "quiz.generate.make": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "만들기"
+          }
+        }
+      }
+    },
+    "quiz.generate.mixed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "섞어서"
+          }
+        }
+      }
+    },
+    "quiz.generate.note-make": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 단원의 노트와 과목 요약을 Claude에 보냅니다"
+          }
+        }
+      }
+    },
+    "quiz.generate.note-pick": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장하지 않은 후보는 버립니다"
+          }
+        }
+      }
+    },
+    "quiz.generate.save": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고른 %lld장 저장"
+          }
+        }
+      }
+    },
+    "quiz.generate.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · Claude로 카드 만들기"
+          }
+        }
+      }
+    },
+    "quiz.missing-key.detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정의 Claude 항목에서 Claude Code 구독이나 API 키를 연결하면 쓸 수 있습니다. 그 전에는 직접 만들고 직접 채점할 수 있습니다."
+          }
+        }
+      }
+    },
+    "quiz.missing-key.open-settings": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "설정 열기"
+          }
+        }
+      }
+    },
+    "quiz.missing-key.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude가 연결되지 않았습니다"
+          }
+        }
+      }
+    },
+    "quiz.model-answer": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모범 답안"
+          }
+        }
+      }
+    },
+    "quiz.only-wrong": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오답만"
+          }
+        }
+      }
+    },
+    "quiz.open-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오답 %lld"
+          }
+        }
+      }
+    },
+    "quiz.order.random": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "무작위"
+          }
+        }
+      }
+    },
+    "quiz.order.unit-order": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 순서"
+          }
+        }
+      }
+    },
+    "quiz.order.wrong-first": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오답 우선"
+          }
+        }
+      }
+    },
+    "quiz.problems.add": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "묶음 추가"
+          }
+        }
+      }
+    },
+    "quiz.problems.add-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제 묶음 추가"
+          }
+        }
+      }
+    },
+    "quiz.problems.attempted-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "푼 문제 %lld개"
+          }
+        }
+      }
+    },
+    "quiz.problems.cell-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@번"
+          }
+        }
+      }
+    },
+    "quiz.problems.correct-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "맞음 %lld"
+          }
+        }
+      }
+    },
+    "quiz.problems.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "묶음을 만들면 번호 격자가 생깁니다. 번호를 눌러 판정을 기록하고, 우클릭해 단원을 연결합니다."
+          }
+        }
+      }
+    },
+    "quiz.problems.field-numbers": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제 번호"
+          }
+        }
+      }
+    },
+    "quiz.problems.field-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제목"
+          }
+        }
+      }
+    },
+    "quiz.problems.field-title-example": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예: 2024 중간 족보"
+          }
+        }
+      }
+    },
+    "quiz.problems.items": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld문제"
+          }
+        }
+      }
+    },
+    "quiz.problems.no-pdfs": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료 화면에서 파일 추적을 먼저 갱신하세요"
+          }
+        }
+      }
+    },
+    "quiz.problems.no-units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원에 연결된 문제가 없습니다. 번호를 우클릭해 단원을 연결하세요"
+          }
+        }
+      }
+    },
+    "quiz.problems.numbers-example": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예: 1-10, 12, 13a"
+          }
+        }
+      }
+    },
+    "quiz.problems.open-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남은 오답 %lld"
+          }
+        }
+      }
+    },
+    "quiz.problems.open-sheet": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제지 열기"
+          }
+        }
+      }
+    },
+    "quiz.problems.open-solution": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해설 열기"
+          }
+        }
+      }
+    },
+    "quiz.problems.problem-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제 %lld개"
+          }
+        }
+      }
+    },
+    "quiz.problems.remove-confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘%@’ 묶음을 삭제할까요?"
+          }
+        }
+      }
+    },
+    "quiz.problems.remove-ellipsis": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "묶음 삭제…"
+          }
+        }
+      }
+    },
+    "quiz.problems.remove-message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "번호 격자와 단원 연결이 사라집니다. 문제지와 해설 파일, 풀이 기록은 그대로 둡니다."
+          }
+        }
+      }
+    },
+    "quiz.problems.resolve": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해결"
+          }
+        }
+      }
+    },
+    "quiz.problems.set-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "묶음 %lld개"
+          }
+        }
+      }
+    },
+    "quiz.problems.sheet": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제지"
+          }
+        }
+      }
+    },
+    "quiz.problems.solution": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해설"
+          }
+        }
+      }
+    },
+    "quiz.problems.subtitle-empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제집, 증명집, 족보처럼 번호가 붙은 문제를 종이로 풀고 판정을 기록합니다"
+          }
+        }
+      }
+    },
+    "quiz.problems.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제 묶음"
+          }
+        }
+      }
+    },
+    "quiz.problems.units-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 문제에 연결합니다. 문제마다 바꾸려면 번호를 우클릭하세요"
+          }
+        }
+      }
+    },
+    "quiz.problems.unsolved-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "안 푼 %lld"
+          }
+        }
+      }
+    },
+    "quiz.problems.wrong-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "틀림 %lld"
+          }
+        }
+      }
+    },
+    "quiz.resolved-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해결 %lld"
+          }
+        }
+      }
+    },
+    "quiz.solve.accuracy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정답률 %@"
+          }
+        }
+      }
+    },
+    "quiz.solve.again": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 범위로 다시"
+          }
+        }
+      }
+    },
+    "quiz.solve.all-categories": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모든 유형"
+          }
+        }
+      }
+    },
+    "quiz.solve.compare": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모범 답안과 비교해 판정하세요"
+          }
+        }
+      }
+    },
+    "quiz.solve.crumb": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "퀴즈 › %@"
+          }
+        }
+      }
+    },
+    "quiz.solve.deselect-all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 해제"
+          }
+        }
+      }
+    },
+    "quiz.solve.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마치기"
+          }
+        }
+      }
+    },
+    "quiz.solve.empty-deck": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 범위에 풀 카드가 없습니다"
+          }
+        }
+      }
+    },
+    "quiz.solve.empty-deck-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "왼쪽에서 다른 단원이나 유형을 고르세요."
+          }
+        }
+      }
+    },
+    "quiz.solve.empty-units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 없는 단원 %lld개"
+          }
+        }
+      }
+    },
+    "quiz.solve.ended-empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "푼 카드 없이 끝냈습니다"
+          }
+        }
+      }
+    },
+    "quiz.solve.ended-empty-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "왼쪽에서 범위를 고르고 다시 시작하세요."
+          }
+        }
+      }
+    },
+    "quiz.solve.exam-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$lld장"
+          }
+        }
+      }
+    },
+    "quiz.solve.exam-scope": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 범위 전체"
+          }
+        }
+      }
+    },
+    "quiz.solve.exclude": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "범위에서 빼기"
+          }
+        }
+      }
+    },
+    "quiz.solve.finish": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끝내기"
+          }
+        }
+      }
+    },
+    "quiz.solve.first-time": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "처음 푸는 카드입니다"
+          }
+        }
+      }
+    },
+    "quiz.solve.grade-claude": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude 채점"
+          }
+        }
+      }
+    },
+    "quiz.solve.grade-failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "채점하지 못했습니다. 직접 채점으로 판정할 수 있습니다. (%@)"
+          }
+        }
+      }
+    },
+    "quiz.solve.grade-mine": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "직접 채점"
+          }
+        }
+      }
+    },
+    "quiz.solve.graded-auto": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 채점"
+          }
+        }
+      }
+    },
+    "quiz.solve.graded-claude": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude 채점"
+          }
+        }
+      }
+    },
+    "quiz.solve.graded-mine": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "직접 채점"
+          }
+        }
+      }
+    },
+    "quiz.solve.grading": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "채점"
+          }
+        }
+      }
+    },
+    "quiz.solve.grading-busy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude가 채점하는 중"
+          }
+        }
+      }
+    },
+    "quiz.solve.grading-mine": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "직접"
+          }
+        }
+      }
+    },
+    "quiz.solve.history": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 카드의 기록"
+          }
+        }
+      }
+    },
+    "quiz.solve.include": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "범위에 넣기"
+          }
+        }
+      }
+    },
+    "quiz.solve.make-cards": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 만들기"
+          }
+        }
+      }
+    },
+    "quiz.solve.missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "누락 · %@"
+          }
+        }
+      }
+    },
+    "quiz.solve.my-answer": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 답안"
+          }
+        }
+      }
+    },
+    "quiz.solve.next": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음 문제"
+          }
+        }
+      }
+    },
+    "quiz.solve.no-cards": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드가 아직 없습니다"
+          }
+        }
+      }
+    },
+    "quiz.solve.no-cards-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 화면에서 직접 만들거나 Claude로 만들 수 있습니다."
+          }
+        }
+      }
+    },
+    "quiz.solve.no-exam": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다가오는 시험 없음"
+          }
+        }
+      }
+    },
+    "quiz.solve.open-since": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@부터 오답 목록에 있습니다"
+          }
+        }
+      }
+    },
+    "quiz.solve.order": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "순서"
+          }
+        }
+      }
+    },
+    "quiz.solve.overridden": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내가 바꿈"
+          }
+        }
+      }
+    },
+    "quiz.solve.override-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "판정을 바꾸면 내 판정으로 기록됩니다"
+          }
+        }
+      }
+    },
+    "quiz.solve.pending-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 · 지금 답안"
+          }
+        }
+      }
+    },
+    "quiz.solve.pick-scope": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "범위를 고르고 시작하세요"
+          }
+        }
+      }
+    },
+    "quiz.solve.pick-scope-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "왼쪽에서 단원과 유형을 고르거나 바로가기를 누르세요."
+          }
+        }
+      }
+    },
+    "quiz.solve.picked-scope": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고른 범위"
+          }
+        }
+      }
+    },
+    "quiz.solve.recheck": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해결됨 · %@에 한 번 더 확인합니다"
+          }
+        }
+      }
+    },
+    "quiz.solve.resolved": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해결됨"
+          }
+        }
+      }
+    },
+    "quiz.solve.restart": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 범위로 다시 시작"
+          }
+        }
+      }
+    },
+    "quiz.solve.review-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld단원 · %2$lld장"
+          }
+        }
+      }
+    },
+    "quiz.solve.review-units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 복습 단원"
+          }
+        }
+      }
+    },
+    "quiz.solve.round": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이번 회차"
+          }
+        }
+      }
+    },
+    "quiz.solve.rubric-met": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "채점 기준 %1$lld개 중 %2$lld개 충족"
+          }
+        }
+      }
+    },
+    "quiz.solve.select-all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 선택"
+          }
+        }
+      }
+    },
+    "quiz.solve.shortcuts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "바로가기"
+          }
+        }
+      }
+    },
+    "quiz.solve.show-answer": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모범 답안 보기"
+          }
+        }
+      }
+    },
+    "quiz.solve.solved": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld장을 풀었습니다"
+          }
+        }
+      }
+    },
+    "quiz.solve.start": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 범위로 시작"
+          }
+        }
+      }
+    },
+    "quiz.solve.summary": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld단원 · %2$@ · %3$lld장"
+          }
+        }
+      }
+    },
+    "quiz.solve.type-by-claude": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · Claude가 만든 카드"
+          }
+        }
+      }
+    },
+    "quiz.solve.unit-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "진도 %1$lld%% · 푼 카드 %2$lld / %3$lld"
+          }
+        }
+      }
+    },
+    "quiz.stats.accuracy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정답률"
+          }
+        }
+      }
+    },
+    "quiz.stats.attempted": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "푼 카드"
+          }
+        }
+      }
+    },
+    "quiz.stats.by-category": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "유형별"
+          }
+        }
+      }
+    },
+    "quiz.stats.daily": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "날짜별 풀이 수"
+          }
+        }
+      }
+    },
+    "quiz.stats.daily-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최근 14일 · 문제 묶음 포함"
+          }
+        }
+      }
+    },
+    "quiz.stats.no-units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드가 있는 단원이 없습니다. 카드 화면에서 만드세요."
+          }
+        }
+      }
+    },
+    "quiz.stats.none-open": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남은 오답이 없습니다"
+          }
+        }
+      }
+    },
+    "quiz.stats.none-solved": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 푼 카드가 없습니다"
+          }
+        }
+      }
+    },
+    "quiz.stats.open": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남은 오답"
+          }
+        }
+      }
+    },
+    "quiz.stats.open-since": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@부터"
+          }
+        }
+      }
+    },
+    "quiz.stats.recheck": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 확인"
+          }
+        }
+      }
+    },
+    "quiz.stats.resolved": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해결"
+          }
+        }
+      }
+    },
+    "quiz.stats.solve": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "풀기"
+          }
+        }
+      }
+    },
+    "quiz.stats.solve-all-wrong": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오답 모두 풀기"
+          }
+        }
+      }
+    },
+    "quiz.stats.solve-unit-wrong": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 단원 오답 풀기"
+          }
+        }
+      }
+    },
+    "quiz.stats.solved-today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 푼 문제"
+          }
+        }
+      }
+    },
+    "quiz.stats.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "판정을 바꾼 시도는 바꾼 판정으로 셉니다"
+          }
+        }
+      }
+    },
+    "quiz.stats.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오답과 통계"
+          }
+        }
+      }
+    },
+    "quiz.stats.wrong-list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오답 목록"
+          }
+        }
+      }
+    },
+    "quiz.stats.wrong-of": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오답 · %@"
+          }
+        }
+      }
+    },
+    "quiz.unit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원"
+          }
+        }
+      }
+    },
+    "quiz.verdict.correct": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "맞음"
+          }
+        }
+      }
+    },
+    "quiz.verdict.partial": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "애매"
+          }
+        }
+      }
+    },
+    "quiz.verdict.wrong": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "틀림"
+          }
+        }
+      }
+    },
+    "quiz.wrong": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오답"
+          }
+        }
+      }
+    },
+    "recording.back-15": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "15초 뒤로"
+          }
+        }
+      }
+    },
+    "recording.bookmark-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 이 지점 표시 (%lld개)"
+          }
+        }
+      }
+    },
+    "recording.collapse": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받아쓰기 접기"
+          }
+        }
+      }
+    },
+    "recording.copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받아쓰기 복사"
+          }
+        }
+      }
+    },
+    "recording.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받아쓴 내용이 없습니다."
+          }
+        }
+      }
+    },
+    "recording.error.install-failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음을 과목 폴더로 옮기지 못했습니다. 녹음은 이 기기에 남아 있고, 다음에 앱을 열 때 다시 옮깁니다.\n%@"
+          }
+        }
+      }
+    },
+    "recording.error.locale-unsupported": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -980,7 +2949,7 @@
         }
       }
     },
-    "recorder.microphone-denied": {
+    "recording.error.microphone-denied": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -991,7 +2960,51 @@
         }
       }
     },
-    "recorder.model-downloading": {
+    "recording.error.no-microphone": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "사용할 수 있는 마이크가 없습니다."
+          }
+        }
+      }
+    },
+    "recording.expand": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받아쓰기 펼치기"
+          }
+        }
+      }
+    },
+    "recording.forward-15": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "15초 앞으로"
+          }
+        }
+      }
+    },
+    "recording.listening": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "듣는 중…"
+          }
+        }
+      }
+    },
+    "recording.note.downloading": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -1002,13 +3015,134 @@
         }
       }
     },
-    "recorder.no-microphone": {
+    "recording.note.unsupported": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "사용할 수 있는 마이크가 없습니다."
+            "value": "이 언어는 받아쓰기를 쓸 수 없어 소리만 녹음합니다"
+          }
+        }
+      }
+    },
+    "recording.pause": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일시 정지"
+          }
+        }
+      }
+    },
+    "recording.play": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "재생"
+          }
+        }
+      }
+    },
+    "recording.preparing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받아쓰기 준비 중…"
+          }
+        }
+      }
+    },
+    "recording.rate": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "재생 속도"
+          }
+        }
+      }
+    },
+    "recording.remove": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 삭제"
+          }
+        }
+      }
+    },
+    "recording.remove-action": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음과 받아쓰기 삭제"
+          }
+        }
+      }
+    },
+    "recording.remove-confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 녹음을 삭제할까요?"
+          }
+        }
+      }
+    },
+    "recording.remove-message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오디오 파일과 받아쓴 내용을 지웁니다. 되돌릴 수 없습니다."
+          }
+        }
+      }
+    },
+    "recording.resume": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이어서 녹음"
+          }
+        }
+      }
+    },
+    "recording.search": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받아쓰기에서 찾기"
+          }
+        }
+      }
+    },
+    "recording.stop": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 끝내기"
           }
         }
       }

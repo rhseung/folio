@@ -551,7 +551,7 @@ struct SessionRow: View {
         } message: {
             Text(deleteRefusal ?? "")
         }
-        .sheet(item: $playing) { RecordingPlayer(courseId: course.id, store: course.store, recording: $0, title: "\(course.file.course.title) · \(course.file.name(of: session))") }
+        .sheet(item: $playing) { RecordingPlayer(workspace: workspace, courseId: course.id, store: course.store, recording: $0, title: "\(course.file.course.title) · \(course.file.name(of: session))") }
     }
 
     @ViewBuilder var menuItems: some View {

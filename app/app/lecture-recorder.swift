@@ -60,8 +60,8 @@ final class LectureRecorder {
             var transcription: (SpeechTranscriber, AVAudioFormat, Locale)?
             switch await Self.transcriber(for: locale) {
             case .ready(let t, let format, let supported): transcription = (t, format, supported)
-            case .downloading: transcriptionNote = String(localized: .recorderModelDownloading)
-            case .unsupported: transcriptionNote = String(localized: .recorderLocaleAudioOnly)
+            case .downloading: transcriptionNote = String(localized: .recordingNoteDownloading)
+            case .unsupported: transcriptionNote = String(localized: .recordingNoteUnsupported)
             }
             var analyzerInput: AsyncStream<AnalyzerInput>.Continuation?
             if let (transcriber, _, _) = transcription {
@@ -237,9 +237,9 @@ enum RecorderError: LocalizedError {
 
     var errorDescription: String? {
         switch self {
-        case .microphoneDenied: String(localized: .recorderMicrophoneDenied)
-        case .noMicrophone: String(localized: .recorderNoMicrophone)
-        case .localeUnsupported: String(localized: .recorderLocaleUnsupported)
+        case .microphoneDenied: String(localized: .recordingErrorMicrophoneDenied)
+        case .noMicrophone: String(localized: .recordingErrorNoMicrophone)
+        case .localeUnsupported: String(localized: .recordingErrorLocaleUnsupported)
         }
     }
 }

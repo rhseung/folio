@@ -85,7 +85,7 @@ struct RootView: View {
                 }
                 .overlay(alignment: .bottom) {
                     if workspace.recorder.isActive {
-                        RecordingBar()
+                        RecordingBar(workspace: workspace)
                             .padding(.bottom, Theme.Space.xl)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                     }
