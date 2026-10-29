@@ -19,7 +19,6 @@ enum Exit: Int32 {
     }
 }
 
-/// A failure the CLI reports itself, with what to run instead.
 struct CLIError: Error {
     var exit: Exit
     var message: String
@@ -29,7 +28,7 @@ struct CLIError: Error {
     var hints: [String] = []
 }
 
-/// Where output goes. Tests swap it out to keep the test log clean and to read what a command printed.
+/// Tests swap it out to keep the test log clean and to read what a command printed.
 final class Sink: @unchecked Sendable {
     var out: (String) -> Void
     var err: (String) -> Void

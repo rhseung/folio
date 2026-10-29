@@ -2,9 +2,11 @@
 import CompilerPluginSupport
 import PackageDescription
 
-// Layers: CLI, Gen -> Actions -> Storage -> Domain, Actions -> Macros (compile time only), CLI -> Index -> Storage, Storage and Actions -> Markdown (note frontmatter). Domain must stay free of file I/O and UI (see CLAUDE.md "레이어").
+// Layers: CLI, Gen -> Actions -> Storage -> Domain, Actions -> Macros (compile time only), CLI -> Index -> Storage, Storage and Actions -> Markdown (note frontmatter). Domain must stay free of file I/O and UI (see AGENTS.md "레이어").
 let package = Package(
     name: "FolioCore",
+    // UI strings live in each target's Localizable.xcstrings as keys; the catalog generates `.key` symbols.
+    defaultLocalization: "ko",
     // Keep in sync with deploymentTarget in project.yml.
     platforms: [.macOS(.v26), .iOS(.v26)],
     products: [
@@ -12,9 +14,10 @@ let package = Package(
         .library(name: "FolioStorage", targets: ["FolioStorage"]),
         .library(name: "FolioActions", targets: ["FolioActions"]),
         .library(name: "FolioIndex", targets: ["FolioIndex"]),
-        .executable(name: "folio", targets: ["FolioCLI"]),
+        .executable(name: "folio", targets: ["FolioCommand"]),
         .executable(name: "folio-gen", targets: ["FolioGen"]),
         .executable(name: "folio-fixture", targets: ["FolioFixtureWriter"]),
+        .library(name: "FolioFixtures", targets: ["FolioFixtures"]),
     ],
     dependencies: [
         .package(path: "../folio-markdown"),
@@ -27,15 +30,18 @@ let package = Package(
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "604.0.0"),
     ],
     targets: [
-        .target(name: "FolioDomain", dependencies: [.product(name: "Algorithms", package: "swift-algorithms")], path: "sources/folio-domain"),
+        .target(name: "FolioDomain", dependencies: [.product(name: "Algorithms", package: "swift-algorithms")], path: "sources/folio-domain", resources: [.process("Localizable.xcstrings")]),
         .target(name: "FolioStorage", dependencies: ["FolioDomain", .product(name: "FolioMarkdown", package: "folio-markdown")], path: "sources/folio-storage"),
         .macro(name: "FolioMacros", dependencies: [
             .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
             .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
         ], path: "sources/folio-macros"),
-        .target(name: "FolioActions", dependencies: ["FolioStorage", .product(name: "FolioMarkdown", package: "folio-markdown"), "FolioMacros"], path: "sources/folio-actions"),
+        .target(name: "FolioActions", dependencies: ["FolioStorage", .product(name: "FolioMarkdown", package: "folio-markdown"), "FolioMacros"], path: "sources/folio-actions", resources: [.process("Localizable.xcstrings")]),
         .target(name: "FolioIndex", dependencies: ["FolioStorage", .product(name: "FolioMarkdown", package: "folio-markdown"), .product(name: "GRDB", package: "GRDB.swift")], path: "sources/folio-index"),
-        .executableTarget(name: "FolioCLI", dependencies: ["FolioActions", "FolioIndex", .product(name: "ArgumentParser", package: "swift-argument-parser"), .product(name: "GRDB", package: "GRDB.swift")], path: "sources/folio-cli"),
+        .target(name: "FolioCLI", dependencies: ["FolioActions", "FolioIndex", .product(name: "ArgumentParser", package: "swift-argument-parser"), .product(name: "GRDB", package: "GRDB.swift")], path: "sources/folio-cli", resources: [.process("Localizable.xcstrings")]),
+        // Only the entry point: an executable target's test build gets no string-catalog symbols, so the commands live
+        // in the FolioCLI library that the tests import.
+        .executableTarget(name: "FolioCommand", dependencies: ["FolioCLI"], path: "sources/folio-command"),
         // Writes folio-cli/generated/commands.swift from the action specs. It must not need FolioCLI, so a broken
         // generated file can always be generated again.
         .executableTarget(name: "FolioGen", dependencies: ["FolioActions"], path: "sources/folio-gen"),

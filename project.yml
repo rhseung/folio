@@ -24,6 +24,8 @@ targets:
   Folio:
     type: application
     supportedDestinations: [macOS, iOS]
+    scheme:
+      testTargets: [FolioTests]
     sources:
       - path: app
         excludes: ["resources/AppIcon.icon"]
@@ -63,3 +65,21 @@ targets:
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         SWIFT_EMIT_LOC_STRINGS: YES
+        # Keys added to Localizable.xcstrings by hand become `.key` symbols (Text(.peopleTitle)), checked at compile time.
+        STRING_CATALOG_GENERATE_SYMBOLS: YES
+  # Screen models, run inside the app on macOS (mise run test-app). Workspace skips the saved folder under tests.
+  FolioTests:
+    type: bundle.unit-test
+    supportedDestinations: [macOS]
+    sources: [app-tests]
+    dependencies:
+      - target: Folio
+      - package: FolioCore
+        product: FolioFixtures
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_IDENTITY: "-"
+        # XcodeGen points a multiplatform app's host at the iOS layout; the Mac app keeps its binary in Contents/MacOS.
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Folio.app/Contents/MacOS/Folio
+        BUNDLE_LOADER: $(TEST_HOST)

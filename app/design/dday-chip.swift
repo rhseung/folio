@@ -6,7 +6,6 @@ struct DdayChip: View {
 
     static let horizon = 14
 
-    /// Gray at the horizon and beyond, amber halfway, red at zero.
     static func heat(_ days: Int) -> Color {
         let t = 1 - Double(min(max(days, 0), horizon)) / Double(horizon)
         return t < 0.5 ? Theme.Palette.textSecondary.mix(with: Theme.Palette.warning, by: t * 2)

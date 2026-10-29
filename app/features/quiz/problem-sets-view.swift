@@ -2,7 +2,6 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// Numbered problems solved on paper: a number grid per set, marked 맞음 / 틀림 / 해결 (docs/SPEC.md "문제 묶음").
 struct ProblemSetsView: View {
     @Environment(Workspace.self) private var workspace
     let course: LoadedCourse
@@ -105,7 +104,6 @@ struct ProblemSetsView: View {
     #endif
 }
 
-/// A new set: title, the problem and solution PDFs, the numbers, and the units every problem starts linked to.
 struct ProblemSetSheet: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.dismiss) private var dismiss
@@ -144,7 +142,6 @@ struct ProblemSetSheet: View {
     }
 }
 
-/// One problem number. Its color is its place in the wrong flow; clicking records a verdict.
 struct ProblemCell: View {
     @Environment(\.accent) private var accent
     let set: ProblemSet

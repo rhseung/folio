@@ -3,7 +3,6 @@ import LocalAuthentication
 import SwiftUI
 
 extension Workspace {
-    /// Touch ID or Face ID, falling back to the Mac login password or the iPad passcode.
     /// Grades lock again this long after unlocking, so a Mac left open does not keep them on show.
     static let gradeUnlockDuration: Duration = .seconds(GradeLock.unlockSeconds)
 

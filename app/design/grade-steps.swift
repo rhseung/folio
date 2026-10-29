@@ -98,7 +98,6 @@ struct GradeSteps: View {
         min(max(Int(((x - Self.thumb / 2) / Self.spacing).rounded()), 0), stops.count - 1)
     }
 
-    /// Red for the lowest stop, amber in the middle, green at the top.
     func color(_ i: Int) -> Color {
         let t = stops.count > 1 ? Double(i) / Double(stops.count - 1) : 1
         return t < 0.5 ? Theme.Palette.danger.mix(with: Theme.Palette.warning, by: t * 2)

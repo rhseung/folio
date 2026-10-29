@@ -3,8 +3,7 @@ import FolioMarkdown
 import Foundation
 
 extension CourseStore {
-    /// Writes the planned notes with bodies converted from Notion markup, and copies the dump's images into
-    /// `Notes/assets`. Notes whose ID already exists and existing assets are left alone.
+    /// Notes whose ID already exists and existing assets are left alone.
     public func writeNotionNotes(_ plans: [NotionNotePlan], dump: NotionCourseDump, folder: URL, links: [String: String]) throws {
         guard !plans.isEmpty else { return }
         var images: [String: String] = [:]
@@ -21,7 +20,6 @@ extension CourseStore {
         }
     }
 
-    /// Names of the folders under `Assignments/`.
     public func assignmentFolders() throws -> [String] {
         let url = url.appending(path: CourseFolder.assignments.rawValue)
         guard FileManager.default.fileExists(atPath: url.path) else { return [] }

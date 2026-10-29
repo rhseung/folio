@@ -1,9 +1,7 @@
 import Foundation
 
-/// Fake GIST folders for tests and development runs. They live in code and are written out on demand, so the public
-/// repository carries no folder of course files.
+/// They live in code and are written out on demand, so the public repository carries no folder of course files.
 public enum Fixture: String, CaseIterable, Sendable {
-    /// Follows the layout in docs/SPEC.md.
     case standard
     /// The unorganized shape of the real folder. Only for cleanup-tool tests.
     case legacy

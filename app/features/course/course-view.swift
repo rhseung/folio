@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// One page of the course screen. Search, the overview and other screens navigate to these.
 enum CourseSection: String, CaseIterable, Identifiable {
     case overview = "개요", sessions = "회차", units = "단원", notes = "노트", materials = "자료"
     case quizSolve = "풀기", quizCards = "카드", quizStats = "오답과 통계", quizProblems = "문제 묶음"
@@ -20,7 +19,6 @@ enum CourseSection: String, CaseIterable, Identifiable {
     }
 }
 
-/// The course column's entries; a tab with several pages lists them under itself while chosen.
 enum CourseTab: String, CaseIterable, Identifiable {
     case overview = "개요", classes = "수업", notes = "노트", materials = "자료", quiz = "퀴즈", assessment = "평가"
     var id: Self { self }
@@ -39,7 +37,6 @@ enum CourseTab: String, CaseIterable, Identifiable {
     }
 }
 
-/// Course column on the left (identity, sections, recent classes) and the chosen section as a page on the right.
 struct CourseView: View {
     @Environment(Workspace.self) private var workspace
     let courseID: UUID
@@ -63,7 +60,6 @@ struct CourseView: View {
     /// Past this the panel stops growing with the window: a full-height panel read as a sidebar laid over the page.
     static let claudeMaxHeight: CGFloat = 720
 
-    /// The Claude button at the page's corner and, open, the panel floating above it.
     func claudeFloat(_ course: LoadedCourse) -> some View {
         VStack(alignment: .trailing, spacing: Theme.Space.m) {
             if showClaude {
@@ -94,7 +90,6 @@ struct CourseView: View {
         .padding(Theme.Space.l)
     }
 
-    /// The panel's leading edge drags its width.
     var claudeResizeHandle: some View {
         Color.clear.frame(width: Theme.Space.s).contentShape(.rect)
             #if os(macOS)
@@ -164,7 +159,6 @@ struct CourseView: View {
     }
 }
 
-/// Code, credits, grading and professors; the section list with counts; the latest classes.
 struct CourseColumn: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
@@ -275,8 +269,6 @@ struct CourseColumn: View {
     }
 }
 
-/// The course at a glance: what comes next across the top, this week's classes and open assignments beside the units
-/// due and the score, then people, memo and folder.
 struct CourseOverview: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
@@ -509,7 +501,6 @@ struct CourseOverview: View {
     }
 }
 
-/// A session row's context menu: its notes, made on first open as everywhere else, and the sessions page.
 struct SessionMenu: View {
     @Environment(Workspace.self) private var workspace
     let courseId: UUID
@@ -531,7 +522,6 @@ struct SessionMenu: View {
     }
 }
 
-/// Component weights as one segmented bar, darkest first.
 struct WeightBar: View {
     @Environment(\.accent) private var accent
     let components: [GradeComponent]
@@ -556,7 +546,6 @@ struct WeightBar: View {
 
 @MainActor
 extension LoadedCourse {
-    /// `EC4207-01`.
     func codeLine(_ workspace: Workspace) -> String {
         let c = file.course
         // `GS2004-02`: the prefix, the course number and the section, written once.

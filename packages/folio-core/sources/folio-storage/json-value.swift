@@ -77,7 +77,6 @@ enum JSONFormat {
 }
 
 extension JSONDecoder {
-    /// Decoder matching the files Folio writes (fractional-second ISO 8601 dates, plain ISO 8601 accepted).
     public static var folio: JSONDecoder { JSONFormat.decoder }
 }
 

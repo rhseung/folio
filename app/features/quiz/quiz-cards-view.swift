@@ -3,7 +3,6 @@ import FolioAI
 import FolioDomain
 import SwiftUI
 
-/// Cards in the unit outline: a chapter per block, each unit a row with its cards under it (docs/SPEC.md "카드 만들기").
 struct QuizCardsView: View {
     @Environment(Workspace.self) private var workspace
     let course: LoadedCourse
@@ -105,7 +104,7 @@ struct QuizCardsView: View {
     }
 }
 
-/// The editable fields of a card; `original` is nil for a new one.
+/// `original` is nil for a new one.
 struct CardDraft: Identifiable {
     var id = UUID()
     var original: QuizCard?
@@ -214,7 +213,6 @@ struct CardEditorSheet: View {
     }
 }
 
-/// Asks Claude for cards on one unit and saves only the candidates the user keeps (docs/SPEC.md "카드 만들기").
 struct GenerateCardsSheet: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.dismiss) private var dismiss

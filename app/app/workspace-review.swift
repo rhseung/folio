@@ -50,7 +50,6 @@ extension Workspace {
             .flatMap { ReviewScheduler.state(of: $0, settings: settings.review, today: today).due }
     }
 
-    /// Card count and still-open wrong cards per unit, from the quiz files and the attempt log.
     func quizStats(of courseId: UUID) -> [UUID: UnitQuizStats] {
         guard let course = course(courseId) else { return [:] }
         var attempts: [UUID: [(day: LocalDate, verdict: Verdict)]] = [:]
@@ -66,7 +65,6 @@ extension Workspace {
         return result
     }
 
-    /// Notes tagged with the unit and the rough and review notes of its sessions: review notes first, then rough.
     func notes(for unit: FolioDomain.Unit, in courseId: UUID) -> [NoteFile] {
         guard let course = course(courseId) else { return [] }
         let sessions = course.file.sessions.filter { unit.sessionIds.contains($0.id) }
@@ -88,7 +86,6 @@ extension Workspace {
         run(ReviewSkip(units: units.map { ReviewSkip.Target(course: $0.courseId, unit: $0.unitId) }))
     }
 
-    /// Appends the review result and the time spent to this device's log, then rereads so every screen sees the new state.
     func recordReview(course courseId: UUID, unit: UUID, result: ReviewResult, start: Date, end: Date) {
         run(ReviewRecord(course: courseId, unit: unit, result: result, start: start, end: end))
     }

@@ -3,7 +3,7 @@ import SwiftUI
 import AppKit
 #endif
 
-/// Light, dark or following the system. Kept per device in user defaults: settings.json is shared by every device.
+/// Kept per device in user defaults: settings.json is shared by every device.
 enum Appearance: String, CaseIterable {
     case system, light, dark
     static let storageKey = "appearance"

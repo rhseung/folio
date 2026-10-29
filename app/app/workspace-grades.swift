@@ -5,12 +5,12 @@ import Foundation
 
 extension Workspace {
 
-    /// Categories of undeclared programs stay in catalog.json but out of every requirement view.
     /// `EC 주전공`, `AI 복수전공`.
     func programTitle(_ program: StudentProgram) -> String {
         (catalog.codes.first { $0.id == program.codeId }?.prefix ?? "?") + " " + program.kind.label
     }
 
+    /// Categories of undeclared programs stay in catalog.json but out of every requirement view.
     var requirementCatalog: Catalog { catalog.scoped(to: transcript.graduation.programs) }
 
     /// A draft in the default mail app. mailto can't choose the sending account; the mail app's default account does.

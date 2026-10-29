@@ -2,7 +2,6 @@ import FolioDomain
 import Foundation
 import UserNotifications
 
-/// Turns the notification plan into pending local notifications (docs/SPEC.md "알림").
 @MainActor
 enum NotificationScheduler {
     /// Attendance warnings fire right away, so the ones already shown are remembered per device.

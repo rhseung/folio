@@ -1,9 +1,6 @@
 import FolioActions
 import Foundation
 
-// `folio-gen [--check] [<out>]`: writes the CLI command of every action declared with `@Action`, or with --check
-// fails (exit 1) when the committed file differs from what the specs give.
-
 let args = CommandLine.arguments.dropFirst()
 let check = args.contains("--check")
 let out = args.first { !$0.hasPrefix("--") }
@@ -111,7 +108,6 @@ enum CommandSource {
     /// `X.Path` fields name a file and resolve to its path, the others to an id.
     static func lookup(_ kind: String) -> String { kind.hasSuffix("Path") ? "path" : "id" }
 
-    /// The CLI's type for one value of the field.
     static func cliType(_ f: FieldSpec) -> String {
         if f.ref != nil { return "String" }
         // `켜기`, `yes`, `1` as well as `true`, like the commands written by hand.
@@ -151,7 +147,6 @@ enum CommandSource {
         }
     }
 
-    /// The expression that turns the parsed field into the action's value.
     static func value(_ f: FieldSpec, scope: String) -> String {
         switch f.role {
         case .hidden: return f.defaultValue ?? "nil"

@@ -12,7 +12,6 @@ extension Chat: StoredModel {
 extension CourseStore {
     var chatsURL: URL { metadataURL.appending(path: StandardLayout.chatsFolder) }
 
-    /// The course's conversations, most recently updated first.
     public func chats() throws -> [StoredDocument<Chat>] {
         guard FileManager.default.fileExists(atPath: chatsURL.path) else { return [] }
         return try FileManager.default.contentsOfDirectory(at: chatsURL, includingPropertiesForKeys: nil)
@@ -27,13 +26,11 @@ extension CourseStore {
 
     static let contextTextExtensions: Set<String> = ["md", "tex", "txt", "csv", "py", "c", "cpp", "java", "swift"]
 
-    /// Whether `contextText(ofMaterial:)` can read this file.
     public static func canReadContext(_ path: String) -> Bool {
         let ext = (path as NSString).pathExtension.lowercased()
         return ext == "pdf" || contextTextExtensions.contains(ext)
     }
 
-    /// Text of a course file for Claude's context: PDF text through PDFKit, text files as they are. Nil for other kinds.
     /// Reading downloads an iCloud placeholder, which is what the spec wants for files handed to Claude.
     public func contextText(ofMaterial path: String) throws -> String? {
         let url = url.appending(path: path)
@@ -44,8 +41,7 @@ extension CourseStore {
         return String(decoding: try CoordinatedFile.read(url), as: UTF8.self)
     }
 
-    /// The images `body` embeds, read from the course folder and shrunk to JPEG for Claude. Files outside the course
-    /// or that don't decode are left out.
+    /// Files outside the course or that don't decode are left out.
     public func contextImages(of note: NoteFile, body: String, limit: Int = 20) -> [(name: String, data: Data)] {
         let root = url.standardizedFileURL.path + "/"
         return NoteImages.references(in: body).compactMap { ref -> (String, Data)? in

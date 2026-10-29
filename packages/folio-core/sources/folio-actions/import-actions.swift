@@ -21,32 +21,32 @@ public struct ImportNotion {
     public func run(_ ctx: ActionContext) throws {
         let gist = ctx.gist
         for existing in [gist.transcriptURL, gist.catalogURL] where FileManager.default.fileExists(atPath: existing.path) {
-            throw ActionError.rule("이미 있어 덮어쓰지 않습니다: \(ctx.relative(existing))")
+            throw ActionError.rule(String(localized: .errorImportExists(ctx.relative(existing))))
         }
         let r = NotionImporter.convert(export, gist: try gist.readTree(), device: ctx.device, now: ctx.now)
         let courses = r.transcript.courses + r.courseFiles.values.map(\.course)
         func gpa(_ name: String, _ s: GPACalculator.Summary) {
-            ctx.note("\(name): 총 \(s.totalCredits.formatted())학점, 유효 \(s.effectiveCredits.formatted())학점, GPA \(GPACalculator.label(s.gpa))")
+            ctx.note(String(localized: .noteImportNotionGpa(name, s.totalCredits.formatted(), s.effectiveCredits.formatted(), GPACalculator.label(s.gpa))))
         }
         for semester in r.transcript.semesters.sorted(by: { $0.order < $1.order }) {
-            gpa(semester.folder?.name ?? "인정학기", GPACalculator.semester(semester, courses: courses, catalog: r.catalog))
+            gpa(semester.folder?.name ?? String(localized: .valueCreditedSemester), GPACalculator.semester(semester, courses: courses, catalog: r.catalog))
         }
-        gpa("누적", GPACalculator.cumulative(semesters: r.transcript.semesters, courses: courses, catalog: r.catalog))
-        gpa("전공", GPACalculator.major(courses: courses, catalog: r.catalog))
+        gpa(String(localized: .valueCumulative), GPACalculator.cumulative(semesters: r.transcript.semesters, courses: courses, catalog: r.catalog))
+        gpa(String(localized: .valueMajor), GPACalculator.major(courses: courses, catalog: r.catalog))
 
         ctx.record(Change(.added, ctx.relative(gist.catalogURL)))
         ctx.record(Change(.added, ctx.relative(gist.transcriptURL)))
         for (folder, file) in r.courseFiles.sorted(by: { $0.key < $1.key }) {
             let store = CourseStore(url: gist.url.appending(path: folder))
             if FileManager.default.fileExists(atPath: store.courseFileURL.path) {
-                ctx.note("\(folder): course.json이 있어 건너뜀")
+                ctx.note(String(localized: .noteImportNotionCourseExists(folder)))
             } else {
                 ctx.record(Change(.added, ctx.relative(store.courseFileURL)))
-                ctx.note("\(folder): 평가 항목 \(file.components.count), 점수 \(file.scores.count), 시험 \(file.exams.count), 결석 상한 \(file.policy.attendanceCap.count)")
+                ctx.note(String(localized: .noteImportNotionCourse(folder, file.components.count, file.scores.count, file.exams.count, file.policy.attendanceCap.count)))
             }
         }
-        for course in r.transcript.courses { ctx.note("폴더 없는 과목(transcript.json): \(course.title)") }
-        for w in r.warnings { ctx.note("확인 필요: \(w)") }
+        for course in r.transcript.courses { ctx.note(String(localized: .noteImportNotionNoFolder(course.title))) }
+        for w in r.warnings { ctx.note(String(localized: .noteImportCheck(w))) }
         guard !ctx.dryRun else { return }
         _ = try gist.write(r)
         ctx.invalidate()
@@ -66,19 +66,18 @@ public struct ImportNotes {
             .filter { FileManager.default.fileExists(atPath: $0.appending(path: "index.json").path) }
             .sorted { $0.path < $1.path }
         let dumps = try folders.map { ($0, try JSONDecoder().decode(NotionCourseDump.self, from: Data(contentsOf: $0.appending(path: "index.json")))) }
-        // Mentions between imported pages become wikilinks.
         var links: [String: String] = [:]
         for (_, dump) in dumps { for n in dump.notes { links[n.id.uuidString.lowercased().replacingOccurrences(of: "-", with: "")] = n.title } }
         for (dumpFolder, dump) in dumps {
             guard ctx.hasFolder(dump.coursePageId) else {
-                if !dump.notes.isEmpty || !dump.scores.isEmpty { ctx.note("\(dump.title): 과목 폴더가 없어 건너뜀 (노트 \(dump.notes.count), 점수 \(dump.scores.count))") }
+                if !dump.notes.isEmpty || !dump.scores.isEmpty { ctx.note(String(localized: .noteImportNotesNoFolder(dump.title, dump.notes.count, dump.scores.count))) }
                 continue
             }
             let store = try ctx.store(dump.coursePageId)
             let existing = Set(try store.notes().compactMap(\.meta.id))
             let r = NotionNotesImporter.merge(dump, into: try ctx.file(dump.coursePageId), existingNotes: existing, calendar: ctx.calendar, device: ctx.device, now: ctx.now)
-            ctx.note("\(dump.title): 회차 +\(r.sessionsAdded), 노트 +\(r.notes.count), 평가 항목 +\(r.componentsAdded), 점수 +\(r.scoresAdded), 그림 \(dump.images.filter { $0.file != nil }.count)")
-            for w in r.warnings { ctx.note("\(dump.title) 확인: \(w)") }
+            ctx.note(String(localized: .noteImportNotesCourse(dump.title, r.sessionsAdded, r.notes.count, r.componentsAdded, r.scoresAdded, dump.images.filter { $0.file != nil }.count)))
+            for w in r.warnings { ctx.note(String(localized: .noteImportNotesCheck(dump.title, w))) }
             for plan in r.notes where !existing.contains(plan.id) {
                 ctx.record(Change(.added, try ctx.relative(dump.coursePageId, "\(CourseFolder.notes.rawValue)/\(plan.title).md")))
             }
@@ -99,21 +98,21 @@ public struct ImportCalendar {
         let semesters = try ctx.transcript().semesters
         for (name, group) in Dictionary(grouping: meetings, by: \.course).sorted(by: { $0.key < $1.key }) {
             guard let id = ids[name] else {
-                ctx.note("\(name): 과목 폴더가 없어 건너뜀 (\(group.count)회)")
+                ctx.note(String(localized: .noteImportCalendarNoFolder(name, group.count)))
                 continue
             }
             let store = try ctx.store(id)
             let file = try ctx.file(id)
             guard let start = semesters.first(where: { $0.id == file.course.semesterId })?.start else {
-                ctx.note("\(name): 학기 시작일이 없어 건너뜀")
+                ctx.note(String(localized: .noteImportCalendarNoStart(name)))
                 continue
             }
             let r = CalendarImporter.merge(group, into: file, semesterStart: start, calendar: ctx.calendar, device: ctx.device, now: ctx.now)
             let notes = try store.notes()
             let links = CalendarImporter.noteLinks(sessions: r.file.sessions, notes: notes.compactMap { n in n.meta.id.map { ($0, n.title, n.meta.sessionId) } })
-            ctx.note("\(name): 회차 +\(r.added.count), 시각·주제 보정 \(r.filled.count), 휴강 \(r.cancelled.count), 노트 연결 \(links.count)")
+            ctx.note(String(localized: .noteImportCalendarCourse(name, r.added.count, r.filled.count, r.cancelled.count, links.count)))
             if !r.schedule.isEmpty {
-                ctx.note("\(name) 시간표: " + r.schedule.map { "\(ClassTime.weekdayNames[$0.weekday - 1]) \(String(format: "%02d:%02d-%02d:%02d", $0.startMinute / 60, $0.startMinute % 60, $0.endMinute / 60, $0.endMinute % 60)) \($0.room)" }.joined(separator: ", "))
+                ctx.note(String(localized: .noteImportCalendarSchedule(name, r.schedule.map { "\(ClassTime.weekdayNames[$0.weekday - 1]) \(String(format: "%02d:%02d-%02d:%02d", $0.startMinute / 60, $0.startMinute % 60, $0.endMinute / 60, $0.endMinute % 60)) \($0.room)" }.joined(separator: ", "))))
             }
             for s in r.added {
                 // A lab's unit title already holds its topic.
@@ -121,11 +120,11 @@ public struct ImportCalendar {
                 ctx.note("+ \(s.name(among: r.file.sessions)) \(shortTime(s.date))\(label.isEmpty ? "" : " · \(label)")")
             }
             for s in r.filled { ctx.note("~ \(s.name(among: r.file.sessions)) \(shortTime(s.date))\(s.topic.isEmpty ? "" : " · \(s.topic)")") }
-            for s in r.cancelled { ctx.note("휴강 \(s.name(among: r.file.sessions)) \(shortTime(s.date))") }
+            for s in r.cancelled { ctx.note(String(localized: .noteImportCalendarCancelled(s.name(among: r.file.sessions), shortTime(s.date)))) }
             var result = r.file
             for l in links {
                 guard var note = notes.first(where: { $0.meta.id == l.note }), let i = result.sessions.firstIndex(where: { $0.id == l.session }) else { continue }
-                ctx.note("노트 \(result.sessions[i].name(among: result.sessions)) ← \(note.title).md")
+                ctx.note(String(localized: .noteImportCalendarNoteLink(result.sessions[i].name(among: result.sessions), note.title)))
                 let text = try store.read(note)
                 note.meta.sessionId = l.session
                 try ctx.io(Change(.changed, ctx.relative(note.url))) { try store.save(note, text: text) }
@@ -147,14 +146,14 @@ public struct ImportExams {
         let ids = try courseIDs(ctx)
         for (name, group) in Dictionary(grouping: exams, by: \.course).sorted(by: { $0.key < $1.key }) {
             guard let id = ids[name] else {
-                ctx.note("\(name): 과목 폴더가 없어 건너뜀")
+                ctx.note(String(localized: .noteImportNoFolder(name)))
                 continue
             }
             let r = CalendarImporter.mergeExams(group, into: try ctx.file(id), calendar: ctx.calendar, device: ctx.device, now: ctx.now)
             for x in r.added { ctx.note("\(name) + \(x.title) \(shortTime(x.start))–\(shortTime(x.end)) \(x.location)") }
             for x in r.filled { ctx.note("\(name) ~ \(x.title) \(shortTime(x.start))–\(shortTime(x.end)) \(x.location)\(x.memo.isEmpty ? "" : " · \(x.memo)")") }
-            for c in r.conflicts { ctx.note("\(name) 다름 \(c.exam.title): 파일 \(shortTime(c.exam.start)), 캘린더 \(shortTime(c.calendar.start)). 그대로 둠") }
-            if r.added.isEmpty && r.filled.isEmpty && r.conflicts.isEmpty { ctx.note("\(name): 바뀐 것 없음") }
+            for c in r.conflicts { ctx.note(String(localized: .noteImportExamsConflict(name, c.exam.title, shortTime(c.exam.start), shortTime(c.calendar.start)))) }
+            if r.added.isEmpty && r.filled.isEmpty && r.conflicts.isEmpty { ctx.note(String(localized: .noteImportExamsUnchanged(name))) }
             if !r.added.isEmpty || !r.filled.isEmpty { try ctx.edit(id) { $0 = r.file } }
         }
     }
@@ -169,13 +168,13 @@ public struct ImportUnits {
         let ids = try courseIDs(ctx)
         for units in files {
             guard let id = ids[units.course] else {
-                ctx.note("\(units.course): 과목 폴더가 없어 건너뜀")
+                ctx.note(String(localized: .noteImportNoFolder(units.course)))
                 continue
             }
             let r = UnitImporter.merge(units.units, into: try ctx.file(id), device: ctx.device, now: ctx.now)
-            ctx.note("\(units.course): 단원 +\(r.added.count), 회차 연결 +\(r.linked.count)")
+            ctx.note(String(localized: .noteImportUnitsCourse(units.course, r.added.count, r.linked.count)))
             for title in r.added { ctx.note("+ \(title)") }
-            if !r.unknownSessions.isEmpty { ctx.note("\(units.course) 없는 회차: \(r.unknownSessions.joined(separator: ", "))") }
+            if !r.unknownSessions.isEmpty { ctx.note(String(localized: .noteImportUnitsUnknownSessions(units.course, r.unknownSessions.joined(separator: ", ")))) }
             if !r.added.isEmpty || !r.linked.isEmpty { try ctx.edit(id) { $0 = r.file } }
         }
     }
@@ -191,13 +190,13 @@ public struct ImportRequirements {
         let catalog = try ctx.catalog()
         let codes = catalog.codes
         for prefix in Set(file.categories.compactMap(\.program) + (file.programs ?? []).map(\.code)) where RequirementImporter.code(prefix, in: codes) == nil {
-            throw ActionError.rule("강의 코드 표에 \(prefix)가 없습니다")
+            throw ActionError.rule(String(localized: .errorImportUnknownCode(prefix)))
         }
         let r = RequirementImporter.merge(file.categories, into: catalog.categories, codes: codes, device: ctx.device, now: ctx.now)
         let fmt = { (c: FolioDomain.Category) in
             let parent = c.parentId.flatMap { id in r.categories.first { $0.id == id }?.name }.map { " ⊂ \($0)" } ?? ""
-            let credits = [c.minCredits.map { "최소 \($0.formatted())" }, c.maxCredits.map { "최대 \($0.formatted())" }, c.minCount.map { "\($0)과목" },
-                           c.maxSharedCredits.map { "이중 계산 \($0.formatted())" }].compactMap { $0 }.joined(separator: ", ")
+            let credits = [c.minCredits.map { String(localized: .valueCreditsMin($0.formatted())) }, c.maxCredits.map { String(localized: .valueCreditsMax($0.formatted())) }, c.minCount.map { String(localized: .valueCourseCount($0)) },
+                           c.maxSharedCredits.map { String(localized: .valueCreditsShared($0.formatted())) }].compactMap { $0 }.joined(separator: ", ")
             let program = c.programId.flatMap { id in codes.first { $0.id == id }?.prefix }.map { " (\($0))" } ?? ""
             return "\(c.name) [\(c.group)]\(program)\(parent) \(credits)"
         }
@@ -205,9 +204,9 @@ public struct ImportRequirements {
         for name in r.changed {
             let after = r.categories.first { $0.name == name }!
             let before = catalog.categories.first { $0.id == after.id }!
-            ctx.note("~ " + fmt(after) + (before.name != after.name ? "  (이름: \(before.name))" : "") + "  이전: " + fmt(before))
+            ctx.note("~ " + fmt(after) + (before.name != after.name ? String(localized: .noteImportRequirementsRenamed(before.name)) : "") + String(localized: .noteImportRequirementsBefore) + fmt(before))
         }
-        for name in r.untouched { ctx.note("그대로: \(name)") }
+        for name in r.untouched { ctx.note(String(localized: .noteImportRequirementsUntouched(name))) }
         try ctx.editCatalog { $0.categories = r.categories }
         try ctx.editTranscript { t in
             if let year = file.admissionYear { t.graduation.admissionYear = year }
@@ -228,17 +227,17 @@ public struct ImportHandbook {
     public func run(_ ctx: ActionContext) throws {
         var catalog = try ctx.catalog()
         let unknown = Set(handbook.areas.values).subtracting(catalog.categories.map(\.name))
-        guard unknown.isEmpty else { throw ActionError.rule("catalog.json에 없는 분류: \(unknown.sorted().joined(separator: ", "))") }
+        guard unknown.isEmpty else { throw ActionError.rule(String(localized: .errorImportUnknownCategory(unknown.sorted().joined(separator: ", ")))) }
         catalog.handbooks.removeAll { $0.year == handbook.year }
         catalog.handbooks.append(handbook)
         catalog.handbooks.sort { $0.year < $1.year }
         for (name, n) in Dictionary(grouping: handbook.areas.values, by: { $0 }).mapValues(\.count).sorted(by: { $0.key < $1.key }) {
-            ctx.note("\(handbook.year) \(name): \(n)과목")
+            ctx.note(String(localized: .noteImportHandbookArea(handbook.year, name, n)))
         }
         let courses = try ctx.gist.allCourses()
         let suggestions = HandbookClassifier.suggest(courses: courses, semesters: try ctx.transcript().semesters, catalog: catalog)
         for s in suggestions {
-            ctx.note("제안 \(courses.first { $0.id == s.courseId }!.title) \(s.code) → \(catalog.category(s.categoryId)!.name)")
+            ctx.note(String(localized: .noteImportHandbookSuggestion(courses.first { $0.id == s.courseId }!.title, s.code, catalog.category(s.categoryId)!.name)))
         }
         try ctx.editCatalog { $0.handbooks = catalog.handbooks }
         guard accept else { return }

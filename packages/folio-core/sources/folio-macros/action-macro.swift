@@ -97,7 +97,6 @@ private struct Arguments {
     }
 }
 
-/// One stored property of the action.
 private struct Field {
     enum Role { case argument, option, off(String), new, hidden }
 
@@ -106,7 +105,6 @@ private struct Field {
     var defaultValue: String?
     var role: Role
     var help: String
-    // What the type says.
     var patch = false, optional = false, many = false
     var ref: String?
     var base: String

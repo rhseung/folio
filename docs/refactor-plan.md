@@ -37,7 +37,7 @@
 | `FolioCLI/Generated/` | `generated/commands.swift`. `FolioGen`이 쓰는 경로를 함께 고친다 |
 
 도구가 이름을 정해서 그대로 두는 것:
-- `Package.swift`, `Package.resolved`, `mise.toml`, `CLAUDE.md`, `README.md`, `SKILL.md`, `docs/SPEC.md`, `docs/DESIGN.md`, `.github/workflows/`, `main.swift`
+- `Package.swift`, `Package.resolved`, `mise.toml`, `AGENTS.md`, `README.md`, `SKILL.md`, `docs/SPEC.md`, `docs/DESIGN.md`, `.github/workflows/`, `main.swift`
 - `Localizable.xcstrings`: 기본 표 이름이다. 바꾸면 모든 호출에 표 이름을 넘겨야 한다.
 - `AppIcon.icon`: 빌드 설정의 앱 아이콘 이름과 묶여 있다.
 - 가짜 GIST 폴더(`FolioFixtures`)의 폴더와 파일 이름: 가짜 GIST 데이터라 `StandardLayout`의 이름 규칙(`Lectures`, `2026-3/EC4207 그래프 이론`)을 따라야 한다. 절대 바꾸지 않는다.
@@ -132,7 +132,7 @@ Text(.sessionsCount(file.sessions.count))
 
 ## 6. 규칙 문서
 
-- CLAUDE.md: 이름 규칙, MVVM 역할, 주석 규칙, 문자열 키, 새 경로.
+- AGENTS.md: 이름 규칙, MVVM 역할, 주석 규칙, 문자열 키, 새 경로.
 - `docs/DESIGN.md`의 경로.
 - 에이전트 스킬: `Skill.swift`를 고친 뒤 `SKILL.md` 사본을 맞춘다.
 

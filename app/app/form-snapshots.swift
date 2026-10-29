@@ -31,7 +31,7 @@ enum FormSnapshots {
         let users = workspace.allCourseRecords.flatMap(\.codes)
         if let code = workspace.catalog.codes.max(by: { a, b in users.filter { $0 == a.id }.count < users.filter { $0 == b.id }.count }) {
             let courses = workspace.allCourseRecords.filter { $0.codes.contains(code.id) }.map(\.id)
-            forms.append(("code", AnyView(CodeEditor(code: .constant(code), programs: [code.program], courses: courses) {})))
+            forms.append(("code", AnyView(CodeEditor(model: CodesModel(workspace: workspace), code: .constant(code), programs: [code.program], courses: courses) {})))
         }
         if let exam = file.exams.first { forms.append(("exam-edit", AnyView(ExamEditor(course: course, exam: exam)))) }
         if let unit = file.units.first { forms.append(("card", AnyView(CardEditorSheet(course: course, draft: CardDraft(unitId: unit.id), units: file.units) {}))) }

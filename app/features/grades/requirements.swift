@@ -4,7 +4,6 @@ import SwiftUI
 
 typealias RequirementCategory = FolioDomain.Category
 
-/// docs/SPEC.md "졸업 요건": degree totals, the category tree with progress, and courses still without a category.
 struct RequirementsView: View {
     @Environment(Workspace.self) private var workspace
     let openCourse: (Course) -> Void
@@ -175,7 +174,6 @@ struct RequirementsView: View {
         return names.isEmpty ? "없음" : names.joined(separator: ", ")
     }
 
-    /// `2025학번 · EC 주전공 · AI 복수전공`
     func profileLine(_ rule: GraduationRule) -> String? {
         let parts = [rule.admissionYear.map { "\($0)학번" }]
             + rule.programs.map { workspace.programTitle($0) }
@@ -240,7 +238,6 @@ struct RequirementsView: View {
         .help(category.rule ?? "눌러서 과목 보기")
     }
 
-    /// The courses counted toward a category, oldest semester first; ones still being taken say so.
     func courseList(_ category: RequirementCategory, _ courses: [Course]) -> some View {
         let order = Dictionary(keepingFirst: workspace.transcript.semesters.map { ($0.id, $0.order) })
         let sorted = courses.sorted { (order[$0.semesterId ?? UUID()] ?? .max, $0.title) < (order[$1.semesterId ?? UUID()] ?? .max, $1.title) }
@@ -275,7 +272,6 @@ struct RequirementsView: View {
         .frame(width: 340, alignment: .leading)
     }
 
-    /// Splits items into two columns, each going to the shorter column so far.
     static func balance<T>(_ items: [T], by weight: (T) -> Int) -> [[T]] {
         var columns: [[T]] = [[], []]
         var heights = [0, 0]
@@ -287,12 +283,11 @@ struct RequirementsView: View {
         return columns
     }
 
-    /// Groups in the order their first top-level category appears.
     static func groups(_ categories: [RequirementCategory]) -> [String] {
         Array(categories.filter { $0.parentId == nil }.map(\.group).uniqued())
     }
 
-    /// Parents before their children, depth first. A child takes its top-level ancestor's group so it stays under it.
+    /// A child takes its top-level ancestor's group so it stays under it.
     static func tree(_ categories: [RequirementCategory]) -> [(category: RequirementCategory, depth: Int, group: String)] {
         var result: [(RequirementCategory, Int, String)] = []
         func visit(_ c: RequirementCategory, depth: Int, group: String) {
@@ -307,8 +302,6 @@ struct RequirementsView: View {
     }
 }
 
-/// A category's earned and in-progress credits (or passed courses) against its requirement: the name with a short
-/// note under it, the figure, and a ring that turns into a check once met.
 struct RequirementLine: View {
     let category: RequirementCategory
     let credits: CategoryCredits
@@ -370,7 +363,6 @@ struct RequirementLine: View {
     }
 }
 
-/// Progress toward a goal in the space of an icon: earned solid, in-progress faint, a check once met.
 struct ProgressRing: View {
     let done: Double
     let taking: Double
@@ -401,7 +393,6 @@ struct ProgressRing: View {
     }
 }
 
-/// Earned credits solid, in-progress ones faint, scaled to the requirement (or to the credits when there is none).
 struct CreditBar: View {
     let credits: CategoryCredits
     let goal: Double?
@@ -423,7 +414,6 @@ struct CreditBar: View {
     }
 }
 
-/// One category, new or existing, saved to catalog.json.
 struct RequirementSheet: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.dismiss) private var dismiss
@@ -542,7 +532,6 @@ struct ProfileSheet: View {
     }
 }
 
-/// School mail, admission year and declared programs, saved to transcript.json's `graduation`.
 struct ProfileCard: View {
     @Environment(Workspace.self) private var workspace
     @State private var email = ""

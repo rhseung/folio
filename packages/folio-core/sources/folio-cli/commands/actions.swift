@@ -4,21 +4,12 @@ import Foundation
 
 struct ActionsCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "actions", abstract: "모든 액션과 명령, 앱 화면, 동등성 테스트. --check로 커버리지 검사",
-        discussion: """
-            --check는 명령이 없는 액션, 동등성 테스트가 없는 액션, 앱 코드에서 액션을 거치지 않고 파일을 바꾸는 곳이 있으면
-            종료 코드 7로 끝난다. 액션 밖 쓰기가 맞는 곳(녹음, 대화, 공부 시간 기록)은 그 줄이나 바로 윗줄에
-            `// folio:not-an-action <이유>`를 단다. 저장소 안에서 실행해야 한다.
-
-            예시:
-              folio actions
-              folio actions --check --json
-              folio actions --schema
-            """)
+        commandName: "actions", abstract: String(localized: .actionsAbstract),
+        discussion: String(localized: .actionsDiscussion))
 
     @OptionGroup var g: GlobalOptions
-    @Flag(help: "커버리지 검사. 실패하면 종료 코드 7") var check = false
-    @Flag(help: "모든 액션의 입력 형식(JSON Schema)을 JSON 하나로") var schema = false
+    @Flag(help: ArgumentHelp(String(localized: .actionsHelpCheck))) var check = false
+    @Flag(help: ArgumentHelp(String(localized: .actionsHelpSchema))) var schema = false
 
     struct Row: Encodable {
         var action: String
@@ -54,22 +45,21 @@ struct ActionsCommand: ParsableCommand {
         if g.json {
             try printJSON(Report(actions: rows, directWrites: writes, passed: passed))
         } else {
-            var t = Table(header: ["액션", "명령", "앱 화면", "동등성"], shrink: [2])
+            var t = Table(header: [String(localized: .actionsHeaderAction), String(localized: .actionsHeaderCommand), String(localized: .actionsHeaderScreens), String(localized: .actionsHeaderEquivalence)], shrink: [2])
             for r in rows {
-                t.rows.append([r.action, r.hasCommand ? r.command : "없음".styled(.red),
-                               r.screens.isEmpty ? "명령줄 전용".styled(.dim) : r.screens.joined(separator: ", "),
+                t.rows.append([r.action, r.hasCommand ? r.command : String(localized: .actionsNoCommand).styled(.red),
+                               r.screens.isEmpty ? String(localized: .actionsCliOnly).styled(.dim) : r.screens.joined(separator: ", "),
                                r.equivalenceTest ? "✓".styled(.green) : "✗".styled(.red)])
             }
             t.print()
-            for w in writes { say("✗".styled(.red) + " 액션 밖 변경: \(w)") }
+            for w in writes { say("✗".styled(.red) + " " + String(localized: .actionsDirectWrite(w))) }
             let n = rows.count
-            say(["액션 \(n)개", "명령 \(rows.filter(\.hasCommand).count)/\(n)", "동등성 테스트 \(rows.filter(\.equivalenceTest).count)/\(n)",
-                 "액션 밖 변경 \(writes.count)곳"].joined(separator: " · ").styled(.dim))
+            say([String(localized: .actionsSummaryActions(n)), String(localized: .actionsSummaryCommands(rows.filter(\.hasCommand).count, n)),
+                 String(localized: .actionsSummaryTests(rows.filter(\.equivalenceTest).count, n)), String(localized: .actionsSummaryWrites(writes.count))].joined(separator: " · ").styled(.dim))
         }
         if check, !passed { throw ExitCode(Exit.coverage.rawValue) }
     }
 
-    /// The working copy the CLI runs in, else the one it was built from.
     static func repository() throws -> URL {
         let marker = "packages/folio-core/Package.swift"
         for start in [URL(filePath: FileManager.default.currentDirectoryPath), URL(filePath: #filePath)] {
@@ -79,7 +69,7 @@ struct ActionsCommand: ParsableCommand {
                 dir.deleteLastPathComponent()
             }
         }
-        throw CLIError(exit: .usage, message: "Folio 저장소 안에서 실행해 주세요")
+        throw CLIError(exit: .usage, message: String(localized: .actionsOutsideRepo))
     }
 
     static func commandPaths(_ type: ParsableCommand.Type, prefix: [String] = []) -> [String] {
@@ -92,7 +82,6 @@ struct ActionsCommand: ParsableCommand {
         }
     }
 
-    /// `(file name, contents)` of every Swift file under `root`.
     static func sources(_ root: URL) -> [(String, String)] {
         guard let files = FileManager.default.enumerator(at: root, includingPropertiesForKeys: nil) else { return [] }
         return files.compactMap { $0 as? URL }.filter { $0.pathExtension == "swift" }.compactMap { url in

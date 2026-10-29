@@ -89,7 +89,6 @@ public struct CLIProvider: ClaudeProvider {
         try await respond(request, onText: onText)
     }
 
-    /// The text a `--include-partial-messages` stream line adds to the answer, if it is a text delta.
     static func textDelta(_ line: Data) -> String? {
         guard let value = try? JSONDecoder().decode(JSONValue.self, from: line), value["type"] == .string("stream_event"),
               let event = value["event"], event["type"] == .string("content_block_delta"),

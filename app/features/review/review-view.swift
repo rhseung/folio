@@ -5,7 +5,6 @@ import FolioStorage
 import PDFKit
 import SwiftUI
 
-/// Makes `label` open the review screen for one unit (docs/SPEC.md "복습 진행").
 struct ReviewOpener<Label: View>: View {
     let courseId: UUID
     let unitId: UUID
@@ -21,16 +20,12 @@ struct ReviewOpener<Label: View>: View {
     }
 }
 
-/// One unit's review: its review note, with the rough note and lecture files opening beside it, a running timer, and
-/// the four results that set the next interval (docs/SPEC.md "복습 진행"). Given several units, each result slides the
-/// next one in instead of closing.
 struct ReviewView: View {
     struct Item {
         let courseId: UUID
         let unitId: UUID
     }
 
-    /// Something to read during the review: a note, or a lecture PDF linked to one of the unit's sessions.
     struct Source: Identifiable {
         enum Kind: Hashable { case note(URL), lecture(UUID) }
         let id: Kind
@@ -227,7 +222,6 @@ struct ReviewView: View {
         side = nil
     }
 
-    /// What clicking the chip does; nil for the note already in the main pane.
     func action(for source: Source) -> String? {
         source.id == main ? nil : source.id == side ? "옆에서 닫기" : source.beside ? "옆에 펼치기" : "이 노트로 바꾸기"
     }
@@ -252,7 +246,6 @@ struct ReviewView: View {
     }
 }
 
-/// A note rendered, or a lecture PDF opened at the session's first page.
 private struct SourcePane: View {
     @Environment(Workspace.self) private var workspace
     let source: ReviewView.Source
@@ -293,7 +286,6 @@ private struct SourcePane: View {
 }
 
 extension ReviewResult {
-    /// 1–4 from worst to best, as on the buttons.
     var shortcut: Int {
         switch self {
         case .again: 1
@@ -305,7 +297,6 @@ extension ReviewResult {
     }
 }
 
-/// The finished unit tips away like a turned card while the next pushes in.
 private struct FlipAway: Transition {
     func body(content: Content, phase: TransitionPhase) -> some View {
         content

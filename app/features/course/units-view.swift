@@ -3,7 +3,6 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
-/// The course's units as an outline with each unit's review state; a unit opens its detail page in place.
 struct UnitsView: View {
     @Environment(Workspace.self) private var workspace
     let course: LoadedCourse
@@ -184,7 +183,6 @@ struct UnitsView: View {
     }
 }
 
-/// Review state in one chip: due today, days overdue, the next day, or settled.
 struct ReviewBadge: View {
     let state: ReviewState?
     let today: LocalDate
@@ -212,15 +210,12 @@ struct ReviewBadge: View {
 }
 
 extension LocalDate {
-    /// `10월 25일 (일)`.
     var shortLabel: String {
         date(in: .current)?.formatted(.dateTime.month().day().weekday()) ?? description
     }
 }
 
-/// One unit: its review state and the way into a review first, then everything gathered under it (docs/SPEC.md "과목 화면"
-/// 단원): the classes that covered it with their notes, other notes, materials, exam scope and review history. Renaming,
-/// moving and deleting the unit come last, since they are rare.
+/// Renaming, moving and deleting the unit come last, since they are rare.
 struct UnitDetail: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
@@ -420,7 +415,6 @@ struct UnitDetail: View {
             .help("연결 해제")
     }
 
-    /// The row's note slots and unlink button as menu items.
     @ViewBuilder func sessionMenu(_ s: Session, now: Date) -> some View {
         if let id = s.roughNoteId { Button("러프 노트 열기") { openNote(id) } }
         if s.reviewNoteId != nil || course.file.needsReviewNote(s, at: now) {
@@ -495,7 +489,6 @@ struct UnitDetail: View {
     }
 }
 
-/// A link chip that opens a searchable list of checkable items; each pick toggles one item and leaves the rest.
 struct ToggleMenu: View {
     let title: String
     let items: [(id: UUID, label: String, on: Bool)]

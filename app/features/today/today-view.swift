@@ -182,7 +182,6 @@ struct TodayView: View {
         }
     }
 
-    /// A class under way tints its row in the course color and reads 지금.
     func classRow(_ item: TodaySummary.SessionItem, last: Bool) -> some View {
         let start = item.session.date
         let end = item.session.end(schedule: workspace.course(item.courseId)?.file.course.schedule ?? [], calendar: workspace.calendar)
@@ -217,7 +216,6 @@ struct TodayView: View {
         Button("오늘 복습 건너뛰기", systemImage: "forward") { workspace.skipReviews([(entry.courseId, entry.item.unitId)]) }
     }
 
-    /// Past sessions still without a review note, newest first.
     @ViewBuilder func noteRows(_ items: [TodaySummary.SessionItem], limit: Int, endsCard: Bool) -> some View {
         let shown = Array(items.suffix(limit).reversed())
         let more = items.count - shown.count
@@ -282,7 +280,6 @@ struct TodayView: View {
     }
 }
 
-/// The class under way as the page's lead while it lasts, its time gone as a bar along the bottom.
 struct NowClassCard: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.searchTarget) private var searchTarget
@@ -332,7 +329,6 @@ struct NowClassCard: View {
     }
 }
 
-/// One-line add: `선대 HW5 금 23:59`. Shows how it was read before saving.
 struct DateMark: TextAttribute {}
 
 /// Draws only rounded pills behind runs marked `DateMark`; the glyphs come from the field on top.
@@ -396,7 +392,6 @@ struct QuickAddField: View {
         }
     }
 
-    // The line as it will be saved: course, deadline, repeat, then the title left over.
     func summary(_ parsed: QuickAdd) -> some View {
         let due = parsed.due?.formatted(.dateTime.month(.defaultDigits).day().weekday(.abbreviated).hour().minute())
         return HStack(spacing: Theme.Space.tight) {
@@ -432,7 +427,6 @@ struct QuickAddField: View {
     }
 }
 
-/// The review card's banner, which fills with green from the left as today's units are finished.
 struct ReviewProgressBanner: View {
     let done: Int
     let left: Int

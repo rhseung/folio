@@ -2,7 +2,6 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// Coming exams first, each with its facts, scope and plan; finished ones below as single rows (docs/SPEC.md "시험").
 struct ExamsView: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
@@ -82,7 +81,6 @@ struct ExamsView: View {
         course.file.materials.filter { $0.path.hasPrefix(folder + "/") && $0.status != .ignored }.count
     }
 
-    /// When and where with the summary note, the scope as it stands in review, the folder, then the plan.
     func section(_ exam: Exam, states: [UUID: ReviewState]) -> some View {
         Block(title: exam.title, note: exam.kind.label) {
             if let start = exam.start { DdayChip(days: max(workspace.days(to: start), 0)) }
@@ -187,7 +185,6 @@ struct ExamsView: View {
         }
     }
 
-    /// A finished exam in one row: its facts in a line, the summary note still a click away.
     func pastRow(_ exam: Exam) -> some View {
         let scoped = exam.scopeUnitIds.count
         let checked = exam.plan.filter { done.contains($0.id) }.count
@@ -250,7 +247,7 @@ struct ExamsView: View {
     }
 }
 
-/// Dated to-dos until the exam. Checking one appends a `plan_check` event; course.json only holds the items.
+/// Checking one appends a `plan_check` event; course.json only holds the items.
 struct ExamPlanCard: View {
     @Environment(Workspace.self) private var workspace
     let course: LoadedCourse
@@ -455,7 +452,6 @@ struct ExamEditor: View {
     }
 }
 
-/// Today's plan items across the current semester's exams. Hidden when there are none.
 struct ExamPlanTodayBlock: View {
     @Environment(Workspace.self) private var workspace
     let courses: [LoadedCourse]
@@ -497,7 +493,6 @@ struct ExamPlanTodayBlock: View {
     }
 }
 
-/// A unit's review in a dot: not started (hollow), behind, due, scheduled or settled.
 private struct ReviewDot: View {
     let state: ReviewState?
     let today: LocalDate

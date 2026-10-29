@@ -3,7 +3,6 @@ import FolioAI
 import FolioDomain
 import SwiftUI
 
-/// Scope on the left, the card in the middle, the card's history on the right (design direction C).
 struct QuizSolveView: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
@@ -536,12 +535,11 @@ struct QuizSolveView: View {
     }
 }
 
-/// Inline markdown (emphasis, code, links) with line breaks kept. Math stays as TeX until KaTeX is bundled.
+/// Math stays as TeX until KaTeX is bundled.
 func markdown(_ text: String) -> AttributedString {
     (try? AttributedString(markdown: text, options: .init(interpretedSyntax: .inlineOnlyPreservingWhitespace))) ?? AttributedString(text)
 }
 
-/// Toggle chips that wrap onto new lines.
 struct FlowChips<Item: Hashable>: View {
     @Environment(\.accent) private var accent
     let items: [Item]
@@ -567,7 +565,6 @@ struct FlowChips<Item: Hashable>: View {
     }
 }
 
-/// Lays children left to right, wrapping when the row is full.
 struct WrapLayout: Layout {
     var spacing: CGFloat
 

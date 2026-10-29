@@ -2,7 +2,6 @@ import FolioDomain
 import SwiftUI
 
 extension View {
-    /// Background work tied to the open GIST folder: notification rescheduling and the daily backup.
     func appServices() -> some View {
         modifier(AppServices())
     }
@@ -11,7 +10,6 @@ extension View {
 private struct AppServices: ViewModifier {
     @Environment(Workspace.self) private var workspace
 
-    /// What the notification plan reads; any change reschedules.
     struct PlanInputs: Equatable {
         var settings: NotificationSettings
         var edits: [Date]

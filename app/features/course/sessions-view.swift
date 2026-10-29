@@ -2,8 +2,7 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// Sessions grouped by week and split at the midterm and the final. Sessions are made as classes happen: the weekly
-/// schedule only suggests the next lecture, and the rest are added by hand (docs/SPEC.md "강의 회차").
+/// Sessions are made as classes happen: the weekly schedule only suggests the next lecture, and the rest are added by hand (docs/SPEC.md "강의 회차").
 struct SessionsView: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
@@ -163,7 +162,6 @@ struct SessionsView: View {
 struct SuggestedSessionRow: View {
     @Environment(Workspace.self) private var workspace
     let item: Workspace.SuggestedSession
-    /// On Today: the time and the course, as in 오늘 수업.
     var showsCourse = false
     let openNote: (UUID) -> Void
     /// On the sessions page, where a wrong suggestion is the cue that the class times changed.
@@ -281,7 +279,6 @@ struct SuggestedSessionItems: View {
     }
 }
 
-/// A session off the weekly schedule: a recitation, a makeup, or a 휴강 the suggestion never offered.
 struct AddSessionSheet: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.dismiss) private var dismiss
@@ -370,7 +367,6 @@ enum TimelineItem: Identifiable {
     }
 }
 
-/// A line of the timeline that isn't a session: the gutter blank or naming a new month, the rail running through.
 struct TimelineLine<Content: View>: View {
     @Environment(\.accent) private var accent
     let above: Bool?
@@ -385,7 +381,6 @@ struct TimelineLine<Content: View>: View {
             Text(month?.formatted(.dateTime.month()) ?? "").font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(Theme.Palette.textSecondary)
                 .fixedSize().frame(width: SessionRow.gutter).frame(maxHeight: .infinity, alignment: .bottom).padding(.bottom, Theme.Space.xs)
             Rail(above: above, below: below) {
-                // A midterm or final: a diamond on the rail.
                 if marker { Rectangle().fill(Theme.Palette.danger).frame(width: 8, height: 8).rotationEffect(.degrees(45)) }
             }
             .frame(maxHeight: .infinity)
@@ -395,7 +390,6 @@ struct TimelineLine<Content: View>: View {
     }
 }
 
-/// The rail through one line: the half above and below the dot, each in the course color once held and gray ahead.
 /// `dotY` puts the dot level with the row's title; nil centers it.
 struct Rail<Dot: View>: View {
     @Environment(\.accent) private var accent
@@ -560,7 +554,6 @@ struct SessionRow: View {
         .sheet(item: $playing) { RecordingPlayer(courseId: course.id, store: course.store, recording: $0, title: "\(course.file.course.title) · \(course.file.name(of: session))") }
     }
 
-    /// The ⋯ menu's items, also the row's context menu.
     @ViewBuilder var menuItems: some View {
         let recordings = course.file.recordings.filter { $0.sessionId == session.id }
         let recorder = workspace.recorder
@@ -616,7 +609,6 @@ struct SessionRow: View {
         }
     }
 
-    /// `오늘 오후 1:00`, `내일 오후 1:00`, then `3일 후`.
     static func ahead(_ date: Date, clock: String, now: Date, calendar: Calendar) -> String {
         let days = calendar.dateComponents([.day], from: calendar.startOfDay(for: now), to: calendar.startOfDay(for: date)).day ?? 0
         switch days {

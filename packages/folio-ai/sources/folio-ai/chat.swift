@@ -17,8 +17,6 @@ extension ContextBuilder {
         ContextItem(id: "material:\(path)", title: "자료: \(path)", tier: .related, text: text)
     }
 
-    /// What the chat panel sends: the course summary and note rules always, the open note, then what the user added,
-    /// minus what the user removed. An added item that duplicates the open note is skipped.
     public static func chatItems(course: CourseFile, rules: String, openNote: ContextItem?, added: [ContextItem],
                                  removed: Set<String>, now: Date) -> [ContextItem] {
         var items = [courseSummary(course, now: now), Self.rules(rules)]
@@ -35,7 +33,7 @@ extension ClaudeClient {
     and $$…$$, one display equation per block. When writing note content, follow the note-writing rules.
     """
 
-    /// Answers the last user message of `chat`. The context goes in the system prompt (stable part, cached) and in front
+    /// The context goes in the system prompt (stable part, cached) and in front
     /// of the newest question only; earlier turns are sent as plain text.
     public func reply(to chat: Chat, context: BuiltContext, onText: (@Sendable (String) -> Void)? = nil) async throws -> MessagesResponse {
         guard let last = chat.messages.last, last.role == .user else { throw ClaudeError.invalidOutput("no question to answer") }
@@ -47,7 +45,6 @@ extension ClaudeClient {
     }
 }
 
-/// API use in one calendar month, for the settings page (docs/SPEC.md "데이터 전송 원칙").
 public struct MonthlyUsage: Sendable, Equatable {
     public var year: Int
     public var month: Int
@@ -60,7 +57,6 @@ public struct MonthlyUsage: Sendable, Equatable {
 }
 
 extension APIUsageEvent {
-    /// Totals per month, newest first.
     public static func monthly(_ events: [(at: Date, event: APIUsageEvent)], calendar: Calendar) -> [MonthlyUsage] {
         var months: [DateComponents: MonthlyUsage] = [:]
         for (at, e) in events {

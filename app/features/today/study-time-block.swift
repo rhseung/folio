@@ -2,7 +2,6 @@ import Charts
 import FolioDomain
 import SwiftUI
 
-/// "최근 2주 과목별 공부 시간": stacked bars per study day in the course colors.
 struct StudyTimeBlock: View {
     @Environment(Workspace.self) private var workspace
     @State private var bars: [Workspace.StudyBar] = []
@@ -117,7 +116,6 @@ struct StudyTimeBlock: View {
         .overlay(RoundedRectangle(cornerRadius: Theme.Radius.control).strokeBorder(Theme.Palette.line))
     }
 
-    /// The day of the month, with its month on the 1st; today is named.
     static func label(_ day: LocalDate, today: LocalDate) -> String {
         day == today ? "오늘" : day.day == 1 ? "\(day.month)/1" : "\(day.day)"
     }
@@ -125,7 +123,6 @@ struct StudyTimeBlock: View {
     static func duration(_ seconds: TimeInterval) -> String { StudyTime.label(seconds) }
 }
 
-/// Courses one absence away from an attendance cap (docs/SPEC.md "알림"), shown on the today screen.
 struct AttendanceWarnings: View {
     @Environment(Workspace.self) private var workspace
 

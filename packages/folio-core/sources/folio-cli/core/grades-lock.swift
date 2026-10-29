@@ -22,7 +22,6 @@ enum GradesLock {
         return LAContext().canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
     }
 
-    /// `value` while unlocked, else a placeholder of the same job.
     static func masked(_ value: String) -> String { isUnlocked ? value : "••".styled(.dim) }
 
     /// For commands whose whole point is grades: asks for Touch ID or the Mac password when locked. The prompt is a
@@ -40,14 +39,14 @@ enum GradesLock {
         if let o = CLI.overrides {
             result.ok = o.gradesUnlocked
         } else {
-            LAContext().evaluatePolicy(.deviceOwnerAuthentication, localizedReason: "성적을 보려면 잠금을 해제하세요") { ok, _ in
+            LAContext().evaluatePolicy(.deviceOwnerAuthentication, localizedReason: String(localized: .lockReason)) { ok, _ in
                 result.ok = ok
                 done.signal()
             }
             done.wait()
         }
         guard result.ok else {
-            throw CLIError(exit: .needsConfirmation, message: "성적이 잠겨 있습니다", hints: ["Touch ID나 Mac 암호로 풀어야 보입니다: folio unlock"])
+            throw CLIError(exit: .needsConfirmation, message: String(localized: .lockLocked), hints: [String(localized: .lockLockedHint)])
         }
     }
 
@@ -69,45 +68,34 @@ enum GradesLock {
 }
 
 struct UnlockCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "unlock", abstract: "성적 잠금 풀기. Touch ID나 Mac 암호로 풀고 5분 뒤(--for로 정한 시간 뒤) 다시 잠긴다", discussion: """
-        성적, GPA, 점수는 잠겨 있다. gpa, transcript, score list는 잠겨 있으면 바로 묻고, 다른 명령의 성적 칸은 ••로 가린다.
-        풀려 있어도 다시 묻는다. 묻지 않고 늘릴 수 있으면 에이전트가 잠금을 끝없이 미룰 수 있다.
-
-        예시:
-          folio unlock
-          folio unlock --for 1h
-          folio lock
-        """)
+    static let configuration = CommandConfiguration(commandName: "unlock", abstract: String(localized: .unlockAbstract), discussion: String(localized: .unlockDiscussion))
     @OptionGroup var g: GlobalOptions
-    @Option(name: .customLong("for"), help: ArgumentHelp("열어 둘 시간. 예: 30m, 1h, 1h30m. 최대 12h", valueName: "duration")) var duration = "5m"
+    @Option(name: .customLong("for"), help: ArgumentHelp(String(localized: .unlockHelpDuration), valueName: "duration")) var duration = "5m"
 
     func run() throws {
         guard let seconds = GradesLock.seconds(duration), seconds > 0 else {
-            throw CLIError(exit: .usage, message: "시간을 읽지 못했습니다: \(duration)", hints: ["30m, 1h, 1h30m처럼 씁니다"])
+            throw CLIError(exit: .usage, message: String(localized: .unlockBadDuration(duration)), hints: [String(localized: .unlockBadDurationHint)])
         }
         let most = Int(GradeLock.maxUnlockSeconds / 3600)
         guard seconds <= GradeLock.maxUnlockSeconds else {
-            throw CLIError(exit: .usage, message: "최대 \(most)시간까지 풀 수 있습니다: \(duration)", hints: ["folio unlock --for \(most)h"])
+            throw CLIError(exit: .usage, message: String(localized: .unlockTooLong(most, duration)), hints: ["folio unlock --for \(most)h"])
         }
         if GradesLock.hasPasscode { try GradesLock.authenticate() }
         GradesLock.unlock(for: seconds)
         let until = CLI.now.addingTimeInterval(seconds)
         struct Out: Encodable { var unlocked = true, until: Date }
         if g.json { return try printJSON(Out(until: until)) }
-        say("✓".styled(.green) + " 성적 잠금을 풀었습니다 " + "\(until.formatted(date: .omitted, time: .shortened))에 다시 잠깁니다".styled(.dim))
+        say("✓".styled(.green) + " " + String(localized: .unlockDone) + " " + String(localized: .unlockUntil(until.formatted(date: .omitted, time: .shortened))).styled(.dim))
     }
 }
 
 struct LockCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "lock", abstract: "성적 바로 잠그기", discussion: """
-        예시:
-          folio lock
-        """)
+    static let configuration = CommandConfiguration(commandName: "lock", abstract: String(localized: .lockAbstract), discussion: String(localized: .lockDiscussion))
     @OptionGroup var g: GlobalOptions
 
     func run() throws {
         GradesLock.lock()
         if g.json { return try printJSON(["unlocked": false]) }
-        say("✓".styled(.green) + " 성적을 잠갔습니다")
+        say("✓".styled(.green) + " " + String(localized: .lockDone))
     }
 }

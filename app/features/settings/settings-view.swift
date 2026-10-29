@@ -6,7 +6,6 @@ import SwiftUI
 enum SettingsTab: String, CaseIterable, Identifiable {
     case profile = "내 정보", general = "일반", notifications = "알림", backup = "백업", catalog = "평어", notes = "노트", claude = "Claude"
     var id: Self { self }
-    /// Remembered across launches.
     static let storageKey = "settingsTab"
 
     var symbol: String {
@@ -23,7 +22,6 @@ enum SettingsTab: String, CaseIterable, Identifiable {
 }
 
 extension EnvironmentValues {
-    /// Opens the settings page at a section, from anywhere in the main window.
     @Entry var showSettings: @MainActor (SettingsTab) -> Void = { _ in }
 }
 
@@ -362,7 +360,6 @@ struct Footnote: View {
     }
 }
 
-/// On/off switch at the right of a form row.
 struct Switch: View {
     @Binding var isOn: Bool
     var body: some View {
@@ -370,7 +367,6 @@ struct Switch: View {
     }
 }
 
-/// Whole numbers as chips, each removable; a new one is scrubbed in a popover, held to `range`.
 /// Stored sorted, without repeats, and never empty.
 struct IntListField: View {
     @Binding var values: [Int]
@@ -423,7 +419,6 @@ struct IntListField: View {
     }
 }
 
-/// One heading per row, in order, each editable and removable.
 struct HeadingList: View {
     @Binding var lines: [String]
 

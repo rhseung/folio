@@ -2,7 +2,6 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// One semester: its period, courses, weekly timetable, exams and admin files (docs/SPEC.md "학기 화면").
 struct SemesterView: View {
     @Environment(Workspace.self) private var workspace
     let semesterID: UUID
@@ -102,7 +101,6 @@ struct SemesterView: View {
         }
     }
 
-    /// `8월 31일 – 12월 18일 · 9주차`, the week only while the term runs.
     func period(_ s: Semester) -> String {
         let calendar = workspace.calendar
         guard let start = s.start?.date(in: calendar), let end = s.end?.date(in: calendar) else { return "기간 미정" }
@@ -116,7 +114,6 @@ struct SemesterView: View {
         return (start...end).contains(workspace.today)
     }
 
-    /// The tile, the title and one muted line of facts, the same for a course with a folder and one only on record.
     func courseLabel(tile: IconTile, title: String, detail: [String]) -> some View {
         HStack(spacing: Theme.Space.m) {
             tile
@@ -176,7 +173,6 @@ struct SemesterView: View {
         }
     }
 
-    /// The recorded final grade, W included; 미정 until the semester's grades are out.
     @ViewBuilder func gradeMenu(_ course: Course) -> some View {
         let grades = workspace.catalog.grades(for: course.gradingMode)
         let selection = Binding(get: { course.finalGrade }, set: { g in workspace.run(CourseSet(course: course.id, [.finalGrade(g)])) })
@@ -192,7 +188,6 @@ struct SemesterView: View {
         }
     }
 
-    /// A week of the term, labeled with its Monday when the start is known; unset, it shows the term's default.
     func examWeek(_ semester: Semester, _ key: WritableKeyPath<Semester, Int?>, fallback: Int?) -> some View {
         let calendar = workspace.calendar
         let anchor = semester.start?.date(in: calendar)
@@ -205,7 +200,6 @@ struct SemesterView: View {
                           options: (fallback == nil ? [(nil, "없음")] : []) + weeks)
     }
 
-    /// A date-only chip bound to the semester's start or end, saved as soon as it changes.
     func dateChip(_ semester: Semester, _ key: WritableKeyPath<Semester, LocalDate?>) -> some View {
         let calendar = workspace.calendar
         let binding = Binding<Date>(
@@ -273,7 +267,6 @@ struct Timetable<Menu: View>: View {
                         }
                     }
                     .background(alignment: .top) {
-                        // Hour rules behind the columns, starting where the gutter's labels end.
                         VStack(spacing: 0) {
                             ForEach(first..<last, id: \.self) { _ in
                                 Theme.Palette.lineSoft.frame(height: 1).frame(height: Self.hourHeight, alignment: .top)
@@ -317,7 +310,6 @@ struct Timetable<Menu: View>: View {
     }
 }
 
-/// Year, term and period for a new semester; creates its folder.
 struct AddSemesterSheet: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.dismiss) private var dismiss
@@ -351,7 +343,6 @@ struct AddSemesterSheet: View {
     }
 }
 
-/// Name, code, number, credits and grading for a new course; creates `<code><number> <title>`.
 struct AddCourseSheet: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.dismiss) private var dismiss

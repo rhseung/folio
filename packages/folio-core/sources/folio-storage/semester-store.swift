@@ -2,7 +2,6 @@ import FolioDomain
 import Foundation
 
 extension GISTStore {
-    /// Adds a semester to transcript.json and creates its folder. A term that already exists is refused.
     public func addSemester(_ semester: Semester) throws {
         // Only a missing file starts empty; one that fails to read must not be replaced by a single-semester file.
         var doc = FileManager.default.fileExists(atPath: transcriptURL.path) ? try loadTranscript() : StoredDocument(new: Transcript())
@@ -16,7 +15,6 @@ extension GISTStore {
         try save(doc)
     }
 
-    /// Replaces a semester's fields (period, memo) in transcript.json.
     public func updateSemester(_ semester: Semester) throws {
         var doc = try loadTranscript()
         guard let i = doc.model.semesters.firstIndex(where: { $0.id == semester.id }) else { return }
@@ -24,7 +22,6 @@ extension GISTStore {
         try save(doc)
     }
 
-    /// Creates `<semester folder>/<folder name>/.folio/course.json`. Refuses a folder that already exists.
     @discardableResult
     public func createCourse(_ course: Course, folderName: String, in semester: Semester) throws -> CourseStore {
         guard let semesterFolder = semester.folder else { throw MoveJournal.Failure.targetExists(folderName) }
@@ -39,7 +36,6 @@ extension GISTStore {
 }
 
 extension GISTStore {
-    /// Files in the semester's `_Admin` folder (exam timetable, room assignments, registration papers).
     public func adminFiles(of semester: Semester) -> [URL] {
         guard let folder = semester.folder else { return [] }
         let admin = url.appending(path: folder.name).appending(path: StandardLayout.adminFolder)

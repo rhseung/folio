@@ -71,7 +71,6 @@ public enum MoveJournal {
         return writer.batch
     }
 
-    /// Reverses a batch: recreates removed folders, moves everything back, and removes folders the batch created.
     @discardableResult
     public static func undo(batch: UUID, in gist: URL, device: DeviceID, now: Date) throws -> UUID {
         let records = try records(in: gist).filter { $0.batch == batch }
@@ -140,7 +139,6 @@ public enum MoveJournal {
             try removeFolder(path)
         }
 
-        /// Removes source folders (and their ancestors) left holding nothing but ignorable junk, deepest first.
         func removeEmptied(_ folders: Set<String>) throws {
             var candidates = Set<String>()
             for folder in folders {

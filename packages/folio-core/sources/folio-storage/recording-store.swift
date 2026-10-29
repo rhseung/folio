@@ -24,7 +24,7 @@ extension CourseStore {
         return path
     }
 
-    /// The audio and its transcript. Only after the user confirmed the deletion.
+    /// Only after the user confirmed the deletion.
     public func deleteFiles(of recording: Recording) throws {
         try CoordinatedFile.remove(fileURL(recording.file))
         try CoordinatedFile.remove(fileURL(recording.transcriptFile))

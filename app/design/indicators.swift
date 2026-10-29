@@ -183,7 +183,6 @@ struct EmptyLine: View {
 }
 
 extension View {
-    /// Digits roll to a new value instead of swapping in place.
     func rolling(_ value: String) -> some View {
         contentTransition(.numericText()).animation(.snappy(duration: 0.35), value: value)
     }

@@ -20,7 +20,7 @@ struct GradingTests {
 
     func id(_ symbol: String) -> UUID { catalog.letterGrades.first { $0.symbol == symbol }!.id }
 
-    // MARK: GPA — made-up grades with expected values worked out by hand (CLAUDE.md "테스트 기준")
+    // MARK: GPA — made-up grades with expected values worked out by hand (AGENTS.md "테스트 기준")
 
     @Test func aTermWithAWithdrawal() {
         let catalog = catalog

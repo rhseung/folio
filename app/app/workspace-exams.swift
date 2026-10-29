@@ -15,7 +15,6 @@ extension Workspace {
         run(ExamPlanCheck(course: id, item: item, done: done))
     }
 
-    /// Exam ID -> its summary note ID.
     func examSummaryNotes(course id: UUID) -> [UUID: UUID] {
         let notes = (try? course(id)?.store.notes()) ?? []
         return Dictionary(notes.compactMap { n in

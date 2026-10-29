@@ -156,8 +156,7 @@ struct RootView: View {
         .frame(height: navHeight)
         .focusable(false)
         List(selection: listSelection) {
-            // One list of terms, each opening to its courses. The current term starts open, since its courses are what's
-            // opened daily.
+            // The current term starts open, since its courses are what's opened daily.
             Section {
                 ForEach(sidebarSemesters, id: \.id) { semester in
                     let courses = workspace.sidebarCourses(in: semester)
@@ -319,7 +318,6 @@ struct RootView: View {
         .sharedBackgroundVisibility(.hidden)
     }
 
-    /// Where the window is: the page with its sidebar icon, or a course with its dot, then what the page added.
     var crumb: some View {
         let first: Crumb = switch selection {
         case .course(let id): Crumb(title: workspace.course(id)?.title ?? "", symbol: workspace.course(id)?.file.course.icon, dot: workspace.accent(id).color)
@@ -355,7 +353,6 @@ struct RootView: View {
     /// less the Claude button that moved to the page.
     static let trailingTools: CGFloat = 288
 
-    /// Records the class under way, the one a recording belongs to; with none, there is nothing to record into.
     var recordButton: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let ongoing = workspace.ongoingClass(at: context.date)
@@ -375,7 +372,6 @@ struct RootView: View {
         }
     }
 
-    /// The manual timer for the open course; while it runs, it shows (and stops) wherever the window is.
     @ViewBuilder var timerButton: some View {
         if let manual = StudyTracker.shared.manual {
             ManualTimerButton(courseID: manual.courseId)
@@ -402,7 +398,6 @@ struct RootView: View {
         LineIcon(symbol: symbol, filled: selection == destination).foregroundStyle(Theme.Palette.chromeIcon)
     }
 
-    /// The current term first, then the credited term, then the rest oldest first in date order like the folders.
     var sidebarSemesters: [Semester] {
         // Oldest first; the credited term comes before any taken one.
         workspace.transcript.semesters.filter { $0.term == .credited } + workspace.semesters.reversed()
@@ -454,8 +449,8 @@ struct RootView: View {
             RequirementsView { course in
                 if workspace.course(course.id) != nil { selection = .course(course.id) } else if let id = course.semesterId { selection = .semester(id) }
             }
-        case .people: PeopleView { selection = .course($0) }
-        case .codes: CodesView()
+        case .people: PeopleView(workspace: workspace) { selection = .course($0) }
+        case .codes: CodesView(workspace: workspace)
         case .settings: SettingsView()
         }
     }

@@ -57,7 +57,6 @@ final class SchemaBuilder {
     }
 }
 
-/// What one decode asked for.
 final class Probe {
     let builder: SchemaBuilder
     let caseIndex: Int
@@ -174,7 +173,6 @@ extension Dictionary: SniffDictionary where Key == String, Value: Decodable { st
 protocol SniffOptional { static var wrapped: any Decodable.Type { get } }
 extension Optional: SniffOptional where Wrapped: Decodable { static var wrapped: any Decodable.Type { Wrapped.self } }
 
-/// Leaf types: their schema, and a value that decodes.
 protocol SchemaHint {
     static var schema: JSONValue { get }
     static var example: Any { get }
@@ -205,7 +203,6 @@ extension JSONValue: ExpressibleByStringLiteral, ExpressibleByDictionaryLiteral 
     public init(dictionaryLiteral elements: (String, JSONValue)...) { self = .object(Dictionary(elements) { a, _ in a }) }
 }
 
-/// `folio actions --schema`: one JSON value with every action's command, summary, and input schema.
 /// The decoded shape with what only the declaration knows: which kind of item a field names (`x-folio-ref`, a UUID
 /// or a name), and that a `Patch` field may be left out.
 func declaredInput(_ spec: ActionSpec, _ sniffed: JSONValue) -> JSONValue {

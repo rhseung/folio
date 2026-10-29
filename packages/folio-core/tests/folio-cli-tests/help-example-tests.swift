@@ -77,7 +77,6 @@ struct HelpExampleTests {
         return own + (config.subcommands + config.groupedSubcommands.flatMap(\.subcommands)).flatMap { examples($0) }
     }
 
-    /// Shell words: spaces split, quotes group.
     static func words(_ line: String) -> [String] {
         var out: [String] = [], cur = "", quote: Character?
         for c in line {

@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// Letter grades. Codes, categories and people have their own pages.
 struct CatalogEditor: View {
     @Environment(Workspace.self) private var workspace
 
@@ -76,7 +75,6 @@ struct CatalogEditing<Content: View>: View {
     }
 }
 
-/// Rows of one catalog table under a header naming its columns, with a remove button each and an add row at the end.
 struct EntityRows<E: Entity, Header: View, Row: View>: View {
     @Binding var items: [E]
     let name: KeyPath<E, String>
@@ -119,7 +117,6 @@ struct EntityRows<E: Entity, Header: View, Row: View>: View {
     }
 }
 
-/// A yes/no flag drawn as a chip; filled when on.
 struct ToggleChip: View {
     let title: String
     @Binding var isOn: Bool

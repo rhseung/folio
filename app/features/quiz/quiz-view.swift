@@ -25,7 +25,6 @@ final class QuizModel {
     func history(set: UUID, number: String) -> AttemptHistory { problemHistory[Self.key(set, number)] ?? [] }
 }
 
-/// What the solve tab should start with when another tab asks for it.
 struct SolveRequest: Equatable {
     var id = UUID()
     var scope: QuizScope
@@ -33,7 +32,6 @@ struct SolveRequest: Equatable {
     var order: QuizOrder = .unitOrder
 }
 
-/// The quiz section (docs/SPEC.md "퀴즈와 채점"): solving, cards, the wrong list with statistics, and problem sets.
 struct QuizView: View {
     @Environment(Workspace.self) private var workspace
     let course: LoadedCourse
@@ -134,7 +132,6 @@ extension WrongTally {
     var accuracyText: String { accuracy.map { "\(Int(($0 * 100).rounded()))%" } ?? "-" }
 }
 
-/// Where to put the API key when there is none.
 struct MissingKeyNotice: View {
     @Environment(\.showSettings) private var showSettings
 

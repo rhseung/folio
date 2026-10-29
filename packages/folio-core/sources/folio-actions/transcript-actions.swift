@@ -25,12 +25,12 @@ public struct TranscriptAdd {
     var number: String = ""
 
     public func run(_ ctx: ActionContext) throws {
-        guard !ctx.hasFolder(id) else { throw ActionError.rule("이미 쓰는 과목 ID입니다: \(id)") }
+        guard !ctx.hasFolder(id) else { throw ActionError.rule(String(localized: .errorIdTakenCourse("\(id)"))) }
         var course = Course(id: id, device: ctx.device, at: ctx.now, semesterId: semester, title: title, codes: code.map { [$0] } ?? [],
                             number: number, credits: credits, gradingMode: mode)
         course.finalGrade = grade
         try ctx.editTranscript { t in
-            guard !t.courses.contains(where: { $0.id == id }) else { throw ActionError.rule("이미 쓰는 과목 ID입니다: \(id)") }
+            guard !t.courses.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenCourse("\(id)"))) }
             t.courses.append(course)
         }
         ctx.made(id)
@@ -55,7 +55,7 @@ public struct TranscriptSet {
     var grade: Patch<LetterGrade.ID?>
 
     public func run(_ ctx: ActionContext) throws {
-        guard !ctx.hasFolder(course) else { throw ActionError.rule("과목 폴더가 있는 과목은 folio course set으로 바꿉니다") }
+        guard !ctx.hasFolder(course) else { throw ActionError.rule(String(localized: .errorTranscriptHasFolderSet)) }
         try ctx.editTranscript { t in
             try t.update(\.courses, course) { c in
                 title.apply(&c.title)
@@ -77,7 +77,7 @@ public struct TranscriptRemove {
     @Arg var course: Course.ID
 
     public func run(_ ctx: ActionContext) throws {
-        guard !ctx.hasFolder(course) else { throw ActionError.rule("과목 폴더가 있는 과목의 기록은 폴더와 함께 있습니다") }
+        guard !ctx.hasFolder(course) else { throw ActionError.rule(String(localized: .errorTranscriptHasFolderRm)) }
         try ctx.editTranscript { try $0.remove(Course.self, course) }
     }
 }

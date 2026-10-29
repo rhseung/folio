@@ -11,7 +11,7 @@ public protocol Action: Codable, Sendable {
 }
 
 extension Action {
-    /// The CLI command that runs this action, e.g. `session rm`. `folio actions --check` matches commands on it.
+    /// `folio actions --check` matches commands on it.
     public static var command: String { spec.command }
 }
 
@@ -91,8 +91,7 @@ extension [Change] {
     }
 }
 
-/// What an action may touch, and the record of what it did. All reads and writes of an action go through here, so a
-/// dry run is the same code with the writes left out.
+/// All reads and writes of an action go through here, so a dry run is the same code with the writes left out.
 public final class ActionContext {
     public let gist: GISTStore
     public let device: DeviceID
@@ -106,7 +105,6 @@ public final class ActionContext {
     public private(set) var savedCourses: [UUID: StoredDocument<CourseFile>] = [:]
     /// True when something other than a course file changed: the app then reads everything again.
     public private(set) var needsReload = false
-    /// Courses whose logs got new lines.
     public private(set) var loggedCourses: Set<UUID> = []
     /// What an import skipped or wants checked, for the person reading the result.
     public private(set) var notes: [String] = []
@@ -142,7 +140,7 @@ public final class ActionContext {
     // MARK: Reads
 
     public func store(_ course: UUID) throws -> CourseStore {
-        guard let store = try courseStores()[course] else { throw ActionError.notFound("과목을 찾지 못했습니다: \(course)") }
+        guard let store = try courseStores()[course] else { throw ActionError.notFound(String(localized: .errorNotFoundCourseId("\(course)"))) }
         return store
     }
 
@@ -211,7 +209,6 @@ public final class ActionContext {
 
     // MARK: Writes
 
-    /// Applies `change` to the course file, stamps the course as edited from this device, and saves it.
     public func edit(_ course: UUID, _ change: (inout CourseFile) throws -> Void) throws {
         let store = try store(course)
         var doc = try document(course)
@@ -244,7 +241,7 @@ public final class ActionContext {
     public func createNote(_ course: UUID, title: String, meta: NoteMeta, body: String?) throws -> UUID? {
         let store = try store(course)
         let planned = relative(store.url.appending(path: CourseFolder.notes.rawValue).appending(path: "\(title).md"))
-        if let id = meta.id, try store.notes().contains(where: { $0.meta.id == id }) { throw ActionError.rule("이미 쓰는 노트 ID입니다: \(id)") }
+        if let id = meta.id, try store.notes().contains(where: { $0.meta.id == id }) { throw ActionError.rule(String(localized: .errorIdTakenNote("\(id)"))) }
         guard !dryRun else {
             record(Change(.added, planned))
             return meta.id
@@ -276,7 +273,7 @@ public final class ActionContext {
         try refuseNewViolation(before, doc.model, World())
         let transcript = try transcript()
         if let v = Transcript.model.newViolation(transcript, in: World(catalog: before), transcript, in: World(catalog: doc.model)) {
-            throw ActionError.rule("다른 파일이 쓰고 있어 바꿀 수 없습니다: \(v.message)")
+            throw ActionError.rule(String(localized: .errorInUse(v.message)))
         }
         try refuseBreakingCourses(World(catalog: before, transcript: transcript), World(catalog: doc.model, transcript: transcript))
         catalogDoc = doc
@@ -307,12 +304,11 @@ public final class ActionContext {
         for course in try courseStores().keys.sorted(by: { $0.uuidString < $1.uuidString }) {
             let file = try file(course)
             if let v = CourseFile.model.newViolation(file, in: before, file, in: after) {
-                throw ActionError.rule("다른 파일이 쓰고 있어 바꿀 수 없습니다: \(v.message)")
+                throw ActionError.rule(String(localized: .errorInUse(v.message)))
             }
         }
     }
 
-    /// Appends one line to this device's log in the course folder.
     public func log<E: LogEvent>(_ event: E, course: UUID, at date: Date? = nil) throws {
         let store = try store(course)
         changes.append(Change(.changed, relative(store.log.folder.appending(path: device.uuidString).appendingPathExtension(StandardLayout.logExtension)), item: E.type))

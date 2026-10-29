@@ -15,7 +15,7 @@ struct SearchStoreTests {
         GISTStore(url: try Fixture.standard.copyToTemp())
     }
 
-    /// A one-page PDF whose text layer says `text`; the fixture PDFs are placeholders with none.
+    /// The fixture PDFs are placeholders with no text layer.
     func writePDF(_ text: String, to url: URL) throws {
         var box = CGRect(x: 0, y: 0, width: 400, height: 200)
         let ctx = try #require(CGContext(url as CFURL, mediaBox: &box, nil))

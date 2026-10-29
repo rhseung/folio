@@ -1,7 +1,7 @@
 import FolioDomain
 import Foundation
 
-/// Structured results for the tasks that need them (docs/SPEC.md "작업 목록"). Each type carries the JSON schema
+/// Each type carries the JSON schema
 /// sent as `output_config.format`, so the schema and the decoder can't drift apart.
 public protocol StructuredResult: Decodable, Sendable {
     static var schema: JSONValue { get }
@@ -24,7 +24,6 @@ enum Schema {
     static func nullable(_ t: JSONValue) -> JSONValue { .object(["anyOf": .array([t, .object(["type": .string("null")])])]) }
 }
 
-/// Grading of a free-text, proof or handwritten answer (docs/SPEC.md "AI 채점").
 public struct GradingResult: StructuredResult, Equatable {
     public enum Verdict: String, Codable, Sendable { case correct, partial, wrong }
     public struct LineNote: Codable, Sendable, Equatable {
@@ -34,7 +33,6 @@ public struct GradingResult: StructuredResult, Equatable {
     }
 
     public var verdict: Verdict
-    /// Rubric elements the answer lacks.
     public var missing: [String]
     public var feedback: String
     public var lines: [LineNote]
@@ -47,7 +45,7 @@ public struct GradingResult: StructuredResult, Equatable {
     ])
 }
 
-/// Proposed classification of an unclassified file. Only a proposal: nothing moves without approval.
+/// Only a proposal: nothing moves without approval.
 public struct FileClassification: StructuredResult, Equatable {
     public var role: String
     public var kind: String
@@ -69,7 +67,6 @@ public struct FileClassification: StructuredResult, Equatable {
     ])
 }
 
-/// Title and deadline read from an assignment PDF.
 public struct AssignmentExtraction: StructuredResult, Equatable {
     public var title: String
     /// ISO 8601 with offset, or null when the document has no deadline.
@@ -78,7 +75,7 @@ public struct AssignmentExtraction: StructuredResult, Equatable {
     public static let schema = Schema.object(["title": Schema.string, "due": Schema.nullable(Schema.string)])
 }
 
-/// Grading rules read from a syllabus (docs/SPEC.md "평가 기준 추출"); the user confirms before saving.
+/// The user confirms before saving.
 public struct GradingPolicyExtraction: StructuredResult, Equatable {
     public struct Component: Codable, Sendable, Equatable {
         public var name: String
@@ -116,7 +113,7 @@ extension ClaudeClient {
         try await structured(task, as: type, schema: T.schema, system: system, messages: messages)
     }
 
-    /// Grades an answer against the model answer and rubric. `answerImages` are PNG pages of handwriting.
+    /// `answerImages` are PNG pages of handwriting.
     public func grade(question: String, modelAnswer: String, rubric: [String], answer: String?, answerImages: [Data] = [],
                       rules: String) async throws -> GradingResult {
         var content: [ContentBlock] = answerImages.map { .image($0, mediaType: "image/png") }

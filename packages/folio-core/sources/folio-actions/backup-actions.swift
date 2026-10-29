@@ -17,12 +17,12 @@ public struct BackupCreate {
         let store = try ctx.backupStore()
         let today = LocalDate(ctx.now, in: ctx.calendar)
         let target = store.folder.appending(path: "Folio-\(today).zip").path
-        guard !ctx.dryRun else { return ctx.note("만들 백업: \(target)") }
+        guard !ctx.dryRun else { return ctx.note(String(localized: .noteBackupPlanned(target))) }
         do {
             let url = try store.backUp(today: today, dailyDays: try ctx.settings().backup.dailyDays, calendar: ctx.calendar)
-            ctx.note("백업: \(url.path(percentEncoded: false))")
+            ctx.note(String(localized: .noteBackupCreated(url.path(percentEncoded: false))))
         } catch BackupStore.Failure.insideGIST(let folder) {
-            throw ActionError.rule("백업 폴더가 GIST 폴더 안에 있습니다: \(folder)")
+            throw ActionError.rule(String(localized: .errorBackupInsideGist(folder)))
         }
     }
 }
@@ -37,7 +37,7 @@ public struct BackupRestore {
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.backupStore()
         let courseStore = try ctx.store(course)
-        guard let archive = store.archives().first(where: { $0.day == day }) else { throw ActionError.notFound("\(day) 백업을 찾지 못했습니다") }
+        guard let archive = store.archives().first(where: { $0.day == day }) else { throw ActionError.notFound(String(localized: .errorNotFoundBackup("\(day)"))) }
         let stamp = ctx.now.formatted(.iso8601.year().month().day().time(includingFractionalSeconds: false).timeSeparator(.omitted))
         let target = store.folder.deletingLastPathComponent().appending(path: "restored")
             .appending(path: "\(courseStore.url.lastPathComponent) (\(day)) \(stamp)")
@@ -45,9 +45,9 @@ public struct BackupRestore {
         do {
             try store.restore(course: courseStore, from: archive, to: target)
         } catch BackupStore.Failure.courseNotInBackup(let path) {
-            throw ActionError.notFound("이 백업에 없는 과목입니다: \(path)")
+            throw ActionError.notFound(String(localized: .errorNotFoundBackupCourse(path)))
         } catch BackupStore.Failure.targetExists(let path) {
-            throw ActionError.conflict("이미 있는 폴더입니다: \(path)")
+            throw ActionError.conflict(String(localized: .errorFolderExists(path)))
         }
         ctx.note(target.path(percentEncoded: false))
     }

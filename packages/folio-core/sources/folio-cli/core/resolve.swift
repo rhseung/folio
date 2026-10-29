@@ -14,16 +14,14 @@ struct CourseRef: Identifiable {
     var color = ""
 
     var id: UUID { course.id }
-    /// The code in the course's color, for tables and lists a person reads.
     var tag: String { code.course(color) }
 
     func requireFile() throws -> CourseFile {
-        guard let file else { throw CLIError(exit: .rule, message: "\(course.title)은(는) 과목 폴더가 없습니다") }
+        guard let file else { throw CLIError(exit: .rule, message: String(localized: .resolveNoCourseFolder(course.title))) }
         return file
     }
 }
 
-/// Turns what people type (`EC4207`, `9주차-1`, `Quiz1`, a UUID) into ids (docs/SPEC.md "명령 구조").
 final class Resolver {
     let ctx: ActionContext
     init(_ ctx: ActionContext) { self.ctx = ctx }
@@ -59,7 +57,7 @@ final class Resolver {
         let today = LocalDate(ctx.now, in: ctx.calendar)
         if let s = semesters.last(where: { ($0.start.map { $0 <= today } ?? false) && ($0.end.map { today <= $0 } ?? true) }) { return s }
         if let s = semesters.last(where: { $0.start.map { $0 <= today } ?? false }) ?? semesters.last { return s }
-        throw CLIError(exit: .notFound, message: "학기가 없습니다", hints: ["folio semester add 2026 가을"])
+        throw CLIError(exit: .notFound, message: String(localized: .resolveNoSemester), hints: [String(localized: .resolveNoSemesterHint)])
     }
 
     func semester(_ ref: String?) throws -> Semester {
@@ -77,7 +75,7 @@ final class Resolver {
         if let course { return (try self.course(course), ref) }
         guard let slash = ref.firstIndex(of: "/") else {
             if ref.isEmpty || Picker.allowed, let c = try? self.course(ref) { return (c, "") }
-            throw CLIError(exit: .usage, message: "과목을 함께 적어 주세요: <과목>/\(ref)", hints: ["예: EC4207/\(ref)"])
+            throw CLIError(exit: .usage, message: String(localized: .resolveNeedCourse(ref)), hints: [String(localized: .resolveNeedCourseHint(ref))])
         }
         return (try self.course(String(ref[..<slash])), String(ref[ref.index(after: slash)...]))
     }
@@ -112,7 +110,7 @@ final class Resolver {
     }
 
     func note(_ name: String, in c: CourseRef) throws -> NoteFile {
-        guard let store = c.store else { throw CLIError(exit: .rule, message: "\(c.course.title)은(는) 과목 폴더가 없습니다") }
+        guard let store = c.store else { throw CLIError(exit: .rule, message: String(localized: .resolveNoCourseFolder(c.course.title))) }
         let notes = try store.notes()
         let path = { (n: NoteFile) in store.coursePath(of: n.url) ?? n.url.lastPathComponent }
         return try pick(name, notes, what: "노트", id: { $0.meta.id }, names: { [path($0), $0.title] }, ref: { "\(c.code)/\(path($0))" })
@@ -128,14 +126,14 @@ final class Resolver {
     /// error listing them, never a guess.
     func pick<T>(_ ref: String, _ items: [T], what: String, id: (T) -> UUID?, names: (T) -> [String], ref label: (T) -> String) throws -> T {
         if ref.isEmpty {
-            guard !items.isEmpty else { throw CLIError(exit: .notFound, message: "\(what)이(가) 없습니다") }
+            guard !items.isEmpty else { throw CLIError(exit: .notFound, message: String(localized: .resolveEmpty(what))) }
             if let chosen = Picker.choose(items.map(label), prompt: what) { return items[items.map(label).firstIndex(of: chosen)!] }
-            throw CLIError(exit: .usage, message: "\(what)을(를) 주세요", candidates: items.count <= 12 ? items.map(label) : [],
-                           hints: ["터미널에서 fzf가 있으면 빼고 실행해 고를 수 있다"])
+            throw CLIError(exit: .usage, message: String(localized: .resolveNeed(what)), candidates: items.count <= 12 ? items.map(label) : [],
+                           hints: [String(localized: .resolvePickHint)])
         }
         if let uuid = UUID(uuidString: ref) {
             if let hit = items.first(where: { id($0) == uuid }) { return hit }
-            throw CLIError(exit: .notFound, message: "\(what)을(를) 찾지 못했습니다: \(ref)")
+            throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound(what, ref)))
         }
         let key = Self.normalized(ref)
         let exact = items.filter { names($0).contains { Self.normalized($0) == key } }
@@ -143,9 +141,9 @@ final class Resolver {
         if hits.count == 1 { return hits[0] }
         if hits.count > 1, let chosen = Picker.choose(hits.map(label), prompt: what) { return hits[hits.map(label).firstIndex(of: chosen)!] }
         if hits.isEmpty {
-            throw CLIError(exit: .notFound, message: "\(what)을(를) 찾지 못했습니다: \(ref)", candidates: items.count <= 12 ? items.map(label) : [])
+            throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound(what, ref)), candidates: items.count <= 12 ? items.map(label) : [])
         }
-        throw CLIError(exit: .notFound, message: "\(what) '\(ref)'이(가) 여러 개에 맞습니다", candidates: hits.map(label))
+        throw CLIError(exit: .notFound, message: String(localized: .resolveAmbiguous(what, ref)), candidates: hits.map(label))
     }
 
     /// `given`, or when it is empty several names picked at a terminal; otherwise a usage error.
@@ -153,7 +151,7 @@ final class Resolver {
         guard given.isEmpty else { return given }
         let picked = Picker.chooseMany(names, prompt: what)
         guard picked.isEmpty else { return picked }
-        throw CLIError(exit: .usage, message: "\(what)을(를) 하나 이상 주세요", hints: ["터미널에서 fzf가 있으면 빼고 실행해 여러 개를 고를 수 있다"])
+        throw CLIError(exit: .usage, message: String(localized: .resolveNeedMany(what)), hints: [String(localized: .resolvePickManyHint)])
     }
 
     static func normalized(_ s: String) -> String {
@@ -182,7 +180,6 @@ enum Picker {
         run(lines, prompt: prompt, multi: true)
     }
 
-    /// The `show` that previews a picked line, by what is being picked.
     static let previews = ["과목": "course", "학기": "semester", "회차": "session", "시험": "exam", "단원": "unit", "과제": "assignment", "노트": "note", "자료": "material"]
 
     static func run(_ lines: [String], prompt: String, multi: Bool) -> [String] {

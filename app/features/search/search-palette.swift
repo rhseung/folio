@@ -2,7 +2,6 @@ import FolioDomain
 import FolioIndex
 import SwiftUI
 
-/// Where a search result leads inside a course.
 struct SearchTarget: Equatable {
     var courseId: UUID
     var section: CourseSection
@@ -54,8 +53,6 @@ extension SearchKind {
     }
 }
 
-/// ⌘K: one field over every course's notes, files, assignments, sessions, units and quiz cards, grouped by kind and narrowed by
-/// kind, semester or course (docs/SPEC.md "검색").
 struct SearchPalette: View {
     @Environment(Workspace.self) private var workspace
     let close: () -> Void
@@ -65,7 +62,6 @@ struct SearchPalette: View {
     @State private var scope = Scope.all
     @State private var index: SearchStore?
     @State private var searching: Task<Void, Never>?
-    /// Courses read so far and to read while the index catches up; nil once it has.
     @State private var indexing: (done: Int, total: Int)?
     /// Progress hops arrive as separate main-actor tasks and may land after the refresh returned; past that they're stale.
     @State private var caughtUp = false
@@ -218,7 +214,6 @@ struct SearchPalette: View {
         .font(Theme.Typeface.caption)
     }
 
-    /// Every course, then the semesters that hold them, newest first.
     var scopeOptions: [PickOption<Scope>] {
         let semesters = workspace.semesters.filter { !workspace.courses(in: $0).isEmpty }
         return [PickOption(id: .all, title: "모든 과목")]

@@ -5,8 +5,6 @@ import FolioStorage
 import Foundation
 import Testing
 
-/// Set options that clear or replace whole lists, the note conflict guard, field changes in the output, and what an
-/// omitted item does where nobody can pick it.
 struct WriteCommandTests {
     let h = Harness()
     let gt = Harness.graphTheory
@@ -157,7 +155,6 @@ struct WriteCommandTests {
     }
 }
 
-/// Decodes what `--json` prints for a write.
 struct WriteResultProbe: Decodable {
     var changes: [FolioActions.Change]
 }

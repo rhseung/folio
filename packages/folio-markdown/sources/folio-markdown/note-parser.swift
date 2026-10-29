@@ -1,6 +1,5 @@
 import Markdown
 
-/// A note: frontmatter plus the parsed body, with the extended syntax already identified.
 public struct ParsedNote {
     public var frontmatter: Frontmatter
     public var body: String
@@ -16,7 +15,6 @@ public struct ParsedNote {
         blockIDs = body.matches(of: /\s\^([A-Za-z0-9-]+)\s*$/.anchorsMatchLineEndings()).map { String($0.1) }
     }
 
-    /// Text of the note, frontmatter included, ready to save.
     public var text: String {
         frontmatter.render(body: body)
     }

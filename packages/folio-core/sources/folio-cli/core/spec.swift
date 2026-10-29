@@ -7,12 +7,11 @@ import Foundation
 // new action's command needs no code of its own.
 
 extension Resolver {
-    /// The id of the item `ref` names. Items inside a course are looked up in `course`.
     func id(_ kind: String, _ ref: String, in course: CourseRef? = nil) throws -> UUID {
         // A second item in the same course may be written with or without `<course>/` in front.
         let ref = course?.local(ref) ?? ref
         func scoped() throws -> CourseRef {
-            guard let course else { throw CLIError(exit: .usage, message: "과목을 함께 적어 주세요: <과목>/\(ref)") }
+            guard let course else { throw CLIError(exit: .usage, message: String(localized: .resolveNeedCourse(ref))) }
             return course
         }
         return switch kind {
@@ -31,7 +30,7 @@ extension Resolver {
         case "CourseCode": try code(ref).id
         case "Person": try person(ref).id
         case "Category": try category(ref).id
-        default: throw CLIError(exit: .usage, message: "이 종류는 이름으로 가리킬 수 없습니다: \(kind)")
+        default: throw CLIError(exit: .usage, message: String(localized: .resolveKindNoName(kind)))
         }
     }
 
@@ -39,15 +38,14 @@ extension Resolver {
         let n = try note(ref, in: c)
         guard let id = n.meta.id else {
             let path = c.store?.coursePath(of: n.url) ?? ref
-            throw CLIError(exit: .rule, message: "노트에 아직 ID가 없습니다: \(path)", hints: ["folio note adopt \(c.code)/\(path)"])
+            throw CLIError(exit: .rule, message: String(localized: .resolveNoteNoId(path)), hints: ["folio note adopt \(c.code)/\(path)"])
         }
         return id
     }
 
-    /// The course-relative path of the file `ref` names, for `X.Path` fields.
     func path(_ kind: String, _ ref: String, in course: CourseRef?) throws -> String {
-        guard let course else { throw CLIError(exit: .usage, message: "과목을 함께 적어 주세요: <과목>/\(ref)") }
-        guard kind == "NotePath" else { throw CLIError(exit: .usage, message: "이 종류는 경로로 가리킬 수 없습니다: \(kind)") }
+        guard let course else { throw CLIError(exit: .usage, message: String(localized: .resolveNeedCourse(ref))) }
+        guard kind == "NotePath" else { throw CLIError(exit: .usage, message: String(localized: .resolveKindNoPath(kind))) }
         let n = try note(course.local(ref), in: course)
         return course.store?.coursePath(of: n.url) ?? ref
     }
@@ -71,8 +69,6 @@ extension Complete {
     }
 }
 
-/// Runs a declared action with the texts its spec gives: asks when it removes, moves, or touches several items, and
-/// says what it did by name.
 @discardableResult
 func perform<A: Action>(spec action: A, _ options: GlobalOptions, ctx: ActionContext) throws -> ActionContext {
     let spec = A.spec

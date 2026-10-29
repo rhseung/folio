@@ -2,7 +2,6 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// Edits or deletes one score entry.
 struct ScoreEntrySheet: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.dismiss) private var dismiss
@@ -91,7 +90,6 @@ struct ScoreEntrySheet: View {
     }
 }
 
-/// Adds or edits a grade component; an existing one can be deleted along with its scores.
 struct ComponentSheet: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.dismiss) private var dismiss
@@ -192,7 +190,6 @@ struct ComponentSheet: View {
     }
 }
 
-/// Attendance caps, minimum attendance, late submission rule and the verbatim rules.
 struct PolicySheet: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.dismiss) private var dismiss
@@ -299,7 +296,6 @@ struct PolicySheet: View {
     }
 }
 
-/// Lays chips out left to right, wrapping onto new lines.
 struct FlowLayout: Layout {
     var spacing: CGFloat = 6
 
@@ -350,6 +346,5 @@ extension Double {
         return r == 0 ? "평균" : "평균 \(r > 0 ? "+" : "")\(r.formatted())점"
     }
 
-    /// 0.6667 → `66.7%`
     var percent: String { (self * 100).formatted(.number.precision(.fractionLength(0...1))) + "%" }
 }

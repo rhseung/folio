@@ -5,13 +5,13 @@ import Foundation
 
 func note(_ ctx: ActionContext, course: UUID, path: String) throws -> NoteFile {
     guard let note = try ctx.store(course).note(at: path) else {
-        throw ActionError.notFound("노트를 찾지 못했습니다: \(path)")
+        throw ActionError.notFound(String(localized: .errorNotFoundNote("\(path)")))
     }
     return note
 }
 
 func note(_ ctx: ActionContext, course: UUID, id: UUID) throws -> NoteFile {
-    guard let note = try ctx.store(course).note(id: id) else { throw ActionError.notFound("노트를 찾지 못했습니다: \(id)") }
+    guard let note = try ctx.store(course).note(id: id) else { throw ActionError.notFound(String(localized: .errorNotFoundNote("\(id)"))) }
     return note
 }
 
@@ -28,7 +28,7 @@ public struct NoteAdd {
 
     public func run(_ ctx: ActionContext) throws {
         let title = title.trimmingCharacters(in: .whitespaces)
-        guard !title.isEmpty else { throw ActionError.rule("노트 제목이 비어 있습니다") }
+        guard !title.isEmpty else { throw ActionError.rule(String(localized: .errorNoteTitleEmpty)) }
         let settings = try ctx.settings()
         let body = body ?? NoteTemplate.body(for: kind, title: title, sections: settings.noteSections(for: kind))
         ctx.made(try ctx.createNote(course, title: title, meta: NoteMeta(id: id, kind: kind, math: settings.newNoteMath), body: body) ?? id)
@@ -48,7 +48,7 @@ public struct NoteWrite {
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.store(course)
         let file = try FolioActions.note(ctx, course: course, path: note)
-        if let expected, try store.read(file) != expected { throw ActionError.conflict("노트가 다른 곳에서 바뀌었습니다: \(note)") }
+        if let expected, try store.read(file) != expected { throw ActionError.conflict(String(localized: .errorNoteChanged("\(note)"))) }
         try ctx.io(Change(.changed, ctx.relative(file.url))) { try store.write(file, text: text) }
     }
 }
@@ -90,11 +90,11 @@ public struct NoteLink {
         let course = try ctx.file(self.course)
         // The note's frontmatter isn't part of the course file, so the model can't check where it points.
         if kind == .rough || kind == .review, let session {
-            guard let s = course.sessions.first(where: { $0.id == session }) else { throw ActionError.notFound("회차를 찾지 못했습니다") }
-            if s.isCancelled { throw ActionError.rule("휴강한 회차에는 노트를 연결할 수 없습니다") }
+            guard let s = course.sessions.first(where: { $0.id == session }) else { throw ActionError.notFound(String(localized: .errorNotFoundSession)) }
+            if s.isCancelled { throw ActionError.rule(String(localized: .errorNoteCancelledSession)) }
         }
-        if kind == .examSummary, let exam, !course.exams.contains(where: { $0.id == exam }) { throw ActionError.notFound("시험을 찾지 못했습니다") }
-        if kind == .topic, let u = units.first(where: { u in !course.units.contains { $0.id == u } }) { throw ActionError.notFound("단원을 찾지 못했습니다: \(u)") }
+        if kind == .examSummary, let exam, !course.exams.contains(where: { $0.id == exam }) { throw ActionError.notFound(String(localized: .errorNotFoundExam)) }
+        if kind == .topic, let u = units.first(where: { u in !course.units.contains { $0.id == u } }) { throw ActionError.notFound(String(localized: .errorNotFoundUnitId("\(u)"))) }
         var file = try FolioActions.note(ctx, course: self.course, id: note)
         file.meta.kind = kind
         file.meta.sessionId = kind == .rough || kind == .review ? session : nil
@@ -139,7 +139,7 @@ public struct QuizCardSave {
     public func run(_ ctx: ActionContext) throws {
         let units = Set(try ctx.file(course).units.map(\.id))
         for unit in Set(cards.map(\.unitId)) {
-            guard units.contains(unit) else { throw ActionError.notFound("단원을 찾지 못했습니다") }
+            guard units.contains(unit) else { throw ActionError.notFound(String(localized: .errorNotFoundUnit)) }
             try ctx.editQuiz(course, unit: unit) { list in
                 for var card in cards where card.unitId == unit {
                     card.touch(by: ctx.device, at: ctx.now)
@@ -164,7 +164,7 @@ public struct QuizCardRemove {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.editQuiz(course, unit: unit) { list in
-            _ = try index(card, in: list, "카드")
+            _ = try index(card, in: list, .valueCard)
             list.removeAll { $0.id == card }
         }
     }
@@ -179,7 +179,7 @@ public struct QuizRecord {
     public func run(_ ctx: ActionContext) throws {
         let units = try ctx.file(course).units
         guard try units.contains(where: { try ctx.store(course).loadQuiz(unit: $0.id).model.cards.contains { $0.id == attempt.cardId } }) else {
-            throw ActionError.notFound("퀴즈 카드를 찾지 못했습니다")
+            throw ActionError.notFound(String(localized: .errorNotFoundCard))
         }
         try ctx.log(attempt, course: course)
     }
@@ -214,7 +214,7 @@ public struct ProblemSetRemove {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            _ = try index(set, in: f.problemSets, "문제 묶음")
+            _ = try index(set, in: f.problemSets, .valueProblemSet)
             f.problemSets.removeAll { $0.id == set }
         }
     }
@@ -237,9 +237,9 @@ public struct ProblemLinkUnit {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            let s = try index(set, in: f.problemSets, "문제 묶음")
-            _ = try index(unit, in: f.units, "단원")
-            guard let p = f.problemSets[s].problems.firstIndex(where: { $0.number == number }) else { throw ActionError.notFound("문제 \(number)을(를) 찾지 못했습니다") }
+            let s = try index(set, in: f.problemSets, .valueProblemSet)
+            _ = try index(unit, in: f.units, .valueUnit)
+            guard let p = f.problemSets[s].problems.firstIndex(where: { $0.number == number }) else { throw ActionError.notFound(String(localized: .errorNotFoundProblem(number))) }
             guard f.problemSets[s].problems[p].unitIds.contains(unit) != linked else { return }
             if linked { f.problemSets[s].problems[p].unitIds.append(unit) } else { f.problemSets[s].problems[p].unitIds.removeAll { $0 == unit } }
             f.problemSets[s].touch(by: ctx.device, at: ctx.now)
@@ -255,9 +255,9 @@ public struct ProblemRecord {
 
     public func run(_ ctx: ActionContext) throws {
         guard let set = try ctx.file(course).problemSets.first(where: { $0.id == attempt.problemSetId }) else {
-            throw ActionError.notFound("문제 묶음을 찾지 못했습니다")
+            throw ActionError.notFound(String(localized: .errorNotFoundProblemSet))
         }
-        guard set.problems.contains(where: { $0.number == attempt.number }) else { throw ActionError.notFound("문제 \(attempt.number)을(를) 찾지 못했습니다") }
+        guard set.problems.contains(where: { $0.number == attempt.number }) else { throw ActionError.notFound(String(localized: .errorNotFoundProblem(attempt.number))) }
         try ctx.log(attempt, course: course)
     }
 }
@@ -281,7 +281,7 @@ public struct ReviewRecord {
     var end: Date
 
     public func run(_ ctx: ActionContext) throws {
-        guard end >= start else { throw ActionError.rule("끝난 시각이 시작보다 이릅니다") }
+        guard end >= start else { throw ActionError.rule(String(localized: .errorReviewEndBeforeStart)) }
         try ctx.log(ReviewEvent(unitId: unit, result: result, seconds: Int(end.timeIntervalSince(start).rounded())), course: course, at: end)
         try ctx.log(StudySessionEvent(courseId: course, start: start, end: end, screen: "review"), course: course, at: end)
     }

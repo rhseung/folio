@@ -1,48 +1,34 @@
 import ArgumentParser
 import Foundation
 
-@main
 struct Folio: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "folio",
-        abstract: "Folio의 GIST 폴더를 터미널에서 다룹니다. 앱과 같은 액션을 부릅니다.",
+        abstract: String(localized: .folioAbstract),
         groupedSubcommands: [
-            CommandGroup(name: "오늘", subcommands: [TodayCommand.self]),
-            CommandGroup(name: "수업", subcommands: [SessionCommand.self, UnitCommand.self, AttendanceCommand.self]),
-            CommandGroup(name: "시험과 과제", subcommands: [ExamCommand.self, AssignmentCommand.self]),
-            CommandGroup(name: "성적", subcommands: [ScoreCommand.self, ComponentCommand.self, TranscriptCommand.self, RequirementCommand.self, GPACommand.self, UnlockCommand.self, LockCommand.self]),
-            CommandGroup(name: "복습과 퀴즈", subcommands: [ReviewCommand.self, QuizCommand.self, ProblemSetCommand.self]),
-            CommandGroup(name: "자료와 노트", subcommands: [MaterialCommand.self, NoteCommand.self, SearchCommand.self]),
-            CommandGroup(name: "설정과 카탈로그", subcommands: [SemesterCommand.self, CourseCommand.self, CatalogCommand.self, SettingsCommand.self]),
-            CommandGroup(name: "가져오기와 점검", subcommands: [ImportCommand.self, CheckCommand.self, CleanupCommand.self, BackupCommand.self, ActionsCommand.self, RunCommand.self, SkillCommand.self, CompletionCommand.self]),
+            CommandGroup(name: String(localized: .folioGroupToday), subcommands: [TodayCommand.self]),
+            CommandGroup(name: String(localized: .folioGroupClass), subcommands: [SessionCommand.self, UnitCommand.self, AttendanceCommand.self]),
+            CommandGroup(name: String(localized: .folioGroupExams), subcommands: [ExamCommand.self, AssignmentCommand.self]),
+            CommandGroup(name: String(localized: .folioGroupGrades), subcommands: [ScoreCommand.self, ComponentCommand.self, TranscriptCommand.self, RequirementCommand.self, GPACommand.self, UnlockCommand.self, LockCommand.self]),
+            CommandGroup(name: String(localized: .folioGroupStudy), subcommands: [ReviewCommand.self, QuizCommand.self, ProblemSetCommand.self]),
+            CommandGroup(name: String(localized: .folioGroupMaterials), subcommands: [MaterialCommand.self, NoteCommand.self, SearchCommand.self]),
+            CommandGroup(name: String(localized: .folioGroupSetup), subcommands: [SemesterCommand.self, CourseCommand.self, CatalogCommand.self, SettingsCommand.self]),
+            CommandGroup(name: String(localized: .folioGroupTools), subcommands: [ImportCommand.self, CheckCommand.self, CleanupCommand.self, BackupCommand.self, ActionsCommand.self, RunCommand.self, SkillCommand.self, CompletionCommand.self]),
         ]
     )
 
     /// Below the command list, as docs/SPEC.md "도움말" asks; ArgumentParser would put a discussion above it.
-    static let footer = """
-        예시:
-          folio today
-          folio session list EC4207
-          folio assignment add EC4207 "HW 4" --due "2026-11-11 23:59" --dry-run
-          folio exam scope EC4207/Quiz1 --unit 트리 --dry-run
-          folio search 매칭
-
-        JSON으로 받으려면 --json, 쓰지 않고 보려면 --dry-run.
-        명령 찾기: folio help 과제 마감 바꾸기
-        개념 설명: folio help refs | output | exit | safety | fzf
-        명령 목록을 기계가 읽게: folio help --json, folio actions --schema
-        에이전트에게 쓰는 법 알려 주기: folio skill --install <스킬 폴더>
-        """
+    static let footer = String(localized: .folioFooter)
 
     /// ArgumentParser's help labels are English and fixed; these sit at line starts or in parentheses, so columns stay aligned.
     static func korean(_ help: String) -> String {
-        [("OVERVIEW: ", ""), ("USAGE: ", "사용법: "), ("ARGUMENTS:", "인자:"), ("OPTIONS:", "옵션:"), (" SUBCOMMANDS:", ":"),
-         ("SUBCOMMANDS:", "명령:"), ("Show help information.", "도움말 보기"), ("(values: ", "(값: "), ("default: ", "기본값: "),
-         ("See 'folio help <subcommand>' for detailed help.", "명령마다 자세한 도움말: folio <명령> --help")]
+        [("OVERVIEW: ", ""), ("USAGE: ", String(localized: .helpLabelUsage)), ("ARGUMENTS:", String(localized: .helpLabelArguments)), ("OPTIONS:", String(localized: .helpLabelOptions)), (" SUBCOMMANDS:", ":"),
+         ("SUBCOMMANDS:", String(localized: .helpLabelSubcommands)), ("Show help information.", String(localized: .helpLabelShowHelp)), ("(values: ", String(localized: .helpLabelValues)), ("default: ", String(localized: .helpLabelDefault)),
+         ("See 'folio help <subcommand>' for detailed help.", String(localized: .helpLabelSeeSubcommand))]
             .reduce(help) { $0.replacingOccurrences(of: $1.0, with: $1.1) }
     }
 
-    /// Headings bold, example commands green, option names cyan. Only the start of a line changes, so columns still line up.
+    /// Only the start of a line changes, so columns still line up.
     static func colored(_ help: String) -> String {
         guard Style.enabled else { return help }
         return help.split(separator: "\n", omittingEmptySubsequences: false).map { raw -> String in
@@ -54,7 +40,7 @@ struct Folio: ParsableCommand {
                 guard let gap = s.firstMatch(of: /\s{2,}\S/) else { return (s, "") }
                 return (String(s[..<gap.range.lowerBound]), String(s[gap.range.lowerBound...]))
             }
-            if indent.isEmpty, body.hasSuffix(":") || body.hasPrefix("사용법:"), let colon = body.firstIndex(of: ":") {
+            if indent.isEmpty, body.hasSuffix(":") || body.hasPrefix(String(localized: .helpLabelUsage)), let colon = body.firstIndex(of: ":") {
                 return String(body[...colon]).styled(.bold) + String(body[body.index(after: colon)...])
             }
             if body.hasPrefix("folio ") {
@@ -73,7 +59,7 @@ struct Folio: ParsableCommand {
         Darwin.exit(run(Array(CommandLine.arguments.dropFirst())))
     }
 
-    /// Parses and runs one command line, returning the exit code (docs/SPEC.md "출력"). Tests call this in-process.
+    /// Tests call this in-process.
     static func run(_ arguments: [String]) -> Int32 {
         let json = arguments.contains("--json")
         if arguments.first == "help", arguments.count == 2 {
@@ -145,8 +131,8 @@ struct Folio: ParsableCommand {
             let near = subs.map { s in (s._commandName, Array(s._commandName).difference(from: Array(arg)).count) }
                 .filter { $0.1 <= 2 }.min { $0.1 < $1.1 }
             let here = path.joined(separator: " ")
-            return CLIError(exit: .usage, message: "없는 명령입니다: \(here) \(arg)",
-                            hints: near.map { ["혹시: \(here) \($0.0)"] } ?? ["\(here) --help"])
+            return CLIError(exit: .usage, message: String(localized: .folioUnknownCommand(here, arg)),
+                            hints: near.map { [String(localized: .folioDidYouMean(here, $0.0))] } ?? ["\(here) --help"])
         }
         return nil
     }
@@ -169,3 +155,6 @@ struct Folio: ParsableCommand {
         for h in e.hints { warn("  " + h.styled(.dim)) }
     }
 }
+
+/// The `folio` binary's entry point.
+public func folioMain() { Folio.main() }

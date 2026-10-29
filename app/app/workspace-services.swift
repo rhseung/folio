@@ -25,7 +25,6 @@ extension Workspace {
         var seconds: TimeInterval
     }
 
-    /// Study time per study day and course for the current semester's last `days` study days, from every device's log.
     func recentStudyTime(days: Int, now: Date) async -> [StudyBar] {
         let stores = currentCourses.map { ($0.id, $0.store) }
         let settings = settings, calendar = calendar
@@ -76,7 +75,6 @@ extension Workspace {
         }
     }
 
-    /// Once a day: runs when today's archive is missing.
     func backUpIfDue() async {
         guard settings.backup.enabled, !runsOnFixture, let store = backupStore,
               store.archives().first?.day != LocalDate(.now, in: calendar) else { return }

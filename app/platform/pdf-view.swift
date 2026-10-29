@@ -70,7 +70,6 @@ struct PDFKitView {
     let controller: PDFController
 }
 
-/// Page thumbnails for the controller's document; clicking one moves the main view.
 struct PDFThumbnails {
     let controller: PDFController
 

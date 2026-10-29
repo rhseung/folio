@@ -4,7 +4,6 @@ import FolioStorage
 import Foundation
 import Observation
 
-/// One course as loaded from its folder.
 struct LoadedCourse: Identifiable {
     var store: CourseStore
     var document: StoredDocument<CourseFile>
@@ -51,6 +50,8 @@ final class Workspace {
     static let environmentKey = "FOLIO_GIST"
 
     init() {
+        // The test host must never open the saved folder: that is the real GIST folder.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil { return }
         if let path = ProcessInfo.processInfo.environment[Self.environmentKey] {
             open(URL(filePath: path, directoryHint: .isDirectory), remember: false)
         } else if let data = UserDefaults.standard.data(forKey: Self.bookmarkKey) {
@@ -178,7 +179,6 @@ final class Workspace {
         TodaySummary.ongoingClass(in: currentCourses.map(\.file), at: now, calendar: calendar)
     }
 
-    /// Today's review queue across the current semester.
     func reviewQueue(now: Date) -> [ReviewEntry] {
         ReviewScheduler.queue(courses: currentCourses.map { ($0.file, (reviewEvents[$0.id] ?? []).events(ReviewEvent.self)) },
                               settings: settings, calendar: calendar, now: now)

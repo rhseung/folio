@@ -24,7 +24,6 @@ struct Harness {
         var err: String
     }
 
-    /// One command line against `gist`.
     func cli(_ args: [String], gist: URL, gradesLocked: Bool = false) -> Result {
         let lines = Lines()
         let code = CLI.$overrides.withValue(Overrides(gist: gist, device: device, now: now, gradesUnlocked: !gradesLocked)) {
@@ -39,8 +38,7 @@ struct Harness {
         try action.run(ActionContext(gist: GISTStore(url: gist), device: device, now: now))
     }
 
-    /// Runs `setup` lines on both copies first, then `args` on one and `action` on the other, and expects every file
-    /// to match. `action` may read the prepared copy (to look up ids the setup made).
+    /// `action` may read the prepared copy (to look up ids the setup made).
     func expectSame(_ args: [String], setup: [[String]] = [], _ action: (GISTStore) throws -> any Action,
                     sourceLocation: SourceLocation = #_sourceLocation) throws {
         let (a, b) = (try Self.fixtureCopy(), try Self.fixtureCopy())

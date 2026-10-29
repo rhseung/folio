@@ -55,8 +55,6 @@ extension Workspace {
         Task { await startRecording(session, in: course, locale: locale) }
     }
 
-    /// Whether the session can go without leaving a note, recording or other link pointing at nothing. An unreadable
-    /// note folder might point at it, so it can't then.
     /// Sessions made ahead when the app filled whole terms that nothing has used yet; listed for the user to delete.
     func untouchedFutureSessions(_ course: LoadedCourse, now: Date) -> [Session] {
         // Unreadable notes might point at any of them, so none is offered then.

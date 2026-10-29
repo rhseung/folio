@@ -1,8 +1,6 @@
 import FolioFixtures
 import Foundation
 
-// `folio-fixture <folder> [standard|legacy]`: writes a fake GIST folder for running the app or the CLI on.
-
 let args = CommandLine.arguments.dropFirst()
 guard let path = args.first, let fixture = Fixture(rawValue: args.dropFirst().first ?? "standard") else {
     FileHandle.standardError.write(Data("usage: folio-fixture <folder> [standard|legacy]\n".utf8))

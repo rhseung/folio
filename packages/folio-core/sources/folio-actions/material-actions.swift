@@ -15,8 +15,8 @@ public struct MaterialLinkSession {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            _ = try index(material, in: f.materials, "자료")
-            _ = try index(session, in: f.sessions, "회차")
+            _ = try index(material, in: f.materials, .valueMaterial)
+            _ = try index(session, in: f.sessions, .valueSession)
             if linked { f.linkMaterial(material, session: session, firstPage: firstPage, lastPage: lastPage) } else { f.unlinkMaterial(material, session: session) }
         }
     }
@@ -37,8 +37,8 @@ public struct MaterialLinkUnit {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            _ = try index(material, in: f.materials, "자료")
-            _ = try index(unit, in: f.units, "단원")
+            _ = try index(material, in: f.materials, .valueMaterial)
+            _ = try index(unit, in: f.units, .valueUnit)
             f.setMaterial(material, unit: unit, linked: linked)
         }
     }
@@ -54,7 +54,7 @@ public struct MaterialStatusSet {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            for id in materials { _ = try index(id, in: f.materials, "자료") }
+            for id in materials { _ = try index(id, in: f.materials, .valueMaterial) }
             for i in f.materials.indices where materials.contains(f.materials[i].id) { f.materials[i].status = status }
         }
     }
@@ -72,14 +72,14 @@ public struct MaterialRelink {
 
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.store(course)
-        guard FileManager.default.fileExists(atPath: file) else { throw ActionError.notFound("파일을 찾지 못했습니다: \(file)") }
+        guard FileManager.default.fileExists(atPath: file) else { throw ActionError.notFound(String(localized: .errorNotFoundFile(file))) }
         do {
             try ctx.edit(course) { f in
-                _ = try index(material, in: f.materials, "자료")
+                _ = try index(material, in: f.materials, .valueMaterial)
                 try store.relink(material, to: URL(filePath: file), in: &f, device: ctx.device, now: ctx.now)
             }
         } catch MaterialFileError.outsideCourseFolder(let name) {
-            throw ActionError.rule("과목 폴더 안의 파일만 연결할 수 있습니다: \(name)")
+            throw ActionError.rule(String(localized: .errorMaterialOutsideCourse(name)))
         }
     }
 }
@@ -95,7 +95,7 @@ public struct MaterialUntrack {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            _ = try index(material, in: f.materials, "자료")
+            _ = try index(material, in: f.materials, .valueMaterial)
             f.materials.removeAll { $0.id == material }
         }
     }
@@ -142,7 +142,7 @@ public struct MaterialImport {
 
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.store(course)
-        guard store.contains(folder) else { throw ActionError.rule("과목 폴더 밖으로는 가져올 수 없습니다: \(folder)") }
+        guard store.contains(folder) else { throw ActionError.rule(String(localized: .errorMaterialImportOutside(folder))) }
         var paths: [String] = []
         for file in files {
             let url = URL(filePath: file)
@@ -176,8 +176,8 @@ public struct MaterialMove {
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.store(course)
         let file = try ctx.file(course)
-        let m = file.materials[try index(material, in: file.materials, "자료")]
-        guard store.contains(to) else { throw ActionError.rule("과목 폴더 밖으로는 옮길 수 없습니다: \(to)") }
+        let m = file.materials[try index(material, in: file.materials, .valueMaterial)]
+        guard store.contains(to) else { throw ActionError.rule(String(localized: .errorMaterialMoveOutside(to))) }
         let change = Change(.moved, try ctx.relative(course, m.path), to: try ctx.relative(course, to))
         if ctx.dryRun {
             ctx.record(change)
@@ -203,7 +203,7 @@ public struct MaterialTrash {
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.store(course)
         let file = try ctx.file(course)
-        let m = file.materials[try index(material, in: file.materials, "자료")]
+        let m = file.materials[try index(material, in: file.materials, .valueMaterial)]
         ctx.record(Change(.removed, try ctx.relative(course, m.path)))
         try ctx.edit(course) { f in
             if ctx.dryRun { f.materials.removeAll { $0.id == material } } else { try store.trash(material, in: &f) }
@@ -234,7 +234,7 @@ public struct CleanupUndo {
 
     public func run(_ ctx: ActionContext) throws {
         let records = try MoveJournal.records(in: ctx.gist.url).filter { $0.batch == batch && $0.undoOf == nil }
-        guard !records.isEmpty else { throw ActionError.notFound("이동 묶음을 찾지 못했습니다: \(batch)") }
+        guard !records.isEmpty else { throw ActionError.notFound(String(localized: .errorNotFoundMoveBatch("\(batch)"))) }
         for r in records.reversed() { ctx.record(Change(.moved, r.to ?? "", to: r.from)) }
         guard !ctx.dryRun else { return }
         ctx.made(try MoveJournal.undo(batch: batch, in: ctx.gist.url, device: ctx.device, now: ctx.now))

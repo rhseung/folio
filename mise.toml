@@ -41,11 +41,14 @@ description = "Run the folio CLI"
 run = "swift run --package-path packages/folio-core folio"
 
 [tasks.install-cli]
-description = "Build folio in release mode into ~/.local/bin with its zsh completion, so it runs from anywhere"
+description = "Build folio in release mode into ~/.local/lib/folio, linked from ~/.local/bin, with its zsh completion"
 run = [
   "swift build -c release --package-path packages/folio-core --product folio",
-  "mkdir -p ~/.local/bin",
-  "install -m 755 packages/folio-core/.build/release/folio ~/.local/bin/folio",
+  # The string catalogs ship as resource bundles that must sit beside the binary, so both go in their own folder.
+  "rm -rf ~/.local/lib/folio && mkdir -p ~/.local/lib/folio ~/.local/bin",
+  "install -m 755 packages/folio-core/.build/release/folio ~/.local/lib/folio/folio",
+  "cp -R packages/folio-core/.build/release/*.bundle ~/.local/lib/folio/",
+  "ln -sf ~/.local/lib/folio/folio ~/.local/bin/folio",
   # zsh picks completions up from this fpath folder; other shells: folio completion bash|fish
   "mkdir -p ~/.local/share/zsh/site-functions",
   "~/.local/bin/folio completion zsh > ~/.local/share/zsh/site-functions/_folio",
@@ -57,6 +60,11 @@ run = [
 description = "Build the app for macOS"
 depends = ["generate"]
 run = "xcodebuild -scheme Folio -destination 'platform=macOS' build -quiet -skipMacroValidation"
+
+[tasks.test-app]
+description = "Run the app's screen-model tests on macOS"
+depends = ["generate"]
+run = "xcodebuild -scheme Folio -destination 'platform=macOS' test -quiet -skipMacroValidation"
 
 [tasks.install-mac]
 description = "Build a Release app and install it to /Applications"

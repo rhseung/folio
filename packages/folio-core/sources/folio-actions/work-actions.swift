@@ -37,7 +37,7 @@ public struct ExamAdd {
         var exam = Exam(id: id, device: ctx.device, at: ctx.now, kind: kind, title: title, start: start, end: end, location: location)
         (exam.componentId, exam.scopeText, exam.allowed, exam.memo) = (component, scopeText, allowed, memo)
         try ctx.edit(course) { f in
-            guard !f.exams.contains(where: { $0.id == id }) else { throw ActionError.rule("이미 쓰는 시험 ID입니다: \(id)") }
+            guard !f.exams.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenExam("\(id)"))) }
             f.exams.append(exam)
             f.setScope(scope, exam: id)
         }
@@ -112,7 +112,7 @@ public struct ExamRemove {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            _ = try index(exam, in: f.exams, "시험")
+            _ = try index(exam, in: f.exams, .valueExam)
             f.exams.removeAll { $0.id == exam }
             for i in f.units.indices { f.units[i].examIds.removeAll { $0 == exam } }
             for i in f.scores.indices where f.scores[i].examId == exam { f.scores[i].examId = nil }
@@ -137,7 +137,7 @@ public struct ExamPlanAdd {
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
             try f.update(\.exams, exam) { e in
-                guard !e.plan.contains(where: { $0.id == id }) else { throw ActionError.rule("이미 쓰는 공부 계획 항목 ID입니다: \(id)") }
+                guard !e.plan.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenPlanItem("\(id)"))) }
                 e.plan.append(ExamPlanItem(id: id, day: day, title: title, target: unit.map { ExamPlanTarget(kind: .unit, id: $0) }))
                 e.touch(by: ctx.device, at: ctx.now)
             }
@@ -157,7 +157,7 @@ public struct ExamPlanRemove {
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
             try f.update(\.exams, exam) { e in
-                guard e.plan.contains(where: { $0.id == item }) else { throw ActionError.notFound("공부 계획 항목을 찾지 못했습니다") }
+                guard e.plan.contains(where: { $0.id == item }) else { throw ActionError.notFound(String(localized: .errorNotFoundPlanItem)) }
                 e.plan.removeAll { $0.id == item }
                 e.touch(by: ctx.device, at: ctx.now)
             }
@@ -174,7 +174,7 @@ public struct ExamPlanCheck {
 
     public func run(_ ctx: ActionContext) throws {
         guard try ctx.file(course).exams.contains(where: { $0.plan.contains { $0.id == item } }) else {
-            throw ActionError.notFound("공부 계획 항목을 찾지 못했습니다")
+            throw ActionError.notFound(String(localized: .errorNotFoundPlanItem))
         }
         try ctx.log(PlanCheckEvent(itemId: item, done: done), course: course)
     }
@@ -191,7 +191,7 @@ public struct ExamSummary {
 
     public func run(_ ctx: ActionContext) throws {
         let file = try ctx.file(course)
-        let exam = file.exams[try index(exam, in: file.exams, "시험")]
+        let exam = file.exams[try index(exam, in: file.exams, .valueExam)]
         if let existing = try ctx.store(course).notes().first(where: { $0.meta.kind == .examSummary && $0.meta.examId == exam.id })?.meta.id {
             ctx.made(existing)
             return
@@ -228,7 +228,7 @@ public struct AssignmentAdd {
     var repeats: AssignmentRepeat?
 
     public func run(_ ctx: ActionContext) throws {
-        guard !title.isEmpty else { throw ActionError.rule("과제 제목이 비어 있습니다") }
+        guard !title.isEmpty else { throw ActionError.rule(String(localized: .errorAssignmentTitleEmpty)) }
         try ctx.edit(course) { f in
             var a = Assignment(id: id, device: ctx.device, at: ctx.now, title: title, due: due)
             a.repeats = repeats
@@ -272,13 +272,13 @@ public struct AssignmentSave {
     var scores: [Score]
 
     public func run(_ ctx: ActionContext) throws {
-        guard !title.isEmpty else { throw ActionError.rule("과제 제목이 비어 있습니다") }
-        guard scores.allSatisfy({ $0.max > 0 }) else { throw ActionError.rule("만점은 0보다 커야 합니다") }
+        guard !title.isEmpty else { throw ActionError.rule(String(localized: .errorAssignmentTitleEmpty)) }
+        guard scores.allSatisfy({ $0.max > 0 }) else { throw ActionError.rule(String(localized: .errorAssignmentMaxScore)) }
         let end = try repeatEnd(ctx, course: course)
         // A weekly series shares one title, so each score is told apart by its date.
         let entryTitle = repeats == .weekly ? due.map { "\(title) \($0.formatted(.dateTime.month(.defaultDigits).day()))" } ?? title : title
         try ctx.edit(course) { f in
-            let i = try index(assignment, in: f.assignments, "과제")
+            let i = try index(assignment, in: f.assignments, .valueAssignment)
             f.assignments[i].title = title
             f.assignments[i].due = due
             f.assignments[i].repeats = repeats
@@ -322,7 +322,7 @@ public struct AssignmentStatusSet {
     public func run(_ ctx: ActionContext) throws {
         let end = try repeatEnd(ctx, course: course)
         try ctx.edit(course) { f in
-            let i = try index(assignment, in: f.assignments, "과제")
+            let i = try index(assignment, in: f.assignments, .valueAssignment)
             f.assignments[i].status = status
             f.continueRepeating(assignment, until: end, calendar: ctx.calendar, device: ctx.device, now: ctx.now)
         }
@@ -341,7 +341,7 @@ public struct AssignmentRemove {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            _ = try index(assignment, in: f.assignments, "과제")
+            _ = try index(assignment, in: f.assignments, .valueAssignment)
             f.assignments.removeAll { $0.id == assignment }
             f.scores.removeAll { $0.assignmentId == assignment }
         }
@@ -384,7 +384,7 @@ public struct ScoreAdd {
                                excused: excused)
         (entry.date, entry.examId, entry.assignmentId) = (date, exam, assignment)
         try ctx.edit(course) { f in
-            guard !f.scores.contains(where: { $0.id == id }) else { throw ActionError.rule("이미 쓰는 점수 ID입니다: \(id)") }
+            guard !f.scores.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenScore("\(id)"))) }
             f.scores.append(entry)
         }
         ctx.made(id)
@@ -472,7 +472,7 @@ public struct ComponentAdd {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            guard !f.components.contains(where: { $0.id == id }) else { throw ActionError.rule("이미 쓰는 성적 항목 ID입니다: \(id)") }
+            guard !f.components.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenComponent("\(id)"))) }
             let order = (f.components.map(\.order).max() ?? -1) + 1
             var c = GradeComponent(id: id, device: ctx.device, at: ctx.now, name: name, weight: weight, order: order, aggregation: aggregation,
                                    expectedCount: expectedCount)
@@ -527,7 +527,7 @@ public struct ComponentRemove {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            _ = try index(component, in: f.components, "성적 항목")
+            _ = try index(component, in: f.components, .valueComponent)
             f.components.removeAll { $0.id == component }
             f.scores.removeAll { $0.componentId == component }
             for i in f.assignments.indices where f.assignments[i].componentId == component { f.assignments[i].componentId = nil }
@@ -547,7 +547,7 @@ public struct ComponentMove {
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
             var ids = f.components.sorted { $0.order < $1.order }.map(\.id)
-            guard let i = ids.firstIndex(of: component) else { throw ActionError.notFound("성적 항목을 찾지 못했습니다") }
+            guard let i = ids.firstIndex(of: component) else { throw ActionError.notFound(String(localized: .errorNotFoundComponent)) }
             guard ids.indices.contains(i + by) else { return }
             ids.swapAt(i, i + by)
             for j in f.components.indices {
