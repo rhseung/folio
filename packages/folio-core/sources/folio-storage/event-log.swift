@@ -1,7 +1,7 @@
 import FolioDomain
 import Foundation
 
-/// One line of a device log. `data` stays raw so event types from newer app versions are read without loss.
+/// `data` stays raw so event types from newer app versions are read without loss.
 public struct LoggedEvent: Sendable, Equatable {
     public var id: UUID
     public var at: Date
@@ -16,7 +16,7 @@ public struct LoggedEvent: Sendable, Equatable {
 }
 
 extension Sequence<LoggedEvent> {
-    /// The events of one type with their times. A line that doesn't decode is skipped, so one bad line hides nothing else.
+    /// A line that doesn't decode is skipped, so one bad line hides nothing else.
     public func events<E: LogEvent>(_: E.Type) -> [(at: Date, event: E)] {
         compactMap { e in (try? e.decode(E.self)).flatMap { $0 }.map { (at: e.at, event: $0) } }
     }
@@ -51,7 +51,7 @@ public struct EventLog: Sendable {
         try CoordinatedFile.append(JSONFormat.lineEncoder.encode(line) + Data("\n".utf8), to: fileURL(for: device))
     }
 
-    /// All devices' events in time order. Lines that fail to parse (e.g. a write cut off mid-line) are skipped.
+    /// Lines that fail to parse (e.g. a write cut off mid-line) are skipped.
     public func readAll() throws -> [LoggedEvent] {
         guard FileManager.default.fileExists(atPath: folder.path) else { return [] }
         let files = try FileManager.default.contentsOfDirectory(at: folder, includingPropertiesForKeys: nil)

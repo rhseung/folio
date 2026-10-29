@@ -16,7 +16,6 @@ extension CourseStore {
         return file
     }
 
-    /// Points a material at `picked`, a file the user chose to replace a missing one.
     public func relink(_ id: UUID, to picked: URL, in file: inout CourseFile, device: DeviceID, now: Date) throws {
         guard let path = coursePath(of: picked) else { throw MaterialFileError.outsideCourseFolder(picked.lastPathComponent) }
         let size = try picked.resourceValues(forKeys: [.fileSizeKey]).fileSize.map(Int64.init)
@@ -28,8 +27,7 @@ extension CourseStore {
 }
 
 extension CourseStore {
-    /// The course-relative path of `file` if it lies inside this course folder.
-    /// Whether a course-relative path stays in the course folder. Lexical, since a planned path may not exist yet.
+    /// Lexical, since a planned path may not exist yet.
     public func contains(_ coursePath: String) -> Bool {
         let (root, path) = (url.standardizedFileURL.path, fileURL(coursePath).standardizedFileURL.path)
         return path == root || path.hasPrefix(root + "/")
@@ -54,7 +52,6 @@ extension CourseStore {
     }
 
     /// Moves or renames a tracked file through `moves.jsonl`, so it can be undone, keeping its ID and links.
-    /// Returns the batch for `MoveJournal.undo`.
     public func move(_ id: UUID, to newPath: String, gist: URL, in file: inout CourseFile, device: DeviceID, now: Date) throws -> UUID {
         guard let m = file.materials.first(where: { $0.id == id }) else { throw CocoaError(.fileNoSuchFile) }
         let root = gist.standardizedFileURL.path

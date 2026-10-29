@@ -37,9 +37,8 @@ public final class SearchStore: Sendable {
         return try SearchStore(url: folder.appending(path: "Folio/search-\(name).sqlite"))
     }
 
-    /// Reads again the courses whose course.json, notes, or tracked PDFs changed since last time, and drops courses that
-    /// are gone. Returns how many courses it read. `progress` gets (read so far, to read) before each course and once at
-    /// the end, so a first build (minutes, with textbooks) can show how far it is.
+    /// `progress` gets (read so far, to read) before each course and once at the end, so a first build (minutes, with
+    /// textbooks) can show how far it is.
     @discardableResult
     public func refresh(_ gist: GISTStore, progress: (@Sendable (_ done: Int, _ total: Int) -> Void)? = nil) throws -> Int {
         let stores = try gist.courseStores()

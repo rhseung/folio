@@ -2,7 +2,7 @@ import FolioDomain
 import FolioMarkdown
 import Foundation
 
-/// A markdown note in `Notes/`. The file name is the title; the frontmatter `id` is the identity.
+/// The file name is the title; the frontmatter `id` is the identity.
 public struct NoteFile: Equatable, Sendable {
     public var url: URL
     public var meta: NoteMeta
@@ -37,7 +37,6 @@ extension NoteMeta {
 extension CourseStore {
     var notesURL: URL { url.appending(path: CourseFolder.notes.rawValue) }
 
-    /// Subfolders of Notes/ that hold attachments or exports, not notes.
     static let nonNoteFolders: Set<String> = [StandardLayout.noteAssetsFolder, StandardLayout.noteExportsFolder]
 
     public func notes() throws -> [NoteFile] {
@@ -60,7 +59,6 @@ extension CourseStore {
         try notes().first { $0.meta.id == id }
     }
 
-    /// The note at a course-relative path, reading only that file.
     public func note(at path: String) throws -> NoteFile? {
         let url = url.appending(path: path)
         guard url.pathExtension == "md", FileManager.default.fileExists(atPath: url.path) else { return nil }
@@ -115,7 +113,6 @@ extension CourseStore {
 
     public var noteAssetsURL: URL { notesURL.appending(path: StandardLayout.noteAssetsFolder) }
 
-    /// Files in `Notes/assets/`, newest first.
     public func noteAssets() -> [URL] {
         let keys: [URLResourceKey] = [.contentModificationDateKey, .isRegularFileKey]
         let files = (try? FileManager.default.contentsOfDirectory(at: noteAssetsURL, includingPropertiesForKeys: keys, options: .skipsHiddenFiles)) ?? []
@@ -130,7 +127,6 @@ extension CourseStore {
         return String(repeating: "../", count: max(depth, 0)) + assetPath
     }
 
-    /// Copies `file` into `Notes/assets/`. Returns the note-relative path.
     @discardableResult
     public func addNoteAsset(_ file: URL) throws -> String {
         try addNoteAsset(named: file.lastPathComponent, data: try Data(contentsOf: file))

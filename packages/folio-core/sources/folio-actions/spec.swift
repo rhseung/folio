@@ -6,10 +6,8 @@ public enum Effect: String, Codable, Sendable {
     case creates, changes, removes, moves, logs
 }
 
-/// One input of an action, as `@Action` reads it off the declaration.
 public struct FieldSpec: Codable, Sendable, Equatable {
     public enum Role: Codable, Sendable, Equatable {
-        /// A positional CLI argument.
         case argument
         case option
         /// A Bool that defaults to true, turned off by the flag of this name.

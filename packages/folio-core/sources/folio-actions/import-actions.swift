@@ -66,7 +66,6 @@ public struct ImportNotes {
             .filter { FileManager.default.fileExists(atPath: $0.appending(path: "index.json").path) }
             .sorted { $0.path < $1.path }
         let dumps = try folders.map { ($0, try JSONDecoder().decode(NotionCourseDump.self, from: Data(contentsOf: $0.appending(path: "index.json")))) }
-        // Mentions between imported pages become wikilinks.
         var links: [String: String] = [:]
         for (_, dump) in dumps { for n in dump.notes { links[n.id.uuidString.lowercased().replacingOccurrences(of: "-", with: "")] = n.title } }
         for (dumpFolder, dump) in dumps {

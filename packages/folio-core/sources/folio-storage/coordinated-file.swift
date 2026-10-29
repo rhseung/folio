@@ -57,7 +57,7 @@ enum CoordinatedFile {
         try finish(result, error)
     }
 
-    /// Removes `url` if it's there; a missing file is not an error.
+    /// A missing file is not an error.
     static func remove(_ url: URL) throws {
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         var error: NSError?
@@ -68,7 +68,6 @@ enum CoordinatedFile {
         try finish(result, error)
     }
 
-    /// Moves `url` to the Trash, where the user can still put it back.
     static func trash(_ url: URL) throws {
         var error: NSError?
         var result: Result<Void, any Error>?
@@ -88,7 +87,6 @@ enum CoordinatedFile {
         try handle.write(contentsOf: data)
     }
 
-    /// iCloud conflict copies of `url` that still need resolving (docs/SPEC.md "동기화와 충돌 방지").
     static func unresolvedConflicts(_ url: URL) -> [NSFileVersion] {
         NSFileVersion.unresolvedConflictVersionsOfItem(at: url) ?? []
     }

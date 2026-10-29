@@ -11,7 +11,7 @@ public protocol Action: Codable, Sendable {
 }
 
 extension Action {
-    /// The CLI command that runs this action, e.g. `session rm`. `folio actions --check` matches commands on it.
+    /// `folio actions --check` matches commands on it.
     public static var command: String { spec.command }
 }
 
@@ -91,8 +91,7 @@ extension [Change] {
     }
 }
 
-/// What an action may touch, and the record of what it did. All reads and writes of an action go through here, so a
-/// dry run is the same code with the writes left out.
+/// All reads and writes of an action go through here, so a dry run is the same code with the writes left out.
 public final class ActionContext {
     public let gist: GISTStore
     public let device: DeviceID
@@ -106,7 +105,6 @@ public final class ActionContext {
     public private(set) var savedCourses: [UUID: StoredDocument<CourseFile>] = [:]
     /// True when something other than a course file changed: the app then reads everything again.
     public private(set) var needsReload = false
-    /// Courses whose logs got new lines.
     public private(set) var loggedCourses: Set<UUID> = []
     /// What an import skipped or wants checked, for the person reading the result.
     public private(set) var notes: [String] = []
@@ -211,7 +209,6 @@ public final class ActionContext {
 
     // MARK: Writes
 
-    /// Applies `change` to the course file, stamps the course as edited from this device, and saves it.
     public func edit(_ course: UUID, _ change: (inout CourseFile) throws -> Void) throws {
         let store = try store(course)
         var doc = try document(course)
@@ -312,7 +309,6 @@ public final class ActionContext {
         }
     }
 
-    /// Appends one line to this device's log in the course folder.
     public func log<E: LogEvent>(_ event: E, course: UUID, at date: Date? = nil) throws {
         let store = try store(course)
         changes.append(Change(.changed, relative(store.log.folder.appending(path: device.uuidString).appendingPathExtension(StandardLayout.logExtension)), item: E.type))

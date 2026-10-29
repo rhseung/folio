@@ -2,7 +2,6 @@ import FolioDomain
 import CryptoKit
 import Foundation
 
-/// The GIST root folder.
 public struct GISTStore: Sendable {
     public let url: URL
 
@@ -10,7 +9,6 @@ public struct GISTStore: Sendable {
         self.url = url
     }
 
-    /// A path stored relative to the course folder (materials, recordings), as a file URL.
     public func fileURL(_ coursePath: String) -> URL { url.appending(path: coursePath) }
 
     var metadataURL: URL { url.appending(path: StandardLayout.metadataFolder) }
@@ -86,7 +84,6 @@ public struct GISTStore: Sendable {
         try transcript.write(to: transcriptURL)
     }
 
-    /// Folders under semester folders that have a course.json.
     /// Lists two levels only; reading the whole tree (thousands of files) would make every app launch slow.
     public func courseStores() throws -> [CourseStore] {
         let fm = FileManager.default
@@ -101,7 +98,6 @@ public struct GISTStore: Sendable {
     }
 }
 
-/// One course folder.
 public struct CourseStore: Sendable {
     public let url: URL
 
@@ -109,7 +105,6 @@ public struct CourseStore: Sendable {
         self.url = url
     }
 
-    /// A path stored relative to the course folder (materials, recordings), as a file URL.
     public func fileURL(_ coursePath: String) -> URL { url.appending(path: coursePath) }
 
     var metadataURL: URL { url.appending(path: StandardLayout.metadataFolder) }

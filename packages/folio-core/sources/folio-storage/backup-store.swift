@@ -44,7 +44,6 @@ public struct BackupStore: Sendable {
         .sorted { $0.day > $1.day }
     }
 
-    /// Writes today's archive (replacing an earlier one from today), then drops archives retention no longer keeps.
     @discardableResult
     public func backUp(today: LocalDate, dailyDays: Int, calendar: Calendar) throws -> URL {
         try checkFolder()
