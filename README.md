@@ -95,4 +95,4 @@ scripts/           디자인 토큰 검사
 
 - [docs/SPEC.md](docs/SPEC.md): 기능 명세. 화면, 데이터 모델, 계산 규칙, 명령줄 도구
 - [docs/DESIGN.md](docs/DESIGN.md): 디자인 시스템. 원칙, 토큰, 구성 요소, 창 구조
-- [CLAUDE.md](CLAUDE.md): 구현 규칙. 모듈 경계, 데이터 원칙, 테스트 기준
+- [AGENTS.md](AGENTS.md): 구현 규칙. 모듈 경계, 데이터 원칙, 테스트 기준

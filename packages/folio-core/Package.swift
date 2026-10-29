@@ -2,7 +2,7 @@
 import CompilerPluginSupport
 import PackageDescription
 
-// Layers: CLI, Gen -> Actions -> Storage -> Domain, Actions -> Macros (compile time only), CLI -> Index -> Storage, Storage and Actions -> Markdown (note frontmatter). Domain must stay free of file I/O and UI (see CLAUDE.md "레이어").
+// Layers: CLI, Gen -> Actions -> Storage -> Domain, Actions -> Macros (compile time only), CLI -> Index -> Storage, Storage and Actions -> Markdown (note frontmatter). Domain must stay free of file I/O and UI (see AGENTS.md "레이어").
 let package = Package(
     name: "FolioCore",
     // Keep in sync with deploymentTarget in project.yml.

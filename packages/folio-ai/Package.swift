@@ -1,7 +1,7 @@
 // swift-tools-version: 6.2
 import PackageDescription
 
-// Layers: AI -> Domain. Never writes files; results go back to the caller as proposals (CLAUDE.md "레이어").
+// Layers: AI -> Domain. Never writes files; results go back to the caller as proposals (AGENTS.md "레이어").
 let package = Package(
     name: "FolioAI",
     // Keep in sync with deploymentTarget in project.yml.

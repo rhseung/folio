@@ -13,7 +13,7 @@ struct DayBoundaryTests {
         calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour, minute: minute))!
     }
 
-    /// CLAUDE.md: check just before and just after the 04:00 boundary.
+    /// AGENTS.md: check just before and just after the 04:00 boundary.
     @Test func streakCountsBackFromTodayOrYesterday() {
         let today = LocalDate(year: 2026, month: 10, day: 24)!
         let days: Set<LocalDate> = [today.adding(days: -1), today.adding(days: -2), today.adding(days: -4)]

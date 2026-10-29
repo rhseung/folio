@@ -1,7 +1,7 @@
 // swift-tools-version: 6.2
 import PackageDescription
 
-// Depends on no other Folio module (CLAUDE.md "레이어").
+// Depends on no other Folio module (AGENTS.md "레이어").
 let package = Package(
     name: "FolioMarkdown",
     // Keep in sync with deploymentTarget in project.yml.
