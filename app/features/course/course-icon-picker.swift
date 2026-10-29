@@ -15,7 +15,7 @@ struct CourseIconPicker: View {
             .chip()
         }
         .buttonStyle(.pointing(.plain))
-        .help("아이콘 고르기")
+        .help(Text(.iconPickerHelp))
         .popover(isPresented: $open, arrowEdge: .bottom) {
             CourseIconPanel(icon: icon, color: color) {
                 icon = $0
@@ -43,8 +43,8 @@ struct CourseIconPanel: View {
 
     // SF Symbols has no public catalog or Korean search terms, so the subject subset and its words live here.
     static let groups = [
-        Subject(title: "기본", symbols: [(CourseMark.defaultIcon, "기본 책")]),
-        Subject(title: "수학", symbols: [
+        Subject(title: String(localized: .iconPickerFieldBasic), symbols: [(CourseMark.defaultIcon, "기본 책")]),
+        Subject(title: String(localized: .iconPickerFieldMath), symbols: [
             ("function", "함수 수학 미적분"), ("sum", "합 시그마 급수 수열"), ("x.squareroot", "루트 제곱근 대수"),
             ("percent", "퍼센트 비율 확률"), ("plus.forwardslash.minus", "사칙연산 산수 계산"), ("divide", "나눗셈 정수론"),
             ("equal", "등식 방정식"), ("infinity", "무한 극한 해석학"), ("pi", "파이 원주율"), ("number", "수 정수론 숫자"),
@@ -54,7 +54,7 @@ struct CourseIconPanel: View {
             ("chart.bar", "통계 막대 분포"), ("dice", "확률 주사위 통계"), ("ruler", "측정 자 기하"),
             ("square.grid.3x3", "행렬 격자 선형대수"),
         ]),
-        Subject(title: "과학", symbols: [
+        Subject(title: String(localized: .iconPickerFieldScience), symbols: [
             ("atom", "원자 물리 양자 화학"), ("flask", "화학 실험 플라스크"), ("testtube.2", "시험관 실험 화학 생화학"),
             ("microbe", "미생물 세포 생물"), ("allergens", "분자 화학 생명"), ("leaf", "식물 생물 생태 환경"),
             ("tree", "나무 생태 환경"), ("ladybug", "곤충 생물"), ("fish", "물고기 생물 해양"), ("pawprint", "동물 생물"),
@@ -64,7 +64,7 @@ struct CourseIconPanel: View {
             ("mountain.2", "산 지질 지구과학"), ("hurricane", "기상 대기 날씨"), ("laser.burst", "레이저 광학 물리"),
             ("scope", "광학 조준"), ("binoculars", "관측 광학"),
         ]),
-        Subject(title: "공학", symbols: [
+        Subject(title: String(localized: .iconPickerFieldEngineering), symbols: [
             ("bolt", "전기 전류 전자기"), ("cpu", "반도체 프로세서 컴퓨터구조"), ("memorychip", "메모리 칩 반도체 회로"),
             ("waveform", "신호 파형 신호처리 소리"), ("antenna.radiowaves.left.and.right", "통신 안테나 전파 무선"),
             ("cable.connector", "케이블 회로 전자"), ("powerplug", "전력 전기"), ("battery.100", "배터리 전지 에너지"),
@@ -74,7 +74,7 @@ struct CourseIconPanel: View {
             ("sailboat", "배 조선 해양"), ("train.side.front.car", "기차 교통"), ("building.2", "건축 토목 도시"),
             ("cube", "입체 설계 재료"), ("shippingbox", "물류 산업"), ("wind", "바람 공기 유체"), ("water.waves", "파동 유체 해양"),
         ]),
-        Subject(title: "컴퓨터", symbols: [
+        Subject(title: String(localized: .iconPickerFieldComputer), symbols: [
             ("terminal", "터미널 시스템 셸"), ("chevron.left.forwardslash.chevron.right", "코드 프로그래밍 웹"),
             ("curlybraces", "코드 프로그래밍 언어"), ("desktopcomputer", "컴퓨터 데스크톱"), ("laptopcomputer", "노트북 컴퓨터"),
             ("keyboard", "키보드 입력"), ("network", "네트워크 인터넷"), ("server.rack", "서버 시스템 분산"),
@@ -84,7 +84,7 @@ struct CourseIconPanel: View {
             ("square.stack.3d.up", "스택 계층 자료구조"), ("tablecells", "표 데이터 스프레드시트"), ("sparkles", "인공지능 AI 생성"),
             ("eye", "비전 시각 인식"), ("puzzlepiece", "퍼즐 문제 해결"), ("gamecontroller", "게임"), ("text.magnifyingglass", "검색 정보 텍스트"),
         ]),
-        Subject(title: "사회·경영", symbols: [
+        Subject(title: String(localized: .iconPickerFieldSociety), symbols: [
             ("wonsign.circle", "원 돈 경제"), ("dollarsign.circle", "달러 돈 경제 금융"), ("banknote", "돈 화폐 회계"),
             ("creditcard", "카드 금융 결제"), ("chart.line.uptrend.xyaxis", "성장 추세 경제 주식"), ("chart.pie", "비율 통계 경영"),
             ("briefcase", "경영 창업 직업"), ("building.columns", "기관 정치 법 역사"), ("scalemass", "저울 법 정의 무게"),
@@ -93,7 +93,7 @@ struct CourseIconPanel: View {
             ("signpost.right", "방향 진로 정책"), ("cart", "소비 시장 유통"), ("storefront", "가게 상업 창업"),
             ("person.line.dotted.person", "협력 협상 거래"), ("hand.raised", "참여 권리 인권"),
         ]),
-        Subject(title: "인문·언어", symbols: [
+        Subject(title: String(localized: .iconPickerFieldHumanities), symbols: [
             ("book", "책 독서"), ("books.vertical", "책 도서관 문헌"), ("text.book.closed", "교과서 책"),
             ("character.book.closed", "사전 어휘 언어"), ("character", "글자 문자 언어"),
             ("textformat", "글꼴 텍스트 글쓰기"), ("quote.opening", "인용 문학"), ("text.quote", "인용 논문 글"),
@@ -103,7 +103,7 @@ struct CourseIconPanel: View {
             ("brain.head.profile", "심리 인지 사고 철학"), ("graduationcap", "교육 졸업 학위"), ("person.bust", "인물 초상"),
             ("magazine", "잡지 교양 읽기"), ("bookmark", "책갈피 읽기"),
         ]),
-        Subject(title: "예술·체육·건강", symbols: [
+        Subject(title: String(localized: .iconPickerFieldArts), symbols: [
             ("paintbrush", "그림 미술 회화"), ("paintpalette", "팔레트 미술 색"), ("paintbrush.pointed", "붓 서예 미술"),
             ("pencil.tip", "스케치 드로잉 디자인"), ("scribble", "드로잉 낙서"), ("music.note", "음악 음표"),
             ("music.note.list", "음악 악보 곡"), ("pianokeys", "피아노 건반 음악"), ("guitars", "기타 악기 음악"),
@@ -135,7 +135,7 @@ struct CourseIconPanel: View {
         return VStack(spacing: 0) {
             HStack(spacing: Theme.Space.tight) {
                 Image(systemName: "magnifyingglass").foregroundStyle(Theme.Palette.textTertiary)
-                TextField("분야나 낱말로 찾기", text: $query)
+                TextField(String(localized: .iconPickerSearch), text: $query)
                     .textFieldStyle(.plain)
                     .focused($focused)
                     .onSubmit { if let first = groups.first?.symbols.first { choose(first.0) } }
@@ -145,7 +145,7 @@ struct CourseIconPanel: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     if groups.isEmpty {
-                        EmptyLine("맞는 아이콘이 없습니다").padding(Theme.Space.m).frame(maxWidth: .infinity, alignment: .leading)
+                        EmptyLine(String(localized: .iconPickerNoMatch)).padding(Theme.Space.m).frame(maxWidth: .infinity, alignment: .leading)
                     }
                     LazyVStack(alignment: .leading, spacing: Theme.Space.s) {
                         ForEach(groups, id: \.title) { group in

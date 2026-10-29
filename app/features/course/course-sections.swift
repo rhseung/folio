@@ -6,36 +6,40 @@ import SwiftUI
 extension ReviewReason {
     var label: String {
         switch self {
-        case .guessedWeek: "주차 추정"
-        case .unknownWeek: "주차 모름"
-        case .guessedNumber: "과제 번호 추정"
-        case .unknownNumber: "과제 번호 모름"
-        case .guessedExam: "대상 시험 추정"
-        case .pastExamNameKept: "족보 이름 유지"
-        case .guessedFolder: "위치 추정"
-        case .unknownFile: "분류 불명"
-        case .unknownFolder: "대응 폴더 없음"
-        case .nameCollision: "이름 충돌"
+        case .guessedWeek: String(localized: .reviewReasonGuessedWeek)
+        case .unknownWeek: String(localized: .reviewReasonUnknownWeek)
+        case .guessedNumber: String(localized: .reviewReasonGuessedNumber)
+        case .unknownNumber: String(localized: .reviewReasonUnknownNumber)
+        case .guessedExam: String(localized: .reviewReasonGuessedExam)
+        case .pastExamNameKept: String(localized: .reviewReasonPastExamNameKept)
+        case .guessedFolder: String(localized: .reviewReasonGuessedFolder)
+        case .unknownFile: String(localized: .reviewReasonUnknownFile)
+        case .unknownFolder: String(localized: .reviewReasonUnknownFolder)
+        case .nameCollision: String(localized: .reviewReasonNameCollision)
         }
     }
 }
 
 /// People, the grading rules as written, the memo and the folder, at the bottom of the overview.
 struct InfoBlocks: View {
-    @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
     @Environment(\.personTarget) private var personTarget
     @Environment(\.openURL) private var openURL
     let course: LoadedCourse
-    @State private var memo = ""
+    @State private var model: CourseInfoModel
+
+    init(workspace: Workspace, course: LoadedCourse) {
+        self.course = course
+        _model = State(initialValue: CourseInfoModel(workspace: workspace))
+    }
 
     var body: some View {
         let c = course.file.course
-        let people = c.instructorIds.compactMap { id in workspace.catalog.people.first { $0.id == id } }
+        let people = model.people(c)
         Group {
-            Block("교수와 조교") {
+            Block(String(localized: .courseInfoPeople)) {
                 Card {
-                    if people.isEmpty { CardRow(last: true) { EmptyLine("등록된 사람이 없습니다") } }
+                    if people.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .courseInfoNoPeople)) } }
                     ForEach(Array(people.enumerated()), id: \.element.id) { i, p in
                         CardRow(last: i == people.count - 1) {
                             // The name and its details open the person; the address beside them still writes mail.
@@ -43,7 +47,7 @@ struct InfoBlocks: View {
                                 HStack {
                                     VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                                         Text(p.name)
-                                        if let detail = [p.office, p.officeHours].filter({ !$0.isEmpty }).joined(separator: " · ").nilIfEmpty {
+                                        if let detail = model.detail(p) {
                                             Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                                         }
                                     }
@@ -53,53 +57,53 @@ struct InfoBlocks: View {
                                 .contentShape(.rect)
                             }
                             .buttonStyle(.pointing(.plain))
-                            .help("\(p.name) 페이지 열기")
-                            if let url = workspace.mailURL(to: p.email) {
+                            .help(Text(.courseInfoOpenPerson(p.name)))
+                            if let url = model.mailURL(p) {
                                 Link(p.email, destination: url).buttonStyle(.plain).foregroundStyle(accent.ink).pointingHand()
                             }
                         }
                         .contextMenu {
-                            Button("\(p.name) 페이지 열기", systemImage: "person") { personTarget.wrappedValue = p.id }
-                            if let url = workspace.mailURL(to: p.email) {
-                                Button("메일 쓰기", systemImage: "envelope") { openURL(url) }
+                            Button(.courseInfoOpenPerson(p.name), systemImage: "person") { personTarget.wrappedValue = p.id }
+                            if let url = model.mailURL(p) {
+                                Button(.courseInfoWriteMail, systemImage: "envelope") { openURL(url) }
                             }
                         }
                     }
                 }
             }
-            Block("메모") {
+            Block(String(localized: .courseInfoMemo)) {
                 Card {
-                    TextEditor(text: $memo)
+                    TextEditor(text: $model.memo)
                         .scrollContentBackground(.hidden)
                         .frame(minHeight: 140)
                         .padding(Theme.Space.m)
                     Theme.Palette.lineSoft.frame(height: 1)
                     CardRow(last: true) {
                         Spacer()
-                        Button("메모 저장") { workspace.run(CourseSet(course: course.id, [.memo(memo)])) }
+                        Button(.courseInfoSaveMemo) { model.saveMemo(course.id) }
                             .buttonStyle(.pointing(.borderedProminent))
-                            .disabled(memo == c.memo)
+                            .disabled(model.memo == c.memo)
                     }
                 }
             }
-            Block("폴더") {
+            Block(String(localized: .courseInfoFolder)) {
                 Card {
                     FormRow(label: course.store.url.lastPathComponent, detail: course.store.url.deletingLastPathComponent().path, last: true) {
                         #if os(macOS)
-                        Button("Finder에서 보기") { NSWorkspace.shared.activateFileViewerSelecting([course.store.url]) }
+                        Button(.commonShowInFinder) { NSWorkspace.shared.activateFileViewerSelecting([course.store.url]) }
                         #endif
                     }
                     #if os(macOS)
                     .contextMenu {
-                        Button("Finder에서 보기", systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([course.store.url]) }
+                        Button(.commonShowInFinder, systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([course.store.url]) }
                     }
                     #endif
                 }
             }
         }
-        .onAppear { memo = c.memo }
+        .onAppear { model.memo = c.memo }
         // A memo saved elsewhere (another device, the sync) replaces the shown one unless it is being edited here.
-        .onChange(of: c.memo) { old, new in if memo == old { memo = new } }
+        .onChange(of: c.memo) { old, new in if model.memo == old { model.memo = new } }
     }
 }
 
@@ -110,34 +114,34 @@ extension String {
 extension MaterialRole {
     var label: String {
         switch self {
-        case .syllabus: "강의계획서"
-        case .lecture: "강의 자료"
-        case .exercise: "연습 문제"
-        case .textbook: "교재"
-        case .assignment: "과제"
-        case .lab: "실험"
-        case .pastExam: "족보"
-        case .examPrep: "시험 대비"
-        case .archive: "이전 필기"
-        case .other: "기타"
+        case .syllabus: String(localized: .materialRoleSyllabus)
+        case .lecture: String(localized: .materialRoleLecture)
+        case .exercise: String(localized: .materialRoleExercise)
+        case .textbook: String(localized: .materialRoleTextbook)
+        case .assignment: String(localized: .materialRoleAssignment)
+        case .lab: String(localized: .materialRoleLab)
+        case .pastExam: String(localized: .materialRolePastExam)
+        case .examPrep: String(localized: .materialRoleExamPrep)
+        case .archive: String(localized: .materialRoleArchive)
+        case .other: String(localized: .materialRoleOther)
         }
     }
 }
 
 extension AssignmentStatus {
     @MainActor static let steps: [StepToggle<AssignmentStatus>.Option] = [
-        .init(value: .todo, label: "할 일", tint: Theme.Palette.textSecondary),
-        .init(value: .doing, label: "하는 중", tint: Theme.Palette.warning),
-        .init(value: .submitted, label: "제출", tint: Theme.Palette.success),
-        .init(value: .graded, label: "채점됨", tint: Theme.Series.one),
+        .init(value: .todo, label: String(localized: .assignmentStatusTodo), tint: Theme.Palette.textSecondary),
+        .init(value: .doing, label: String(localized: .assignmentStatusDoing), tint: Theme.Palette.warning),
+        .init(value: .submitted, label: String(localized: .assignmentStatusSubmitted), tint: Theme.Palette.success),
+        .init(value: .graded, label: String(localized: .assignmentStatusGraded), tint: Theme.Series.one),
     ]
 
     var label: String {
         switch self {
-        case .todo: "할 일"
-        case .doing: "하는 중"
-        case .submitted: "제출"
-        case .graded: "채점됨"
+        case .todo: String(localized: .assignmentStatusTodo)
+        case .doing: String(localized: .assignmentStatusDoing)
+        case .submitted: String(localized: .assignmentStatusSubmitted)
+        case .graded: String(localized: .assignmentStatusGraded)
         }
     }
 
@@ -157,112 +161,73 @@ extension AssignmentStatus {
 extension ExamKind {
     var label: String {
         switch self {
-        case .midterm: "중간고사"
-        case .final: "기말고사"
-        case .quiz: "퀴즈"
-        case .other: "기타"
+        case .midterm: String(localized: .examKindMidterm)
+        case .final: String(localized: .examKindFinal)
+        case .quiz: String(localized: .examKindQuiz)
+        case .other: String(localized: .examKindOther)
         }
     }
 }
 
 /// Edits course.json. The folder name follows the title, main code and number, so saving a change to those renames it.
 struct EditCourseSheet: View {
-    @Environment(Workspace.self) private var workspace
     @Environment(\.dismiss) private var dismiss
     @Environment(\.self) private var environment
-    let course: LoadedCourse
-    @State private var title: String
-    @State private var codes: [UUID]
-    @State private var number: String
-    @State private var credits: Double?
-    @State private var mode: GradingMode
-    @State private var people: [UUID]
-    @State private var categories: [UUID]
-    @State private var color: String
-    @State private var icon: String?
-    @State private var reviews: Bool
-    @State private var sharingApproved: Bool
-    @State private var schedule: [ClassTime]
+    @State private var model: EditCourseModel
 
-    init(course: LoadedCourse) {
-        self.course = course
-        let c = course.file.course
-        _title = State(initialValue: c.title)
-        _codes = State(initialValue: c.codes)
-        _number = State(initialValue: c.number)
-        _credits = State(initialValue: c.credits)
-        _mode = State(initialValue: c.gradingMode)
-        _people = State(initialValue: c.instructorIds)
-        _categories = State(initialValue: c.categoryIds)
-        _color = State(initialValue: c.color)
-        _icon = State(initialValue: c.icon)
-        _reviews = State(initialValue: c.reviews != false)
-        _sharingApproved = State(initialValue: c.sharingApproved == true)
-        _schedule = State(initialValue: c.schedule)
-    }
-
-    /// The course as the form now has it, for what its codes and approval let it share.
-    var draft: Course {
-        var c = course.file.course
-        c.codes = codes
-        c.sharingApproved = sharingApproved ? true : nil
-        return c
+    init(workspace: Workspace, course: LoadedCourse) {
+        _model = State(initialValue: EditCourseModel(workspace: workspace, course: course))
     }
 
     var body: some View {
-        let catalog = workspace.catalog.people.sorted { $0.name < $1.name }
-        let folder = workspace.folderName(title: title, codes: codes, number: number)
-        let current = course.store.url.lastPathComponent
-        let badTime = schedule.contains { $0.endMinute <= $0.startMinute }
-        SheetForm(title: "과목 편집", confirm: "저장", disabled: (credits ?? -1) < 0 || folder == nil || badTime,
-                  note: folder == nil ? "강의 코드와 번호(예: 4207-01), 이름을 넣어야 폴더 이름이 정해집니다"
-                      : badTime ? "수업이 끝나는 시간이 시작 시간보다 늦어야 합니다"
-                      : folder == current ? nil : "저장하면 폴더 이름을 ‘\(current)’에서 ‘\(folder!)’로 바꿉니다", carded: false, width: 560) {
-            Block("과목") {
+        let course = model.course
+        SheetForm(title: String(localized: .courseEdit), confirm: String(localized: .commonSave), disabled: !model.canSave,
+                  note: model.note, carded: false, width: 560) {
+            Block(String(localized: .courseEditCourse)) {
                 Card {
-                    FormRow(label: "이름") { InlineField("예: 그래프 이론", text: $title) }
+                    FormRow(label: String(localized: .courseEditName)) { InlineField(String(localized: .courseEditNameExample), text: $model.title) }
                     // Prefix and number side by side, as the course reads: GS2004-02.
-                    FormRow(label: "강의 코드", detail: codes.count > 1 ? "교차 개설: 첫 코드를 폴더 이름에 씁니다" : nil) {
-                        CodesMenu(codes: $codes)
-                        TextField("2004-02", text: $number).pill(width: 100)
+                    FormRow(label: String(localized: .courseEditCode), detail: model.codeDetail) {
+                        CodesMenu(codes: $model.codes)
+                        TextField("2004-02", text: $model.number).pill(width: 100)
                     }
-                    if codes.count > 1 {
-                        FormRow(label: "대표 코드") {
-                            ChoiceMenu(selection: Binding(get: { codes[0] }, set: { id in codes.removeAll { $0 == id }; codes.insert(id, at: 0) }),
-                                       options: codes.map { id in (id, workspace.catalog.codes.first { $0.id == id }?.prefix ?? "?") })
+                    if model.codes.count > 1 {
+                        FormRow(label: String(localized: .courseEditMainCode)) {
+                            ChoiceMenu(selection: Binding(get: { model.codes[0] }, set: model.makeMain), options: model.codeOptions)
                         }
                     }
-                    FormRow(label: "학점") { CreditsField(credits: $credits) }
-                    FormRow(label: "평가 방식", last: true) {
-                        ChoiceMenu(selection: $mode, options: [GradingMode.relative, .absolute, .passFail].map { ($0, $0.label) })
+                    FormRow(label: String(localized: .courseEditCredits)) { CreditsField(credits: $model.credits) }
+                    FormRow(label: String(localized: .courseEditGrading), last: true) {
+                        ChoiceMenu(selection: $model.mode, options: [GradingMode.relative, .absolute, .passFail].map { ($0, $0.label) })
                     }
                 }
             }
-            ClassTimesBlock(schedule: $schedule)
-            Block("관리") {
+            ClassTimesBlock(schedule: $model.schedule)
+            Block(String(localized: .courseEditManage)) {
                 Card {
-                    FormRow(label: "교수와 조교") {
-                        SearchMultiSelect(selection: $people, options: catalog.map { PickOption(id: $0.id, title: $0.name, detail: [$0.role.label, $0.email].filter { !$0.isEmpty }.joined(separator: " · ")) },
-                                          placeholder: catalog.isEmpty ? "사이드바의 교수와 조교에서 먼저 추가하세요" : "고르기")
+                    FormRow(label: String(localized: .courseInfoPeople)) {
+                        SearchMultiSelect(selection: $model.people, options: model.peopleOptions, placeholder: model.peoplePlaceholder)
                     }
-                    FormRow(label: "세부 분류", detail: "졸업 요건에서 이 과목이 들어갈 곳") { CategoryMenu(selection: $categories, course: draft) }
-                    if workspace.requirementCatalog.categories.contains(where: { $0.maxSharedCredits != nil }) {
-                        FormRow(label: "학과 인정 과목", detail: "강의 공유 코드가 없어도 전공과 복수전공에 함께 셉니다") { Switch(isOn: $sharingApproved) }
+                    FormRow(label: String(localized: .courseEditCategories), detail: String(localized: .courseEditCategoriesDetail)) {
+                        CategoryMenu(selection: $model.categories, course: model.draft)
                     }
-                    FormRow(label: "복습", detail: "끄면 오늘 복습과 복습 노트 알림에서 빠집니다") { Switch(isOn: $reviews) }
-                    FormRow(label: "아이콘", detail: "사이드바, 과목 열, 위치 표시에 씁니다") {
-                        CourseIconPicker(icon: $icon, color: workspace.accent(course.id, token: color).color)
+                    if model.showsSharing {
+                        FormRow(label: String(localized: .courseEditSharing), detail: String(localized: .courseEditSharingDetail)) { Switch(isOn: $model.sharingApproved) }
                     }
-                    FormRow(label: "색", last: true) {
+                    FormRow(label: String(localized: .courseEditReviews), detail: String(localized: .courseEditReviewsDetail)) { Switch(isOn: $model.reviews) }
+                    FormRow(label: String(localized: .courseEditIcon), detail: String(localized: .courseEditIconDetail)) {
+                        CourseIconPicker(icon: $model.icon, color: model.workspace.accent(course.id, token: model.color).color)
+                    }
+                    FormRow(label: String(localized: .courseEditColor), last: true) {
                         HStack(spacing: Theme.Space.s) {
-                            if color.isEmpty {
-                                Text("자동").foregroundStyle(Theme.Palette.textTertiary)
+                            if model.color.isEmpty {
+                                Text(.courseEditColorAuto).foregroundStyle(Theme.Palette.textTertiary)
                             } else {
-                                Button("자동으로") { color = "" }.buttonStyle(.ghost)
+                                Button(.courseEditColorMakeAuto) { model.color = "" }.buttonStyle(.ghost)
                             }
-                            ColorPicker("과목 색", selection: Binding(
-                                get: { workspace.accent(course.id, token: color).color },
-                                set: { color = CourseAccent.token($0.resolve(in: environment)) }
+                            ColorPicker(String(localized: .courseEditColorPicker), selection: Binding(
+                                get: { model.workspace.accent(course.id, token: model.color).color },
+                                set: { model.color = CourseAccent.token($0.resolve(in: environment)) }
                             ), supportsOpacity: false)
                             .labelsHidden()
                         }
@@ -270,14 +235,7 @@ struct EditCourseSheet: View {
                 }
             }
         } onConfirm: {
-            guard let credits else { return }
-            let c = course.file.course
-            if title != c.title || codes != c.codes || number != c.number {
-                guard workspace.run(CourseRename(course: course.id, title: title, codes: codes, number: number)) != nil else { return }
-            }
-            workspace.run(CourseSet(course: course.id, [.credits(credits), .gradingMode(mode), .instructors(people), .categories(categories),
-                                                       .color(color), .icon(icon), .schedule(schedule), .reviews(reviews), .sharingApproved(sharingApproved)]))
-            dismiss()
+            if model.confirm() { dismiss() }
         }
     }
 }
@@ -287,22 +245,23 @@ struct ClassTimesBlock: View {
     @Binding var schedule: [ClassTime]
 
     var body: some View {
-        Block(title: "수업 시간", note: "다음 강의를 제안할 때 씁니다", trailing: {
-            Button("시간 추가", systemImage: "plus") { schedule.append(ClassTime(weekday: 1, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45)) }
+        Block(title: String(localized: .classTimesTitle), note: String(localized: .classTimesNote), trailing: {
+            Button(.classTimesAdd, systemImage: "plus") { schedule.append(ClassTime(weekday: 1, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45)) }
                 .buttonStyle(.ghost)
         }) {
             Card {
-                if schedule.isEmpty { CardRow(last: true) { EmptyLine("수업 시간이 없습니다") } }
+                if schedule.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .classTimesEmpty)) } }
                 ForEach(schedule.indices, id: \.self) { i in
                     let slot = schedule[i]
                     CardRow(last: i == schedule.count - 1) {
-                        ChoiceMenu(selection: $schedule.element(at: i, fallback: slot).weekday, options: (1...7).map { ($0, "\(ClassTime.weekdayNames[$0 - 1])요일") })
+                        ChoiceMenu(selection: $schedule.element(at: i, fallback: slot).weekday,
+                                   options: (1...7).map { ($0, String(localized: .classTimesWeekday(ClassTime.weekdayNames[$0 - 1]))) })
                         TimeMenu(minute: $schedule.element(at: i, fallback: slot).startMinute)
                         Text("–").foregroundStyle(Theme.Palette.textTertiary)
                         TimeMenu(minute: $schedule.element(at: i, fallback: slot).endMinute)
                         Spacer(minLength: Theme.Space.m)
-                        TextField("강의실", text: $schedule.element(at: i, fallback: slot).room).pill(width: 130)
-                        Button("삭제", systemImage: "minus.circle") { schedule.remove(at: i) }
+                        TextField(String(localized: .classTimesRoom), text: $schedule.element(at: i, fallback: slot).room).pill(width: 130)
+                        Button(.commonDelete, systemImage: "minus.circle") { schedule.remove(at: i) }
                             .buttonStyle(.ghostIcon).tint(Theme.Palette.danger)
                     }
                 }
@@ -311,26 +270,22 @@ struct ClassTimesBlock: View {
     }
 }
 
-/// Only the class times, for 바꾸기 on the sessions page.
+/// Only the class times, for the sessions page.
 struct ClassTimesSheet: View {
-    @Environment(Workspace.self) private var workspace
     @Environment(\.dismiss) private var dismiss
-    let course: LoadedCourse
-    @State private var schedule: [ClassTime]
+    @State private var model: EditCourseModel
 
-    init(course: LoadedCourse) {
-        self.course = course
-        _schedule = State(initialValue: course.file.course.schedule)
+    init(workspace: Workspace, course: LoadedCourse) {
+        _model = State(initialValue: EditCourseModel(workspace: workspace, course: course))
     }
 
     var body: some View {
-        let badTime = schedule.contains { $0.endMinute <= $0.startMinute }
         // The course as the heading: the block below already says 수업 시간, and twice in a row read as a mistake.
-        SheetForm(title: course.title, confirm: "저장", disabled: badTime,
-                  note: badTime ? "수업이 끝나는 시간이 시작 시간보다 늦어야 합니다" : nil, carded: false, width: 560) {
-            ClassTimesBlock(schedule: $schedule)
+        SheetForm(title: model.course.title, confirm: String(localized: .commonSave), disabled: model.badTime,
+                  note: model.timesNote, carded: false, width: 560) {
+            ClassTimesBlock(schedule: $model.schedule)
         } onConfirm: {
-            workspace.run(CourseSet(course: course.id, [.schedule(schedule)]))
+            model.confirmSchedule()
             dismiss()
         }
     }
@@ -343,7 +298,7 @@ struct CreditsField: View {
     var body: some View {
         HStack(spacing: Theme.Space.xs) {
             TextField("3", value: $credits, format: .number).pill(width: 56).multilineTextAlignment(.trailing)
-            Text("학점").foregroundStyle(Theme.Palette.textSecondary)
+            Text(.courseEditCredits).foregroundStyle(Theme.Palette.textSecondary)
         }
     }
 }

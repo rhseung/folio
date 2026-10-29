@@ -14,9 +14,9 @@ enum FormSnapshots {
         var forms: [(String, AnyView)] = [
             ("semester-add", AnyView(AddSemesterSheet(workspace: workspace) { _ in })),
             ("course-add", AnyView(AddCourseSheet(workspace: workspace, semester: semester) { _ in })),
-            ("course-edit", AnyView(EditCourseSheet(course: course))),
+            ("course-edit", AnyView(EditCourseSheet(workspace: workspace, course: course))),
             ("course-icon", AnyView(CourseIconPanel(icon: nil, color: workspace.accent(course.id).color) { _ in })),
-            ("class-times", AnyView(ClassTimesSheet(course: course))),
+            ("class-times", AnyView(ClassTimesSheet(workspace: workspace, course: course))),
             ("session-add", AnyView(AddSessionSheet(course: course))),
             ("exam-new", AnyView(ExamEditor(workspace: workspace, course: course, exam: Exam(device: device, at: .now, kind: .midterm, title: "")))),
             ("assignment", AnyView(AssignmentSheet(workspace: workspace, course: course, assignment: file.assignments.first ?? Assignment(device: device, at: .now, title: "")))),

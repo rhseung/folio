@@ -45,7 +45,7 @@ struct SessionsView: View {
                 }
             }
         }
-        .sheet(isPresented: $editingTimes) { ClassTimesSheet(course: course) }
+        .sheet(isPresented: $editingTimes) { ClassTimesSheet(workspace: model.workspace, course: course) }
         .sheet(isPresented: $adding) { AddSessionSheet(course: course) }
         .task(id: file.sessions) { model.loadUntouched(course) }
     }

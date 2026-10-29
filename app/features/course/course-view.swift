@@ -296,7 +296,7 @@ struct CourseOverview: View {
                 Spacer()
                 Button(.courseEdit, systemImage: "slider.horizontal.3") { editing = true }.buttonStyle(.ghost)
             }
-            .sheet(isPresented: $editing) { EditCourseSheet(course: course) }
+            .sheet(isPresented: $editing) { EditCourseSheet(workspace: model.workspace, course: course) }
             #if DEBUG && os(macOS)
             .onChange(of: SnapshotDriver.shared.editCourse, initial: true) { _, on in editing = on }
             #endif
@@ -324,7 +324,7 @@ struct CourseOverview: View {
             }
             .onGeometryChange(for: Bool.self) { $0.size.width >= 620 } action: { wide = $0 }
 
-            InfoBlocks(course: course)
+            InfoBlocks(workspace: model.workspace, course: course)
         }
     }
 
