@@ -451,7 +451,7 @@ struct RootView: View {
             }
         case .people: PeopleView(workspace: workspace) { selection = .course($0) }
         case .codes: CodesView(workspace: workspace)
-        case .settings: SettingsView()
+        case .settings: SettingsView(workspace: workspace)
         }
     }
 
