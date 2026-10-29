@@ -50,6 +50,8 @@ final class Workspace {
     static let environmentKey = "FOLIO_GIST"
 
     init() {
+        // The test host must never open the saved folder: that is the real GIST folder.
+        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil { return }
         if let path = ProcessInfo.processInfo.environment[Self.environmentKey] {
             open(URL(filePath: path, directoryHint: .isDirectory), remember: false)
         } else if let data = UserDefaults.standard.data(forKey: Self.bookmarkKey) {

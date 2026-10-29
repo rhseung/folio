@@ -17,6 +17,7 @@ let package = Package(
         .executable(name: "folio", targets: ["FolioCommand"]),
         .executable(name: "folio-gen", targets: ["FolioGen"]),
         .executable(name: "folio-fixture", targets: ["FolioFixtureWriter"]),
+        .library(name: "FolioFixtures", targets: ["FolioFixtures"]),
     ],
     dependencies: [
         .package(path: "../folio-markdown"),

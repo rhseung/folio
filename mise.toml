@@ -61,6 +61,11 @@ description = "Build the app for macOS"
 depends = ["generate"]
 run = "xcodebuild -scheme Folio -destination 'platform=macOS' build -quiet -skipMacroValidation"
 
+[tasks.test-app]
+description = "Run the app's screen-model tests on macOS"
+depends = ["generate"]
+run = "xcodebuild -scheme Folio -destination 'platform=macOS' test -quiet -skipMacroValidation"
+
 [tasks.install-mac]
 description = "Build a Release app and install it to /Applications"
 depends = ["generate"]

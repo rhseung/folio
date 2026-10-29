@@ -449,8 +449,8 @@ struct RootView: View {
             RequirementsView { course in
                 if workspace.course(course.id) != nil { selection = .course(course.id) } else if let id = course.semesterId { selection = .semester(id) }
             }
-        case .people: PeopleView { selection = .course($0) }
-        case .codes: CodesView()
+        case .people: PeopleView(workspace: workspace) { selection = .course($0) }
+        case .codes: CodesView(workspace: workspace)
         case .settings: SettingsView()
         }
     }
