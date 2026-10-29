@@ -1,0 +1,131 @@
+/* Note typography, shared by the reader and the live-preview editor.
+   Colors come from the app as variables (theme.swift is their only source, see note-style.swift): --text, --text-2,
+   --text-3, --line, --line-soft, --fill, --card, --accent, --accent-ink and the callout kinds --c-*. */
+
+:root {
+  color-scheme: light dark;
+  --measure: 720px;
+  --body: 16px;
+  --leading: 1.78;
+  --radius: 12px;
+  --mono: ui-monospace, "SF Mono", Menlo, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
+}
+
+html { background: transparent; color: var(--text); -webkit-font-smoothing: antialiased; }
+body.note { margin: 0 auto; padding: 40px 40px 96px; max-width: var(--measure); font: var(--body)/var(--leading) var(--sans);
+  letter-spacing: -0.003em; word-break: keep-all; overflow-wrap: anywhere; }
+::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
+
+/* Headings: a quiet hierarchy, the accent only as a short rule under h2. */
+.note h1 { font-size: 30px; line-height: 1.25; font-weight: 750; letter-spacing: -0.025em; margin: 0 0 28px; }
+.note h2 { font-size: 21px; line-height: 1.35; font-weight: 700; letter-spacing: -0.015em; margin: 48px 0 14px; padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-soft); position: relative; }
+.note h2::after { content: ""; position: absolute; left: 0; bottom: -1px; width: 28px; height: 2px; border-radius: 2px; background: var(--accent); }
+.note h3 { font-size: 17.5px; font-weight: 680; margin: 32px 0 8px; }
+.note h4, .note h5, .note h6 { font-size: 15px; font-weight: 650; margin: 24px 0 6px; color: var(--text-2); }
+.note h1 + h2, .note h2:first-child { margin-top: 0; }
+
+.note p { margin: 0 0 14px; }
+.note strong { font-weight: 650; }
+.note em { font-style: italic; }
+.note del { color: var(--text-3); }
+.note mark { background: color-mix(in srgb, #f5c542 40%, transparent); color: inherit; border-radius: 3px; padding: 0 2px; }
+
+/* Links: notes in the accent with a soft underline, outside links marked with an arrow. */
+.note a { color: var(--accent-ink); text-decoration: none; background-image: linear-gradient(color-mix(in srgb, var(--accent) 35%, transparent), color-mix(in srgb, var(--accent) 35%, transparent));
+  background-size: 100% 1px; background-position: 0 100%; background-repeat: no-repeat; transition: background-size .15s; }
+.note a:hover { background-image: linear-gradient(color-mix(in srgb, var(--accent) 18%, transparent), color-mix(in srgb, var(--accent) 18%, transparent)); background-size: 100% 100%; border-radius: 3px; }
+.note a[href^="http"]::after { content: "↗"; font-size: .75em; margin-left: 2px; color: var(--text-3); }
+
+/* Lists */
+.note ul, .note ol { margin: 0 0 14px; padding-left: 1.5em; }
+.note li { margin: 3px 0; padding-left: 2px; }
+.note li > ul, .note li > ol { margin: 3px 0 4px; }
+.note ul > li::marker { color: color-mix(in srgb, var(--accent) 70%, var(--text-3)); }
+.note ol > li::marker { color: var(--text-3); font-variant-numeric: tabular-nums; font-weight: 600; font-size: .92em; }
+.note li:has(> input[type=checkbox]) { list-style: none; margin-left: -1.4em; }
+.note input[type=checkbox] { appearance: none; position: relative; width: 15px; height: 15px; margin: 0 7px 0 0; vertical-align: -2px; border: 1.5px solid var(--text-3);
+  border-radius: 5px; display: inline-grid; place-content: center; }
+.note input[type=checkbox]:checked { background: var(--accent); border-color: var(--accent); }
+/* Out of flow: an in-flow mark becomes the box's baseline and drops the checked box below the text. */
+.note input[type=checkbox]:checked::after { content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 4px; border: 2px solid white; border-top: 0; border-right: 0;
+  transform: translate(-50%, -50%) rotate(-45deg) translate(1px, -1px); }
+.note li:has(> input:checked) { color: var(--text-3); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--text-3) 60%, transparent); }
+
+/* Code */
+.note code { font: 0.86em var(--mono); background: var(--fill); padding: 2px 6px; border-radius: 6px; }
+.note pre { margin: 18px 0; padding: 14px 18px; background: var(--fill); border-radius: var(--radius); overflow-x: auto; line-height: 1.6; tab-size: 4; }
+.note pre code { background: none; padding: 0; font-size: 13.5px; }
+.note pre[data-lang]::before { content: attr(data-lang); display: block; font: 600 11px var(--sans); color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
+/* Code colors from code.js's classes; scoped to code so markdown marks the editor also tags keep their own look. */
+:is(.note pre, .cm-code) :is(.tok-keyword, .tok-operatorKeyword) { color: var(--c-theorem); }
+:is(.note pre, .cm-code) :is(.tok-string, .tok-string2) { color: var(--c-example); }
+:is(.note pre, .cm-code) :is(.tok-number, .tok-bool, .tok-atom, .tok-literal) { color: var(--c-warning); }
+:is(.note pre, .cm-code) :is(.tok-typeName, .tok-className, .tok-namespace) { color: var(--c-definition); }
+:is(.note pre, .cm-code) :is(.tok-comment, .tok-meta) { color: var(--text-3); }
+:is(.note pre, .cm-code) .tok-comment { font-style: italic; }
+
+/* Quotes and rules */
+.note blockquote { margin: 18px 0; padding: 2px 0 2px 18px; border-left: 3px solid var(--line); color: var(--text-2); }
+/* The last block's margin would sit inside the rule and leave it longer below the text than above. */
+.note blockquote > :last-child { margin-bottom: 0; }
+.note hr { border: 0; height: 24px; margin: 28px 0; text-align: center; }
+.note hr::before { content: "· · ·"; color: var(--text-3); letter-spacing: .6em; font-size: 14px; }
+
+/* Images sit on the page with a soft edge; SVG diagrams get a light card so dark mode keeps them readable. */
+/* Border-box: an SVG's padding otherwise widened it past the text column. A width from `|300` stays a cap, not a minimum. */
+.note img:not(.cm-widgetBuffer) { display: block; box-sizing: border-box; max-width: 100%; height: auto; margin: 22px auto; border-radius: 10px; }
+.note p > img:only-child { margin: 22px auto; }
+.note img[src$=".svg"] { background: #fff; padding: 14px; box-shadow: 0 0 0 1px var(--line-soft); }
+@media (prefers-color-scheme: dark) { .note img[src$=".svg"] { background: #f4f2ee; } }
+
+/* Tables: rounded frame, tinted header, hover row. */
+.note table { border-collapse: separate; border-spacing: 0; margin: 20px 0; font-size: 14.5px; line-height: 1.6; max-width: 100%;
+  border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: block; overflow-x: auto; width: fit-content; }
+.note th, .note td { padding: 9px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line-soft); }
+.note th { background: var(--fill); font-weight: 650; font-size: 13.5px; color: var(--text-2); }
+.note tr:last-child td { border-bottom: 0; }
+.note tbody tr:hover td { background: color-mix(in srgb, var(--fill) 55%, transparent); }
+.note td + td, .note th + th { border-left: 1px solid var(--line-soft); }
+
+/* Math */
+.note .math { font-size: 1.04em; }
+.note .math.display { display: block; margin: 20px 0; padding: 6px 0; overflow-x: auto; overflow-y: hidden; text-align: center; }
+.note .math.pending { font: .9em var(--mono); color: var(--text-3); }
+.note .math-error { font: .9em var(--mono); color: var(--c-danger); background: color-mix(in srgb, var(--c-danger) 10%, transparent); padding: 1px 5px; border-radius: 5px; }
+.note .katex { font-size: 1.08em; }
+.note .katex-display { margin: 0; }
+
+/* Callouts: a tinted card with a colored spine. Math-style blocks (definition, theorem, proof) read like a textbook. */
+.note .callout { --c: var(--c-neutral); margin: 20px 0; padding: 12px 18px 4px; border-radius: var(--radius);
+  background: color-mix(in srgb, var(--c) 7%, transparent); border-left: 3px solid color-mix(in srgb, var(--c) 75%, transparent); }
+.note .callout:not([open]) { padding-bottom: 12px; }
+.note .callout > summary { cursor: pointer; list-style: none; margin-bottom: 6px; display: flex; gap: 8px; align-items: baseline; }
+.note .callout:not([open]) > summary { margin-bottom: 0; }
+.note .callout > summary::-webkit-details-marker { display: none; }
+.note .callout > summary::after { content: "›"; margin-left: auto; color: var(--text-3); transform: rotate(90deg); transition: transform .15s; }
+.note .callout:not([open]) > summary::after { transform: none; }
+.note .callout-label { font-weight: 700; font-size: 13px; letter-spacing: .02em; color: color-mix(in srgb, var(--c) 85%, var(--text)); white-space: nowrap; }
+.note .callout-title { font-weight: 600; }
+.note .callout > p:last-child, .note .callout > ul:last-child, .note .callout > ol:last-child { margin-bottom: 10px; }
+.note .callout-definition, .note .callout-info, .note .callout-note, .note .callout-abstract { --c: var(--c-definition); }
+.note .callout-theorem, .note .callout-lemma, .note .callout-corollary, .note .callout-proposition { --c: var(--c-theorem); }
+.note .callout-example, .note .callout-counterexample, .note .callout-tip, .note .callout-summary, .note .callout-solution { --c: var(--c-example); }
+.note .callout-warning, .note .callout-important, .note .callout-question { --c: var(--c-warning); }
+.note .callout-danger { --c: var(--c-danger); }
+.note .callout-proof, .note .callout-remark { --c: var(--c-neutral); background: none; }
+.note .callout-proof > :last-child::after { content: "∎"; float: right; color: var(--text-3); }
+/* A proof right under a theorem joins it: no gap (the -20px cancels the theorem's margin) and square corners where they meet. */
+.note .callout.attached { margin-top: -20px; border-top-left-radius: 0; border-top-right-radius: 0; }
+.note .callout:has(+ .callout.attached) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+
+/* Wikilinks and embeds */
+.note a.wikilink { font-weight: 550; }
+.note .embed { margin: 16px 0; padding: 10px 14px; border: 1px dashed var(--line); border-radius: 10px; color: var(--text-3); font-size: 14px; }
+.note .embed::before { content: "↪ " attr(data-href); }
+.note .cb-widget { border: 1px dashed var(--line); border-radius: var(--radius); }
+.note .raw-html { color: var(--text-3); }
+
+/* Footnotes and block IDs */
+.note [id^="^"]:target { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 6px; transition: background 1s; }

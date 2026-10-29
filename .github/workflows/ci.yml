@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A newer push to the same branch or PR makes the older run moot.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # mise.toml sets DEVELOPER_DIR to /Applications/Xcode.app; the image keeps each Xcode under its version.
+  XCODE: /Applications/Xcode_27.1.app
+  MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
+
+jobs:
+  test:
+    runs-on: xcode-27
+    steps:
+      - uses: actions/checkout@v7
+      - run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
+      # Apple's date detector reads 오후 3시 or 자정 only when Korean is a preferred language; on the English runner
+      # it kept the date and dropped the time.
+      - run: defaults write -g AppleLanguages -array ko-KR en-US && defaults write -g AppleLocale ko_KR
+      - uses: jdx/mise-action@v5
+      - run: mise run test
+
+  build:
+    runs-on: xcode-27
+    strategy:
+      fail-fast: false
+      matrix:
+        task: [build-mac, build-ipad]
+        # The iPad build adds little over the Mac one on every PR, so it runs only once a change lands.
+        exclude:
+          - task: ${{ github.event_name == 'pull_request' && 'build-ipad' || 'none' }}
+    steps:
+      - uses: actions/checkout@v7
+      - run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
+      - uses: jdx/mise-action@v5
+      - run: mise run ${{ matrix.task }}

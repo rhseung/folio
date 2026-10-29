@@ -1,0 +1,112 @@
+/* The live-preview editor, dressed to read like note.css. Lines are the unit here, so block styles go on line classes. */
+
+body.note.editor { margin: 0; max-width: none; padding: 0; }
+#editor { max-width: var(--measure); margin: 0 auto; padding: 40px 40px 40vh; }
+.cm-editor { font: var(--body)/var(--leading) var(--sans); color: var(--text); background: transparent; letter-spacing: -0.003em; }
+.cm-editor.cm-focused { outline: none; }
+/* CodeMirror's base theme sets a monospace font and 1.4 leading on the scroller; notes read in the body font. */
+.cm-editor .cm-scroller { font-family: var(--sans) !important; line-height: var(--leading) !important; overflow: visible !important; }
+/* Outranks CodeMirror's base theme, whose 4px top padding pushed the note below the reader's. */
+.cm-editor .cm-content { padding: 0; caret-color: var(--accent); }
+/* CodeMirror's wrapping breaks inside words; Korean reads in whole words, as in the reader. */
+.cm-editor .cm-content.cm-lineWrapping { word-break: keep-all; }
+.cm-editor .cm-line { padding: 0; }
+.cm-cursor { border-left: 2px solid var(--accent) !important; }
+.cm-selectionBackground, .cm-focused .cm-selectionBackground { background: color-mix(in srgb, var(--accent) 24%, transparent) !important; }
+.cm-selectionMatch { background: color-mix(in srgb, var(--accent) 12%, transparent); }
+.cm-panels { background: var(--card); color: var(--text); border-color: var(--line) !important; font: 13px var(--sans); }
+.cm-panels input, .cm-panels button { font: inherit; }
+.cm-searchMatch { background: color-mix(in srgb, #f5c542 35%, transparent); border-radius: 2px; }
+
+/* Headings. Space between blocks is set per line by editor.js from note.css's margins; CodeMirror can't measure margins. */
+.cm-h1 { font-size: 30px; line-height: 1.25; font-weight: 750; letter-spacing: -0.025em; }
+.cm-editor .cm-line.cm-h2 { font-size: 21px; line-height: 1.35; font-weight: 700; letter-spacing: -0.015em; padding-bottom: 9px;
+  background: linear-gradient(var(--accent), var(--accent)) 0 100% / 28px 2px no-repeat, linear-gradient(var(--line-soft), var(--line-soft)) 0 100% / 100% 1px no-repeat; }
+.cm-h3 { font-size: 17.5px; font-weight: 680; }
+.cm-h4, .cm-h5, .cm-h6 { font-size: 15px; font-weight: 650; color: var(--text-2); }
+.cm-h .tok-processingInstruction, .cm-h .ͼ-meta { color: var(--text-3); font-weight: 500; }
+
+.cm-strong { font-weight: 650; }
+.cm-em { font-style: italic; }
+.cm-del { text-decoration: line-through; color: var(--text-3); }
+.cm-inline-code { font: 0.86em var(--mono); background: var(--fill); padding: 2px 5px; border-radius: 6px; }
+
+/* Links */
+.cm-link { color: var(--accent-ink); }
+.cm-live { cursor: pointer; text-decoration: underline; text-decoration-color: color-mix(in srgb, var(--accent) 40%, transparent); text-underline-offset: 3px; }
+.cm-live:hover { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 3px; }
+.cm-wikilink { font-weight: 550; }
+.cm-live[data-href^="http"]::after { content: "↗"; font-size: .75em; margin-left: 2px; color: var(--text-3); }
+
+/* Lists */
+/* Items hang like the reader's: the marker sits in its own column and wrapped lines line up under the text. */
+.cm-editor .cm-line.cm-li { --hang: 26px; padding-left: calc(var(--depth) * var(--hang)); text-indent: calc(-1 * var(--hang)); padding-top: 3px; }
+.cm-editor .cm-line.cm-li-first { padding-top: 0; }
+.cm-li * { text-indent: 0; }
+.cm-bullet { color: color-mix(in srgb, var(--accent) 70%, var(--text-3)); font-weight: 700; display: inline-block; min-width: var(--hang); padding-right: 9px;
+  box-sizing: border-box; text-align: right; }
+/* Drawn, not a glyph: the reader's markers are the browser's disc, circle and square, which no bullet character matches. */
+.cm-bullet-1, .cm-bullet-2, .cm-bullet-3 { position: relative; height: 1lh; vertical-align: top; padding: 0; }
+.cm-bullet-1::before, .cm-bullet-2::before, .cm-bullet-3::before { content: ""; position: absolute; left: 7px; top: 50%; width: 5px; height: 5px;
+  transform: translateY(-40%); border-radius: 50%; background: currentColor; box-sizing: border-box; }
+.cm-bullet-2::before { background: none; border: 1.2px solid currentColor; }
+.cm-bullet-3::before { border-radius: 1px; }
+.cm-ol { color: var(--text-3); font-weight: 600; font-size: .92em; font-variant-numeric: tabular-nums; padding-right: 6px; }
+/* Where the reader puts it: the item pulled 1.4em left, then the box, its 7px margin and a space. */
+.note .cm-li .cm-task { margin: 0 10.5px 0 3.6px; }
+.cm-task { appearance: none; position: relative; width: 15px; height: 15px; margin: 0 4px 0 0; vertical-align: -2px; border: 1.5px solid var(--text-3); border-radius: 5px;
+  display: inline-grid; place-content: center; cursor: pointer; }
+.cm-task:checked { background: var(--accent); border-color: var(--accent); }
+/* Out of flow: an in-flow mark becomes the box's baseline and drops the checked box below the text. */
+.cm-task:checked::after { content: ""; position: absolute; left: 50%; top: 50%; width: 7px; height: 4px; border: 2px solid white; border-top: 0; border-right: 0;
+  transform: translate(-50%, -50%) rotate(-45deg) translate(1px, -1px); }
+.cm-task-done { color: var(--text-3); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--text-3) 60%, transparent); }
+
+/* Quotes and callouts: one box around the block's lines. editor.js sets the bottom padding from the last block. */
+.cm-quote-box { color: var(--text-2); border-left: 3px solid var(--line); padding: 2px 0 2px 18px; }
+.cm-callout-box { --c: var(--c-neutral); color: var(--text); background: color-mix(in srgb, var(--c) 7%, transparent);
+  border-left: 3px solid color-mix(in srgb, var(--c) 75%, transparent); border-radius: var(--radius); padding: 12px 18px 14px; }
+.cm-callout-box.attached { border-top-left-radius: 0; border-top-right-radius: 0; }
+.cm-callout-box.has-proof { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+.cm-callout-definition, .cm-callout-info, .cm-callout-note, .cm-callout-abstract { --c: var(--c-definition); }
+.cm-callout-theorem, .cm-callout-lemma, .cm-callout-corollary, .cm-callout-proposition { --c: var(--c-theorem); }
+.cm-callout-example, .cm-callout-counterexample, .cm-callout-tip, .cm-callout-summary, .cm-callout-solution { --c: var(--c-example); }
+.cm-callout-warning, .cm-callout-important, .cm-callout-question { --c: var(--c-warning); }
+.cm-callout-danger { --c: var(--c-danger); }
+.cm-callout-proof, .cm-callout-remark { background: none; }
+.cm-callout-label { font-weight: 700; font-size: 13px; letter-spacing: .02em; margin-right: 8px; color: color-mix(in srgb, var(--c) 85%, var(--text)); }
+.cm-callout-title { font-weight: 600; }
+.cm-editor .cm-line.cm-callout-head { padding-bottom: 6px; }
+/* A widget sits between two zero-width buffer images whose empty line boxes would add a line above and below it. */
+.cm-line:has(> .cm-image-box), .cm-line:has(> .cm-rule) { line-height: 0; font-size: 0; }
+.cm-editor .cm-line.cm-collapsed { line-height: 0; font-size: 0; }
+
+/* Code blocks */
+.cm-code-box { background: var(--fill); border-radius: var(--radius); padding: 14px 18px; }
+/* The reader's pre lines are 16px × 1.6 high around 13.5px code; its language label has normal leading. */
+.cm-code { font: 13.5px var(--mono); line-height: 25.6px; }
+.cm-editor .cm-line.cm-code-head { font: 11px var(--sans); padding-bottom: 8px; }
+.cm-code-lang { font: 600 11px var(--sans); color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
+
+/* Math */
+.cm-math { cursor: text; }
+.note .cm-math.display { display: block; text-align: center; margin: 0; padding: 6px 0; overflow-x: auto; overflow-y: hidden; }
+.cm-math-source { font-family: var(--mono); font-size: .9em; color: var(--accent-ink); background: color-mix(in srgb, var(--accent) 8%, transparent); border-radius: 4px; }
+.cm-math-block-source { font-family: var(--mono); font-size: 14px; color: var(--accent-ink); background: color-mix(in srgb, var(--accent) 6%, transparent); }
+
+/* Media, rules, tables */
+/* img.cm-image outranks note.css's reader rule for images. */
+.note img.cm-image { display: block; box-sizing: border-box; max-width: 100%; height: auto; margin: 0 auto; border-radius: 10px; }
+.cm-image-box { display: block; position: relative; width: fit-content; max-width: 100%; margin: 0 auto; }
+.cm-image-handle { position: absolute; right: -6px; bottom: -6px; width: 12px; height: 12px; border-radius: 50%;
+  background: var(--accent); box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.9); cursor: nwse-resize; touch-action: none; opacity: 0; transition: opacity 0.15s; }
+.cm-image-box:hover .cm-image-handle, .cm-image-box.resizing .cm-image-handle { opacity: 1; }
+/* An outline, not a border, so the image keeps its size and the handle stays on the frame's corner. */
+.note img.cm-image { outline: 1.5px solid transparent; transition: outline-color 0.15s; }
+.cm-image-box:hover img.cm-image, .cm-image-box.resizing img.cm-image { outline-color: var(--accent); }
+.cm-image[src$=".svg"] { background: #fff; padding: 14px; box-shadow: 0 0 0 1px var(--line-soft); }
+@media (prefers-color-scheme: dark) { .cm-image[src$=".svg"] { background: #f4f2ee; } }
+.cm-rule { height: 24px; text-align: center; }
+.cm-rule::before { content: "· · ·"; color: var(--text-3); letter-spacing: .6em; font-size: 14px; line-height: 24px; }
+/* The table takes note.css's table look; only its margin goes, for the line-set gap. */
+.note .cm-table { margin: 0; cursor: text; }
