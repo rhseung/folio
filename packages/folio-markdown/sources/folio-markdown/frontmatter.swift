@@ -15,7 +15,7 @@ public struct Frontmatter: Equatable, Sendable {
 
     static let delimiter = "---"
 
-    /// Splits `text` into frontmatter and body. Text without a leading `---` block has empty frontmatter.
+    /// Text without a leading `---` block has empty frontmatter.
     public static func split(_ text: String) -> (frontmatter: Frontmatter, body: String) {
         // Files saved on Windows: "\r\n" is one Character, so splitting on "\n" would see one long line.
         var text = text.replacing("\r\n", with: "\n")
@@ -82,7 +82,6 @@ public struct Frontmatter: Equatable, Sendable {
 
     public var isEmpty: Bool { lines.isEmpty }
 
-    /// `---` block followed by `body`. Without fields, just the body.
     public func render(body: String) -> String {
         guard !lines.isEmpty else { return body }
         let header = lines.map { line in

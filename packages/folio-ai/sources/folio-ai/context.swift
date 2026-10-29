@@ -1,7 +1,6 @@
 import FolioDomain
 import Foundation
 
-/// One item of context handed to Claude, listed in the Claude panel so the user can drop or add it.
 public struct ContextItem: Sendable, Equatable, Identifiable {
     public enum Tier: Int, Sendable, Comparable {
         // Order from docs/SPEC.md "맥락 구성"; later tiers are dropped first when over budget.
@@ -34,20 +33,17 @@ public struct ContextItem: Sendable, Equatable, Identifiable {
 public struct BuiltContext: Sendable, Equatable {
     /// System blocks; the stable part (course summary, rules) carries the cache breakpoint.
     public var system: [ContentBlock]
-    /// Focus, related and search items, to go in front of the user's question.
     public var userBlocks: [ContentBlock]
     public var included: [ContextItem]
-    /// Items left out to stay within budget, so the panel can say so.
     public var dropped: [ContextItem]
 }
 
 public enum ContextBuilder {
-    /// Rough token estimate (≈ 3 characters per token for mixed Korean/English; a 1568px image ≈ 2,500 tokens).
+    /// ≈ 3 characters per token for mixed Korean/English; a 1568px image ≈ 2,500 tokens.
     public static func estimate(_ item: ContextItem) -> Int {
         item.text.count / 3 + item.images.count * 2_500
     }
 
-    /// Orders items by tier and drops from the back until the estimate fits `budgetTokens`.
     public static func build(_ items: [ContextItem], budgetTokens: Int) -> BuiltContext {
         let ordered = items.enumerated().sorted { ($0.element.tier, $0.offset) < ($1.element.tier, $1.offset) }.map(\.element)
         var included: [ContextItem] = []
@@ -80,7 +76,6 @@ public enum ContextBuilder {
         )
     }
 
-    /// The course summary item: title, units, upcoming exams and the course memo (docs/SPEC.md "맥락 구성" 1).
     public static func courseSummary(_ file: CourseFile, now: Date) -> ContextItem {
         var lines = ["과목: \(file.course.title)"]
         if !file.units.isEmpty {

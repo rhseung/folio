@@ -1,7 +1,7 @@
 import FolioDomain
 import Foundation
 
-/// Card candidates for one unit (docs/SPEC.md "퀴즈 카드 생성"). Shown to the user, who saves only the ones picked.
+/// Shown to the user, who saves only the ones picked.
 public struct QuizCardDrafts: StructuredResult, Equatable {
     public struct Draft: Codable, Sendable, Equatable {
         public var type: String
@@ -20,7 +20,7 @@ public struct QuizCardDrafts: StructuredResult, Equatable {
             self.rubric = rubric
         }
 
-        /// The card to save, or nil when a choice card's answer isn't one of its options.
+        /// nil when a choice card's answer isn't one of its options.
         public func card(unitId: UUID, device: DeviceID, at date: Date) -> QuizCard? {
             let type = CardType(rawValue: type) ?? .free
             var options = options
@@ -46,7 +46,7 @@ public struct QuizCardDrafts: StructuredResult, Equatable {
 }
 
 extension ClaudeClient {
-    /// Asks for `count` cards on `unitTitle`. `context` holds the course summary and the unit's notes; it goes through
+    /// `context` holds the course summary and the unit's notes; it goes through
     /// `ContextBuilder` so the summary is cached and the notes are cut to the budget.
     public func makeCards(unitTitle: String, count: Int, type: CardType?, context: [ContextItem],
                           budgetTokens: Int = 60_000) async throws -> [QuizCardDrafts.Draft] {

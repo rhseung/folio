@@ -1,7 +1,6 @@
 import Foundation
 import Security
 
-/// The API key in the keychain, synced to the user's other devices through iCloud Keychain (docs/SPEC.md "호출 방식").
 public enum APIKeyStore {
     static let service = "com.rhseung.folio.anthropic"
     static let account = "api-key"

@@ -1,13 +1,12 @@
 import FolioDomain
 import Foundation
 
-/// The jobs Claude does in Folio (docs/SPEC.md "작업 목록").
 public enum ClaudeTask: String, Codable, Sendable, CaseIterable {
     case chat, reviewNoteDraft, examSummaryDraft, quizCards, grading, classifyFile, extractAssignment, extractGradingPolicy, examPlan, widget
 }
 
-/// Model and effort per task. The spec: light jobs (file classification) on the small model, grading and proof
-/// review on the large one. Defaults are defined here only; settings may override per task.
+/// Per the spec: light jobs (file classification) on the small model, grading and proof review on the large one.
+/// Defaults are defined here only; settings may override per task.
 public struct TaskConfig: Codable, Sendable, Equatable {
     public var model: String
     public var effort: Effort
@@ -47,7 +46,6 @@ public struct ModelPricing: Sendable, Equatable {
     }
 }
 
-/// `api_usage` log event, for the monthly usage and cost view in settings.
 public struct APIUsageEvent: LogEvent, Equatable {
     public static let type = "api_usage"
     public var task: ClaudeTask
@@ -57,11 +55,9 @@ public struct APIUsageEvent: LogEvent, Equatable {
     public var cost: Double? { ModelPricing.table[model]?.cost(of: usage) }
 }
 
-/// Runs tasks: picks the model, adds the refusal fallback, checks stop reasons, and decodes structured output.
 public struct ClaudeClient: Sendable {
     let provider: any ClaudeProvider
     let configs: [ClaudeTask: TaskConfig]
-    /// Called with every response's usage so the app can log it.
     let onUsage: @Sendable (APIUsageEvent) -> Void
 
     public init(provider: any ClaudeProvider, overrides: [ClaudeTask: TaskConfig] = [:], onUsage: @escaping @Sendable (APIUsageEvent) -> Void = { _ in }) {
@@ -83,13 +79,13 @@ public struct ClaudeClient: Sendable {
         )
     }
 
-    /// Free-text reply (chat, note drafts). Refusals and truncation throw instead of returning partial text.
+    /// Refusals and truncation throw instead of returning partial text.
     public func text(_ task: ClaudeTask, system: [ContentBlock], messages: [Message],
                      onText: (@Sendable (String) -> Void)? = nil) async throws -> MessagesResponse {
         try await send(task, request(task, system: system, messages: messages), onText: onText)
     }
 
-    /// Structured reply decoded as `T`. A reply that doesn't decode is asked for once more, then reported
+    /// A reply that doesn't decode is asked for once more, then reported
     /// (docs/SPEC.md "스키마에 맞지 않는 응답은 한 번 다시 요청").
     public func structured<T: Decodable & Sendable>(_ task: ClaudeTask, as _: T.Type, schema: JSONValue,
                                                     system: [ContentBlock], messages: [Message]) async throws -> T {

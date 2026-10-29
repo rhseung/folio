@@ -56,13 +56,11 @@ public struct CalloutHeader: Hashable, Sendable {
         title = String(m.3)
     }
 
-    /// Types numbered automatically within a note.
     public static let numbered: Set<String> = ["definition", "theorem", "lemma", "corollary", "example", "counterexample"]
 
-    /// Statements a proof right below hangs from.
     public static let provable: Set<String> = ["theorem", "lemma", "corollary", "proposition"]
 
-    /// Callout types the editor offers (docs/SPEC.md). Others still render, as plain callouts.
+    /// Others still render, as plain callouts.
     public static let known: [String] = [
         "definition", "theorem", "lemma", "corollary", "proof", "example", "counterexample", "remark", "note", "tip",
         "warning", "important", "question", "solution", "summary", "abstract", "info", "danger",
@@ -78,7 +76,6 @@ public struct CalloutHeader: Hashable, Sendable {
 enum BlockID {
     static var pattern: Regex<(Substring, Substring)> { #/\s\^([A-Za-z0-9-]+)\s*$/# }
 
-    /// Splits a trailing block ID off `text`.
     static func strip(_ text: String) -> (text: String, id: String?) {
         guard let m = text.firstMatch(of: pattern) else { return (text, nil) }
         var t = text

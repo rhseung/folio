@@ -4,7 +4,6 @@ import Foundation
 /// and `FakeProvider` in tests.
 public protocol ClaudeProvider: Sendable {
     func send(_ request: MessagesRequest) async throws -> MessagesResponse
-    /// Same, calling `onText` with each piece of the answer as it is written.
     func send(_ request: MessagesRequest, onText: @escaping @Sendable (String) -> Void) async throws -> MessagesResponse
 }
 
@@ -15,11 +14,9 @@ extension ClaudeProvider {
     }
 }
 
-/// Calls the Claude API over HTTPS.
 public struct APIProvider: ClaudeProvider {
     let apiKey: @Sendable () -> String?
     let session: URLSession
-    /// Retries for 429 / 5xx / overloaded, honoring `retry-after`.
     let maxRetries: Int
 
     public init(apiKey: @escaping @Sendable () -> String?, session: URLSession = .shared, maxRetries: Int = 2) {
@@ -59,7 +56,6 @@ public struct APIProvider: ClaudeProvider {
     }
 }
 
-/// Returns queued responses in order and records every request.
 public actor FakeProvider: ClaudeProvider {
     public private(set) var requests: [MessagesRequest] = []
     var responses: [MessagesResponse]

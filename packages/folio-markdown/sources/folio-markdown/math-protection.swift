@@ -22,7 +22,7 @@ enum MathProtection {
                 out.append(line)
                 continue
             }
-            // Display math, possibly spanning lines; keep the quote/indent prefix so it stays inside its container.
+            // Keep the quote/indent prefix so display math stays inside its container.
             let prefix = String(line.prefix { $0 == " " || $0 == ">" })
             if line.dropFirst(prefix.count).hasPrefix("$$") {
                 var body = String(line.dropFirst(prefix.count + 2)).trimmingCharacters(in: .whitespaces)
@@ -49,7 +49,6 @@ enum MathProtection {
                 result.append("\\$")
                 chars.removeFirst()
             case "`":
-                // Copy a code span through unchanged.
                 var ticks = "`"
                 while chars.first == "`" { ticks.append(chars.removeFirst()) }
                 result += ticks
@@ -74,7 +73,6 @@ enum MathProtection {
         return result
     }
 
-    /// Text up to the next unescaped `$`, or nil if the line has none.
     static func closingDollar(in s: String) -> String? {
         var previous: Character?
         for (i, c) in s.enumerated() {

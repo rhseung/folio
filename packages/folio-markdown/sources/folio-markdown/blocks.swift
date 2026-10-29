@@ -25,7 +25,6 @@ public struct CBTable: Codable, Equatable, Sendable {
 
     public var columns: [Column]?
     public var rows: [Row]
-    /// First column rendered as headers.
     public var headerColumn: Bool?
 
     static let alignments: Set<String> = ["left", "center", "right"]

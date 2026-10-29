@@ -1,7 +1,6 @@
 import Foundation
 import Markdown
 
-/// Renders a note body to HTML for the in-app viewer.
 /// - Math becomes `<span class="math">` / `<div class="math display">` holding raw TeX for KaTeX to typeset.
 /// - Links use the `folio://` scheme: `folio://note/<title>#<heading or ^block>`, `folio://material/<id>#page=12`.
 /// - Raw HTML in notes is escaped, not executed; notes come from many sources and the viewer is not a sandbox.
@@ -11,7 +10,6 @@ public struct HTMLRenderer {
         return r.blocks(Array(note.document.children))
     }
 
-    /// Renders a markdown fragment (used for cb-table cells).
     public static func render(markdown: String) -> String {
         render(ParsedNote(markdown))
     }
@@ -144,7 +142,6 @@ public struct HTMLRenderer {
             }
         }
 
-        // Body: what follows the header line in the first paragraph, then the remaining blocks.
         let first = quote.child(at: 0) as! Paragraph
         let rest = Array(first.inlineChildren.drop { !($0 is SoftBreak || $0 is LineBreak) }.dropFirst())
         var body = ""

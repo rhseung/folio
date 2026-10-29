@@ -1,6 +1,5 @@
 import Foundation
 
-/// Converts Notion-flavored markdown, as the Notion MCP returns it, into Folio markdown.
 /// Math (`$…$`, `$$…$$`), headings, lists and tables are already compatible and pass through.
 public enum NotionMarkdown {
     /// - Parameters:
@@ -26,7 +25,6 @@ public enum NotionMarkdown {
             emit("[!\(type)]\(folded ? "-" : "")" + (title.isEmpty ? "" : " \(title)"), at: level)
             afterHeader = true
         }
-        /// Emits the waiting header without a title (or nothing, for a plain quote).
         func settle() {
             guard let p = pending else { return }
             pending = nil
@@ -175,7 +173,6 @@ public enum NotionMarkdown {
     static let dropped: Set<String> = ["<p>", "</p>", "<p />", "<p/>", "<columns>", "</columns>", "<column>", "</column>", "</pdf>", "</image>"]
     static var droppedLine: Regex<Substring> { /<(?:table-of-contents|p|column|columns)\b[^>]*\/?>/ }
 
-    /// One markdown table cell: no line breaks, `|` escaped.
     static func cell(_ text: String) -> String {
         text.replacingOccurrences(of: "|", with: "\\|").trimmingCharacters(in: .whitespaces)
     }

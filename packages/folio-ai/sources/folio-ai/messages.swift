@@ -11,7 +11,6 @@ public struct CacheControl: Codable, Sendable, Equatable {
 
 public enum ContentBlock: Codable, Sendable, Equatable {
     case text(String, cache: Bool = false)
-    /// Base64 image, e.g. a handwritten answer rendered to PNG.
     case image(Data, mediaType: String, cache: Bool = false)
     /// Blocks the app doesn't act on (thinking, fallback markers, ...), kept so they can be echoed back unchanged.
     case other(JSONValue)
@@ -80,7 +79,6 @@ public struct MessagesRequest: Encodable, Sendable, Equatable {
     /// `"default"`: on a safety refusal the server re-runs the request on Anthropic's recommended fallback model.
     public var fallbacks: String?
 
-    /// Beta headers the body needs.
     var betas: [String] { fallbacks == nil ? [] : [ClaudeAPI.fallbackBeta] }
 
     enum CodingKeys: String, CodingKey { case model, max_tokens, system, messages, output_config, fallbacks }
@@ -126,7 +124,6 @@ public enum ClaudeError: Error, Equatable {
     case http(status: Int, body: String)
     /// The model (and its fallback) declined; the content must not be used.
     case refused
-    /// Output stopped at `max_tokens` before finishing.
     case truncated
     /// Structured output still didn't match the schema after one retry.
     case invalidOutput(String)
