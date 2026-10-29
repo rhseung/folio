@@ -88,12 +88,12 @@ public struct ActionSpec: Codable, Sendable, Equatable {
         case .string(let s)?:
             guard ref, let id = UUID(uuidString: s) else { return s }
             return ctx.name(of: id) ?? s
-        case .bool(let b)?: return b ? "예" : "아니오"
+        case .bool(let b)?: return b ? String(localized: .valueYes) : String(localized: .valueNo)
         case .number(let n)?: return n == n.rounded() && abs(n) < 1e15 ? String(Int64(n)) : String(n)
         case .array(let items)?:
             // Objects have no name of their own, so a list of them is told by its count.
             let objects = items.contains { if case .object = $0 { true } else { false } }
-            return items.count > 3 || objects ? "\(items.count)개" : items.map { text($0, ref: ref, ctx: ctx) }.joined(separator: ", ")
+            return items.count > 3 || objects ? String(localized: .valueCount(items.count)) : items.map { text($0, ref: ref, ctx: ctx) }.joined(separator: ", ")
         case .object?: return ""
         }
     }

@@ -2,8 +2,8 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-func index<E: Identifiable>(_ id: E.ID, in items: [E], _ what: String) throws -> Int {
-    guard let i = items.firstIndex(where: { $0.id == id }) else { throw ActionError.notFound("\(what)을(를) 찾지 못했습니다") }
+func index<E: Identifiable>(_ id: E.ID, in items: [E], _ what: LocalizedStringResource) throws -> Int {
+    guard let i = items.firstIndex(where: { $0.id == id }) else { throw ActionError.notFound(String(localized: .errorNotFoundItem(String(localized: what)))) }
     return i
 }
 
@@ -22,7 +22,7 @@ public struct SessionAdd {
     public func run(_ ctx: ActionContext) throws {
         let start = try ctx.semester(of: ctx.file(course).course)?.start
         try ctx.edit(course) { f in
-            guard !f.sessions.contains(where: { $0.id == id }) else { throw ActionError.rule("이미 쓰는 회차 ID입니다: \(id)") }
+            guard !f.sessions.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenSession("\(id)"))) }
             var s = SessionPlanner.session(at: date, sessions: f.sessions, termStart: start, calendar: ctx.calendar,
                                            device: ctx.device, now: ctx.now)
             s.id = id
@@ -46,9 +46,9 @@ public struct SessionRemove {
         let noted = Set(try ctx.store(course).notes().compactMap(\.meta.sessionId))
         try ctx.edit(course) { f in
             for id in sessions {
-                let s = f.sessions[try index(id, in: f.sessions, "회차")]
+                let s = f.sessions[try index(id, in: f.sessions, .valueSession)]
                 guard f.isUnlinked(s, notedSessions: noted) else {
-                    throw ActionError.rule("\(f.name(of: s)) 회차에 노트, 녹음, 출석, 자료, 단원 중 연결된 것이 있습니다. 수업이 없던 날이면 휴강으로 표시하세요.")
+                    throw ActionError.rule(String(localized: .errorSessionLinked(f.name(of: s))))
                 }
             }
             f.sessions.removeAll { sessions.contains($0.id) }
@@ -97,9 +97,9 @@ public struct SessionNote {
     @Arg var kind: NoteKind
 
     public func run(_ ctx: ActionContext) throws {
-        guard kind == .rough || kind == .review else { throw ActionError.rule("회차 노트는 러프나 복습 노트입니다") }
+        guard kind == .rough || kind == .review else { throw ActionError.rule(String(localized: .errorSessionNoteKind)) }
         let file = try ctx.file(course)
-        let s = file.sessions[try index(session, in: file.sessions, "회차")]
+        let s = file.sessions[try index(session, in: file.sessions, .valueSession)]
         if let id = kind == .rough ? s.roughNoteId : s.reviewNoteId {
             ctx.made(id)
             return
@@ -110,7 +110,7 @@ public struct SessionNote {
         let made = try ctx.createNote(course, title: title, meta: NoteMeta(id: id, kind: kind, sessionId: s.id, unitIds: s.unitIds,
                                                                            math: settings.newNoteMath), body: body) ?? id
         try ctx.edit(course) { f in
-            let i = try index(session, in: f.sessions, "회차")
+            let i = try index(session, in: f.sessions, .valueSession)
             if kind == .rough {
                 f.sessions[i].roughNoteId = made
             } else {
@@ -135,7 +135,7 @@ public struct AttendanceSet {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            _ = try index(session, in: f.sessions, "회차")
+            _ = try index(session, in: f.sessions, .valueSession)
             f.attendance.removeAll { $0.sessionId == session }
             if state != .present { f.attendance.append(Attendance(device: ctx.device, at: ctx.now, sessionId: session, state: state)) }
         }
@@ -159,7 +159,7 @@ public struct UnitAdd {
     public func run(_ ctx: ActionContext) throws {
         let name = title.trimmingCharacters(in: .whitespaces)
         try ctx.edit(course) { f in
-            guard !f.units.contains(where: { $0.id == id }) else { throw ActionError.rule("이미 쓰는 단원 ID입니다: \(id)") }
+            guard !f.units.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenUnit("\(id)"))) }
             f.units.append(FolioDomain.Unit(id: id, device: ctx.device, at: ctx.now, title: name, order: UnitTree.nextOrder(under: parent, in: f.units), parentId: parent))
         }
         ctx.made(id)
@@ -177,7 +177,7 @@ public struct UnitRemove {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            _ = try index(unit, in: f.units, "단원")
+            _ = try index(unit, in: f.units, .valueUnit)
             f.removeUnit(unit)
         }
     }
@@ -218,12 +218,12 @@ public struct UnitMove {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            _ = try index(unit, in: f.units, "단원")
+            _ = try index(unit, in: f.units, .valueUnit)
             switch target {
             // Already first or last: nothing to do, as with the app's arrow buttons.
             case .by(let offset): _ = UnitTree.move(unit, by: offset, in: &f.units)
             case .parent(let parent):
-                guard UnitTree.setParent(unit, to: parent, in: &f.units) else { throw ActionError.rule("자기 자신이나 하위 단원 아래로는 옮길 수 없습니다") }
+                guard UnitTree.setParent(unit, to: parent, in: &f.units) else { throw ActionError.rule(String(localized: .errorUnitCycle)) }
             }
         }
     }
@@ -244,9 +244,9 @@ public struct UnitLink {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            let u = try index(unit, in: f.units, "단원")
+            let u = try index(unit, in: f.units, .valueUnit)
             for session in sessions {
-                _ = try index(session, in: f.sessions, "회차")
+                _ = try index(session, in: f.sessions, .valueSession)
                 if f.units[u].sessionIds.contains(session) != linked { f.toggle(session: session, unit: unit) }
             }
         }
@@ -265,8 +265,8 @@ public struct ExamScope {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            let e = try index(exam, in: f.exams, "시험")
-            _ = try index(unit, in: f.units, "단원")
+            let e = try index(exam, in: f.exams, .valueExam)
+            _ = try index(unit, in: f.units, .valueUnit)
             if f.exams[e].scopeUnitIds.contains(unit) != included { f.toggle(exam: exam, unit: unit) }
         }
     }

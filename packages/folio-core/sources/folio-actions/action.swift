@@ -140,7 +140,7 @@ public final class ActionContext {
     // MARK: Reads
 
     public func store(_ course: UUID) throws -> CourseStore {
-        guard let store = try courseStores()[course] else { throw ActionError.notFound("과목을 찾지 못했습니다: \(course)") }
+        guard let store = try courseStores()[course] else { throw ActionError.notFound(String(localized: .errorNotFoundCourseId("\(course)"))) }
         return store
     }
 
@@ -241,7 +241,7 @@ public final class ActionContext {
     public func createNote(_ course: UUID, title: String, meta: NoteMeta, body: String?) throws -> UUID? {
         let store = try store(course)
         let planned = relative(store.url.appending(path: CourseFolder.notes.rawValue).appending(path: "\(title).md"))
-        if let id = meta.id, try store.notes().contains(where: { $0.meta.id == id }) { throw ActionError.rule("이미 쓰는 노트 ID입니다: \(id)") }
+        if let id = meta.id, try store.notes().contains(where: { $0.meta.id == id }) { throw ActionError.rule(String(localized: .errorIdTakenNote("\(id)"))) }
         guard !dryRun else {
             record(Change(.added, planned))
             return meta.id
@@ -273,7 +273,7 @@ public final class ActionContext {
         try refuseNewViolation(before, doc.model, World())
         let transcript = try transcript()
         if let v = Transcript.model.newViolation(transcript, in: World(catalog: before), transcript, in: World(catalog: doc.model)) {
-            throw ActionError.rule("다른 파일이 쓰고 있어 바꿀 수 없습니다: \(v.message)")
+            throw ActionError.rule(String(localized: .errorInUse(v.message)))
         }
         try refuseBreakingCourses(World(catalog: before, transcript: transcript), World(catalog: doc.model, transcript: transcript))
         catalogDoc = doc
@@ -304,7 +304,7 @@ public final class ActionContext {
         for course in try courseStores().keys.sorted(by: { $0.uuidString < $1.uuidString }) {
             let file = try file(course)
             if let v = CourseFile.model.newViolation(file, in: before, file, in: after) {
-                throw ActionError.rule("다른 파일이 쓰고 있어 바꿀 수 없습니다: \(v.message)")
+                throw ActionError.rule(String(localized: .errorInUse(v.message)))
             }
         }
     }

@@ -10,8 +10,8 @@ public struct ExamScopeTaught {
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
-            let e = f.exams[try index(exam, in: f.exams, "시험")]
-            guard let start = e.start else { throw ActionError.rule("\(e.title)에 일시가 없어 지난 회차를 알 수 없습니다") }
+            let e = f.exams[try index(exam, in: f.exams, .valueExam)]
+            guard let start = e.start else { throw ActionError.rule(String(localized: .errorExamNoStart(e.title))) }
             f.addScope(f.unitsTaught(before: start), exam: exam)
         }
     }

@@ -24,9 +24,9 @@ public struct SemesterAdd {
         semester.creditedHours = creditedHours
         try ctx.editTranscript { t in
             guard term == .credited || !t.semesters.contains(where: { $0.year == year && $0.term == term }) else {
-                throw ActionError.rule("이미 있는 학기입니다: \(semester.folder?.name ?? "\(year)")")
+                throw ActionError.rule(String(localized: .errorSemesterExists(semester.folder?.name ?? "\(year)")))
             }
-            guard !t.semesters.contains(where: { $0.id == id }) else { throw ActionError.rule("이미 쓰는 학기 ID입니다: \(id)") }
+            guard !t.semesters.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenSemester("\(id)"))) }
             t.semesters.append(semester)
         }
         if let folder = semester.folder {
@@ -84,16 +84,16 @@ public struct CourseAdd {
 
     public func run(_ ctx: ActionContext) throws {
         guard let semester = try ctx.transcript().semesters.first(where: { $0.id == self.semester }), let semesterFolder = semester.folder else {
-            throw ActionError.notFound("학기를 찾지 못했습니다")
+            throw ActionError.notFound(String(localized: .errorNotFoundSemester))
         }
         // Course folders are found by the id in their course.json, so a second folder with this id would be unreachable.
-        guard !ctx.hasFolder(id) else { throw ActionError.rule("이미 쓰는 과목 ID입니다: \(id)") }
+        guard !ctx.hasFolder(id) else { throw ActionError.rule(String(localized: .errorIdTakenCourse("\(id)"))) }
         let folder = try CourseRename.folderName(title: title, codes: [code], number: number, catalog: ctx.catalog())
         let course = Course(id: id, device: ctx.device, at: ctx.now, semesterId: semester.id, title: title, codes: [code], number: number,
                             credits: credits, gradingMode: mode)
         let path = "\(semesterFolder.name)/\(folder)"
         guard !FileManager.default.fileExists(atPath: ctx.gist.url.appending(path: path).path) else {
-            throw ActionError.rule("이미 있는 폴더입니다: \(path)")
+            throw ActionError.rule(String(localized: .errorFolderExists(path)))
         }
         try ctx.io(Change(.added, path + "/")) { try ctx.gist.createCourse(course, folderName: folder, in: semester) }
         ctx.invalidate()
@@ -114,7 +114,7 @@ public struct CourseRename {
     public static func folderName(title: String, codes: [UUID], number: String, catalog: Catalog) throws -> String {
         guard let prefix = codes.first.flatMap({ id in catalog.codes.first { $0.id == id } })?.prefix,
               let name = StandardLayout.courseFolderName(prefix: prefix, number: number, title: title) else {
-            throw ActionError.rule("과목 폴더 이름을 만들 수 없습니다. 강의 코드와 번호(예: 4207-01)를 확인하세요.")
+            throw ActionError.rule(String(localized: .errorCourseFolderName))
         }
         return name
     }
@@ -176,7 +176,7 @@ public struct CourseSet {
             return
         }
         try ctx.editTranscript { t in
-            guard let i = t.courses.firstIndex(where: { $0.id == course }) else { throw ActionError.notFound("과목을 찾지 못했습니다") }
+            guard let i = t.courses.firstIndex(where: { $0.id == course }) else { throw ActionError.notFound(String(localized: .errorNotFoundCourse)) }
             apply(to: &t.courses[i])
             t.courses[i].touch(by: ctx.device, at: ctx.now)
         }
