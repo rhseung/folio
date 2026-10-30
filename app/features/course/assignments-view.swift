@@ -59,12 +59,10 @@ struct AssignmentsView: View {
         Menu {
             statusItems(a)
         } label: {
-            Image(systemName: a.status.symbol)
-                .font(.system(size: 20)) // design: one-off, the status symbol is the row's button
-                .foregroundStyle(a.status == .todo ? Theme.Palette.textTertiary : a.status.tint)
+            AssignmentStatusIcon(status: a.status)
                 .contentTransition(.symbolEffect(.replace))
                 .symbolEffect(.bounce, value: a.status)
-                .frame(width: 24, height: 24).contentShape(.rect)
+                .contentShape(.rect)
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)
