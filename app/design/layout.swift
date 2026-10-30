@@ -124,6 +124,9 @@ struct Breadcrumb: View {
                     .buttonStyle(.toolbar)
                     .help(Text(.designHiddenPath))
                     .popover(isPresented: $showsHidden, arrowEdge: .bottom) { hidden }
+                    // The 32pt button's own margin around the glyph already spaces it; the row's gap on top of that
+                    // left the slashes adrift.
+                    .padding(.horizontal, -Theme.Space.s)
                 separator
                 step(last, at: crumbs.count - 1)
             } else {
