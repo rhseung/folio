@@ -10,29 +10,6 @@ struct Caption: View {
     }
 }
 
-/// Rounded colored square with a symbol or a short text, used to mark rows in sidebars and lists.
-struct IconTile: View {
-    let color: Color
-    var symbol: String?
-    var text: String?
-    var size: CGFloat = Theme.Size.tile
-
-    var body: some View {
-        RoundedRectangle(cornerRadius: Theme.Radius.tile * size / Theme.Size.tile)
-            .fill(LinearGradient(colors: [color.opacity(0.78), color], startPoint: .top, endPoint: .bottom))
-            .frame(width: size, height: size)
-            .overlay {
-                if let symbol {
-                    // Symbols differ in how much of their box they fill; a smaller size keeps dense ones (charts) from looking oversized.
-                    Image(systemName: symbol).font(.system(size: size * 0.42, weight: .semibold))
-                } else if let text {
-                    Text(text).font(.system(size: size * 0.5, weight: .bold))
-                }
-            }
-            .foregroundStyle(Theme.Palette.onFill)
-    }
-}
-
 /// A row of figures sharing one card, separated by hairlines.
 struct StatStrip: View {
     struct Item: Identifiable {
@@ -143,10 +120,25 @@ struct CourseMark: View {
     let color: Color
     var font: Font = Theme.Glyph.line
     var filled = false
+    var duotone = false
+    // Within a line of text the symbol takes the text's size; the icon column's 22pt square would gap the line.
+    var inline = false
 
     static let defaultIcon = "book.closed"
 
-    var body: some View { LineIcon(symbol: icon ?? Self.defaultIcon, font: font, filled: filled).foregroundStyle(color) }
+    var body: some View {
+        if inline {
+            Image(systemName: icon ?? Self.defaultIcon).foregroundStyle(color)
+        } else {
+            LineIcon(symbol: icon ?? Self.defaultIcon, font: font, filled: filled, duotone: duotone).foregroundStyle(color)
+        }
+    }
+}
+
+extension CourseMark {
+    init(_ workspace: Workspace, _ id: UUID, inline: Bool = false) {
+        self.init(icon: workspace.course(id)?.file.course.icon, color: workspace.accent(id).color, inline: inline)
+    }
 }
 
 struct CourseDot: View {

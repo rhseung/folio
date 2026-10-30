@@ -2,8 +2,10 @@ import FolioDomain
 import SwiftUI
 
 /// A scrolling page: cards on a quiet background, centered at reading width.
-struct Page<Content: View>: View {
+struct Page<Content: View, Backdrop: View>: View {
     var maxWidth: CGFloat = Theme.Size.pageMaxWidth
+    // Behind the content's top across the page's full width, scrolling away with it: Today's course wash.
+    @ViewBuilder var backdrop: Backdrop
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -14,12 +16,19 @@ struct Page<Content: View>: View {
                 .padding(.top, Theme.Space.xl)
                 .padding(.bottom, Theme.Space.xxl * 2)
                 .frame(maxWidth: .infinity)
+                .background(alignment: .top) { backdrop }
         }
         .background(Theme.Palette.page)
         // No edge effect under the toolbar: on this flat paper it reads as a header band with a rule across the page.
         .scrollEdgeEffectHidden(true, for: .top)
         .foregroundStyle(Theme.Palette.text)
         .font(Theme.Typeface.body)
+    }
+}
+
+extension Page where Backdrop == EmptyView {
+    init(maxWidth: CGFloat = Theme.Size.pageMaxWidth, @ViewBuilder content: () -> Content) {
+        self.init(maxWidth: maxWidth, backdrop: { EmptyView() }, content: content)
     }
 }
 
@@ -115,6 +124,9 @@ struct Breadcrumb: View {
                     .buttonStyle(.toolbar)
                     .help(Text(.designHiddenPath))
                     .popover(isPresented: $showsHidden, arrowEdge: .bottom) { hidden }
+                    // The 32pt button's own margin around the glyph already spaces it; the row's gap on top of that
+                    // left the slashes adrift.
+                    .padding(.horizontal, -Theme.Space.s)
                 separator
                 step(last, at: crumbs.count - 1)
             } else {
@@ -294,11 +306,12 @@ private struct FloatingGlass: ViewModifier {
 struct FolderIcon: View {
     var open: Bool
     var filled = false
+    var duotone = false
 
     var body: some View {
         let t: CGFloat = open ? 1 : 0
         ZStack {
-            FolderPart(kind: .fill, t: t).fill().opacity(filled ? Theme.Opacity.innerFill : 0)
+            FolderPart(kind: .fill, t: t).fill().opacity(filled ? Theme.Opacity.innerFill : duotone ? Theme.Opacity.duotone : 0)
             let line = StrokeStyle(lineWidth: FolderPart.stroke * Theme.Glyph.lineSize, lineCap: .round, lineJoin: .round)
             FolderPart(kind: .outline, t: t).stroke(style: line)
             FolderPart(kind: .corners, t: t).stroke(style: line).opacity(open ? 1 : 0)
@@ -403,10 +416,13 @@ struct LineIcon: View {
     /// `.fill` symbol stood out as a block, white in dark, among the outlines. Open line symbols (#, a chart line) have
     /// no inside and stay as they are.
     var filled = false
+    /// Every icon of a list given a fainter inside than the chosen one's (the sidebar): plain outlines all in white
+    /// read flat, and the chosen row still steps up from the rest.
+    var duotone = false
 
     var body: some View {
         ZStack {
-            if filled, Self.hasFill(symbol) { glyph(symbol + ".fill").opacity(Theme.Opacity.innerFill) }
+            if filled || duotone, Self.hasFill(symbol) { glyph(symbol + ".fill").opacity(filled ? Theme.Opacity.innerFill : Theme.Opacity.duotone) }
             glyph(symbol)
         }
     }
@@ -469,5 +485,46 @@ struct ColumnRow<Trailing: View>: View {
 extension ColumnRow where Trailing == EmptyView {
     init(title: String, symbol: String, chosen: Bool) {
         self.init(title: title, symbol: symbol, chosen: chosen) { EmptyView() }
+    }
+}
+
+extension View {
+    // In place of a scroll bar: an edge fades only while there is more past it, so a list at rest isn't faded.
+    // The mask also clips, which a Mac view otherwise doesn't (the sidebar's terms showed over the window buttons).
+    func overflowFade(_ axis: Axis) -> some View { modifier(OverflowFade(axis: axis)) }
+}
+
+private struct OverflowFade: ViewModifier {
+    let axis: Axis
+    @State private var edges = Edge.Set()
+
+    func body(content: Content) -> some View {
+        let vertical = axis == .vertical
+        let (start, end): (Edge.Set, Edge.Set) = vertical ? (.top, .bottom) : (.leading, .trailing)
+        let (from, to): (UnitPoint, UnitPoint) = vertical ? (.top, .bottom) : (.leading, .trailing)
+        let stack = vertical ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
+        return content
+            // Not .hidden: with scroll bars set to always show, that still reserved the bar's height below a row.
+            .scrollIndicators(.never)
+            .onScrollGeometryChange(for: Edge.Set.self) { g in
+                let (offset, visible, size) = vertical
+                    ? (g.visibleRect.minY, g.visibleRect.maxY, g.contentSize.height)
+                    : (g.visibleRect.minX, g.visibleRect.maxX, g.contentSize.width)
+                var past = Edge.Set()
+                if offset > 1 { past.insert(start) }
+                if visible < size - 1 { past.insert(end) }
+                return past
+            } action: { _, past in
+                withAnimation(.easeOut(duration: 0.15)) { edges = past }
+            }
+            .mask {
+                stack {
+                    LinearGradient(colors: [edges.contains(start) ? .clear : .primary, .primary], startPoint: from, endPoint: to)
+                        .frame(width: vertical ? nil : Theme.Space.xl, height: vertical ? Theme.Space.xl : nil)
+                    Rectangle()
+                    LinearGradient(colors: [.primary, edges.contains(end) ? .clear : .primary], startPoint: from, endPoint: to)
+                        .frame(width: vertical ? nil : Theme.Space.xl, height: vertical ? Theme.Space.xl : nil)
+                }
+            }
     }
 }

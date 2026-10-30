@@ -12,12 +12,14 @@ struct StudyTimeBlock: View {
 
     var body: some View {
         let chart = model.chart
-        Block(String(localized: .todayStudyTitle), note: model.bars.isEmpty ? nil : String(localized: .todayStudyTotal(StudyTimeModel.duration(chart.total)))) {
-            Card(padding: Theme.Space.l) {
-                if model.bars.isEmpty {
-                    EmptyLine(String(localized: .todayStudyEmpty))
-                } else {
-                    Chart {
+        Block(String(localized: .todayStudyTitle), note: String(localized: .todayStudyNote)) {
+            if model.bars.isEmpty {
+                EmptyCard(symbol: "clock", title: String(localized: .todayStudyEmpty))
+            } else {
+                Card(padding: Theme.Space.xl) {
+                    HStack(alignment: .top, spacing: Theme.Space.xxl) {
+                        totals(chart).frame(width: 200, alignment: .leading)
+                        Chart {
                         ForEach(chart.segments) { s in
                             BarMark(x: .value(String(localized: .todayStudyAxisDay), s.day), yStart: .value(String(localized: .todayStudyAxisStart), s.start),
                                     yEnd: .value(String(localized: .todayStudyAxisEnd), s.end), width: .ratio(0.5))
@@ -58,14 +60,44 @@ struct StudyTimeBlock: View {
                             }
                         }
                     }
-                    .chartLegend(position: .bottom, alignment: .leading, spacing: Theme.Space.m)
-                    .font(Theme.Typeface.caption)
-                    .frame(height: 180)
+                        // The courses are named in the totals beside the chart, with their colors.
+                        .chartLegend(.hidden)
+                        .font(Theme.Typeface.caption)
+                        .frame(height: 200)
+                    }
                 }
             }
         }
         // The day too: after the day boundary the bars must shift by a day even when nothing new was logged.
         .task(id: "\(StudyTracker.shared.revision) \(chart.today)") { await model.load() }
+    }
+
+    func totals(_ chart: StudyTimeModel.Chart) -> some View {
+        let courses = model.perCourse(chart)
+        let top = courses.first?.seconds ?? 1
+        return VStack(alignment: .leading, spacing: Theme.Space.l) {
+            Figure(StudyTimeModel.todayLabel, StudyTimeModel.duration(chart.perDay[chart.today] ?? 0))
+            HStack(spacing: Theme.Space.xl) {
+                Figure(String(localized: .todayStudyFortnight), StudyTimeModel.duration(chart.total), font: Theme.Typeface.figureSmall)
+                Figure(String(localized: .todayStudyDays), String(localized: .todayStudyDayCount(chart.perDay.values.filter { $0 > 0 }.count)), font: Theme.Typeface.figureSmall)
+            }
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                ForEach(courses, id: \.course.id) { entry in
+                    HStack(spacing: Theme.Space.s) {
+                        Text(entry.course.title).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1).frame(width: 88, alignment: .leading)
+                        Capsule().fill(Theme.Palette.fill)
+                            .overlay(alignment: .leading) {
+                                GeometryReader { proxy in
+                                    Capsule().fill(model.workspace.accent(entry.course.id).color).frame(width: proxy.size.width * entry.seconds / top)
+                                }
+                            }
+                            .frame(height: Theme.Space.tight)
+                        Text(StudyTimeModel.duration(entry.seconds)).monospacedDigit().frame(minWidth: 40, alignment: .trailing)
+                    }
+                    .font(Theme.Typeface.caption)
+                }
+            }
+        }
     }
 
     func tooltip(day: String, total: TimeInterval, segments: [StudyTimeModel.Segment]) -> some View {
@@ -97,7 +129,7 @@ struct AttendanceWarnings: View {
             Card {
                 ForEach(Array(warnings.enumerated()), id: \.element.course.id) { i, w in
                     CardRow(last: i == warnings.count - 1) {
-                        CourseDot(color: model.workspace.accent(w.course.id).color)
+                        CourseMark(model.workspace, w.course.id)
                         Text(.todayAttendanceAbsences(w.course.title, w.absences))
                         Spacer()
                         Chip(model.capLabel(w.cap), tone: .warning)

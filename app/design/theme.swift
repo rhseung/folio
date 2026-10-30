@@ -32,6 +32,8 @@ enum Theme {
         /// Icons on the window frame (sidebar, toolbar, breadcrumb). Darker than `textSecondary` in light: the frame's
         /// vibrancy lifts symbols, and the secondary gray came out faint on a light wallpaper.
         static let chromeIcon = Color(light: 0x2E2C28, dark: 0xE8E5E0)
+        /// The chosen sidebar row's icon: the system accent, so it follows the accent picked in System Settings.
+        static let chromeSelected = Color.accentColor
         /// Quiet text on the window frame (add rows, the search field's placeholder and key). The page's tertiary gray
         /// vanished into a light wallpaper showing through the frame, so light keeps it dark and lets weight and size
         /// carry the quiet.
@@ -77,6 +79,13 @@ enum Theme {
         static let edge = 0.12
         /// The fill inside a chosen row's line icon (`LineIcon(filled:)`).
         static let innerFill = 0.24
+        /// The inside of every sidebar icon (`LineIcon(duotone:)`), below the chosen one's `innerFill`.
+        static let duotone = 0.14
+        /// What's over and kept only for reference: Today's ended classes, the sidebar's past terms.
+        static let ended = 0.45
+        /// Today's course wash at the page's top (`TodayWash`). Each accent is already tuned per appearance, so one value
+        /// reads in both.
+        static let courseWash = 0.24
     }
 
     enum Space {
@@ -125,6 +134,11 @@ enum Theme {
 
     enum Size {
         static let pageMaxWidth: CGFloat = 900
+        /// Today's course wash: how far down it reaches, each course's glow radius in it, and the lone glow of the class
+        /// under way, wider since it's the only one.
+        static let washHeight: CGFloat = 480
+        static let washReach: CGFloat = 220
+        static let washReachFocus: CGFloat = 400
         static let courseColumn: CGFloat = 256
         static let sidebar: CGFloat = 216
         static let claudePanel: CGFloat = 380

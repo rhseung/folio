@@ -65,6 +65,11 @@ final class StudyTimeModel {
                      inHours: inHours, segments: segments)
     }
 
+    /// Each logged course's fortnight, most first.
+    func perCourse(_ chart: Chart) -> [(course: LoadedCourse, seconds: TimeInterval)] {
+        chart.courses.map { c in (c, bars.filter { $0.courseId == c.id }.map(\.seconds).reduce(0, +)) }.sorted { $0.seconds > $1.seconds }
+    }
+
     /// The hovered column's title and total, or nil when nothing was logged that day.
     func tooltip(_ hovered: String, in chart: Chart) -> (day: String, total: TimeInterval, segments: [Segment])? {
         guard let seconds = chart.perDay.first(where: { Self.label($0.key, today: chart.today) == hovered })?.value else { return nil }

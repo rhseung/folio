@@ -10836,6 +10836,17 @@
         }
       }
     },
+    "root.due-today-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@ 마감"
+          }
+        }
+      }
+    },
     "root.error-title": {
       "extractionState": "manual",
       "localizations": {
@@ -10953,6 +10964,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "오늘"
+          }
+        }
+      }
+    },
+    "root.next-class-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 다음 수업"
           }
         }
       }
@@ -13850,46 +13872,13 @@
         }
       }
     },
-    "today.classes.empty": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘은 수업이 없습니다"
-          }
-        }
-      }
-    },
-    "today.classes.now": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지금"
-          }
-        }
-      }
-    },
     "today.deadlines": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "마감"
-          }
-        }
-      }
-    },
-    "today.deadlines.count": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld개"
+            "value": "할 일"
           }
         }
       }
@@ -13900,7 +13889,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "남은 마감이 없습니다"
+            "value": "남은 과제 없음"
           }
         }
       }
@@ -13927,17 +13916,6 @@
         }
       }
     },
-    "today.note.continue": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복습 노트 마저 쓰기 · %@"
-          }
-        }
-      }
-    },
     "today.note.create-help": {
       "extractionState": "manual",
       "localizations": {
@@ -13956,17 +13934,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "복습 노트 작성 완료"
-          }
-        }
-      }
-    },
-    "today.note.more": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복습 노트 없는 회차 외 %lld개"
           }
         }
       }
@@ -14004,17 +13971,6 @@
         }
       }
     },
-    "today.note.write": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복습 노트 쓰기 · %@"
-          }
-        }
-      }
-    },
     "today.now-class": {
       "extractionState": "manual",
       "localizations": {
@@ -14022,28 +13978,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "지금 수업"
-          }
-        }
-      }
-    },
-    "today.now-class.left": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "남음"
-          }
-        }
-      }
-    },
-    "today.now-class.minutes": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld분"
           }
         }
       }
@@ -14059,28 +13993,6 @@
         }
       }
     },
-    "today.progress.done": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘 복습 끝"
-          }
-        }
-      }
-    },
-    "today.progress.left": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld단원 남음"
-          }
-        }
-      }
-    },
     "today.progress.streak": {
       "extractionState": "manual",
       "localizations": {
@@ -14088,17 +14000,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld일 연속"
-          }
-        }
-      }
-    },
-    "today.progress.total": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "/ %lld단원"
           }
         }
       }
@@ -14180,17 +14081,6 @@
         }
       }
     },
-    "today.reviews.note": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "우선순위 순"
-          }
-        }
-      }
-    },
     "today.reviews.overdue": {
       "extractionState": "manual",
       "localizations": {
@@ -14264,17 +14154,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이미 공부한 것으로 보고 오늘 화면에서 뺍니다. 틀린 퀴즈 카드나 시험 계획이 생기면 다시 올라옵니다."
-          }
-        }
-      }
-    },
-    "today.reviews.write-note-first": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ · 복습 노트 작성부터"
           }
         }
       }
@@ -14373,7 +14252,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "최근 2주 공부 시간"
+            "value": "공부 시간"
           }
         }
       }
@@ -14385,17 +14264,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "오늘"
-          }
-        }
-      }
-    },
-    "today.study.total": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "합계 %@"
           }
         }
       }
@@ -15188,6 +15056,523 @@
           "stringUnit": {
             "state": "translated",
             "value": "해설"
+          }
+        }
+      }
+    },
+    "today.deadlines.this-week": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이번 주"
+          }
+        }
+      }
+    },
+    "today.deadlines.next-week": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음 주"
+          }
+        }
+      }
+    },
+    "today.deadlines.later": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나중에"
+          }
+        }
+      }
+    },
+    "today.more": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld개 더 보기"
+          }
+        }
+      }
+    },
+    "today.next": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음"
+          }
+        }
+      }
+    },
+    "today.next.today-done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 수업 끝"
+          }
+        }
+      }
+    },
+    "today.next.tomorrow": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내일 첫 수업 %@"
+          }
+        }
+      }
+    },
+    "today.next.tomorrow-none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내일은 수업 없음"
+          }
+        }
+      }
+    },
+    "today.line.no-classes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 없음"
+          }
+        }
+      }
+    },
+    "today.line.classes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 **%lld개**"
+          }
+        }
+      }
+    },
+    "today.line.classes-ended": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 **%1$lld개 중 %2$lld개** 끝"
+          }
+        }
+      }
+    },
+    "today.line.classes-done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 **%lld개** 모두 끝"
+          }
+        }
+      }
+    },
+    "today.line.due": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 마감 **%lld개**"
+          }
+        }
+      }
+    },
+    "today.line.reviews": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 **%lld개** 남음"
+          }
+        }
+      }
+    },
+    "today.line.reviews-done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 끝"
+          }
+        }
+      }
+    },
+    "today.reviews.after-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 노트를 쓰면 시작"
+          }
+        }
+      }
+    },
+    "today.when.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
+          }
+        }
+      }
+    },
+    "today.when.yesterday": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어제"
+          }
+        }
+      }
+    },
+    "today.ribbon.free": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 없는 날"
+          }
+        }
+      }
+    },
+    "today.ribbon.next": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음 수업 · %@"
+          }
+        }
+      }
+    },
+    "today.ribbon.due-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@ 마감"
+          }
+        }
+      }
+    },
+    "today.now-class.remaining": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld분 남음"
+          }
+        }
+      }
+    },
+    "today.now-class.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트"
+          }
+        }
+      }
+    },
+    "today.exams": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다가오는 시험"
+          }
+        }
+      }
+    },
+    "today.exams.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld일 안 · %2$lld개"
+          }
+        }
+      }
+    },
+    "today.exams.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다가오는 시험 없음"
+          }
+        }
+      }
+    },
+    "today.exams.empty-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 일정이 생기면 D-day로 보여 줍니다"
+          }
+        }
+      }
+    },
+    "today.deadlines.empty-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빠른 추가로 바로 넣을 수 있어요"
+          }
+        }
+      }
+    },
+    "today.agenda.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다가오는 시험과 남은 과제가 없습니다"
+          }
+        }
+      }
+    },
+    "today.agenda.empty-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld일 안의 시험과 새 과제가 생기면 여기에 나눠 보여 줍니다"
+          }
+        }
+      }
+    },
+    "today.reviews.notes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 노트"
+          }
+        }
+      }
+    },
+    "today.reviews.notes-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업이 끝난 회차 · %lld개"
+          }
+        }
+      }
+    },
+    "today.reviews.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 복습을 다 했어요"
+          }
+        }
+      }
+    },
+    "today.reviews.empty-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업이 끝나면 그 회차의 복습 노트가 여기 생깁니다"
+          }
+        }
+      }
+    },
+    "today.reviews.progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld / %2$lld"
+          }
+        }
+      }
+    },
+    "today.note.unfinished": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쓰는 중"
+          }
+        }
+      }
+    },
+    "today.study.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최근 2주"
+          }
+        }
+      }
+    },
+    "today.study.fortnight": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "2주 합계"
+          }
+        }
+      }
+    },
+    "today.study.days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공부한 날"
+          }
+        }
+      }
+    },
+    "today.study.day-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld일"
+          }
+        }
+      }
+    },
+    "today.reviews.units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 복습"
+          }
+        }
+      }
+    },
+    "today.reviews.notes-empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쓸 복습 노트 없음"
+          }
+        }
+      }
+    },
+    "today.reviews.units-empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 복습할 단원 없음"
+          }
+        }
+      }
+    },
+    "today.note.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다 씀"
+          }
+        }
+      }
+    },
+    "today.ribbon.midnight": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자정"
+          }
+        }
+      }
+    },
+    "today.ribbon.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld개"
+          }
+        }
+      }
+    },
+    "today.ribbon.note-due": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld개 · 마감 %2$lld개"
           }
         }
       }

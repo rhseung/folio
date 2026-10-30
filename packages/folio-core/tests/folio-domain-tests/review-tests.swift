@@ -201,6 +201,25 @@ struct TodayTests {
         #expect(!session.needsReviewNote(at: now))
     }
 
+    @Test func courseHintPrefersDueTodayThenNextClassThenAnExamWithinAWeek() {
+        let now = at(23, 12)
+        var file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"))
+        let id = file.course.id
+        func hint(_ at: Date = now) -> TodaySummary.CourseHint? {
+            TodaySummary.build(courses: [file], now: at, settings: Settings(), calendar: calendar).hint(for: id, now: at)
+        }
+        file.exams = [Exam(device: device, at: now, kind: .midterm, title: "Midterm", start: at(31, 19))]
+        #expect(hint() == nil)  // eight days out
+        file.exams[0].start = at(30, 19)
+        #expect(hint() == .exam(days: 7))
+        file.sessions = [Session(device: device, at: now, week: 7, index: 1, date: at(23, 10)), Session(device: device, at: now, week: 7, index: 2, date: at(23, 15))]
+        #expect(hint() == .nextClass(at(23, 15)))  // the morning class is over
+        #expect(hint(at(23, 16)) == .exam(days: 7))
+        let hw = Assignment(device: device, at: now, title: "HW5", due: at(23, 23, 59))
+        file.assignments = [hw]
+        #expect(hint() == .dueToday(hw))
+    }
+
     @Test func sessionsNeedingNoReviewAskForNoNoteAndDontRestartUnits() throws {
         let now = at(23, 12)
         var file = CourseFile(course: Course(device: device, at: now, title: "컴파일러"))
@@ -316,5 +335,47 @@ struct TodayTests {
         file.course.reviews = false
         #expect(inputs().isEmpty)
         #expect(TodaySummary.build(courses: [file], now: now, settings: Settings(), calendar: calendar).missingReviewNotes.isEmpty)
+    }
+}
+
+struct DayRibbonTests {
+    var calendar: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        return c
+    }()
+    let day = LocalDate(year: 2026, month: 10, day: 30)!
+
+    func at(_ hour: Int, _ minute: Int = 0) -> Date {
+        calendar.date(byAdding: .minute, value: hour * 60 + minute, to: day.date(in: calendar)!)!
+    }
+
+    @Test func spansAnHourEitherSideOfTheDaysClasses() {
+        let one = DayRibbon(day: day, classes: [DateInterval(start: at(10, 30), end: at(11, 45))], calendar: calendar)
+        #expect((one.startHour, one.endHour) == (9, 13))
+        #expect(one.ticks == [9, 10, 11, 12, 13])
+        #expect(one.position(of: at(9)) == 0)
+        #expect(one.position(of: at(11)) == 0.5)
+
+        let afternoon = DayRibbon(day: day, classes: [DateInterval(start: at(13), end: at(14, 15)), DateInterval(start: at(16), end: at(17, 15))], calendar: calendar)
+        #expect((afternoon.startHour, afternoon.endHour) == (12, 19))
+        #expect(afternoon.ticks == [12, 14, 16, 18])
+
+        let long = DayRibbon(day: day, classes: [DateInterval(start: at(0, 30), end: at(1, 45)), DateInterval(start: at(23), end: at(24, 15))], calendar: calendar)
+        #expect((long.startHour, long.endHour) == (0, 26))
+        #expect(long.ticks == [0, 3, 6, 9, 12, 15, 18, 21, 24])
+
+        let free = DayRibbon(day: day, classes: [], calendar: calendar)
+        #expect((free.startHour, free.endHour) == (9, 24))
+    }
+
+    @Test func positionsOutsideTheSpanHoldToItsEdges() {
+        let ribbon = DayRibbon(day: day, classes: [], calendar: calendar)
+        // A 1am deadline belongs to the study day but lies past midnight.
+        #expect(ribbon.position(of: at(25)) == 1)
+        #expect(ribbon.position(of: at(7)) == 0)
+        #expect(!ribbon.contains(at(25)))
+        #expect(ribbon.contains(at(24)))
+        #expect(!ribbon.contains(at(8, 59)))
     }
 }

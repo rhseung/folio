@@ -162,26 +162,29 @@ extension AssignmentStatus {
 struct AssignmentStatusIcon: View {
     let status: AssignmentStatus
     var tint: Color?
+    var size: CGFloat = 20
 
     var body: some View {
+        // The half-done ring's measurements are for 20pt; they scale with the symbol.
+        let k = size / 20
         Group {
             if status == .doing {
                 // circle.lefthalf.filled runs the fill into the ring and reads as a blot; a gap keeps it a ring that is half done.
                 // 20 and 1.7 are SF `circle` at 20pt, measured, so it lines up with the other states' symbols.
                 ZStack {
-                    Circle().strokeBorder(lineWidth: 1.7)
-                    HalfDisc(round: 1).fill()
-                        .overlay { HalfDisc(round: 1).stroke(style: StrokeStyle(lineWidth: 2, lineJoin: .round)) }
-                        .padding(2.9)
+                    Circle().strokeBorder(lineWidth: 1.7 * k)
+                    HalfDisc(round: k).fill()
+                        .overlay { HalfDisc(round: k).stroke(style: StrokeStyle(lineWidth: 2 * k, lineJoin: .round)) }
+                        .padding(2.9 * k)
                 }
-                .frame(width: 20, height: 20)
+                .frame(width: size, height: size)
             } else {
                 Image(systemName: status.symbol)
-                    .font(.system(size: 20)) // design: one-off, the status symbol is the row's button
+                    .font(.system(size: size)) // design: one-off, the status symbol is the row's button
             }
         }
         .foregroundStyle(tint ?? (status == .todo ? Theme.Palette.textTertiary : status.tint))
-        .frame(width: 24, height: 24)
+        .frame(width: size + 4, height: size + 4)
     }
 }
 

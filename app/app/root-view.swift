@@ -26,7 +26,6 @@ struct RootView: View {
     /// The fixed list's own height, measured: the rows' height follows the system's sidebar size setting.
     @State private var navHeight: CGFloat?
     /// Whether the terms run on past the top and the bottom of their space, where the list fades out.
-    @State private var termsOverflow = Edge.Set()
     @State private var searching = false
     @State private var searchTarget: SearchTarget?
     @State private var personTarget: UUID?
@@ -158,6 +157,8 @@ struct RootView: View {
         List(selection: listSelection) {
             // The current term starts open, since its courses are what's opened daily.
             Section {
+                // Built once per tick for every course row's hint, not once per row.
+                let summary = TodaySummary.build(courses: workspace.currentCourses.map(\.file), now: context.date, settings: workspace.settings, calendar: workspace.calendar)
                 ForEach(sidebarSemesters, id: \.id) { semester in
                     let courses = workspace.sidebarCourses(in: semester)
                     let current = semester.id == workspace.currentSemester?.id
@@ -167,7 +168,7 @@ struct RootView: View {
                             if over { hoveredTerm = semester.id } else if hoveredTerm == semester.id { hoveredTerm = nil }
                         }
                     if open {
-                        ForEach(courses) { courseRow($0, last: $0.id == courses.last?.id, now: context.date) }
+                        ForEach(courses) { courseRow($0, last: $0.id == courses.last?.id, now: context.date, hint: current ? summary.hint(for: $0.id, now: context.date) : nil) }
                             .onMove { workspace.moveSidebarCourses(in: semester, from: $0, to: $1) }
                     }
                 }
@@ -182,25 +183,7 @@ struct RootView: View {
                 if let current = workspace.currentSemester { AddCourseSheet(workspace: workspace, semester: current) { if let id = $0 { selection = .course(id) } } }
             }
         }
-        .onScrollGeometryChange(for: Edge.Set.self) { g in
-            var edges = Edge.Set()
-            if g.visibleRect.minY > 1 { edges.insert(.top) }
-            if g.visibleRect.maxY < g.contentSize.height - 1 { edges.insert(.bottom) }
-            return edges
-        } action: { _, edges in
-            withAnimation(.easeOut(duration: 0.15)) { termsOverflow = edges }
-        }
-        // The mask also clips: a Mac view doesn't clip what it draws, so rows scrolled up showed over the places and
-        // the window buttons. Each edge fades only while there is more past it, so the 학기 title isn't faded at rest.
-        .mask {
-            VStack(spacing: 0) {
-                LinearGradient(colors: [termsOverflow.contains(.top) ? .clear : .primary, .primary], startPoint: .top, endPoint: .bottom)
-                    .frame(height: Theme.Space.xl)
-                Rectangle()
-                LinearGradient(colors: [.primary, termsOverflow.contains(.bottom) ? .clear : .primary], startPoint: .top, endPoint: .bottom)
-                    .frame(height: Theme.Space.xl)
-            }
-        }
+        .overflowFade(.vertical)
         .focusable(false)
         }
         .listStyle(.sidebar)
@@ -381,21 +364,29 @@ struct RootView: View {
     }
 
     func semesterRow(_ semester: Semester, open: Bool) -> some View {
-        Label {
+        let chosen = selection == .semester(semester.id)
+        // Terms already over step back, so the current and coming ones stand out in a list that grows every term.
+        let past = semester.term == .credited || workspace.currentSemester.map { semester.order < $0.order } ?? false
+        return Label {
             Text(semester.title)
         } icon: {
-            if semester.term == .credited {
-                LineIcon(symbol: "checkmark.seal", filled: selection == .semester(semester.id)).foregroundStyle(Theme.Palette.chromeIcon)
-            } else {
-                FolderIcon(open: open || hoveredTerm == semester.id, filled: selection == .semester(semester.id))
-                    .foregroundStyle(Theme.Palette.chromeIcon)
+            Group {
+                if semester.term == .credited {
+                    LineIcon(symbol: "checkmark.seal", filled: chosen, duotone: true)
+                } else {
+                    FolderIcon(open: open || hoveredTerm == semester.id, filled: chosen, duotone: true)
+                }
             }
+            .foregroundStyle(chosen ? Theme.Palette.chromeSelected : Theme.Palette.chromeIcon)
         }
+        // On the label, under `sidebarRow`, so a chosen past term's row fill stays full strength.
+        .opacity(past && !chosen ? Theme.Opacity.ended : 1)
         .sidebarRow(.semester(semester.id), $selection, guide: .stem, guideShown: open)
     }
 
     func sidebarIcon(_ symbol: String, _ destination: Destination) -> some View {
-        LineIcon(symbol: symbol, filled: selection == destination).foregroundStyle(Theme.Palette.chromeIcon)
+        LineIcon(symbol: symbol, filled: selection == destination, duotone: true)
+            .foregroundStyle(selection == destination ? Theme.Palette.chromeSelected : Theme.Palette.chromeIcon)
     }
 
     var sidebarSemesters: [Semester] {
@@ -415,7 +406,7 @@ struct RootView: View {
         }
     }
 
-    func courseRow(_ course: LoadedCourse, last: Bool, now: Date) -> some View {
+    func courseRow(_ course: LoadedCourse, last: Bool, now: Date, hint: TodaySummary.CourseHint?) -> some View {
         let accent = workspace.accent(course.id)
         // The course in class right now shows how far the class has gone, from any page: its row fills from the left
         // in its color and the minutes left sit at the end. No ring or dot, so the row keeps the shape of every other.
@@ -427,15 +418,40 @@ struct RootView: View {
                     Spacer(minLength: Theme.Space.xs)
                     Text(.rootMinutesLeft(Int(ongoing.end.timeIntervalSince(now) / 60) + 1)).font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
                         .foregroundStyle(accent.ink)
+                } else if let hint {
+                    Spacer(minLength: Theme.Space.xs)
+                    courseHint(hint)
                 }
             }
         } icon: {
             // A line icon, not a tile: with twenty-odd courses, tiles turn the sidebar into confetti.
-            CourseMark(icon: course.file.course.icon, color: accent.color, filled: selection == .course(course.id))
+            CourseMark(icon: course.file.course.icon, color: accent.color, filled: selection == .course(course.id), duotone: true)
         }
-        .help(ongoing.map { String(localized: .rootInClass(course.file.name(of: $0.session))) } ?? "")
+        .help(ongoing.map { String(localized: .rootInClass(course.file.name(of: $0.session))) } ?? hint.map(hintHelp) ?? "")
         .padding(.leading, SidebarGuide.indent)
         .sidebarRow(.course(course.id), $selection, fill: accent.tint, guide: last ? .lastCourse : .course, progress: ongoing?.fraction(at: now))
+    }
+
+    @ViewBuilder func courseHint(_ hint: TodaySummary.CourseHint) -> some View {
+        Group {
+            switch hint {
+            // An icon alone, its name and time on hover: "마감" didn't say what was due, and with the time it cut the title.
+            case .dueToday: Image(systemName: "checklist").foregroundStyle(Theme.Palette.danger)
+            case .nextClass(let date): Text(clock(date)).foregroundStyle(Theme.Palette.chromeText)
+            case .exam(let days): Text(days == 0 ? "D-day" : "D-\(days)").foregroundStyle(Theme.Palette.warning)
+            }
+        }
+        .font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
+    }
+
+    func clock(_ date: Date) -> String { date.formatted(.dateTime.hour(.defaultDigits(amPM: .omitted)).minute()) }
+
+    func hintHelp(_ hint: TodaySummary.CourseHint) -> String {
+        switch hint {
+        case .dueToday(let a): String(localized: .rootDueTodayHelp(a.title, a.due?.formatted(date: .omitted, time: .shortened) ?? ""))
+        case .nextClass(let date): String(localized: .rootNextClassHelp(date.formatted(date: .omitted, time: .shortened)))
+        case .exam: ""
+        }
     }
 
     @ViewBuilder var detail: some View {
