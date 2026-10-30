@@ -98,7 +98,7 @@ Folio가 아닌 앱에서 같은 느낌을 만들 때도 이 문서를 쓴다. "
 | | `SheetForm` | 만들기와 편집 시트. 제목, 폼 카드, 취소·확인, 지우기 버튼 |
 | `indicators.swift` | `StatStrip`, `Figure` | 수치 여러 개를 한 줄로, 큰 수치 하나 |
 | | `CourseMark` | 과목을 나타내는 모든 자리의 과목 아이콘. `course.json`의 `icon`을 과목 색으로, 없으면 기본 아이콘(닫힌 책). 행 앞에서는 아이콘 열(`LineIcon`)에, 글줄 안(캡션의 과목 이름 앞, 빠른 추가 요약)에서는 `inline: true`로 글자 크기에 맞춘다. 색만 보면 비슷한 과목(파랑과 보라)이 섞이므로 점으로 대신하지 않는다 |
-| | `Chip`, `DdayChip`, `Meter`, `CourseDot`, `IconTile`, `Avatar`, `CheckCircle` | 상태 꼬리표, 시험까지 남은 날, 진행 막대, 색 견본 점(차트 툴팁, 타임라인 마디. 과목 표시는 `CourseMark`), 학기 화면의 과목 머리글자 타일, 사람 머리글자, 둥근 체크 |
+| | `Chip`, `DdayChip`, `Meter`, `CourseDot`, `Avatar`, `CheckCircle` | 상태 꼬리표, 시험까지 남은 날, 진행 막대, 색 견본 점(차트 툴팁, 타임라인 마디. 과목 표시는 `CourseMark`), 사람 머리글자, 둥근 체크 |
 | | `Caption`, `EmptyLine` | 값 위의 작은 이름표, 목록이 비었을 때 한 줄 |
 | `inputs.swift` | `ChoiceMenu` | 고정된 짧은 선택지(열거형) |
 | | `SearchSelect`, `SearchMultiSelect`, `SearchPicker` | 사용자 데이터로 늘어나는 목록(코드, 사람, 단원, 파일) |

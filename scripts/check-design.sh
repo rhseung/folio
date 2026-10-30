@@ -27,7 +27,7 @@ grid=$(rg -n --glob '*.swift' \
   -e "\b(spacing|width|height|cornerRadius|top|leading|bottom|trailing|minLength|dx|dy): $odd" \
   -e "padding\((\.[a-zA-Z]+, )?$odd\)" \
   -e "CGFloat = $odd" \
-  -e "(CourseDot|IconTile|Avatar)\([^)]*size: $odd" \
+  -e "(CourseDot|Avatar)\([^)]*size: $odd" \
   app \
   | rg -v 'design: one-off' || true)
 if [[ -n "$grid" ]]; then

@@ -28,7 +28,7 @@ struct SemesterView: View {
                         ForEach(Array(courses.enumerated()), id: \.element.id) { i, course in
                             CardRow(last: i == courses.count - 1 && records.isEmpty) {
                                 Button { openCourse(course.id) } label: {
-                                    courseLabel(tile: IconTile(color: model.workspace.accent(course.id).color, symbol: course.file.course.icon ?? CourseMark.defaultIcon),
+                                    courseLabel(mark: CourseMark(icon: course.file.course.icon, color: model.workspace.accent(course.id).color, font: Theme.Glyph.lineTitle, duotone: true),
                                                 title: course.title, detail: model.detail(course))
                                 }
                                 .buttonStyle(.pointing(.plain))
@@ -38,7 +38,7 @@ struct SemesterView: View {
                         }
                         ForEach(Array(records.enumerated()), id: \.element.id) { i, course in
                             CardRow(last: i == records.count - 1) {
-                                courseLabel(tile: IconTile(color: Theme.Palette.textTertiary, symbol: "doc.text"), title: course.title, detail: model.detail(course))
+                                courseLabel(mark: CourseMark(icon: "doc.text", color: Theme.Palette.textTertiary, font: Theme.Glyph.lineTitle, duotone: true), title: course.title, detail: model.detail(course))
                                 gradeMenu(course)
                             }
                         }
@@ -98,9 +98,9 @@ struct SemesterView: View {
         }
     }
 
-    func courseLabel(tile: IconTile, title: String, detail: String) -> some View {
+    func courseLabel(mark: CourseMark, title: String, detail: String) -> some View {
         HStack(spacing: Theme.Space.m) {
-            tile
+            mark
             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                 Text(title).font(Theme.Typeface.bodyStrong).lineLimit(1)
                 Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
