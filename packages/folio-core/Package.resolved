@@ -1,5 +1,5 @@
 {
-  "originHash" : "264e5df8ee024e63ff711ddeca066f90a1942069f526b52a290c15b24c4108e7",
+  "originHash" : "aa94c45f3daaa5c883c1b9a4b3097dc6dc65dd073248cb9b1e1d734812ccfa27",
   "pins" : [
     {
       "identity" : "grdb.swift",
@@ -60,8 +60,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/x-sheep/swift-property-based",
       "state" : {
-        "revision" : "edaffedcd90339544fefb2f045f3fa988d94c794",
-        "version" : "1.2.0"
+        "revision" : "7d405e77a7b729390ed1d9a66e1f80a707fd03c4",
+        "version" : "2.0.1"
       }
     },
     {

@@ -24,7 +24,7 @@ let package = Package(
         .package(url: "https://github.com/apple/swift-algorithms", from: "1.2.0"),
         .package(url: "https://github.com/apple/swift-argument-parser", from: "1.8.0"),
         // Tests only: random inputs for properties every input must keep, beside the hand-worked examples.
-        .package(url: "https://github.com/x-sheep/swift-property-based", from: "1.1.2"),
+        .package(url: "https://github.com/x-sheep/swift-property-based", from: "2.0.1"),
         .package(url: "https://github.com/groue/GRDB.swift", from: "7.0.0"),
         // Matches the Swift 6.4 toolchain, so builds use its prebuilt copy instead of compiling swift-syntax.
         .package(url: "https://github.com/swiftlang/swift-syntax", from: "604.0.0"),
