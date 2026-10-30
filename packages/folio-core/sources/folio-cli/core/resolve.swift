@@ -166,6 +166,8 @@ enum Picker {
     nonisolated(unsafe) static var gist: String?
 
     static func enable(_ options: GlobalOptions) {
+        // Tests run commands in parallel under overrides; each writing these unguarded statics crashed the test process.
+        guard CLI.overrides == nil else { return }
         let env = ProcessInfo.processInfo.environment
         allowed = !options.json && !options.noPick && env["FOLIO_NO_PICK"] == nil && isatty(STDIN_FILENO) == 1 && isatty(STDOUT_FILENO) == 1
         gist = try? CLI.gist(options).url.path
