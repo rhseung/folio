@@ -202,7 +202,7 @@ struct RequirementsView: View {
                     if sorted.isEmpty { Text(.requirementsNoCourses).foregroundStyle(Theme.Palette.textTertiary) }
                     ForEach(sorted) { course in
                         Button { model.showing = nil; openCourse(course) } label: { HStack(spacing: Theme.Space.s) {
-                            CourseDot(color: model.workspace.accent(course.id).color, size: 6)
+                            CourseMark(model.workspace, course.id, inline: true)
                             Text(course.title).lineLimit(1)
                             // Plain text, not a chip: a chip makes its row taller than the rest.
                             if course.finalGrade == nil { Text(.gradesEnrolled).foregroundStyle(Theme.Palette.warning) }

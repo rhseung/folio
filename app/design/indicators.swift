@@ -143,10 +143,24 @@ struct CourseMark: View {
     let color: Color
     var font: Font = Theme.Glyph.line
     var filled = false
+    // Within a line of text the symbol takes the text's size; the icon column's 22pt square would gap the line.
+    var inline = false
 
     static let defaultIcon = "book.closed"
 
-    var body: some View { LineIcon(symbol: icon ?? Self.defaultIcon, font: font, filled: filled).foregroundStyle(color) }
+    var body: some View {
+        if inline {
+            Image(systemName: icon ?? Self.defaultIcon).foregroundStyle(color)
+        } else {
+            LineIcon(symbol: icon ?? Self.defaultIcon, font: font, filled: filled).foregroundStyle(color)
+        }
+    }
+}
+
+extension CourseMark {
+    init(_ workspace: Workspace, _ id: UUID, inline: Bool = false) {
+        self.init(icon: workspace.course(id)?.file.course.icon, color: workspace.accent(id).color, inline: inline)
+    }
 }
 
 struct CourseDot: View {

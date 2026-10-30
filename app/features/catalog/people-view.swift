@@ -124,7 +124,7 @@ struct PeopleView: View {
                     ForEach(Array(taught.enumerated()), id: \.element.course.id) { i, item in
                         let opens = model.opens(item.course.id)
                         CardRow(last: i == taught.count - 1) {
-                            CourseDot(color: model.workspace.accent(item.course.id).color)
+                            CourseMark(model.workspace, item.course.id)
                             Text(item.course.title).lineLimit(1)
                             Spacer(minLength: Theme.Space.m)
                             Text(item.semester?.title ?? "").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)

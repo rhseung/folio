@@ -95,8 +95,8 @@ Folio가 아닌 앱에서 같은 느낌을 만들 때도 이 문서를 쓴다. "
 | | `FormTextArea` | 여러 줄 입력. 다른 카드 안에 넣지 않고 섹션 하나를 차지한다 |
 | | `SheetForm` | 만들기와 편집 시트. 제목, 폼 카드, 취소·확인, 지우기 버튼 |
 | `indicators.swift` | `StatStrip`, `Figure` | 수치 여러 개를 한 줄로, 큰 수치 하나 |
-| | `CourseMark` | 과목이 자기를 대표하는 자리(창 사이드바, 과목 열 머리, 위치 표시, 학기 화면 타일)의 과목 아이콘. `course.json`의 `icon`을 과목 색으로, 없으면 기본 아이콘(닫힌 책). 행 앞에서 항목이 어느 과목 것인지만 알리는 자리는 `CourseDot`을 쓴다 |
-| | `Chip`, `DdayChip`, `Meter`, `CourseDot`, `IconTile`, `Avatar`, `CheckCircle` | 상태 꼬리표, 시험까지 남은 날, 진행 막대, 과목 점, 학기 화면의 과목 머리글자 타일, 사람 머리글자, 둥근 체크 |
+| | `CourseMark` | 과목을 나타내는 모든 자리의 과목 아이콘. `course.json`의 `icon`을 과목 색으로, 없으면 기본 아이콘(닫힌 책). 행 앞에서는 아이콘 열(`LineIcon`)에, 글줄 안(캡션의 과목 이름 앞, 빠른 추가 요약)에서는 `inline: true`로 글자 크기에 맞춘다. 색만 보면 비슷한 과목(파랑과 보라)이 섞이므로 점으로 대신하지 않는다 |
+| | `Chip`, `DdayChip`, `Meter`, `CourseDot`, `IconTile`, `Avatar`, `CheckCircle` | 상태 꼬리표, 시험까지 남은 날, 진행 막대, 색 견본 점(차트 툴팁, 타임라인 마디. 과목 표시는 `CourseMark`), 학기 화면의 과목 머리글자 타일, 사람 머리글자, 둥근 체크 |
 | | `Caption`, `EmptyLine` | 값 위의 작은 이름표, 목록이 비었을 때 한 줄 |
 | `inputs.swift` | `ChoiceMenu` | 고정된 짧은 선택지(열거형) |
 | | `SearchSelect`, `SearchMultiSelect`, `SearchPicker` | 사용자 데이터로 늘어나는 목록(코드, 사람, 단원, 파일) |
@@ -211,7 +211,7 @@ Folio가 아닌 앱에서 같은 느낌을 만들 때도 이 문서를 쓴다. "
 
 ## 패턴
 
-- **화면 골격.** 상세 화면은 `Page { PageHeader; StatStrip; Block { Card { CardRow… } } }` 순서로 쌓는다. 목록과 상세가 나란한 화면은 `Theme.Size.courseColumn` 폭의 목록 열, `ColumnDivider`, 본문 순서로 둔다. 과목과 설정처럼 화면 안에 구역이 여럿이면 그 열에 `ColumnRow`로 구역을 늘어놓는다. 아이콘은 창 사이드바를 포함해 어디서나 `LineIcon`(배경 없는 선 기호, `.fill` 아닌 기호. 고른 행은 `filled`의 옅은 속채움)이고, 색은 과목 점과 고른 항목에만 쓴다. 설정도 따로 뜨는 창이 아니라 이 형태의 페이지다(⌘,로 연다).
+- **화면 골격.** 상세 화면은 `Page { PageHeader; StatStrip; Block { Card { CardRow… } } }` 순서로 쌓는다. 목록과 상세가 나란한 화면은 `Theme.Size.courseColumn` 폭의 목록 열, `ColumnDivider`, 본문 순서로 둔다. 과목과 설정처럼 화면 안에 구역이 여럿이면 그 열에 `ColumnRow`로 구역을 늘어놓는다. 아이콘은 창 사이드바를 포함해 어디서나 `LineIcon`(배경 없는 선 기호, `.fill` 아닌 기호. 고른 행은 `filled`의 옅은 속채움)이고, 색은 과목 아이콘과 고른 항목에만 쓴다. 설정도 따로 뜨는 창이 아니라 이 형태의 페이지다(⌘,로 연다).
 - **버튼의 무게.** 기본은 `.ghost`다. 화면에서 하나뿐인 주 동작(시트의 확인, 퀴즈 시작)만 `.borderedProminent`를 쓴다. 지우기는 `role: .destructive`를 주고 `confirmationDialog`로 한 번 묻는다.
 - **오른쪽 클릭.** 행에 버튼이 있으면 `contextMenu`에 같은 동작을 같은 이름으로 넣는다.
 - **편집 위치.** 새 항목 만들기와 여러 칸 편집은 `SheetForm` 시트로 한다. 행 하나에 딸린 내용을 잠깐 보거나 고를 때는 그 행에 붙은 팝오버를 쓰고, 다른 화면으로 이동하기 전에 팝오버를 닫는다. 카드 안에서 목록을 펼쳐 다른 카드의 자리를 밀어내지 않는다.

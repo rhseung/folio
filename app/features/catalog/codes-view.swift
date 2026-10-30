@@ -73,7 +73,7 @@ private struct CodeTile: View {
                     .foregroundStyle(accent?.ink ?? Theme.Palette.text)
                 Spacer()
                 HStack(spacing: Theme.Space.xxs) {
-                    ForEach(courses.prefix(4), id: \.self) { CourseDot(color: workspace.accent($0).color, size: 8) }
+                    ForEach(courses.prefix(4), id: \.self) { CourseMark(workspace, $0, inline: true) }
                 }
             }
             Text(code.department.isEmpty ? String(localized: .codesNoDepartment) : code.department)
@@ -111,7 +111,7 @@ struct CodeEditor: View {
                             ForEach(records) { c in
                                 Button { searchTarget.wrappedValue = SearchTarget(courseId: c.id, section: .overview) } label: {
                                     HStack(spacing: Theme.Space.s) {
-                                        CourseDot(color: model.workspace.accent(c.id).color, size: 8)
+                                        CourseMark(model.workspace, c.id, inline: true)
                                         Text(c.title).lineLimit(1)
                                         Spacer(minLength: Theme.Space.s)
                                         Text(model.workspace.semester(of: c)?.title ?? "").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)

@@ -76,7 +76,7 @@ struct ReviewView: View {
             HStack(alignment: .center, spacing: Theme.Space.m) {
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     HStack(spacing: Theme.Space.tight) {
-                        CourseDot(color: accent.color, size: 8)
+                        CourseMark(icon: course.file.course.icon, color: accent.color, inline: true)
                         Text(.reviewCourse(course.title)).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink)
                     }
                     Text(unit.title).font(Theme.Typeface.columnTitle).lineLimit(2)

@@ -136,7 +136,7 @@ struct SemesterView: View {
                             Text(start.formatted(.dateTime.weekday().hour().minute())).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
                         }
                         .frame(width: 84, alignment: .leading)
-                        CourseDot(color: model.workspace.accent(item.course.id).color)
+                        CourseMark(model.workspace, item.course.id)
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                             Text(model.examTitle(item.exam)).lineLimit(1)
                             Text(item.course.title).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)

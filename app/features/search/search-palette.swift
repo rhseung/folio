@@ -203,7 +203,7 @@ struct SearchPalette: View {
                 Spacer(minLength: Theme.Space.m)
                 if let course {
                     HStack(spacing: Theme.Space.tight) {
-                        CourseDot(color: accent.color)
+                        CourseMark(icon: course.file.course.icon, color: accent.color, inline: true)
                         Text(course.title).lineLimit(1)
                     }
                         .font(Theme.Typeface.caption)

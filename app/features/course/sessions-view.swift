@@ -144,7 +144,7 @@ struct SuggestedSessionRow: View {
         HStack(spacing: Theme.Space.m) {
             if showsCourse {
                 Text(date.formatted(date: .omitted, time: .shortened)).timeColumn().font(Theme.Typeface.caption).monospacedDigit().fixedSize()
-                CourseDot(color: workspace.accent(item.courseId).color)
+                CourseMark(workspace, item.courseId)
                 Text("\(workspace.course(item.courseId)?.title ?? "") · \(item.name)").lineLimit(1)
                     .help(Text(.sessionsSuggested))
             } else {

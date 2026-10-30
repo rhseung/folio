@@ -352,7 +352,7 @@ struct ExamPlanTodayBlock: View {
                             CheckCircle(on: done.contains(entry.item.id)) { toggle(entry) }
                             .help(Text(done.contains(entry.item.id) ? .examsPlanUndo : .examsPlanCheck))
                             .environment(\.accent, accent)
-                            CourseDot(color: accent.color)
+                            CourseMark(workspace, entry.courseId)
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                                 Text(entry.item.title).font(Theme.Typeface.bodyStrong).strikethrough(done.contains(entry.item.id))
                                 Text("\(workspace.course(entry.courseId)?.title ?? "") · \(entry.exam.title)")

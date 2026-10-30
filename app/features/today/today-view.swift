@@ -76,7 +76,7 @@ struct TodayView: View {
             HStack(alignment: .center, spacing: Theme.Space.m) {
                 VStack(alignment: .leading, spacing: Theme.Space.xs) {
                     HStack(spacing: Theme.Space.tight) {
-                        CourseDot(color: model.workspace.accent(item.courseId).color)
+                        CourseMark(model.workspace, item.courseId, inline: true)
                         Text(model.examTitle(item)).font(Theme.Typeface.bodyStrong).lineLimit(1)
                     }
                     Text(model.examStart(item)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
@@ -115,7 +115,7 @@ struct TodayView: View {
                 ForEach(Array(queue.enumerated()), id: \.element.item.unitId) { i, entry in
                     ReviewOpener(courseId: entry.courseId, unitId: entry.item.unitId, then: queue[(i + 1)...].map { .init(courseId: $0.courseId, unitId: $0.item.unitId) }) { CardRow(last: i == queue.count - 1) {
                         reviewLead(widest: queue.count) { Text("\(i + 1)").foregroundStyle(Theme.Palette.textTertiary) }
-                        CourseDot(color: model.workspace.accent(entry.courseId).color)
+                        CourseMark(model.workspace, entry.courseId)
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                             Text(entry.unitTitle).font(Theme.Typeface.bodyStrong).lineLimit(1)
                             Text(model.reviewSubtitle(entry))
@@ -132,7 +132,7 @@ struct TodayView: View {
                     Text(.todayReviewsDeferred).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(Theme.Palette.textSecondary)
                     ForEach(deferred, id: \.item.unitId) { entry in
                         ReviewOpener(courseId: entry.courseId, unitId: entry.item.unitId) { HStack(spacing: Theme.Space.m) {
-                            CourseDot(color: model.workspace.accent(entry.courseId).color)
+                            CourseMark(model.workspace, entry.courseId)
                             Text(entry.unitTitle)
                             Spacer()
                             Text(model.title(entry.courseId)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
@@ -268,9 +268,9 @@ struct TodayView: View {
         Button(.todayReviewsSkip, systemImage: "forward") { model.skip([entry]) }
     }
 
-    // Note rows and unit rows share one leading column, sized by the widest mark either can hold, so their dots line up.
+    // Note rows keep the unit rows' number column, empty, so every course icon in the card lines up.
     func reviewLead(widest: Int, @ViewBuilder mark: () -> some View) -> some View {
-        ZStack { Text("\(widest)").hidden(); Image(systemName: "square.and.pencil").hidden() }
+        Text("\(widest)").hidden()
             .overlay(alignment: .trailing, content: mark)
             .font(Theme.Typeface.caption).monospacedDigit().lineLimit(1)
     }
@@ -284,8 +284,8 @@ struct TodayView: View {
                     if let id = model.reviewNote(of: item) { openNote(in: item.courseId)(id) }
                 } label: {
                     HStack(spacing: Theme.Space.m) {
-                        reviewLead(widest: widest) { Image(systemName: "square.and.pencil").foregroundStyle(Theme.Palette.warning) }
-                        CourseDot(color: model.workspace.accent(item.courseId).color)
+                        if widest > 0 { reviewLead(widest: widest) { EmptyView() } }
+                        CourseMark(model.workspace, item.courseId)
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                             Text(model.noteTitle(item)).font(Theme.Typeface.bodyStrong).lineLimit(1)
                             Text(model.noteSubtitle(item))
@@ -440,7 +440,7 @@ struct QuickAddField: View {
     func summary(_ parsed: QuickAdd) -> some View {
         HStack(spacing: Theme.Space.tight) {
             if let id = parsed.courseId, let title = model.courseTitle(parsed) {
-                CourseDot(color: model.workspace.accent(id).color, size: 8)
+                CourseMark(model.workspace, id, inline: true)
                 Text(title).foregroundStyle(Theme.Palette.textSecondary)
             } else {
                 Text(.todayQuickAddNoCourse).foregroundStyle(Theme.Palette.danger)
