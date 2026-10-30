@@ -79,6 +79,14 @@ final class TodayModel {
         workspace.suggestedSessions(now: now).filter { workspace.settings.studyDay(of: $0.suggestion.date, calendar: workspace.calendar) == day }
     }
 
+    /// The study day's courses in class order, each once: the page's wash takes their colors left to right.
+    func washCourses(_ summary: TodaySummary, now: Date) -> [UUID] {
+        let classes = summary.classesToday.map { ($0.session.date, $0.courseId) }
+            + suggested(now: now, on: summary.studyDay).map { ($0.suggestion.date, $0.courseId) }
+        var seen = Set<UUID>()
+        return classes.sorted { $0.0 < $1.0 }.map(\.1).filter { seen.insert($0).inserted }
+    }
+
     func end(of item: TodaySummary.SessionItem) -> Date? {
         item.session.end(schedule: workspace.course(item.courseId)?.file.course.schedule ?? [], calendar: workspace.calendar)
     }

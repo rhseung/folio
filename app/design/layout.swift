@@ -2,8 +2,10 @@ import FolioDomain
 import SwiftUI
 
 /// A scrolling page: cards on a quiet background, centered at reading width.
-struct Page<Content: View>: View {
+struct Page<Content: View, Backdrop: View>: View {
     var maxWidth: CGFloat = Theme.Size.pageMaxWidth
+    // Behind the content's top across the page's full width, scrolling away with it: Today's course wash.
+    @ViewBuilder var backdrop: Backdrop
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -14,12 +16,19 @@ struct Page<Content: View>: View {
                 .padding(.top, Theme.Space.xl)
                 .padding(.bottom, Theme.Space.xxl * 2)
                 .frame(maxWidth: .infinity)
+                .background(alignment: .top) { backdrop }
         }
         .background(Theme.Palette.page)
         // No edge effect under the toolbar: on this flat paper it reads as a header band with a rule across the page.
         .scrollEdgeEffectHidden(true, for: .top)
         .foregroundStyle(Theme.Palette.text)
         .font(Theme.Typeface.body)
+    }
+}
+
+extension Page where Backdrop == EmptyView {
+    init(maxWidth: CGFloat = Theme.Size.pageMaxWidth, @ViewBuilder content: () -> Content) {
+        self.init(maxWidth: maxWidth, backdrop: { EmptyView() }, content: content)
     }
 }
 

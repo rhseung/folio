@@ -23,6 +23,8 @@ struct TodayView: View {
         let summary = model.summary(now: now)
         let reviews = model.reviews(now: now)
         return Page {
+            TodayWash(model: model, courses: model.washCourses(summary, now: now))
+        } content: {
             PageHeader(title: model.heading(summary, now: now), subtitle: model.workspace.currentSemester?.title)
 
             // One slot for both: an empty NowClassCard still took a stack slot and left a double gap above the field.

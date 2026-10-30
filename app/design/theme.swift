@@ -77,6 +77,10 @@ enum Theme {
         static let edge = 0.12
         /// The fill inside a chosen row's line icon (`LineIcon(filled:)`).
         static let innerFill = 0.24
+        /// Today's course wash at the page's top (`TodayWash`), and the class under way within it. Each accent is
+        /// already tuned per appearance, so one value reads in both.
+        static let courseWash = 0.24
+        static let courseWashFocus = 0.40
     }
 
     enum Space {
@@ -125,6 +129,11 @@ enum Theme {
 
     enum Size {
         static let pageMaxWidth: CGFloat = 900
+        /// Today's course wash: how far down it reaches, each course's glow radius in it, and the lone glow of the class
+        /// under way, wider since it's the only one.
+        static let washHeight: CGFloat = 480
+        static let washReach: CGFloat = 220
+        static let washReachFocus: CGFloat = 400
         static let courseColumn: CGFloat = 256
         static let sidebar: CGFloat = 216
         static let claudePanel: CGFloat = 380

@@ -51,6 +51,19 @@ struct TodayModelTests {
         #expect(model.editing?.assignment.title == "A")
         #expect(model.editing?.course.id == graphTheory)
     }
+
+    @Test func washTakesEachCourseOnceInClassOrder() throws {
+        let workspace = try fixtureWorkspace()
+        let model = TodayModel(workspace: workspace)
+        let other = try #require(model.current.map(\.id).first { $0 != graphTheory })
+        let c = workspace.calendar
+        func at(_ hour: Int) -> Date { c.date(byAdding: .hour, value: hour, to: c.startOfDay(for: .now))! }
+        for (course, hour) in [(other, 9), (graphTheory, 13), (other, 15)] { workspace.run(SessionAdd(course: course, date: at(hour))) }
+        // The fixture's own timetable may add other courses to the day; only these two's order is pinned here.
+        let wash = model.washCourses(model.summary(now: at(12)), now: at(12))
+        #expect(wash.filter { [other, graphTheory].contains($0) } == [other, graphTheory])
+        #expect(Set(wash).count == wash.count)
+    }
 }
 
 @MainActor
