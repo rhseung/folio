@@ -79,8 +79,10 @@ public struct TodaySummary: Sendable {
     /// Past sessions with no review note yet, oldest first.
     public var missingReviewNotes: [SessionItem]
 
-    /// - Parameter examHorizonDays: how far ahead exams are listed.
-    public static func build(courses: [CourseFile], now: Date, settings: Settings, calendar: Calendar, examHorizonDays: Int = 30) -> TodaySummary {
+    /// How many days ahead exams are listed.
+    public static let examHorizon = 30
+
+    public static func build(courses: [CourseFile], now: Date, settings: Settings, calendar: Calendar, examHorizonDays: Int = examHorizon) -> TodaySummary {
         let today = settings.studyDay(of: now, calendar: calendar)
         // The study day runs from the boundary to the next boundary, in real time.
         let dayStart = calendar.date(byAdding: .minute, value: settings.dayBoundaryMinutes, to: today.date(in: calendar)!)!

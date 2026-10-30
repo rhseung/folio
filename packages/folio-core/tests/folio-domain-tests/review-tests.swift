@@ -337,3 +337,45 @@ struct TodayTests {
         #expect(TodaySummary.build(courses: [file], now: now, settings: Settings(), calendar: calendar).missingReviewNotes.isEmpty)
     }
 }
+
+struct DayRibbonTests {
+    var calendar: Calendar = {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        return c
+    }()
+    let day = LocalDate(year: 2026, month: 10, day: 30)!
+
+    func at(_ hour: Int, _ minute: Int = 0) -> Date {
+        calendar.date(byAdding: .minute, value: hour * 60 + minute, to: day.date(in: calendar)!)!
+    }
+
+    @Test func spansAnHourEitherSideOfTheDaysClasses() {
+        let one = DayRibbon(day: day, classes: [DateInterval(start: at(10, 30), end: at(11, 45))], calendar: calendar)
+        #expect((one.startHour, one.endHour) == (9, 13))
+        #expect(one.ticks == [9, 10, 11, 12, 13])
+        #expect(one.position(of: at(9)) == 0)
+        #expect(one.position(of: at(11)) == 0.5)
+
+        let afternoon = DayRibbon(day: day, classes: [DateInterval(start: at(13), end: at(14, 15)), DateInterval(start: at(16), end: at(17, 15))], calendar: calendar)
+        #expect((afternoon.startHour, afternoon.endHour) == (12, 19))
+        #expect(afternoon.ticks == [12, 14, 16, 18])
+
+        let long = DayRibbon(day: day, classes: [DateInterval(start: at(0, 30), end: at(1, 45)), DateInterval(start: at(23), end: at(24, 15))], calendar: calendar)
+        #expect((long.startHour, long.endHour) == (0, 26))
+        #expect(long.ticks == [0, 3, 6, 9, 12, 15, 18, 21, 24])
+
+        let free = DayRibbon(day: day, classes: [], calendar: calendar)
+        #expect((free.startHour, free.endHour) == (9, 24))
+    }
+
+    @Test func positionsOutsideTheSpanHoldToItsEdges() {
+        let ribbon = DayRibbon(day: day, classes: [], calendar: calendar)
+        // A 1am deadline belongs to the study day but lies past midnight.
+        #expect(ribbon.position(of: at(25)) == 1)
+        #expect(ribbon.position(of: at(7)) == 0)
+        #expect(!ribbon.contains(at(25)))
+        #expect(ribbon.contains(at(24)))
+        #expect(!ribbon.contains(at(8, 59)))
+    }
+}

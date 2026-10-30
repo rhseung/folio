@@ -27,6 +27,7 @@ final class TodayModel {
         var room: String
         var start: Date
         var end: Date
+        var sessionId: UUID?
         var suggested: Workspace.SuggestedSession?
     }
 
@@ -94,7 +95,7 @@ final class TodayModel {
     func nowClass(at now: Date) -> NowClass? {
         if let item = workspace.ongoingClass(at: now), let course = workspace.course(item.courseId) {
             let room = course.file.course.schedule.first { $0.weekday == workspace.calendar.isoWeekday(of: item.session.date) }?.room ?? ""
-            return NowClass(courseId: item.courseId, name: course.file.name(of: item.session), room: room, start: item.session.date, end: item.end)
+            return NowClass(courseId: item.courseId, name: course.file.name(of: item.session), room: room, start: item.session.date, end: item.end, sessionId: item.session.id)
         }
         // Under way but not made yet: the card offers what starting the class needs.
         guard let item = workspace.suggestedSessions(now: now).first(where: { $0.suggestion.date <= now }) else { return nil }
@@ -106,6 +107,26 @@ final class TodayModel {
     func noteRows<Item>(_ items: [Item], limit: Int) -> (shown: [Item], more: Int) {
         let shown = Array(items.suffix(limit).reversed())
         return (shown, items.count - shown.count)
+    }
+
+    struct NoteGroup: Identifiable {
+        let label: String
+        var items: [TodaySummary.SessionItem]
+        var id: String { label }
+    }
+
+    static let noteLimit = 6
+    var showsAllNotes = false
+
+    /// The newest notes first, under the day their class was (`오늘`, `어제`, a weekday), cut to `noteLimit` unless unfolded.
+    func noteGroups(_ items: [TodaySummary.SessionItem], today: LocalDate) -> (groups: [NoteGroup], more: Int) {
+        let (shown, more) = noteRows(items, limit: showsAllNotes ? items.count : Self.noteLimit)
+        var groups: [NoteGroup] = []
+        for item in shown {
+            let label = sessionWhen(item, today: today)
+            if groups.last?.label == label { groups[groups.count - 1].items.append(item) } else { groups.append(NoteGroup(label: label, items: [item])) }
+        }
+        return (groups, more)
     }
 
     func reviewNote(of item: TodaySummary.SessionItem) -> UUID? {
@@ -164,42 +185,194 @@ final class TodayModel {
         editing = EditingAssignment(course: course, assignment: item.assignment)
     }
 
-    struct DeadlineDay {
-        var id: Date
-        var day: String
-        var label: String
-        var isToday: Bool
+    enum DeadlineWhen: Int, CaseIterable {
+        case today, thisWeek, nextWeek, later
+    }
+
+    struct DeadlineGroup: Identifiable {
+        var when: DeadlineWhen
         var items: [TodaySummary.DeadlineItem]
+        var id: DeadlineWhen { when }
     }
 
-    /// The month shows only where it turns, so the column reads as a calendar without repeating it on every day.
-    func deadlineDays(_ items: [TodaySummary.DeadlineItem], studyDay: LocalDate) -> [DeadlineDay] {
+    /// Weeks run Monday to Sunday, the way the timetable repeats, so "다음 주" is the next run of the same classes.
+    func deadlineGroups(_ items: [TodaySummary.DeadlineItem], studyDay: LocalDate) -> [DeadlineGroup] {
         let calendar = workspace.calendar
-        var days: [DeadlineDay] = []
-        var month = studyDay.month
-        for item in items {
-            guard let due = item.assignment.due else { continue }
-            // Before the day boundary a 1am due is still today's though its calendar date is the next one.
-            let start = item.isToday ? (studyDay.date(in: calendar) ?? calendar.startOfDay(for: due)) : calendar.startOfDay(for: due)
-            if days.last?.id == start { days[days.count - 1].items.append(item); continue }
-            let m = item.isToday ? studyDay.month : calendar.component(.month, from: due)
-            let label = item.isToday ? String(localized: .todayDeadlinesToday)
-                : due.formatted(m == month ? .dateTime.weekday() : .dateTime.month().weekday())
-            days.append(DeadlineDay(id: start, day: String(item.isToday ? studyDay.day : calendar.component(.day, from: due)),
-                                    label: label, isToday: item.isToday, items: [item]))
-            month = m
+        let weekday = studyDay.date(in: calendar).map { calendar.isoWeekday(of: $0) } ?? 1
+        let nextMonday = studyDay.adding(days: 8 - weekday)
+        func when(_ item: TodaySummary.DeadlineItem) -> DeadlineWhen {
+            if item.isToday { return .today }
+            guard let due = item.assignment.due else { return .later }
+            let day = LocalDate(due, in: calendar)
+            return day < nextMonday ? .thisWeek : day < nextMonday.adding(days: 7) ? .nextWeek : .later
         }
-        return days
+        let grouped = Dictionary(grouping: items, by: when)
+        return DeadlineWhen.allCases.compactMap { w in grouped[w].map { DeadlineGroup(when: w, items: $0) } }
     }
 
-    func reviewSubtitle(_ entry: Workspace.ReviewEntry) -> String {
-        entry.item.writeNoteFirst ? String(localized: .todayReviewsWriteNoteFirst(title(entry.courseId))) : title(entry.courseId)
+    /// Past this many deadlines the rest fold behind a button: a term's worth of reports would push the reviews off the page.
+    static let deadlineLimit = 6
+    var showsAllDeadlines = false
+
+    /// The groups cut to `deadlineLimit` items unless unfolded, and how many were left out.
+    func shownDeadlines(_ groups: [DeadlineGroup]) -> (groups: [DeadlineGroup], more: Int) {
+        let total = groups.map(\.items.count).reduce(0, +)
+        guard !showsAllDeadlines, total > Self.deadlineLimit else { return (groups, 0) }
+        var left = Self.deadlineLimit
+        let cut = groups.compactMap { g -> DeadlineGroup? in
+            guard left > 0 else { return nil }
+            defer { left -= min(left, g.items.count) }
+            return DeadlineGroup(when: g.when, items: Array(g.items.prefix(left)))
+        }
+        return (cut, total - Self.deadlineLimit)
     }
 
-    func noteTitle(_ item: TodaySummary.SessionItem) -> String { "\(title(item.courseId)) · \(sessionName(item.courseId, item.session))" }
+    func groupLabel(_ when: DeadlineWhen) -> String {
+        switch when {
+        case .today: String(localized: .todayDeadlinesToday)
+        case .thisWeek: String(localized: .todayDeadlinesThisWeek)
+        case .nextWeek: String(localized: .todayDeadlinesNextWeek)
+        case .later: String(localized: .todayDeadlinesLater)
+        }
+    }
 
-    func noteSubtitle(_ item: TodaySummary.SessionItem) -> String {
-        let day = item.session.date.formatted(.dateTime.month().day().weekday())
-        return String(localized: item.session.reviewNoteUnfinished ? .todayNoteContinue(day) : .todayNoteWrite(day))
+    // MARK: Day ribbon
+
+    /// A class on the ribbon: a session already made, or the timetable's lecture not made yet.
+    struct RibbonClass: Identifiable {
+        var courseId: UUID
+        var start: Date
+        var end: Date
+        var name: String
+        var sessionId: UUID?
+        var suggested: Workspace.SuggestedSession?
+        var id: String { "\(courseId)-\(start.timeIntervalSinceReferenceDate)" }
+    }
+
+    func ribbonClasses(_ summary: TodaySummary, now: Date) -> [RibbonClass] {
+        // A session without a weekly slot has no end; an hour keeps it a visible block rather than a sliver.
+        let made = summary.classesToday.map { item in
+            RibbonClass(courseId: item.courseId, start: item.session.date, end: end(of: item) ?? item.session.date.addingTimeInterval(3600),
+                        name: sessionName(item.courseId, item.session), sessionId: item.session.id)
+        }
+        let planned = suggested(now: now, on: summary.studyDay).map {
+            RibbonClass(courseId: $0.courseId, start: $0.suggestion.date, end: $0.suggestion.end, name: $0.name, suggested: $0)
+        }
+        return (made + planned).sorted { $0.start < $1.start }
+    }
+
+    func ribbon(_ classes: [RibbonClass], on day: LocalDate) -> DayRibbon {
+        DayRibbon(day: day, classes: classes.map { DateInterval(start: $0.start, end: max($0.start, $0.end)) }, calendar: workspace.calendar)
+    }
+
+    /// The next class to start after `now`, made or only on the timetable.
+    func nextClass(after now: Date) -> (courseId: UUID, date: Date)? {
+        let made = current.flatMap { c in c.file.sessions.filter { !$0.isCancelled && $0.date > now }.map { (courseId: c.id, date: $0.date) } }
+        let planned = workspace.suggestedSessions(now: now).filter { $0.suggestion.date > now }.map { (courseId: $0.courseId, date: $0.suggestion.date) }
+        return (made + planned).min { $0.date < $1.date }
+    }
+
+    /// The 지금 수업 card's side panel: the class after this one, or how tomorrow starts once today's are done.
+    func nextPanel(now: Date, studyDay: LocalDate) -> (title: String, detail: String) {
+        let next = nextClass(after: now)
+        let day = next.map { workspace.settings.studyDay(of: $0.date, calendar: workspace.calendar) }
+        if let next, day == studyDay { return (title(next.courseId), time(next.date)) }
+        let tomorrow = next.flatMap { day == studyDay.adding(days: 1) ? $0 : nil }
+        return (String(localized: .todayNextTodayDone),
+                tomorrow.map { String(localized: .todayNextTomorrow(time($0.date))) } ?? String(localized: .todayNextTomorrowNone))
+    }
+
+    /// `월요일 오전 9:00`, the line an empty day's ribbon gives for the next class; the date too once it's over a week out.
+    func nextClassLine(after now: Date) -> (when: String, courseId: UUID)? {
+        guard let next = nextClass(after: now) else { return nil }
+        let soon = next.date.timeIntervalSince(now) < 6 * 86_400
+        return (next.date.formatted(soon ? .dateTime.weekday(.wide).hour().minute() : .dateTime.month().day().weekday().hour().minute()), next.courseId)
+    }
+
+    func time(_ date: Date) -> String { date.formatted(date: .omitted, time: .shortened) }
+
+    // MARK: Header
+
+    struct WeekDay: Identifiable {
+        var day: LocalDate
+        var weekday: String
+        var isToday: Bool
+        /// Courses with a class time that weekday, in class order.
+        var courses: [UUID]
+        var id: LocalDate { day }
+    }
+
+    /// The week around the study day, each day dotted with the courses the timetable puts on it.
+    func week(around studyDay: LocalDate) -> [WeekDay] {
+        let calendar = workspace.calendar
+        let weekday = studyDay.date(in: calendar).map { calendar.isoWeekday(of: $0) } ?? 1
+        let semester = workspace.currentSemester
+        return (1...7).map { iso in
+            let day = studyDay.adding(days: iso - weekday)
+            let inTerm = (semester?.start.map { $0 <= day } ?? true) && (semester?.end.map { day <= $0 } ?? true)
+            let slots = inTerm ? current.flatMap { c in c.file.course.schedule.filter { $0.weekday == iso }.map { ($0.startMinute, c.id) } } : []
+            var seen = Set<UUID>()
+            let courses = slots.sorted { $0.0 < $1.0 }.map(\.1).filter { seen.insert($0).inserted }
+            return WeekDay(day: day, weekday: ClassTime.weekdayNames[iso - 1], isToday: day == studyDay, courses: courses)
+        }
+    }
+
+    /// The line under the date, as Markdown-styled pieces whose bold runs are the counts; `urgent` colors them.
+    func summaryLine(classes: [RibbonClass], summary: TodaySummary, reviews: Reviews, now: Date) -> [(text: AttributedString, urgent: Bool)] {
+        var pieces: [(AttributedString, Bool)] = []
+        let ended = classes.filter { $0.end <= now }.count
+        pieces.append((classes.isEmpty ? AttributedString(localized: .todayLineNoClasses)
+                       : ended == classes.count ? AttributedString(localized: .todayLineClassesDone(classes.count))
+                       : ended > 0 ? AttributedString(localized: .todayLineClassesEnded(classes.count, ended))
+                       : AttributedString(localized: .todayLineClasses(classes.count)), false))
+        let due = summary.deadlines.filter(\.isToday).count
+        if due > 0 { pieces.append((AttributedString(localized: .todayLineDue(due)), true)) }
+        let left = reviews.queue.count + summary.missingReviewNotes.count
+        if left > 0 {
+            pieces.append((AttributedString(localized: .todayLineReviews(left)), false))
+        } else if reviews.doneToday > 0 {
+            pieces.append((AttributedString(localized: .todayLineReviewsDone), false))
+        }
+        return pieces
+    }
+
+    // MARK: Reviews
+
+    struct UnitGroup: Identifiable {
+        var courseId: UUID
+        /// Each entry with its place in the whole queue, which `ReviewOpener` walks on from.
+        var entries: [(index: Int, entry: Workspace.ReviewEntry)]
+        var id: UUID { courseId }
+        var overdue: Int { entries.map(\.entry.item.overdueDays).max() ?? 0 }
+        var writeNoteFirst: Bool { entries.contains { $0.entry.item.writeNoteFirst } }
+    }
+
+    /// The queue by course, courses in the order their first unit comes, so the most urgent course leads.
+    func unitGroups(_ queue: [Workspace.ReviewEntry]) -> [UnitGroup] {
+        var groups: [UnitGroup] = []
+        for (i, entry) in queue.enumerated() {
+            if let g = groups.firstIndex(where: { $0.courseId == entry.courseId }) {
+                groups[g].entries.append((i, entry))
+            } else {
+                groups.append(UnitGroup(courseId: entry.courseId, entries: [(i, entry)]))
+            }
+        }
+        return groups
+    }
+
+    static let unitLimit = 6
+    var expandedUnitGroups: Set<UUID> = []
+
+    func shownUnits(_ group: UnitGroup) -> (entries: [(index: Int, entry: Workspace.ReviewEntry)], more: Int) {
+        guard !expandedUnitGroups.contains(group.courseId), group.entries.count > Self.unitLimit else { return (group.entries, 0) }
+        return (Array(group.entries.prefix(Self.unitLimit)), group.entries.count - Self.unitLimit)
+    }
+
+    /// `오늘`, `어제`, or the weekday within the week, then the date: the name of a review-note group.
+    func sessionWhen(_ item: TodaySummary.SessionItem, today: LocalDate) -> String {
+        let day = workspace.settings.studyDay(of: item.session.date, calendar: workspace.calendar)
+        let gap = day.days(until: today)
+        return gap == 0 ? String(localized: .todayWhenToday) : gap == 1 ? String(localized: .todayWhenYesterday)
+            : item.session.date.formatted(gap < 7 ? .dateTime.weekday(.wide) : .dateTime.month().day())
     }
 }

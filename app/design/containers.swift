@@ -162,3 +162,31 @@ struct SheetForm<Rows: View>: View {
         .controlSize(.large)
     }
 }
+
+/// A block with nothing in it, said in one card: a glyph, what is empty, and what fills it. Shorter than the block it
+/// stands for, so an empty column beside a full one doesn't hold open a tall hole.
+struct EmptyCard: View {
+    let symbol: String
+    var tone: Tone = .plain
+    let title: String
+    var detail: String?
+
+    var body: some View {
+        Card {
+            HStack(spacing: Theme.Space.m) {
+                Image(systemName: symbol)
+                    .font(Theme.Glyph.check)
+                    .foregroundStyle(tone == .plain ? Theme.Palette.textTertiary : tone.foreground)
+                    .frame(width: Theme.Size.toolbarButton, height: Theme.Size.toolbarButton)
+                    .background(tone == .plain ? Theme.Palette.fill : tone.foreground.opacity(Theme.Opacity.tint), in: .rect(cornerRadius: Theme.Radius.control))
+                VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+                    Text(title).font(Theme.Typeface.bodyStrong)
+                    if let detail { Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary) }
+                }
+                Spacer(minLength: 0)
+            }
+            .padding(Theme.Inset.row)
+            .frame(maxWidth: .infinity, minHeight: Theme.Size.rowHeight, alignment: .leading)
+        }
+    }
+}

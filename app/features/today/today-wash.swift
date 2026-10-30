@@ -8,8 +8,8 @@ struct TodayWash: View {
     let courses: [UUID]
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { context in
-            let now = model.nowClass(at: context.date)
+        TimelineView(.periodic(from: .now, by: 30)) { _ in
+            let now = model.nowClass(at: model.workspace.now)
             ZStack {
                 ForEach(Array(courses.enumerated()), id: \.element) { i, id in
                     // Spread edge to edge; a lone course sits left, over the title, rather than dead center.
