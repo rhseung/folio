@@ -15169,6 +15169,17 @@
           }
         }
       }
+    },
+    "assignments.solution": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해설"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

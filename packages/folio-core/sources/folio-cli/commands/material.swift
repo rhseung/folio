@@ -4,6 +4,7 @@ import FolioDomain
 import Foundation
 
 extension MaterialRole: ExpressibleByArgument {}
+extension MaterialKind: ExpressibleByArgument {}
 
 extension CourseRef {
     /// A second ref in the same course may be written with or without `<course>/` in front.
@@ -19,7 +20,7 @@ func absolute(_ path: String) -> String {
 struct MaterialCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "material", abstract: String(localized: .materialAbstract),
-        subcommands: [List.self, Show.self, Link.self, Status.self, Relink.self, Track.self, Import.self, Move.self]
+        subcommands: [List.self, Show.self, Link.self, Status.self, Kind.self, Relink.self, Track.self, Import.self, Move.self]
             + GeneratedCommands.material)
 
     struct List: ParsableCommand {
@@ -118,6 +119,22 @@ struct MaterialCommand: ParsableCommand {
             let (c, name) = try r.split(first)
             let ids = try ([name] + materials.dropFirst().map { c.local($0) }).map { try r.material($0, in: c).id }
             try perform(spec: MaterialStatusSet(course: c.id, materials: ids, status: status), g, ctx: ctx)
+        }
+    }
+
+    struct Kind: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: String(localized: .materialKindAbstract), discussion: String(localized: .materialKindDiscussion))
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp(String(localized: .materialKindHelpKind))) var kind: MaterialKind
+        @Argument(help: ArgumentHelp(String(localized: .materialStatusHelpMaterials), valueName: "material"), completion: Complete.materials) var materials: [String]
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            guard let first = materials.first else { throw CLIError(exit: .usage, message: String(localized: .materialStatusMissing)) }
+            let (c, name) = try r.split(first)
+            let ids = try ([name] + materials.dropFirst().map { c.local($0) }).map { try r.material($0, in: c).id }
+            try perform(spec: MaterialKindSet(course: c.id, materials: ids, kind: kind), g, ctx: ctx)
         }
     }
 

@@ -7150,6 +7150,39 @@
           }
         }
       }
+    },
+    "material.kind.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료의 종류(문제, 제출물, 해설 등) 바꾸기. 여러 개면 확인을 받는다"
+          }
+        }
+      }
+    },
+    "material.kind.discussion": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제 폴더의 파일은 종류가 없으면 이름으로 짐작한다(HW3-이름.pdf는 제출물, 나머지는 문제).\n\n예시:\n  folio material kind submission EC4207/26h3.pdf\n  folio material kind problem EC4207/26h3.pdf"
+          }
+        }
+      }
+    },
+    "material.kind.help.kind": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "종류"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

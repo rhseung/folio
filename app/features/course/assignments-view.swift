@@ -173,7 +173,7 @@ struct AssignmentSheet: View {
                     if files.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .assignmentsFilesEmpty)) } }
                     ForEach(Array(files.enumerated()), id: \.element.id) { i, m in
                         let name = (m.path as NSString).lastPathComponent
-                        let kind = m.kind ?? AssignmentFiles.guessKind(fileName: name)
+                        let kind = model.kind(of: m)
                         CardRow(last: i == files.count - 1) {
                             Group {
                                 Image(systemName: kind == .submission ? "paperplane" : "doc").foregroundStyle(Theme.Palette.textSecondary)
@@ -181,7 +181,7 @@ struct AssignmentSheet: View {
                             }
                             .fileDrag(store.fileURL(m.path))
                             Spacer()
-                            Chip(String(localized: kind == .submission ? .assignmentsSubmission : .assignmentsProblem))
+                            ChoiceMenu(selection: Binding(get: { kind }, set: { model.setKind(m, $0) }), options: model.kindOptions)
                             #if os(macOS)
                             Button(.assignmentsOpen) { NSWorkspace.shared.open(store.fileURL(m.path)) }.buttonStyle(.ghost)
                             #endif

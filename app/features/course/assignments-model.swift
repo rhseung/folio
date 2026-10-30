@@ -186,6 +186,15 @@ final class AssignmentSheetModel {
 
     func importFiles(_ urls: [URL]) { workspace.importFiles(urls, into: folder, course: course.id) }
 
+    let kindOptions: [(MaterialKind, String)] = [(.problem, String(localized: .assignmentsProblem)),
+                                                 (.submission, String(localized: .assignmentsSubmission)),
+                                                 (.solution, String(localized: .assignmentsSolution))]
+
+    func kind(of m: FolioDomain.Material) -> MaterialKind { m.kind ?? AssignmentFiles.guessKind(fileName: (m.path as NSString).lastPathComponent) }
+
+    // Saved at once like an added file, not on confirm: the file is already in the folder whatever the sheet does.
+    func setKind(_ m: FolioDomain.Material, _ kind: MaterialKind) { workspace.run(MaterialKindSet(course: course.id, materials: [m.id], kind: kind)) }
+
     func apply() -> Bool {
         let scored = targetComponents
         let entered = scored.compactMap { c -> AssignmentSave.Score? in

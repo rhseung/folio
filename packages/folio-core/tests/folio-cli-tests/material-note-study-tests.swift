@@ -71,6 +71,15 @@ struct MaterialNoteStudyTests {
         }
     }
 
+    @Test func kindOfSeveralNeedsConfirmation() throws {
+        let gist = try Harness.fixtureCopy()
+        _ = h.cli(Self.track, gist: gist)
+        #expect(h.cli(["material", "kind", "submission", "EC4207/Seating.pdf", "Guideline.pdf"], gist: gist).code == Exit.needsConfirmation.rawValue)
+        try h.expectSame(["material", "kind", "submission", "EC4207/Seating.pdf", "Guideline.pdf", "--yes"], setup: [Self.track]) { gist in
+            MaterialKindSet(course: course, materials: [try material(gist, "Seating.pdf"), try material(gist, "Guideline.pdf")], kind: .submission)
+        }
+    }
+
     @Test func relink() throws {
         try h.expectSame(["material", "relink", "EC4207/Seating.pdf", "Exams/Midterm/Guideline.pdf"], setup: [Self.track]) { gist in
             let store = try ActionContext(gist: gist, device: h.device).store(course)
