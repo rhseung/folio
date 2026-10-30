@@ -59,12 +59,10 @@ struct AssignmentsView: View {
         Menu {
             statusItems(a)
         } label: {
-            Image(systemName: a.status.symbol)
-                .font(.system(size: 20)) // design: one-off, the status symbol is the row's button
-                .foregroundStyle(a.status == .todo ? Theme.Palette.textTertiary : a.status.tint)
+            AssignmentStatusIcon(status: a.status)
                 .contentTransition(.symbolEffect(.replace))
                 .symbolEffect(.bounce, value: a.status)
-                .frame(width: 24, height: 24).contentShape(.rect)
+                .contentShape(.rect)
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)
@@ -175,7 +173,7 @@ struct AssignmentSheet: View {
                     if files.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .assignmentsFilesEmpty)) } }
                     ForEach(Array(files.enumerated()), id: \.element.id) { i, m in
                         let name = (m.path as NSString).lastPathComponent
-                        let kind = m.kind ?? AssignmentFiles.guessKind(fileName: name)
+                        let kind = model.kind(of: m)
                         CardRow(last: i == files.count - 1) {
                             Group {
                                 Image(systemName: kind == .submission ? "paperplane" : "doc").foregroundStyle(Theme.Palette.textSecondary)
@@ -183,7 +181,7 @@ struct AssignmentSheet: View {
                             }
                             .fileDrag(store.fileURL(m.path))
                             Spacer()
-                            Chip(String(localized: kind == .submission ? .assignmentsSubmission : .assignmentsProblem))
+                            ChoiceMenu(selection: Binding(get: { kind }, set: { model.setKind(m, $0) }), options: model.kindOptions)
                             #if os(macOS)
                             Button(.assignmentsOpen) { NSWorkspace.shared.open(store.fileURL(m.path)) }.buttonStyle(.ghost)
                             #endif

@@ -130,25 +130,72 @@ struct TodayView: View {
 
     func deadlinesBlock(_ summary: TodaySummary) -> some View {
         Block(String(localized: .todayDeadlines), note: summary.deadlines.isEmpty ? nil : String(localized: .todayDeadlinesCount(summary.deadlines.count))) {
-            Card {
+            Card(padding: summary.deadlines.isEmpty ? 0 : Theme.Space.m) {
                 if summary.deadlines.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .todayDeadlinesEmpty)) } }
-                ForEach(Array(summary.deadlines.enumerated()), id: \.element.assignment.id) { i, item in
-                    Button { go(item.courseId, .assignments) } label: { CardRow(last: i == summary.deadlines.count - 1) {
-                        CourseDot(color: model.workspace.accent(item.courseId).color)
-                        VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                            Text(item.assignment.title).lineLimit(1)
-                            Text(model.title(item.courseId)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
-                        }
-                        Spacer(minLength: Theme.Space.s)
-                        Text(model.due(item))
-                            .font(Theme.Typeface.caption.weight(item.isToday ? .bold : .regular)).monospacedDigit()
-                            .foregroundStyle(item.isToday ? Theme.Palette.danger : Theme.Palette.textSecondary)
-                            .fixedSize()
-                    }.contentShape(.rect) }
-                    .buttonStyle(.pointing(.plain))
-                    .contextMenu { Button(.todayDeadlinesShow, systemImage: "checklist") { go(item.courseId, .assignments) } }
+                let days = model.deadlineDays(summary.deadlines, studyDay: summary.studyDay)
+                ForEach(Array(days.enumerated()), id: \.element.id) { i, day in
+                    deadlineDay(day, first: i == 0, last: i == days.count - 1)
                 }
             }
+        }
+        .sheet(item: $model.editing) { AssignmentSheet(workspace: model.workspace, course: $0.course, assignment: $0.assignment) }
+    }
+
+    private static let pillHeight: CGFloat = 40
+
+    func deadlineDay(_ day: TodayModel.DeadlineDay, first: Bool, last: Bool) -> some View {
+        // Pill gaps live inside each day, so the rail runs unbroken from one day's node to the next.
+        let inset = Theme.Space.tight / 2, node = inset + Self.pillHeight / 2
+        return HStack(alignment: .top, spacing: Theme.Space.m) {
+            VStack(alignment: .trailing, spacing: 0) {
+                Text(day.day).font(Theme.Typeface.figureMedium).monospacedDigit()
+                    .foregroundStyle(day.isToday ? Theme.Palette.danger : Theme.Palette.text)
+                Text(day.label).font(Theme.Typeface.label)
+                    .foregroundStyle(day.isToday ? Theme.Palette.danger : Theme.Palette.textTertiary)
+            }
+            .frame(width: 40, height: Self.pillHeight, alignment: .trailing)
+            .padding(.top, inset)
+            ZStack(alignment: .top) {
+                Rectangle().fill(Theme.Palette.line).frame(width: 1)
+                    .padding(.top, first ? node : 0)
+                    .frame(maxHeight: last ? node : .infinity, alignment: .top)
+                CourseDot(color: day.isToday ? Theme.Palette.danger : Theme.Palette.lineStrong)
+                    .padding(.top, node - Theme.Size.dot / 2)
+            }
+            .frame(width: Theme.Size.dot)
+            .frame(maxHeight: .infinity, alignment: .top)
+            VStack(spacing: Theme.Space.tight) {
+                ForEach(day.items, id: \.assignment.id) { deadlinePill($0) }
+            }
+            .padding(.vertical, inset)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+    }
+
+    func deadlinePill(_ item: TodaySummary.DeadlineItem) -> some View {
+        let accent = model.workspace.accent(item.courseId)
+        return Button { model.edit(item) } label: {
+            HStack(spacing: Theme.Space.s) {
+                AssignmentStatusIcon(status: item.assignment.status, tint: accent.color)
+                HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
+                    Text(item.assignment.title).font(Theme.Typeface.bodyStrong).foregroundStyle(accent.ink).lineLimit(1).layoutPriority(1)
+                    Text(model.title(item.courseId)).font(Theme.Typeface.caption).foregroundStyle(accent.ink.secondary).lineLimit(1)
+                }
+                Spacer(minLength: Theme.Space.s)
+                if item.isToday {
+                    Text(model.due(item)).font(Theme.Typeface.caption.weight(.bold)).monospacedDigit()
+                        .foregroundStyle(Theme.Palette.danger).fixedSize()
+                }
+            }
+            .padding(.horizontal, Theme.Space.s)
+            .frame(height: Self.pillHeight)
+            .background(accent.tint, in: .rect(cornerRadius: Theme.Radius.control))
+            .contentShape(.rect)
+        }
+        .buttonStyle(.pointing(.plain))
+        .contextMenu {
+            Button(.commonEditEllipsis) { model.edit(item) }
+            Button(.todayDeadlinesShow, systemImage: "checklist") { go(item.courseId, .assignments) }
         }
     }
 

@@ -146,6 +146,7 @@ extension AssignmentStatus {
     }
 
     /// The circle a todo app draws: empty, half full, checked, then the seal once a score is back.
+    /// `AssignmentStatusIcon` draws doing itself; this symbol is for menus.
     var symbol: String {
         switch self {
         case .todo: "circle"
@@ -156,6 +157,46 @@ extension AssignmentStatus {
     }
 
     @MainActor var tint: Color { Self.steps.first { $0.value == self }?.tint ?? Theme.Palette.textTertiary }
+}
+
+struct AssignmentStatusIcon: View {
+    let status: AssignmentStatus
+    var tint: Color?
+
+    var body: some View {
+        Group {
+            if status == .doing {
+                // circle.lefthalf.filled runs the fill into the ring and reads as a blot; a gap keeps it a ring that is half done.
+                // 20 and 1.7 are SF `circle` at 20pt, measured, so it lines up with the other states' symbols.
+                ZStack {
+                    Circle().strokeBorder(lineWidth: 1.7)
+                    HalfDisc(round: 1).fill()
+                        .overlay { HalfDisc(round: 1).stroke(style: StrokeStyle(lineWidth: 2, lineJoin: .round)) }
+                        .padding(2.9)
+                }
+                .frame(width: 20, height: 20)
+            } else {
+                Image(systemName: status.symbol)
+                    .font(.system(size: 20)) // design: one-off, the status symbol is the row's button
+            }
+        }
+        .foregroundStyle(tint ?? (status == .todo ? Theme.Palette.textTertiary : status.tint))
+        .frame(width: 24, height: 24)
+    }
+}
+
+/// The right half of the rect's circle, drawn `round` short on every side so a round-joined stroke of twice that
+/// brings it back to full size with soft corners. Rounding by shrinking only the flat side would push the shape right.
+private struct HalfDisc: Shape {
+    let round: CGFloat
+
+    func path(in rect: CGRect) -> Path {
+        let rho = rect.width / 2 - round, theta = acos(round / rho)
+        var p = Path()
+        p.addRelativeArc(center: CGPoint(x: rect.midX, y: rect.midY), radius: rho, startAngle: .radians(-theta), delta: .radians(2 * theta))
+        p.closeSubpath()
+        return p
+    }
 }
 
 extension ExamKind {

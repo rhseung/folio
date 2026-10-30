@@ -143,6 +143,47 @@ final class TodayModel {
         return item.isToday ? due.formatted(date: .omitted, time: .shortened) : due.formatted(.dateTime.month().day().weekday())
     }
 
+    struct EditingAssignment: Identifiable {
+        var course: LoadedCourse
+        var assignment: Assignment
+        var id: UUID { assignment.id }
+    }
+
+    var editing: EditingAssignment?
+
+    func edit(_ item: TodaySummary.DeadlineItem) {
+        guard let course = workspace.course(item.courseId) else { return }
+        editing = EditingAssignment(course: course, assignment: item.assignment)
+    }
+
+    struct DeadlineDay {
+        var id: Date
+        var day: String
+        var label: String
+        var isToday: Bool
+        var items: [TodaySummary.DeadlineItem]
+    }
+
+    /// The month shows only where it turns, so the column reads as a calendar without repeating it on every day.
+    func deadlineDays(_ items: [TodaySummary.DeadlineItem], studyDay: LocalDate) -> [DeadlineDay] {
+        let calendar = workspace.calendar
+        var days: [DeadlineDay] = []
+        var month = studyDay.month
+        for item in items {
+            guard let due = item.assignment.due else { continue }
+            // Before the day boundary a 1am due is still today's though its calendar date is the next one.
+            let start = item.isToday ? (studyDay.date(in: calendar) ?? calendar.startOfDay(for: due)) : calendar.startOfDay(for: due)
+            if days.last?.id == start { days[days.count - 1].items.append(item); continue }
+            let m = item.isToday ? studyDay.month : calendar.component(.month, from: due)
+            let label = item.isToday ? String(localized: .todayDeadlinesToday)
+                : due.formatted(m == month ? .dateTime.weekday() : .dateTime.month().weekday())
+            days.append(DeadlineDay(id: start, day: String(item.isToday ? studyDay.day : calendar.component(.day, from: due)),
+                                    label: label, isToday: item.isToday, items: [item]))
+            month = m
+        }
+        return days
+    }
+
     func reviewSubtitle(_ entry: Workspace.ReviewEntry) -> String {
         entry.item.writeNoteFirst ? String(localized: .todayReviewsWriteNoteFirst(title(entry.courseId))) : title(entry.courseId)
     }

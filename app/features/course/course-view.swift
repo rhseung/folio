@@ -370,7 +370,7 @@ struct CourseOverview: View {
                 if shown.isEmpty { CardRow(last: true) { EmptyLine(String(localized: file.assignments.isEmpty ? .courseNoAssignments : .courseNoOpenAssignments)) } }
                 ForEach(Array(shown.enumerated()), id: \.element.id) { i, a in
                     CardRow(last: i == shown.count - 1 && open.count == shown.count) {
-                        Image(systemName: a.status.symbol).foregroundStyle(a.status.tint)
+                        AssignmentStatusIcon(status: a.status)
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                             Text(a.title).font(Theme.Typeface.bodyStrong).lineLimit(1)
                             Text(a.due?.formatted(.dateTime.month().day().weekday().hour().minute()) ?? String(localized: .courseNoDue))

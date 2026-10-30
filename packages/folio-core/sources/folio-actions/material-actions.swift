@@ -60,6 +60,22 @@ public struct MaterialStatusSet {
     }
 }
 
+/// The kind comes before the materials on the command line, so the command is written by hand.
+@Action("material kind", "자료의 종류(문제, 제출물, 해설 등) 바꾸기. 여러 개면 확인을 받는다", confirm: "자료 {materials}의 종류를 {kind}(으)로 바꿉니다.",
+        done: "자료 {materials}을(를) {kind}(으)로 바꿨습니다", phrases: ["제출물로 표시", "과제 파일 문제 제출물 구분"], cli: .manual)
+public struct MaterialKindSet {
+    @Arg var course: Course.ID
+    @Arg var materials: [Material.ID]
+    @Arg var kind: MaterialKind
+
+    public func run(_ ctx: ActionContext) throws {
+        try ctx.edit(course) { f in
+            for id in materials { _ = try index(id, in: f.materials, .valueMaterial) }
+            for i in f.materials.indices where materials.contains(f.materials[i].id) { f.materials[i].kind = kind }
+        }
+    }
+}
+
 /// Points a material at a file inside the course folder, to replace a missing one.
 /// The command reads the file relative to the course folder, so it is written by hand.
 @Action("material relink", "사라진 자료를 과목 폴더 안의 다른 파일에 다시 잇기", done: "자료 '{material}'을(를) {file}에 다시 이었습니다",

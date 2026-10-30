@@ -13916,6 +13916,17 @@
         }
       }
     },
+    "today.deadlines.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
+          }
+        }
+      }
+    },
     "today.note.continue": {
       "extractionState": "manual",
       "localizations": {
@@ -15166,6 +15177,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "읽지 못한 파일이 있습니다."
+          }
+        }
+      }
+    },
+    "assignments.solution": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "해설"
           }
         }
       }
