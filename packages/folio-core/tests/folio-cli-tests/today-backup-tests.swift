@@ -69,7 +69,7 @@ struct TodayBackupTests {
 
     @Test func backupCreateMatchesTheAction() throws {
         let (a, b, folder) = try backupCopies()
-        let archive = folder.appending(path: "Folio-2026-10-28.zip")
+        let archive = folder.appending(path: "Folio-2026-10-28")
         #expect(h.cli(["backup", "create", "--dry-run"], gist: a).code == 0)
         #expect(!FileManager.default.fileExists(atPath: archive.path))
         #expect(h.cli(["backup", "create"], gist: a).code == 0)

@@ -40,7 +40,7 @@ extension Workspace {
         gist.map { BackupStore(gist: $0, folder: URL(filePath: (settings.backup.folder as NSString).expandingTildeInPath, directoryHint: .isDirectory)) }
     }
 
-    /// Off the main actor: zipping every course's notes takes seconds. Nothing in the GIST folder changes, so no reload.
+    /// Off the main actor: a backup walks every file in GIST and takes seconds. Nothing in the GIST folder changes, so no reload.
     @discardableResult
     func backUpNow() async -> Bool {
         guard let gist else { return false }
@@ -60,8 +60,7 @@ extension Workspace {
         await backUpNow()
     }
 
-    /// Extracts the course's Notes, Ink and .folio from a backup into a new folder beside the backup folder,
-    /// outside GIST, and returns it. Nothing in the GIST folder is touched.
+    /// Copies the course out of a backup into a new folder beside the backup folder, outside GIST, and returns it. Nothing in the GIST folder is touched.
     func restore(_ courseId: UUID, from archive: BackupStore.Archive) async -> URL? {
         guard let gist else { return nil }
         let device = device, calendar = calendar, day = archive.day

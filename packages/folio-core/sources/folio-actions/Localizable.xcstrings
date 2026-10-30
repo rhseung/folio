@@ -573,6 +573,17 @@
         }
       }
     },
+    "note.backup.skipped": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iCloud에만 있어 건너뛴 파일: %lld개"
+          }
+        }
+      }
+    },
     "note.import.calendar.cancelled": {
       "extractionState": "manual",
       "localizations": {

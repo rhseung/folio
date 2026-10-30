@@ -59,7 +59,7 @@ struct HelpExampleTests {
         try h.direct(SettingsSet(settings: settings), gist: gist)
         try FileManager.default.createDirectory(at: backups, withIntermediateDirectories: true)
         try h.direct(BackupCreate(), gist: gist)
-        try FileManager.default.moveItem(at: backups.appending(path: "Folio-2026-10-28.zip"), to: backups.appending(path: "Folio-2026-10-27.zip"))
+        try FileManager.default.moveItem(at: backups.appending(path: "Folio-2026-10-28"), to: backups.appending(path: "Folio-2026-10-27"))
         for line in Self.world { #expect(h.cli(line, gist: gist).code == 0, "\(line): \(h.cli(line + ["--dry-run"], gist: gist).err)") }
         let matching = try #require(try h.file(GISTStore(url: gist)).units.first { $0.title == "매칭" })
         let card = QuizCard(device: h.device, at: h.now, unitId: matching.id, type: .free, category: .definition, prompt: "최대 매칭의 정의", answer: "크기가 가장 큰 매칭")
