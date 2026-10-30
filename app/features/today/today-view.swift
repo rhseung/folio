@@ -241,17 +241,22 @@ struct TodayView: View {
         return Button { go(item.courseId, .sessions) } label: { TimelineView(.periodic(from: .now, by: 30)) { _ in
             let now = model.workspace.now
             let ongoing = end.map { now >= start && now < $0 } ?? false
+            let ended = !ongoing && now >= (end ?? start)
             CardRow(last: last) {
-                Text(start.formatted(date: .omitted, time: .shortened)).timeColumn().font(Theme.Typeface.caption).monospacedDigit()
-                CourseDot(color: accent.color)
-                VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text(model.title(item.courseId)).lineLimit(1)
-                    Text(model.sessionName(item.courseId, item.session)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+                // On a full day most rows are already over; greyed, they let the classes still ahead stand out.
+                Group {
+                    Text(start.formatted(date: .omitted, time: .shortened)).timeColumn().font(Theme.Typeface.caption).monospacedDigit()
+                    CourseMark(model.workspace, item.courseId)
+                    VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+                        Text(model.title(item.courseId)).lineLimit(1)
+                        Text(model.sessionName(item.courseId, item.session)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+                    }
                 }
+                .opacity(ended ? 0.45 : 1)
                 Spacer()
                 if ongoing {
                     Text(.todayClassesNow).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink)
-                } else if now >= (end ?? start) {
+                } else if ended {
                     Text(.commonEnded).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                 }
             }
