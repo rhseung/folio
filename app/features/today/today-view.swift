@@ -32,10 +32,19 @@ struct TodayView: View {
             }
 
             if !summary.exams.isEmpty {
-                // One column per exam up to four, so two exams fill the row instead of huddling at its start.
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Theme.Space.m), count: min(summary.exams.count, 4)), spacing: Theme.Space.m) {
-                    ForEach(summary.exams, id: \.exam.id) { examCard($0) }
+                let exams = summary.exams
+                // Five side by side and the rest a scroll away: an exam week brings about five at once. Fewer share the
+                // row's width, so two exams fill it instead of huddling at its start.
+                ScrollView(.horizontal) {
+                    HStack(spacing: Theme.Space.m) {
+                        ForEach(exams, id: \.exam.id) {
+                            examCard($0, stacked: exams.count > 2)
+                                .containerRelativeFrame(.horizontal, count: min(exams.count, 5), spacing: Theme.Space.m)
+                        }
+                    }
+                    .scrollTargetLayout()
                 }
+                .scrollTargetBehavior(.viewAligned)
             }
 
             AttendanceWarnings(model: model)
@@ -70,19 +79,36 @@ struct TodayView: View {
 
     private static let sideColumn: CGFloat = 320
 
-    func examCard(_ item: TodaySummary.ExamItem) -> some View {
-        // Paper card with the course as a dot: an accent tint as the whole background sank into the page in dark mode.
+    func examCard(_ item: TodaySummary.ExamItem, stacked: Bool) -> some View {
+        // Paper card with the course as an icon: an accent tint as the whole background sank into the page in dark mode.
+        // A fifth of the row is too narrow for title and D-day on one line, so three or more cards stack theirs.
         Card(padding: Theme.Space.l) {
-            HStack(alignment: .center, spacing: Theme.Space.m) {
-                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+            if stacked {
+                VStack(alignment: .leading, spacing: 0) {
                     HStack(spacing: Theme.Space.tight) {
                         CourseMark(model.workspace, item.courseId, inline: true)
-                        Text(model.examTitle(item)).font(Theme.Typeface.bodyStrong).lineLimit(1)
+                        Text(model.title(item.courseId)).lineLimit(1)
                     }
-                    Text(model.examStart(item)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
+                    .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+                    Text(item.exam.title).font(Theme.Typeface.bodyStrong).lineLimit(1)
+                        .padding(.top, Theme.Space.tight)
+                    Text(model.dDay(item)).font(Theme.Typeface.figureCompact).monospacedDigit().foregroundStyle(DdayChip.heat(item.dDay))
+                        .padding(.top, Theme.Space.xs)
+                    Text(model.examStart(item)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                        .padding(.top, Theme.Space.xxs)
                 }
-                Spacer(minLength: 0)
-                Text(model.dDay(item)).font(Theme.Typeface.figureCompact).monospacedDigit().foregroundStyle(DdayChip.heat(item.dDay)).fixedSize()
+            } else {
+                HStack(alignment: .center, spacing: Theme.Space.m) {
+                    VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                        HStack(spacing: Theme.Space.tight) {
+                            CourseMark(model.workspace, item.courseId, inline: true)
+                            Text(model.examTitle(item)).font(Theme.Typeface.bodyStrong).lineLimit(1)
+                        }
+                        Text(model.examStart(item)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
+                    }
+                    Spacer(minLength: 0)
+                    Text(model.dDay(item)).font(Theme.Typeface.figureCompact).monospacedDigit().foregroundStyle(DdayChip.heat(item.dDay)).fixedSize()
+                }
             }
         }
         .opens { go(item.courseId, .exams) }
