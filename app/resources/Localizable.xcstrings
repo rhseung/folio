@@ -13031,7 +13031,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "GIST 폴더의 .folio과 과목마다 Notes, Ink, .folio을 담습니다."
+            "value": "같은 디스크면 GIST 폴더 전체를 APFS 복제로 떠서 바뀐 파일만큼만 공간을 씁니다. 다른 디스크면 .folio과 과목마다 Notes, Ink, .folio만 압축합니다."
           }
         }
       }

@@ -579,7 +579,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "GIST의 .folio와 각 과목의 Notes, Ink, .folio를 설정의 백업 폴더(기본 ~/Backups/Folio/auto)에 Folio-<날짜>.zip으로 묶는다.\n오늘 백업이 있으면 바꾼다. 보관 기간이 지난 백업은 지운다. GIST 폴더는 바뀌지 않는다.\n\n예시:\n  folio backup create --dry-run\n  folio backup create"
+            "value": "설정의 백업 폴더(기본 ~/Backups/Folio/auto)에 오늘 백업을 만든다. GIST 폴더와 같은 디스크면 GIST 전체를 APFS 복제로 Folio-<날짜> 폴더에 떠서 바뀐 파일만큼만 공간을 쓴다. iCloud에만 있는 파일은 내려받지 않고 건너뛴다. 다른 디스크면 GIST의 .folio와 각 과목의 Notes, Ink, .folio를 Folio-<날짜>.zip으로 묶는다.\n오늘 백업이 있으면 바꾼다. 보관 기간이 지난 백업은 지운다. GIST 폴더는 바뀌지 않는다.\n\n예시:\n  folio backup create --dry-run\n  folio backup create"
           }
         }
       }
@@ -645,7 +645,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "과목의 Notes, Ink, .folio를 백업 폴더 옆 restored 폴더에 새로 꺼낸다. GIST 폴더는 건드리지 않으니 비교해서 직접 옮긴다.\n\n예시:\n  folio backup restore EC4207 2026-10-27 --dry-run\n  folio backup restore EC4207 2026-10-27"
+            "value": "과목을 백업 폴더 옆 restored 폴더에 새로 꺼낸다. 복제 백업이면 과목 폴더 전체, zip 백업이면 Notes, Ink, .folio를 꺼낸다. GIST 폴더는 건드리지 않으니 비교해서 직접 옮긴다.\n\n예시:\n  folio backup restore EC4207 2026-10-27 --dry-run\n  folio backup restore EC4207 2026-10-27"
           }
         }
       }

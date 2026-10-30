@@ -16,18 +16,18 @@ public struct BackupCreate {
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.backupStore()
         let today = LocalDate(ctx.now, in: ctx.calendar)
-        let target = store.folder.appending(path: "Folio-\(today).zip").path
-        guard !ctx.dryRun else { return ctx.note(String(localized: .noteBackupPlanned(target))) }
+        guard !ctx.dryRun else { return ctx.note(String(localized: .noteBackupPlanned(store.target(for: today).path(percentEncoded: false)))) }
         do {
-            let url = try store.backUp(today: today, dailyDays: try ctx.settings().backup.dailyDays, calendar: ctx.calendar)
-            ctx.note(String(localized: .noteBackupCreated(url.path(percentEncoded: false))))
+            let created = try store.backUp(today: today, dailyDays: try ctx.settings().backup.dailyDays, calendar: ctx.calendar)
+            ctx.note(String(localized: .noteBackupCreated(created.url.path(percentEncoded: false))))
+            if created.skipped > 0 { ctx.note(String(localized: .noteBackupSkipped(created.skipped))) }
         } catch BackupStore.Failure.insideGIST(let folder) {
             throw ActionError.rule(String(localized: .errorBackupInsideGist(folder)))
         }
     }
 }
 
-/// Extracts one course's Notes, Ink and .folio from the archive of `day` into a new folder beside the backup folder.
+/// Copies one course out of the backup of `day` into a new folder beside the backup folder.
 /// Never writes into the GIST folder; the extracted folder's path is the action's only note.
 @Action("backup restore", "한 과목을 백업에서 새 폴더로 꺼낸다", effect: .creates, done: "과목 '{course}'을(를) {day} 백업에서 꺼냈습니다", phrases: ["백업에서 복구", "되살리기"], cli: .manual)
 public struct BackupRestore {
