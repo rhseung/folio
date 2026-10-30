@@ -161,6 +161,7 @@ extension AssignmentStatus {
 
 struct AssignmentStatusIcon: View {
     let status: AssignmentStatus
+    var tint: Color?
 
     var body: some View {
         Group {
@@ -179,7 +180,7 @@ struct AssignmentStatusIcon: View {
                     .font(.system(size: 20)) // design: one-off, the status symbol is the row's button
             }
         }
-        .foregroundStyle(status == .todo ? Theme.Palette.textTertiary : status.tint)
+        .foregroundStyle(tint ?? (status == .todo ? Theme.Palette.textTertiary : status.tint))
         .frame(width: 24, height: 24)
     }
 }

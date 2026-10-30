@@ -28,6 +28,29 @@ struct TodayModelTests {
         #expect(progress.doneToday == 1)
         #expect(progress.streak == 1)
     }
+
+    @Test func deadlinesGroupByDayAndNameTheMonthWhereItTurns() throws {
+        let workspace = try fixtureWorkspace()
+        let model = TodayModel(workspace: workspace)
+        let c = workspace.calendar
+        // Two days out, so the boundary hour never makes one of them today's.
+        let base = try #require(c.date(byAdding: .day, value: 2, to: c.startOfDay(for: .now)))
+        func at(_ days: Int, _ hour: Int) -> Date { c.date(byAdding: .hour, value: days * 24 + hour, to: base)! }
+        let dues = [("A", at(0, 12)), ("B", at(0, 18)), ("C", at(1, 12)), ("D", at(42, 12))]
+        for (title, due) in dues { workspace.run(AssignmentAdd(course: graphTheory, title: title, due: due)) }
+        let summary = model.summary(now: .now)
+        let days = model.deadlineDays(summary.deadlines.filter { ["A", "B", "C", "D"].contains($0.assignment.title) }, studyDay: summary.studyDay)
+        #expect(days.map { $0.items.map(\.assignment.title) } == [["A", "B"], ["C"], ["D"]])
+        #expect(days.allSatisfy { !$0.isToday })
+        #expect(days[0].day == String(c.component(.day, from: at(0, 12))))
+        // "월 " not "월": 월 alone is Monday.
+        #expect(days[1].label.contains("월 ") == (c.component(.month, from: at(1, 12)) != c.component(.month, from: at(0, 12))))
+        #expect(days[2].label.contains("월 "))
+
+        model.edit(days[0].items[0])
+        #expect(model.editing?.assignment.title == "A")
+        #expect(model.editing?.course.id == graphTheory)
+    }
 }
 
 @MainActor

@@ -13916,6 +13916,17 @@
         }
       }
     },
+    "today.deadlines.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
+          }
+        }
+      }
+    },
     "today.note.continue": {
       "extractionState": "manual",
       "localizations": {
