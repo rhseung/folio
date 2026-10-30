@@ -7,6 +7,7 @@ struct TodayView: View {
     @State private var model: TodayModel
     @Environment(\.searchTarget) private var searchTarget
     @State private var skippingAll = false
+    @State private var wide = true
 
     init(workspace: Workspace) {
         _model = State(initialValue: TodayModel(workspace: workspace))
@@ -21,8 +22,7 @@ struct TodayView: View {
     func page(now: Date) -> some View {
         let summary = model.summary(now: now)
         let reviews = model.reviews(now: now)
-        // Narrower than other pages: a glance at today, not a table to read across.
-        return Page(maxWidth: 780) {
+        return Page {
             PageHeader(title: model.heading(summary, now: now), subtitle: model.workspace.currentSemester?.title)
 
             // One slot for both: an empty NowClassCard still took a stack slot and left a double gap above the field.
@@ -32,39 +32,61 @@ struct TodayView: View {
             }
 
             if !summary.exams.isEmpty {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 180), spacing: Theme.Space.m - 2)], spacing: Theme.Space.m - 2) {
-                    ForEach(summary.exams, id: \.exam.id) { item in
-                        let accent = model.workspace.accent(item.courseId)
-                        VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                            Text(model.examTitle(item)).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink).lineLimit(1)
-                            Text(model.dDay(item)).font(Theme.Typeface.figureCompact).foregroundStyle(DdayChip.heat(item.dDay))
-                            Text(model.examStart(item)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
-                        }
-                        .padding(.horizontal, Theme.Inset.panel)
-                        .padding(.vertical, Theme.Space.m)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(accent.tint, in: .rect(cornerRadius: Theme.Radius.card))
-                        .opens { go(item.courseId, .exams) }
-                        .contextMenu { Button(.commonShowExams, systemImage: "calendar.badge.exclamationmark") { go(item.courseId, .exams) } }
-                    }
+                // One column per exam up to four, so two exams fill the row instead of huddling at its start.
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Theme.Space.m), count: min(summary.exams.count, 4)), spacing: Theme.Space.m) {
+                    ForEach(summary.exams, id: \.exam.id) { examCard($0) }
                 }
             }
 
-            ExamPlanTodayBlock(courses: model.current)
             AttendanceWarnings(model: model)
 
-            // Classes and deadlines are short lists of equal weight, side by side when there's room for their titles.
-            // The review queue can run to dozens of rows, so it gets the full width below them instead of a column
-            // that pushes everything else down.
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: Theme.Space.xl, alignment: .top)], alignment: .leading, spacing: Theme.Space.xl) {
-                classesBlock(summary, now: now)
-                deadlinesBlock(summary)
+            // Deadlines get a side column so they sit beside the day's work: in a grid row with the classes, an empty
+            // class list left a hole as tall as the deadline timeline. Narrow, they stack above the long review queue.
+            VStack(alignment: .leading, spacing: Theme.Space.section) {
+                if wide {
+                    HStack(alignment: .top, spacing: Theme.Space.xl) {
+                        VStack(alignment: .leading, spacing: Theme.Space.section) {
+                            classesBlock(summary, now: now)
+                            ExamPlanTodayBlock(courses: model.current)
+                            reviewBlock(reviews, notes: summary.missingReviewNotes)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        deadlinesBlock(summary).frame(width: Self.sideColumn)
+                    }
+                } else {
+                    classesBlock(summary, now: now)
+                    ExamPlanTodayBlock(courses: model.current)
+                    deadlinesBlock(summary)
+                    reviewBlock(reviews, notes: summary.missingReviewNotes)
+                }
             }
-            reviewBlock(reviews, notes: summary.missingReviewNotes)
+            // Below this the main column gets too narrow for a unit title beside its overdue chip.
+            .onGeometryChange(for: Bool.self) { $0.size.width >= Self.sideColumn + 440 } action: { wide = $0 }
 
             StudyTimeBlock(workspace: model.workspace)
         }
         .navigationSubtitle(summary.studyDay.description)
+    }
+
+    private static let sideColumn: CGFloat = 320
+
+    func examCard(_ item: TodaySummary.ExamItem) -> some View {
+        // Paper card with the course as a dot: an accent tint as the whole background sank into the page in dark mode.
+        Card(padding: Theme.Space.l) {
+            HStack(alignment: .center, spacing: Theme.Space.m) {
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    HStack(spacing: Theme.Space.tight) {
+                        CourseDot(color: model.workspace.accent(item.courseId).color)
+                        Text(model.examTitle(item)).font(Theme.Typeface.bodyStrong).lineLimit(1)
+                    }
+                    Text(model.examStart(item)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
+                }
+                Spacer(minLength: 0)
+                Text(model.dDay(item)).font(Theme.Typeface.figureCompact).monospacedDigit().foregroundStyle(DdayChip.heat(item.dDay)).fixedSize()
+            }
+        }
+        .opens { go(item.courseId, .exams) }
+        .contextMenu { Button(.commonShowExams, systemImage: "calendar.badge.exclamationmark") { go(item.courseId, .exams) } }
     }
 
     /// A class's review note comes first, then the units: writing the note is the day's review of that class
@@ -89,13 +111,10 @@ struct TodayView: View {
                 } else if notes.isEmpty {
                     CardRow(last: true) { EmptyLine(String(localized: .todayReviewsEmpty)) }
                 }
-                noteRows(notes, limit: 6, endsCard: queue.isEmpty)
+                noteRows(notes, limit: 6, endsCard: queue.isEmpty, widest: queue.count)
                 ForEach(Array(queue.enumerated()), id: \.element.item.unitId) { i, entry in
                     ReviewOpener(courseId: entry.courseId, unitId: entry.item.unitId, then: queue[(i + 1)...].map { .init(courseId: $0.courseId, unitId: $0.item.unitId) }) { CardRow(last: i == queue.count - 1) {
-                        // The widest number, hidden, sizes the column so every row lines up however long the queue is.
-                        Text("\(queue.count)").hidden()
-                            .overlay(alignment: .trailing) { Text("\(i + 1)") }
-                            .font(Theme.Typeface.caption).monospacedDigit().lineLimit(1).foregroundStyle(Theme.Palette.textTertiary)
+                        reviewLead(widest: queue.count) { Text("\(i + 1)").foregroundStyle(Theme.Palette.textTertiary) }
                         CourseDot(color: model.workspace.accent(entry.courseId).color)
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                             Text(entry.unitTitle).font(Theme.Typeface.bodyStrong).lineLimit(1)
@@ -249,7 +268,14 @@ struct TodayView: View {
         Button(.todayReviewsSkip, systemImage: "forward") { model.skip([entry]) }
     }
 
-    @ViewBuilder func noteRows(_ items: [TodaySummary.SessionItem], limit: Int, endsCard: Bool) -> some View {
+    // Note rows and unit rows share one leading column, sized by the widest mark either can hold, so their dots line up.
+    func reviewLead(widest: Int, @ViewBuilder mark: () -> some View) -> some View {
+        ZStack { Text("\(widest)").hidden(); Image(systemName: "square.and.pencil").hidden() }
+            .overlay(alignment: .trailing, content: mark)
+            .font(Theme.Typeface.caption).monospacedDigit().lineLimit(1)
+    }
+
+    @ViewBuilder func noteRows(_ items: [TodaySummary.SessionItem], limit: Int, endsCard: Bool, widest: Int) -> some View {
         let (shown, more) = model.noteRows(items, limit: limit)
         ForEach(Array(shown.enumerated()), id: \.element.session.id) { i, item in
             CardRow(last: endsCard && more == 0 && i == shown.count - 1) {
@@ -258,7 +284,7 @@ struct TodayView: View {
                     if let id = model.reviewNote(of: item) { openNote(in: item.courseId)(id) }
                 } label: {
                     HStack(spacing: Theme.Space.m) {
-                        Image(systemName: "square.and.pencil").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.warning)
+                        reviewLead(widest: widest) { Image(systemName: "square.and.pencil").foregroundStyle(Theme.Palette.warning) }
                         CourseDot(color: model.workspace.accent(item.courseId).color)
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                             Text(model.noteTitle(item)).font(Theme.Typeface.bodyStrong).lineLimit(1)
