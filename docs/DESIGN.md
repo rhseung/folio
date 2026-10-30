@@ -62,13 +62,13 @@ Folio가 아닌 앱에서 같은 느낌을 만들 때도 이 문서를 쓴다. "
 
 | 토큰 | 맡는 일 | 메모 |
 | --- | --- | --- |
-| `Theme.Palette` | 배경, 선, 글자, 상태색 | `page` 위에 `card`. 선은 `lineSoft`(카드 안 구분선), `line`(열 경계, 테두리), `lineStrong`(아직 만들지 않은 행의 점선). 채운 색 위 글자는 `onFill`. 창 틀 위에는 `chromeIcon`(사이드바·툴바·위치 표시의 아이콘), `chromeText`(틀 위의 조용한 글자), `chromeLine`(틀 위의 안내선), `frameTint`(틀 재질 위의 옅은 층. 라이트는 흰색, 다크는 종이의 짙은 색)를 쓴다. 틀 너머로 바탕화면이 비쳐서 본문의 회색 단계는 틀 위에서 묻힌다 |
+| `Theme.Palette` | 배경, 선, 글자, 상태색 | `page` 위에 `card`. 선은 `lineSoft`(카드 안 구분선), `line`(열 경계, 테두리), `lineStrong`(아직 만들지 않은 행의 점선). 채운 색 위 글자는 `onFill`. 창 틀 위에는 `chromeIcon`(사이드바·툴바·위치 표시의 아이콘), `chromeText`(틀 위의 조용한 글자), `chromeSelected`(사이드바에서 고른 아이콘, 시스템 강조색), `chromeLine`(틀 위의 안내선), `frameTint`(틀 재질 위의 옅은 층. 라이트는 흰색, 다크는 종이의 짙은 색)를 쓴다. 틀 너머로 바탕화면이 비쳐서 본문의 회색 단계는 틀 위에서 묻힌다 |
 | `Tone` | 상태의 뜻 | `Chip`, `StatStrip`, 수치에 쓴다. 새 상태색은 `Palette`에 라이트·다크 쌍으로 더하고 `Tone`에 연결한다 |
 | `CourseAccent` | 과목 강조색 | `course.json`의 `color`에서 읽는다. 프리셋 이름과 고르는 순서는 `FolioDomain`의 `CourseColor`가 정한다 |
 | `Theme.Series` | 차트 계열색 | dataviz 팔레트 검증기로 두 모드 모두 확인한 값이다. 계열을 더할 때도 검증한다 |
 | `Theme.Space` | 간격 | `xxs`(제목과 그 아래 설명 줄), `xs`, `tight`(아이콘과 낱말, 나란한 칩), `s`, `m`, `l`, `xl`, `section`(페이지의 블록 사이), `xxl` |
 | `Theme.Inset` | 반복되는 모양의 안쪽 여백 | `row`(CardRow), `listRow`(카드 없는 목록 열의 행), `toggle`(켜면 강조색이 되는 작은 선택지, Segmented), `tag`(Chip), `control`(캡슐 컨트롤), `stat`(StatStrip 칸), `panel`(행이 아닌 하나짜리 카드) |
-| `Theme.Opacity` | 투명도 | `tint`(같은 색 글자 뒤의 옅은 배경, 유리 위 고른 칸), `projected`(막대의 예상 부분), `wash`(유리 위 칸과 트랙의 바탕), `edge`(그 테두리), `hover`·`pressed`(틀 위 버튼의 원) |
+| `Theme.Opacity` | 투명도 | `tint`(같은 색 글자 뒤의 옅은 배경, 유리 위 고른 칸), `projected`(막대의 예상 부분), `wash`(유리 위 칸과 트랙의 바탕), `edge`(그 테두리), `hover`·`pressed`(틀 위 버튼의 원), `innerFill`·`duotone`(고른 아이콘과 사이드바 아이콘의 속채움), `ended`(끝난 수업, 지난 학기) |
 | `Theme.Radius` | 모서리 | `mark`(범례 견본) < `small`(키캡, 썸네일) < `tile` < `control` < `card` < `floating` |
 | `Theme.Size` | 고정 치수 | 본문 최대 폭, 과목 열 폭, 행 최소 높이, 점과 타일 크기. 창 구조: `sidebar`(왼쪽 사이드바), `claudePanel`(떠 있는 Claude 패널의 기본 폭), `fab`(그 패널을 여는 둥근 버튼), `panelInset`(본문 패널과 틀 사이), `toolbarButton`(툴바 줄의 높이 단위), `searchField` |
 | `Theme.Typeface` | 글자 | 제목 3단(`pageTitle`, `columnTitle`, `sectionTitle`), 수치 4단(`figure` 화면의 주인공 수치, `figureCompact` 타일 수치, `figureMedium` 행 앞 날짜·성적 글자, `figureSmall` 표 안 수치), 본문(`bodyLarge`, `body`, `bodyStrong`, `caption`, `label`, `mono`) |
@@ -134,6 +134,8 @@ Folio가 아닌 앱에서 같은 느낌을 만들 때도 이 문서를 쓴다. "
   - 학기 안 과목은 끌어서 순서를 바꾼다(같은 학기 안에서만). Mac과 iPad 모두 목록의 `onMove`를 써서 시스템 삽입선이 나온다. Mac의 행은 버튼이 아니라 탭으로 스스로를 고른다. 버튼은 누름을 가져가 목록의 끌기가 시작되지 않는다. 학기는 날짜순이라 옮기지 않는다. 사이드바 순서는 `Workspace.sidebarCourses(in:)`만 따르고, 다른 목록과 기본 색은 이름순 `courses(in:)`를 그대로 쓴다.
   - 추가는 줄을 차지하지 않는다. "학기" 이름 끝의 +(학기 추가)와 지금 학기 행 끝의 +(과목 추가)가 Mac에서는 포인터를 올릴 때만 보이고, iPad에서는 늘 보인다. 오른쪽 여백은 행 아이콘의 왼쪽 여백과 같다.
   - 지금 수업 중인 과목은 줄 바탕이 수업이 지난 만큼 왼쪽부터 과목의 `tint`로 차오르고, 줄 끝에 남은 분이 붙는다. 아이콘은 그대로이고 고리나 점은 두지 않는다. 고른 줄이면 지난 부분이 한 단계 짙어진다.
+  - 수업 중이 아닌 지금 학기 과목은 줄 끝에 오늘의 한 가지를 캡션으로 붙인다. 급한 것 하나만 쓰고, 고르는 순서는 `TodaySummary.hint(for:now:)`가 정한다. 오늘 마감이면 체크리스트 기호(`danger`. 과제 이름과 시각은 포인터를 올리면), 오늘 남은 수업이면 시작 시각(`chromeText`, 오전·오후 없이), 7일 안의 시험이면 "D-n"(`warning`)이다. 마감과 수업은 포인터를 올리면 과제 이름이나 시각이 뜬다. 아무것도 없으면 비워 둔다.
+  - 아이콘은 두 톤이다. 모든 아이콘 안을 `Opacity.duotone`(0.14)으로 옅게 채우고(`duotone: true`), 고른 행은 `innerFill`로 한 단계 짙게 채운다. 흰 윤곽만 늘어서면 납작해 보였다. 고른 탐색과 학기 아이콘은 시스템 강조색(`chromeSelected`)으로, 과목은 늘 과목 색이다. 지난 학기(인정학기 포함)는 오늘 화면의 끝난 수업처럼 `Opacity.ended`로 흐려, 해마다 느는 목록에서 지금과 앞으로의 학기가 앞에 선다.
   - 고른 행은 과목이면 그 과목의 `tint`, 나머지는 `sidebarSelection`(글자색을 옅게 깐 것)으로 칠한다. Mac 사이드바의 시스템 선택은 tint와 상관없이 회색 한 가지라, Mac에서는 행이 스스로 고르고 바탕을 그린다(`sidebarRow`). iPad는 접힌 화면에서 상세로 넘어가는 동작 때문에 시스템 선택을 쓴다.
 - **보조 패널은 떠 있다.** 화면이 여는 보조 창(과목의 Claude)은 열을 차지하지 않는다. 본문 오른쪽 아래의 둥근 버튼(FAB, 유리 원)을 누르면 그 위로 유리 패널(`floatingGlass()`, 그림자)이 떠오르고, 같은 버튼이 ✕로 바뀌어 닫는다. 패널의 앞쪽 가장자리를 끌어 폭을 바꾼다. 열로 두면 좁은 창에서 사이드바, 과목 열, 보조 열이 함께 폭을 차지해 본문이 띠처럼 좁아졌다. 가리는 쪽을 택한 대신 패널 높이에 상한을 두어 본문 위쪽이 보이게 한다. Mac과 iPad가 같은 방식이고 `.inspector`는 쓰지 않는다. 패널 안의 구성 요소에는 `\.onGlass`를 준다.
 - **유리 위의 구성 요소.** Claude 패널처럼 유리 위에 놓인 영역에는 `.environment(\.onGlass, true)`를 준다. `Card`, `StatStrip`, `.chip()`, `Segmented`, `floatingGlass()`가 이 값을 보고 불투명한 `card`·`fill` 대신 글자색 `wash`로 그린다. 새 구성 요소의 바탕은 `.surface(_:in:)`로 깔아 같은 규칙을 따르게 한다. 유리 위의 불투명한 칸은 혼자 떠 보인다.
@@ -213,7 +215,7 @@ Folio가 아닌 앱에서 같은 느낌을 만들 때도 이 문서를 쓴다. "
 
 ## 패턴
 
-- **화면 골격.** 상세 화면은 `Page { PageHeader; StatStrip; Block { Card { CardRow… } } }` 순서로 쌓는다. 목록과 상세가 나란한 화면은 `Theme.Size.courseColumn` 폭의 목록 열, `ColumnDivider`, 본문 순서로 둔다. 과목과 설정처럼 화면 안에 구역이 여럿이면 그 열에 `ColumnRow`로 구역을 늘어놓는다. 아이콘은 창 사이드바를 포함해 어디서나 `LineIcon`(배경 없는 선 기호, `.fill` 아닌 기호. 고른 행은 `filled`의 옅은 속채움)이고, 색은 과목 아이콘과 고른 항목에만 쓴다. 설정도 따로 뜨는 창이 아니라 이 형태의 페이지다(⌘,로 연다).
+- **화면 골격.** 상세 화면은 `Page { PageHeader; StatStrip; Block { Card { CardRow… } } }` 순서로 쌓는다. 목록과 상세가 나란한 화면은 `Theme.Size.courseColumn` 폭의 목록 열, `ColumnDivider`, 본문 순서로 둔다. 과목과 설정처럼 화면 안에 구역이 여럿이면 그 열에 `ColumnRow`로 구역을 늘어놓는다. 아이콘은 창 사이드바를 포함해 어디서나 `LineIcon`(배경 없는 선 기호, `.fill` 아닌 기호. 고른 행은 `filled`의 옅은 속채움. 창 사이드바는 위의 두 톤)이고, 색은 과목 아이콘과 고른 항목에만 쓴다. 설정도 따로 뜨는 창이 아니라 이 형태의 페이지다(⌘,로 연다).
 - **버튼의 무게.** 기본은 `.ghost`다. 화면에서 하나뿐인 주 동작(시트의 확인, 퀴즈 시작)만 `.borderedProminent`를 쓴다. 지우기는 `role: .destructive`를 주고 `confirmationDialog`로 한 번 묻는다.
 - **오른쪽 클릭.** 행에 버튼이 있으면 `contextMenu`에 같은 동작을 같은 이름으로 넣는다.
 - **편집 위치.** 새 항목 만들기와 여러 칸 편집은 `SheetForm` 시트로 한다. 행 하나에 딸린 내용을 잠깐 보거나 고를 때는 그 행에 붙은 팝오버를 쓰고, 다른 화면으로 이동하기 전에 팝오버를 닫는다. 카드 안에서 목록을 펼쳐 다른 카드의 자리를 밀어내지 않는다.

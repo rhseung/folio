@@ -201,6 +201,25 @@ struct TodayTests {
         #expect(!session.needsReviewNote(at: now))
     }
 
+    @Test func courseHintPrefersDueTodayThenNextClassThenAnExamWithinAWeek() {
+        let now = at(23, 12)
+        var file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"))
+        let id = file.course.id
+        func hint(_ at: Date = now) -> TodaySummary.CourseHint? {
+            TodaySummary.build(courses: [file], now: at, settings: Settings(), calendar: calendar).hint(for: id, now: at)
+        }
+        file.exams = [Exam(device: device, at: now, kind: .midterm, title: "Midterm", start: at(31, 19))]
+        #expect(hint() == nil)  // eight days out
+        file.exams[0].start = at(30, 19)
+        #expect(hint() == .exam(days: 7))
+        file.sessions = [Session(device: device, at: now, week: 7, index: 1, date: at(23, 10)), Session(device: device, at: now, week: 7, index: 2, date: at(23, 15))]
+        #expect(hint() == .nextClass(at(23, 15)))  // the morning class is over
+        #expect(hint(at(23, 16)) == .exam(days: 7))
+        let hw = Assignment(device: device, at: now, title: "HW5", due: at(23, 23, 59))
+        file.assignments = [hw]
+        #expect(hint() == .dueToday(hw))
+    }
+
     @Test func sessionsNeedingNoReviewAskForNoNoteAndDontRestartUnits() throws {
         let now = at(23, 12)
         var file = CourseFile(course: Course(device: device, at: now, title: "컴파일러"))

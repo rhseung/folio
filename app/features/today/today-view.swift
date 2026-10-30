@@ -281,7 +281,7 @@ struct TodayView: View {
                         Text(model.sessionName(item.courseId, item.session)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
                     }
                 }
-                .opacity(ended ? 0.45 : 1)
+                .opacity(ended ? Theme.Opacity.ended : 1)
                 Spacer()
                 if ongoing {
                     Text(.todayClassesNow).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink)

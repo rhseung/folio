@@ -143,6 +143,7 @@ struct CourseMark: View {
     let color: Color
     var font: Font = Theme.Glyph.line
     var filled = false
+    var duotone = false
     // Within a line of text the symbol takes the text's size; the icon column's 22pt square would gap the line.
     var inline = false
 
@@ -152,7 +153,7 @@ struct CourseMark: View {
         if inline {
             Image(systemName: icon ?? Self.defaultIcon).foregroundStyle(color)
         } else {
-            LineIcon(symbol: icon ?? Self.defaultIcon, font: font, filled: filled).foregroundStyle(color)
+            LineIcon(symbol: icon ?? Self.defaultIcon, font: font, filled: filled, duotone: duotone).foregroundStyle(color)
         }
     }
 }

@@ -10836,6 +10836,17 @@
         }
       }
     },
+    "root.due-today-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$@ 마감"
+          }
+        }
+      }
+    },
     "root.error-title": {
       "extractionState": "manual",
       "localizations": {
@@ -10953,6 +10964,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "오늘"
+          }
+        }
+      }
+    },
+    "root.next-class-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 다음 수업"
           }
         }
       }

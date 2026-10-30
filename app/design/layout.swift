@@ -303,11 +303,12 @@ private struct FloatingGlass: ViewModifier {
 struct FolderIcon: View {
     var open: Bool
     var filled = false
+    var duotone = false
 
     var body: some View {
         let t: CGFloat = open ? 1 : 0
         ZStack {
-            FolderPart(kind: .fill, t: t).fill().opacity(filled ? Theme.Opacity.innerFill : 0)
+            FolderPart(kind: .fill, t: t).fill().opacity(filled ? Theme.Opacity.innerFill : duotone ? Theme.Opacity.duotone : 0)
             let line = StrokeStyle(lineWidth: FolderPart.stroke * Theme.Glyph.lineSize, lineCap: .round, lineJoin: .round)
             FolderPart(kind: .outline, t: t).stroke(style: line)
             FolderPart(kind: .corners, t: t).stroke(style: line).opacity(open ? 1 : 0)
@@ -412,10 +413,13 @@ struct LineIcon: View {
     /// `.fill` symbol stood out as a block, white in dark, among the outlines. Open line symbols (#, a chart line) have
     /// no inside and stay as they are.
     var filled = false
+    /// Every icon of a list given a fainter inside than the chosen one's (the sidebar): plain outlines all in white
+    /// read flat, and the chosen row still steps up from the rest.
+    var duotone = false
 
     var body: some View {
         ZStack {
-            if filled, Self.hasFill(symbol) { glyph(symbol + ".fill").opacity(Theme.Opacity.innerFill) }
+            if filled || duotone, Self.hasFill(symbol) { glyph(symbol + ".fill").opacity(filled ? Theme.Opacity.innerFill : Theme.Opacity.duotone) }
             glyph(symbol)
         }
     }
