@@ -78,7 +78,7 @@ final class StudyTimeModel {
     }
 
     func load() async {
-        let now = Date.now
+        let now = workspace.now
         let stores = workspace.currentCourses.map { ($0.id, $0.store) }
         let settings = workspace.settings, calendar = workspace.calendar
         let first = settings.studyDay(of: now, calendar: calendar).adding(days: -(Self.days - 1))

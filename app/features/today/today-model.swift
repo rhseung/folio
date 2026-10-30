@@ -113,7 +113,7 @@ final class TodayModel {
     }
 
     var attendanceWarnings: [(course: LoadedCourse, absences: Int, cap: AttendanceCap)] {
-        current.compactMap { course in course.file.capOneAway(at: .now).map { (course, $0.absences, $0.cap) } }
+        current.compactMap { course in course.file.capOneAway(at: workspace.now).map { (course, $0.absences, $0.cap) } }
     }
 
     func capLabel(_ cap: AttendanceCap) -> String {

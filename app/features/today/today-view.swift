@@ -14,7 +14,7 @@ struct TodayView: View {
 
     var body: some View {
         // Redrawn at each day boundary, so a page left open overnight turns to the new study day.
-        TimelineView(.periodic(from: model.nextDayStart, by: 86_400)) { _ in page(now: .now) }
+        TimelineView(.periodic(from: model.nextDayStart, by: 86_400)) { _ in page(now: model.workspace.now) }
             .navigationTitle(.todayTitle)
     }
 
@@ -172,8 +172,8 @@ struct TodayView: View {
         let start = item.session.date
         let end = model.end(of: item)
         let accent = model.workspace.accent(item.courseId)
-        return Button { go(item.courseId, .sessions) } label: { TimelineView(.periodic(from: .now, by: 30)) { context in
-            let now = context.date
+        return Button { go(item.courseId, .sessions) } label: { TimelineView(.periodic(from: .now, by: 30)) { _ in
+            let now = model.workspace.now
             let ongoing = end.map { now >= start && now < $0 } ?? false
             CardRow(last: last) {
                 Text(start.formatted(date: .omitted, time: .shortened)).timeColumn().font(Theme.Typeface.caption).monospacedDigit()
@@ -262,8 +262,8 @@ struct NowClassCard: View {
     @Environment(\.searchTarget) private var searchTarget
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { context in
-            let now = context.date
+        TimelineView(.periodic(from: .now, by: 30)) { _ in
+            let now = model.workspace.now
             if let item = model.nowClass(at: now) {
                 card(courseId: item.courseId, name: item.name, room: item.room, start: item.start, end: item.end, now: now) {
                     if let suggested = item.suggested {
@@ -442,3 +442,18 @@ extension View {
         ZStack(alignment: .leading) { Text(verbatim: "오후 12:00").hidden(); self }.lineLimit(1)
     }
 }
+
+#if DEBUG
+import FolioFixtures
+
+@MainActor private func todayPreview(_ scenario: Scenario) -> some View {
+    let workspace = try! Workspace.scenario(scenario)
+    return TodayView(workspace: workspace).environment(workspace)
+}
+
+#Preview("바쁜 날", traits: .fixedLayout(width: 1180, height: 1600)) { todayPreview(.busyDay) }
+#Preview("바쁜 날, 좁게", traits: .fixedLayout(width: 720, height: 2000)) { todayPreview(.busyDay) }
+#Preview("시험이 몰린 날", traits: .fixedLayout(width: 1180, height: 1600)) { todayPreview(.manyExams) }
+#Preview("한가한 날", traits: .fixedLayout(width: 1180, height: 1000)) { todayPreview(.quietDay) }
+#Preview("빈 학기", traits: .fixedLayout(width: 1180, height: 800)) { todayPreview(.empty) }
+#endif

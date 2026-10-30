@@ -66,6 +66,19 @@ description = "Run the app's screen-model tests on macOS"
 depends = ["generate"]
 run = "xcodebuild -scheme Folio -destination 'platform=macOS' test -quiet -skipMacroValidation"
 
+[tasks.render]
+description = "Draw Today for every fixture scenario into FOLIO_RENDER_DIR (default .build/renders), with no window on screen"
+depends = ["generate"]
+# xcodebuild passes TEST_RUNNER_-prefixed variables to the tests without the prefix. Korean time and language keep the
+# scenarios' class times and dates the same on any machine.
+run = """
+dir="${FOLIO_RENDER_DIR:-.build/renders}"
+case "$dir" in /*) ;; *) dir="$PWD/$dir" ;; esac
+TEST_RUNNER_FOLIO_RENDER_DIR="$dir" TEST_RUNNER_TZ=Asia/Seoul xcodebuild -scheme Folio -destination 'platform=macOS' test -quiet \
+  -skipMacroValidation -only-testing:FolioTests/TodayRenders -testLanguage ko -testRegion KR
+echo "$dir"
+"""
+
 [tasks.install-mac]
 description = "Build a Release app and install it to /Applications"
 depends = ["generate"]

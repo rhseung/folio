@@ -3,6 +3,14 @@ import SwiftUI
 @main
 struct FolioApp: App {
     @State private var workspace = Workspace()
+    /// Under tests the app is only their host: no window of its own and no focus taken from what the user is doing.
+    private static let hostingTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+
+    init() {
+        #if os(macOS)
+        if Self.hostingTests { NSApplication.shared.setActivationPolicy(.prohibited) }
+        #endif
+    }
 
     var body: some Scene {
         WindowGroup {
@@ -17,6 +25,7 @@ struct FolioApp: App {
                 .buttonStyle(.pointing(.automatic))
         }
         .defaultSize(width: 1520, height: 860)
+        .defaultLaunchBehavior(Self.hostingTests ? .suppressed : .automatic)
         #if os(macOS)
         // The compact row keeps the frame around the content panel thin.
         .windowToolbarStyle(.unifiedCompact(showsTitle: false))

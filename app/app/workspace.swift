@@ -42,6 +42,9 @@ final class Workspace {
 
     let device = LocalDevice.id()
     let calendar = Calendar.current
+    /// Set by previews and offscreen renders, so a scenario's day doesn't follow the real clock.
+    var pinnedNow: Date?
+    var now: Date { pinnedNow ?? .now }
 
     static let bookmarkKey = "folio.gistBookmark"
     /// The folder as a plain path for the folio command, which can't resolve this app's bookmark without a sandbox warning.
@@ -50,9 +53,10 @@ final class Workspace {
     static let environmentKey = "FOLIO_GIST"
 
     init() {
-        // The test host must never open the saved folder: that is the real GIST folder.
-        if ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil { return }
-        if let path = ProcessInfo.processInfo.environment[Self.environmentKey] {
+        // The test host and Xcode previews must never open the saved folder: that is the real GIST folder.
+        let env = ProcessInfo.processInfo.environment
+        if env["XCTestConfigurationFilePath"] != nil || env["XCODE_RUNNING_FOR_PREVIEWS"] == "1" { return }
+        if let path = env[Self.environmentKey] {
             open(URL(filePath: path, directoryHint: .isDirectory), remember: false)
         } else if let data = UserDefaults.standard.data(forKey: Self.bookmarkKey) {
             var stale = false
@@ -136,7 +140,7 @@ final class Workspace {
 
     /// The latest semester that has started (or the earliest upcoming one if none has).
     var currentSemester: Semester? {
-        let today = LocalDate(.now, in: calendar)
+        let today = LocalDate(now, in: calendar)
         return semesters.first { ($0.start ?? today) <= today } ?? semesters.last
     }
 
@@ -191,7 +195,7 @@ final class Workspace {
     /// A dry run against what the app shows, so a button follows the action's own rules rather than a copy in the view.
     private func checkContext() -> ActionContext? {
         guard let gist else { return nil }
-        let ctx = ActionContext(gist: gist, device: device, now: .now, calendar: calendar, dryRun: true,
+        let ctx = ActionContext(gist: gist, device: device, now: now, calendar: calendar, dryRun: true,
                                 courses: Dictionary(courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))
         ctx.preload(courses: courses.map(\.document), transcript: transcript, catalog: catalog, settings: settings)
         return ctx
@@ -229,7 +233,7 @@ final class Workspace {
 
     func runThrowing(_ action: some Action) throws -> ActionContext {
         guard let gist else { throw ActionError.notFound(String(localized: .workspaceNoGist)) }
-        let ctx = ActionContext(gist: gist, device: device, now: .now, calendar: calendar,
+        let ctx = ActionContext(gist: gist, device: device, now: now, calendar: calendar,
                                 courses: Dictionary(courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))
         // Shown even when the action fails halfway: what it already wrote is on disk.
         defer { show(ctx) }
