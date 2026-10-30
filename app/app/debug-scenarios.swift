@@ -10,6 +10,7 @@ extension Workspace {
         setenv(environmentKey, url.path(percentEncoded: false), 1)
         let workspace = Workspace()
         workspace.pinnedNow = scenario.now
+        workspace.calendar = Scenario.calendar
         workspace.open(url, remember: false)
         return workspace
     }

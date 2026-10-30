@@ -41,7 +41,9 @@ final class Workspace {
     @ObservationIgnored private var pendingReload: Task<Void, Never>?
 
     let device = LocalDevice.id()
-    let calendar = Calendar.current
+    /// Set with `pinnedNow` by previews and offscreen renders: a scenario is built in its own time zone, and read in
+    /// another (CI runs in UTC) its moment lands on a different study day.
+    var calendar = Calendar.current
     /// Set by previews and offscreen renders, so a scenario's day doesn't follow the real clock.
     var pinnedNow: Date?
     var now: Date { pinnedNow ?? .now }
