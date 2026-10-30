@@ -76,8 +76,8 @@ struct SessionsView: View {
             }
         case .session(let session):
             let end = model.end(of: session, in: file)
-            TimelineView(.periodic(from: .now, by: 30)) { context in
-                SessionRow(model: model, course: course, session: session, now: context.date, end: end, openNote: openNote, above: above, below: below)
+            TimelineView(.periodic(from: .now, by: 30)) { _ in
+                SessionRow(model: model, course: course, session: session, now: model.workspace.now, end: end, openNote: openNote, above: above, below: below)
             }
             .fileDrop { model.importFiles($0, into: session) }
         }
@@ -287,7 +287,7 @@ struct SessionUnitsPicker: View {
         let file = course.file
         let linked = file.units(of: session)
         let shown = UnitTree.deepest(linked, in: file.units)
-        let missing = file.needsUnits(session, at: .now)
+        let missing = file.needsUnits(session, at: workspace.now)
         if !file.units.isEmpty && (!linked.isEmpty || !session.skipsReview) {
             SearchPicker(options: UnitTree.outline(file.units).map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) },
                          isSelected: { id in linked.contains { $0.id == id } },
@@ -572,6 +572,7 @@ struct SessionSlot: View {
 /// The rough and review note slots, shared by the sessions page and a unit's classes so both read alike.
 struct SessionNoteSlots: View {
     @Environment(\.accent) private var accent
+    @Environment(Workspace.self) private var workspace
     let file: CourseFile
     let session: Session
     /// Today's class offers its rough note before it exists.
@@ -596,7 +597,7 @@ struct SessionNoteSlots: View {
                 } else {
                     SessionSlot(String(localized: .sessionsSlotReview), symbol: "doc.text", help: String(localized: .sessionsOpenReviewNote)) { openNote(id) }
                 }
-            } else if file.needsReviewNote(session, at: .now) {
+            } else if file.needsReviewNote(session, at: workspace.now) {
                 SessionSlot(String(localized: .sessionsSlotReview), symbol: "plus", tint: Theme.Palette.warning, help: String(localized: .sessionsSlotReviewMakeHelp)) { create(.review) }
             } else if session.skipsReview {
                 Text(.sessionsSlotNoReview).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)

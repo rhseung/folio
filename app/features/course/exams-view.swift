@@ -15,7 +15,7 @@ struct ExamsView: View {
     }
 
     var body: some View {
-        let now = Date.now
+        let now = model.workspace.now
         let (coming, past) = model.exams(now: now)
         let states = model.reviewStates(now: now)
         Page {

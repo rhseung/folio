@@ -76,8 +76,8 @@ final class QuizSolveModel {
         let cards = quiz.cards
         let byUnit = QuizStats.tally(cards, keys: { [$0.unitId] }, history: { self.quiz.history(of: $0.id) })
         let today = workspace.today
-        let exam = course.file.exams.filter { ($0.start ?? .distantPast) > .now && !$0.scopeUnitIds.isEmpty }.min { $0.start! < $1.start! }
-        let reviewUnits = Set(workspace.reviewQueue(now: .now).filter { $0.courseId == course.id }.map(\.item.unitId))
+        let exam = course.file.exams.filter { ($0.start ?? .distantPast) > workspace.now && !$0.scopeUnitIds.isEmpty }.min { $0.start! < $1.start! }
+        let reviewUnits = Set(workspace.reviewQueue(now: workspace.now).filter { $0.courseId == course.id }.map(\.item.unitId))
         let groups = UnitsView.groups(course.outline).compactMap { g -> (title: String?, units: [FolioDomain.Unit])? in
             let rows = ((g.root.map { [$0] } ?? []) + g.rows.map(\.unit)).filter { byUnit[$0.id] != nil }
             return rows.isEmpty ? nil : (g.root?.title, rows)

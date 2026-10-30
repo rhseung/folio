@@ -50,7 +50,7 @@ final class ExamsModel {
 
     func add() {
         let c = workspace.calendar
-        let start = c.date(byAdding: .hour, value: 24 + 9, to: c.startOfDay(for: .now)) ?? .now
+        let start = c.date(byAdding: .hour, value: 24 + 9, to: c.startOfDay(for: workspace.now)) ?? workspace.now
         editing = Exam(device: workspace.device, at: .now, kind: .midterm, title: "", start: start)
     }
 
@@ -164,7 +164,7 @@ final class ExamsModel {
             + (scoped.isEmpty ? outline : scoped).map { PickOption(id: Optional($0.unit.id), title: $0.unit.title, depth: scoped.isEmpty ? $0.depth : 0) }
     }
 
-    var firstPlanDay: Date { today.date(in: workspace.calendar) ?? .now }
+    var firstPlanDay: Date { today.date(in: workspace.calendar) ?? workspace.now }
 
     func planItem(_ exam: Exam, title: String, day: Date, unit: UUID?) -> ExamPlanAdd {
         ExamPlanAdd(course: course.id, exam: exam.id, title: title.trimmingCharacters(in: .whitespaces), day: LocalDate(day, in: workspace.calendar), unit: unit)
@@ -224,7 +224,7 @@ final class ExamEditorModel {
     }
 
     func setDefaultStart() {
-        draft.start = workspace.calendar.date(byAdding: .hour, value: 33, to: workspace.calendar.startOfDay(for: .now))
+        draft.start = workspace.calendar.date(byAdding: .hour, value: 33, to: workspace.calendar.startOfDay(for: workspace.now))
     }
 
     var startMinute: Int? { draft.start.map(minute) }

@@ -9,7 +9,7 @@ struct AssignmentsView: View {
     }
 
     var body: some View {
-        let now = Date.now
+        let now = model.workspace.now
         let course = model.course
         Page {
             PageHeader(title: String(localized: .assignmentsTitle), subtitle: model.subtitle)

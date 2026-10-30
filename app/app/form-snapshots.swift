@@ -4,10 +4,11 @@ import FolioDomain
 import SwiftUI
 
 /// Debug-only: draws every editing sheet on its own into `form-<name>.png`, so the forms can be compared side by side.
+/// The offscreen renders in app-tests draw the same list.
 enum FormSnapshots {
-    @MainActor static func capture(_ workspace: Workspace, into directory: URL) async {
+    @MainActor static func forms(_ workspace: Workspace) -> [(String, AnyView)] {
         guard let course = workspace.currentCourses.first(where: { !$0.file.exams.isEmpty }) ?? workspace.currentCourses.first,
-              let semester = workspace.currentSemester else { return }
+              let semester = workspace.currentSemester else { return [] }
         let file = course.file
         let device = workspace.device
         let component = file.components.first ?? GradeComponent(device: device, at: .now, name: "과제", weight: 20)
@@ -35,7 +36,11 @@ enum FormSnapshots {
         }
         if let exam = file.exams.first { forms.append(("exam-edit", AnyView(ExamEditor(workspace: workspace, course: course, exam: exam)))) }
         if let unit = file.units.first { forms.append(("card", AnyView(CardEditorSheet(workspace: workspace, course: course, draft: CardDraft(unitId: unit.id), units: file.units) {}))) }
-        for (name, view) in forms {
+        return forms
+    }
+
+    @MainActor static func capture(_ workspace: Workspace, into directory: URL) async {
+        for (name, view) in forms(workspace) {
             let host = NSHostingView(rootView: view.environment(workspace))
             let size = host.fittingSize
             let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled], backing: .buffered, defer: false)

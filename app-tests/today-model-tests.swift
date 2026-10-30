@@ -99,3 +99,14 @@ struct StudyTimeModelTests {
         #expect(StudyTimeModel.label(try #require(LocalDate("2026-10-12")), today: today) == "12")
     }
 }
+
+@MainActor
+struct ScenarioWorkspaceTests {
+    @Test func aBusyDayHasStudyTimeOnItsPinnedDay() async throws {
+        let workspace = try Workspace.scenario(.busyDay)
+        #expect(workspace.today == LocalDate("2026-11-04"))
+        let model = StudyTimeModel(workspace: workspace)
+        await model.load()
+        #expect(Set(model.bars.map(\.day)).count == 6)
+    }
+}

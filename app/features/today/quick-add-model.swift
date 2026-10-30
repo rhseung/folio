@@ -17,7 +17,7 @@ final class QuickAddModel {
     var parsed: QuickAdd? {
         let courses = workspace.currentCourses.map(\.file.course)
         return text.trimmingCharacters(in: .whitespaces).isEmpty ? nil
-            : QuickAdd.parse(text, courses: courses, codes: workspace.catalog.codes, fixedCourse: fixedCourse, now: .now, calendar: workspace.calendar)
+            : QuickAdd.parse(text, courses: courses, codes: workspace.catalog.codes, fixedCourse: fixedCourse, now: workspace.now, calendar: workspace.calendar)
     }
 
     func canAdd(_ parsed: QuickAdd) -> Bool { parsed.courseId != nil && !parsed.title.isEmpty }

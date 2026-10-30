@@ -211,7 +211,7 @@ final class NoteEditorModel {
 
     // MARK: Links
 
-    var linkSessions: [Session] { course.file.sessions.filter { !$0.isCancelled && $0.date <= .now }.sorted { $0.date > $1.date } }
+    var linkSessions: [Session] { course.file.sessions.filter { !$0.isCancelled && $0.date <= workspace.now }.sorted { $0.date > $1.date } }
     var linkExams: [Exam] { course.file.exams.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) } }
     /// Outline order: `order` counts among siblings only, so sorting by it alone interleaves chapters and their units.
     var outline: [(unit: FolioDomain.Unit, depth: Int)] { UnitTree.outline(course.file.units) }

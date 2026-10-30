@@ -90,7 +90,7 @@ final class CourseGradesModel {
 
     func attendance(_ file: CourseFile) -> AttendanceSummary {
         let policy = file.policy
-        let absences = GradeCalculator.absences(in: file.heldAttendance(at: .now), policy: policy)
+        let absences = GradeCalculator.absences(in: file.heldAttendance(at: workspace.now), policy: policy)
         let detail = [policy.attendanceCap.isEmpty ? String(localized: .courseGradesNoCap) : capSummary(policy),
                       policy.latesPerAbsence.map { String(localized: .courseGradesLatesPerAbsence($0)) }].compactMap { $0 }.joined(separator: " · ")
         return AttendanceSummary(absences: absences, detail: detail, ratio: policy.minAttendanceRatio,

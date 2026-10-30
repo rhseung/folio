@@ -29,7 +29,7 @@ final class UnitsModel {
     }
 
     var today: LocalDate { workspace.today }
-    func states(now: Date = .now) -> [UUID: ReviewState] { workspace.reviewStates(of: courseId, now: now) }
+    func states(now: Date? = nil) -> [UUID: ReviewState] { workspace.reviewStates(of: courseId, now: now ?? workspace.now) }
 
     func loadQuiz(_ course: LoadedCourse) {
         let settings = workspace.settings, calendar = workspace.calendar
@@ -50,7 +50,7 @@ final class UnitsModel {
 
     func subtitle(_ file: CourseFile, states: [UUID: ReviewState]) -> String {
         let due = states.values.filter { ($0.due.map { $0 <= today }) == true }.count
-        let unlinked = file.sessionsNeedingUnits(at: .now).count
+        let unlinked = file.sessionsNeedingUnits(at: workspace.now).count
         return ([String(localized: .unitsCount(file.units.count)), String(localized: .unitsDueToday(due))]
                 + (unlinked == 0 ? [] : [String(localized: .unitsUnlinkedCount(unlinked))])).joined(separator: " · ")
     }

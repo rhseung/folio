@@ -124,7 +124,7 @@ struct SemesterView: View {
 
     func examsBlock(_ courses: [LoadedCourse]) -> some View {
         let exams = model.exams(of: courses)
-        let now = Date.now
+        let now = model.workspace.now
         return Block(String(localized: .semesterExams)) {
             Card {
                 if exams.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .semesterExamsEmpty)) } }

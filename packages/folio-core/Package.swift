@@ -45,8 +45,9 @@ let package = Package(
         // Writes folio-cli/generated/commands.swift from the action specs. It must not need FolioCLI, so a broken
         // generated file can always be generated again.
         .executableTarget(name: "FolioGen", dependencies: ["FolioActions"], path: "sources/folio-gen"),
-        // Fake GIST folders in code, for tests and for running the app or the CLI on (mise run fixture).
-        .target(name: "FolioFixtures", path: "sources/folio-fixtures"),
+        // Fake GIST folders in code, for tests and for running the app or the CLI on (mise run fixture). Scenarios grow
+        // them through the actions.
+        .target(name: "FolioFixtures", dependencies: ["FolioActions"], path: "sources/folio-fixtures"),
         .executableTarget(name: "FolioFixtureWriter", dependencies: ["FolioFixtures"], path: "sources/folio-fixture-writer"),
         .testTarget(name: "FolioDomainTests", dependencies: ["FolioDomain", .product(name: "PropertyBased", package: "swift-property-based")], path: "tests/folio-domain-tests"),
         .testTarget(name: "FolioStorageTests", dependencies: ["FolioFixtures", "FolioStorage"], path: "tests/folio-storage-tests"),
