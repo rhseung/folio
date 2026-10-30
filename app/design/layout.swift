@@ -471,3 +471,44 @@ extension ColumnRow where Trailing == EmptyView {
         self.init(title: title, symbol: symbol, chosen: chosen) { EmptyView() }
     }
 }
+
+extension View {
+    // In place of a scroll bar: an edge fades only while there is more past it, so a list at rest isn't faded.
+    // The mask also clips, which a Mac view otherwise doesn't (the sidebar's terms showed over the window buttons).
+    func overflowFade(_ axis: Axis) -> some View { modifier(OverflowFade(axis: axis)) }
+}
+
+private struct OverflowFade: ViewModifier {
+    let axis: Axis
+    @State private var edges = Edge.Set()
+
+    func body(content: Content) -> some View {
+        let vertical = axis == .vertical
+        let (start, end): (Edge.Set, Edge.Set) = vertical ? (.top, .bottom) : (.leading, .trailing)
+        let (from, to): (UnitPoint, UnitPoint) = vertical ? (.top, .bottom) : (.leading, .trailing)
+        let stack = vertical ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
+        return content
+            // Not .hidden: with scroll bars set to always show, that still reserved the bar's height below a row.
+            .scrollIndicators(.never)
+            .onScrollGeometryChange(for: Edge.Set.self) { g in
+                let (offset, visible, size) = vertical
+                    ? (g.visibleRect.minY, g.visibleRect.maxY, g.contentSize.height)
+                    : (g.visibleRect.minX, g.visibleRect.maxX, g.contentSize.width)
+                var past = Edge.Set()
+                if offset > 1 { past.insert(start) }
+                if visible < size - 1 { past.insert(end) }
+                return past
+            } action: { _, past in
+                withAnimation(.easeOut(duration: 0.15)) { edges = past }
+            }
+            .mask {
+                stack {
+                    LinearGradient(colors: [edges.contains(start) ? .clear : .primary, .primary], startPoint: from, endPoint: to)
+                        .frame(width: vertical ? nil : Theme.Space.xl, height: vertical ? Theme.Space.xl : nil)
+                    Rectangle()
+                    LinearGradient(colors: [.primary, edges.contains(end) ? .clear : .primary], startPoint: from, endPoint: to)
+                        .frame(width: vertical ? nil : Theme.Space.xl, height: vertical ? Theme.Space.xl : nil)
+                }
+            }
+    }
+}

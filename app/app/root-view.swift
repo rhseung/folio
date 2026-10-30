@@ -26,7 +26,6 @@ struct RootView: View {
     /// The fixed list's own height, measured: the rows' height follows the system's sidebar size setting.
     @State private var navHeight: CGFloat?
     /// Whether the terms run on past the top and the bottom of their space, where the list fades out.
-    @State private var termsOverflow = Edge.Set()
     @State private var searching = false
     @State private var searchTarget: SearchTarget?
     @State private var personTarget: UUID?
@@ -182,25 +181,7 @@ struct RootView: View {
                 if let current = workspace.currentSemester { AddCourseSheet(workspace: workspace, semester: current) { if let id = $0 { selection = .course(id) } } }
             }
         }
-        .onScrollGeometryChange(for: Edge.Set.self) { g in
-            var edges = Edge.Set()
-            if g.visibleRect.minY > 1 { edges.insert(.top) }
-            if g.visibleRect.maxY < g.contentSize.height - 1 { edges.insert(.bottom) }
-            return edges
-        } action: { _, edges in
-            withAnimation(.easeOut(duration: 0.15)) { termsOverflow = edges }
-        }
-        // The mask also clips: a Mac view doesn't clip what it draws, so rows scrolled up showed over the places and
-        // the window buttons. Each edge fades only while there is more past it, so the 학기 title isn't faded at rest.
-        .mask {
-            VStack(spacing: 0) {
-                LinearGradient(colors: [termsOverflow.contains(.top) ? .clear : .primary, .primary], startPoint: .top, endPoint: .bottom)
-                    .frame(height: Theme.Space.xl)
-                Rectangle()
-                LinearGradient(colors: [.primary, termsOverflow.contains(.bottom) ? .clear : .primary], startPoint: .top, endPoint: .bottom)
-                    .frame(height: Theme.Space.xl)
-            }
-        }
+        .overflowFade(.vertical)
         .focusable(false)
         }
         .listStyle(.sidebar)

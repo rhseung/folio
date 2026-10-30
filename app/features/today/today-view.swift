@@ -45,6 +45,7 @@ struct TodayView: View {
                     .scrollTargetLayout()
                 }
                 .scrollTargetBehavior(.viewAligned)
+                .overflowFade(.horizontal)
             }
 
             AttendanceWarnings(model: model)
