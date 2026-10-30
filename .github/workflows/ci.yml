@@ -32,12 +32,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        task: [build-mac, build-ipad]
+        # test-app builds the Mac app to host the screen-model tests, so it stands in for build-mac.
+        task: [test-app, build-ipad]
         # The iPad build adds little over the Mac one on every PR, so it runs only once a change lands.
         exclude:
           - task: ${{ github.event_name == 'pull_request' && 'build-ipad' || 'none' }}
     steps:
       - uses: actions/checkout@v7
       - run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
+      - run: defaults write -g AppleLanguages -array ko-KR en-US && defaults write -g AppleLocale ko_KR
       - uses: jdx/mise-action@v5
       - run: mise run ${{ matrix.task }}

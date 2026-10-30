@@ -1,0 +1,20 @@
+version: 2
+updates:
+  - package-ecosystem: swift
+    directories: [/packages/folio-core, /packages/folio-markdown, /packages/folio-ai]
+    schedule: { interval: weekly }
+    groups:
+      swift: { patterns: ["*"] }
+
+  # A bump here does not rebuild app/resources/web; run mise run build-web on the PR before merging.
+  - package-ecosystem: npm
+    directory: /web
+    schedule: { interval: weekly }
+    groups:
+      web: { patterns: ["*"] }
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: weekly }
+    groups:
+      actions: { patterns: ["*"] }
