@@ -49,6 +49,7 @@ final class SnapshotDriver {
             self.section = section
             try? await Task.sleep(for: .seconds(1.5))
             capture(to: directory.appending(path: "\(name).png"))
+            if name == "today" { captureScrolled(to: directory.appending(path: "today-full.png")) }
             if name == Self.webStep { await captureWebViews(to: directory, name: name) }
             if name == Self.holdStep { try? await Task.sleep(for: .seconds(6)) }
         }
@@ -115,6 +116,17 @@ final class SnapshotDriver {
             // folio:not-an-action debug screenshots, outside the GIST folder
             try? png.write(to: directory.appending(path: "\(name)-web-\(i).png"))
         }
+    }
+
+    // The whole of the tallest scroll view's content, past the window's bottom: Today's lower blocks.
+    func captureScrolled(to url: URL) {
+        func scrollViews(in view: NSView) -> [NSScrollView] { ((view as? NSScrollView).map { [$0] } ?? []) + view.subviews.flatMap(scrollViews) }
+        guard let root = NSApp.windows.first(where: { $0.isVisible && $0.sheetParent == nil })?.contentView,
+              let document = scrollViews(in: root).compactMap(\.documentView).max(by: { $0.bounds.height < $1.bounds.height }),
+              let rep = document.bitmapImageRepForCachingDisplay(in: document.bounds) else { return }
+        document.cacheDisplay(in: document.bounds, to: rep)
+        // folio:not-an-action debug screenshots, outside the GIST folder
+        try? rep.representation(using: .png, properties: [:])?.write(to: url)
     }
 
     func capture(to url: URL) {
