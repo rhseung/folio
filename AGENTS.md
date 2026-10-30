@@ -150,7 +150,7 @@ PageHeader(title: String(localized: .sessionsAdd))   // String을 받는 API
 - Xcode 프로젝트 생성: `mise run generate`. 그 뒤 `open Folio.xcodeproj`
 - 패키지 테스트: `mise run test` (모든 패키지와 디자인 토큰 검사)
 - 화면 모델 테스트: `mise run test-app`. macOS에서 앱을 호스트로 `app-tests/`를 돌린다. 테스트 중에는 앱이 기억해 둔 GIST 폴더를 열지 않고, 창을 띄우거나 포커스를 가져가지 않는다
-- 화면 밖 렌더: `mise run render`. `FolioFixtures`의 상황마다 오늘 화면을 라이트·다크, 넓은 폭·좁은 폭 PNG로 `FOLIO_RENDER_DIR`(기본 `.build/renders`)에 쓴다. 창이 뜨지 않고 실제 GIST 폴더와 시계를 쓰지 않는다. 리퀴드 글라스와 `WKWebView`는 그리지 못하니 그런 화면은 `FOLIO_SNAPSHOT_DIR` 창 스냅숏(`docs/DESIGN.md` 마지막 절)으로 본다
+- 화면 밖 렌더: `mise run render`. `FolioFixtures`의 상황마다 모든 페이지(오늘, 학기, 과목의 각 탭, 성적, 졸업 요건, 사람, 코드, 설정의 각 탭)와 시트(입력 폼, 검색)를 라이트·다크 PNG로 `FOLIO_RENDER_DIR`(기본 `.build/renders`)의 `<상황>/`에 쓴다. 폭과 높이는 `FOLIO_RENDER_SIZES=1180,720,1440x900`(높이를 빼면 페이지 끝까지), 고르기는 `FOLIO_RENDER_SCREENS=today,course-`(이름 앞부분)와 `FOLIO_RENDER_SCENARIOS=busyDay`. 창이 뜨지 않고 실제 GIST 폴더와 시계를 쓰지 않는다. 리퀴드 글라스, `WKWebView`, 뷰 안에서 여는 시트, 창 틀은 그리지 못하니 `FOLIO_SNAPSHOT_DIR` 창 스냅숏(`docs/DESIGN.md` 마지막 절)으로 본다
 - 가짜 GIST 폴더: `mise run fixture -- <폴더> [standard|legacy]`. 이미 있는 폴더에는 쓰지 않는다
 - 노트 편집기와 수식 번들: `mise run build-web`. `web/src/`를 고친 뒤 실행한다. 노트 색은 `theme.swift`의 값을 `NoteStyle`이 CSS 변수로 넘기므로 CSS에 색을 적지 않는다
 - macOS 빌드: `mise run build-mac`. `FolioMacros`는 로컬 패키지라 Xcode가 매크로 신뢰를 묻지 않는다. mise 작업의 `-skipMacroValidation`은 명령줄 빌드가 멈추지 않게 하는 안전장치다

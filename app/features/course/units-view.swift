@@ -63,7 +63,7 @@ struct UnitsView: View {
         let file = course.file
         let states = model.states()
         let today = model.today
-        let unlinked = file.sessionsNeedingUnits(at: .now)
+        let unlinked = file.sessionsNeedingUnits(at: model.workspace.now)
         return Page {
             PageHeader(title: String(localized: .unitsTitle), subtitle: model.subtitle(file, states: states))
             if !unlinked.isEmpty { unlinkedCard(unlinked) }
@@ -200,7 +200,7 @@ struct UnitDetail: View {
 
     var body: some View {
         let file = course.file
-        let now = Date.now
+        let now = model.workspace.now
         let today = model.studyDay(now)
         let state = model.states(now: now)[unit.id]
         let sessions = model.sessions(of: unit, in: file)

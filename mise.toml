@@ -67,15 +67,18 @@ depends = ["generate"]
 run = "xcodebuild -scheme Folio -destination 'platform=macOS' test -quiet -skipMacroValidation"
 
 [tasks.render]
-description = "Draw Today for every fixture scenario into FOLIO_RENDER_DIR (default .build/renders), with no window on screen"
+description = "Draw every page and sheet for each fixture scenario into FOLIO_RENDER_DIR (default .build/renders), with no window on screen"
 depends = ["generate"]
 # xcodebuild passes TEST_RUNNER_-prefixed variables to the tests without the prefix. Korean time and language keep the
-# scenarios' class times and dates the same on any machine.
+# scenarios' class times and dates the same on any machine. FOLIO_RENDER_SIZES, _SCREENS and _SCENARIOS narrow a run.
 run = """
 dir="${FOLIO_RENDER_DIR:-.build/renders}"
 case "$dir" in /*) ;; *) dir="$PWD/$dir" ;; esac
-TEST_RUNNER_FOLIO_RENDER_DIR="$dir" TEST_RUNNER_TZ=Asia/Seoul xcodebuild -scheme Folio -destination 'platform=macOS' test -quiet \
-  -skipMacroValidation -only-testing:FolioTests/TodayRenders -testLanguage ko -testRegion KR
+TEST_RUNNER_FOLIO_RENDER_DIR="$dir" TEST_RUNNER_TZ=Asia/Seoul \
+TEST_RUNNER_FOLIO_RENDER_SIZES="${FOLIO_RENDER_SIZES:-}" TEST_RUNNER_FOLIO_RENDER_SCREENS="${FOLIO_RENDER_SCREENS:-}" \
+TEST_RUNNER_FOLIO_RENDER_SCENARIOS="${FOLIO_RENDER_SCENARIOS:-}" \
+xcodebuild -scheme Folio -destination 'platform=macOS,arch=arm64' test -quiet -skipMacroValidation \
+  -only-testing:FolioTests/ScreenRenders -testLanguage ko -testRegion KR
 echo "$dir"
 """
 

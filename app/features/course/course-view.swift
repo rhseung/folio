@@ -249,7 +249,7 @@ struct CourseColumn: View {
                                     Text(model.recentTitle(session, in: file)).lineLimit(1)
                                     Text(model.recentDetail(session, in: file))
                                         .font(Theme.Typeface.label.weight(.regular))
-                                        .foregroundStyle(file.needsReviewNote(session, at: .now) ? Theme.Palette.danger : Theme.Palette.textTertiary)
+                                        .foregroundStyle(file.needsReviewNote(session, at: model.workspace.now) ? Theme.Palette.danger : Theme.Palette.textTertiary)
                                 }
                                 .padding(Theme.Inset.listRow)
                                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -279,7 +279,7 @@ struct CourseOverview: View {
 
     var body: some View {
         let file = course.file
-        let now = Date.now
+        let now = model.workspace.now
         let score = model.score(file)
         let reviews = model.reviews(now: now)
         let suggested = model.suggested(course, now: now)

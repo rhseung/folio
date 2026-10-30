@@ -19,7 +19,8 @@ final class SessionsModel {
 
     var calendar: Calendar { workspace.calendar }
 
-    func subtitle(_ file: CourseFile, now: Date = .now) -> String {
+    func subtitle(_ file: CourseFile, now: Date? = nil) -> String {
+        let now = now ?? workspace.now
         guard !file.sessions.isEmpty else { return String(localized: .sessionsEmpty) }
         let missing = file.missingReviewNotes(at: now)
         let unlinked = file.sessionsNeedingUnits(at: now).count
@@ -28,7 +29,7 @@ final class SessionsModel {
                 + (unlinked > 0 ? [String(localized: .sessionsMissingUnits(unlinked))] : [])).joined(separator: " · ")
     }
 
-    func suggested(_ course: LoadedCourse) -> Workspace.SuggestedSession? { workspace.suggestedSession(for: course, now: .now) }
+    func suggested(_ course: LoadedCourse) -> Workspace.SuggestedSession? { workspace.suggestedSession(for: course, now: workspace.now) }
 
     struct TimelineRow: Identifiable {
         let item: SessionTimeline.Item
@@ -39,7 +40,8 @@ final class SessionsModel {
         var id: String { item.id }
     }
 
-    func timeline(_ file: CourseFile, now: Date = .now) -> [TimelineRow] {
+    func timeline(_ file: CourseFile, now: Date? = nil) -> [TimelineRow] {
+        let now = now ?? workspace.now
         let items = SessionTimeline.items(file, calendar: calendar)
         return items.indices.map { i in
             TimelineRow(item: items[i], first: i == 0, above: i == 0 ? nil : items[i].held(at: now),
@@ -47,7 +49,7 @@ final class SessionsModel {
         }
     }
 
-    func isThisWeek(_ date: Date) -> Bool { calendar.startOfWeek(containing: date) == calendar.startOfWeek(containing: .now) }
+    func isThisWeek(_ date: Date) -> Bool { calendar.startOfWeek(containing: date) == calendar.startOfWeek(containing: workspace.now) }
 
     func examLine(_ exam: Exam, _ date: Date) -> String {
         (exam.title.isEmpty ? exam.kind.label : exam.title) + " · " + date.formatted(.dateTime.month().day().weekday())
@@ -63,7 +65,8 @@ final class SessionsModel {
 
     /// Sessions made ahead when the app filled whole terms that nothing has used yet; listed for the user to delete.
     /// Reads the course's notes from disk, so the view loads it when the sessions change, not on every redraw.
-    func loadUntouched(_ course: LoadedCourse, now: Date = .now) {
+    func loadUntouched(_ course: LoadedCourse, now: Date? = nil) {
+        let now = now ?? workspace.now
         // Unreadable notes might point at any of them, so none is offered then.
         guard let notes = try? course.store.notes() else { untouched = []; return }
         untouched = course.file.untouchedFutureSessions(now: now, notedSessions: Set(notes.compactMap(\.meta.sessionId)))

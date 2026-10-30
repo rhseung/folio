@@ -286,7 +286,7 @@ final class ImportPlaceModel {
         self.course = course
         self.files = files
         self.places = places
-        session = sessions.last { $0.date <= .now }?.id
+        session = sessions.last { $0.date <= workspace.now }?.id
     }
 
     var sessions: [Session] { course.file.sessions.filter { !$0.isCancelled }.sorted { ($0.week, $0.index) < ($1.week, $1.index) } }

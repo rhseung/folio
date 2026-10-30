@@ -59,6 +59,7 @@ private struct Builder {
     let fall = UUID(uuidString: "5E4F1A00-0000-4000-8000-000000000003")!
     let graph = UUID(uuidString: "C0000000-0000-4000-8000-000000000002")!
     let robotics = UUID(uuidString: "C0000000-0000-4000-8000-000000000003")!
+    let linearAlgebra = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
 
     func at(_ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) -> Date { Scenario.at(2026, m, d, h, min) }
 
@@ -99,7 +100,21 @@ private struct Builder {
     func busyDay(extraExams: Bool = false) throws {
         let setup = at(8, 28, 10)
         let codes = ["EC", "MA", "PS", "GS"].map { CourseCode(device: device, at: setup, prefix: $0) }
-        try run(CatalogSet(catalog: Catalog(codes: codes)), at: setup)
+        // Invented scale, categories and people: the repo is public, so nothing here is a real grade or person.
+        let grades = [("A+", 4.5), ("A0", 4.0), ("B+", 3.5), ("B0", 3.0), ("C+", 2.5), ("C0", 2.0), ("D+", 1.5), ("D0", 1.0), ("F", 0.0)]
+            .map { LetterGrade(device: device, at: setup, symbol: $0.0, points: $0.1, countsInGpa: true, countsInCredits: $0.0 != "F") }
+            + [LetterGrade(device: device, at: setup, symbol: "S", points: nil, countsInGpa: false, countsInCredits: true)]
+        let major = Category(device: device, at: setup, name: "전공", group: "전공", isMajor: true, minCredits: 36)
+        let science = Category(device: device, at: setup, name: "기초과학", group: "기초", minCredits: 30)
+        let humanities = Category(device: device, at: setup, name: "인문사회", group: "교양", minCredits: 24)
+        // Fixed ids: avatar colors follow them.
+        let people = [
+            Person(id: UUID(uuidString: "A0000000-0000-4000-8000-000000000001")!, device: device, at: setup, name: "김도윤", email: "doyun@example.com", office: "A동 412", officeHours: "화 14:00-16:00"),
+            Person(id: UUID(uuidString: "A0000000-0000-4000-8000-000000000002")!, device: device, at: setup, name: "이서연", email: "seoyeon@example.com", office: "C동 301", officeHours: "목 10:00-11:00"),
+            Person(id: UUID(uuidString: "A0000000-0000-4000-8000-000000000003")!, device: device, at: setup, name: "박준호", email: "junho@example.com", role: .lecturer, office: "B동 208"),
+            Person(id: UUID(uuidString: "A0000000-0000-4000-8000-000000000004")!, device: device, at: setup, name: "최하은", email: "haeun@example.com", role: .assistant, office: "A동 405", memo: "그래프 이론 조교"),
+        ]
+        try run(CatalogSet(catalog: Catalog(codes: codes, categories: [major, science, humanities], letterGrades: grades, people: people)), at: setup)
         let os = try run(CourseAdd(semester: fall, title: "운영체제", code: codes[0].id, number: "3204", credits: 3, mode: .relative), at: setup)
         let prob = try run(CourseAdd(semester: fall, title: "확률과 통계", code: codes[1].id, number: "2004", credits: 3, mode: .relative), at: setup)
         let physics = try run(CourseAdd(semester: fall, title: "일반물리학", code: codes[2].id, number: "1102", credits: 3, mode: .absolute), at: setup)
@@ -117,6 +132,16 @@ private struct Builder {
         for (course, schedule, icon) in timetable {
             try run(CourseSet(course: course, fields: [.schedule(schedule), .icon(icon)]), at: setup)
         }
+
+        let staffed: [(UUID, [UUID], FolioDomain.Category)] = [
+            (graph, [people[0].id, people[3].id], major), (robotics, [people[1].id], major), (os, [people[2].id], major),
+            (prob, [people[2].id], science), (physics, [], science), (writing, [], humanities), (linearAlgebra, [people[0].id], science),
+        ]
+        for (course, instructors, category) in staffed {
+            try run(CourseSet(course: course, fields: [.instructors(instructors), .categories([category.id])]), at: setup)
+        }
+        try run(CourseSet(course: linearAlgebra, fields: [.finalGrade(grades[1].id)]), at: at(6, 30, 12))
+        try gradeBook(graph, at: setup)
 
         // The last two weeks of classes. Notes are written up to last week; this Monday's still owe theirs.
         var held: [UUID: [Date: UUID]] = [:]
@@ -176,6 +201,22 @@ private struct Builder {
             try run(ExamAdd(course: graph, title: "Quiz 4", kind: .quiz, start: at(11, 25, 9), end: at(11, 25, 9, 30), location: "A101"), at: setup)
         }
         try run(ExamPlanAdd(course: prob, exam: quiz, title: "조건부 확률 연습문제 풀기", day: LocalDate(at(11, 4), in: Scenario.calendar), unit: conditional), at: at(11, 1, 10))
+    }
+
+    /// A syllabus with scores in so far, so the course's grade page has a curve and a projection to draw.
+    func gradeBook(_ course: UUID, at setup: Date) throws {
+        let homework = try run(ComponentAdd(course: course, name: "과제", weight: 30, expectedCount: 6), at: setup)
+        let quizzes = try run(ComponentAdd(course: course, name: "퀴즈", weight: 20, aggregation: .dropLowest(1), expectedCount: 5), at: setup)
+        let midterm = try run(ComponentAdd(course: course, name: "중간고사", weight: 25, aggregation: .single), at: setup)
+        try run(ComponentAdd(course: course, name: "기말고사", weight: 25, aggregation: .single), at: setup)
+        for (i, (score, day)) in [(9.0, at(9, 15)), (10, at(9, 29)), (7.5, at(10, 13)), (9, at(10, 27))].enumerated() {
+            try run(ScoreAdd(course: course, component: homework, title: "HW\(i + 1)", score: score, max: 10, date: LocalDate(day, in: Scenario.calendar)), at: day)
+        }
+        for (i, (score, day)) in [(8.0, at(9, 22)), (5, at(10, 6)), (9, at(10, 20))].enumerated() {
+            try run(ScoreAdd(course: course, component: quizzes, title: "Quiz \(i + 1)", score: score, max: 10, date: LocalDate(day, in: Scenario.calendar)), at: day)
+        }
+        try run(ScoreAdd(course: course, component: midterm, title: "중간고사", score: 72, max: 100, mean: 61.5, stdDev: 12,
+                         date: LocalDate(at(10, 21), in: Scenario.calendar)), at: at(10, 23))
     }
 
     func quietDay() throws {

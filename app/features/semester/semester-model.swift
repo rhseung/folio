@@ -42,7 +42,7 @@ final class SemesterModel {
         guard let start = s.start?.date(in: calendar), let end = s.end?.date(in: calendar) else { return String(localized: .semesterPeriodNone) }
         let format = Date.FormatStyle.dateTime.month().day()
         let range = "\(start.formatted(format)) – \(end.formatted(format))"
-        return isCurrent(s) ? String(localized: .semesterPeriodWeek(range, SessionPlanner.week(of: .now, anchor: start, calendar: calendar))) : range
+        return isCurrent(s) ? String(localized: .semesterPeriodWeek(range, SessionPlanner.week(of: workspace.now, anchor: start, calendar: calendar))) : range
     }
 
     func stats(_ s: Semester) -> [StatStrip.Item] {
@@ -101,7 +101,7 @@ final class SemesterModel {
     }
 
     func date(_ s: Semester, _ key: WritableKeyPath<Semester, LocalDate?>) -> Date {
-        s[keyPath: key]?.date(in: workspace.calendar) ?? .now
+        s[keyPath: key]?.date(in: workspace.calendar) ?? workspace.now
     }
 
     func setDate(_ s: Semester, _ key: WritableKeyPath<Semester, LocalDate?>, to date: Date) {

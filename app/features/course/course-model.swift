@@ -38,7 +38,7 @@ final class CourseModel {
     // MARK: Course column
 
     func recent(_ file: CourseFile) -> [Session] {
-        Array(file.sessions.filter { $0.date <= .now && !$0.isCancelled }.sorted { $0.date > $1.date }.prefix(4))
+        Array(file.sessions.filter { $0.date <= workspace.now && !$0.isCancelled }.sorted { $0.date > $1.date }.prefix(4))
     }
 
     func recentTitle(_ s: Session, in file: CourseFile) -> String {
@@ -52,7 +52,7 @@ final class CourseModel {
     func noteState(_ session: Session, in file: CourseFile) -> String {
         if session.reviewNoteId != nil { return String(localized: session.reviewNoteUnfinished ? .courseReviewNoteDraft : .courseReviewNote) }
         if session.roughNoteId != nil { return String(localized: .sessionsRoughNote) }
-        return String(localized: file.needsReviewNote(session, at: .now) ? .courseReviewNoteMissing : .courseReviewNotNeeded)
+        return String(localized: file.needsReviewNote(session, at: workspace.now) ? .courseReviewNoteMissing : .courseReviewNotNeeded)
     }
 
     /// What a tab's row shows on its right: a count, a warning, or the projected score once grades are unlocked.

@@ -172,7 +172,7 @@ final class AssignmentSheetModel {
     func load() {
         title = assignment.title
         hasDue = assignment.due != nil
-        due = assignment.due ?? workspace.calendar.date(bySettingHour: 23, minute: 59, second: 0, of: .now) ?? .now
+        due = assignment.due ?? workspace.calendar.date(bySettingHour: 23, minute: 59, second: 0, of: workspace.now) ?? workspace.now
         status = assignment.status
         repeats = assignment.repeats
         memo = assignment.memo
