@@ -184,6 +184,69 @@ struct NoteLayoutTests {
         #expect(problems.isEmpty, "\(problems.joined(separator: "\n"))")
     }
 
+    /// Walking the note with ↓ never opens a gap: the keys pass over blank lines without room for the caret.
+    @Test func arrowsMoveNoOtherBlock() async throws {
+        let view = try await Self.editor(Self.sample)
+        let base = try await Self.js(view, "return probe.lineTops()") as! [Double]
+        let walk = try await Self.js(view, """
+            const v = cb.debug.view, out = [];
+            probe.caretAt(1); v.dispatch({ selection: { anchor: 0 } });
+            for (let i = 0; i < 200; i++) {
+              const n = v.state.doc.lineAt(v.state.selection.main.head).number;
+              out.push([n, probe.block(n), probe.lineTops()]);
+              const at = v.state.selection.main.head;
+              probe.key("ArrowDown");
+              if (v.state.selection.main.head === at) break;
+            }
+            probe.blur();
+            return out;
+            """) as! [[Any]]
+        let lines = base.count
+        var problems: [String] = []
+        for step in walk {
+            let n = step[0] as! Int, block = step[1] as! [Any], tops = step[2] as! [Double]
+            let (first, last, kind) = (block[0] as! Int, block[1] as! Int, block[2] as! String)
+            for m in 1...lines where m < first || (m > last && !Self.swaps.contains(kind)) {
+                let moved = tops[m - 1] - base[m - 1]
+                if abs(moved) > 0.5 {
+                    problems.append(String(format: "caret on line %d (%@): line %d moved %+.1f px", n, kind, m, moved))
+                    break
+                }
+            }
+        }
+        #expect(walk.last?.first as? Int == lines, "the walk stopped at line \(walk.last?.first ?? 0) of \(lines)")
+        #expect(problems.isEmpty, "\(problems.joined(separator: "\n"))")
+    }
+
+    /// The caret shows a heading's `#`s and a list item's marker in the margin; the text after them stays put.
+    @Test func revealedMarkupMovesNoText() async throws {
+        let view = try await Self.editor(Self.sample)
+        let shifts = try await Self.js(view, """
+            const v = cb.debug.view, d = v.state.doc, out = [];
+            const start = (n) => { const m = /^\\s*(?:#{1,6} |(?:[-*+]|\\d+[.)]) (?:\\[[ xX]\\] )?)/.exec(d.line(n).text); return m && d.line(n).length > m[0].length ? d.line(n).from + m[0].length : null; };
+            for (let n = 1; n <= d.lines; n++) {
+              const at = start(n); if (at === null) continue;
+              probe.blur(); const before = v.coordsAtPos(at, 1).left;
+              probe.caretAt(n); const after = v.coordsAtPos(at, 1).left; probe.blur();
+              if (Math.abs(after - before) > 0.5) out.push(`line ${n}: text moved ${(after - before).toFixed(1)} px`);
+            }
+            return out;
+            """) as! [String]
+        #expect(shifts.isEmpty, "\(shifts.joined(separator: "\n"))")
+    }
+
+    /// Enter on an empty item steps out a level, then out of the list; on an empty `>` line, out of the quote.
+    @Test func enterOnAnEmptyMarkerEndsTheBlock() async throws {
+        let view = try await Self.editor("- a\n    - b\n\n> q")
+        let text = try await Self.js(view, """
+            const v = cb.debug.view;
+            probe.caretAt(2); for (let i = 0; i < 3; i++) probe.key("Enter");
+            probe.caretAt(v.state.doc.lines); for (let i = 0; i < 2; i++) probe.key("Enter");
+            return v.state.doc.toString();
+            """) as! String
+        #expect(text == "- a\n    - b\n\n\n\n> q\n\n")
+    }
+
     // MARK: Helpers
 
     /// `math`: KaTeX sets each glyph on its own baseline, so math never marks where a line starts.
@@ -249,6 +312,7 @@ struct NoteLayoutTests {
       },
       caretAt(n) { const v = cb.debug.view; v.dispatch({ selection: { anchor: v.state.doc.line(n).to } }); cb.debug.focus(true); },
       blur() { cb.debug.focus(false); },
+      key(k) { cb.debug.view.contentDOM.dispatchEvent(new KeyboardEvent("keydown", { key: k, code: k, bubbles: true, cancelable: true })); },
       middle(pos, side) { const c = cb.debug.view.coordsAtPos(pos, side); return c ? (c.top + c.bottom) / 2 + scrollY : -1; },
       // Middles, not tops: an empty line's caret is the line's height and a letter only its font's.
       typeAt(n) {

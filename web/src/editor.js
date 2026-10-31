@@ -1,6 +1,6 @@
 // The note editor: CodeMirror with Obsidian-style live preview. Markdown syntax stays hidden and rendered except where
 // the cursor is; "source" mode shows the raw text. The app talks to it through `window.cb` and the `folio` handler.
-import { EditorState, StateField, StateEffect, RangeSetBuilder } from "@codemirror/state";
+import { EditorState, EditorSelection, StateField, StateEffect, RangeSetBuilder, Prec } from "@codemirror/state";
 import { EditorView, Decoration, WidgetType, BlockWrapper, keymap, drawSelection, dropCursor } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo } from "@codemirror/commands";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
@@ -242,6 +242,9 @@ const liveField = StateField.define({
 });
 
 const hide = Decoration.replace({});
+// Markup the caret reveals (`## `, `> `) is drawn left of where the text starts, so the text doesn't move under it.
+const hang = Decoration.mark({ class: "cm-hang" });
+const shown = Decoration.mark({ class: "cm-mark" });
 const line = (cls) => Decoration.line({ class: cls });
 const CALLOUT = /^\s*>\s*\[!([A-Za-z]+)\]([+-]?)\s?/;
 // Mirrors CalloutHeader.numbered: these are counted through the note, unless the title carries its own number.
@@ -271,7 +274,7 @@ function blockType(node, doc) {
 }
 
 function buildDecorations(state) {
-  if (!state.field(liveField)) return { deco: Decoration.none, wrap: BlockWrapper.set([]), lead: 0 };
+  if (!state.field(liveField)) return { deco: Decoration.none, wrap: BlockWrapper.set([]), lead: 0, skip: new Set(), atomic: Decoration.none };
   const syntax = state.field(mathSyntaxField);
   const doc = state.doc;
   const sel = state.field(focusedField) ? state.selection.ranges : [];
@@ -279,9 +282,13 @@ function buildDecorations(state) {
   const onLines = (from, to) => touches(doc.lineAt(from).from, doc.lineAt(to).to);
   const decos = [];
   const add = (from, to, deco) => decos.push(deco.range(from, to));
+  // Hidden with the caret on its line, so arrows must step over it whole, or they stop in it unseen.
+  const atomic = [];
   const codeLines = new Set();
   const counters = {};
   const wraps = [];
+  // A mark alone on its line stays in it: hung out of the flow, it would leave the line empty and fold it to nothing.
+  const hangs = (pos) => doc.sliceString(pos, doc.lineAt(pos).to).trim() !== "";
   const wrap = (from, to, attributes) => wraps.push(BlockWrapper.create({ tagName: "div", attributes }).range(doc.lineAt(from).from, doc.lineAt(to).to));
   const style = (n, css) => add(doc.line(n).from, doc.line(n).from, Decoration.line({ attributes: { style: css } }));
   const calloutType = (n) => (n?.name === "Blockquote" ? CALLOUT.exec(doc.lineAt(n.from).text)?.[1].toLowerCase() : undefined);
@@ -318,10 +325,9 @@ function buildDecorations(state) {
           return;
         }
         case "HeaderMark": {
-          if (doc.lineAt(from).from === from && !onLines(from, to)) {
-            const after = doc.sliceString(to, to + 1) === " " ? to + 1 : to;
-            add(from, after, hide);
-          }
+          if (doc.lineAt(from).from !== from) return;
+          const after = doc.sliceString(to, to + 1) === " " ? to + 1 : to;
+          add(from, after, !onLines(from, to) ? hide : hangs(after) ? hang : shown);
           return;
         }
         case "EmphasisMark": case "StrikethroughMark": case "CodeMark": {
@@ -407,12 +413,23 @@ function buildDecorations(state) {
           for (let n = node.node.parent; n; n = n.parent) if (n.name === "BulletList" || n.name === "OrderedList") depth++;
           const item = node.node.parent;
           add(row.from, row.from, Decoration.line({ class: depth === 1 && !item.prevSibling ? "cm-li cm-li-first" : "cm-li", attributes: { style: `--depth: ${depth}` } }));
-          if (onLines(from, to)) return;
-          if (from > row.from && !lead.includes(">")) add(row.from, from, hide);
           const end = doc.sliceString(to, to + 1) === " " ? to + 1 : to;
+          // The line's padding draws the nesting, so the indent stays hidden with the caret on it too.
+          if (from > row.from && !lead.includes(">")) { add(row.from, from, hide); atomic.push(hide.range(row.from, from)); }
           const task = doc.sliceString(to, to + 4).match(/^ \[([ xX])\]/);
+          const taskEnd = task && (doc.sliceString(to + 4, to + 5) === " " ? to + 5 : to + 4);
+          // Shown, the marker takes the bullet's column, so the item's text stays where it was. A task keeps its
+          // checkbox there (raw `[ ] ` is wider) and hangs the `-` left of it; Backspace takes the box whole.
+          if (onLines(from, to) && task) {
+            add(from, end, hang);
+            const box = Decoration.replace({ widget: new CheckboxWidget(task[1] !== " ", to + 1) });
+            add(end, taskEnd, box);
+            atomic.push(box.range(end, taskEnd));
+            return;
+          }
+          if (onLines(from, to)) return add(from, end, Decoration.mark({ class: "cm-list-mark" }));
           if (task) {
-            add(from, doc.sliceString(to + 4, to + 5) === " " ? to + 5 : to + 4, Decoration.replace({ widget: new CheckboxWidget(task[1] !== " ", to + 1) }));
+            add(from, taskEnd, Decoration.replace({ widget: new CheckboxWidget(task[1] !== " ", to + 1) }));
           } else if (parent?.name === "BulletList" && /^[-*+]$/.test(text)) {
             add(from, end, Decoration.replace({ widget: new TextWidget("", `cm-bullet cm-bullet-${Math.min(depth, 3)}`) }));
           } else if (parent?.name === "OrderedList") {
@@ -459,10 +476,10 @@ function buildDecorations(state) {
           while (quote && quote.name !== "Blockquote") quote = quote.parent;
           const lineStart = doc.lineAt(from);
           const isCalloutHead = CALLOUT.test(lineStart.text) && lineStart.from <= from && from <= lineStart.from + lineStart.text.indexOf(">");
-          if (quote && !onLines(quote.from, quote.to) && !isCalloutHead) {
-            const after = doc.sliceString(to, to + 1) === " " ? to + 1 : to;
-            add(from, after, hide);
-          }
+          const after = doc.sliceString(to, to + 1) === " " ? to + 1 : to;
+          if (quote && !onLines(quote.from, quote.to) && !isCalloutHead) add(from, after, hide);
+          // Only the line's first mark hangs: a second would land on top of it.
+          else if (quote && onLines(quote.from, quote.to) && /^\s*$/.test(doc.sliceString(lineStart.from, from)) && hangs(after)) add(from, after, hang);
           return;
         }
         case "FencedCode": {
@@ -501,13 +518,17 @@ function buildDecorations(state) {
   // The reader parts blocks with margins, not lines of text. The blank lines between two blocks carry the gap (a run
   // of them is one gap); blocks with none between them get it as padding. Inside a quote the `>` lines do the same.
   const spaced = new Set();
+  // Blank lines the arrow keys pass over: entering them would push the blocks below down, or they show nothing.
+  const skip = new Set();
   // A run of blank lines with the caret in it can't fold to nothing, or the caret has no line. The caret's line sits
   // where typed text will land, `top` under the block above or, on the run's first line, `join` (see `joins`), and
   // the run keeps its height where it has room for the line, so a click moves as little as it can. `raw`: the run's
   // `>` marks show, as the rest of the quote's source does.
-  const spaceRun = (from, to, gap, top, join = null, raw = false) => {
+  const spaceRun = (from, to, gap, top, join = null, raw = false, open = false) => {
     const caret = [];
+    const first = join !== null ? join : top;
     for (let n = from; n < to; n++) {
+      if (n > from || !(open || gap >= Math.max(0, first) + LINE)) skip.add(n);
       spaced.add(n);
       if (touches(doc.line(n).from, doc.line(n).to)) caret.push(n);
     }
@@ -546,7 +567,7 @@ function buildDecorations(state) {
     }
     // Blank lines after the note's last block: the caret there sits where a new paragraph would start.
     // `!parent.parent`, not `=== tree.topNode`: that getter makes a new node object on every read.
-    if (!parent.parent && prev && prev.last < doc.lines) spaceRun(prev.last + 1, doc.lines + 1, 0, MARGIN[prev.type][1], prev.join);
+    if (!parent.parent && prev && prev.last < doc.lines) spaceRun(prev.last + 1, doc.lines + 1, 0, MARGIN[prev.type][1], prev.join, false, true);
   };
   layout(tree.topNode, false);
   // The reader keeps the first block's top margin below the page padding, except a leading h2's (note.css).
@@ -555,7 +576,9 @@ function buildDecorations(state) {
   // Other blank lines (inside lists, around the note) take no room, as the reader has nothing there.
   for (let n = 1; n <= doc.lines; n++) {
     const l = doc.line(n);
-    if (!l.text.trim() && !spaced.has(n) && !codeLines.has(n) && !touches(l.from, l.to)) style(n, "line-height: 0; font-size: 0");
+    if (l.text.trim() || spaced.has(n) || codeLines.has(n)) continue;
+    skip.add(n);
+    if (!touches(l.from, l.to)) style(n, "line-height: 0; font-size: 0");
   }
 
   decos.sort((a, b) => a.from - b.from || a.value.startSide - b.value.startSide);
@@ -569,7 +592,7 @@ function buildDecorations(state) {
     }
     builder.add(d.from, d.to, d.value);
   }
-  return { deco: builder.finish(), wrap: BlockWrapper.set(wraps, true), lead };
+  return { deco: builder.finish(), wrap: BlockWrapper.set(wraps, true), lead, skip, atomic: Decoration.set(atomic, true) };
 }
 
 const livePreview = StateField.define({
@@ -579,8 +602,56 @@ const livePreview = StateField.define({
     return deco;
   },
   provide: (f) => [EditorView.decorations.from(f, (v) => v.deco), EditorView.blockWrappers.from(f, (v) => v.wrap),
+    EditorView.atomicRanges.of((view) => view.state.field(f).atomic),
     EditorView.contentAttributes.from(f, (v) => ({ style: `padding-top: ${v.lead}px` }))],
 });
+
+// MARK: Keys
+
+// Up and down pass over blank lines the layout has no room for (see `skip`), so moving through a note never makes it
+// breathe. To start a paragraph there, Enter at the end of the block above.
+const moveLine = (forward) => (view) => {
+  const { skip } = view.state.field(livePreview), range = view.state.selection.main;
+  if (view.state.selection.ranges.length > 1 || !range.empty || !skip.size) return false;
+  let at = range, landed = null;
+  for (let i = 0; i < 100; i++) {
+    const next = view.moveVertically(at, forward);
+    if (next.head === at.head) break;
+    at = next;
+    if (!skip.has(view.state.doc.lineAt(next.head).number)) { landed = next; break; }
+  }
+  if (!landed) return false;
+  view.dispatch({ selection: EditorSelection.create([landed]), scrollIntoView: true, userEvent: "select" });
+  return true;
+};
+
+// Enter on an empty `- ` or `> ` at the end of a list or quote ends it with a blank line, so what's typed next is a
+// paragraph of its own. CodeMirror's own handling leaves the line touching the block, and CommonMark then reads the
+// text as part of the last item or the quote.
+const MARKER = /^(?:(?:[-*+]|\d+[.)])(?: \[[ xX]\])?|>)[ \t]*$/;
+function endBlock(view) {
+  const { state } = view, range = state.selection.main;
+  if (!state.field(liveField) || state.selection.ranges.length > 1 || !range.empty) return false;
+  const line = state.doc.lineAt(range.head);
+  if (range.head !== line.to) return false;
+  // An empty nested item steps out one level, to its parent's indent, as in Obsidian.
+  const nested = /^([ \t]+)(\S.*)$/.exec(line.text);
+  if (nested && MARKER.test(nested[2])) {
+    for (let n = line.number - 1; n >= 1; n--) {
+      const m = /^([ \t]*)(?:[-*+]|\d+[.)])\s/.exec(state.doc.line(n).text);
+      if (!m) { if (state.doc.line(n).text.trim() && !/^\s/.test(state.doc.line(n).text)) break; continue; }
+      if (m[1].length >= nested[1].length) continue;
+      const insert = m[1] + nested[2];
+      view.dispatch({ changes: { from: line.from, to: line.to, insert }, selection: { anchor: line.from + insert.length }, userEvent: "input" });
+      return true;
+    }
+  }
+  if (!MARKER.test(line.text)) return false;
+  const next = line.number < state.doc.lines ? state.doc.line(line.number + 1).text : "";
+  if (/^\s*(?:[-*+]|\d+[.)])\s|^\s*>/.test(next)) return false;
+  view.dispatch({ changes: { from: line.from, to: line.to, insert: "\n" }, selection: { anchor: line.from + 1 }, scrollIntoView: true, userEvent: "input" });
+  return true;
+}
 
 // MARK: Look
 
@@ -606,6 +677,7 @@ const extensions = [
       indentUnit.of("    "),
       EditorState.tabSize.of(4),
       EditorView.lineWrapping,
+      Prec.high(keymap.of([{ key: "ArrowDown", run: moveLine(true) }, { key: "ArrowUp", run: moveLine(false) }, { key: "Enter", run: endBlock }])),
       keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
       markdown({ base: markdownLanguage, extensions: [mathSyntax, wikiSyntax], codeLanguages: codeLanguage }),
       syntaxHighlighting(highlight),
@@ -638,7 +710,23 @@ const extensions = [
           return true;
         },
         // A rendered link opens on click; once the cursor is inside it (raw text showing), ⌘-click opens it.
-        mousedown(e) {
+        mousedown(e, v) {
+          // A click in a gap too thin for a line goes to the nearer text, as up and down do; opening the gap would
+          // push everything below it.
+          const at = e.button === 0 && !e.shiftKey && !e.metaKey ? v.posAtCoords({ x: e.clientX, y: e.clientY }, false) : null;
+          const row = at === null ? null : v.state.doc.lineAt(at);
+          if (row && v.state.field(livePreview).skip.has(row.number)) {
+            const { skip } = v.state.field(livePreview), doc = v.state.doc;
+            let up = row.number, down = row.number;
+            while (up > 1 && (skip.has(up) || !doc.line(up).text.trim())) up--;
+            while (down < doc.lines && (skip.has(down) || !doc.line(down).text.trim())) down++;
+            const above = v.coordsAtPos(doc.line(up).to, -1), below = v.coordsAtPos(doc.line(down).from, 1);
+            const toBelow = below && (!above || e.clientY - above.bottom > below.top - e.clientY);
+            e.preventDefault();
+            v.dispatch({ selection: { anchor: toBelow ? doc.line(down).from : doc.line(up).to }, userEvent: "select.pointer" });
+            v.focus();
+            return true;
+          }
           const link = e.target.closest?.("[data-href], [data-wiki]");
           if (!link || !(link.classList.contains("cm-live") || e.metaKey)) return false;
           post(link.dataset.wiki !== undefined ? { type: "open", wiki: link.dataset.wiki } : { type: "open", href: link.dataset.href });
