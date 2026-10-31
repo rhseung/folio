@@ -254,6 +254,8 @@ const MARGIN = { h1: [0, 28], h2: [48, 14], h3: [32, 8], h4: [24, 6], p: [0, 14]
 const BOXED = new Set(["pre", "quote", "callout", "math", "table"]);
 // The callout head line's bottom padding (editor.css `.cm-callout-head`).
 const HEAD = 6;
+// A body line's height, note.css's --body × --leading.
+const LINE = 16 * 1.78;
 
 function blockType(node, doc) {
   const n = node.name;
@@ -484,7 +486,26 @@ function buildDecorations(state) {
   // The reader parts blocks with margins, not lines of text. The blank lines between two blocks carry the gap (a run
   // of them is one gap); blocks with none between them get it as padding. Inside a quote the `>` lines do the same.
   const spaced = new Set();
-  const layout = (parent, skip) => {
+  // A run of blank lines with the caret in it can't fold to nothing, or the caret has no line. The caret's line sits
+  // where typed text will land (`top` under the block above) and the run keeps its height, so a click moves nothing.
+  const spaceRun = (from, to, gap, top) => {
+    const caret = [];
+    for (let n = from; n < to; n++) {
+      spaced.add(n);
+      if (touches(doc.line(n).from, doc.line(n).to)) caret.push(n);
+    }
+    for (let n = from; n < to; n++) {
+      if (!caret.length) style(n, `line-height: ${n === from ? gap : 0}px; font-size: 0`);
+      else if (!caret.includes(n)) style(n, "line-height: 0; font-size: 0");
+    }
+    if (!caret.length) return;
+    const rest = Math.max(0, gap - top - LINE * caret.length);
+    if (caret.length === 1) return style(caret[0], `padding-top: ${top}px; padding-bottom: ${rest}px`);
+    style(caret[0], `padding-top: ${top}px`);
+    style(caret.at(-1), `padding-bottom: ${rest}px`);
+  };
+  // `raw`: a quote with the caret in it shows its source, so its lines keep their own height.
+  const layout = (parent, raw) => {
     let prev = null;
     for (let c = parent.firstChild; c; c = c.nextSibling) {
       if (c.name === "QuoteMark") continue;
@@ -497,21 +518,19 @@ function buildDecorations(state) {
         if (prev.header) gap = Math.max(HEAD, MARGIN[type][0]);
         const below = prev.header ? HEAD : 0;
         if (first > prev.last + 1) {
-          for (let n = prev.last + 1; n < first; n++) {
-            spaced.add(n);
-            if (!skip(n)) style(n, `line-height: ${n === prev.last + 1 ? gap - below : 0}px; font-size: 0`);
-          }
+          if (raw) for (let n = prev.last + 1; n < first; n++) spaced.add(n);
+          else spaceRun(prev.last + 1, first, gap - below, prev.header ? 0 : MARGIN[prev.type][1]);
         } else if (!BOXED.has(type)) style(first, `padding-top: ${gap - below}px`);
         else if (!BOXED.has(prev.type)) style(prev.last, `padding-bottom: ${gap}px`);
       }
-      if (c.name === "Blockquote") {
-        const active = onLines(c.from, c.to);
-        layout(c, () => active);
-      }
+      if (c.name === "Blockquote") layout(c, onLines(c.from, c.to));
       prev = { type, last, header: !prev && first === last && calloutType(parent) !== undefined };
     }
+    // Blank lines after the note's last block: the caret there sits where a new paragraph would start.
+    // `!parent.parent`, not `=== tree.topNode`: that getter makes a new node object on every read.
+    if (!parent.parent && prev && prev.last < doc.lines) spaceRun(prev.last + 1, doc.lines + 1, 0, MARGIN[prev.type][1]);
   };
-  layout(tree.topNode, (n) => touches(doc.line(n).from, doc.line(n).to));
+  layout(tree.topNode, false);
   // The reader keeps the first block's top margin below the page padding, except a leading h2's (note.css).
   const top = tree.topNode.firstChild, topType = top && blockType(top, doc);
   const lead = !topType || topType === "h2" ? 0 : MARGIN[topType][0];
@@ -627,6 +646,14 @@ const view = new EditorView({ parent: document.getElementById("editor"), state: 
 document.addEventListener("dragover", (e) => {
   e.preventDefault();
   if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
+});
+// The page under the note isn't the editor, and the browser put a click there at the end of the nearest line with text,
+// often a heading, since the blank lines after it take no room. Below the note means after it.
+document.addEventListener("mousedown", (e) => {
+  if (e.button !== 0 || view.dom.contains(e.target) || e.clientY < view.contentDOM.getBoundingClientRect().bottom) return;
+  e.preventDefault();
+  view.dispatch({ selection: { anchor: view.state.doc.length }, scrollIntoView: true });
+  view.focus();
 });
 document.addEventListener("drop", (e) => {
   if (e.defaultPrevented) return;
