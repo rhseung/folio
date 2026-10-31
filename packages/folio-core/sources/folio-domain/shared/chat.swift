@@ -29,12 +29,15 @@ public struct ChatMessage: Codable, Sendable, Equatable, Identifiable {
     public var at: Date
     /// Titles of the context items sent with this question, so the record shows what Claude was given.
     public var context: [String]
+    /// Changes the answer proposed through the Folio tools, kept until the user applies them.
+    public var proposals: [ActionProposal]?
 
-    public init(id: UUID = UUID(), role: Role, text: String, at: Date, context: [String] = []) {
+    public init(id: UUID = UUID(), role: Role, text: String, at: Date, context: [String] = [], proposals: [ActionProposal]? = nil) {
         self.id = id
         self.role = role
         self.text = text
         self.at = at
         self.context = context
+        self.proposals = proposals
     }
 }
