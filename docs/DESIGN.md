@@ -64,7 +64,7 @@ Folio가 아닌 앱에서 같은 느낌을 만들 때도 이 문서를 쓴다. "
 | --- | --- | --- |
 | `Theme.Palette` | 배경, 선, 글자, 상태색 | `page` 위에 `card`. 선은 `lineSoft`(카드 안 구분선), `line`(열 경계, 테두리), `lineStrong`(아직 만들지 않은 행의 점선). 채운 색 위 글자는 `onFill`. 창 틀 위에는 `chromeIcon`(사이드바·툴바·위치 표시의 아이콘), `chromeText`(틀 위의 조용한 글자), `chromeSelected`(사이드바에서 고른 아이콘, 시스템 강조색), `chromeLine`(틀 위의 안내선), `frameTint`(틀 재질 위의 옅은 층. 라이트는 흰색, 다크는 종이의 짙은 색)를 쓴다. 틀 너머로 바탕화면이 비쳐서 본문의 회색 단계는 틀 위에서 묻힌다 |
 | `Tone` | 상태의 뜻 | `Chip`, `StatStrip`, 수치에 쓴다. 새 상태색은 `Palette`에 라이트·다크 쌍으로 더하고 `Tone`에 연결한다 |
-| `CourseAccent` | 과목 강조색 | `course.json`의 `color`에서 읽는다. 프리셋 이름과 고르는 순서는 `FolioDomain`의 `CourseColor`가 정한다 |
+| `CourseAccent` | 과목 강조색 | `course.json`의 `color`에서 읽는다. 프리셋 이름과 고르는 순서는 `FolioDomain`의 `CourseColor`가 정한다. 앱 아이콘 팔레트에서 왔고, 사용자는 견본(`CourseColorSwatches`)에서만 고른다. 연한 바탕 위 `ink`는 라이트 5.5:1, 다크 7:1 이상으로 맞춘다 |
 | `Theme.Series` | 차트 계열색 | dataviz 팔레트 검증기로 두 모드 모두 확인한 값이다. 계열을 더할 때도 검증한다 |
 | `Theme.Space` | 간격 | `xxs`(제목과 그 아래 설명 줄), `xs`, `tight`(아이콘과 낱말, 나란한 칩), `s`, `m`, `l`, `xl`, `section`(페이지의 블록 사이), `xxl` |
 | `Theme.Inset` | 반복되는 모양의 안쪽 여백 | `row`(CardRow), `listRow`(카드 없는 목록 열의 행), `toggle`(켜면 강조색이 되는 작은 선택지, Segmented), `tag`(Chip), `control`(캡슐 컨트롤), `stat`(StatStrip 칸), `panel`(행이 아닌 하나짜리 카드) |

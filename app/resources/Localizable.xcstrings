@@ -1882,6 +1882,94 @@
         }
       }
     },
+    "course-color.violet": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "라일락"
+          }
+        }
+      }
+    },
+    "course-color.blue": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "코발트"
+          }
+        }
+      }
+    },
+    "course-color.orange": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앰버"
+          }
+        }
+      }
+    },
+    "course-color.green": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "포레스트"
+          }
+        }
+      }
+    },
+    "course-color.pink": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "핑크"
+          }
+        }
+      }
+    },
+    "course-color.olive": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "올리브"
+          }
+        }
+      }
+    },
+    "course-color.teal": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "청록"
+          }
+        }
+      }
+    },
+    "course-color.red": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "코랄"
+          }
+        }
+      }
+    },
     "course-edit.add-people-first": {
       "extractionState": "manual",
       "localizations": {
@@ -1955,17 +2043,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "자동으로"
-          }
-        }
-      }
-    },
-    "course-edit.color-picker": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목 색"
           }
         }
       }

@@ -56,7 +56,6 @@ enum Style {
 
     static let isTerminal = isatty(STDOUT_FILENO) == 1
     static let enabled = isTerminal && ProcessInfo.processInfo.environment["NO_COLOR"] == nil
-    static let trueColor = ["truecolor", "24bit"].contains(ProcessInfo.processInfo.environment["COLORTERM"] ?? "")
 
     var sgr: String {
         switch self {
@@ -78,19 +77,9 @@ extension String {
         return "\u{1B}[\(styles.map(\.sgr).joined(separator: ";"))m\(self)\u{1B}[0m"
     }
 
-    /// A course's accent from `#RRGGBB`; the nearest of the 256 colors where the terminal lacks true color.
-    func accent(_ hex: String) -> String {
-        guard Style.enabled, hex.count == 7, hex.hasPrefix("#"), let v = Int(hex.dropFirst(), radix: 16) else { return self }
-        let (r, g, b) = (v >> 16 & 0xFF, v >> 8 & 0xFF, v & 0xFF)
-        if Style.trueColor { return "\u{1B}[38;2;\(r);\(g);\(b)m\(self)\u{1B}[0m" }
-        let step = { (c: Int) in c < 48 ? 0 : c < 115 ? 1 : (c - 35) / 40 }
-        return "\u{1B}[38;5;\(16 + 36 * step(r) + 6 * step(g) + step(b))m\(self)\u{1B}[0m"
-    }
-
-    /// A course's color token (`CourseColor.token`): a picked `#RRGGBB` as is, a preset as the nearest of the
-    /// terminal's own 16 colors, which the user's theme already tunes for its background.
+    /// A course's color token (`CourseColor.token`, always a preset or gray) as the nearest of the terminal's own 16
+    /// colors, which the user's theme already tunes for its background.
     func course(_ token: String) -> String {
-        if token.hasPrefix("#") { return accent(token) }
         let ansi: [String: Style] = ["violet": .magenta, "pink": .magenta, "blue": .blue, "teal": .cyan, "green": .green,
                                      "orange": .yellow, "olive": .yellow, "red": .red]
         return ansi[token].map { styled($0) } ?? styled(.dim)

@@ -124,6 +124,15 @@ struct GradesSetupTests {
         }
     }
 
+    @Test func courseSetColor() throws {
+        try h.expectSame(["course", "set", "EC4207", "--color", "teal"]) { _ in CourseSet(course: gt, [.color("teal")]) }
+        try h.expectSame(["course", "set", "EC4207", "--color", "none"], setup: [["course", "set", "EC4207", "--color", "teal"]]) { _ in
+            CourseSet(course: gt, [.color("")])
+        }
+        // Colors come from the presets only.
+        #expect(h.cli(["course", "set", "EC4207", "--color", "#FF0000"], gist: try Harness.fixtureCopy()).code == 2)
+    }
+
     @Test func graduationSet() throws {
         try h.expectSame(["requirement", "set", "--admission-year", "2023"]) { _ in GraduationSet(rule: GraduationRule(admissionYear: 2023)) }
     }
