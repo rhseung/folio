@@ -51,9 +51,10 @@ body.note.editor { margin: 0; max-width: none; padding: 0; }
   transform: translateY(-40%); border-radius: 50%; background: currentColor; box-sizing: border-box; }
 .cm-bullet-2::before { background: none; border: 1.2px solid currentColor; }
 .cm-bullet-3::before { border-radius: 1px; }
-/* Markup the caret reveals, drawn in the margin left of the text (editor.js `hang`) or in the bullet's column. */
-.cm-hang { position: absolute; transform: translateX(-100%); }
-.cm-hang, .cm-mark { color: var(--text-3); font-weight: 500; }
+/* Markup the caret reveals, drawn in the margin left of the text (editor.js `hang`) or in the bullet's column. The
+   hang is a zero-wide box its mark overflows to the left of: an absolute span would leave a line holding only a mark
+   (an empty `>` line) empty, folded to nothing. */
+.cm-hang { display: inline-flex; width: 0; justify-content: flex-end; white-space: pre; color: var(--text-3); font-weight: 500; }
 .cm-list-mark { color: var(--text-3); display: inline-block; min-width: var(--hang); padding-right: 9px; box-sizing: border-box; text-align: right; }
 .cm-ol { color: var(--text-3); font-weight: 600; font-size: .92em; font-variant-numeric: tabular-nums; padding-right: 6px; }
 /* Where the reader puts it: the item pulled 1.4em left, then the box, its 7px margin and a space. */
@@ -66,7 +67,7 @@ body.note.editor { margin: 0; max-width: none; padding: 0; }
   transform: translate(-50%, -50%) rotate(-45deg) translate(1px, -1px); }
 .cm-task-done { color: var(--text-3); text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--text-3) 60%, transparent); }
 
-/* Quotes and callouts: one box around the block's lines. editor.js sets the bottom padding from the last block. */
+/* Quotes and callouts: one box around the block's lines. */
 .cm-quote-box { color: var(--text-2); border-left: 3px solid var(--line); padding: 2px 0 2px 18px; }
 .cm-callout-box { --c: var(--c-neutral); color: var(--text); background: color-mix(in srgb, var(--c) 7%, transparent);
   border-left: 3px solid color-mix(in srgb, var(--c) 75%, transparent); border-radius: var(--radius); padding: 12px 18px 14px; }
@@ -83,13 +84,12 @@ body.note.editor { margin: 0; max-width: none; padding: 0; }
 .cm-editor .cm-line.cm-callout-head { padding-bottom: 6px; }
 /* A widget sits between two zero-width buffer images whose empty line boxes would add a line above and below it. */
 .cm-line:has(> .cm-image-box), .cm-line:has(> .cm-rule) { line-height: 0; font-size: 0; }
-.cm-editor .cm-line.cm-collapsed { line-height: 0; font-size: 0; }
 
 /* Code blocks */
 .cm-code-box { background: var(--fill); border-radius: var(--radius); padding: 14px 18px; }
 /* The reader's pre lines are 16px × 1.6 high around 13.5px code; its language label has normal leading. */
 .cm-code { font: 13.5px var(--mono); line-height: 25.6px; }
-.cm-editor .cm-line.cm-code-head { font: 11px var(--sans); padding-bottom: 8px; }
+.cm-fence { visibility: hidden; }
 .cm-code-lang { font: 600 11px var(--sans); color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; }
 
 /* Math */

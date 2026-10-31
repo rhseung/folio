@@ -1,6 +1,6 @@
 // The note editor: CodeMirror with Obsidian-style live preview. Markdown syntax stays hidden and rendered except where
 // the cursor is; "source" mode shows the raw text. The app talks to it through `window.cb` and the `folio` handler.
-import { EditorState, EditorSelection, StateField, StateEffect, RangeSetBuilder, Prec } from "@codemirror/state";
+import { EditorState, StateField, StateEffect, RangeSetBuilder, Prec } from "@codemirror/state";
 import { EditorView, Decoration, WidgetType, BlockWrapper, keymap, drawSelection, dropCursor } from "@codemirror/view";
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo } from "@codemirror/commands";
 import { searchKeymap, highlightSelectionMatches } from "@codemirror/search";
@@ -244,37 +244,14 @@ const liveField = StateField.define({
 const hide = Decoration.replace({});
 // Markup the caret reveals (`## `, `> `) is drawn left of where the text starts, so the text doesn't move under it.
 const hang = Decoration.mark({ class: "cm-hang" });
-const shown = Decoration.mark({ class: "cm-mark" });
 const line = (cls) => Decoration.line({ class: cls });
 const CALLOUT = /^\s*>\s*\[!([A-Za-z]+)\]([+-]?)\s?/;
 // Mirrors CalloutHeader.numbered: these are counted through the note, unless the title carries its own number.
 const NUMBERED = new Set(["definition", "theorem", "lemma", "corollary", "example", "counterexample"]);
 const PROVABLE = new Set(["theorem", "lemma", "corollary", "proposition"]);
-// note.css's block margins as [top, bottom]. Neighbors sit max(bottom, top) apart, as the reader's collapsed margins do.
-const MARGIN = { h1: [0, 28], h2: [48, 14], h3: [32, 8], h4: [24, 6], p: [0, 14], img: [22, 22], list: [3, 14], pre: [18, 18],
-  quote: [18, 18], callout: [20, 20], math: [20, 20], table: [20, 20], hr: [28, 28] };
-// Drawn as a box or a block widget, whose own padding would land inside the box, so the gap goes on the line above.
-const BOXED = new Set(["pre", "quote", "callout", "math", "table"]);
-// The callout head line's bottom padding (editor.css `.cm-callout-head`).
-const HEAD = 6;
-// A body line's height, note.css's --body × --leading.
-const LINE = 16 * 1.78;
-
-function blockType(node, doc) {
-  const n = node.name;
-  if (/Heading\d$/.test(n)) return "h" + Math.min(+n.slice(-1), 4);
-  if (n === "BulletList" || n === "OrderedList") return "list";
-  if (n === "Blockquote") return CALLOUT.test(doc.lineAt(node.from).text) ? "callout" : "quote";
-  if (n === "FencedCode" || n === "CodeBlock" || n === "HTMLBlock") return "pre";
-  if (n === "BlockMath") return "math";
-  if (n === "Table") return "table";
-  if (n === "HorizontalRule") return "hr";
-  if (n === "Paragraph" && /^!\[[^\]]*\]\([^)]*\)$/.test(doc.sliceString(node.from, node.to).trim())) return "img";
-  return "p";
-}
 
 function buildDecorations(state) {
-  if (!state.field(liveField)) return { deco: Decoration.none, wrap: BlockWrapper.set([]), lead: 0, skip: new Set(), atomic: Decoration.none };
+  if (!state.field(liveField)) return { deco: Decoration.none, wrap: BlockWrapper.set([]), atomic: Decoration.none };
   const syntax = state.field(mathSyntaxField);
   const doc = state.doc;
   const sel = state.field(focusedField) ? state.selection.ranges : [];
@@ -287,33 +264,12 @@ function buildDecorations(state) {
   const codeLines = new Set();
   const counters = {};
   const wraps = [];
-  // A mark alone on its line stays in it: hung out of the flow, it would leave the line empty and fold it to nothing.
-  const hangs = (pos) => doc.sliceString(pos, doc.lineAt(pos).to).trim() !== "";
   const wrap = (from, to, attributes) => wraps.push(BlockWrapper.create({ tagName: "div", attributes }).range(doc.lineAt(from).from, doc.lineAt(to).to));
-  const style = (n, css) => add(doc.line(n).from, doc.line(n).from, Decoration.line({ attributes: { style: css } }));
   const calloutType = (n) => (n?.name === "Blockquote" ? CALLOUT.exec(doc.lineAt(n.from).text)?.[1].toLowerCase() : undefined);
   const prevBlock = (n) => { let s = n.prevSibling; while (s?.name === "QuoteMark") s = s.prevSibling; return s; };
   const nextBlock = (n) => { let s = n.nextSibling; while (s?.name === "QuoteMark") s = s.nextSibling; return s; };
   // A proof right under a theorem hangs from it, as the reader's `.callout.attached` (CalloutHeader.provable).
   const attached = (n) => calloutType(n) === "proof" && PROVABLE.has(calloutType(prevBlock(n)));
-  const lastBlock = (n) => { let s = n.lastChild; while (s?.name === "QuoteMark") s = s.prevSibling; return s; };
-  // A callout ends with its last block's bottom margin inside its 4px padding, as the reader's; a quote with only its 2px.
-  const quotePad = (n) => {
-    const first = doc.lineAt(n.from), callout = CALLOUT.test(first.text), end = lastBlock(n);
-    const endType = end ? blockType(end, doc) : "p";
-    const headOnly = callout && end && doc.lineAt(end.from).number === first.number && doc.lineAt(end.to).number === first.number;
-    return !callout ? 2 : headOnly ? 4 : 4 + (endType === "p" || endType === "list" ? 10 : MARGIN[endType][1]);
-  };
-  // Where text typed on the blank line right under a block lands, from that block's last line, or null if it starts a
-  // block of its own. A paragraph takes the line in (CommonMark's lazy continuation), also at the end of a list or a
-  // quote, where it lands inside the quote's box, above its bottom padding.
-  const joins = (n) => {
-    let leaf = n;
-    while (leaf && /^(Blockquote|BulletList|OrderedList|ListItem)$/.test(leaf.name)) leaf = lastBlock(leaf);
-    // A task item's text is a Task node, not a Paragraph, in lezer's GFM.
-    if (leaf?.name !== "Paragraph" && leaf?.name !== "Task") return null;
-    return n.name === "Blockquote" ? -quotePad(n) : 0;
-  };
 
   const tree = ensureSyntaxTree(state, doc.length, 250) ?? syntaxTree(state);
   tree.iterate({
@@ -327,7 +283,7 @@ function buildDecorations(state) {
         case "HeaderMark": {
           if (doc.lineAt(from).from !== from) return;
           const after = doc.sliceString(to, to + 1) === " " ? to + 1 : to;
-          add(from, after, !onLines(from, to) ? hide : hangs(after) ? hang : shown);
+          add(from, after, onLines(from, to) ? hang : hide);
           return;
         }
         case "EmphasisMark": case "StrikethroughMark": case "CodeMark": {
@@ -451,8 +407,7 @@ function buildDecorations(state) {
           const callout = CALLOUT.exec(first.text);
           const active = onLines(from, to);
           // One box around the lines, as the reader's card: per-line tints can't round or pad the block as a whole.
-          wrap(from, to, { class: callout ? `cm-callout-box cm-callout-${callout[1].toLowerCase()}${attached(node.node) ? " attached" : ""}${attached(nextBlock(node.node)) ? " has-proof" : ""}` : "cm-quote-box",
-            style: `padding-bottom: ${quotePad(node.node)}px` });
+          wrap(from, to, { class: callout ? `cm-callout-box cm-callout-${callout[1].toLowerCase()}${attached(node.node) ? " attached" : ""}${attached(nextBlock(node.node)) ? " has-proof" : ""}` : "cm-quote-box" });
           if (callout) {
             const type = callout[1].toLowerCase();
             let label = type[0].toUpperCase() + type.slice(1);
@@ -479,7 +434,7 @@ function buildDecorations(state) {
           const after = doc.sliceString(to, to + 1) === " " ? to + 1 : to;
           if (quote && !onLines(quote.from, quote.to) && !isCalloutHead) add(from, after, hide);
           // Only the line's first mark hangs: a second would land on top of it.
-          else if (quote && onLines(quote.from, quote.to) && /^\s*$/.test(doc.sliceString(lineStart.from, from)) && hangs(after)) add(from, after, hang);
+          else if (quote && onLines(quote.from, quote.to) && /^\s*$/.test(doc.sliceString(lineStart.from, from))) add(from, after, hang);
           return;
         }
         case "FencedCode": {
@@ -490,13 +445,13 @@ function buildDecorations(state) {
           wrap(from, to, { class: "cm-code-box" });
           for (let n = first; n <= last; n++) {
             codeLines.add(n);
-            // The reader has no fence lines: the opening one shows only the language, and empty fences take no room.
-            const cls = active || (n > first && (n < last || !closed)) ? "cm-code" : n === first && lang ? "cm-code cm-code-head" : "cm-code cm-collapsed";
-            add(doc.line(n).from, doc.line(n).from, line(cls));
+            add(doc.line(n).from, doc.line(n).from, line("cm-code"));
           }
+          // The fences keep their lines when hidden, so the caret coming in moves nothing: the opening one shows only
+          // the language, the closing one nothing.
           if (!active && lang) add(doc.lineAt(from).from, doc.lineAt(from).to, Decoration.replace({ widget: new TextWidget(lang, "cm-code-lang") }));
-          else if (!active) add(doc.lineAt(from).from, doc.lineAt(from).to, hide);
-          if (!active && closed) add(doc.line(last).from, doc.line(last).to, hide);
+          else if (!active) add(doc.lineAt(from).from, doc.lineAt(from).to, Decoration.mark({ class: "cm-fence" }));
+          if (!active && closed) add(doc.line(last).from, doc.line(last).to, Decoration.mark({ class: "cm-fence" }));
           return false;
         }
         case "Table": {
@@ -515,72 +470,6 @@ function buildDecorations(state) {
     if (m && !codeLines.has(n) && !touches(l.from, l.to)) add(l.from + m.index, l.to, hide);
   }
 
-  // The reader parts blocks with margins, not lines of text. The blank lines between two blocks carry the gap (a run
-  // of them is one gap); blocks with none between them get it as padding. Inside a quote the `>` lines do the same.
-  const spaced = new Set();
-  // Blank lines the arrow keys pass over: entering them would push the blocks below down, or they show nothing.
-  const skip = new Set();
-  // A run of blank lines with the caret in it can't fold to nothing, or the caret has no line. The caret's line sits
-  // where typed text will land, `top` under the block above or, on the run's first line, `join` (see `joins`), and
-  // the run keeps its height where it has room for the line, so a click moves as little as it can. `raw`: the run's
-  // `>` marks show, as the rest of the quote's source does.
-  const spaceRun = (from, to, gap, top, join = null, raw = false, open = false) => {
-    const caret = [];
-    const first = join !== null ? join : top;
-    for (let n = from; n < to; n++) {
-      if (n > from || !(open || gap >= Math.max(0, first) + LINE)) skip.add(n);
-      spaced.add(n);
-      if (touches(doc.line(n).from, doc.line(n).to)) caret.push(n);
-    }
-    for (let n = from; n < to; n++) {
-      if (!caret.length) style(n, n === from && raw ? `line-height: ${gap}px` : `line-height: ${n === from ? gap : 0}px; font-size: 0`);
-      else if (!caret.includes(n)) style(n, "line-height: 0; font-size: 0");
-    }
-    if (!caret.length) return;
-    const land = caret[0] === from && join !== null ? join : top;
-    // Inside the quote above, which the line can't join in the layout: drawn there, kept in its place below it.
-    const lift = land < 0 ? `; position: relative; top: ${land}px` : "";
-    const pad = Math.max(0, land), rest = Math.max(0, gap - pad - LINE * caret.length);
-    if (caret.length === 1) return style(caret[0], `padding-top: ${pad}px; padding-bottom: ${rest}px${lift}`);
-    style(caret[0], `padding-top: ${pad}px${lift}`);
-    style(caret.at(-1), `padding-bottom: ${rest}px`);
-  };
-  // `raw`: a quote with the caret in it shows its source, its blank `>` lines too, at the height the gap had.
-  const layout = (parent, raw) => {
-    let prev = null;
-    for (let c = parent.firstChild; c; c = c.nextSibling) {
-      if (c.name === "QuoteMark") continue;
-      const type = blockType(c, doc), first = doc.lineAt(c.from).number, last = doc.lineAt(c.to).number;
-      if (prev) {
-        let gap = Math.max(MARGIN[prev.type][1], MARGIN[type][0]);
-        if (prev.type === "h1" && type === "h2") gap = MARGIN.h1[1];
-        if (attached(c)) gap = 0;
-        // Under a callout's header the reader's summary margin (6px, the head line's padding) meets the block's own.
-        if (prev.header) gap = Math.max(HEAD, MARGIN[type][0]);
-        const below = prev.header ? HEAD : 0;
-        if (first > prev.last + 1) spaceRun(prev.last + 1, first, gap - below, prev.header ? 0 : MARGIN[prev.type][1], prev.join, raw);
-        else if (!BOXED.has(type)) style(first, `padding-top: ${gap - below}px`);
-        else if (!BOXED.has(prev.type)) style(prev.last, `padding-bottom: ${gap}px`);
-      }
-      if (c.name === "Blockquote") layout(c, onLines(c.from, c.to));
-      prev = { type, last, header: !prev && first === last && calloutType(parent) !== undefined, join: joins(c) };
-    }
-    // Blank lines after the note's last block: the caret there sits where a new paragraph would start.
-    // `!parent.parent`, not `=== tree.topNode`: that getter makes a new node object on every read.
-    if (!parent.parent && prev && prev.last < doc.lines) spaceRun(prev.last + 1, doc.lines + 1, 0, MARGIN[prev.type][1], prev.join, false, true);
-  };
-  layout(tree.topNode, false);
-  // The reader keeps the first block's top margin below the page padding, except a leading h2's (note.css).
-  const top = tree.topNode.firstChild, topType = top && blockType(top, doc);
-  const lead = !topType || topType === "h2" ? 0 : MARGIN[topType][0];
-  // Other blank lines (inside lists, around the note) take no room, as the reader has nothing there.
-  for (let n = 1; n <= doc.lines; n++) {
-    const l = doc.line(n);
-    if (l.text.trim() || spaced.has(n) || codeLines.has(n)) continue;
-    skip.add(n);
-    if (!touches(l.from, l.to)) style(n, "line-height: 0; font-size: 0");
-  }
-
   decos.sort((a, b) => a.from - b.from || a.value.startSide - b.value.startSide);
   const builder = new RangeSetBuilder();
   let lastReplaceEnd = -1;
@@ -592,7 +481,7 @@ function buildDecorations(state) {
     }
     builder.add(d.from, d.to, d.value);
   }
-  return { deco: builder.finish(), wrap: BlockWrapper.set(wraps, true), lead, skip, atomic: Decoration.set(atomic, true) };
+  return { deco: builder.finish(), wrap: BlockWrapper.set(wraps, true), atomic: Decoration.set(atomic, true) };
 }
 
 const livePreview = StateField.define({
@@ -602,28 +491,10 @@ const livePreview = StateField.define({
     return deco;
   },
   provide: (f) => [EditorView.decorations.from(f, (v) => v.deco), EditorView.blockWrappers.from(f, (v) => v.wrap),
-    EditorView.atomicRanges.of((view) => view.state.field(f).atomic),
-    EditorView.contentAttributes.from(f, (v) => ({ style: `padding-top: ${v.lead}px` }))],
+    EditorView.atomicRanges.of((view) => view.state.field(f).atomic)],
 });
 
 // MARK: Keys
-
-// Up and down pass over blank lines the layout has no room for (see `skip`), so moving through a note never makes it
-// breathe. To start a paragraph there, Enter at the end of the block above.
-const moveLine = (forward) => (view) => {
-  const { skip } = view.state.field(livePreview), range = view.state.selection.main;
-  if (view.state.selection.ranges.length > 1 || !range.empty || !skip.size) return false;
-  let at = range, landed = null;
-  for (let i = 0; i < 100; i++) {
-    const next = view.moveVertically(at, forward);
-    if (next.head === at.head) break;
-    at = next;
-    if (!skip.has(view.state.doc.lineAt(next.head).number)) { landed = next; break; }
-  }
-  if (!landed) return false;
-  view.dispatch({ selection: EditorSelection.create([landed]), scrollIntoView: true, userEvent: "select" });
-  return true;
-};
 
 // Enter on an empty `- ` or `> ` at the end of a list or quote ends it with a blank line, so what's typed next is a
 // paragraph of its own. CodeMirror's own handling leaves the line touching the block, and CommonMark then reads the
@@ -677,7 +548,7 @@ const extensions = [
       indentUnit.of("    "),
       EditorState.tabSize.of(4),
       EditorView.lineWrapping,
-      Prec.high(keymap.of([{ key: "ArrowDown", run: moveLine(true) }, { key: "ArrowUp", run: moveLine(false) }, { key: "Enter", run: endBlock }])),
+      Prec.high(keymap.of([{ key: "Enter", run: endBlock }])),
       keymap.of([...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
       markdown({ base: markdownLanguage, extensions: [mathSyntax, wikiSyntax], codeLanguages: codeLanguage }),
       syntaxHighlighting(highlight),
@@ -711,22 +582,6 @@ const extensions = [
         },
         // A rendered link opens on click; once the cursor is inside it (raw text showing), ⌘-click opens it.
         mousedown(e, v) {
-          // A click in a gap too thin for a line goes to the nearer text, as up and down do; opening the gap would
-          // push everything below it.
-          const at = e.button === 0 && !e.shiftKey && !e.metaKey ? v.posAtCoords({ x: e.clientX, y: e.clientY }, false) : null;
-          const row = at === null ? null : v.state.doc.lineAt(at);
-          if (row && v.state.field(livePreview).skip.has(row.number)) {
-            const { skip } = v.state.field(livePreview), doc = v.state.doc;
-            let up = row.number, down = row.number;
-            while (up > 1 && (skip.has(up) || !doc.line(up).text.trim())) up--;
-            while (down < doc.lines && (skip.has(down) || !doc.line(down).text.trim())) down++;
-            const above = v.coordsAtPos(doc.line(up).to, -1), below = v.coordsAtPos(doc.line(down).from, 1);
-            const toBelow = below && (!above || e.clientY - above.bottom > below.top - e.clientY);
-            e.preventDefault();
-            v.dispatch({ selection: { anchor: toBelow ? doc.line(down).from : doc.line(up).to }, userEvent: "select.pointer" });
-            v.focus();
-            return true;
-          }
           const link = e.target.closest?.("[data-href], [data-wiki]");
           if (!link || !(link.classList.contains("cm-live") || e.metaKey)) return false;
           post(link.dataset.wiki !== undefined ? { type: "open", wiki: link.dataset.wiki } : { type: "open", href: link.dataset.href });
@@ -753,8 +608,8 @@ document.addEventListener("dragover", (e) => {
   e.preventDefault();
   if (e.dataTransfer) e.dataTransfer.dropEffect = "copy";
 });
-// The page under the note isn't the editor, and the browser put a click there at the end of the nearest line with text,
-// often a heading, since the blank lines after it take no room. Below the note means after it.
+// The page under the note isn't the editor, and the browser put a click there at the end of the nearest line with text.
+// Below the note means after it.
 document.addEventListener("mousedown", (e) => {
   if (e.button !== 0 || view.dom.contains(e.target) || e.clientY < view.contentDOM.getBoundingClientRect().bottom) return;
   e.preventDefault();
