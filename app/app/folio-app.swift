@@ -25,8 +25,8 @@ struct FolioApp: App {
                 .buttonStyle(.pointing(.automatic))
         }
         .defaultSize(width: 1520, height: 860)
-        .defaultLaunchBehavior(Self.hostingTests ? .suppressed : .automatic)
         #if os(macOS)
+        .defaultLaunchBehavior(Self.hostingTests ? .suppressed : .automatic)
         // The compact row keeps the frame around the content panel thin.
         .windowToolbarStyle(.unifiedCompact(showsTitle: false))
         #endif
