@@ -21,6 +21,7 @@ Folio의 모든 데이터 변경은 `folio` 명령으로 한다. `course.json`�
 - GIST 폴더는 `--gist <경로>`, 환경 변수 `FOLIO_GIST`, 앱이 연 폴더 순으로 정한다.
 - 사용자의 실제 학업 자료다. 사용자가 시킨 것만 바꾼다. Folio를 개발하는 중이면 실제 폴더 대신 `mise run fixture -- <임시 폴더>`로 만든 가짜 폴더를 쓴다.
 - 결과를 읽을 때는 `--json`을 붙인다. 쓰기 명령의 JSON은 `{action, dryRun, made, changes, notes}`다.
+- 셸 없이 MCP만 쓰는 클라이언트는 `folio mcp`를 MCP 서버로 붙인다(`claude mcp add folio -- folio mcp`). 도구 이름은 명령의 공백을 `_`로 바꾼 것이고(`exam add` → `exam_add`), 입력은 `folio run`과 같다. 위 안전 규칙은 MCP 도구에도 같다.
 
 ## 안전
 

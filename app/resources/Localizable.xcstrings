@@ -1101,6 +1101,50 @@
         }
       }
     },
+    "claude.proposal.apply": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "적용"
+          }
+        }
+      }
+    },
+    "claude.proposal.applied": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "적용함"
+          }
+        }
+      }
+    },
+    "claude.proposal.unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "적용할 수 없음"
+          }
+        }
+      }
+    },
+    "claude.proposal.unknown": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 Folio에서 모르는 변경입니다"
+          }
+        }
+      }
+    },
     "claude.resend": {
       "extractionState": "manual",
       "localizations": {
@@ -1141,6 +1185,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "Claude 연결이 필요합니다"
+          }
+        }
+      }
+    },
+    "claude.status.applied": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "적용했습니다: %@"
           }
         }
       }

@@ -28,6 +28,15 @@ final class ClaudeModel {
     /// The chat that answer belongs to: switching chats mid-answer must not show it under another conversation.
     var answering: UUID?
     var cardDraft: CardDraft?
+    /// A proposed change that removes or moves, waiting on the panel's confirmation.
+    var confirming: PendingProposal?
+
+    struct PendingProposal: Identifiable {
+        var message: UUID
+        var index: Int
+        var question: String
+        var id: String { "\(message)/\(index)" }
+    }
 
     init(workspace: Workspace) { self.workspace = workspace }
 
@@ -138,7 +147,7 @@ final class ClaudeModel {
         status = nil
         failed = nil
         partial = nil
-        let client = workspace.claude(for: course)
+        let client = workspace.claude(for: course, folioTools: true)
         let asked = doc.model
         let stream = AnswerStream()
         Task {
@@ -153,7 +162,7 @@ final class ClaudeModel {
             defer { ticker.cancel(); partial = nil }
             do {
                 let reply = try await client.reply(to: asked, context: context) { stream.append($0) }
-                doc.model.messages.append(ChatMessage(role: .assistant, text: reply.text, at: .now))
+                doc.model.messages.append(ChatMessage(role: .assistant, text: reply.text, at: .now, proposals: reply.proposals))
                 doc.model.touch(by: workspace.device, at: .now)
                 let saved = doc
                 // folio:not-an-action chat history is not an action
@@ -180,13 +189,17 @@ final class ClaudeModel {
         chats.insert(doc, at: 0)
     }
 
-    /// `folio://action/<copy|insert|newnote|card>/<message ID>` from the answer's links. `openNote` is the note open
-    /// beside the panel, which `insert` writes into through `insertIntoNote`; without one it makes a free note.
+    /// `folio://action/<copy|insert|newnote|card>/<message ID>` and `folio://action/apply/<message ID>/<proposal>` from
+    /// the answer's links. `openNote` is the note open beside the panel, which `insert` writes into through
+    /// `insertIntoNote`; without one it makes a free note.
     func handle(_ url: URL, course: LoadedCourse, openNote: UUID?, insertIntoNote: (String) -> Void, showNote: (UUID) -> Void) {
         let parts = url.pathComponents
-        guard parts.count == 3, let id = UUID(uuidString: parts[2]),
+        guard parts.count >= 3, let id = UUID(uuidString: parts[2]),
               let message = chat?.messages.first(where: { $0.id == id }) else { return }
         switch parts[1] {
+        case "apply":
+            guard parts.count == 4, let index = Int(parts[3]) else { break }
+            apply(message: id, index: index, course: course, confirmed: false)
         case "copy":
             #if os(macOS)
             NSPasteboard.general.clearContents()
@@ -224,6 +237,35 @@ final class ClaudeModel {
         failed = nil
     }
 
+    // MARK: Proposals
+
+    /// The proposal's line in the answer: what it would do, and why it can't when the folder no longer allows it.
+    func describe(_ proposal: ActionProposal) -> (text: String, refusal: String?) {
+        guard let action = workspace.action(proposal) else { return (proposal.command, String(localized: .claudeProposalUnknown)) }
+        return (workspace.summary(action), proposal.applied == true ? nil : workspace.refusal(action))
+    }
+
+    /// Runs the proposal through the workspace like any button would, after the same confirmation a removal asks for.
+    func apply(message: UUID, index: Int, course: LoadedCourse, confirmed: Bool) {
+        guard var doc = chats.first(where: { $0.model.id == chatID }),
+              let m = doc.model.messages.firstIndex(where: { $0.id == message }),
+              let proposals = doc.model.messages[m].proposals, proposals.indices.contains(index),
+              case let proposal = proposals[index], proposal.applied != true,
+              let action = workspace.action(proposal) else { return }
+        if !confirmed, let question = workspace.confirmation(action) {
+            confirming = PendingProposal(message: message, index: index, question: question)
+            return
+        }
+        guard workspace.run(action) != nil else { return }
+        doc.model.messages[m].proposals?[index].applied = true
+        doc.model.touch(by: workspace.device, at: .now)
+        let saved = doc
+        // folio:not-an-action chat history is not an action
+        workspace.perform { try course.store.save(saved) }
+        replace(doc)
+        status = String(localized: .claudeStatusApplied(workspace.summary(action)))
+    }
+
     /// A free note holding `text`, for an answer saved while no note is open.
     func createNote(title: String, body: String, course: LoadedCourse) -> UUID? {
         workspace.run(NoteAdd(course: course.id, title: title, body: body))?.made
@@ -253,7 +295,8 @@ final class ClaudeModel {
     }
 
     /// The whole conversation as one page. `column-reverse` keeps the newest message in view without JavaScript.
-    static func html(_ chat: Chat, partial: String? = nil, cards: Bool = true) -> String {
+    static func html(_ chat: Chat, partial: String? = nil, cards: Bool = true,
+                     describe: (ActionProposal) -> (text: String, refusal: String?) = { ($0.command, nil) }) -> String {
         let writing = partial.map { #"<div class="msg assistant">\#(HTMLRenderer.render(markdown: $0))</div>"# }
         let card = String(localized: .claudeAnswerCard)
         let messages = (writing.map { [$0] } ?? []) + chat.messages.reversed().map { m in
@@ -264,8 +307,15 @@ final class ClaudeModel {
             case .assistant:
                 let cardLink = cards ? #"<a href="folio://action/card/\#(m.id)">\#(card)</a>"#
                     : #"<span class="off" title="\#(String(localized: .claudeAnswerCardOff))">\#(card)</span>"#
+                let proposals = (m.proposals ?? []).enumerated().map { i, p in
+                    let (text, refusal) = describe(p)
+                    let button = p.applied == true ? #"<span class="done">\#(String(localized: .claudeProposalApplied))</span>"#
+                        : refusal.map { #"<span class="off" title="\#(escape($0))">\#(String(localized: .claudeProposalUnavailable))</span>"# }
+                        ?? #"<a href="folio://action/apply/\#(m.id)/\#(i)">\#(String(localized: .claudeProposalApply))</a>"#
+                    return #"<div class="proposal"><span>\#(escape(text))</span>\#(button)</div>"#
+                }.joined()
                 return #"""
-                <div class="msg assistant">\#(body)<div class="actions">\#
+                <div class="msg assistant">\#(body)\#(proposals)<div class="actions">\#
                 <a href="folio://action/copy/\#(m.id)">\#(String(localized: .claudeAnswerCopy))</a>\#
                 <a href="folio://action/insert/\#(m.id)">\#(String(localized: .claudeAnswerInsert))</a>\#
                 <a href="folio://action/newnote/\#(m.id)">\#(String(localized: .claudeAnswerNewNote))</a>\#
@@ -282,7 +332,14 @@ final class ClaudeModel {
     .msg > :first-child { margin-top: 0; } .msg > :last-child { margin-bottom: 0; } .msg h1 { font-size: 19px; } .msg h2 { font-size: 16px; margin-top: 18px; }
     .user { align-self: flex-end; max-width: 85%; padding: 8px 12px; border-radius: 14px; background: var(--fill); }
     .actions { display: flex; gap: 14px; margin-top: 8px; font-size: 12px; } .actions .off { color: var(--text-3); cursor: default; }
+    .proposal { display: flex; align-items: baseline; gap: 12px; margin-top: 8px; padding: 8px 12px; border-radius: 12px; background: var(--fill); font-size: 13px; }
+    .proposal > span:first-child { flex: 1; } .proposal .off, .proposal .done { color: var(--text-3); cursor: default; }
     """
+
+    static func escape(_ text: String) -> String {
+        text.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;")
+            .replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;")
+    }
 }
 
 /// Collects an answer's pieces off the main actor; the panel reads the text so far on its own schedule.

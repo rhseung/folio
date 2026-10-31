@@ -72,7 +72,7 @@ enum Finder {
         "catalog show": ["카탈로그", "과목 코드 목록", "교수 목록"],
         "settings show": ["설정 보기"],
         "check": ["폴더 검사", "구조 확인", "문제 있나"], "cleanup plan": ["폴더 정리", "파일 정리 계획"], "backup list": ["백업 목록"],
-        "actions": ["액션 목록", "커버리지 검사"], "run": ["JSON 입력으로 실행", "에이전트 실행"],
+        "actions": ["액션 목록", "커버리지 검사"], "run": ["JSON 입력으로 실행", "에이전트 실행"], "mcp": ["MCP 서버", "MCP 도구", "Claude 데스크톱에 연결"],
         "skill": ["에이전트 스킬", "스킬 설치"], "completion": ["자동 완성", "탭 완성"],
     ]
 

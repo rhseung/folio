@@ -222,6 +222,12 @@ final class Workspace {
         return A.spec.render(text, action, ctx: ctx)
     }
 
+    /// What running it would do, in the words the CLI prints after it runs.
+    func summary<A: Action>(_ action: A) -> String {
+        guard let ctx = checkContext() else { return A.spec.summary }
+        return A.spec.render(A.spec.done, action, ctx: ctx)
+    }
+
     // MARK: Writes (only from explicit user actions)
 
     /// Runs an action the way the CLI does, then shows what it changed. A failure goes to the error banner.

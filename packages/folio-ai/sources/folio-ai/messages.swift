@@ -105,13 +105,16 @@ public struct MessagesResponse: Codable, Sendable, Equatable {
     public var content: [ContentBlock]
     public var stop_reason: String?
     public var usage: Usage
+    /// Changes Claude asked for through the Folio tools; only the CLI provider has those tools.
+    public var proposals: [ActionProposal]?
 
-    public init(id: String, model: String, content: [ContentBlock], stop_reason: String?, usage: Usage) {
+    public init(id: String, model: String, content: [ContentBlock], stop_reason: String?, usage: Usage, proposals: [ActionProposal]? = nil) {
         self.id = id
         self.model = model
         self.content = content
         self.stop_reason = stop_reason
         self.usage = usage
+        self.proposals = proposals
     }
 
     public var text: String {

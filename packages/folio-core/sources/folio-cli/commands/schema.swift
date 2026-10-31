@@ -213,7 +213,9 @@ func declaredInput(_ spec: ActionSpec, _ sniffed: JSONValue) -> JSONValue {
             let one: JSONValue = ["type": "string", "x-folio-ref": .string(kind)]
             p = f.many ? ["type": "array", "items": one] : ["type": "string", "x-folio-ref": .string(kind)]
         }
-        let help = [f.help, f.patch && f.optional ? "null이면 지운다" : ""].filter { !$0.isEmpty }.joined(separator: ". ")
+        // JSON input takes only RFC 3339 with an offset, unlike the commands' "2026-11-20 23:59"; agents guessed wrong without it.
+        let dateHint = p["format"] == "date-time" ? "시간대를 붙인 ISO 8601. 예: 2026-11-20T23:59:00+09:00" : ""
+        let help = [f.help, f.patch && f.optional ? "null이면 지운다" : "", dateHint].filter { !$0.isEmpty }.joined(separator: ". ")
         if !help.isEmpty { p["description"] = .string(help) }
         props[f.name] = .object(p)
     }
@@ -223,9 +225,11 @@ func declaredInput(_ spec: ActionSpec, _ sniffed: JSONValue) -> JSONValue {
     return .object(o)
 }
 
+let actionRefNote = "항목을 가리키는 필드(course, semester, session, exam, unit, material, component, assignment, set, note)는 UUID와 이름(EC4207, 9주차-1, Quiz1)을 모두 받는다. 새 항목의 id는 빼면 만들어진다. x-folio-ref가 있는 필드는 그 종류의 항목을 가리킨다. NotePath는 노트를 과목 폴더 기준 경로로 가리키고, 노트 이름도 받는다."
+
 func actionSchemas() -> JSONValue {
     let builder = SchemaBuilder()
-    let refNote = "항목을 가리키는 필드(course, semester, session, exam, unit, material, component, assignment, set, note)는 UUID와 이름(EC4207, 9주차-1, Quiz1)을 모두 받는다. 새 항목의 id는 빼면 만들어진다. x-folio-ref가 있는 필드는 그 종류의 항목을 가리킨다. NotePath는 노트를 과목 폴더 기준 경로로 가리키고, 노트 이름도 받는다. asks가 true인 액션은 --yes 없이 터미널이 아니면 종료 코드 5로 멈춘다."
+    let refNote = actionRefNote + " asks가 true인 액션은 --yes 없이 터미널이 아니면 종료 코드 5로 멈춘다."
     let actions = Actions.all.map { type -> JSONValue in
         let spec = type.spec
         guard !spec.done.isEmpty else {

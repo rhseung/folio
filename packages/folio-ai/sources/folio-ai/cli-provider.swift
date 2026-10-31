@@ -2,15 +2,27 @@ import FolioDomain
 import Foundation
 
 #if os(macOS)
-/// Runs the user's own Claude Code CLI on their subscription (docs/SPEC.md "호출 방식"). Every tool is off, so Claude
-/// only answers: it cannot read or change the GIST folder, and results stay proposals.
+/// Runs the user's own Claude Code CLI on their subscription (docs/SPEC.md "호출 방식"). Its own tools stay off, so
+/// Claude can't touch files; with `folio` given, the chat gets Folio's actions through `folio mcp --propose`, which
+/// reads freely but turns every change into a proposal the user approves in the panel.
 public struct CLIProvider: ClaudeProvider {
+    public struct FolioTools: Sendable, Equatable {
+        public var executable: URL
+        public var gist: URL
+        public init(executable: URL, gist: URL) {
+            self.executable = executable
+            self.gist = gist
+        }
+    }
+
     let executable: URL
     let workingDirectory: URL?
+    let folio: FolioTools?
 
-    public init(executable: URL, workingDirectory: URL? = nil) {
+    public init(executable: URL, workingDirectory: URL? = nil, folio: FolioTools? = nil) {
         self.executable = executable
         self.workingDirectory = workingDirectory
+        self.folio = folio
     }
 
     /// Apps opened from the Finder don't get the shell's PATH, so the usual install places are checked directly.
@@ -21,10 +33,24 @@ public struct CLIProvider: ClaudeProvider {
             .map { URL(fileURLWithPath: $0) }
     }
 
-    static func arguments(for request: MessagesRequest, systemFile: URL?) throws -> [String] {
+    /// Where `mise run install-cli` puts it, or Homebrew's places.
+    public static func findFolio() -> URL? {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        return ["\(home)/.local/bin/folio", "/opt/homebrew/bin/folio", "/usr/local/bin/folio"]
+            .first { FileManager.default.isExecutableFile(atPath: $0) }
+            .map { URL(fileURLWithPath: $0) }
+    }
+
+    static func arguments(for request: MessagesRequest, systemFile: URL?, folio: FolioTools? = nil) throws -> [String] {
         var args = ["-p", "--verbose", "--input-format", "stream-json", "--output-format", "stream-json",
                     "--model", request.model, "--tools", "", "--setting-sources", "", "--strict-mcp-config",
                     "--disable-slash-commands", "--no-session-persistence"]
+        if let folio {
+            let server: [String: Any] = ["command": folio.executable.path, "args": ["mcp", "--gist", folio.gist.path, "--propose"]]
+            let config = try JSONSerialization.data(withJSONObject: ["mcpServers": ["folio": server]], options: [.sortedKeys, .withoutEscapingSlashes])
+            // `--strict-mcp-config` above keeps the user's own servers out; only this one is allowed.
+            args += ["--mcp-config", String(decoding: config, as: UTF8.self), "--allowedTools", "mcp__folio"]
+        }
         if let systemFile { args += ["--system-prompt-file", systemFile.path] }
         if let effort = request.output_config?.effort { args += ["--effort", effort.rawValue] }
         if let schema = request.output_config?.format?.schema {
@@ -73,12 +99,27 @@ public struct CLIProvider: ClaudeProvider {
         if case .object(let models)? = result["modelUsage"], let first = models.keys.sorted().first { model = first }
         // Structured output arrives through a tool call, which is a finished answer here.
         let stop = string(result["stop_reason"]).map { $0 == "tool_use" ? "end_turn" : $0 }
+        let found = proposals(lines)
         return MessagesResponse(
             id: string(result["session_id"]) ?? "cli", model: model, content: [.text(text)], stop_reason: stop,
             usage: Usage(input_tokens: int(usage?["input_tokens"]), output_tokens: int(usage?["output_tokens"]),
                          cache_creation_input_tokens: int(usage?["cache_creation_input_tokens"]),
-                         cache_read_input_tokens: int(usage?["cache_read_input_tokens"]))
+                         cache_read_input_tokens: int(usage?["cache_read_input_tokens"])),
+            proposals: found.isEmpty ? nil : found
         )
+    }
+
+    /// The changes `folio mcp --propose` handed back in tool results along the way.
+    static func proposals(_ lines: [Substring]) -> [ActionProposal] {
+        lines.flatMap { line -> [ActionProposal] in
+            guard line.contains(ActionProposal.marker), let value = try? JSONDecoder().decode(JSONValue.self, from: Data(line.utf8)),
+                  value["type"] == .string("user"), case .array(let blocks)? = value["message"]?["content"] else { return [] }
+            return blocks.flatMap { block -> [ActionProposal] in
+                guard block["type"] == .string("tool_result") else { return [] }
+                let texts: [JSONValue] = if case .array(let a)? = block["content"] { a.compactMap { $0["text"] } } else { [block["content"] ?? .null] }
+                return texts.compactMap { if case .string(let t) = $0 { ActionProposal(text: t) } else { nil } }
+            }
+        }
     }
 
     public func send(_ request: MessagesRequest) async throws -> MessagesResponse {
@@ -107,7 +148,7 @@ public struct CLIProvider: ClaudeProvider {
             systemFile = temp.appending(path: "system.txt")
             try system.write(to: systemFile!, atomically: true, encoding: .utf8)
         }
-        let args = try Self.arguments(for: request, systemFile: systemFile) + (onText == nil ? [] : ["--include-partial-messages"])
+        let args = try Self.arguments(for: request, systemFile: systemFile, folio: folio) + (onText == nil ? [] : ["--include-partial-messages"])
         let (executable, cwd, errorFile) = (executable, workingDirectory, temp.appending(path: "stderr.txt"))
         // shortcut: a cancelled task lets the process run to the end; terminate it once long requests can be cancelled.
         let (output, status) = try await Task.detached {

@@ -1,5 +1,7 @@
+import FolioActions
 import FolioAI
 import FolioDomain
+import FolioStorage
 import Foundation
 import Testing
 @testable import Folio
@@ -55,5 +57,35 @@ struct ClaudeModelTests {
         #expect(ClaudeModel.html(chat, cards: false).contains(#"<span class="off""#))
         #expect(ClaudeModel.html(chat, cards: true).contains("folio://action/card/"))
         #expect(ClaudeModel.html(chat, partial: "쓰는 중").contains("쓰는 중"))
+    }
+
+    /// A proposal runs only when the user applies it, once, and the chat file remembers it was applied.
+    @Test func aProposalAppliesOnceAndARemovalAsksFirst() throws {
+        let workspace = try fixtureWorkspace()
+        let model = ClaudeModel(workspace: workspace)
+        let course = try #require(workspace.course(graphTheory))
+        model.load(course)
+        let exam = UUID()
+        let add = ActionProposal(command: ExamAdd.command, input: try JSONValue(ExamAdd(id: exam, course: graphTheory, title: "제안 퀴즈")))
+        let remove = ActionProposal(command: ExamRemove.command, input: try JSONValue(ExamRemove(course: graphTheory, exam: exam)))
+        #expect(model.describe(add).refusal == nil)
+        var chat = Chat(device: workspace.device, at: .now)
+        let answer = ChatMessage(role: .assistant, text: "제안했습니다", at: .now, proposals: [add, remove])
+        chat.messages = [answer]
+        model.replace(StoredDocument(new: chat))
+        model.select(chat.id)
+        #expect(ClaudeModel.html(chat, describe: model.describe).contains("folio://action/apply/\(answer.id)/0"))
+
+        model.apply(message: answer.id, index: 0, course: course, confirmed: false)
+        model.apply(message: answer.id, index: 0, course: course, confirmed: false)
+        #expect(workspace.course(graphTheory)?.file.exams.map(\.title) == ["제안 퀴즈"])
+        #expect(model.chat?.messages[0].proposals?[0].applied == true)
+        #expect(try course.store.chats().first?.model.messages[0].proposals?[0].applied == true)
+
+        model.apply(message: answer.id, index: 1, course: course, confirmed: false)
+        #expect(model.confirming?.index == 1)
+        #expect(workspace.course(graphTheory)?.file.exams.count == 1)
+        model.apply(message: answer.id, index: 1, course: course, confirmed: true)
+        #expect(workspace.course(graphTheory)?.file.exams.isEmpty == true)
     }
 }

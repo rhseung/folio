@@ -209,6 +209,26 @@ struct CLIProviderTests {
         #expect(content[1]["text"] == .string("두 번째 질문"))
     }
 
+    /// The chat's Folio tools: its own tools stay off, only the `folio` server is loaded and allowed, in propose mode.
+    @Test func chatGetsOnlyFolioToolsAndCollectsProposals() throws {
+        let folio = CLIProvider.FolioTools(executable: URL(fileURLWithPath: "/bin/folio"), gist: URL(fileURLWithPath: "/g"))
+        let args = try CLIProvider.arguments(for: request, systemFile: nil, folio: folio)
+        #expect(args[args.firstIndex(of: "--tools")! + 1] == "" && args.contains("--strict-mcp-config"))
+        #expect(args[args.firstIndex(of: "--allowedTools")! + 1] == "mcp__folio")
+        let config = try JSONDecoder().decode(JSONValue.self, from: Data(args[args.firstIndex(of: "--mcp-config")! + 1].utf8))
+        #expect(config["mcpServers"]?["folio"]?["args"] == .array(["mcp", "--gist", "/g", "--propose"].map(JSONValue.string)))
+
+        let proposal = ActionProposal(command: "exam add", input: .object(["title": .string("퀴즈")]))
+        let toolResult = try JSONEncoder().encode(JSONValue.object([
+            "type": .string("user"),
+            "message": .object(["content": .array([.object(["type": .string("tool_result"), "content": .array([
+                .object(["type": .string("text"), "text": .string("{}")]), .object(["type": .string("text"), "text": .string(proposal.text)]),
+            ])])])]),
+        ]))
+        let output = toolResult + Data("\n".utf8) + Data(#"{"type":"result","is_error":false,"result":"제안했습니다","usage":{}}"#.utf8)
+        #expect(try CLIProvider.response(from: output, request: request).proposals == [proposal])
+    }
+
     @Test func readsTheResultLine() throws {
         let ok = Data("""
             {"type":"system","subtype":"init"}
