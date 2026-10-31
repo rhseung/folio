@@ -19,6 +19,8 @@ struct HTMLView {
     /// Set to let the reader type into blocks: called with a block's lines in the body, the text they should still
     /// hold and their new text; false when they no longer hold it, and the page is shown anew.
     var edit: (@MainActor (_ from: Int, _ to: Int, _ old: String, _ new: String) -> Bool)?
+    /// What ⌘E does while the page has the keyboard, if anything.
+    var toggleMode: (@MainActor () -> Void)?
 
     func head(accent: CourseAccent) -> String {
         "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: accent))\(NoteStyle.css)</style></head>"
@@ -36,7 +38,11 @@ struct HTMLView {
                                                                 forMainFrameOnly: true, in: .defaultClient))
         config.userContentController.add(coordinator, contentWorld: .defaultClient, name: "folioReader")
         config.setURLSchemeHandler(coordinator.files, forURLScheme: LocalFileScheme.scheme)
+        #if os(macOS)
+        let view = NoteWebView(frame: .zero, configuration: config)
+        #else
         let view = WKWebView(frame: .zero, configuration: config)
+        #endif
         view.navigationDelegate = coordinator
         link?.view = view
         #if os(macOS)
@@ -56,6 +62,21 @@ struct HTMLView {
         coordinator.link = link
         coordinator.edit = edit
         coordinator.body = body
+        #if os(macOS)
+        (view as? NoteWebView)?.shortcut = { [weak view, edit, toggleMode] key in
+            switch key {
+            case "e":
+                toggleMode?()
+                return toggleMode != nil
+            case "b", "i" where edit != nil:
+                view?.callAsyncJavaScript("window.folioReader?.format(command)", arguments: ["command": key == "b" ? "bold" : "italic"],
+                                          in: nil, in: .defaultClient)
+                return true
+            default:
+                return false
+            }
+        }
+        #endif
         let page = page(accent: accent)
         guard coordinator.loaded != page else { return }
         // Reloading would blank the page and lose its scroll on every keystroke.
@@ -132,6 +153,22 @@ struct HTMLView {
 }
 
 #if os(macOS)
+/// Takes the note's ⌘ shortcuts before WebKit, which claims every ⌘ key for the page, so neither the page's script
+/// nor SwiftUI's shortcuts would see them. Matched by key code, which doesn't change with the input source (Korean).
+class NoteWebView: WKWebView {
+    var shortcut: (@MainActor (Character) -> Bool)?
+    static let letters: [UInt16: Character] = [11: "b", 34: "i", 14: "e"]
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if (window?.firstResponder as? NSView)?.isDescendant(of: self) == true,
+           event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+           let key = Self.letters[event.keyCode], shortcut?(key) == true {
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+}
+
 extension HTMLView: NSViewRepresentable {
     func makeNSView(context: Context) -> WKWebView { makeWebView(context.coordinator) }
     func updateNSView(_ view: WKWebView, context: Context) { update(view, context.coordinator, accent: context.environment.accent) }

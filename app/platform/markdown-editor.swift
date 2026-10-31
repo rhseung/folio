@@ -15,6 +15,8 @@ struct MarkdownEditor {
     var openNote: (String) -> Void
     /// The editor's top line and how far into it the page is scrolled, for a preview to follow.
     var onScroll: @MainActor (Int, Double) -> Void = { _, _ in }
+    /// What ⌘E does while the editor has the keyboard, if anything.
+    var toggleMode: (@MainActor () -> Void)?
 
     func page(accent: CourseAccent) -> String {
         "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: accent))\(NoteStyle.css)</style></head>"
@@ -53,6 +55,13 @@ struct MarkdownEditor {
     @MainActor func update(_ coordinator: Coordinator) {
         let previous = coordinator.parent
         coordinator.parent = self
+        #if os(macOS)
+        (coordinator.view as? NoteWebView)?.shortcut = { [toggleMode] key in
+            guard key == "e", let toggleMode else { return false }
+            toggleMode()
+            return true
+        }
+        #endif
         guard coordinator.ready else { return }
         if text != coordinator.known { coordinator.replace() }
         if math != previous.math { coordinator.call("cb.setSyntax", math.rawValue) }
@@ -149,7 +158,7 @@ struct MarkdownEditor {
 #if os(macOS)
 /// Takes the drags WebKit can't hand the page as files: file promises (screenshot tools like CleanShot, Photos,
 /// browser images) and bare image data. Left to WebKit, they dropped a broken image into the editor's markup.
-final class EditorWebView: WKWebView {
+final class EditorWebView: NoteWebView {
     var receiveFile: ((String, Data, CGPoint) -> Void)?
     private static let promiseQueue = OperationQueue()
 

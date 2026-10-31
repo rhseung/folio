@@ -177,9 +177,6 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "Enter" && !e.shiftKey && el.tagName !== "UL" && el.tagName !== "OL") {
     e.preventDefault();
     document.execCommand("insertLineBreak");
-  } else if (e.metaKey && !e.shiftKey && !e.altKey && (e.key === "b" || e.key === "i")) {
-    e.preventDefault();
-    document.execCommand(e.key === "b" ? "bold" : "italic");
   }
 });
 
@@ -208,6 +205,10 @@ else start();
 // The app swaps the note in place, so the page keeps its scroll while you type in either view. Beside the editor, the
 // page follows its top line by the blocks' `data-line` (HTMLRenderer `sourceLines`).
 window.folioReader = {
+  // ⌘B and ⌘I, sent by the app (NoteWebView), which takes them by key before the page and the input method do.
+  format(command) {
+    if (editing()) document.execCommand(command);
+  },
   update(html, force = false) {
     // Replacing the block being typed into would drop the caret; the note waits until it's left.
     if (!force && editing()) pending = html;

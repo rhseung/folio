@@ -196,7 +196,8 @@ struct NoteEditor: View {
                              edit: model.replaceLines)
                 }
             } else if mode == .read {
-                HTMLView(body: model.html, baseURL: model.baseURL, mathSyntax: model.meta.math.rawValue, openNote: openNote, edit: model.replaceLines)
+                HTMLView(body: model.html, baseURL: model.baseURL, mathSyntax: model.meta.math.rawValue, openNote: openNote, edit: model.replaceLines,
+                         toggleMode: toggleMode)
             } else {
                 editor
             }
@@ -207,7 +208,7 @@ struct NoteEditor: View {
         // Edits save on their own; ⌘S is kept only for the habit, with no button of its own.
         .background { Button("") { model.saveNow(force: false) }.keyboardShortcut("s").opacity(0).allowsHitTesting(false).accessibilityHidden(true) }
         .background {
-            Button("") { mode = mode == .read ? .write : .read }.keyboardShortcut("e").disabled(wide)
+            Button("", action: toggleMode).keyboardShortcut("e").disabled(wide)
                 .opacity(0).allowsHitTesting(false).accessibilityHidden(true)
         }
         .onAppear(perform: model.load)
@@ -240,9 +241,11 @@ struct NoteEditor: View {
 
     var writing: Bool { wide || mode == .write }
 
+    func toggleMode() { mode = mode == .read ? .write : .read }
+
     var editor: some View {
         MarkdownEditor(text: $model.body, baseURL: model.baseURL, math: model.meta.math, insert: $model.pendingInsert,
-                       saveFile: model.saveFile, openNote: openNote, onScroll: preview.follow)
+                       saveFile: model.saveFile, openNote: openNote, onScroll: preview.follow, toggleMode: wide ? nil : toggleMode)
     }
 
     var linkMenu: some View {

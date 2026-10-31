@@ -44,9 +44,9 @@ struct NoteReaderTests {
 
     final class Edits { var all: [(from: Int, to: Int, old: String, new: String)] = [] }
 
-    static func reader(_ text: String, edits: Edits) async throws -> (WKWebView, HTMLView.Coordinator) {
+    static func reader(_ text: String, edits: Edits, toggle: (@MainActor () -> Void)? = nil) async throws -> (WKWebView, HTMLView.Coordinator) {
         let html = HTMLRenderer.render(ParsedNote(text), sourceLines: true)
-        let page = HTMLView(body: html, edit: { from, to, old, new in edits.all.append((from, to, old, new)); return true })
+        let page = HTMLView(body: html, edit: { from, to, old, new in edits.all.append((from, to, old, new)); return true }, toggleMode: toggle)
         let coordinator = page.makeCoordinator()
         let view = page.makeWebView(coordinator)
         view.frame = CGRect(x: 0, y: 0, width: 800, height: 3000)
@@ -121,5 +121,22 @@ struct NoteReaderTests {
             """) as! [Any]
         #expect(result[1] as? String == (result[0] as? Bool == true ? "문단" : "새 글"))
         #expect(result[2] as? String == "강제")
+    }
+
+    /// WebKit claims every ⌘ key for the page, so the app takes the note's shortcuts first, by key code: ⌘E switches
+    /// the view, ⌘B and ⌘I format the block being typed into.
+    @Test func shortcutsAreTakenBeforeThePage() async throws {
+        var toggled = 0
+        let (view, _) = try await Self.reader("문단", edits: Edits(), toggle: { toggled += 1 })
+        let web = try #require(view as? NoteWebView)
+        #expect(NoteWebView.letters == [11: "b", 34: "i", 14: "e"])
+        #expect(web.shortcut?("e") == true && toggled == 1)
+        _ = try await Self.js(view, "const p = document.querySelector('p'); p.focus(); getSelection().selectAllChildren(p); return true")
+        #expect(web.shortcut?("b") == true)
+        try await Task.sleep(for: .milliseconds(100))
+        let html = try await Self.js(view, "return document.activeElement === document.querySelector('p') ? document.querySelector('p').innerHTML : 'no focus'") as? String
+        #expect(html == "<b>문단</b>" || html == "no focus")
+        let plain = try await Self.reader("문단", edits: Edits()).0 as? NoteWebView
+        #expect(plain?.shortcut?("e") == false)
     }
 }
