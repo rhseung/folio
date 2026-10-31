@@ -289,6 +289,24 @@ function buildDecorations(state) {
   const nextBlock = (n) => { let s = n.nextSibling; while (s?.name === "QuoteMark") s = s.nextSibling; return s; };
   // A proof right under a theorem hangs from it, as the reader's `.callout.attached` (CalloutHeader.provable).
   const attached = (n) => calloutType(n) === "proof" && PROVABLE.has(calloutType(prevBlock(n)));
+  const lastBlock = (n) => { let s = n.lastChild; while (s?.name === "QuoteMark") s = s.prevSibling; return s; };
+  // A callout ends with its last block's bottom margin inside its 4px padding, as the reader's; a quote with only its 2px.
+  const quotePad = (n) => {
+    const first = doc.lineAt(n.from), callout = CALLOUT.test(first.text), end = lastBlock(n);
+    const endType = end ? blockType(end, doc) : "p";
+    const headOnly = callout && end && doc.lineAt(end.from).number === first.number && doc.lineAt(end.to).number === first.number;
+    return !callout ? 2 : headOnly ? 4 : 4 + (endType === "p" || endType === "list" ? 10 : MARGIN[endType][1]);
+  };
+  // Where text typed on the blank line right under a block lands, from that block's last line, or null if it starts a
+  // block of its own. A paragraph takes the line in (CommonMark's lazy continuation), also at the end of a list or a
+  // quote, where it lands inside the quote's box, above its bottom padding.
+  const joins = (n) => {
+    let leaf = n;
+    while (leaf && /^(Blockquote|BulletList|OrderedList|ListItem)$/.test(leaf.name)) leaf = lastBlock(leaf);
+    // A task item's text is a Task node, not a Paragraph, in lezer's GFM.
+    if (leaf?.name !== "Paragraph" && leaf?.name !== "Task") return null;
+    return n.name === "Blockquote" ? -quotePad(n) : 0;
+  };
 
   const tree = ensureSyntaxTree(state, doc.length, 250) ?? syntaxTree(state);
   tree.iterate({
@@ -374,6 +392,8 @@ function buildDecorations(state) {
         }
         case "HorizontalRule": {
           if (!onLines(from, to)) add(from, to, Decoration.replace({ widget: new RuleWidget() }));
+          // `---` takes the rule's height (editor.css `.cm-rule`), so revealing it moves nothing below.
+          else add(doc.lineAt(from).from, doc.lineAt(from).from, Decoration.line({ attributes: { style: "line-height: 24px" } }));
           return;
         }
         case "ListMark": {
@@ -414,14 +434,8 @@ function buildDecorations(state) {
           const callout = CALLOUT.exec(first.text);
           const active = onLines(from, to);
           // One box around the lines, as the reader's card: per-line tints can't round or pad the block as a whole.
-          // A callout ends with its last block's bottom margin inside its 4px padding, as the reader's; a quote with only its 2px.
-          let end = node.node.lastChild;
-          while (end?.name === "QuoteMark") end = end.prevSibling;
-          const endType = end ? blockType(end, doc) : "p";
-          const headOnly = callout && end && doc.lineAt(end.from).number === first.number && doc.lineAt(end.to).number === first.number;
-          const pad = !callout ? 2 : headOnly ? 4 : 4 + (endType === "p" || endType === "list" ? 10 : MARGIN[endType][1]);
           wrap(from, to, { class: callout ? `cm-callout-box cm-callout-${callout[1].toLowerCase()}${attached(node.node) ? " attached" : ""}${attached(nextBlock(node.node)) ? " has-proof" : ""}` : "cm-quote-box",
-            style: `padding-bottom: ${pad}px` });
+            style: `padding-bottom: ${quotePad(node.node)}px` });
           if (callout) {
             const type = callout[1].toLowerCase();
             let label = type[0].toUpperCase() + type.slice(1);
@@ -430,8 +444,9 @@ function buildDecorations(state) {
               const own = /^(?:[A-Za-z]+\s+)?(\d+(?:\.\d+)*)\b\s*/.exec(first.text.slice(head));
               if (own) { label += " " + own[1]; head += own[0].length; } else label += " " + (counters[type] = (counters[type] ?? 0) + 1);
             }
+            // The head keeps its spacing with its source showing, so the callout's body doesn't jump up a step.
+            add(first.from, first.from, line("cm-callout-head"));
             if (!active) {
-              add(first.from, first.from, line("cm-callout-head"));
               add(first.from, first.from + head, Decoration.replace({ widget: new TextWidget(label, "cm-callout-label") }));
               if (first.from + head < first.to) add(first.from + head, first.to, Decoration.mark({ class: "cm-callout-title" }));
             }
@@ -487,24 +502,29 @@ function buildDecorations(state) {
   // of them is one gap); blocks with none between them get it as padding. Inside a quote the `>` lines do the same.
   const spaced = new Set();
   // A run of blank lines with the caret in it can't fold to nothing, or the caret has no line. The caret's line sits
-  // where typed text will land (`top` under the block above) and the run keeps its height, so a click moves nothing.
-  const spaceRun = (from, to, gap, top) => {
+  // where typed text will land, `top` under the block above or, on the run's first line, `join` (see `joins`), and
+  // the run keeps its height where it has room for the line, so a click moves as little as it can. `raw`: the run's
+  // `>` marks show, as the rest of the quote's source does.
+  const spaceRun = (from, to, gap, top, join = null, raw = false) => {
     const caret = [];
     for (let n = from; n < to; n++) {
       spaced.add(n);
       if (touches(doc.line(n).from, doc.line(n).to)) caret.push(n);
     }
     for (let n = from; n < to; n++) {
-      if (!caret.length) style(n, `line-height: ${n === from ? gap : 0}px; font-size: 0`);
+      if (!caret.length) style(n, n === from && raw ? `line-height: ${gap}px` : `line-height: ${n === from ? gap : 0}px; font-size: 0`);
       else if (!caret.includes(n)) style(n, "line-height: 0; font-size: 0");
     }
     if (!caret.length) return;
-    const rest = Math.max(0, gap - top - LINE * caret.length);
-    if (caret.length === 1) return style(caret[0], `padding-top: ${top}px; padding-bottom: ${rest}px`);
-    style(caret[0], `padding-top: ${top}px`);
+    const land = caret[0] === from && join !== null ? join : top;
+    // Inside the quote above, which the line can't join in the layout: drawn there, kept in its place below it.
+    const lift = land < 0 ? `; position: relative; top: ${land}px` : "";
+    const pad = Math.max(0, land), rest = Math.max(0, gap - pad - LINE * caret.length);
+    if (caret.length === 1) return style(caret[0], `padding-top: ${pad}px; padding-bottom: ${rest}px${lift}`);
+    style(caret[0], `padding-top: ${pad}px${lift}`);
     style(caret.at(-1), `padding-bottom: ${rest}px`);
   };
-  // `raw`: a quote with the caret in it shows its source, so its lines keep their own height.
+  // `raw`: a quote with the caret in it shows its source, its blank `>` lines too, at the height the gap had.
   const layout = (parent, raw) => {
     let prev = null;
     for (let c = parent.firstChild; c; c = c.nextSibling) {
@@ -517,18 +537,16 @@ function buildDecorations(state) {
         // Under a callout's header the reader's summary margin (6px, the head line's padding) meets the block's own.
         if (prev.header) gap = Math.max(HEAD, MARGIN[type][0]);
         const below = prev.header ? HEAD : 0;
-        if (first > prev.last + 1) {
-          if (raw) for (let n = prev.last + 1; n < first; n++) spaced.add(n);
-          else spaceRun(prev.last + 1, first, gap - below, prev.header ? 0 : MARGIN[prev.type][1]);
-        } else if (!BOXED.has(type)) style(first, `padding-top: ${gap - below}px`);
+        if (first > prev.last + 1) spaceRun(prev.last + 1, first, gap - below, prev.header ? 0 : MARGIN[prev.type][1], prev.join, raw);
+        else if (!BOXED.has(type)) style(first, `padding-top: ${gap - below}px`);
         else if (!BOXED.has(prev.type)) style(prev.last, `padding-bottom: ${gap}px`);
       }
       if (c.name === "Blockquote") layout(c, onLines(c.from, c.to));
-      prev = { type, last, header: !prev && first === last && calloutType(parent) !== undefined };
+      prev = { type, last, header: !prev && first === last && calloutType(parent) !== undefined, join: joins(c) };
     }
     // Blank lines after the note's last block: the caret there sits where a new paragraph would start.
     // `!parent.parent`, not `=== tree.topNode`: that getter makes a new node object on every read.
-    if (!parent.parent && prev && prev.last < doc.lines) spaceRun(prev.last + 1, doc.lines + 1, 0, MARGIN[prev.type][1]);
+    if (!parent.parent && prev && prev.last < doc.lines) spaceRun(prev.last + 1, doc.lines + 1, 0, MARGIN[prev.type][1], prev.join);
   };
   layout(tree.topNode, false);
   // The reader keeps the first block's top margin below the page padding, except a leading h2's (note.css).
@@ -691,6 +709,8 @@ window.cb = {
   focus: () => view.focus(),
   undo: () => undo(view),
   redo: () => redo(view),
+  // For app-tests' layout checks: a web view with no window never takes focus, so they set the focus state directly.
+  debug: { view, tree: () => ensureSyntaxTree(view.state, view.state.doc.length, 1000), focus: (on) => view.dispatch({ effects: setFocused.of(on) }) },
 };
 
 post({ type: "ready" });
