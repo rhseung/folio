@@ -1,8 +1,4 @@
 {
-  "fill-specializations" : [
-    { "value" : { "automatic-gradient" : "srgb:0.969,0.961,0.945,1.0" } },
-    { "appearance" : "dark", "value" : { "automatic-gradient" : "srgb:0.165,0.176,0.227,1.0" } }
-  ],
   "groups" : [
     {
       "layers" : [
