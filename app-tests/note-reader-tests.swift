@@ -1,142 +1,161 @@
+import AppKit
 import FolioDomain
 import FolioMarkdown
 import Foundation
 import Testing
-import WebKit
 @testable import Folio
 
-/// The read view typed into, laid out by WebKit as in the app: which blocks take typing, and the markdown an edit
-/// writes back over the block's lines.
+/// The read view: the note rendered as text, typed into where a block writes back exactly as written.
 @MainActor @Suite(.serialized)
 struct NoteReaderTests {
-    static let sample = """
-    # 제목
+    final class Edits {
+        var all: [(from: Int, to: Int, old: String, new: String)] = []
+    }
 
-    평범한 문단
+    static let fixtures = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "fixtures")
 
-    **굵게**와 *기울임*, `코드`, $x^2$, [[다른 노트|별칭]], [링크](https://a.b) ^blk
+    static func reader(_ text: String, width: CGFloat = 900, dark: Bool = false, edits: Edits? = nil) -> (ReaderTextView, NSWindow) {
+        let view = ReaderTextView()
+        view.delegate = view
+        let window = NoteRender.host(view, width: width, dark: dark)
+        view.baseURL = fixtures
+        if let edits { view.edit = { edits.all.append(($0, $1, $2, $3)); return true } }
+        view.configure(accent: CourseAccent.presets[0].accent, syntax: .latex, dark: dark)
+        view.show(text)
+        NoteRender.layout(view)
+        return (view, window)
+    }
 
-    첫 줄
-    둘째 줄
-
-    - 하나
-        - 안쪽
-    - [ ] 할 일
-
-    1. 첫째
-    2. 둘째
-
-    > [!note] 콜아웃
-    > 내용
-
-    | a | b |
-    | --- | --- |
-    | 1 | 2 |
-
-    ```py
-    x = 1
-    ```
-
-    $$
-    x
-    $$
-    """
-
-    final class Edits { var all: [(from: Int, to: Int, old: String, new: String)] = [] }
-
-    static func reader(_ text: String, edits: Edits, toggle: (@MainActor () -> Void)? = nil) async throws -> (WKWebView, HTMLView.Coordinator) {
-        let html = HTMLRenderer.render(ParsedNote(text), sourceLines: true)
-        let page = HTMLView(body: html, edit: { from, to, old, new in edits.all.append((from, to, old, new)); return true }, toggleMode: toggle)
-        let coordinator = page.makeCoordinator()
-        let view = page.makeWebView(coordinator)
-        view.frame = CGRect(x: 0, y: 0, width: 800, height: 3000)
-        page.update(view, coordinator, accent: CourseAccent.presets[0].accent)
-        for _ in 0..<200 {
-            if (try? await js(view, "return !!window.folioReader && !!document.querySelector('[contenteditable]')")) as? Bool == true { break }
-            try await Task.sleep(for: .milliseconds(25))
+    @Test func renderSample() {
+        for dark in [false, true] {
+            let (view, _) = Self.reader(NoteSourceTests.sample, dark: dark, edits: Edits())
+            NoteRender.write(view, "reader-\(dark ? "dark" : "light")")
         }
-        return (view, coordinator)
     }
 
-    static func js(_ view: WKWebView, _ body: String) async throws -> Any? {
-        try await view.callAsyncJavaScript(body, arguments: [:], in: nil, contentWorld: .defaultClient)
+    @Test func textSitsInTheMiddleOfItsLine() throws {
+        let text = "> [!definition] Matching\n> A set of edges.\n\n본문 `code` 와 $x^2$ 끝"
+        let (view, _) = Self.reader(text)
+        let shown = view.string as NSString
+        for word in ["Matching", "A set", "본문"] {
+            let gaps = try #require(NoteRender.gaps(view, at: shown.range(of: word).location))
+            #expect(abs(gaps.above - gaps.below) <= 1, "\(word): \(gaps)")
+        }
+        let body = try #require(NoteRender.caret(view, at: shown.range(of: "A set").location))
+        #expect(try #require(NoteRender.caret(view, at: shown.range(of: "본문").location)).height == body.height)
     }
 
-    static func settle(_ edits: Edits, count: Int) async throws {
-        for _ in 0..<100 where edits.all.count < count { try await Task.sleep(for: .milliseconds(20)) }
+    @Test func aCalloutThatEndsTheNoteBoxesItsLastLine() throws {
+        let (view, _) = Self.reader("> [!definition] Matching\n> A set of pairwise non-adjacent edges.\n")
+        let manager = try #require(view.textLayoutManager)
+        var last: NoteFragment?
+        manager.enumerateTextLayoutFragments(from: manager.documentRange.location, options: [.ensuresLayout]) {
+            last = $0 as? NoteFragment ?? last
+            return true
+        }
+        let fragment = try #require(last)
+        let box = try #require(fragment.boxRect)
+        let line = try #require(fragment.textLineFragments.last).typographicBounds
+        #expect(box.minY <= line.minY && box.maxY > line.maxY)
     }
 
-    /// Paragraphs, headings and lists take typing, with their math, links and block IDs; callouts, tables, code and
-    /// display math stay read-only, since the reader can't write them back as written.
-    @Test func ordinaryBlocksTakeTyping() async throws {
-        let (view, _) = try await Self.reader(Self.sample, edits: Edits())
-        let blocks = try await Self.js(view, """
-            return [...document.querySelectorAll("body > [data-src]")].map((b) => b.tagName + (b.isContentEditable ? "+" : "-"));
-            """) as! [String]
-        #expect(blocks == ["H1+", "P+", "P+", "P+", "UL+", "OL+", "DETAILS-", "TABLE-", "PRE-", "DIV-"])
+    @Test func aNestedQuoteKeepsTheOuterBoxAndAddsASpine() throws {
+        let (view, _) = Self.reader("> 바깥\n> > 안쪽\n> > > 더 안쪽\n>\n> 다시 바깥")
+        let storage = try #require(view.textStorage)
+        let shown = storage.string as NSString
+        for (word, spines) in [("바깥", 0), ("안쪽", 1), ("더 안쪽", 2), ("다시 바깥", 0)] {
+            let at = shown.range(of: word).location
+            #expect(storage.attribute(.noteBox, at: at, effectiveRange: nil) is NoteBox, "\(word)")
+            #expect((storage.attribute(.noteQuotes, at: at, effectiveRange: nil) as? [NoteBox])?.count ?? 0 == spines, "\(word)")
+        }
+        // Only a paragraph's gap above a nested quote, not a block's.
+        let style = try #require(storage.attribute(.paragraphStyle, at: shown.range(of: "안쪽").location, effectiveRange: nil) as? NSParagraphStyle)
+        #expect(style.paragraphSpacingBefore == 0)
     }
 
-    @Test func editsWriteMarkdownBackOverTheirLines() async throws {
+    @Test func aCalloutFoldsWithAChevron() {
+        let (view, _) = Self.reader("> [!note]- 접힘\n> 안")
+        #expect(!view.string.contains("›") && !view.string.contains("⌄"))
+        #expect(view.textStorage?.attribute(.attachment, at: view.string.utf16.count - 1, effectiveRange: nil) != nil
+            || view.textStorage?.attribute(.attachment, at: view.string.utf16.count - 2, effectiveRange: nil) != nil)
+    }
+
+    /// Text, marks, links, wikilinks, math and lists write back as written, so they can be typed into; a block whose
+    /// markdown would come back different (`_x_` for `*x*`) stays read-only.
+    @Test func blocksThatWriteBackExactlyAreEditable() {
+        let text = """
+        # 제목 *기울임*
+
+        문단 *기울임* **굵게** ~~취소~~ `code` [링크](https://example.com) [[노트|별칭]] $x^2$ 끝 ^abc
+        둘째 줄
+
+        - 하나
+            - 둘 **굵게**
+        - [ ] 할 일
+        - [x] 한 일
+
+        1. 첫째
+        2. 둘째
+
+        _밑줄 기울임_
+
+        > 인용
+        """
+        let (view, _) = Self.reader(text, edits: Edits())
+        #expect(view.blocks.map(\.editable) == [true, true, true, true, false, false])
+    }
+
+    @Test func typingCommitsTheBlocksLines() throws {
         let edits = Edits()
-        let (view, _) = try await Self.reader(Self.sample, edits: edits)
-        _ = try await Self.js(view, """
-            const [h, plain, rich, two, ul, ol] = document.querySelectorAll("body > [data-src]");
-            const { commit } = folioReader.debug;
-            plain.append(" 그리고 *별표* 와 a * b");
-            commit(plain);
-            plain.innerHTML = "1. 첫째<br># 둘째 <b>굵게<br><br>이어서 </b>";
-            commit(plain);
-            rich.querySelector("em").textContent = "기울인 글";
-            commit(rich);
-            ul.querySelector("input").dispatchEvent(new MouseEvent("mousedown", { bubbles: true, cancelable: true }));
-            const li = document.createElement("li"); li.textContent = "새 항목"; ul.append(li);
-            commit(ul);
-            return true;
-            """)
-        try await Self.settle(edits, count: 5)
-        #expect(edits.all.map(\.new) == [
-            "평범한 문단 그리고 \\*별표\\* 와 a * b",
-            "1\\. 첫째\n\\# 둘째 **굵게**\n\n**이어서** ",
-            "**굵게**와 *기울인 글*, `코드`, $x^2$, [[다른 노트|별칭]], [링크](https://a.b) ^blk",
-            "- 하나\n    - 안쪽\n- [x] 할 일",
-            "- 하나\n    - 안쪽\n- [x] 할 일\n- 새 항목",
-        ])
-        // Each edit names the lines as they stand after the ones before it: the paragraph grew three.
-        #expect(edits.all.map(\.from) == [3, 3, 8, 13, 13])
-        #expect(edits.all[2].old == "**굵게**와 *기울임*, `코드`, $x^2$, [[다른 노트|별칭]], [링크](https://a.b) ^blk")
-        #expect(edits.all[3].old == "- 하나\n    - 안쪽\n- [ ] 할 일")
+        let (view, window) = Self.reader("# 제목\n\n첫 문단\n\n둘째 문단", edits: edits)
+        window.makeFirstResponder(view)
+        let storage = try #require(view.textStorage)
+        let end = try #require(ReaderBuilder.range(of: 2, in: storage))
+        view.setSelectedRange(NSRange(location: NSMaxRange(end), length: 0))
+        view.insertText(" 더", replacementRange: view.selectedRange())
+        view.insertNewline(nil)
+        view.insertText("새 줄", replacementRange: view.selectedRange())
+        window.makeFirstResponder(nil)
+        #expect(edits.all.count == 1)
+        #expect(edits.all.first.map { [String($0.from), String($0.to), $0.old, $0.new] } == ["5", "5", "둘째 문단", "둘째 문단 더\n새 줄"])
     }
 
-    /// The note coming back rendered waits while a block is typed into, so the caret stays; refused edits show it at once.
-    @Test func updatesWaitForTheBlockBeingTyped() async throws {
-        let (view, _) = try await Self.reader("문단", edits: Edits())
-        let result = try await Self.js(view, """
-            const p = document.querySelector("p");
-            p.focus();
-            const typing = document.activeElement === p;
-            folioReader.update('<p data-line="1" data-end="1" data-src="새 글">새 글</p>');
-            const held = document.querySelector("p").textContent;
-            folioReader.update('<p data-line="1" data-end="1" data-src="강제">강제</p>', true);
-            return [typing, held, document.querySelector("p").textContent];
-            """) as! [Any]
-        #expect(result[1] as? String == (result[0] as? Bool == true ? "문단" : "새 글"))
-        #expect(result[2] as? String == "강제")
+    @Test func typedMarkupIsEscaped() {
+        #expect(ReaderMarkdown.escape("a*b [[c x_y * z") == "a\\*b \\[[c x_y * z")
+        #expect(ReaderMarkdown.lines("# 아님\n- 아님\n1. 아님") == "\\# 아님\n\\- 아님\n1\\. 아님")
     }
 
-    /// WebKit claims every ⌘ key for the page, so the app takes the note's shortcuts first, by key code: ⌘E switches
-    /// the view, ⌘B and ⌘I format the block being typed into.
-    @Test func shortcutsAreTakenBeforeThePage() async throws {
-        var toggled = 0
-        let (view, _) = try await Self.reader("문단", edits: Edits(), toggle: { toggled += 1 })
-        let web = try #require(view as? NoteWebView)
-        #expect(NoteWebView.letters == [11: "b", 34: "i", 14: "e"])
-        #expect(web.shortcut?("e") == true && toggled == 1)
-        _ = try await Self.js(view, "const p = document.querySelector('p'); p.focus(); getSelection().selectAllChildren(p); return true")
-        #expect(web.shortcut?("b") == true)
-        try await Task.sleep(for: .milliseconds(100))
-        let html = try await Self.js(view, "return document.activeElement === document.querySelector('p') ? document.querySelector('p').innerHTML : 'no focus'") as? String
-        #expect(html == "<b>문단</b>" || html == "no focus")
-        let plain = try await Self.reader("문단", edits: Edits()).0 as? NoteWebView
-        #expect(plain?.shortcut?("e") == false)
+    @Test func enterInAListMakesTheNextItem() throws {
+        let edits = Edits()
+        let (view, window) = Self.reader("- [ ] 하나\n- 둘", edits: edits)
+        window.makeFirstResponder(view)
+        let storage = try #require(view.textStorage)
+        let first = (storage.string as NSString).paragraphRange(for: NSRange(location: 0, length: 0))
+        view.setSelectedRange(NSRange(location: NSMaxRange(first) - 1, length: 0))
+        view.insertNewline(nil)
+        view.insertText("셋", replacementRange: view.selectedRange())
+        window.makeFirstResponder(nil)
+        #expect(edits.all.last?.new == "- [ ] 하나\n- [ ] 셋\n- 둘")
+    }
+
+    @Test func boldWrapsTheSelection() throws {
+        let edits = Edits()
+        let (view, window) = Self.reader("가나 다라", edits: edits)
+        window.makeFirstResponder(view)
+        view.setSelectedRange(NSRange(location: 3, length: 2))
+        _ = view.shortcut?("b")
+        window.makeFirstResponder(nil)
+        #expect(edits.all.last?.new == "가나 **다라**")
+    }
+
+    @Test func readOnlyBlocksRefuseTyping() throws {
+        let edits = Edits()
+        let (view, window) = Self.reader("> [!note] 제목\n> 본문", edits: edits)
+        window.makeFirstResponder(view)
+        view.setSelectedRange(NSRange(location: 1, length: 0))
+        view.insertText("x", replacementRange: view.selectedRange())
+        window.makeFirstResponder(nil)
+        #expect(edits.all.isEmpty)
+        #expect(!(view.textStorage?.string.contains("x") ?? true))
     }
 }

@@ -192,12 +192,11 @@ struct NoteEditor: View {
                 HStack(spacing: 0) {
                     editor
                     Theme.Palette.lineSoft.frame(width: 1)
-                    HTMLView(body: model.html, baseURL: model.baseURL, mathSyntax: model.meta.math.rawValue, openNote: openNote, link: preview,
-                             edit: model.replaceLines)
+                    NoteReader(text: model.body, baseURL: model.baseURL, math: model.meta.math, openNote: openNote, edit: model.replaceLines, link: preview)
                 }
             } else if mode == .read {
-                HTMLView(body: model.html, baseURL: model.baseURL, mathSyntax: model.meta.math.rawValue, openNote: openNote, edit: model.replaceLines,
-                         toggleMode: toggleMode)
+                NoteReader(text: model.body, baseURL: model.baseURL, math: model.meta.math, openNote: openNote, edit: model.replaceLines,
+                           toggleMode: toggleMode)
             } else {
                 editor
             }
@@ -245,7 +244,7 @@ struct NoteEditor: View {
 
     var editor: some View {
         MarkdownEditor(text: $model.body, baseURL: model.baseURL, math: model.meta.math, insert: $model.pendingInsert,
-                       saveFile: model.saveFile, openNote: openNote, onScroll: preview.follow, toggleMode: wide ? nil : toggleMode)
+                       saveFile: model.saveFile, openNote: openNote, onScroll: preview.follow)
     }
 
     var linkMenu: some View {

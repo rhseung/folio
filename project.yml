@@ -20,6 +20,10 @@ packages:
   swift-algorithms:
     url: https://github.com/apple/swift-algorithms
     from: 1.2.0
+  # Native TeX typesetting for the note views (AsciiMath is turned into TeX first, resources/web/native.js).
+  SwiftMath:
+    url: https://github.com/mgriebling/SwiftMath
+    exactVersion: 1.7.3
 targets:
   Folio:
     type: application
@@ -49,6 +53,7 @@ targets:
       - package: FolioAI
       - package: swift-algorithms
         product: Algorithms
+      - package: SwiftMath
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.rhseung.folio

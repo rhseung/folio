@@ -125,8 +125,8 @@ final class ReviewModel {
 
     // MARK: Sources
 
-    func html(of note: NoteFile, in course: LoadedCourse) -> String {
-        HTMLRenderer.render(ParsedNote((try? course.store.read(note)) ?? ""))
+    func body(of note: NoteFile, in course: LoadedCourse) -> String {
+        Frontmatter.split((try? course.store.read(note)) ?? "").body
     }
 
     func document(_ source: Source, in course: LoadedCourse) async -> PDFDocument? {

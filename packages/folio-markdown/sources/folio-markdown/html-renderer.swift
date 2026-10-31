@@ -5,15 +5,9 @@ import Markdown
 /// - Links use the `folio://` scheme: `folio://note/<title>#<heading or ^block>`, `folio://material/<id>#page=12`.
 /// - Raw HTML in notes is escaped, not executed; notes come from many sources and the viewer is not a sandbox.
 public struct HTMLRenderer {
-    /// `sourceLines`: each top-level block carries its lines in the body (`data-line`, `data-end`) and their text
-    /// (`data-src`), for a preview to follow the editor's scroll and to write an edited block back over its own lines.
-    public static func render(_ note: ParsedNote, sourceLines: Bool = false) -> String {
+    public static func render(_ note: ParsedNote) -> String {
         var r = HTMLRenderer()
-        if sourceLines {
-            r.sourceLine = note.sourceLine
-            r.sourceText = note.body.split(separator: "\n", omittingEmptySubsequences: false)
-        }
-        return r.blocks(Array(note.document.children), top: true)
+        return r.blocks(Array(note.document.children))
     }
 
     public static func render(markdown: String) -> String {
@@ -21,12 +15,10 @@ public struct HTMLRenderer {
     }
 
     var counters: [String: Int] = [:]
-    var sourceLine: [Int]?
-    var sourceText: [Substring] = []
 
     // MARK: Blocks
 
-    mutating func blocks(_ nodes: [Markup], top: Bool = false) -> String {
+    mutating func blocks(_ nodes: [Markup]) -> String {
         var out = ""
         var previousCallout: String?
         for node in nodes {
@@ -38,21 +30,9 @@ public struct HTMLRenderer {
                 html = block(node)
                 previousCallout = nil
             }
-            out += top ? mark(html, node.range) : html
+            out += html
         }
         return out
-    }
-
-    func mark(_ html: String, _ range: SourceRange?) -> String {
-        guard let range, let map = sourceLine, range.upperBound.line <= map.count, html.hasPrefix("<"),
-              let tag = html.firstIndex(where: { $0 == " " || $0 == ">" }) else { return html }
-        let first = map[range.lowerBound.line - 1]
-        var last = map[range.upperBound.line - 1]
-        guard first >= 1, first <= last, last <= sourceText.count else { return html }
-        // A list's range runs on to the blank line after it.
-        while last > first, sourceText[last - 1].allSatisfy(\.isWhitespace) { last -= 1 }
-        let src = sourceText[(first - 1)...(last - 1)].joined(separator: "\n")
-        return String(html[..<tag]) + " data-line=\"\(first)\" data-end=\"\(last)\" data-src=\"\(Self.escape(src))\"" + html[tag...]
     }
 
     mutating func block(_ node: Markup) -> String {
@@ -132,12 +112,7 @@ public struct HTMLRenderer {
 
     // MARK: Callouts
 
-    /// The header comes from the first line only; `plainText` would join the whole paragraph with spaces.
-    func calloutHeader(_ quote: BlockQuote) -> CalloutHeader? {
-        guard let p = quote.child(at: 0) as? Paragraph else { return nil }
-        let firstLine = Array(p.inlineChildren).prefix { !($0 is SoftBreak || $0 is LineBreak) }.map { Self.sourceText($0) }.joined()
-        return CalloutHeader(line: firstLine)
-    }
+    func calloutHeader(_ quote: BlockQuote) -> CalloutHeader? { quote.calloutHeader }
 
     /// Inline markdown text close to the source, with protected math turned back into `$...$`.
     static func sourceText(_ node: Markup) -> String {
@@ -264,10 +239,9 @@ public struct HTMLRenderer {
                 href = "folio://note/\(link.target.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? link.target)\(fragment)"
             }
             let text = link.alias ?? (link.target + (link.fragment.map { " › " + $0 } ?? ""))
-            // `data-src` is the link as written, already escaped like the text around it, so an edit can write it back.
             return link.isEmbed
-                ? "<div class=\"embed\" data-href=\"\(href)\" data-src=\"\(m.0)\"></div>"
-                : "<a class=\"wikilink\" href=\"\(href)\" data-src=\"\(m.0)\">\(text)</a>"
+                ? "<div class=\"embed\" data-href=\"\(href)\"></div>"
+                : "<a class=\"wikilink\" href=\"\(href)\">\(text)</a>"
         }
     }
 
@@ -297,5 +271,14 @@ public struct HTMLRenderer {
             }
         }
         return out
+    }
+}
+
+extension BlockQuote {
+    /// The header comes from the first line only; `plainText` would join the whole paragraph with spaces.
+    public var calloutHeader: CalloutHeader? {
+        guard let p = child(at: 0) as? Paragraph else { return nil }
+        let firstLine = Array(p.inlineChildren).prefix { !($0 is SoftBreak || $0 is LineBreak) }.map { HTMLRenderer.sourceText($0) }.joined()
+        return CalloutHeader(line: firstLine)
     }
 }

@@ -1,4 +1,5 @@
 @testable import FolioMarkdown
+import Markdown
 import Foundation
 import Testing
 
@@ -108,24 +109,15 @@ struct CalloutTests {
         #expect(out.components(separatedBy: "callout-proof attached").count == 2)
     }
 
-    @Test func sourceLinesMarkTopLevelBlocks() {
-        let out = HTMLRenderer.render(ParsedNote("# T\n\ntext\n\n> [!note]\n> body\n\n- a\n- b"), sourceLines: true)
-        #expect(out.contains("<h1 data-line=\"1\" data-end=\"1\" data-src=\"# T\" id="))
-        #expect(out.contains("<p data-line=\"3\" data-end=\"3\" data-src=\"text\">text</p>"))
-        #expect(out.contains("<details data-line=\"5\" data-end=\"6\" data-src=\"&gt; [!note]\n&gt; body\" class=\"callout callout-note\""))
-        #expect(out.contains("<ul data-line=\"8\" data-end=\"9\" data-src=\"- a\n- b\">"))
-        #expect(!HTMLRenderer.render(markdown: "text").contains("data-line"))
-        #expect(HTMLRenderer.render(ParsedNote("- a\n- b\n\ntext"), sourceLines: true).contains("<ul data-line=\"1\" data-end=\"2\" data-src=\"- a\n- b\">"))
+    @Test func topLevelBlocksKnowTheirLines() {
+        func spans(_ text: String) -> [String] {
+            let note = ParsedNote(text)
+            return note.document.children.compactMap { note.lines(of: $0).map { "\($0.lowerBound)-\($0.upperBound) \(note.source($0))" } }
+        }
+        #expect(spans("# T\n\ntext\n\n> [!note]\n> body\n\n- a\n- b") == ["1-1 # T", "3-3 text", "5-6 > [!note]\n> body", "8-9 - a\n- b"])
+        #expect(spans("- a\n- b\n\ntext") == ["1-2 - a\n- b", "4-4 text"])
         // `$$…$$` is longer once protected; the blocks after it still name their own lines, and it ends where it closed.
-        let math = HTMLRenderer.render(ParsedNote("$$x$$\n\nafter\n\n$$\nx\n$$\n\nend"), sourceLines: true)
-        #expect(math.contains("<div data-line=\"1\" data-end=\"1\""))
-        #expect(math.contains("<p data-line=\"3\" data-end=\"3\" data-src=\"after\">"))
-        #expect(math.contains("<div data-line=\"5\" data-end=\"7\""))
-        #expect(math.contains("<p data-line=\"9\" data-end=\"9\" data-src=\"end\">"))
-    }
-
-    @Test func wikiLinksKeepTheirSource() {
-        #expect(html("[[A & B|b]] ![[C]]").contains("data-src=\"[[A &amp; B|b]]\""))
+        #expect(spans("$$x$$\n\nafter\n\n$$\nx\n$$\n\nend") == ["1-1 $$x$$", "3-3 after", "5-7 $$\nx\n$$", "9-9 end"])
     }
 
     /// The body an edit's lines count in is the same one the note renders from, frontmatter and all.
@@ -151,7 +143,7 @@ struct LinkTests {
 
     @Test func rendersLinksButNotInsideCode() {
         let out = HTMLRenderer.render(markdown: "See [[Vector Space#^def-vs|정의]] and `[[raw]]` and [[material:ABC#page=3]]")
-        #expect(out.contains("<a class=\"wikilink\" href=\"folio://note/Vector%20Space#^def-vs\" data-src=\"[[Vector Space#^def-vs|정의]]\">정의</a>"))
+        #expect(out.contains("<a class=\"wikilink\" href=\"folio://note/Vector%20Space#^def-vs\">정의</a>"))
         #expect(out.contains("<code>[[raw]]</code>"))
         #expect(out.contains("href=\"folio://material/ABC#page=3\""))
     }
@@ -225,4 +217,18 @@ struct BlockTests {
     ![again](assets/IMG_3182.JPG) ![sp](assets/My%20Photo.heic) ![[other note]]
     """
     #expect(NoteImages.references(in: body) == [.path("assets/IMG_3182.JPG"), .name("diagram.png"), .path("assets/My Photo.heic")])
+}
+
+struct DraftItemTests {
+    /// Enter then Tab under a list item leaves `    - `; the item above stays a list item, not a heading.
+    @Test func aStartedSubItemDoesNotMakeAHeading() {
+        for text in ["- 하나\n    - ", "- 하나\n    -", "본문\n  -"] {
+            let note = ParsedNote(text)
+            #expect(!note.document.children.contains { $0 is Heading }, "\(text.debugDescription)")
+            #expect(DraftItem.mask(text).utf16.count == text.utf16.count)
+        }
+        #expect(ParsedNote("- 하나\n- ").document.child(at: 0).map { Array($0.children).count } == 2)
+        #expect(ParsedNote("제목\n---").document.child(at: 0) is Heading)
+        #expect(ParsedNote("- 하나\n    - 둘").document.child(at: 0)?.child(at: 0)?.child(at: 1) is UnorderedList)
+    }
 }

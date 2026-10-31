@@ -67,8 +67,8 @@ SwiftUI 멀티플랫폼 프로젝트 하나로 macOS 26과 iPadOS 26을 동시�
 - **인덱스 캐시**: 기기별 로컬 SQLite. 검색, 전체 평점, 오늘 화면 집계를 빠르게 하기 위한 것이며, 삭제되어도 과목 폴더에서 다시 만들 수 있다.
 - **필기**: PencilKit. 획 데이터는 `PKDrawing`으로 저장한다.
 - **PDF 표시**: PDFKit.
-- **노트 렌더링**: 마크다운 파서는 swift-markdown을 기반으로 확장 문법을 추가한다. 수식은 KaTeX로 그린다. 읽기 화면은 페이지 스크립트를 끈 채 앱 전용 스크립트 영역에서 수식만 조판한다.
-- **노트 편집기**: CodeMirror 6(옵시디언과 같은 편집기)를 웹 뷰에 넣고 꾸민 원문(기호를 흐리게 남기고 글자에 서식을 입힌 원문)을 직접 구현한다. KaTeX, AsciiMath 변환기(asciimath2tex), CodeMirror는 `web/`에서 npm으로 받아 번들로 묶는다.
+- **노트 렌더링**: 마크다운 파서는 swift-markdown을 기반으로 확장 문법을 추가한다. 읽기 보기와 쓰기 보기는 모두 TextKit 2 네이티브 텍스트 뷰이고 웹 뷰를 쓰지 않는다. 수식은 SwiftMath로 그린다. AsciiMath를 LaTeX로 바꾸는 변환기(asciimath2tex)와 코드 하이라이터(Lezer)는 `web/`에서 npm으로 받아 묶은 스크립트를 JavaScriptCore로 돌린다.
+- **노트 편집기**: 꾸민 원문(기호를 흐리게 남기고 글자에 서식을 입힌 원문)을 TextKit 2 텍스트 뷰에 직접 구현한다. Claude 패널의 답은 아직 웹 뷰에서 KaTeX로 그린다.
 - **위젯**: `WKWebView`. 앱과의 데이터 교환은 메시지 핸들러로 한다.
 - **내보내기**: Typst. Rust 라이브러리를 앱에 포함해 PDF를 만든다.
 - **Claude**: Claude Code CLI를 하위 프로세스로 호출하는 방식과 Claude API를 직접 호출하는 방식을 모두 지원하도록 연동 계층을 추상화한다. 자세한 내용은 Claude 연동 절에 적는다.
@@ -702,8 +702,8 @@ Me/GIST/
 ### 지원 문법
 
 - 표준 마크다운과 GFM(표, 체크박스, 취소선, 각주)
-- 인라인 수식 `$...$`과 display 수식 `$$...$$`. `aligned`, `cases`, `pmatrix` 등 KaTeX가 지원하는 환경을 모두 쓸 수 있다
-- 수식 문법은 노트마다 LaTeX와 AsciiMath 중 하나다. frontmatter의 `math: asciimath`가 있으면 AsciiMath로 읽고, 없으면 LaTeX로 읽는다(옵시디언과 노션에서 온 노트). 앱에서 새로 만드는 노트는 설정의 "수식 문법"을 따르며 기본값은 AsciiMath다. AsciiMath는 LaTeX로 바꾼 뒤 KaTeX로 그린다
+- 인라인 수식 `$...$`과 display 수식 `$$...$$`. `aligned`, `cases`, `pmatrix` 등 SwiftMath가 지원하는 환경을 쓸 수 있다. 그리지 못하는 수식은 원문을 빨간색으로 보인다
+- 수식 문법은 노트마다 LaTeX와 AsciiMath 중 하나다. frontmatter의 `math: asciimath`가 있으면 AsciiMath로 읽고, 없으면 LaTeX로 읽는다(옵시디언과 노션에서 온 노트). 앱에서 새로 만드는 노트는 설정의 "수식 문법"을 따르며 기본값은 AsciiMath다. AsciiMath는 LaTeX로 바꾼 뒤 그린다
 - 옵시디언 콜아웃 `> [!type] 제목`. 볼트에서 쓰던 definition, theorem, lemma, corollary, proof, example, counterexample, remark, note, tip, warning, important, question, solution, summary, abstract, info, danger를 전부 지원하고, `> [!type]-`로 접힌 상태를 표현한다
 - 블록 ID `^def-vectorspace`와 블록 참조
 - 노트 간 위키링크 `[[노트 제목]]`, `[[노트 제목#^블록 ID|표시 문구]]`. 저장할 때는 노트 ID를 함께 기록해 제목이 바뀌어도 연결이 유지되게 한다

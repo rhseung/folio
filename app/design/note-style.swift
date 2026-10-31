@@ -30,5 +30,4 @@ enum NoteStyle {
 
     static let css = resource("note.css")
     static let reader = resource("reader.js")
-    static let editor = resource("editor.js")
 }

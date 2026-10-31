@@ -1,10 +1,10 @@
 /// Markdown escapes would eat TeX (`\{` becomes `{`, `a_1_b` turns into emphasis), so math is wrapped
 /// in code before parsing: `$$...$$` becomes a ```` ```math ```` block and `$...$` an inline code span
 /// starting with `mathMarker`. Code spans and fenced code are left alone, and `\$` is a literal dollar.
-enum MathProtection {
-    static let blockLanguage = "math"
+public enum MathProtection {
+    public static let blockLanguage = "math"
     /// Private-use character marking an inline code span that holds math.
-    static let marker: Character = "\u{E000}"
+    public static let marker: Character = "\u{E000}"
 
     static func protect(_ text: String) -> String { protectMapped(text).text }
 
@@ -49,7 +49,7 @@ enum MathProtection {
         return (out.joined(separator: "\n"), origin)
     }
 
-    static func protectInline(_ line: String) -> String {
+    public static func protectInline(_ line: String) -> String {
         var result = ""
         var chars = Array(line)[...]
         while let c = chars.popFirst() {
