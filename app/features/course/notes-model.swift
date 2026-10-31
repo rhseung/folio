@@ -167,7 +167,7 @@ final class NoteEditorModel {
     var store: CourseStore { course.store }
     var dirty: Bool { body != saved || meta.math != savedMath }
     var baseURL: URL { note.url.deletingLastPathComponent() }
-    var html: String { HTMLRenderer.render(ParsedNote(frontmatter.render(body: body))) }
+    var html: String { HTMLRenderer.render(ParsedNote(frontmatter.render(body: body)), sourceLines: true) }
 
     func load() {
         onDisk = (try? store.read(note)) ?? ""

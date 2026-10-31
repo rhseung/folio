@@ -4,8 +4,8 @@ import Testing
 import WebKit
 @testable import Folio
 
-/// The live-preview editor laid out by WebKit, as in the app. Like Obsidian's, it shows markup only on the caret's
-/// line, so the caret moves nothing outside its own block. Each failure names the line and how far it moved, so a fix can start from the report.
+/// The editor laid out by WebKit, as in the app. It draws the source with its markup dimmed, never hidden, so the caret
+/// moves nothing. Each failure names the line and how far it moved, so a fix can start from the report.
 @MainActor @Suite(.serialized)
 struct NoteLayoutTests {
     static let sample = """
@@ -78,8 +78,6 @@ struct NoteLayoutTests {
     // MARK: Pages
 
     static let width: CGFloat = 800
-    /// Blocks drawn as a widget that the caret swaps for their source, of whatever height that is.
-    static let swaps: Set<String> = ["BlockMath", "Table"]
 
     static func webView(script: String) -> WKWebView {
         let config = WKWebViewConfiguration()
@@ -102,28 +100,24 @@ struct NoteLayoutTests {
 
     static func editor(_ text: String) async throws -> WKWebView {
         let view = webView(script: NoteStyle.editor)
-        let html = MarkdownEditor(text: .constant(""), math: .latex, live: true, insert: .constant(nil), saveFile: { _, _ in nil }, openNote: { _ in })
+        let html = MarkdownEditor(text: .constant(""), math: .latex, insert: .constant(nil), saveFile: { _, _ in nil }, openNote: { _ in })
             .page(accent: CourseAccent.presets[0].accent)
         try await load(view, html, until: "typeof cb !== 'undefined'")
-        _ = try await view.callAsyncJavaScript("cb.load({ text, syntax: 'latex', live: true }); return true", arguments: ["text": text], contentWorld: .page)
+        _ = try await view.callAsyncJavaScript("cb.load({ text, syntax: 'latex' }); return true", arguments: ["text": text], contentWorld: .page)
         return view
     }
 
     // MARK: Checks
 
-    /// Clicking into a line reveals its markup, but no other block moves: blocks above never, blocks below only when
-    /// the caret's block trades its rendering for source of another height (math, tables).
-    @Test func theCaretMovesNoOtherBlock() async throws {
+    @Test func theCaretMovesNothing() async throws {
         let view = try await Self.editor(Self.sample)
         let lines = try await Self.js(view, "return cb.debug.view.state.doc.lines") as! Int
         let base = try await Self.js(view, "return probe.lineTops()") as! [Double]
         var problems: [String] = []
         for n in 1...lines {
             let result = try await Self.js(view, "probe.caretAt(n); const t = probe.lineTops(); probe.blur(); return [t, probe.block(n)]", ["n": n]) as! [Any]
-            let tops = result[0] as! [Double], block = result[1] as! [Any]
-            let (first, last, kind) = (block[0] as! Int, block[1] as! Int, block[2] as! String)
-            let swaps = Self.swaps.contains(kind)
-            for m in 1...lines where m < first || (m > last && !swaps) {
+            let tops = result[0] as! [Double], kind = (result[1] as! [Any])[2] as! String
+            for m in 1...lines {
                 let moved = tops[m - 1] - base[m - 1]
                 if abs(moved) > 0.5 {
                     problems.append(String(format: "caret on line %d (%@): line %d moved %+.1f px", n, kind, m, moved))
@@ -141,19 +135,18 @@ struct NoteLayoutTests {
         var problems: [String] = []
         for n in 1...lines {
             let r = try await Self.js(view, "return probe.typeAt(n)", ["n": n]) as! [Any]
-            // A line typed under a table is a row of it (GFM), and the caret in a table shows its source; `---x` is no rule.
-            // Typed right under a quote, the text joins it (CommonMark's lazy continuation) and lands in its box, as in
-            // Obsidian.
+            // What's typed can make the line another block, drawn in another font or box: a line under a table is a row
+            // of it (GFM), `| --- |x` ends the table and `---x` the rule, and text right under a quote joins it
+            // (CommonMark's lazy continuation), as in Obsidian.
             let (now, was) = (r[2] as! String, r[3] as! String)
-            if Self.swaps.contains(now) || now == "Paragraph" && was == "HorizontalRule" || now == "Blockquote" && was == "Blank" { continue }
+            if now != was && (now == "Table" || was == "Table" || was == "HorizontalRule" || now == "Blockquote") { continue }
             let (before, after) = (r[0] as! Double, r[1] as! Double)
             if abs(after - before) > 1.5 { problems.append(String(format: "line %d: caret at %.1f, typed text at %.1f (%+.1f px)", n, before, after, after - before)) }
         }
         #expect(problems.isEmpty, "\(problems.joined(separator: "\n"))")
     }
 
-    /// Walking the note with ↓ moves nothing outside the caret's block.
-    @Test func arrowsMoveNoOtherBlock() async throws {
+    @Test func arrowsMoveNothing() async throws {
         let view = try await Self.editor(Self.sample)
         let base = try await Self.js(view, "return probe.lineTops()") as! [Double]
         let walk = try await Self.js(view, """
@@ -172,9 +165,8 @@ struct NoteLayoutTests {
         let lines = base.count
         var problems: [String] = []
         for step in walk {
-            let n = step[0] as! Int, block = step[1] as! [Any], tops = step[2] as! [Double]
-            let (first, last, kind) = (block[0] as! Int, block[1] as! Int, block[2] as! String)
-            for m in 1...lines where m < first || (m > last && !Self.swaps.contains(kind)) {
+            let n = step[0] as! Int, kind = (step[1] as! [Any])[2] as! String, tops = step[2] as! [Double]
+            for m in 1...lines {
                 let moved = tops[m - 1] - base[m - 1]
                 if abs(moved) > 0.5 {
                     problems.append(String(format: "caret on line %d (%@): line %d moved %+.1f px", n, kind, m, moved))
@@ -186,8 +178,20 @@ struct NoteLayoutTests {
         #expect(problems.isEmpty, "\(problems.joined(separator: "\n"))")
     }
 
-    /// The caret shows a heading's `#`s and a list item's marker in the margin; the text after them stays put.
-    @Test func revealedMarkupMovesNoText() async throws {
+    /// The caret walks the raw text: no mark is hung, hidden or padded, so every line starts at the same x.
+    @Test func everyLineStartsInOneColumn() async throws {
+        let view = try await Self.editor(Self.sample)
+        let starts = try await Self.js(view, """
+            const v = cb.debug.view, d = v.state.doc, out = [];
+            for (let n = 1; n <= d.lines; n++) out.push(v.coordsAtPos(d.line(n).from, 1).left);
+            return out;
+            """) as! [Double]
+        let off = starts.enumerated().filter { abs($0.element - starts[0]) > 0.5 }.map { String(format: "line %d starts at %+.1f px", $0.offset + 1, $0.element - starts[0]) }
+        #expect(off.isEmpty, "\(off.joined(separator: "\n"))")
+    }
+
+    /// A heading's `#`s and a list item's marker stay where they are drawn whether or not the caret is on the line.
+    @Test func markupMovesNoText() async throws {
         let view = try await Self.editor(Self.sample)
         let shifts = try await Self.js(view, """
             const v = cb.debug.view, d = v.state.doc, out = [];
@@ -213,6 +217,18 @@ struct NoteLayoutTests {
             return v.state.doc.toString();
             """) as! String
         #expect(text == "- a\n    - b\n\n\n\n> q\n\n")
+    }
+
+    /// Inline math stays source; the caret inside it floats the rendered formula over the text.
+    @Test func caretInMathShowsItRendered() async throws {
+        let view = try await Self.editor("a $x^2$ b")
+        let tips = try await Self.js(view, """
+            const v = cb.debug.view, tip = () => !!document.querySelector(".cm-math-tip .katex");
+            probe.caretAt(1); const outside = tip();
+            v.dispatch({ selection: { anchor: 4 } }); const inside = tip();
+            probe.blur(); return [outside, inside, tip()];
+            """) as! [Bool]
+        #expect(tips == [false, true, false])
     }
 
     // MARK: Helpers

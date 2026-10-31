@@ -7,10 +7,14 @@ public struct ParsedNote {
     public var document: Document
     public var links: [WikiLink]
     public var blockIDs: [String]
+    /// The body line each line of `document` came from.
+    var sourceLine: [Int]
 
     public init(_ text: String) {
         (frontmatter, body) = Frontmatter.split(text)
-        document = Document(parsing: MathProtection.protect(body))
+        let protected = MathProtection.protectMapped(body)
+        document = Document(parsing: protected.text)
+        sourceLine = protected.origin
         links = WikiLink.all(in: body)
         blockIDs = body.matches(of: /\s\^([A-Za-z0-9-]+)\s*$/.anchorsMatchLineEndings()).map { String($0.1) }
     }

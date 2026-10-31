@@ -5,9 +5,12 @@ import Markdown
 /// - Links use the `folio://` scheme: `folio://note/<title>#<heading or ^block>`, `folio://material/<id>#page=12`.
 /// - Raw HTML in notes is escaped, not executed; notes come from many sources and the viewer is not a sandbox.
 public struct HTMLRenderer {
-    public static func render(_ note: ParsedNote) -> String {
+    /// `sourceLines`: each top-level block carries `data-line`, its first line in the body, for a preview to follow
+    /// the editor's scroll.
+    public static func render(_ note: ParsedNote, sourceLines: Bool = false) -> String {
         var r = HTMLRenderer()
-        return r.blocks(Array(note.document.children))
+        if sourceLines { r.sourceLine = note.sourceLine }
+        return r.blocks(Array(note.document.children), top: true)
     }
 
     public static func render(markdown: String) -> String {
@@ -15,22 +18,32 @@ public struct HTMLRenderer {
     }
 
     var counters: [String: Int] = [:]
+    var sourceLine: [Int]?
 
     // MARK: Blocks
 
-    mutating func blocks(_ nodes: [Markup]) -> String {
+    mutating func blocks(_ nodes: [Markup], top: Bool = false) -> String {
         var out = ""
         var previousCallout: String?
         for node in nodes {
+            let html: String
             if let quote = node as? BlockQuote, let header = calloutHeader(quote) {
-                out += callout(quote, header, attached: header.type == "proof" && CalloutHeader.provable.contains(previousCallout ?? ""))
+                html = callout(quote, header, attached: header.type == "proof" && CalloutHeader.provable.contains(previousCallout ?? ""))
                 previousCallout = header.type
             } else {
-                out += block(node)
+                html = block(node)
                 previousCallout = nil
             }
+            let line = node.range.flatMap { r in sourceLine.flatMap { r.lowerBound.line <= $0.count ? $0[r.lowerBound.line - 1] : nil } }
+            out += top ? Self.mark(html, line: line) : html
         }
         return out
+    }
+
+    /// Adds `data-line` to the block's first tag.
+    static func mark(_ html: String, line: Int?) -> String {
+        guard let line, html.hasPrefix("<"), let end = html.firstIndex(where: { $0 == " " || $0 == ">" }) else { return html }
+        return String(html[..<end]) + " data-line=\"\(line)\"" + html[end...]
     }
 
     mutating func block(_ node: Markup) -> String {

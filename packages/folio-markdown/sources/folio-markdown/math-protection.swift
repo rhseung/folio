@@ -6,11 +6,17 @@ enum MathProtection {
     /// Private-use character marking an inline code span that holds math.
     static let marker: Character = "\u{E000}"
 
-    static func protect(_ text: String) -> String {
+    static func protect(_ text: String) -> String { protectMapped(text).text }
+
+    /// Also the original line each protected line came from (1-based), since a one-line `$$…$$` becomes three.
+    static func protectMapped(_ text: String) -> (text: String, origin: [Int]) {
         var out: [String] = []
+        var origin: [Int] = []
         var lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)[...]
         var fence: String?
         while let line = lines.popFirst() {
+            let n = lines.startIndex
+            defer { while origin.count < out.count { origin.append(n) } }
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if let open = fence {
                 out.append(line)
@@ -37,7 +43,7 @@ enum MathProtection {
             }
             out.append(protectInline(line))
         }
-        return out.joined(separator: "\n")
+        return (out.joined(separator: "\n"), origin)
     }
 
     static func protectInline(_ line: String) -> String {

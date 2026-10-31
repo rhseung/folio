@@ -108,6 +108,18 @@ struct CalloutTests {
         #expect(out.components(separatedBy: "callout-proof attached").count == 2)
     }
 
+    @Test func sourceLinesMarkTopLevelBlocks() {
+        let out = HTMLRenderer.render(ParsedNote("# T\n\ntext\n\n> [!note]\n> body\n\n- a\n- b"), sourceLines: true)
+        #expect(out.contains("<h1 data-line=\"1\" id="))
+        #expect(out.contains("<p data-line=\"3\">text</p>"))
+        #expect(out.contains("<details data-line=\"5\" class=\"callout callout-note\""))
+        #expect(out.contains("<ul data-line=\"8\">"))
+        #expect(!HTMLRenderer.render(markdown: "text").contains("data-line"))
+        // A one-line `$$…$$` is three lines once protected; the blocks after it still name their own line.
+        let math = HTMLRenderer.render(ParsedNote("$$x$$\n\nafter"), sourceLines: true)
+        #expect(math.contains("<p data-line=\"3\">after</p>"))
+    }
+
     @Test func plainQuoteIsNotACallout() {
         #expect(html("> just a quote") == "<blockquote>\n<p>just a quote</p>\n</blockquote>\n")
     }

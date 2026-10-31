@@ -13,10 +13,17 @@ struct HTMLView {
     var openNote: (String) -> Void = { _ in }
     /// Called with `folio://action/…` links, which a page uses for buttons since JavaScript is off.
     var onAction: (URL) -> Void = { _ in }
+    /// Set for the preview beside the editor: the note is swapped in place as it changes, and the page follows the
+    /// editor's scroll.
+    var link: PreviewLink?
+
+    func head(accent: CourseAccent) -> String {
+        "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: accent))\(NoteStyle.css)</style></head>"
+            + "<body class=\"note\" data-math=\"\(mathSyntax)\">"
+    }
 
     func page(accent: CourseAccent) -> String {
-        "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: accent))\(NoteStyle.css)</style></head>"
-            + "<body class=\"note\" data-math=\"\(mathSyntax)\">\(body)</body></html>"
+        head(accent: accent) + "\(body)</body></html>"
     }
 
     @MainActor func makeWebView(_ coordinator: Coordinator) -> WKWebView {
@@ -27,6 +34,7 @@ struct HTMLView {
         config.setURLSchemeHandler(coordinator.files, forURLScheme: LocalFileScheme.scheme)
         let view = WKWebView(frame: .zero, configuration: config)
         view.navigationDelegate = coordinator
+        link?.view = view
         #if os(macOS)
         view.setValue(false, forKey: "drawsBackground")
         #else
@@ -41,9 +49,19 @@ struct HTMLView {
     @MainActor func update(_ view: WKWebView, _ coordinator: Coordinator, accent: CourseAccent) {
         coordinator.openNote = openNote
         coordinator.onAction = onAction
+        coordinator.link = link
         let page = page(accent: accent)
         guard coordinator.loaded != page else { return }
+        // Reloading would blank the page and lose its scroll on every keystroke.
+        if link != nil, coordinator.ready, let loaded = coordinator.loaded, loaded.hasPrefix(head(accent: accent)) {
+            coordinator.loaded = page
+            view.callAsyncJavaScript("window.folioReader?.update(html)", arguments: ["html": body], in: nil, in: .defaultClient) { _ in
+                coordinator.link?.refollow()
+            }
+            return
+        }
         coordinator.loaded = page
+        coordinator.ready = false
         coordinator.files.root = LocalFileScheme.root(for: baseURL)
         view.loadHTMLString(page, baseURL: LocalFileScheme.base(for: baseURL))
     }
@@ -53,7 +71,14 @@ struct HTMLView {
         var openNote: (String) -> Void = { _ in }
         var onAction: (URL) -> Void = { _ in }
         var loaded: String?
+        var ready = false
+        var link: PreviewLink?
         let files = LocalFileScheme()
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            ready = true
+            link?.refollow()
+        }
 
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
             guard action.navigationType == .linkActivated, let url = action.request.url else { return .allow }
@@ -89,3 +114,20 @@ extension HTMLView: UIViewRepresentable {
     func updateUIView(_ view: WKWebView, context: Context) { update(view, context.coordinator, accent: context.environment.accent) }
 }
 #endif
+
+/// Carries the editor's scroll to the preview beside it. Not observed state: going through SwiftUI would render the
+/// note again on every step of a scroll.
+@MainActor final class PreviewLink {
+    weak var view: WKWebView?
+    private var last: (line: Int, frac: Double)?
+
+    func follow(line: Int, frac: Double) {
+        last = (line, frac)
+        refollow()
+    }
+
+    func refollow() {
+        guard let last else { return }
+        view?.callAsyncJavaScript("window.folioReader?.follow(line, frac)", arguments: ["line": last.line, "frac": last.frac], in: nil, in: .defaultClient)
+    }
+}

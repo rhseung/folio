@@ -2,19 +2,19 @@ import FolioDomain
 import SwiftUI
 import WebKit
 
-/// The live-preview note editor (web/src/editor.js) in a web view. Unlike the reader, this page runs script: it is
+/// The note editor (web/src/editor.js), styled markdown source, in a web view. Unlike the reader, this page runs script: it is
 /// the bundled editor, and the note's text only ever enters it as editor content, never as markup.
 struct MarkdownEditor {
     @Binding var text: String
     var baseURL: URL?
     var math: MathSyntax
-    /// Live preview; off shows the raw markdown.
-    var live: Bool
     /// Set to insert at the cursor; cleared once inserted.
     @Binding var insert: String?
     /// Saves a dropped or pasted file and returns the markdown that links it, or nil when it couldn't be saved.
     var saveFile: (String, Data) -> String?
     var openNote: (String) -> Void
+    /// The editor's top line and how far into it the page is scrolled, for a preview to follow.
+    var onScroll: @MainActor (Int, Double) -> Void = { _, _ in }
 
     func page(accent: CourseAccent) -> String {
         "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: accent))\(NoteStyle.css)</style></head>"
@@ -56,7 +56,6 @@ struct MarkdownEditor {
         guard coordinator.ready else { return }
         if text != coordinator.known { coordinator.load() }
         if math != previous.math { coordinator.call("cb.setSyntax", math.rawValue) }
-        if live != previous.live { coordinator.call("cb.setLive", live) }
         if let insert {
             coordinator.call("cb.insert", insert)
             DispatchQueue.main.async { self.insert = nil }
@@ -75,7 +74,7 @@ struct MarkdownEditor {
 
         func load() {
             known = parent.text
-            call("cb.load", ["text": parent.text, "syntax": parent.math.rawValue, "live": parent.live] as [String: Any])
+            call("cb.load", ["text": parent.text, "syntax": parent.math.rawValue] as [String: Any])
         }
 
         /// Calls `function` with JSON arguments; JSON keeps note text from being read as script.
@@ -95,6 +94,9 @@ struct MarkdownEditor {
                 guard let text = body["text"] as? String else { return }
                 known = text
                 parent.text = text
+            case "scroll":
+                guard let line = body["line"] as? Int else { return }
+                parent.onScroll(line, body["frac"] as? Double ?? 0)
             case "file":
                 guard let name = body["name"] as? String, let base64 = body["data"] as? String, let data = Data(base64Encoded: base64),
                       let link = parent.saveFile((name as NSString).lastPathComponent, data) else { return }

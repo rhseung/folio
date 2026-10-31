@@ -130,14 +130,18 @@ struct NotesView: View {
 }
 
 struct NoteEditor: View {
-    enum Mode: Hashable { case read, live, source }
+    enum Mode: Hashable { case read, write }
+    /// From here the note panel holds the source and the preview side by side.
+    nonisolated static let sideBySide: CGFloat = 880
 
     @State private var model: NoteEditorModel
     @Environment(\.accent) private var accent
     @Environment(\.scenePhase) private var scenePhase
     var insert: Binding<String?> = .constant(nil)
     let openNote: (String) -> Void
-    @State private var mode = Mode.live
+    @State private var mode = Mode.write
+    @State private var wide = false
+    @State private var preview = PreviewLink()
     @State private var showsAssets = false
 
     init(workspace: Workspace, course: LoadedCourse, note: NoteFile, insert: Binding<String?> = .constant(nil), openNote: @escaping (String) -> Void) {
@@ -149,8 +153,11 @@ struct NoteEditor: View {
     var body: some View {
         VStack(spacing: 0) {
             PageBar {
-                Segmented(selection: $mode, options: [(.read, String(localized: .notesModeRead)), (.live, String(localized: .notesModeLive)),
-                                                      (.source, String(localized: .notesModeSource))], compact: true)
+                if !wide {
+                    Segmented(selection: $mode, options: [(.read, String(localized: .notesModeRead)), (.write, String(localized: .notesModeWrite))],
+                              compact: true)
+                    .help(Text(.notesModeToggle))
+                }
             } trailing: {
                 if let session = model.unfinishedReview {
                     Button { model.finishReview(session) } label: {
@@ -169,29 +176,39 @@ struct NoteEditor: View {
                 }
                 .help(Text(.notesMathHelp(model.meta.math.label)))
                 linkMenu
-                if mode != .read {
+                if writing {
                     Button { showsAssets.toggle() } label: {
                         Label(.notesAssets, systemImage: "photo.on.rectangle").foregroundStyle(showsAssets ? accent.color : Theme.Palette.textSecondary)
                     }
                     .help(Text(.notesAssetsHelp))
                 }
             }
-            if mode != .read && showsAssets {
+            if writing && showsAssets {
                 AssetTray(model: model)
                     .transition(.move(edge: .top).combined(with: .opacity))
                 Theme.Palette.lineSoft.frame(height: 1)
             }
-            if mode == .read {
+            if wide {
+                HStack(spacing: 0) {
+                    editor
+                    Theme.Palette.lineSoft.frame(width: 1)
+                    HTMLView(body: model.html, baseURL: model.baseURL, mathSyntax: model.meta.math.rawValue, openNote: openNote, link: preview)
+                }
+            } else if mode == .read {
                 HTMLView(body: model.html, baseURL: model.baseURL, mathSyntax: model.meta.math.rawValue, openNote: openNote)
             } else {
-                MarkdownEditor(text: $model.body, baseURL: model.baseURL, math: model.meta.math, live: mode == .live,
-                               insert: $model.pendingInsert, saveFile: model.saveFile, openNote: openNote)
+                editor
             }
         }
+        .onGeometryChange(for: Bool.self) { $0.size.width >= Self.sideBySide } action: { wide = $0 }
         .background(Theme.Palette.card)
         .animation(.snappy(duration: 0.25), value: showsAssets)
         // Edits save on their own; ⌘S is kept only for the habit, with no button of its own.
         .background { Button("") { model.saveNow(force: false) }.keyboardShortcut("s").opacity(0).allowsHitTesting(false).accessibilityHidden(true) }
+        .background {
+            Button("") { mode = mode == .read ? .write : .read }.keyboardShortcut("e").disabled(wide)
+                .opacity(0).allowsHitTesting(false).accessibilityHidden(true)
+        }
         .onAppear(perform: model.load)
         // Saved a moment after typing stops, and whenever the note goes away: switching notes or courses, closing the
         // window or quitting would otherwise drop the edits.
@@ -218,6 +235,13 @@ struct NoteEditor: View {
             model.append(text)
             insert.wrappedValue = nil
         }
+    }
+
+    var writing: Bool { wide || mode == .write }
+
+    var editor: some View {
+        MarkdownEditor(text: $model.body, baseURL: model.baseURL, math: model.meta.math, insert: $model.pendingInsert,
+                       saveFile: model.saveFile, openNote: openNote, onScroll: preview.follow)
     }
 
     var linkMenu: some View {
