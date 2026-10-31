@@ -57,11 +57,11 @@ enum Theme {
     /// Chart series in fixed order, checked with the dataviz palette validator against the card surface in both
     /// appearances (CVD ΔE ≥ 21, contrast ≥ 3:1). Series 1 is the default single hue.
     enum Series {
-        static let one = Color(light: 0x4A6CB2, dark: 0x6A8BD0)
-        static let two = Color(light: 0xEB6834, dark: 0xD95926)
+        static let one = Color(light: 0x3B5BDB, dark: 0x6489FE)
+        static let two = Color(light: 0xE75534, dark: 0xEE5C3B)
         /// Series 1's lightness partner for a second measure drawn as another mark type (bars and a line).
         /// Fails the categorical lightness band by design; it passes CVD ΔE ≥ 19 against `one`, and the mark tells them apart too.
-        static let oneCompanion = Color(light: 0x1B3363, dark: 0xB3C9F2)
+        static let oneCompanion = Color(light: 0x2A3F9E, dark: 0xBED0FE)
     }
 
     enum Opacity {
@@ -214,66 +214,37 @@ struct Swatch {
     static let textTertiary = Swatch(light: 0x7A766F, dark: 0x8F8A83)
 }
 
-/// A course's accent. `course.json` stores a `#RRGGBB` from the color picker or, in older files, a preset name;
-/// courses without one get a stable preset by position.
+/// A course's accent: one of the presets, named in `course.json`. Courses without one get a stable preset by position,
+/// and a `#RRGGBB` from before colors were limited to the presets reads as the nearest one (`CourseColor`).
 struct CourseAccent: Hashable {
     let light: UInt32, dark: UInt32
-    /// Text on a light tint of the accent; darker than `color` so it stays readable.
+    /// Text on a light tint of the accent; darker than `color` so it stays readable (4.5:1 on the tint over card and page).
     let inkLight: UInt32, inkDark: UInt32
 
     var color: Color { Color(light: light, dark: dark) }
     var ink: Color { Color(light: inkLight, dark: inkDark) }
     var tint: Color { color.opacity(Theme.Opacity.tint) }
 
-    /// A picked color shows as picked in both appearances; only the ink shifts toward black or white.
-    init(hex: UInt32) {
-        self.init(light: hex, dark: hex, inkLight: Self.mix(hex, 0x000000, 0.45), inkDark: Self.mix(hex, 0xFFFFFF, 0.55))
-    }
-
-    init(light: UInt32, dark: UInt32, inkLight: UInt32, inkDark: UInt32) {
-        self.light = light
-        self.dark = dark
-        self.inkLight = inkLight
-        self.inkDark = inkDark
-    }
-
     static let gray = CourseAccent(light: 0x706C66, dark: 0x9A98A8, inkLight: 0x4A4741, inkDark: 0xC9C7D6)
 
-    /// Gray is left out: it reads as "no color" next to the others.
+    /// The app icon's palette, plus olive and teal so a busy term still gets eight. Light values must match
+    /// `CourseColor.anchors`. Gray is left out: it reads as "no color" next to the others.
     static let presets: [(name: String, accent: CourseAccent)] = [
-        ("violet", .init(light: 0x6D5BD0, dark: 0x9D8CFF, inkLight: 0x3D2F9E, inkDark: 0xC4BAFF)),
-        ("blue", .init(light: 0x2F7FE0, dark: 0x5AA2FF, inkLight: 0x1D5FAE, inkDark: 0xA9CDFF)),
-        ("orange", .init(light: 0xD9822B, dark: 0xF0A050, inkLight: 0x7A4510, inkDark: 0xF5BE86)),
-        ("green", .init(light: 0x1F9D7A, dark: 0x3CC79C, inkLight: 0x13694F, inkDark: 0x7FE0C0)),
-        ("pink", .init(light: 0xC2477A, dark: 0xF0709F, inkLight: 0x8E2A55, inkDark: 0xF5A3C1)),
+        ("violet", .init(light: 0x8B7CF6, dark: 0xA49CFE, inkLight: 0x5B45BA, inkDark: 0xC2BFFF)),
+        ("blue", .init(light: 0x3B5BDB, dark: 0x87A7FF, inkLight: 0x2D48C6, inkDark: 0xAEC5FF)),
+        ("orange", .init(light: 0xE9A02C, dark: 0xFFB547, inkLight: 0x7E5101, inkDark: 0xFCC77F)),
+        ("green", .init(light: 0x2D7A62, dark: 0x77BBA3, inkLight: 0x0C634C, inkDark: 0x93D4BC)),
+        ("pink", .init(light: 0xFF3D7F, dark: 0xFF799B, inkLight: 0xAD004C, inkDark: 0xFFADBE)),
         ("olive", .init(light: 0x8A8A3C, dark: 0xC9C25A, inkLight: 0x5C5C22, inkDark: 0xE0DA8A)),
         ("teal", .init(light: 0x1D8FA8, dark: 0x4CC3D9, inkLight: 0x125F70, inkDark: 0x8ADCEA)),
-        ("red", .init(light: 0xC4473A, dark: 0xF07A6A, inkLight: 0x8A2A20, inkDark: 0xF5A79C)),
+        ("red", .init(light: 0xFF6B4A, dark: 0xFE8165, inkLight: 0xA92602, inkDark: 0xFEB19F)),
     ]
 
     /// Which preset an unset color falls back to is `CourseColor`'s, shared with the folio command.
     static func resolve(token stored: String, position: Int) -> CourseAccent {
         let token = CourseColor.token(stored, position: position)
-        if let hex = hex(token) { return CourseAccent(hex: hex) }
         if token == "gray" { return .gray }
         return presets.first { $0.name == token }?.accent ?? presets[0].accent
-    }
-
-    static func hex(_ token: String) -> UInt32? {
-        guard token.count == 7, token.first == "#" else { return nil }
-        return UInt32(token.dropFirst(), radix: 16)
-    }
-
-    static func token(_ color: Color.Resolved) -> String {
-        let byte = { (c: Float) in Int((min(max(c, 0), 1) * 255).rounded()) }
-        return String(format: "#%02X%02X%02X", byte(color.red), byte(color.green), byte(color.blue))
-    }
-
-    static func mix(_ a: UInt32, _ b: UInt32, _ t: Double) -> UInt32 {
-        [16, 8, 0].reduce(0) { sum, shift in
-            let x = Double(a >> shift & 0xFF), y = Double(b >> shift & 0xFF)
-            return sum | UInt32((x + (y - x) * t).rounded()) << shift
-        }
     }
 }
 

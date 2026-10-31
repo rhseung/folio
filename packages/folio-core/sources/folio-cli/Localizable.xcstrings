@@ -1992,13 +1992,24 @@
         }
       }
     },
+    "course.set.color-unknown": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "색은 %@ 중 하나여야 합니다"
+          }
+        }
+      }
+    },
     "course.set.discussion": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "예시:\n  folio course set EC4207 --color \"#3A7BD5\" --credits 3\n  folio course set EC4207 --icon point.3.filled.connected.trianglepath.dotted\n  folio course set EC4207 --grade A+ --instructor 김교수\n  folio course set EC4207 --reviews false\n  folio course set EC4207 --sharing-approved true"
+            "value": "예시:\n  folio course set EC4207 --color teal --credits 3\n  folio course set EC4207 --icon point.3.filled.connected.trianglepath.dotted\n  folio course set EC4207 --grade A+ --instructor 김교수\n  folio course set EC4207 --reviews false\n  folio course set EC4207 --sharing-approved true"
           }
         }
       }
@@ -2020,7 +2031,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "강조색 #RRGGBB"
+            "value": "강조색 이름(%@). none이면 자동"
           }
         }
       }

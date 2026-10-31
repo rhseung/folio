@@ -298,7 +298,7 @@ Me/GIST/
 | sharingApproved | 논리값 | 학과별 인정 과목. 강의 공유 코드가 없어도 전공과 복수전공에 함께 셀 수 있다. 기본값은 거짓 |
 | retakeOf | Course ID 또는 없음 | 재수강이면 이전 수강 과목 |
 | schedule | 요일과 시간 배열 | 수업 시간과 강의실. 다음 강의 회차 제안에 씀 |
-| color | `#RRGGBB` 또는 색상 토큰 | 과목 강조색. 색 피커로 고른 값. 비어 있으면 학기 안 순서로 고른다 |
+| color | 색상 토큰 | 과목 강조색. 프리셋 견본(violet, blue, orange, green, pink, olive, teal, red) 중 고른 이름. 비어 있으면 학기 안 순서로 고른다. 예전에 저장된 `#RRGGBB`는 가장 가까운 프리셋으로 읽는다 |
 | icon | SF Symbol 이름 또는 없음 | 과목을 나타내는 모든 자리(사이드바, 과목 열 머리, 위치 표시, 학기 화면, 오늘 화면 같은 목록의 행 앞)에서 과목 색으로 그리는 아이콘. 없으면 기본 아이콘(닫힌 책) |
 | folderRoles | 폴더 경로와 역할의 대응 | 표준 구조의 예외를 기록하는 칸. 기본은 비어 있음 |
 | syllabusMaterialId | Material ID 또는 없음 | 강의계획서 |

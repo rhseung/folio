@@ -185,7 +185,7 @@ struct CourseCommand: ParsableCommand {
         @Option(help: ArgumentHelp(String(localized: .commonHelpMemo))) var memo: String?
         @Option(help: ArgumentHelp(String(localized: .commonHelpCredits))) var credits: Double?
         @Option(help: ArgumentHelp(String(localized: .commonHelpMode))) var mode: GradingMode?
-        @Option(help: ArgumentHelp(String(localized: .courseSetHelpColor), valueName: "color")) var color: String?
+        @Option(help: ArgumentHelp(String(localized: .courseSetHelpColor(CourseColor.presets.joined(separator: ", "))), valueName: "color")) var color: String?
         @Option(help: ArgumentHelp(String(localized: .courseSetHelpIcon), valueName: "symbol")) var icon: String?
         @Option(help: ArgumentHelp(String(localized: .courseSetHelpReviews))) var reviews: Toggle?
         @Option(help: ArgumentHelp(String(localized: .courseSetHelpSharingApproved))) var sharingApproved: Toggle?
@@ -201,7 +201,13 @@ struct CourseCommand: ParsableCommand {
             if let memo { fields.append(.memo(memo)) }
             if let credits { fields.append(.credits(credits)) }
             if let mode { fields.append(.gradingMode(mode)) }
-            if let color { fields.append(.color(color)) }
+            if let color {
+                let token = color == "none" ? "" : color
+                guard token.isEmpty || CourseColor.presets.contains(token) else {
+                    throw CLIError(exit: .usage, message: String(localized: .courseSetColorUnknown(CourseColor.presets.joined(separator: ", "))))
+                }
+                fields.append(.color(token))
+            }
             if let icon { fields.append(.icon(icon == "none" ? nil : icon)) }
             if let reviews { fields.append(.reviews(reviews.value)) }
             if let sharingApproved { fields.append(.sharingApproved(sharingApproved.value)) }
