@@ -16,10 +16,13 @@ struct HTMLView {
     /// Set for the preview beside the editor: the note is swapped in place as it changes, and the page follows the
     /// editor's scroll.
     var link: PreviewLink?
+    /// Set to let the reader type into blocks: called with a block's lines in the body, the text they should still
+    /// hold and their new text; false when they no longer hold it, and the page is shown anew.
+    var edit: (@MainActor (_ from: Int, _ to: Int, _ old: String, _ new: String) -> Bool)?
 
     func head(accent: CourseAccent) -> String {
         "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: accent))\(NoteStyle.css)</style></head>"
-            + "<body class=\"note\" data-math=\"\(mathSyntax)\">"
+            + "<body class=\"note\" data-math=\"\(mathSyntax)\"\(edit == nil ? "" : " data-editable")>"
     }
 
     func page(accent: CourseAccent) -> String {
@@ -31,6 +34,7 @@ struct HTMLView {
         config.defaultWebpagePreferences.allowsContentJavaScript = false
         config.userContentController.addUserScript(WKUserScript(source: NoteStyle.reader, injectionTime: .atDocumentEnd,
                                                                 forMainFrameOnly: true, in: .defaultClient))
+        config.userContentController.add(coordinator, contentWorld: .defaultClient, name: "folioReader")
         config.setURLSchemeHandler(coordinator.files, forURLScheme: LocalFileScheme.scheme)
         let view = WKWebView(frame: .zero, configuration: config)
         view.navigationDelegate = coordinator
@@ -50,10 +54,12 @@ struct HTMLView {
         coordinator.openNote = openNote
         coordinator.onAction = onAction
         coordinator.link = link
+        coordinator.edit = edit
+        coordinator.body = body
         let page = page(accent: accent)
         guard coordinator.loaded != page else { return }
         // Reloading would blank the page and lose its scroll on every keystroke.
-        if link != nil, coordinator.ready, let loaded = coordinator.loaded, loaded.hasPrefix(head(accent: accent)) {
+        if coordinator.ready, let loaded = coordinator.loaded, loaded.hasPrefix(head(accent: accent)) {
             coordinator.loaded = page
             view.callAsyncJavaScript("window.folioReader?.update(html)", arguments: ["html": body], in: nil, in: .defaultClient) { _ in
                 coordinator.link?.refollow()
@@ -67,9 +73,11 @@ struct HTMLView {
     }
 
     /// Keeps clicks out of the web view: note links open in the app, web links in the browser.
-    @MainActor final class Coordinator: NSObject, WKNavigationDelegate {
+    @MainActor final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
         var openNote: (String) -> Void = { _ in }
         var onAction: (URL) -> Void = { _ in }
+        var edit: (@MainActor (Int, Int, String, String) -> Bool)?
+        var body = ""
         var loaded: String?
         var ready = false
         var link: PreviewLink?
@@ -80,8 +88,29 @@ struct HTMLView {
             link?.refollow()
         }
 
+        func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+            guard let msg = message.body as? [String: Any] else { return }
+            switch msg["type"] as? String {
+            case "edit":
+                guard let from = msg["from"] as? Int, let to = msg["to"] as? Int, let old = msg["old"] as? String,
+                      let new = msg["text"] as? String, let edit else { return }
+                if !edit(from, to, old, new) {
+                    message.webView?.callAsyncJavaScript("window.folioReader?.update(html, true)", arguments: ["html": body], in: nil, in: .defaultClient)
+                }
+            case "open":
+                if let href = msg["href"] as? String, let url = URL(string: href) { Task { await open(url) } }
+            default:
+                break
+            }
+        }
+
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
             guard action.navigationType == .linkActivated, let url = action.request.url else { return .allow }
+            await open(url)
+            return .cancel
+        }
+
+        func open(_ url: URL) async {
             switch url.scheme {
             case "folio" where url.host == "note":
                 openNote(String(url.path.dropFirst()))
@@ -98,7 +127,6 @@ struct HTMLView {
             default:
                 break
             }
-            return .cancel
         }
     }
 }

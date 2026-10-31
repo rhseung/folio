@@ -110,14 +110,28 @@ struct CalloutTests {
 
     @Test func sourceLinesMarkTopLevelBlocks() {
         let out = HTMLRenderer.render(ParsedNote("# T\n\ntext\n\n> [!note]\n> body\n\n- a\n- b"), sourceLines: true)
-        #expect(out.contains("<h1 data-line=\"1\" id="))
-        #expect(out.contains("<p data-line=\"3\">text</p>"))
-        #expect(out.contains("<details data-line=\"5\" class=\"callout callout-note\""))
-        #expect(out.contains("<ul data-line=\"8\">"))
+        #expect(out.contains("<h1 data-line=\"1\" data-end=\"1\" data-src=\"# T\" id="))
+        #expect(out.contains("<p data-line=\"3\" data-end=\"3\" data-src=\"text\">text</p>"))
+        #expect(out.contains("<details data-line=\"5\" data-end=\"6\" data-src=\"&gt; [!note]\n&gt; body\" class=\"callout callout-note\""))
+        #expect(out.contains("<ul data-line=\"8\" data-end=\"9\" data-src=\"- a\n- b\">"))
         #expect(!HTMLRenderer.render(markdown: "text").contains("data-line"))
-        // A one-line `$$…$$` is three lines once protected; the blocks after it still name their own line.
-        let math = HTMLRenderer.render(ParsedNote("$$x$$\n\nafter"), sourceLines: true)
-        #expect(math.contains("<p data-line=\"3\">after</p>"))
+        #expect(HTMLRenderer.render(ParsedNote("- a\n- b\n\ntext"), sourceLines: true).contains("<ul data-line=\"1\" data-end=\"2\" data-src=\"- a\n- b\">"))
+        // `$$…$$` is longer once protected; the blocks after it still name their own lines, and it ends where it closed.
+        let math = HTMLRenderer.render(ParsedNote("$$x$$\n\nafter\n\n$$\nx\n$$\n\nend"), sourceLines: true)
+        #expect(math.contains("<div data-line=\"1\" data-end=\"1\""))
+        #expect(math.contains("<p data-line=\"3\" data-end=\"3\" data-src=\"after\">"))
+        #expect(math.contains("<div data-line=\"5\" data-end=\"7\""))
+        #expect(math.contains("<p data-line=\"9\" data-end=\"9\" data-src=\"end\">"))
+    }
+
+    @Test func wikiLinksKeepTheirSource() {
+        #expect(html("[[A & B|b]] ![[C]]").contains("data-src=\"[[A &amp; B|b]]\""))
+    }
+
+    /// The body an edit's lines count in is the same one the note renders from, frontmatter and all.
+    @Test func bodyRoundTripsThroughItsFrontmatter() {
+        let note = ParsedNote("---\nid: 1\n---\n\n# T\n\ntext\n")
+        #expect(ParsedNote(note.text).body == note.body)
     }
 
     @Test func plainQuoteIsNotACallout() {
@@ -137,7 +151,7 @@ struct LinkTests {
 
     @Test func rendersLinksButNotInsideCode() {
         let out = HTMLRenderer.render(markdown: "See [[Vector Space#^def-vs|정의]] and `[[raw]]` and [[material:ABC#page=3]]")
-        #expect(out.contains("<a class=\"wikilink\" href=\"folio://note/Vector%20Space#^def-vs\">정의</a>"))
+        #expect(out.contains("<a class=\"wikilink\" href=\"folio://note/Vector%20Space#^def-vs\" data-src=\"[[Vector Space#^def-vs|정의]]\">정의</a>"))
         #expect(out.contains("<code>[[raw]]</code>"))
         #expect(out.contains("href=\"folio://material/ABC#page=3\""))
     }

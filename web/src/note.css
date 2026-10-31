@@ -129,3 +129,7 @@ body.note { margin: 0 auto; padding: 40px 40px 96px; max-width: var(--measure); 
 
 /* Footnotes and block IDs */
 .note [id^="^"]:target { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 6px; transition: background 1s; }
+
+/* A block typed into in the read view (reader.js `prepare`) looks like the rest of the note. */
+.note [contenteditable="true"] { outline: none; caret-color: var(--accent); }
+.note [contenteditable="true"] a { cursor: text; }

@@ -192,10 +192,11 @@ struct NoteEditor: View {
                 HStack(spacing: 0) {
                     editor
                     Theme.Palette.lineSoft.frame(width: 1)
-                    HTMLView(body: model.html, baseURL: model.baseURL, mathSyntax: model.meta.math.rawValue, openNote: openNote, link: preview)
+                    HTMLView(body: model.html, baseURL: model.baseURL, mathSyntax: model.meta.math.rawValue, openNote: openNote, link: preview,
+                             edit: model.replaceLines)
                 }
             } else if mode == .read {
-                HTMLView(body: model.html, baseURL: model.baseURL, mathSyntax: model.meta.math.rawValue, openNote: openNote)
+                HTMLView(body: model.html, baseURL: model.baseURL, mathSyntax: model.meta.math.rawValue, openNote: openNote, edit: model.replaceLines)
             } else {
                 editor
             }

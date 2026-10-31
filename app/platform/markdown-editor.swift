@@ -54,7 +54,7 @@ struct MarkdownEditor {
         let previous = coordinator.parent
         coordinator.parent = self
         guard coordinator.ready else { return }
-        if text != coordinator.known { coordinator.load() }
+        if text != coordinator.known { coordinator.replace() }
         if math != previous.math { coordinator.call("cb.setSyntax", math.rawValue) }
         if let insert {
             coordinator.call("cb.insert", insert)
@@ -75,6 +75,13 @@ struct MarkdownEditor {
         func load() {
             known = parent.text
             call("cb.load", ["text": parent.text, "syntax": parent.math.rawValue] as [String: Any])
+        }
+
+        /// Text changed outside the editor (typed in the read view): only the changed span is swapped, so the editor
+        /// keeps its scroll, caret and undo history.
+        func replace() {
+            known = parent.text
+            call("cb.replace", parent.text)
         }
 
         /// Calls `function` with JSON arguments; JSON keeps note text from being read as script.

@@ -38,7 +38,10 @@ enum MathProtection {
                 if body.hasSuffix("$$") { body.removeLast(2) }
                 out.append(prefix + "```" + blockLanguage)
                 out += body.trimmingCharacters(in: .newlines).split(separator: "\n", omittingEmptySubsequences: false).map { prefix + $0 }
+                while origin.count < out.count { origin.append(n) }
+                // The closing fence stands for the line the `$$` closed on, so the block ends where its source does.
                 out.append(prefix + "```")
+                origin.append(lines.startIndex)
                 continue
             }
             out.append(protectInline(line))

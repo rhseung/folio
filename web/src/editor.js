@@ -478,6 +478,15 @@ window.cb = {
     view.dispatch({ effects: setSyntax.of(syntax ?? "latex") });
   },
   setSyntax(syntax) { view.dispatch({ effects: setSyntax.of(syntax) }); },
+  replace(text) {
+    const old = view.state.doc.toString();
+    if (old === text) return;
+    const max = Math.min(old.length, text.length);
+    let a = 0, b = 0;
+    while (a < max && old.charCodeAt(a) === text.charCodeAt(a)) a++;
+    while (b < max - a && old.charCodeAt(old.length - 1 - b) === text.charCodeAt(text.length - 1 - b)) b++;
+    view.dispatch({ changes: { from: a, to: old.length - b, insert: text.slice(a, text.length - b) } });
+  },
   insert(text) {
     const { from, to } = view.state.selection.main;
     view.dispatch({ changes: { from, to, insert: text }, selection: { anchor: from + text.length }, scrollIntoView: true });
