@@ -24,7 +24,8 @@ struct FolioApp: App {
                 .environment(workspace)
                 .buttonStyle(.pointing(.automatic))
         }
-        .defaultSize(width: 1520, height: 860)
+        // Fits a 1512pt-wide laptop screen; wider, macOS stretches the first window edge to edge.
+        .defaultSize(width: 1280, height: 860)
         #if os(macOS)
         .defaultLaunchBehavior(Self.hostingTests ? .suppressed : .automatic)
         // The compact row keeps the frame around the content panel thin.
