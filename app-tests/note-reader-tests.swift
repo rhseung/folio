@@ -73,6 +73,15 @@ struct NoteReaderTests {
         #expect(style.paragraphSpacingBefore == 0)
     }
 
+    @Test func mermaidDrawsAsAPictureAndFallsBackToItsSource() throws {
+        let (view, _) = Self.reader("```mermaid\ngraph TD\n    A[시작] --> B[끝]\n```\n\n```mermaid\n이건 다이어그램이 아니다\n```")
+        let storage = try #require(view.textStorage)
+        let picture = try #require(storage.attribute(.attachment, at: 0, effectiveRange: nil) as? NSTextAttachment)
+        #expect(picture.bounds.width > 20 && picture.bounds.height > 40)
+        // One that doesn't parse shows as code, not an empty picture.
+        #expect(storage.string.contains("이건 다이어그램이 아니다"))
+    }
+
     @Test func aCalloutFoldsWithAChevron() {
         let (view, _) = Self.reader("> [!note]- 접힘\n> 안")
         #expect(!view.string.contains("›") && !view.string.contains("⌄"))

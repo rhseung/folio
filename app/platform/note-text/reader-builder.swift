@@ -392,6 +392,11 @@ struct ReaderBlock {
             let image = ReaderTable.render(json: text, builder: self)
             picture(image, ctx)
             return
+        case NoteMermaid.language:
+            if let image = NoteMermaid.picture(text, accent: accent.native, dark: dark, width: width - ctx.indent * 2) {
+                picture(image, ctx)
+                return
+            }
         case CBWidget.language:
             let height = (try? JSONDecoder().decode(CBWidget.self, from: Data(text.utf8)))?.height ?? 120
             picture(ReaderPictures.placeholder(CGSize(width: width - ctx.indent * 2, height: height)), ctx)

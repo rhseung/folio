@@ -24,6 +24,10 @@ packages:
   SwiftMath:
     url: https://github.com/mgriebling/SwiftMath
     exactVersion: 1.7.3
+  # Native mermaid diagrams for the read view: parsing and ELK layout in Swift, so no web view.
+  BeautifulMermaid:
+    url: https://github.com/lukilabs/beautiful-mermaid-swift
+    exactVersion: 1.0.4
 targets:
   Folio:
     type: application
@@ -54,6 +58,8 @@ targets:
       - package: swift-algorithms
         product: Algorithms
       - package: SwiftMath
+      - package: BeautifulMermaid
+        product: BeautifulMermaid
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.rhseung.folio
