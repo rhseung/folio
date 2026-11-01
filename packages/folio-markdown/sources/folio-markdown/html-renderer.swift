@@ -22,13 +22,15 @@ public struct HTMLRenderer {
         var out = ""
         var previousCallout: String?
         for node in nodes {
+            let html: String
             if let quote = node as? BlockQuote, let header = calloutHeader(quote) {
-                out += callout(quote, header, attached: header.type == "proof" && CalloutHeader.provable.contains(previousCallout ?? ""))
+                html = callout(quote, header, attached: header.type == "proof" && CalloutHeader.provable.contains(previousCallout ?? ""))
                 previousCallout = header.type
             } else {
-                out += block(node)
+                html = block(node)
                 previousCallout = nil
             }
+            out += html
         }
         return out
     }
@@ -110,12 +112,7 @@ public struct HTMLRenderer {
 
     // MARK: Callouts
 
-    /// The header comes from the first line only; `plainText` would join the whole paragraph with spaces.
-    func calloutHeader(_ quote: BlockQuote) -> CalloutHeader? {
-        guard let p = quote.child(at: 0) as? Paragraph else { return nil }
-        let firstLine = Array(p.inlineChildren).prefix { !($0 is SoftBreak || $0 is LineBreak) }.map { Self.sourceText($0) }.joined()
-        return CalloutHeader(line: firstLine)
-    }
+    func calloutHeader(_ quote: BlockQuote) -> CalloutHeader? { quote.calloutHeader }
 
     /// Inline markdown text close to the source, with protected math turned back into `$...$`.
     static func sourceText(_ node: Markup) -> String {
@@ -274,5 +271,14 @@ public struct HTMLRenderer {
             }
         }
         return out
+    }
+}
+
+extension BlockQuote {
+    /// The header comes from the first line only; `plainText` would join the whole paragraph with spaces.
+    public var calloutHeader: CalloutHeader? {
+        guard let p = child(at: 0) as? Paragraph else { return nil }
+        let firstLine = Array(p.inlineChildren).prefix { !($0 is SoftBreak || $0 is LineBreak) }.map { HTMLRenderer.sourceText($0) }.joined()
+        return CalloutHeader(line: firstLine)
     }
 }

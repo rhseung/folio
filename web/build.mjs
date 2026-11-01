@@ -5,7 +5,7 @@ const out = "../app/resources/web";
 const common = { bundle: true, minify: true, target: "safari18", legalComments: "eof", logLevel: "warning" };
 
 await build({ ...common, entryPoints: ["src/reader.js"], outfile: `${out}/reader.js`, format: "iife" });
-await build({ ...common, entryPoints: ["src/editor.js"], outfile: `${out}/editor.js`, format: "iife" });
+await build({ ...common, entryPoints: ["src/native.js"], outfile: `${out}/native.js`, format: "iife", globalName: "folioNative" });
 await build({
   ...common,
   entryPoints: ["src/style.css"],

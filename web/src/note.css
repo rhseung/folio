@@ -62,8 +62,12 @@ body.note { margin: 0 auto; padding: 40px 40px 96px; max-width: var(--measure); 
 :is(.note pre, .cm-code) :is(.tok-keyword, .tok-operatorKeyword) { color: var(--c-theorem); }
 :is(.note pre, .cm-code) :is(.tok-string, .tok-string2) { color: var(--c-example); }
 :is(.note pre, .cm-code) :is(.tok-number, .tok-bool, .tok-atom, .tok-literal) { color: var(--c-warning); }
-:is(.note pre, .cm-code) :is(.tok-typeName, .tok-className, .tok-namespace) { color: var(--c-definition); }
-:is(.note pre, .cm-code) :is(.tok-comment, .tok-meta) { color: var(--text-3); }
+:is(.note pre, .cm-code) .tok-function { color: var(--c-definition); }
+:is(.note pre, .cm-code) :is(.tok-typeName, .tok-className, .tok-namespace, .tok-builtin) { color: var(--c-type); }
+:is(.note pre, .cm-code) .tok-comment { color: var(--text-3); }
+:is(.note pre, .cm-code) :is(.tok-meta, .tok-decorator) { color: var(--c-decorator); }
+:is(.note pre, .cm-code) .tok-propertyName { color: var(--c-property); }
+:is(.note pre, .cm-code) .tok-propertyName.tok-function { color: var(--c-definition); }
 :is(.note pre, .cm-code) .tok-comment { font-style: italic; }
 
 /* Quotes and rules */
@@ -129,3 +133,7 @@ body.note { margin: 0 auto; padding: 40px 40px 96px; max-width: var(--measure); 
 
 /* Footnotes and block IDs */
 .note [id^="^"]:target { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 6px; transition: background 1s; }
+
+/* A block typed into in the read view (reader.js `prepare`) looks like the rest of the note. */
+.note [contenteditable="true"] { outline: none; caret-color: var(--accent); }
+.note [contenteditable="true"] a { cursor: text; }

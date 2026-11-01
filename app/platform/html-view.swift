@@ -1,8 +1,8 @@
 import SwiftUI
 import WebKit
 
-/// Shows rendered note HTML. The page's own JavaScript is off: notes are content, not code. Math is typeset by the
-/// bundled reader script, which runs in the app's separate script world (widgets get their own sandbox later).
+/// Shows rendered HTML in the Claude panel. The page's own JavaScript is off: answers are content, not code. Math is
+/// typeset by the bundled reader script, which runs in the app's separate script world. Notes use `NoteReader`.
 struct HTMLView {
     let body: String
     /// The note's folder, so `assets/…` images resolve.
@@ -14,9 +14,13 @@ struct HTMLView {
     /// Called with `folio://action/…` links, which a page uses for buttons since JavaScript is off.
     var onAction: (URL) -> Void = { _ in }
 
-    func page(accent: CourseAccent) -> String {
+    func head(accent: CourseAccent) -> String {
         "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: accent))\(NoteStyle.css)</style></head>"
-            + "<body class=\"note\" data-math=\"\(mathSyntax)\">\(body)</body></html>"
+            + "<body class=\"note\" data-math=\"\(mathSyntax)\">"
+    }
+
+    func page(accent: CourseAccent) -> String {
+        head(accent: accent) + "\(body)</body></html>"
     }
 
     @MainActor func makeWebView(_ coordinator: Coordinator) -> WKWebView {
@@ -43,7 +47,14 @@ struct HTMLView {
         coordinator.onAction = onAction
         let page = page(accent: accent)
         guard coordinator.loaded != page else { return }
+        // Reloading would blank the page and lose its scroll on every keystroke.
+        if coordinator.ready, let loaded = coordinator.loaded, loaded.hasPrefix(head(accent: accent)) {
+            coordinator.loaded = page
+            view.callAsyncJavaScript("window.folioReader?.update(html)", arguments: ["html": body], in: nil, in: .defaultClient)
+            return
+        }
         coordinator.loaded = page
+        coordinator.ready = false
         coordinator.files.root = LocalFileScheme.root(for: baseURL)
         view.loadHTMLString(page, baseURL: LocalFileScheme.base(for: baseURL))
     }
@@ -53,10 +64,18 @@ struct HTMLView {
         var openNote: (String) -> Void = { _ in }
         var onAction: (URL) -> Void = { _ in }
         var loaded: String?
+        var ready = false
         let files = LocalFileScheme()
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { ready = true }
 
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
             guard action.navigationType == .linkActivated, let url = action.request.url else { return .allow }
+            await open(url)
+            return .cancel
+        }
+
+        func open(_ url: URL) async {
             switch url.scheme {
             case "folio" where url.host == "note":
                 openNote(String(url.path.dropFirst()))
@@ -73,7 +92,6 @@ struct HTMLView {
             default:
                 break
             }
-            return .cancel
         }
     }
 }

@@ -1,4 +1,5 @@
 @testable import FolioMarkdown
+import Markdown
 import Foundation
 import Testing
 
@@ -108,6 +109,23 @@ struct CalloutTests {
         #expect(out.components(separatedBy: "callout-proof attached").count == 2)
     }
 
+    @Test func topLevelBlocksKnowTheirLines() {
+        func spans(_ text: String) -> [String] {
+            let note = ParsedNote(text)
+            return note.document.children.compactMap { note.lines(of: $0).map { "\($0.lowerBound)-\($0.upperBound) \(note.source($0))" } }
+        }
+        #expect(spans("# T\n\ntext\n\n> [!note]\n> body\n\n- a\n- b") == ["1-1 # T", "3-3 text", "5-6 > [!note]\n> body", "8-9 - a\n- b"])
+        #expect(spans("- a\n- b\n\ntext") == ["1-2 - a\n- b", "4-4 text"])
+        // `$$…$$` is longer once protected; the blocks after it still name their own lines, and it ends where it closed.
+        #expect(spans("$$x$$\n\nafter\n\n$$\nx\n$$\n\nend") == ["1-1 $$x$$", "3-3 after", "5-7 $$\nx\n$$", "9-9 end"])
+    }
+
+    /// The body an edit's lines count in is the same one the note renders from, frontmatter and all.
+    @Test func bodyRoundTripsThroughItsFrontmatter() {
+        let note = ParsedNote("---\nid: 1\n---\n\n# T\n\ntext\n")
+        #expect(ParsedNote(note.text).body == note.body)
+    }
+
     @Test func plainQuoteIsNotACallout() {
         #expect(html("> just a quote") == "<blockquote>\n<p>just a quote</p>\n</blockquote>\n")
     }
@@ -199,4 +217,18 @@ struct BlockTests {
     ![again](assets/IMG_3182.JPG) ![sp](assets/My%20Photo.heic) ![[other note]]
     """
     #expect(NoteImages.references(in: body) == [.path("assets/IMG_3182.JPG"), .name("diagram.png"), .path("assets/My Photo.heic")])
+}
+
+struct DraftItemTests {
+    /// Enter then Tab under a list item leaves `    - `; the item above stays a list item, not a heading.
+    @Test func aStartedSubItemDoesNotMakeAHeading() {
+        for text in ["- 하나\n    - ", "- 하나\n    -", "본문\n  -"] {
+            let note = ParsedNote(text)
+            #expect(!note.document.children.contains { $0 is Heading }, "\(text.debugDescription)")
+            #expect(DraftItem.mask(text).utf16.count == text.utf16.count)
+        }
+        #expect(ParsedNote("- 하나\n- ").document.child(at: 0).map { Array($0.children).count } == 2)
+        #expect(ParsedNote("제목\n---").document.child(at: 0) is Heading)
+        #expect(ParsedNote("- 하나\n    - 둘").document.child(at: 0)?.child(at: 0)?.child(at: 1) is UnorderedList)
+    }
 }

@@ -1,4 +1,4 @@
-// Runs in the app's own script world: the note page itself has JavaScript off, so nothing in a note can run.
+// Runs in the app's own script world: the page itself has JavaScript off, so nothing in it can run.
 import { renderMath } from "./math.js";
 import { highlightBlocks } from "./code.js";
 
@@ -12,3 +12,11 @@ function typeset() {
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", typeset);
 else typeset();
+
+// The app swaps the page in place, so it keeps its scroll while an answer streams in.
+window.folioReader = {
+  update(html) {
+    document.body.innerHTML = html;
+    typeset();
+  },
+};

@@ -6667,17 +6667,6 @@
         }
       }
     },
-    "notes.mode.live": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "편집"
-          }
-        }
-      }
-    },
     "notes.mode.read": {
       "extractionState": "manual",
       "localizations": {
@@ -6689,13 +6678,24 @@
         }
       }
     },
-    "notes.mode.source": {
+    "notes.mode.toggle": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "원문"
+            "value": "읽기와 쓰기 전환"
+          }
+        }
+      }
+    },
+    "notes.mode.write": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쓰기"
           }
         }
       }

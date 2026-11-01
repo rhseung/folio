@@ -23,11 +23,11 @@ public struct WikiLink: Hashable, Sendable {
 
     public static let objectKinds: Set<String> = ["material", "unit", "session", "card", "assignment"]
 
-    static var pattern: Regex<(Substring, Substring, Substring, Substring?, Substring?, Substring?)> {
+    public static var pattern: Regex<(Substring, Substring, Substring, Substring?, Substring?, Substring?)> {
         #/(!?)\[\[([^\]\|#]+)(?:#(\^?)([^\]\|]*))?(?:\|([^\]]*))?\]\]/#
     }
 
-    init(_ m: Regex<(Substring, Substring, Substring, Substring?, Substring?, Substring?)>.Match) {
+    public init(_ m: Regex<(Substring, Substring, Substring, Substring?, Substring?, Substring?)>.Match) {
         target = String(m.2).trimmingCharacters(in: .whitespaces)
         let isBlock = m.3 == "^"
         blockID = isBlock ? m.4.map(String.init) : nil
@@ -73,10 +73,10 @@ public struct CalloutHeader: Hashable, Sendable {
 }
 
 /// `^block-id` at the end of a paragraph or list item.
-enum BlockID {
-    static var pattern: Regex<(Substring, Substring)> { #/\s\^([A-Za-z0-9-]+)\s*$/# }
+public enum BlockID {
+    public static var pattern: Regex<(Substring, Substring)> { #/\s\^([A-Za-z0-9-]+)\s*$/# }
 
-    static func strip(_ text: String) -> (text: String, id: String?) {
+    public static func strip(_ text: String) -> (text: String, id: String?) {
         guard let m = text.firstMatch(of: pattern) else { return (text, nil) }
         var t = text
         t.removeSubrange(m.range)

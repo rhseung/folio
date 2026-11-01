@@ -192,7 +192,7 @@ private struct SourcePane: View {
     let source: ReviewView.Source
     let note: NoteFile?
     let course: LoadedCourse
-    @State private var html: String?
+    @State private var text: String?
     @State private var pdf: PDFController?
     @State private var failed = false
 
@@ -200,8 +200,8 @@ private struct SourcePane: View {
         Group {
             if let pdf {
                 PDFKitView(controller: pdf)
-            } else if let html {
-                HTMLView(body: html, baseURL: note?.url.deletingLastPathComponent())
+            } else if let text {
+                NoteReader(text: text, baseURL: note?.url.deletingLastPathComponent(), math: note?.meta.math ?? .latex)
             } else if failed {
                 ContentUnavailableView(String(localized: .reviewSourceFailed), systemImage: "doc.questionmark", description: Text(source.title))
             } else {
@@ -216,7 +216,7 @@ private struct SourcePane: View {
         switch source.id {
         case .note:
             guard let note else { failed = true; return }
-            html = model.html(of: note, in: course)
+            text = model.body(of: note, in: course)
         case .lecture:
             guard let document = await model.document(source, in: course) else { failed = true; return }
             pdf = PDFController(document: document, page: (source.page ?? 1) - 1)

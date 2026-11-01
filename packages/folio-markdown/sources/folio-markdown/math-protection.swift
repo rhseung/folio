@@ -1,16 +1,22 @@
 /// Markdown escapes would eat TeX (`\{` becomes `{`, `a_1_b` turns into emphasis), so math is wrapped
 /// in code before parsing: `$$...$$` becomes a ```` ```math ```` block and `$...$` an inline code span
 /// starting with `mathMarker`. Code spans and fenced code are left alone, and `\$` is a literal dollar.
-enum MathProtection {
-    static let blockLanguage = "math"
+public enum MathProtection {
+    public static let blockLanguage = "math"
     /// Private-use character marking an inline code span that holds math.
-    static let marker: Character = "\u{E000}"
+    public static let marker: Character = "\u{E000}"
 
-    static func protect(_ text: String) -> String {
+    static func protect(_ text: String) -> String { protectMapped(text).text }
+
+    /// Also the original line each protected line came from (1-based), since a one-line `$$…$$` becomes three.
+    static func protectMapped(_ text: String) -> (text: String, origin: [Int]) {
         var out: [String] = []
+        var origin: [Int] = []
         var lines = text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)[...]
         var fence: String?
         while let line = lines.popFirst() {
+            let n = lines.startIndex
+            defer { while origin.count < out.count { origin.append(n) } }
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             if let open = fence {
                 out.append(line)
@@ -32,15 +38,18 @@ enum MathProtection {
                 if body.hasSuffix("$$") { body.removeLast(2) }
                 out.append(prefix + "```" + blockLanguage)
                 out += body.trimmingCharacters(in: .newlines).split(separator: "\n", omittingEmptySubsequences: false).map { prefix + $0 }
+                while origin.count < out.count { origin.append(n) }
+                // The closing fence stands for the line the `$$` closed on, so the block ends where its source does.
                 out.append(prefix + "```")
+                origin.append(lines.startIndex)
                 continue
             }
             out.append(protectInline(line))
         }
-        return out.joined(separator: "\n")
+        return (out.joined(separator: "\n"), origin)
     }
 
-    static func protectInline(_ line: String) -> String {
+    public static func protectInline(_ line: String) -> String {
         var result = ""
         var chars = Array(line)[...]
         while let c = chars.popFirst() {

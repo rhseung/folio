@@ -1,5 +1,6 @@
 import FolioActions
 import FolioDomain
+import FolioMarkdown
 import Foundation
 import Testing
 @testable import Folio
@@ -177,5 +178,23 @@ struct NotesModelTests {
         editor.relink(.free)
         #expect(editor.currentLink == "자유 노트" && !editor.dirty)
         #expect(NoteEditorModel.markdown(for: URL(filePath: "/x/a b.png"), path: "assets/a b.png") == "![a b](assets/a%20b.png)")
+    }
+
+    /// A block typed into in the read view lands on the lines the parser marked, counted in the same body the editor
+    /// holds; lines that changed since are left alone.
+    @Test func readViewEditsReplaceTheirOwnLines() throws {
+        let (workspace, course) = try fixtureCourse()
+        let notes = NotesModel(workspace: workspace, course: course)
+        let editor = NoteEditorModel(workspace: workspace, course: course, note: try #require(notes.note(try #require(notes.noteId(titled: "1주차-1")))))
+        editor.load()
+        editor.body += "\n\n문단 하나\n둘째 줄\n"
+        let parsed = ParsedNote(editor.body)
+        let last = try #require(Array(parsed.document.children).last)
+        let lines = try #require(parsed.lines(of: last))
+        #expect(parsed.source(lines) == "문단 하나\n둘째 줄")
+        let (from, to) = (lines.lowerBound, lines.upperBound)
+        #expect(!editor.replaceLines(from, to, "다른 글", "바뀐 글"))
+        #expect(editor.replaceLines(from, to, "문단 하나\n둘째 줄", "바뀐 문단"))
+        #expect(editor.body.hasSuffix("\n\n바뀐 문단\n"))
     }
 }
