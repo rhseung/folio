@@ -64,7 +64,10 @@ body.note { margin: 0 auto; padding: 40px 40px 96px; max-width: var(--measure); 
 :is(.note pre, .cm-code) :is(.tok-number, .tok-bool, .tok-atom, .tok-literal) { color: var(--c-warning); }
 :is(.note pre, .cm-code) .tok-function { color: var(--c-definition); }
 :is(.note pre, .cm-code) :is(.tok-typeName, .tok-className, .tok-namespace, .tok-builtin) { color: var(--c-type); }
-:is(.note pre, .cm-code) :is(.tok-comment, .tok-meta) { color: var(--text-3); }
+:is(.note pre, .cm-code) .tok-comment { color: var(--text-3); }
+:is(.note pre, .cm-code) :is(.tok-meta, .tok-decorator) { color: var(--c-decorator); }
+:is(.note pre, .cm-code) .tok-propertyName { color: var(--c-property); }
+:is(.note pre, .cm-code) .tok-propertyName.tok-function { color: var(--c-definition); }
 :is(.note pre, .cm-code) .tok-comment { font-style: italic; }
 
 /* Quotes and rules */

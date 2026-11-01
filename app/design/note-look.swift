@@ -98,20 +98,22 @@ enum NoteLook {
 
     /// Code colors by the highlighter's `tok-*` classes (resources/web/native.js).
     static func token(_ classes: String) -> (color: PlatformColor, italic: Bool)? {
-        for cls in classes.split(separator: " ") {
-            switch cls {
-            case "tok-keyword", "tok-operatorKeyword": return (preset("violet").accent, false)
-            case "tok-string", "tok-string2": return (preset("green").accent, false)
-            case "tok-number", "tok-bool", "tok-atom", "tok-literal": return (preset("orange").accent, false)
-            case "tok-function": return (preset("blue").accent, false)
-            case "tok-typeName", "tok-className", "tok-namespace", "tok-builtin": return (preset("teal").accent, false)
-            case "tok-comment": return (text3, true)
-            case "tok-meta": return (text3, false)
-            default: continue
-            }
-        }
+        let set = Set(classes.split(separator: " ").map(String.init))
+        // A token carries several classes (a called method is a property and a function), so the first match wins.
+        for (names, color, italic) in tokenColors where !set.isDisjoint(with: names) { return (color, italic) }
         return nil
     }
+
+    private static let tokenColors: [(Set<String>, PlatformColor, Bool)] = [
+        (["tok-comment"], text3, true),
+        (["tok-keyword", "tok-operatorKeyword"], preset("violet").accent, false),
+        (["tok-function"], preset("blue").accent, false),
+        (["tok-string", "tok-string2"], preset("green").accent, false),
+        (["tok-number", "tok-bool", "tok-atom", "tok-literal"], preset("orange").accent, false),
+        (["tok-typeName", "tok-className", "tok-namespace", "tok-builtin"], preset("teal").accent, false),
+        (["tok-meta", "tok-decorator"], preset("pink").accent, false),
+        (["tok-propertyName"], preset("red").accent, false),
+    ]
 }
 
 extension Swatch {

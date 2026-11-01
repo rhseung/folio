@@ -79,7 +79,7 @@ struct NoteReaderTests {
         let picture = try #require(storage.attribute(.attachment, at: 0, effectiveRange: nil) as? NSTextAttachment)
         #expect(picture.bounds.width > 20 && picture.bounds.height > 40)
         // One that doesn't parse shows as code, not an empty picture.
-        #expect(storage.string.contains("이건 다이어그램이 아니다"))
+        #expect(Self.codes(storage).contains { $0.code.string.contains("이건 다이어그램이 아니다") })
     }
 
     @Test func codeColorsCallsAndSwift() {
@@ -90,6 +90,38 @@ struct NoteReaderTests {
         #expect(colored("def f(g):\n    return len(g)", "python", "len"))
         #expect(colored("def f(g):\n    return len(g)", "python", " f("))
         #expect(colored("let edges: [Int] = []", "swift", "let"))
+        #expect(colored("@dataclass\nclass G:\n    pass", "python", "dataclass"))
+        // A property and a called method on it read differently.
+        let line = "g.adj.get(u)"
+        let looks = NoteScripts.highlight(line, language: "python").compactMap { t in NoteLook.token(t.classes).map { (t.range, $0.color) } }
+        let color = { (word: String) in looks.first { NSIntersectionRange($0.0, (line as NSString).range(of: word)).length > 0 }?.1 }
+        #expect(color("adj") != nil && color("get") != nil && color("adj") != color("get"))
+    }
+
+    static func codes(_ storage: NSAttributedString) -> [CodeAttachment] {
+        var found: [CodeAttachment] = []
+        storage.enumerateAttribute(.attachment, in: NSRange(location: 0, length: storage.length)) { value, _, _ in
+            if let code = value as? CodeAttachment { found.append(code) }
+        }
+        return found
+    }
+
+    @Test func aLongCodeLineScrollsInsteadOfWrapping() throws {
+        let long = "x = [" + (1...80).map(String.init).joined(separator: ", ") + "]"
+        let (view, _) = Self.reader("```python\nx = 1\n```\n\n```python\n\(long)\n```", width: 600)
+        let codes = Self.codes(try #require(view.textStorage))
+        try #require(codes.count == 2)
+        #expect(codes[1].bounds.height == codes[0].bounds.height)
+        #expect(codes[1].bounds.width < 600)
+        let scroll = try #require(codes[1].view as? NSScrollView)
+        #expect((scroll.documentView?.frame.width ?? 0) > scroll.frame.width)
+        // The text view places it over its attachment, since AppKit never asks for an attachment's view.
+        #expect(scroll.superview === view && !scroll.isHidden)
+        // Its scroller sits in the box's padding, under the last line rather than over it.
+        scroll.tile()
+        let scroller = try #require(scroll.horizontalScroller).frame
+        let lines = codes[1].bounds.height
+        #expect(scroll.isFlipped ? scroller.minY >= lines : scroller.maxY <= scroll.frame.height - lines, "\(scroller) \(lines) \(scroll.frame)")
     }
 
     @Test func aTaskShowsItsBoxWithoutABullet() {

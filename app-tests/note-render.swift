@@ -24,6 +24,9 @@ import FolioDomain
         view.window?.setContentSize(size)
         view.enclosingScrollView?.frame = NSRect(origin: .zero, size: size)
         view.setFrameSize(size)
+        // The window's layout pass, which puts code views over their blocks.
+        view.needsLayout = true
+        view.layoutSubtreeIfNeeded()
         manager.ensureLayout(for: manager.documentRange)
     }
 

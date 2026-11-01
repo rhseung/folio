@@ -104,7 +104,23 @@ final class ReaderTextView: NoteTextView, NSTextViewDelegate {
 
     func show(_ text: String) { core.show(text, typing: typing) }
 
+    override func layout() {
+        super.layout()
+        placeCode()
+    }
+
+    override func prepareContent(in rect: NSRect) {
+        super.prepareContent(in: rect)
+        placeCode()
+    }
+
+    private func placeCode() {
+        guard let manager = textLayoutManager else { return }
+        CodeAttachment.place(in: self, storage: core.storage, manager: manager, origin: textContainerOrigin)
+    }
+
     private func rendered() {
+        placeCode()
         undoManager?.removeAllActions(withTarget: self)
         setSelectedRange(NSRange(location: min(selectedRange().location, core.storage.length), length: 0))
         // Beside the editor the page follows it, except right after a click here, which leaves the editor still.
@@ -260,7 +276,18 @@ final class ReaderTextView: NoteTextView, UITextViewDelegate, UIGestureRecognize
 
     func show(_ text: String) { core.show(text, typing: typing) }
 
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        placeCode()
+    }
+
+    private func placeCode() {
+        guard let manager = textLayoutManager else { return }
+        CodeAttachment.place(in: self, storage: core.storage, manager: manager, origin: CGPoint(x: textContainerInset.left, y: textContainerInset.top))
+    }
+
     private func rendered() {
+        placeCode()
         undoManager?.removeAllActions()
         link?.refollow()
     }

@@ -13,7 +13,7 @@ enum NoteStyle {
             let presets = Dictionary(uniqueKeysWithValues: CourseAccent.presets.map { ($0.name, $0.accent) })
             let callouts: [(String, CourseAccent)] = [
                 ("c-definition", presets["blue"]!), ("c-theorem", presets["violet"]!), ("c-example", presets["green"]!),
-                ("c-warning", presets["orange"]!), ("c-danger", presets["red"]!), ("c-neutral", .gray), ("c-type", presets["teal"]!),
+                ("c-warning", presets["orange"]!), ("c-danger", presets["red"]!), ("c-neutral", .gray), ("c-type", presets["teal"]!), ("c-decorator", presets["pink"]!), ("c-property", presets["red"]!),
             ]
             let pairs = swatches.map { ($0.0, pick($0.1.light, $0.1.dark)) }
                 + callouts.map { ($0.0, pick($0.1.light, $0.1.dark)) }

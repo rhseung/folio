@@ -417,17 +417,20 @@ struct ReaderBlock {
             // In the label's font: a body-sized line break would make the line body-tall and sink the label to its bottom.
             newline(attributes(c, label, font: NoteLook.font(NoteLook.smallSize, .semibold)))
         }
-        let style = Self.paragraph(c, after: 0, lineSpacing: 6)
-        let body = NSMutableAttributedString(string: text.replacingOccurrences(of: "\n", with: "\u{2028}"), attributes: attributes(c, style, font: font))
+        let lines = NSMutableParagraphStyle()
+        lines.lineSpacing = 6
+        let body = NSMutableAttributedString(string: text.replacingOccurrences(of: "\n", with: "\u{2028}"), attributes: attributes(c, lines, font: font))
         for token in NoteScripts.highlight(text, language: block.language ?? "") {
             guard let look = NoteLook.token(token.classes), NSMaxRange(token.range) <= body.length else { continue }
             body.addAttribute(.foregroundColor, value: look.color, range: token.range)
             if look.italic { body.addAttribute(.font, value: NoteLook.font(NoteLook.codeSize, italic: true, mono: true), range: token.range) }
         }
-        out.append(body)
+        let padding: CGFloat = 16
+        let style = Self.paragraph(c, after: 0, lineSpacing: 0)
+        out.append(NSAttributedString(attachment: CodeAttachment(code: body, width: width - c.indent * 2, inset: NoteLook.boxIndent, below: padding), attributes: attributes(c, style)))
         newline(attributes(c, style))
         box(NSRange(location: start, length: out.length - start), NoteBox(fill: NoteLook.fill, first: true, last: true, rounded: true),
-            gap: NoteLook.blockGap * 0.9, padding: 16)
+            gap: NoteLook.blockGap * 0.9, padding: padding)
     }
 
     /// A tint behind `range`, with `padding` inside it above and below and `gap` outside.

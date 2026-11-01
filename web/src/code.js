@@ -1,6 +1,6 @@
 // Code block languages, shared so the reader and the editor color code the same way.
 import { StreamLanguage } from "@codemirror/language";
-import { classHighlighter, highlightCode, tagHighlighter, tags as t } from "@lezer/highlight";
+import { classHighlighter, highlightCode, styleTags, tagHighlighter, tags as t } from "@lezer/highlight";
 import { pythonLanguage } from "@codemirror/lang-python";
 import { cppLanguage } from "@codemirror/lang-cpp";
 import { javaLanguage } from "@codemirror/lang-java";
@@ -14,7 +14,8 @@ import { swift } from "@codemirror/legacy-modes/mode/swift";
 
 const byName = new Map();
 for (const [language, names] of [
-  [pythonLanguage, "python py"],
+  // The grammar tags only a decorator's `@`, so its name would read as a plain variable.
+  [pythonLanguage.configure({ props: [styleTags({ "Decorator/VariableName Decorator/PropertyName": t.meta })] }), "python py"],
   [cppLanguage, "cpp c++ c h hpp cc"],
   [javaLanguage, "java"],
   [javascriptLanguage, "javascript js jsx mjs"],
@@ -31,6 +32,7 @@ for (const [language, names] of [
 export const highlighters = [classHighlighter, tagHighlighter([
   { tag: [t.function(t.variableName), t.function(t.propertyName)], class: "tok-function" },
   { tag: t.standard(t.variableName), class: "tok-builtin" },
+  { tag: t.attributeName, class: "tok-decorator" },
 ])];
 
 export const codeLanguage = (info) => byName.get(info.trim().split(/\s/)[0]?.toLowerCase() ?? "") ?? null;
