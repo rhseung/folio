@@ -209,7 +209,7 @@ struct ReaderBlock {
             let after: CGFloat = [24, 22, 8, 6, 6, 6][level - 1]
             let style = Self.paragraph(ctx, before: before, after: after, lineSpacing: 4)
             var c = ctx
-            if level >= 4 { c.color = NoteLook.text2 }
+            if level == 6 { c.color = NoteLook.text2 }
             let start = out.length
             inlines(Array(h.inlineChildren), Inline(size: size, weight: NoteLook.headingWeights[level - 1], color: c.color), style: style)
             let a = attributes(c, style, font: NoteLook.font(size, NoteLook.headingWeights[level - 1]))

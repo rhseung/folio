@@ -207,7 +207,7 @@ extension NSAttributedString.Key {
         switch node {
         case let h as Heading:
             w.set(r, [Self.heading: h.level] as [NSAttributedString.Key: Any])
-            if h.level >= 4 { w.set(r, [.foregroundColor: NoteLook.text2]) }
+            if h.level == 6 { w.set(r, [.foregroundColor: NoteLook.text2]) }
             if let m = s.firstMatch(of: #/^ {0,3}#{1,6}/#) { w.marks.append(Self.nsRange(m.range, in: s, at: r.location)) }
             if let m = s.firstMatch(of: /\n[=-]+\s*$/) { w.marks.append(Self.nsRange(m.range, in: s, at: r.location)) }
         case is Emphasis:
