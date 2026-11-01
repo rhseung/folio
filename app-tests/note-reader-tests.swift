@@ -34,10 +34,10 @@ struct NoteReaderTests {
     }
 
     @Test func textSitsInTheMiddleOfItsLine() throws {
-        let text = "> [!definition] Matching\n> A set of edges.\n\n본문 `code` 와 $x^2$ 끝"
+        let text = "> [!definition] Matching\n> A set of edges.\n\n본문 `code` 와 $x^2$ 끝\n\n```python\nx = 1\n```"
         let (view, _) = Self.reader(text)
         let shown = view.string as NSString
-        for word in ["Matching", "A set", "본문"] {
+        for word in ["Matching", "A set", "본문", "PYTHON"] {
             let gaps = try #require(NoteRender.gaps(view, at: shown.range(of: word).location))
             #expect(abs(gaps.above - gaps.below) <= 1, "\(word): \(gaps)")
         }

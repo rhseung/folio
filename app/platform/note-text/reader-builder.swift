@@ -414,7 +414,8 @@ struct ReaderBlock {
             let label = Self.paragraph(c, after: 8, lineSpacing: 4)
             out.append(NSAttributedString(string: language.uppercased(), attributes: attributes(c, label, font: NoteLook.font(NoteLook.smallSize, .semibold))
                 .merging([.foregroundColor: NoteLook.text3, .kern: 0.6]) { $1 }))
-            newline(attributes(c, label))
+            // In the label's font: a body-sized line break would make the line body-tall and sink the label to its bottom.
+            newline(attributes(c, label, font: NoteLook.font(NoteLook.smallSize, .semibold)))
         }
         let style = Self.paragraph(c, after: 0, lineSpacing: 6)
         let body = NSMutableAttributedString(string: text.replacingOccurrences(of: "\n", with: "\u{2028}"), attributes: attributes(c, style, font: font))
