@@ -120,7 +120,8 @@ extension NSAttributedString.Key {
             if let w = attributes[Self.weight] as? CGFloat { weight = max(weight, w) }
             if marked { weight = PlatformFont.Weight.regular.rawValue }
             let size = level.map { NoteLook.headingSizes[$0 - 1] } ?? NoteLook.body
-            let font = NoteLook.font(size, PlatformFont.Weight(weight), italic: attributes[Self.italic] != nil && !marked, mono: attributes[Self.mono] != nil)
+            let mono = attributes[Self.mono] != nil
+            let font = NoteLook.font(mono ? size * NoteLook.monoScale : size, PlatformFont.Weight(weight), italic: attributes[Self.italic] != nil && !marked, mono: mono)
             storage.addAttribute(.font, value: font, range: range)
         }
         for key in keys { storage.removeAttribute(key, range: all) }

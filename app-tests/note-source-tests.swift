@@ -62,7 +62,9 @@ struct NoteSourceTests {
         let ns = storage.string as NSString
         var odd: [String] = []
         storage.enumerateAttribute(.font, in: NSRange(location: 0, length: storage.length)) { value, r, _ in
-            let size = (value as? NSFont)?.pointSize ?? 0
+            let font = value as? NSFont
+            // Monospaced type is scaled to read as the same size.
+            let size = (font?.pointSize ?? 0) / (font?.fontDescriptor.symbolicTraits.contains(.monoSpace) == true ? NoteLook.monoScale : 1)
             let line = ns.substring(with: ns.lineRange(for: r))
             let heading = line.hasPrefix("#")
             if size != NoteLook.body, !(heading && NoteLook.headingSizes.contains(size)) { odd.append("\(size) \(ns.substring(with: r).debugDescription)") }

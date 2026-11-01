@@ -37,6 +37,9 @@ enum NoteLook {
         #endif
     }
 
+    /// Monospaced type at the same size looks a size or two larger (its letters are a third wider), so the write
+    /// view sets it smaller to read as the body does, as GitHub and Notion do.
+    static let monoScale = CGFloat(7) / 8
     static let headingSizes: [CGFloat] = [30, 21, 17.5, 15, 15, 15]
     static let headingWeights: [PlatformFont.Weight] = [.heavy, .bold, .semibold, .semibold, .semibold, .semibold]
     static let codeSize = CGFloat(13.5)
