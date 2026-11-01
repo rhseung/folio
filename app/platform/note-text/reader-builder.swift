@@ -248,7 +248,7 @@ struct ReaderBlock {
             picture(image, ctx)
         case is ThematicBreak:
             let style = Self.paragraph(ctx, before: 16, after: 28, alignment: .center)
-            out.append(NSAttributedString(string: "· · ·", attributes: attributes(ctx, style, font: NoteLook.font(14)).merging([.foregroundColor: NoteLook.text3, .kern: 6]) { $1 }))
+            out.append(NSAttributedString(string: "· · ·", attributes: attributes(ctx, style, font: NoteLook.font(16, .bold)).merging([.foregroundColor: NoteLook.text2, .kern: 6]) { $1 }))
             newline(attributes(ctx, style))
         case let html as HTMLBlock:
             let style = Self.paragraph(ctx)
@@ -289,15 +289,17 @@ struct ReaderBlock {
             let bare = item.checkbox == nil ? first.flatMap(Self.bareBox) : nil
             let checkbox = item.checkbox ?? bare
             let task = checkbox != nil
-            let style = Self.paragraph(ctx, after: 4, head: markerWidth + (task ? 24 : 0))
-            style.tabStops = [NSTextTab(textAlignment: .left, location: ctx.indent + markerWidth)]
+            // An unordered task shows its box where the bullet would be, as Obsidian does; a numbered one keeps its number.
+            let boxOnly = task && !ordered
+            let style = Self.paragraph(ctx, after: 4, head: markerWidth + (task && !boxOnly ? 24 : 0) + (boxOnly ? 6 : 0))
+            style.tabStops = [NSTextTab(textAlignment: .left, location: ctx.indent + markerWidth + (boxOnly ? 6 : 0))]
             style.defaultTabInterval = 24
             let number = start + i
             let itemStart = out.length
             // A marker (and checkbox) is drawn, not typed; it's written back from the item's `ListInfo`.
             let mark = ordered ? "\(number).\t" : "•\t"
-            out.append(NSAttributedString(string: mark, attributes: attributes(ctx, style, font: ordered ? NoteLook.font(NoteLook.body * 0.92, .semibold) : marker)
-                .merging([.foregroundColor: ordered ? NoteLook.text3 : accent.native.withAlphaComponent(0.8), .noteAtom: NoteAtom("")]) { $1 }))
+            if !boxOnly { out.append(NSAttributedString(string: mark, attributes: attributes(ctx, style, font: ordered ? NoteLook.font(NoteLook.body * 0.92, .semibold) : marker)
+                .merging([.foregroundColor: ordered ? NoteLook.text3 : accent.native.withAlphaComponent(0.8), .noteAtom: NoteAtom("")]) { $1 })) }
             if let checkbox {
                 out.append(Self.checkbox(checkbox == .checked, accent: accent, attributes: attributes(ctx, style)))
                 if checkbox == .checked { c.color = NoteLook.text3 }

@@ -82,6 +82,13 @@ struct NoteReaderTests {
         #expect(storage.string.contains("이건 다이어그램이 아니다"))
     }
 
+    @Test func aTaskShowsItsBoxWithoutABullet() {
+        let (view, _) = Self.reader("- [ ] 할 일\n- [x] 한 일\n- [ ]\n- 그냥 항목\n\n1. [ ] 번호 할 일")
+        let lines = view.string.components(separatedBy: "\n")
+        #expect(lines.filter { $0.hasPrefix("•") }.count == 1)
+        #expect(lines.contains { $0.hasPrefix("1.") })
+    }
+
     @Test func aCalloutFoldsWithAChevron() {
         let (view, _) = Self.reader("> [!note]- 접힘\n> 안")
         #expect(!view.string.contains("›") && !view.string.contains("⌄"))

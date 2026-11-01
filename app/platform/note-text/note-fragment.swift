@@ -191,23 +191,32 @@ final class NoteFragment: NSTextLayoutFragment, @unchecked Sendable {
         [boxRect, belowRect].compactMap { $0 }.reduce(super.renderingSurfaceBounds) { $0.union($1) }
     }
 
+    /// `rect` with its left corners rounded by `top` and `bottom` (elliptical radii) and its right ones by `right`
+    /// (the same as the left when not given).
+    static func rounded(_ rect: CGRect, top: CGSize, bottom: CGSize, right: (top: CGFloat, bottom: CGFloat)? = nil) -> CGPath {
+        let k = 4 * (2.squareRoot() - 1) / 3 // a cubic's control-point ratio for a quarter ellipse
+        let tr = right?.top ?? top.width, br = right?.bottom ?? bottom.width
+        let p = CGMutablePath()
+        p.move(to: CGPoint(x: rect.minX, y: rect.minY + top.height))
+        p.addCurve(to: CGPoint(x: rect.minX + top.width, y: rect.minY), control1: CGPoint(x: rect.minX, y: rect.minY + top.height * (1 - k)),
+                   control2: CGPoint(x: rect.minX + top.width * (1 - k), y: rect.minY))
+        p.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.minY), tangent2End: CGPoint(x: rect.maxX, y: rect.minY + tr), radius: tr)
+        p.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.maxY), tangent2End: CGPoint(x: rect.maxX - br, y: rect.maxY), radius: br)
+        p.addLine(to: CGPoint(x: rect.minX + bottom.width, y: rect.maxY))
+        p.addCurve(to: CGPoint(x: rect.minX, y: rect.maxY - bottom.height), control1: CGPoint(x: rect.minX + bottom.width * (1 - k), y: rect.maxY),
+                   control2: CGPoint(x: rect.minX, y: rect.maxY - bottom.height * (1 - k)))
+        p.closeSubpath()
+        return p
+    }
+
     override func draw(at point: CGPoint, in context: CGContext) {
         if let box, let rect = boxRect {
             let r = rect.offsetBy(dx: point.x, dy: point.y)
             context.saveGState()
+            let radius = NoteLook.radius
+            let top = box.rounded && box.first && !box.joinsAbove ? radius : 0, bottom = box.rounded && box.last && !box.joinsBelow ? radius : 0
             if box.rounded {
-                let radius = NoteLook.radius
-                let path = CGMutablePath()
-                let tr = box.first && !box.joinsAbove ? radius : 0, br = box.last && !box.joinsBelow ? radius : 0
-                // A rounded corner would bite into the spine, so the spine's side stays square.
-                let tl = box.spine == nil ? tr : 0, bl = box.spine == nil ? br : 0
-                path.move(to: CGPoint(x: r.minX, y: r.minY + tl))
-                path.addArc(tangent1End: CGPoint(x: r.minX, y: r.minY), tangent2End: CGPoint(x: r.minX + tl, y: r.minY), radius: tl)
-                path.addArc(tangent1End: CGPoint(x: r.maxX, y: r.minY), tangent2End: CGPoint(x: r.maxX, y: r.minY + tr), radius: tr)
-                path.addArc(tangent1End: CGPoint(x: r.maxX, y: r.maxY), tangent2End: CGPoint(x: r.maxX - br, y: r.maxY), radius: br)
-                path.addArc(tangent1End: CGPoint(x: r.minX, y: r.maxY), tangent2End: CGPoint(x: r.minX, y: r.maxY - bl), radius: bl)
-                path.closeSubpath()
-                context.addPath(path)
+                context.addPath(Self.rounded(r, top: CGSize(width: top, height: top), bottom: CGSize(width: bottom, height: bottom)))
                 context.clip()
             }
             if let fill = box.fill {
@@ -215,8 +224,18 @@ final class NoteFragment: NSTextLayoutFragment, @unchecked Sendable {
                 context.fill(r)
             }
             if let spine = box.spine {
+                // The spine bends around a rounded corner, thinning to nothing at its end, like a CSS left border: the
+                // box less itself moved right by the spine's width, with its left corners narrowed by as much.
+                let width: CGFloat = 4
+                let inner = CGRect(x: r.minX + width, y: r.minY, width: r.width - width, height: r.height)
+                let band = CGMutablePath()
+                band.addRect(r)
+                band.addPath(Self.rounded(inner, top: CGSize(width: max(0, top - width), height: top), bottom: CGSize(width: max(0, bottom - width), height: bottom),
+                                          right: (top, bottom)))
+                context.clip(to: CGRect(x: r.minX, y: r.minY, width: max(top, bottom) + width, height: r.height))
+                context.addPath(band)
                 context.setFillColor(spine.cgColor)
-                context.fill(CGRect(x: r.minX, y: r.minY, width: 4, height: r.height))
+                context.fillPath(using: .evenOdd)
             }
             context.restoreGState()
             let lines = textLineFragments
