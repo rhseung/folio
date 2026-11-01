@@ -103,7 +103,8 @@ enum NoteLook {
             case "tok-keyword", "tok-operatorKeyword": return (preset("violet").accent, false)
             case "tok-string", "tok-string2": return (preset("green").accent, false)
             case "tok-number", "tok-bool", "tok-atom", "tok-literal": return (preset("orange").accent, false)
-            case "tok-typeName", "tok-className", "tok-namespace": return (preset("blue").accent, false)
+            case "tok-function": return (preset("blue").accent, false)
+            case "tok-typeName", "tok-className", "tok-namespace", "tok-builtin": return (preset("teal").accent, false)
             case "tok-comment": return (text3, true)
             case "tok-meta": return (text3, false)
             default: continue

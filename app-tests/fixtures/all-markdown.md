@@ -119,7 +119,22 @@ def degree_sum(graph):
 ```
 
 ```swift
-let edges = [(1, 2), (2, 3)]
+struct Graph {
+    var edges: [(Int, Int)] = [(1, 2), (2, 3)]
+
+    /// 꼭짓점마다 이웃 수
+    func degrees() -> [Int: Int] {
+        var count: [Int: Int] = [:]
+        for (u, v) in edges where u != v {
+            count[u, default: 0] += 1
+            count[v, default: 0] += 1
+        }
+        return count
+    }
+}
+
+let g = Graph()
+print("degrees: \(g.degrees()), empty: \(g.edges.isEmpty ? "yes" : "no")")
 ```
 
 ```
@@ -129,6 +144,90 @@ let edges = [(1, 2), (2, 3)]
 ~~~js
 const x = 1;
 ~~~
+
+```python
+from collections import deque
+
+@dataclass
+class Graph:
+    adj: dict[int, list[int]]
+
+    def bfs(self, start: int) -> list[int]:
+        """너비 우선 탐색"""
+        seen, order = {start}, []
+        queue = deque([start])
+        while queue:
+            u = queue.popleft()
+            order.append(u)
+            for v in sorted(self.adj.get(u, [])):
+                if v not in seen:
+                    seen.add(v)
+                    queue.append(v)
+        return order
+
+print(f"순서: {Graph({1: [2, 3], 2: [4]}).bfs(1)}", len(range(10)), None, 0x1F)
+```
+
+```typescript
+interface Edge { from: number; to: number; weight?: number }
+
+export function totalWeight(edges: Edge[]): number {
+  return edges.reduce((sum, e) => sum + (e.weight ?? 1), 0);
+}
+
+const edges: Edge[] = [{ from: 1, to: 2, weight: 3 }, { from: 2, to: 3 }];
+console.log(`total = ${totalWeight(edges)}`, true, null);
+```
+
+```cpp
+#include <vector>
+
+// 인접 행렬로 간선 수 세기
+int countEdges(const std::vector<std::vector<int>>& adj) {
+    int total = 0;
+    for (size_t i = 0; i < adj.size(); ++i)
+        for (size_t j = i + 1; j < adj[i].size(); ++j)
+            total += adj[i][j] != 0;
+    return total;
+}
+```
+
+```rust
+fn is_bipartite(adj: &Vec<Vec<usize>>) -> bool {
+    let mut color = vec![None; adj.len()];
+    for s in 0..adj.len() {
+        if color[s].is_some() { continue; }
+        color[s] = Some(true);
+        let mut stack = vec![s];
+        while let Some(u) = stack.pop() {
+            for &v in &adj[u] {
+                match color[v] {
+                    None => { color[v] = color[u].map(|c| !c); stack.push(v); }
+                    Some(c) if Some(c) == color[u] => return false,
+                    _ => {}
+                }
+            }
+        }
+    }
+    true
+}
+```
+
+```sql
+SELECT course, COUNT(*) AS notes
+FROM notes
+WHERE updated_at > '2026-09-01' AND kind = 'lecture'
+GROUP BY course
+ORDER BY notes DESC
+LIMIT 5;
+```
+
+```bash
+# 과목 폴더의 노트 수
+for dir in ~/GIST/2026-3/*/Notes; do
+  echo "$(basename "$(dirname "$dir")"): $(ls "$dir" | wc -l)"
+done
+```
 
 ## 다이어그램
 

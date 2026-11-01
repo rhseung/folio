@@ -1,7 +1,7 @@
 // Run by the app in JavaScriptCore, with no page: AsciiMath to TeX for SwiftMath, and code colors for the note views.
 import AsciiMathParser from "asciimath2tex";
-import { highlightCode, classHighlighter } from "@lezer/highlight";
-import { codeLanguage } from "./code.js";
+import { highlightCode } from "@lezer/highlight";
+import { codeLanguage, highlighters } from "./code.js";
 
 const ascii = new AsciiMathParser();
 
@@ -13,7 +13,7 @@ export function highlight(code, info) {
   if (!language) return [];
   const out = [];
   let pos = 0;
-  highlightCode(code, language.parser.parse(code), classHighlighter,
+  highlightCode(code, language.parser.parse(code), highlighters,
     (text, cls) => { if (cls) out.push(pos, pos + text.length, cls); pos += text.length; },
     () => { pos += 1; });
   return out;

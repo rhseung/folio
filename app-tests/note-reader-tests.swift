@@ -82,6 +82,16 @@ struct NoteReaderTests {
         #expect(storage.string.contains("이건 다이어그램이 아니다"))
     }
 
+    @Test func codeColorsCallsAndSwift() {
+        let colored = { (code: String, language: String, word: String) -> Bool in
+            let at = (code as NSString).range(of: word)
+            return NoteScripts.highlight(code, language: language).contains { NSIntersectionRange($0.range, at).length > 0 && NoteLook.token($0.classes) != nil }
+        }
+        #expect(colored("def f(g):\n    return len(g)", "python", "len"))
+        #expect(colored("def f(g):\n    return len(g)", "python", " f("))
+        #expect(colored("let edges: [Int] = []", "swift", "let"))
+    }
+
     @Test func aTaskShowsItsBoxWithoutABullet() {
         let (view, _) = Self.reader("- [ ] 할 일\n- [x] 한 일\n- [ ]\n- 그냥 항목\n\n1. [ ] 번호 할 일")
         let lines = view.string.components(separatedBy: "\n")
