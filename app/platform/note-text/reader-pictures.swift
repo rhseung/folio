@@ -20,7 +20,7 @@ import UIKit
         #endif
     }
 
-    /// Where an interactive widget would be; the read view doesn't run note scripts.
+    /// Where a widget would be, where widgets don't run.
     static func placeholder(_ size: CGSize) -> (image: PlatformImage, size: CGSize) {
         let image = draw(size) { context in
             let path = CGPath(roundedRect: CGRect(origin: .zero, size: size).insetBy(dx: 1, dy: 1), cornerWidth: 8, cornerHeight: 8, transform: nil)

@@ -73,6 +73,8 @@ struct ReaderBlock {
     var width: CGFloat
     /// Callouts folded or unfolded by a click, against how the note starts them.
     var toggled: Set<Int> = []
+    /// Where widgets run; without it a widget shows as an empty box.
+    var widgets: ReaderWidgets?
 
     private var out = NSMutableAttributedString()
     private var calloutCount = 0
@@ -80,7 +82,8 @@ struct ReaderBlock {
     /// The block ID taken off the last paragraph.
     private var lastID: String?
 
-    init(accent: CourseAccent, syntax: MathSyntax, baseURL: URL?, dark: Bool, width: CGFloat, toggled: Set<Int> = []) {
+    init(accent: CourseAccent, syntax: MathSyntax, baseURL: URL?, dark: Bool, width: CGFloat, toggled: Set<Int> = [], widgets: ReaderWidgets? = nil) {
+        self.widgets = widgets
         self.accent = accent
         self.syntax = syntax
         self.baseURL = baseURL
@@ -101,6 +104,8 @@ struct ReaderBlock {
         out = NSMutableAttributedString()
         calloutCount = 0
         counters = [:]
+        widgets?.begin()
+        defer { widgets?.end() }
         var blocks: [ReaderBlock] = []
         let children = Array(note.document.children)
         var previousCallout: String?
@@ -403,8 +408,17 @@ struct ReaderBlock {
                 return
             }
         case CBWidget.language:
-            let height = (try? JSONDecoder().decode(CBWidget.self, from: Data(text.utf8)))?.height ?? 120
-            picture(ReaderPictures.placeholder(CGSize(width: width - ctx.indent * 2, height: height)), ctx)
+            let widget = try? JSONDecoder().decode(CBWidget.self, from: Data(text.utf8))
+            let size = CGSize(width: width - ctx.indent * 2, height: widget?.height ?? 320)
+            guard let widget, let widgets else {
+                picture(ReaderPictures.placeholder(size), ctx)
+                return
+            }
+            let file = baseURL.flatMap { StandardLayout.widgetFile(widget.id, noteFolder: $0) }
+            let style = Self.paragraph(ctx, before: 6, after: NoteLook.blockGap)
+            let attachment = WidgetAttachment(view: widgets.view(widget.id, file: file, accent: accent), size: size)
+            out.append(NSAttributedString(attachment: attachment, attributes: attributes(ctx, style)))
+            newline(attributes(ctx, style))
             return
         default:
             break

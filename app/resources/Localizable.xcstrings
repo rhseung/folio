@@ -6931,6 +6931,17 @@
         }
       }
     },
+    "notes.widget-missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위젯 파일이 없습니다: %@"
+          }
+        }
+      }
+    },
     "notify.absences": {
       "extractionState": "manual",
       "localizations": {

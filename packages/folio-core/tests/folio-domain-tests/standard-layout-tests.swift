@@ -20,6 +20,15 @@ struct StandardLayoutTests {
         #expect(SemesterFolder(year: 2026, term: .credited) == nil)
     }
 
+    @Test func widgetFileIsInTheCourseMetadata() throws {
+        let id = UUID()
+        let course = URL(filePath: "/GIST/2026-3/EC4207 그래프 이론")
+        let expected = course.appending(path: ".folio/widgets/\(id.uuidString).html")
+        #expect(StandardLayout.widgetFile(id, noteFolder: course.appending(path: "Notes")) == expected)
+        #expect(StandardLayout.widgetFile(id, noteFolder: course.appending(path: "Notes/Week 9")) == expected)
+        #expect(StandardLayout.widgetFile(id, noteFolder: URL(filePath: "/GIST/Notes")) == nil)
+    }
+
     @Test func fileNameRules() {
         #expect(StandardLayout.isCourseFolderName("EC4207 그래프 이론"))
         #expect(!StandardLayout.isCourseFolderName("그래프 이론"))

@@ -3,11 +3,13 @@ import AppKit
 typealias PlatformFont = NSFont
 typealias PlatformColor = NSColor
 typealias PlatformImage = NSImage
+typealias PlatformView = NSView
 #else
 import UIKit
 typealias PlatformFont = UIFont
 typealias PlatformColor = UIColor
 typealias PlatformImage = UIImage
+typealias PlatformView = UIView
 #endif
 
 /// Type, colors and spacing of the native note views (app/platform/note-text). The Claude panel's web page still takes

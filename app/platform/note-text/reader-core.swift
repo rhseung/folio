@@ -28,6 +28,7 @@ import UIKit
     var dirty: Int?
     private var timer: Timer?
     let storage: NSTextStorage
+    private let widgets = ReaderWidgets()
     /// Called after the text is swapped for a new rendering.
     var rendered: () -> Void = {}
     /// Wraps swapping the text, so the view can keep its place on screen.
@@ -37,7 +38,7 @@ import UIKit
 
     func configure(accent: CourseAccent, syntax: MathSyntax, baseURL: URL?, dark: Bool, width: CGFloat) {
         let changed = builder.map { $0.accent != accent || $0.syntax != syntax || $0.dark != dark || $0.baseURL != baseURL || $0.width != width } ?? true
-        builder = ReaderBuilder(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark, width: width)
+        builder = ReaderBuilder(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark, width: width, widgets: widgets)
         if changed { rerender() }
     }
 
