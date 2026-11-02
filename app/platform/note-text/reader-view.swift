@@ -220,9 +220,11 @@ final class ReaderTextView: NoteTextView, NSTextViewDelegate {
 
     func follow(line: Int, frac: Double) {
         guard !typing, let scroll = enclosingScrollView, let manager = textLayoutManager else { return }
-        let y = textContainerOrigin.y + core.follow(line: line, frac: frac) { manager.top(of: $0) } - NoteLook.margin
-        scroll.contentView.scroll(to: NSPoint(x: 0, y: max(0, min(y, frame.height - scroll.contentView.bounds.height))))
-        scroll.reflectScrolledClipView(scroll.contentView)
+        let y = max(0, textContainerOrigin.y + core.follow(line: line, frac: frac) { manager.top(of: $0) } - NoteLook.margin)
+        let clip = scroll.contentView
+        // Bounded as a scroll by hand is, so the room past the note's end counts.
+        clip.scroll(to: clip.constrainBoundsRect(NSRect(origin: NSPoint(x: 0, y: y), size: clip.bounds.size)).origin)
+        scroll.reflectScrolledClipView(clip)
     }
 }
 #else
@@ -357,7 +359,7 @@ final class ReaderTextView: NoteTextView, UITextViewDelegate, UIGestureRecognize
     func follow(line: Int, frac: Double) {
         guard !typing, let manager = textLayoutManager else { return }
         let y = textContainerInset.top + core.follow(line: line, frac: frac) { manager.top(of: $0) } - NoteLook.margin
-        setContentOffset(CGPoint(x: 0, y: max(0, min(y, contentSize.height - bounds.height))), animated: false)
+        setContentOffset(CGPoint(x: 0, y: max(0, min(y, contentSize.height - bounds.height + contentInset.bottom))), animated: false)
     }
 }
 #endif

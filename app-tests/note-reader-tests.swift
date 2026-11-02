@@ -2,6 +2,7 @@ import AppKit
 import FolioDomain
 import FolioMarkdown
 import Foundation
+import SwiftMath
 import Testing
 @testable import Folio
 
@@ -122,6 +123,51 @@ struct NoteReaderTests {
         let scroller = try #require(scroll.horizontalScroller).frame
         let lines = codes[1].bounds.height
         #expect(scroll.isFlipped ? scroller.minY >= lines : scroller.maxY <= scroll.frame.height - lines, "\(scroller) \(lines) \(scroll.frame)")
+    }
+
+    @Test func aTickedBoxIsAsBigAsAnEmptyOne() throws {
+        // The extent of what's drawn, so a fill that stops short of the empty box's border shows.
+        func inked(_ done: Bool) throws -> CGRect {
+            let s = ReaderBuilder.checkbox(done, accent: CourseAccent.presets[0].accent, attributes: [:])
+            let image = try #require((s.attribute(.attachment, at: 0, effectiveRange: nil) as? NSTextAttachment)?.image)
+            let rep = try #require(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 64, pixelsHigh: 64, bitsPerSample: 8, samplesPerPixel: 4,
+                                                    hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+            image.draw(in: NSRect(x: 0, y: 0, width: 64, height: 64))
+            NSGraphicsContext.restoreGraphicsState()
+            var box = CGRect.null
+            for x in 0..<64 { for y in 0..<64 where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.5 { box = box.union(CGRect(x: x, y: y, width: 1, height: 1)) } }
+            return box
+        }
+        #expect(try inked(true) == inked(false))
+    }
+
+    @Test func mathKeepsInkThatLeavesItsBox() throws {
+        func ink(_ image: NSImage) throws -> CGSize {
+            let scale: CGFloat = 2, pad: CGFloat = 40
+            let w = Int((image.size.width + 2 * pad) * scale), h = Int((image.size.height + 2 * pad) * scale)
+            let rep = try #require(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: w, pixelsHigh: h, bitsPerSample: 8, samplesPerPixel: 4,
+                                                    hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
+            rep.size = NSSize(width: CGFloat(w) / scale, height: CGFloat(h) / scale)
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+            image.draw(in: NSRect(origin: CGPoint(x: pad, y: pad), size: image.size))
+            NSGraphicsContext.restoreGraphicsState()
+            var box = CGRect.null
+            for x in 0..<w { for y in 0..<h where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0 { box = box.union(CGRect(x: x, y: y, width: 1, height: 1)) } }
+            return box.size
+        }
+        for tex in [#"G - T"#, #"\bar S"#, #"\|T\| \ge \|\kappa\|"#, #"f"#] {
+            let picture = try #require(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false))
+            // SwiftMath's own picture with room on every side: all the ink the formula has.
+            let whole = MTMathImage(latex: tex, fontSize: 16, textColor: .black, labelMode: .text)
+            whole.contentInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+            let reference = try #require(whole.asImage().1)
+            let (got, want) = (try ink(picture.image), try ink(reference))
+            // A pixel either way is antialiasing: the two are drawn at different fractions of a point.
+            #expect(abs(got.width - want.width) <= 1 && abs(got.height - want.height) <= 1, "\(tex): \(got) vs \(want)")
+        }
     }
 
     @Test func aTaskShowsItsBoxWithoutABullet() {

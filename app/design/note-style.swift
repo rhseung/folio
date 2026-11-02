@@ -7,7 +7,7 @@ enum NoteStyle {
         func block(_ pick: (UInt32, UInt32) -> UInt32) -> String {
             let swatches: [(String, Swatch)] = [
                 ("text", .text), ("text-2", .textSecondary), ("text-3", .textTertiary), ("line", .line),
-                ("line-soft", .lineSoft), ("fill", .fill), ("card", .card),
+                ("line-soft", .lineSoft), ("fill", .fill), ("code-fill", .codeFill), ("card", .card),
             ]
             // Callout kinds borrow the course presets, so a theorem is violet in every course.
             let presets = Dictionary(uniqueKeysWithValues: CourseAccent.presets.map { ($0.name, $0.accent) })

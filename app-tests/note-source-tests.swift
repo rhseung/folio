@@ -105,4 +105,48 @@ struct NoteSourceTests {
             NoteRender.write(view, "source-\(dark ? "dark" : "light")")
         }
     }
+
+    /// Drawn under their line, a math block and an image made the note taller than its text, and the view couldn't
+    /// scroll to a picture under the last line. Against the same source that renders nothing, the height is the same.
+    @Test func mathBlocksAndImagesAddNoHeight() throws {
+        func height(_ text: String) throws -> CGFloat {
+            let (view, _) = Self.editor(text)
+            return try #require(view.textLayoutManager).usageBoundsForTextContainer.height
+        }
+        let shown = try height("앞\n$$\nx^2\n$$\n![a](assets/sample.png)")
+        let unshown = try height("앞\n$$\n\\frac{\n$$\n![a](assets/missing.png)")
+        #expect(shown == unshown)
+    }
+
+    @Test func theBubbleShowsMathBlocksAndImagesByTheCaret() throws {
+        let text = "앞 $y$\n$$\nx^2\n$$\n![a](assets/sample.png)"
+        let (view, window) = Self.editor(text)
+        window.makeFirstResponder(view)
+        let ns = text as NSString
+        func bubble(at i: Int) -> PreviewBubble? {
+            view.setSelectedRange(NSRange(location: i, length: 0))
+            return view.subviews.compactMap { $0 as? PreviewBubble }.first
+        }
+        #expect(bubble(at: 0) == nil)
+        #expect(bubble(at: ns.range(of: "$y").location + 1) != nil)
+        #expect(bubble(at: ns.range(of: "x^2").location) != nil)
+        // On the note's last line there's no room under it, so the bubble goes over it, where the view still shows it.
+        let image = try #require(bubble(at: ns.range(of: "sample").location))
+        #expect(image.frame.maxY <= view.bounds.maxY && image.frame.minY >= 0, "\(image.frame) in \(view.bounds)")
+    }
+
+    @Test func theBubbleTakesItsWindowsLook() throws {
+        let card = { (name: NSAppearance.Name) -> CGColor? in
+            var color: CGColor?
+            NSAppearance(named: name)?.performAsCurrentDrawingAppearance { color = NoteLook.card.cgColor }
+            return color
+        }
+        for (look, other) in [(NSAppearance.Name.aqua, NSAppearance.Name.darkAqua), (.darkAqua, .aqua)] {
+            let bubble = PreviewBubble(image: NSImage(size: NSSize(width: 20, height: 10)), size: CGSize(width: 20, height: 10))
+            bubble.appearance = NSAppearance(named: look)
+            // Whatever the app's appearance is while the layer is updated, the bubble's own decides.
+            NSAppearance(named: other)?.performAsCurrentDrawingAppearance { bubble.updateLayer() }
+            #expect(bubble.layer?.backgroundColor == card(look))
+        }
+    }
 }

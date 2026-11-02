@@ -46,7 +46,7 @@ struct NoteTypingTests {
         var random = SplitMix(state: UInt64(seed))
         let start = Self.starts[seed % Self.starts.count]
         let (view, _) = NoteSourceTests.typing(start)
-        let styler = SourceStyler(accent: CourseAccent.presets[0].accent, syntax: .latex, baseURL: NoteReaderTests.fixtures, dark: false, width: view.columnWidth)
+        let styler = SourceStyler(accent: CourseAccent.presets[0].accent, syntax: .latex, baseURL: NoteReaderTests.fixtures, dark: false)
         var keys: [String] = []
         for _ in 0..<60 {
             let roll = Int.random(in: 0..<10, using: &random)
