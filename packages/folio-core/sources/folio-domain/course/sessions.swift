@@ -1,6 +1,6 @@
 import Foundation
 
-/// The unit of review and quizzes (docs/SPEC.md "Unit").
+/// The unit of review and quizzes.
 public struct Unit: Entity {
     public var id: UUID
     public var createdAt: Date
@@ -103,7 +103,7 @@ public struct Session: Entity {
 }
 
 /// Sessions are made as classes happen, not ahead for the whole term: the weekly schedule only suggests the next lecture,
-/// and anything off it (a recitation, a makeup) is added by hand (docs/SPEC.md "강의 회차").
+/// and anything off it (a recitation, a makeup) is added by hand.
 public enum SessionPlanner {
     public struct Suggestion: Sendable, Equatable {
         public var date: Date

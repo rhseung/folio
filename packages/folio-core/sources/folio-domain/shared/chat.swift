@@ -1,6 +1,6 @@
 import Foundation
 
-/// `<course>/.folio/chats/<id>.json`: one conversation with Claude about a course (docs/SPEC.md "대화").
+/// `<course>/.folio/chats/<id>.json`: one conversation with Claude about a course.
 public struct Chat: Entity {
     public var id: UUID
     public var createdAt: Date

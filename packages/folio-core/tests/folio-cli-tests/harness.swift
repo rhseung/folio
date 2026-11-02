@@ -7,7 +7,7 @@ import Foundation
 import Testing
 
 /// Runs CLI command lines in-process against copies of `Fixture.standard`, with the device and clock pinned so a
-/// command and the action it stands for leave byte-identical folders (docs/SPEC.md "커버리지 검사").
+/// command and the action it stands for leave byte-identical folders.
 struct Harness {
     static let graphTheory = UUID(uuidString: "C0000000-0000-4000-8000-000000000002")!
     let device = UUID(uuidString: "D0000000-0000-4000-8000-0000000000CC")!

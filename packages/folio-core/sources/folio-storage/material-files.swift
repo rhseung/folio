@@ -62,7 +62,7 @@ extension CourseStore {
     }
 
     /// Moves a tracked file to the Trash, where the user can still put it back, and stops tracking it.
-    /// Links to it stay, as with disconnecting (docs/SPEC.md "파일 추적").
+    /// Links to it stay, as with disconnecting.
     public func trash(_ id: UUID, in file: inout CourseFile) throws {
         guard let m = file.materials.first(where: { $0.id == id }) else { return }
         try CoordinatedFile.trash(fileURL(m.path))

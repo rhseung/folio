@@ -5,7 +5,7 @@ import Speech
 import UIKit
 #endif
 
-/// Records a lecture and transcribes it on the device as it goes (docs/SPEC.md "강의 녹음"). One microphone tap feeds
+/// Records a lecture and transcribes it on the device as it goes. One microphone tap feeds
 /// both the audio file and the transcriber, so transcript times line up with the file even across pauses.
 @MainActor @Observable
 final class LectureRecorder {

@@ -1,6 +1,6 @@
 import Foundation
 
-/// `study_session` log event: time a course screen was in front (docs/SPEC.md "공부 시간").
+/// `study_session` log event: time a course screen was in front.
 public struct StudySessionEvent: LogEvent, Equatable {
     public static let type = "study_session"
     public var courseId: UUID
@@ -43,7 +43,7 @@ public enum StudyTime {
 }
 
 extension CourseFile {
-    /// Absences so far and the cap the next one reaches, when that next absence would reach it (docs/SPEC.md "알림").
+    /// Absences so far and the cap the next one reaches, when that next absence would reach it.
     /// Marks ahead of their class don't count yet.
     public func capOneAway(at now: Date) -> (absences: Int, cap: AttendanceCap)? {
         let absences = GradeCalculator.absences(in: heldAttendance(at: now), policy: policy)
@@ -52,7 +52,7 @@ extension CourseFile {
     }
 }
 
-/// Everything the today screen shows (docs/SPEC.md "오늘 화면"), computed from course files and review states.
+/// Everything the today screen shows, computed from course files and review states.
 public struct TodaySummary: Sendable {
     public struct ExamItem: Sendable, Equatable {
         public var courseId: UUID

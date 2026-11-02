@@ -1,6 +1,6 @@
 import Foundation
 
-/// docs/SPEC.md "학점과 GPA 계산". Totals are always computed from courses, never stored.
+/// Totals are always computed from courses, never stored.
 public enum GPACalculator {
     /// `3.800`, or `-` with nothing graded yet.
     public static func label(_ gpa: Double?) -> String { gpa.map { String(format: "%.3f", $0) } ?? "-" }

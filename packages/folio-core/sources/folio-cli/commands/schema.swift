@@ -4,8 +4,8 @@ import FolioStorage
 import Foundation
 
 /// JSON Schema for action inputs, read off the input types by decoding them with a decoder that answers every
-/// question with a placeholder and notes what was asked. That keeps the schema from drifting from the types
-/// (docs/SPEC.md "에이전트용 호출"); Swift has no reflection over `Decodable`, and schema libraries need a macro on
+/// question with a placeholder and notes what was asked. That keeps the schema from drifting from the types;
+/// Swift has no reflection over `Decodable`, and schema libraries need a macro on
 /// every domain type.
 final class SchemaBuilder {
     var defs: [String: JSONValue] = [:]

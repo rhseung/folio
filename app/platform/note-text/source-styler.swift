@@ -24,8 +24,8 @@ extension NSAttributedString.Key {
 }
 
 /// Styles the note's markdown source in place: marks stay in the text, dimmed, and the text after them takes fonts,
-/// weights, colors and tints, never spacing, so every line starts at the same x and the caret walks the raw text
-/// (docs/SPEC.md "편집 방식"). Rendered math and images only float in a bubble by the caret: drawn in the text, they
+/// weights, colors and tints, never spacing, so every line starts at the same x and the caret walks the raw text.
+/// Rendered math and images only float in a bubble by the caret: drawn in the text, they
 /// added height the text didn't have, so the view couldn't scroll to a picture under the note's last line.
 @MainActor struct SourceStyler {
     var accent: CourseAccent

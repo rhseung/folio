@@ -1,6 +1,6 @@
 import Foundation
 
-/// A one-time plan that moves an unorganized GIST folder into the standard layout (docs/SPEC.md "기존 폴더 정리").
+/// A one-time plan that moves an unorganized GIST folder into the standard layout.
 /// Only moves and renames; file contents are never touched.
 public struct CleanupPlan: Codable, Sendable, Equatable {
     public var moves: [PlannedMove]
@@ -175,7 +175,7 @@ struct CoursePlanner {
         case .assignments(let kind):
             assignmentItems(node.children, in: base, kind: kind)
         case .labManuals:
-            // A manual is what the lab session uses, so it is that week's lecture material (docs/SPEC.md "이름 규칙").
+            // A manual is what the lab session uses, so it is that week's lecture material.
             for item in node.children {
                 let path = "\(base)/\(item.name)"
                 let lab = Keywords.labNumber(of: item.name, labs: labs) ?? Keywords.assignmentNumber(in: item.name)?.number

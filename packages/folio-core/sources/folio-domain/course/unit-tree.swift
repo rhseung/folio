@@ -1,6 +1,6 @@
 import Foundation
 
-/// The unit outline (docs/SPEC.md "Unit"): `order` ranks siblings under the same parent.
+/// The unit outline: `order` ranks siblings under the same parent.
 public enum UnitTree {
     /// Units in outline order with their depth. A unit whose parent is gone, or that sits in a parent cycle,
     /// is listed at the top level so it never disappears from the screen.

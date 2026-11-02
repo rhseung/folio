@@ -6,7 +6,7 @@ import FolioStorage
 import Foundation
 import Testing
 
-/// docs/SPEC.md "도움말": every example in the help runs on a `Fixture.standard` copy, writes as `--dry-run`.
+/// Every example in the help runs on a `Fixture.standard` copy, writes as `--dry-run`.
 struct HelpExampleTests {
     let h = Harness()
 
@@ -93,7 +93,7 @@ struct HelpExampleTests {
         try run(Self.examples())
     }
 
-    /// The agent skill's examples are what agents copy, so they run too (docs/SPEC.md "에이전트용 호출").
+    /// The agent skill's examples are what agents copy, so they run too.
     @Test func skillExamplesRun() throws {
         var dir = URL(filePath: #filePath).deletingLastPathComponent()
         while !FileManager.default.fileExists(atPath: dir.appending(path: ".claude/skills/folio/SKILL.md").path) { dir.deleteLastPathComponent() }

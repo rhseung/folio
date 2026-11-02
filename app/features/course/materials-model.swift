@@ -175,7 +175,7 @@ final class MaterialsModel {
 
     func recordPage(_ page: Int, of m: FolioDomain.Material) {
         let store = course.store
-        // folio:not-an-action page views are activity logs, not data changes (docs/SPEC.md "액션")
+        // folio:not-an-action page views are activity logs, not data changes
         workspace.perform { try store.log.append(MaterialViewEvent(materialId: m.id, page: page), device: workspace.device, at: .now) }
     }
 

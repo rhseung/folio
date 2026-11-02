@@ -1,6 +1,6 @@
 import Foundation
 
-/// What a plan item is about; finishing that work will later complete the item automatically (docs/SPEC.md "시험").
+/// What a plan item is about; finishing that work will later complete the item automatically.
 public struct ExamPlanTarget: Codable, Sendable, Hashable {
     public enum Kind: String, Codable, Sendable, CaseIterable {
         case unit

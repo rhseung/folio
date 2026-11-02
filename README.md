@@ -15,7 +15,7 @@
 - **검색**: 모든 과목의 노트, 자료 제목과 PDF 본문, 퀴즈, 과제를 찾습니다.
 - **명령줄 도구 `folio`**: 앱에서 할 수 있는 데이터 조작을 터미널과 AI 에이전트에서도 할 수 있습니다.
 
-손필기(PencilKit), 위젯, PDF 내보내기는 아직 만들지 않았습니다. 전체 기능과 결정 사항은 [명세](docs/SPEC.md)에 있습니다.
+손필기(PencilKit), 위젯, PDF 내보내기는 아직 만들지 않았습니다. 남은 일과 결정 사항은 [GitHub 이슈와 Project](https://github.com/users/rhseung/projects/10)에 있습니다.
 
 ## 데이터 원칙
 
@@ -85,7 +85,7 @@ packages/
   folio-markdown/  마크다운 파서와 확장 문법, HTML 렌더러
   folio-ai/        Claude 연동 계층
 web/               노트 편집기(CodeMirror)와 수식(KaTeX, AsciiMath) 번들 원본
-docs/              명세와 디자인 시스템
+docs/              디자인 시스템
 scripts/           디자인 토큰 검사
 ```
 
@@ -93,6 +93,5 @@ scripts/           디자인 토큰 검사
 
 ## 문서
 
-- [docs/SPEC.md](docs/SPEC.md): 기능 명세. 화면, 데이터 모델, 계산 규칙, 명령줄 도구
 - [docs/DESIGN.md](docs/DESIGN.md): 디자인 시스템. 원칙, 토큰, 구성 요소, 창 구조
 - [AGENTS.md](AGENTS.md): 구현 규칙. 모듈 경계, 데이터 원칙, 테스트 기준

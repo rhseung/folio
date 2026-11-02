@@ -4,7 +4,7 @@ import FolioStorage
 import Foundation
 import Observation
 
-/// docs/SPEC.md "설정". Edits go to a local copy and are saved to settings.json once typing pauses.
+/// Edits go to a local copy and are saved to settings.json once typing pauses.
 @MainActor @Observable
 final class SettingsModel {
     let workspace: Workspace

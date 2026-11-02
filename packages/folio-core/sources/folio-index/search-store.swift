@@ -5,7 +5,7 @@ import Foundation
 import GRDB
 import PDFKit
 
-/// The per-device search index (docs/SPEC.md "검색"): a cache in local SQLite, rebuilt from the course folders whenever
+/// The per-device search index: a cache in local SQLite, rebuilt from the course folders whenever
 /// they change, never written back to them.
 public final class SearchStore: Sendable {
     let db: DatabaseQueue

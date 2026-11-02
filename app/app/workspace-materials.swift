@@ -11,7 +11,7 @@ extension Workspace {
         return try await Task.detached { try store.download(material) }.value
     }
 
-    /// Copies files in from outside into `folder` (docs/SPEC.md "구조 유지"), registers them, and links them to `session`.
+    /// Copies files in from outside into `folder`, registers them, and links them to `session`.
     /// `week` puts the week in front of the name, as `Lectures` asks. A file already in this course is linked where it is.
     func importFiles(_ urls: [URL], into folder: String, week: Int? = nil, session: UUID? = nil, course id: UUID) {
         let files = urls.filter(\.isFileURL)

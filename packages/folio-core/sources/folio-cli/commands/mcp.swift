@@ -3,8 +3,8 @@ import FolioActions
 import FolioDomain
 import Foundation
 
-/// `folio mcp`: the same actions and read commands as MCP tools over standard input and output (docs/SPEC.md
-/// "에이전트용 호출"). The client starts it per session, so there is no server to keep running.
+/// `folio mcp`: the same actions and read commands as MCP tools over standard input and output.
+/// The client starts it per session, so there is no server to keep running.
 struct MCPCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "mcp", abstract: String(localized: .mcpAbstract), discussion: String(localized: .mcpDiscussion))

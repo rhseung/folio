@@ -199,7 +199,7 @@ struct ScorePanel: View {
     let result: GradeCalculator.CourseScore
     @Binding var target: Double
     /// The A share of a relatively graded course. Its cutoffs aren't known, so it is aimed at by place against the
-    /// mean, not by a score (docs/SPEC.md "목표 점수 역산").
+    /// mean, not by a score.
     var relative: Double?
 
     var body: some View {

@@ -1,6 +1,6 @@
 import Foundation
 
-/// docs/SPEC.md "성적 화면": the semester what-if and graduation requirements.
+/// The semester what-if and graduation requirements.
 public struct CategoryCredits: Sendable, Equatable {
     /// Graded courses whose grade counts toward credits.
     public var earned: Double = 0

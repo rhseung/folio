@@ -2,7 +2,7 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-// One-time imports from Notion, the calendar and hand-written tables (docs/SPEC.md "기존 데이터 이전"). A dry run is the
+// One-time imports from Notion, the calendar and hand-written tables. A dry run is the
 // plan to review; `ctx.notes` carries what was skipped or needs checking.
 
 /// Course folder name (`EC4207 그래프 이론`) to course id, for payloads that name courses by folder.

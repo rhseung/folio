@@ -159,8 +159,8 @@ struct TodayView: View {
 
     // MARK: Reviews
 
-    /// A class's review note comes first, then the units: writing the note is the day's review of that class
-    /// (docs/SPEC.md "복습 스케줄러"), and a unit linked to it waits on the note anyway.
+    /// A class's review note comes first, then the units: writing the note is the day's review of that class,
+    /// and a unit linked to it waits on the note anyway.
     func reviewBlock(_ reviews: TodayModel.Reviews, notes: [TodaySummary.SessionItem], today: LocalDate) -> some View {
         let queue = reviews.queue, all = reviews.all
         let left = queue.count + notes.count, done = reviews.doneToday

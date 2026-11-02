@@ -1,6 +1,6 @@
 import Foundation
 
-/// Where files brought into a course from outside go, and what they are called (docs/SPEC.md "구조 유지").
+/// Where files brought into a course from outside go, and what they are called.
 public enum MaterialIntake {
     /// `05_<name>` for a file brought in for a week-5 session, so `Lectures` keeps its week order.
     public static func lectureName(_ name: String, week: Int) -> String {

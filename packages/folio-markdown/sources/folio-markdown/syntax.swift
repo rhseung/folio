@@ -1,7 +1,7 @@
 import Foundation
 
 /// `[[target#heading|alias]]`, `[[target#^block]]`, `![[target]]` (embed), or an app object link
-/// such as `[[material:<ID>#page=12]]` (docs/SPEC.md "지원 문법").
+/// such as `[[material:<ID>#page=12]]`.
 public struct WikiLink: Hashable, Sendable {
     public var target: String
     /// Text after `#` that is not a block reference: a heading, or `page=12` for object links.

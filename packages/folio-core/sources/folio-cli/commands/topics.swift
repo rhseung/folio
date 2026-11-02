@@ -1,4 +1,4 @@
-/// `folio help <topic>`: concepts rather than commands (docs/SPEC.md "도움말").
+/// `folio help <topic>`: concepts rather than commands.
 enum Topic: String, CaseIterable {
     case refs, output, exit, safety, fzf
 

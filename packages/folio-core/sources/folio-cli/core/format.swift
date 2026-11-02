@@ -33,5 +33,5 @@ func footer(_ count: Int, hidden: String? = nil) {
     say(([String(localized: .commonCount(count))] + (hidden.map { [$0] } ?? [])).joined(separator: " · ").styled(.dim))
 }
 
-/// For `--lines`: one item per line, the first field a ref other commands take (docs/SPEC.md "줄 형식").
+/// For `--lines`: one item per line, the first field a ref other commands take.
 func line(_ fields: [String]) { say(fields.map { $0.replacingOccurrences(of: "\t", with: " ") }.joined(separator: "\t")) }

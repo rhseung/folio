@@ -33,7 +33,7 @@ public struct NoteMeta: Equatable, Sendable {
     }
 }
 
-/// Note bodies (docs/SPEC.md "노트 템플릿"). Settings may override the section headings; these are the defaults.
+/// Note bodies. Settings may override the section headings; these are the defaults.
 public enum NoteTemplate {
     public static func defaultSections(for kind: NoteKind) -> [String] {
         switch kind {

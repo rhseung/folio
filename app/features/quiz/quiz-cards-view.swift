@@ -95,7 +95,7 @@ struct CardEditorSheet: View {
                   deleteTitle: model.deleteTitle, onDelete: { confirmingDelete = true }) {
             Card {
                 FormRow(label: String(localized: .quizUnit)) { SearchSelect(selection: $model.draft.unitId, options: model.unitOptions(units)) }
-                // "유형" is the category, as the solve filter and the statistics call it (docs/SPEC.md "풀기 설정").
+                // "유형" is the category, as the solve filter and the statistics call it.
                 FormRow(label: String(localized: .quizCategory)) { ChoiceMenu(selection: $model.draft.category, options: CardCategory.allCases.map { ($0, $0.label) }) }
                 FormRow(label: String(localized: .quizCardType), last: true) { ChoiceMenu(selection: $model.draft.type, options: CardType.editable.map { ($0, $0.label) }) }
             }

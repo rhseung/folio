@@ -1,6 +1,6 @@
 import Foundation
 
-/// How a component's sub-scores combine (docs/SPEC.md "GradeComponent").
+/// How a component's sub-scores combine.
 /// Stored as `sum`, `mean`, `single`, `dropLowest:1`, `bestOf:3` so course.json stays readable.
 public enum Aggregation: Hashable, Sendable, Codable {
     case sum

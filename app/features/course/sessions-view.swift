@@ -2,7 +2,7 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// Sessions are made as classes happen: the weekly schedule only suggests the next lecture, and the rest are added by hand (docs/SPEC.md "강의 회차").
+/// Sessions are made as classes happen: the weekly schedule only suggests the next lecture, and the rest are added by hand.
 struct SessionsView: View {
     @Environment(\.accent) private var accent
     @State private var model: SessionsModel
@@ -275,7 +275,7 @@ struct AddSessionSheet: View {
 }
 
 /// The units a session covers, linked or unlinked in place. A held class with none is flagged, since its review
-/// never reaches the unit queue (docs/SPEC.md "복습 스케줄러").
+/// never reaches the unit queue.
 struct SessionUnitsPicker: View {
     @Environment(Workspace.self) private var workspace
     let course: LoadedCourse
@@ -366,7 +366,7 @@ struct Rail<Dot: View>: View {
 }
 
 /// Date, what the class covered, then only the notes that exist. Creating notes, attendance and cancelling live in one menu,
-/// except today's rough note, which is a single click away (docs/SPEC.md "강의 회차").
+/// except today's rough note, which is a single click away.
 struct SessionRow: View {
     @Environment(\.accent) private var accent
     let model: SessionsModel

@@ -29,7 +29,7 @@ public struct SearchHit: Sendable, Hashable {
     public var snippet: String?
 }
 
-/// Ranking and snippets over the rows the SQLite index (FolioIndex `SearchStore`) found (docs/SPEC.md "검색").
+/// Ranking and snippets over the rows the SQLite index (FolioIndex `SearchStore`) found.
 public struct SearchIndex: Sendable {
     public var items: [SearchItem]
 

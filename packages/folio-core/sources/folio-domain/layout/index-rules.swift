@@ -1,4 +1,3 @@
-// docs/SPEC.md "색인 제외 대상".
 public enum IndexRules {
     public static let codeProjectMarkers: Set<String> = [".git", "node_modules", "__pycache__", ".venv", "build", "dist"]
 

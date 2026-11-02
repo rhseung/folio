@@ -59,7 +59,7 @@ enum CLI {
         throw CLIError(exit: .usage, message: String(localized: .gistUnknown), hints: [String(localized: .gistUnknownHintOption), String(localized: .gistUnknownHintEnv)])
     }
 
-    /// Its own ID, apart from the Mac app's, so the two never append to the same log file (docs/SPEC.md "쓰기와 안전").
+    /// Its own ID, apart from the Mac app's, so the two never append to the same log file.
     static var device: DeviceID {
         overrides?.device ?? LocalDevice.id(in: UserDefaults(suiteName: "com.rhseung.folio.cli") ?? .standard)
     }

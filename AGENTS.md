@@ -1,13 +1,13 @@
 # Folio
 
-과목을 중심으로 강의 자료, 노트, 손필기, 복습, 퀴즈, 과제, 성적을 관리하는 macOS와 iPadOS용 네이티브 앱입니다. 무엇을 만들지는 `docs/SPEC.md`에 있습니다. 이 파일에는 어떻게 만들지에 대한 규칙을 적습니다. 작업을 시작하기 전에 `docs/SPEC.md`에서 해당 절을 먼저 읽습니다.
+과목을 중심으로 강의 자료, 노트, 손필기, 복습, 퀴즈, 과제, 성적을 관리하는 macOS와 iPadOS용 네이티브 앱입니다. 무엇을 만들지와 남은 일은 GitHub 이슈와 [Project](https://github.com/users/rhseung/projects/10)에 있습니다. 이 파일에는 어떻게 만들지에 대한 규칙을 적습니다. 작업을 시작하기 전에 해당 이슈와 그 상위 이슈를 먼저 읽습니다.
 
 ## 소통 규칙
 
 - 사용자와는 한국어로 대화한다. 영어로 답하지 않는다.
 - 코드의 식별자, 주석, 커밋 메시지는 영어로 쓴다.
 - 앱의 UI 문자열은 한국어로 쓰고 String Catalog(`Localizable.xcstrings`)에 키로 둔다. 아래 "문자열 키" 절을 따른다.
-- 명세와 다르게 구현해야 할 이유가 생기면 구현하기 전에 사용자에게 묻는다. 명세에 없는 기능을 임의로 추가하지 않는다.
+- 이슈와 다르게 구현해야 할 이유가 생기면 구현하기 전에 사용자에게 묻는다. 이슈에 없는 기능을 임의로 추가하지 않는다. 사용자와 새로 정한 동작은 그 이슈 본문에 적는다.
 
 ## 기술 기준
 
@@ -25,7 +25,6 @@
 folio/
   AGENTS.md
   docs/
-    SPEC.md
     DESIGN.md         # 디자인 시스템: 원칙, 토큰과 구성 요소의 쓰임, 패턴
   packages/
     folio-core/       # 모델, 저장소, 파일 추적, 성적과 GPA 계산, 복습 스케줄러. UI 코드 없음
@@ -58,7 +57,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
 | `FolioStorage` | `packages/folio-core` | GIST 폴더 읽기와 쓰기, JSON 스키마 버전과 마이그레이션, 원자적 쓰기, 기기별 로그, 파일 추적 | 규칙 판단. 판단은 Domain에 맡긴다 |
 | `FolioMarkdown` | `packages/folio-markdown` | 마크다운 파서와 확장 문법, frontmatter, HTML 렌더러. `swift-markdown` 기반 | 다른 Folio 모듈에 의존 |
 | `FolioAI` | `packages/folio-ai` | Claude API 호출(Swift SDK가 없어 문서화된 HTTP 형식 그대로), 작업별 모델과 effort 표, 맥락 구성, 구조화된 응답 스키마, 사용량과 비용 | 파일 쓰기. 결과는 제안으로만 돌려준다 |
-| `FolioActions` | `packages/folio-core` | 데이터를 바꾸는 모든 동작(명세의 "명령줄 도구" 절의 액션). Domain의 변환과 Storage의 쓰기, 폴더 생성, 로그를 한 액션으로 묶는다. 액션 목록의 단일 출처 | UI, 출력 형식. 앱과 CLI가 같은 구현을 부른다 |
+| `FolioActions` | `packages/folio-core` | 데이터를 바꾸는 모든 동작. Domain의 변환과 Storage의 쓰기, 폴더 생성, 로그를 한 액션으로 묶는다. 액션 목록의 단일 출처 | UI, 출력 형식. 앱과 CLI가 같은 구현을 부른다 |
 | `FolioIndex` | `packages/folio-core` | 기기별 로컬 SQLite 검색 색인(GRDB, FTS5 trigram). 바뀐 과목만 다시 읽고 PDF 본문을 뽑아 둔다. 캐시 폴더에 두며 지워도 다시 만든다 | GIST 폴더에 쓰기. 순위와 발췌는 Domain의 `SearchIndex`에 맡긴다 |
 | `FolioCLI` | `packages/folio-core` | 터미널 도구 `folio`의 명령 라이브러리. 실행 파일은 진입점만 있는 `FolioCommand`다(실행 타깃의 테스트 빌드에는 카탈로그 심볼이 생기지 않아서다). 모든 액션을 `<대상> <동작>` 명령으로 열고, 사람용 출력과 `--json` 출력을 만든다 | 액션 로직. 명령은 인자를 해석해 `FolioActions`를 부르고 결과를 그리기만 한다 |
 | `FolioMacros` | `packages/folio-core` | `@Action`과 필드 표시(`@Arg`, `@New`, `@Off`, `@Hidden`). 선언에서 입력 형식, init, 코딩, `spec`을 만들고 실수(맨 `UUID`, 없는 `{필드}`, 확인 문구 없는 삭제)를 컴파일 오류로 막는다 | 실행 코드. 앱과 CLI에 링크되지 않는다 |
@@ -73,6 +72,25 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
     - 규칙은 액션이 아니라 `FolioDomain`의 모델(`course-rules.swift`의 `Document.model`)에 둔다. 모든 저장이 그 규칙으로 검사한다.
     - 화면은 규칙을 다시 적지 않는다. 버튼을 켜고 끌 때는 `workspace.can(액션)`, 막힌 이유는 `refusal`, 확인 문구는 `confirmation`으로 묻는다. 앱이 보여 주는 문서로 미리 실행해 본다.
 - 새 관심사가 생기면 위 표에 모듈을 추가하고 방향을 정한 뒤 만든다.
+
+### 구조 축
+
+`@Action`처럼 한 번 선언하고 여러 곳이 같은 선언을 읽는 구조를 축이라 부른다. 새 기능은 맞는 축 위에 얹고, 같은 일을 화면마다 따로 구현하지 않는다.
+
+- 축은 첫 소비자 두세 개와 함께 만든다. 소비자 없이 미리 만들지 않는다.
+- 값의 모양과 규칙은 `FolioDomain`에 두고, 앱은 그 값을 그리기만 한다.
+
+| 축 | 하나로 모으는 것 | 상태 |
+| --- | --- | --- |
+| 액션 `@Action` | 데이터를 바꾸는 모든 동작. 앱, CLI, MCP가 같은 선언을 쓴다 | 있음 |
+| 표준 구조 `standard-layout.swift` | 폴더와 파일 이름 | 있음 |
+| 앱 링크(Route) | 앱 안의 모든 대상을 가리키는 주소. 알림, 위젯, 단축어, 멀티뷰, 기록이 쓴다 | #43 |
+| 화면 계약 | 모든 화면이 주소 하나를 그리고 전체·칸·좁은 폭에서 동작 | #61 |
+| 제안 | Claude가 내놓는 분류, 추출, 일정을 승인 화면으로 받는 공통 구조 | #90 |
+| 파일 보기 렌더러 | 형식 판단(`MaterialFormat`)과 형식별 보기(`FileView`) | #179 |
+| 단축키 | 명령마다 한 번 등록하고 메뉴, 설정, 팔레트가 읽는 표와 키 녹음 검사 | #176 |
+
+축을 새로 만들면 이 표에 적는다.
 
 ### 화면: 모델과 뷰
 
@@ -118,12 +136,57 @@ PageHeader(title: String(localized: .sessionsAdd))   // String을 받는 API
 이 원칙들은 사용자의 실제 학업 자료를 다루기 때문에 반드시 지킵니다.
 
 1. **파일이 원본이다.** 모든 상태는 GIST 폴더 안의 파일(`course.json`, `transcript.json`, 마크다운 노트, `.drawing`, 기기별 `.jsonl` 로그)에 저장한다. 앱 내부의 SQLite는 검색과 집계를 위한 캐시이며, 지워도 파일에서 다시 만들 수 있어야 한다.
-2. **폴더 구조는 Folio가 정한다.** GIST 폴더는 `docs/SPEC.md`의 "표준 폴더 구조"와 "이름 규칙"을 따른다. 과목 폴더의 하위 폴더는 `Syllabus`, `Lectures`, `Exercises`, `Textbooks`, `Assignments/<과제>`, `Exams/Past`, `Exams/<시험>`, `Notes`, `Ink`, `Recordings`, `Archive`, `.folio`만 쓴다. 과제와 시험은 하나당 폴더 하나이고, 시험 폴더는 데이터 모델의 Exam과 1:1로 대응한다. 과제 폴더 안의 파일 이름은 바꾸지 않는다. 예전 학기의 다양한 폴더 이름을 허용하는 분기 코드를 만들지 않는다. 기존 폴더는 일회성 정리 도구로 표준 구조에 맞춘다.
+2. **폴더 구조는 Folio가 정한다.** GIST 폴더는 아래 "폴더 구조와 이름 규칙"을 따른다. 과목 폴더의 하위 폴더는 `Syllabus`, `Lectures`, `Exercises`, `Textbooks`, `Assignments/<과제>`, `Exams/Past`, `Exams/<시험>`, `Notes`, `Ink`, `Recordings`, `Archive`, `.folio`만 쓴다. 과제와 시험은 하나당 폴더 하나이고, 시험 폴더는 데이터 모델의 Exam과 1:1로 대응한다. 과제 폴더 안의 파일 이름은 바꾸지 않는다. 예전 학기의 다양한 폴더 이름을 허용하는 분기 코드를 만들지 않는다. 기존 폴더는 일회성 정리 도구로 표준 구조에 맞춘다.
 3. **삭제와 이동은 사용자 승인 후에만 한다.** 파일 이동, 이름 변경, 삭제는 사용자가 확인 화면에서 승인한 경우에만 수행한다. 수행한 이동과 이름 변경은 `.folio/moves.jsonl`에 기록해 되돌릴 수 있게 한다. Claude가 제안한 분류와 위치도 제안으로만 저장한다.
 4. **쓰기는 원자적으로 한다.** 파일 쓰기는 `NSFileCoordinator`를 거치고, 임시 파일에 쓴 뒤 교체하는 방식으로 한다. iCloud 충돌 사본은 `NSFileVersion`으로 감지한다.
 5. **로그는 추가만 한다.** `.folio/logs/<기기 ID>.jsonl`은 각 기기가 자기 파일에만 줄을 추가한다. 기존 줄을 고치거나 지우지 않는다.
 6. **스키마에 버전을 둔다.** 모든 JSON 파일 최상위에 `schemaVersion`을 두고, 버전이 바뀌면 마이그레이션 함수를 추가한다. 모르는 필드는 읽을 때 버리지 않고 그대로 보존한다.
 7. **식별은 ID로 한다.** 파일, 노트, 엔티티는 UUID로 식별한다. 경로와 제목은 표시용이며 바뀔 수 있다.
+
+### 폴더 구조와 이름 규칙
+
+코드의 단일 출처는 `standard-layout.swift`다. 이 절은 그 규칙을 사람이 읽는 형태로 적는다. 과목 폴더는 받은 자료(`Syllabus`, `Lectures`, `Exercises`, `Textbooks`), 해야 할 일(`Assignments`, `Exams`), 내가 만든 것(`Notes`, `Ink`, `Recordings`, `Archive`)으로 나뉜다.
+
+```text
+Me/GIST/
+  .folio/
+    transcript.json            # 학기별 이수 기록, 인정학기, 학점 규칙, 목표
+    catalog.json               # 강의 코드, 세부 분류, 평어, 교수 정보
+    settings.json              # 하루 경계, 복습 간격, 사이드바 과목 순서 등 전역 설정
+  2026-3/
+    _Admin/                    # 학기 전체의 시험 시간표, 강의실 배정, 수강신청 서류, 성적증명서
+    EC4207 그래프 이론/
+      Syllabus/                # 강의계획서, OT 자료, 수업 운영 안내
+      Lectures/                # 강의 슬라이드. 05_Matchings.pdf
+      Exercises/               # 교수가 준 채점 없는 연습 문제
+      Textbooks/               # 교재, 참고서, 해설집
+      Assignments/
+        HW03/                  # 과제 하나에 폴더 하나. 안의 파일은 원래 이름 유지
+        Lab03/                 # 실험 보고서. 매뉴얼은 그 실험 회차의 강의 자료로 Lectures에 둔다
+      Exams/
+        Past/                  # 족보. 2024 Midterm (소순범).pdf
+        Midterm/               # 이 시험 하나에 딸린 파일. Guideline, Seating, 직접 만든 문제집, Summary
+      Notes/                   # Folio 마크다운 노트
+        assets/                # 노트에 넣은 그림과 파일
+      Ink/                     # PencilKit 필기 (.drawing)
+      Recordings/              # 강의 녹음(.m4a)과 받아쓰기(.transcript.json). 2주차-1.m4a
+      Archive/                 # 이전 필기 (노타빌리티 PDF, 예전 노트 폴더)
+      .folio/
+        course.json            # 과목 정보, 단원, 강의 회차, 평가 기준, 과제, 파일 연결
+        quizzes/<단원 ID>.json
+        chats/<대화 ID>.json
+        widgets/<위젯 ID>.html
+        moves.jsonl            # 앱이 수행한 이동과 이름 변경 기록
+        logs/<기기 ID>.jsonl  # 복습, 퀴즈, 공부 시간 기록 (기기별 추가 전용)
+```
+
+- GIST 폴더 최상위에는 학기 폴더와 `.folio`만 둔다. 학기 폴더는 `<연도>-<번호>`이고 번호 1은 봄, 2는 여름, 3은 가을, 4는 겨울학기다. 학기 폴더 안에는 `_Admin`과 과목 폴더만 둔다.
+- 과목 폴더는 `<대표 과목코드> <과목명>`이다. 원본은 `course.json`이고, 과목 편집에서 바꾸면 앱이 폴더 이름을 맞춘다(저장 전 새 이름을 보여 주는 것이 승인이며 `moves.jsonl`에 남긴다). 과목 폴더 최상위에는 파일을 두지 않는다. 과목을 만들 때 `Syllabus`, `Lectures`, `Assignments`, `Exams`, `Notes`를 만들고, 나머지는 처음 필요할 때 만든다.
+- `Lectures`의 파일은 `<주차 두 자리>_<제목>`이고, 한 주에 여러 개면 `05-1_`, `05-2_`로 나눈다.
+- `Assignments/<과제>`는 종류 접두어와 두 자리 번호다(`HW`, `Lab`, `Report`, `Project`, `SP`, `Reading`, 평가 항목에 맞춰 추가). 안의 파일 이름은 바꾸지 않는다. 제출본은 교수가 정한 형식을 따라야 하기 때문이다. 문제, 제출본, 해설 같은 역할은 `course.json`에 기록한다. 코드 과제는 프로젝트를 이 폴더에 그대로 두고, `.git`이 있는 폴더는 이름도 바꾸지 않는다.
+- `Exams/Past`의 족보는 `<연도> <Midterm|Final|Quiz> (<출처>)`이고 해설은 같은 이름에 ` Solution`을 붙인다. 시험별 폴더(`Midterm`, `Final`, `Quiz1`)는 Exam과 1:1이며, 대비 자료가 없는 작은 퀴즈는 폴더를 만들지 않는다.
+- `Exercises`에는 교수가 준 연습 문제만 둔다. 직접 만든 문제집은 대상 시험 폴더에 둔다. 노트를 내보낸 PDF는 시험 종합 정리면 그 시험 폴더에, 그 밖은 `Notes/Exports`에 둔다.
+- 앱 밖의 파일은 복사해서 들여오고, 같은 이름이 있으면 ` 2`를 붙여 덮어쓰지 않는다.
 
 ## 실제 데이터 위치
 
@@ -175,21 +238,18 @@ PageHeader(title: String(localized: .sessionsAdd))   // String을 받는 API
 
 작업을 끝냈다고 보고하기 전에 관련 테스트와 빌드가 통과하는지 확인한다.
 
-## 작업 순서
+## 이슈와 작업 순서
 
-다른 기능이 의존하는 부분부터 쌓는다. 한 단계가 테스트까지 끝나면 커밋하고 다음 단계로 넘어간다.
+할 일은 GitHub 이슈로, 순서와 상태는 [Project](https://github.com/users/rhseung/projects/10)로 관리한다. 별도의 명세 문서는 두지 않는다.
 
-1. 패키지 구조와 Xcode 프로젝트 생성, 가짜 GIST 폴더(`FolioFixtures`) 작성
-2. 표준 구조 검사, 파일 추적, `course.json`과 `transcript.json` 읽기와 쓰기, 기기별 로그
-3. 기존 폴더 정리 도구. 이동 계획을 만들어 보여 주고, 승인받은 뒤 실행하며, 되돌리기를 지원한다. 실제 폴더에 실행하기 전에 사용자가 계획을 검토한다
-4. 노션 가져오기(명세의 "기존 데이터 이전" 절)
-5. 성적, 학점, GPA 계산
-6. 마크다운 파서와 노트 편집기, 렌더러
-7. 강의 회차, 과제, 시험
-8. 복습 스케줄러와 오늘 화면
-9. Claude 연동 계층, 퀴즈와 채점
-10. iPad 손필기
-11. 위젯, 내보내기, 백업, 알림
+- 영역마다 상위 이슈(`epic` 라벨)가 있고 할 일은 그 하위 이슈다. 영역 라벨은 `area/*`다.
+- 상위 이슈의 진행 순서는 Project의 `Order` 필드, 하위 이슈는 `Priority`(P0~P3)와 `Size`(XS~XL)로 둔다. `Status`는 Backlog, Ready, In progress, Blocked, Done이다.
+- 다른 이슈가 먼저 끝나야 하면 blocked-by 관계로 건다. 열린 이슈에 막힌 이슈는 Ready로 두지 않는다.
+- 사용자가 정해야 하는 일은 `decision` 라벨, 구현 전에 조사가 필요한 일은 `research` 라벨을 붙인 이슈로 둔다.
+- 다음 할 일은 Ready 중 상위 이슈 순서와 우선순위가 앞선 것이다. 한 이슈가 테스트까지 끝나면 커밋하고 다음으로 넘어간다.
+- 새 이슈를 만들기 전에 기존 이슈(닫힌 것 포함)에서 같은 일을 찾는다. 같은 일이면 만들지 않는다. 기존 이슈를 발전시킨 것이면 그 이슈 본문을 고치거나, 새 내용과 합쳐 하나로 만든다(합친 쪽은 중복으로 닫는다).
+- 새로 만들 때는 맞는 상위 이슈의 하위 이슈로 넣고, 기대거나 막는 이슈와 blocked-by 관계를 건다. 본문에서도 관련 이슈 번호를 적어 서로 찾아갈 수 있게 한다.
+- 예시 하나가 아니라 그 기능이 다뤄야 할 범위를 적고, 같은 일을 여러 이슈로 쪼개지 않는다.
 
 ## UI
 
@@ -203,4 +263,4 @@ PageHeader(title: String(localized: .sessionsAdd))   // String을 받는 API
 
 - GIST 폴더의 학업 외 폴더(`과대표`, `기숙사`, `기타`, `GIST OTP`, `무한도전 프로젝트`)와 `2026-2`에 놓인 경진대회 자료를 어디로 옮길지 사용자가 정해야 한다. 정해지기 전까지 정리 도구는 이 항목을 건드리지 않는다.
 - GIST 학칙의 재수강 처리, 졸업 평점 산정 방식, 우등 졸업 기준은 아직 확인하지 않았다. 계산 규칙은 설정값으로 두고 하드코딩하지 않는다.
-- 그 밖의 미결정 사항은 `docs/SPEC.md`의 "보류 사항과 미결정 사항" 절을 따른다.
+- 그 밖의 미결정 사항은 `decision` 라벨이 붙은 이슈에 있다.

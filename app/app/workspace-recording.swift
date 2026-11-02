@@ -17,10 +17,10 @@ extension Workspace {
             let file = try course.store.newRecordingFile(named: course.file.name(of: session), reserved: course.file.recordings.map(\.file))
             let recording = Recording(device: device, at: .now, sessionId: session.id, file: file)
             started = recording.id
-            // folio:not-an-action recording is not an action (docs/SPEC.md "액션")
+            // folio:not-an-action recording is not an action
             try pending.save(PendingRecording(courseId: course.id, recording: recording))
             recorder.saveTranscript = { [store = course.store] recording, transcript in try? store.saveTranscript(transcript, of: recording) }
-            // folio:not-an-action recording is not an action (docs/SPEC.md "액션")
+            // folio:not-an-action recording is not an action
             recorder.saveProgress = { [id = course.id] recording in try? pending.save(PendingRecording(courseId: id, recording: recording)) }
             try await recorder.start(recording, at: pending.audioURL(of: recording.id), course: course.id,
                                      title: "\(course.file.course.title) · \(course.file.name(of: session))", locale: locale)
@@ -79,7 +79,7 @@ extension Workspace {
         }
     }
 
-    /// Recording is not an action (docs/SPEC.md "액션"), so its list is the one place the app writes course.json itself.
+    /// Recording is not an action, so its list is the one place the app writes course.json itself.
     private func editRecordings(_ course: UUID, _ change: (inout [Recording]) -> Void) {
         guard let gist else { return }
         let ctx = ActionContext(gist: gist, device: device, calendar: calendar, courses: Dictionary(courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))

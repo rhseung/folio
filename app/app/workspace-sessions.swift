@@ -37,7 +37,7 @@ extension Workspace {
         return course(courseId)?.file.sessions.first { $0.id == id }
     }
 
-    /// The session's rough or review note, created from its template the first time (docs/SPEC.md "러프 노트는 처음 열 때 만들어진다").
+    /// The session's rough or review note, created from its template the first time.
     func note(_ kind: NoteKind, of sessionId: UUID, in courseId: UUID) -> UUID? {
         run(SessionNote(course: courseId, session: sessionId, kind: kind))?.made
     }

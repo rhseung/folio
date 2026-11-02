@@ -4,7 +4,7 @@ import Foundation
 import GRDB
 
 /// `folio help <자연어>`: finds commands from a plain-language request, so an agent (or a person) who doesn't know the
-/// command names can get from "과제 마감 바꾸기" to `assignment set --due` (docs/SPEC.md "에이전트용 호출").
+/// command names can get from "과제 마감 바꾸기" to `assignment set --due`.
 enum Finder {
     struct Entry {
         var path: [String]

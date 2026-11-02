@@ -2,7 +2,7 @@ import FolioDomain
 import Foundation
 
 #if os(macOS)
-/// Runs the user's own Claude Code CLI on their subscription (docs/SPEC.md "호출 방식"). Its own tools stay off, so
+/// Runs the user's own Claude Code CLI on their subscription. Its own tools stay off, so
 /// Claude can't touch files; with `folio` given, the chat gets Folio's actions through `folio mcp --propose`, which
 /// reads freely but turns every change into a proposal the user approves in the panel.
 public struct CLIProvider: ClaudeProvider {
