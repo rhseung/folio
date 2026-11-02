@@ -355,10 +355,12 @@ struct ReaderBlock {
     static func checkbox(_ done: Bool, accent: CourseAccent, attributes: [NSAttributedString.Key: Any]) -> NSAttributedString {
         let size = CGSize(width: 16, height: 16)
         let image = ReaderPictures.draw(size) { context in
+            let line = CGFloat(3) / 2
             let r = CGRect(origin: .zero, size: size).insetBy(dx: 1, dy: 1)
-            let path = CGPath(roundedRect: r, cornerWidth: 4, cornerHeight: 4, transform: nil)
-            context.addPath(path)
             if done {
+                // Out to the empty box's outer edge, where half its border lies outside `r`, so both are one size.
+                let outer = r.insetBy(dx: -line / 2, dy: -line / 2)
+                context.addPath(CGPath(roundedRect: outer, cornerWidth: 4 + line / 2, cornerHeight: 4 + line / 2, transform: nil))
                 context.setFillColor(accent.native.cgColor)
                 context.fillPath()
                 context.setStrokeColor(PlatformColor.white.cgColor)
@@ -370,8 +372,9 @@ struct ReaderBlock {
                 context.addLine(to: CGPoint(x: 11.5, y: 5.5))
                 context.strokePath()
             } else {
+                context.addPath(CGPath(roundedRect: r, cornerWidth: 4, cornerHeight: 4, transform: nil))
                 context.setStrokeColor(NoteLook.text3.cgColor)
-                context.setLineWidth(1.5)
+                context.setLineWidth(line)
                 context.strokePath()
             }
         }
@@ -429,7 +432,7 @@ struct ReaderBlock {
         let style = Self.paragraph(c, after: 0, lineSpacing: 0)
         out.append(NSAttributedString(attachment: CodeAttachment(code: body, width: width - c.indent * 2, inset: NoteLook.boxIndent, below: padding), attributes: attributes(c, style)))
         newline(attributes(c, style))
-        box(NSRange(location: start, length: out.length - start), NoteBox(fill: NoteLook.fill, first: true, last: true, rounded: true),
+        box(NSRange(location: start, length: out.length - start), NoteBox(fill: NoteLook.codeFill, first: true, last: true, rounded: true),
             gap: NoteLook.blockGap * 0.9, padding: padding)
     }
 
@@ -579,7 +582,7 @@ struct ReaderBlock {
             .foregroundColor: s.link != nil ? accent.inkNative : s.marks.contains(.strike) ? NoteLook.text3 : s.color,
             .paragraphStyle: paragraph, .noteMarks: s.marks.rawValue,
         ]
-        if code { a[.backgroundColor] = NoteLook.fill }
+        if code { a[.backgroundColor] = NoteLook.codeFill }
         if s.marks.contains(.strike) { a[.strikethroughStyle] = NSUnderlineStyle.single.rawValue }
         if let link = s.link {
             a[.noteLink] = link

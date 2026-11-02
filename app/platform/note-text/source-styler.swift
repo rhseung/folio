@@ -221,7 +221,7 @@ extension NSAttributedString.Key {
             dim(ends: s.prefix { $0 == "~" }.count, r, &w)
         case is InlineCode:
             w.code.append(r)
-            w.set(r, [Self.mono: true, .backgroundColor: NoteLook.fill])
+            w.set(r, [Self.mono: true, .backgroundColor: NoteLook.codeFill])
             dim(ends: s.prefix { $0 == "`" }.count, r, &w)
         case let link as Markdown.Link:
             let href = link.destination ?? ""
@@ -281,7 +281,7 @@ extension NSAttributedString.Key {
         case let block as CodeBlock:
             w.code.append(r)
             let lines = w.lineRanges(r)
-            let box = NoteBox(fill: NoteLook.fill, first: true, last: true)
+            let box = NoteBox(fill: NoteLook.codeFill, first: true, last: true)
             for line in lines {
                 w.set(Self.withBreak(line, in: w.storage), [.noteBox: box, .noteCode: true, Self.mono: true])
             }

@@ -124,6 +124,24 @@ struct NoteReaderTests {
         #expect(scroll.isFlipped ? scroller.minY >= lines : scroller.maxY <= scroll.frame.height - lines, "\(scroller) \(lines) \(scroll.frame)")
     }
 
+    @Test func aTickedBoxIsAsBigAsAnEmptyOne() throws {
+        // The extent of what's drawn, so a fill that stops short of the empty box's border shows.
+        func inked(_ done: Bool) throws -> CGRect {
+            let s = ReaderBuilder.checkbox(done, accent: CourseAccent.presets[0].accent, attributes: [:])
+            let image = try #require((s.attribute(.attachment, at: 0, effectiveRange: nil) as? NSTextAttachment)?.image)
+            let rep = try #require(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: 64, pixelsHigh: 64, bitsPerSample: 8, samplesPerPixel: 4,
+                                                    hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+            image.draw(in: NSRect(x: 0, y: 0, width: 64, height: 64))
+            NSGraphicsContext.restoreGraphicsState()
+            var box = CGRect.null
+            for x in 0..<64 { for y in 0..<64 where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0.5 { box = box.union(CGRect(x: x, y: y, width: 1, height: 1)) } }
+            return box
+        }
+        #expect(try inked(true) == inked(false))
+    }
+
     @Test func aTaskShowsItsBoxWithoutABullet() {
         let (view, _) = Self.reader("- [ ] 할 일\n- [x] 한 일\n- [ ]\n- 그냥 항목\n\n1. [ ] 번호 할 일")
         let lines = view.string.components(separatedBy: "\n")

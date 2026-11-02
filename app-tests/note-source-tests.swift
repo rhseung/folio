@@ -105,4 +105,20 @@ struct NoteSourceTests {
             NoteRender.write(view, "source-\(dark ? "dark" : "light")")
         }
     }
+
+    @Test func theMathBubbleTakesItsWindowsLook() throws {
+        let picture = NoteMath.Picture(image: NSImage(size: NSSize(width: 20, height: 10)), size: CGSize(width: 20, height: 10), descent: 0)
+        let card = { (name: NSAppearance.Name) -> CGColor? in
+            var color: CGColor?
+            NSAppearance(named: name)?.performAsCurrentDrawingAppearance { color = NoteLook.card.cgColor }
+            return color
+        }
+        for (look, other) in [(NSAppearance.Name.aqua, NSAppearance.Name.darkAqua), (.darkAqua, .aqua)] {
+            let bubble = MathBubble(picture: picture)
+            bubble.appearance = NSAppearance(named: look)
+            // Whatever the app's appearance is while the layer is updated, the bubble's own decides.
+            NSAppearance(named: other)?.performAsCurrentDrawingAppearance { bubble.updateLayer() }
+            #expect(bubble.layer?.backgroundColor == card(look))
+        }
+    }
 }

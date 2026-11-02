@@ -54,6 +54,7 @@ enum NoteLook {
     static let line = Swatch.line.native
     static let lineSoft = Swatch.lineSoft.native
     static let fill = Swatch.fill.native
+    static let codeFill = Swatch.codeFill.native
     static let card = Swatch.card.native
     static let danger = preset("red").accent
 

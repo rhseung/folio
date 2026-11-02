@@ -207,6 +207,8 @@ struct Swatch {
 
     static let card = Swatch(light: 0xFFFFFF, dark: 0x272624)
     static let fill = Swatch(light: 0xEDEBE6, dark: 0x33312E)
+    /// Behind code in notes: `fill` reads heavy in light mode behind many lines of it.
+    static let codeFill = Swatch(light: 0xF5F4F0, dark: 0x33312E)
     static let line = Swatch(light: 0xD9D5CC, dark: 0x3A3835)
     static let lineSoft = Swatch(light: 0xE2DED6, dark: 0x302E2B)
     static let text = Swatch(light: 0x1F1E1C, dark: 0xEEEDEA)

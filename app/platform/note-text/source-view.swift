@@ -525,10 +525,8 @@ final class MathBubble: NSView {
         let pad = CGSize(width: 10, height: 6)
         super.init(frame: NSRect(origin: .zero, size: CGSize(width: picture.size.width + 2 * pad.width, height: picture.size.height + 2 * pad.height)))
         wantsLayer = true
-        layer?.backgroundColor = NoteLook.card.cgColor
         layer?.cornerRadius = NoteLook.radius
         layer?.borderWidth = 1
-        layer?.borderColor = NoteLook.lineSoft.cgColor
         shadow = NSShadow()
         layer?.shadowOpacity = 0.12
         layer?.shadowRadius = 10
@@ -540,6 +538,17 @@ final class MathBubble: NSView {
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    override var wantsUpdateLayer: Bool { true }
+
+    // A layer holds fixed CGColors. Resolved here, under the view's own appearance, they follow a theme change;
+    // resolved at init they took whatever appearance was current then, so a light window got a dark bubble.
+    override func updateLayer() {
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            layer?.backgroundColor = NoteLook.card.cgColor
+            layer?.borderColor = NoteLook.lineSoft.cgColor
+        }
+    }
 }
 #else
 extension MarkdownEditor: UIViewRepresentable {
