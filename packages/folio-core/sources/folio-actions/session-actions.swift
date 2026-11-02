@@ -79,11 +79,11 @@ public struct SessionSet {
     @Arg var session: Session.ID
     /// 일시. 다른 주로 옮기면 그 주의 마지막 회차가 되어 이름(N주차-M)이 바뀐다
     var date: Patch<Date>
-    /// 끝 일시. 수업 시간표대로 끝나면 none
+    /// 끝 일시. 수업 시간표 칸과 다를 때만 저장된다
     var end: Patch<Date?>
     /// 주제. 회차 목록에서 제목으로 보인다
     var topic: Patch<String>
-    /// 온라인 수업 링크(Zoom 등). 지우려면 none
+    /// 온라인 수업 링크(Zoom 등)
     var link: Patch<String?>
     /// 휴강인지. 휴강이면 그 회차의 출결을 지운다
     var cancelled: Patch<Bool>

@@ -206,9 +206,9 @@ enum GeneratedCommands {
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref("Session")) var session: String = ""
         @Option(help: ArgumentHelp("일시. 다른 주로 옮기면 그 주의 마지막 회차가 되어 이름(N주차-M)이 바뀐다", valueName: "date")) var date: DateArg?
-        @Option(help: ArgumentHelp("끝 일시. 수업 시간표대로 끝나면 none. none이면 지운다", valueName: "date")) var end: Clearable<DateArg>?
+        @Option(help: ArgumentHelp("끝 일시. 수업 시간표 칸과 다를 때만 저장된다. none이면 지운다", valueName: "date")) var end: Clearable<DateArg>?
         @Option(help: "주제. 회차 목록에서 제목으로 보인다") var topic: String?
-        @Option(help: "온라인 수업 링크(Zoom 등). 지우려면 none. none이면 지운다") var link: Clearable<String>?
+        @Option(help: "온라인 수업 링크(Zoom 등). none이면 지운다") var link: Clearable<String>?
         @Option(help: "휴강인지. 휴강이면 그 회차의 출결을 지운다") var cancelled: Toggle?
         @Option(help: "복습에서 뺄지") var skipsReview: Toggle?
         @Option(help: "복습 노트를 마저 써야 하는지") var reviewUnfinished: Toggle?

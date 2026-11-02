@@ -307,7 +307,7 @@ struct TodayTests {
         #expect(file.sessions.map { file.name(of: $0) } == ["9주차-1", "9주차-2", "9주차-3"])
     }
 
-    @Test func ongoingClassRunsFromItsStartToItsSlotsEnd() {
+    @Test func ongoingClassRunsFromItsStartToItsOwnOrItsSlotsEnd() {
         var file = CourseFile(course: Course(device: device, at: at(22, 9), title: "그래프 이론"))
         file.course.schedule = [ClassTime(weekday: 4, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45)]  // Thursday
         file.sessions = [Session(device: device, at: at(22, 9), week: 7, index: 1, date: at(22, 10, 30))]
@@ -318,6 +318,13 @@ struct TodayTests {
         #expect(TodaySummary.ongoingClass(in: [file], at: at(22, 11, 45), calendar: calendar) == nil)
         file.sessions[0].isCancelled = true
         #expect(TodaySummary.ongoingClass(in: [file], at: at(22, 11, 0), calendar: calendar) == nil)
+
+        // A makeup off the timetable runs to its own end.
+        var makeup = Session(device: device, at: at(22, 9), week: 7, index: 2, date: at(22, 21))
+        makeup.end = at(22, 22, 15)
+        file.sessions.append(makeup)
+        #expect(TodaySummary.ongoingClass(in: [file], at: at(22, 22), calendar: calendar)?.end == at(22, 22, 15))
+        #expect(TodaySummary.ongoingClass(in: [file], at: at(22, 22, 15), calendar: calendar) == nil)
     }
 
     @Test func courseWithReviewsOffHasNoReviewsOrMissingNotes() {

@@ -401,7 +401,7 @@ struct SessionRow: View {
     let course: LoadedCourse
     let session: Session
     var now = Date.now
-    /// From the class times; nil for a class off the schedule, which then never shows as under way.
+    /// Its own end, else its class time's; nil for a class with neither, which then never shows as under way.
     var end: Date?
     let openNote: (UUID) -> Void
     @State private var playing: Recording?

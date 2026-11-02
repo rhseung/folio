@@ -150,7 +150,8 @@ extension TodaySummary {
         }
     }
 
-    /// The class under way at `now`. Its end comes from the weekly slot it starts in, so a session without one never is.
+    /// The class under way at `now`. Its end is its own (a makeup's) or else the weekly slot's it starts in, so a session
+    /// with neither, a date-only import, never is.
     public static func ongoingClass(in courses: [CourseFile], at now: Date, calendar: Calendar) -> OngoingClass? {
         for file in courses {
             for s in file.sessions where !s.isCancelled && s.date <= now {
