@@ -80,8 +80,11 @@ struct TextFileActionTests {
         #expect(try store.readText(Self.tex) == read)
     }
 
-    func builtPDF(_ text: String) throws -> URL {
-        let url = FileManager.default.temporaryDirectory.appending(path: "folio-build-\(UUID().uuidString).pdf")
+    /// Where the app's build of `source` would leave its PDF; the action takes nothing from anywhere else.
+    func builtPDF(_ text: String, of source: String = Self.tex) throws -> URL {
+        let folder = TexEngine.outputFolder(for: store.fileURL(source))
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let url = folder.appending(path: "\(UUID().uuidString).pdf")
         try Data(text.utf8).write(to: url)
         return url
     }
@@ -111,11 +114,33 @@ struct TextFileActionTests {
         try store.writeText("Assignments/HW03/hw.tex", text: "\\documentclass{article}\n")
         try run(MaterialTrack(course: Self.course))
         let tex = try material("Assignments/HW03/hw.tex")
-        let built = FileManager.default.temporaryDirectory.appending(path: "folio-build-\(UUID().uuidString).pdf")
-        try Data("%PDF".utf8).write(to: built)
-        let ctx = try run(MaterialBuild(course: Self.course, material: tex.id, pdf: built.path))
+        let ctx = try run(MaterialBuild(course: Self.course, material: tex.id, pdf: try builtPDF("%PDF", of: tex.path).path))
         #expect(ctx.changes.first == Change(.added, "2026-3/EC4207 그래프 이론/Assignments/HW03/hw.pdf"))
         #expect(try material("Assignments/HW03/hw.tex").sourceOf == material("Assignments/HW03/hw.pdf").id)
+    }
+
+    /// A move keeps the ids and their links, so the old link would send the build back to the old folder.
+    @Test func aMovedTexBuildsBesideItsNewPlace() throws {
+        let tex = try material(Self.tex)
+        try run(MaterialMove(course: Self.course, material: tex.id, to: "Assignments/HW03/hw.tex"))
+        try run(MaterialBuild(course: Self.course, material: tex.id, pdf: try builtPDF("%PDF moved", of: "Assignments/HW03/hw.tex").path))
+        #expect(try store.readText("Assignments/HW03/hw.pdf") == "%PDF moved")
+        #expect(try store.readText("Exams/Midterm/Problems.pdf") != "%PDF moved")
+        #expect(try material("Assignments/HW03/hw.tex").sourceOf == material("Assignments/HW03/hw.pdf").id)
+    }
+
+    /// Any other file would take the course PDF's place and be marked as built, so the next build wouldn't ask.
+    @Test func aPDFFromOutsideTheBuildFolderIsRefused() throws {
+        let tex = try material(Self.tex)
+        let given = try store.readText("Exams/Midterm/Problems.pdf")
+        let elsewhere = FileManager.default.temporaryDirectory.appending(path: "folio-\(UUID().uuidString).pdf")
+        try Data("%PDF other".utf8).write(to: elsewhere)
+        for path in [elsewhere.path, TexEngine.outputFolder(for: store.fileURL(Self.tex)).path + "/../x.pdf"] {
+            #expect(throws: ActionError.rule("이 자료를 빌드한 결과가 아니라서 쓰지 않습니다: \(path)")) {
+                try run(MaterialBuild(course: Self.course, material: tex.id, pdf: path, overwrite: true))
+            }
+        }
+        #expect(try store.readText("Exams/Midterm/Problems.pdf") == given)
     }
 
     @Test func buildTakesOnlyTex() throws {

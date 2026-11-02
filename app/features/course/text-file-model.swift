@@ -60,12 +60,12 @@ final class TextFileModel {
     var isTex: Bool { format == .tex }
     var dirty: Bool { loaded && text != onDisk }
 
-    /// The PDF tracking linked to this source, or where a first build will put it. A note's goes to Notes/Exports.
+    /// The tracked PDF beside this source, or where a first build will put it. A note's goes to Notes/Exports.
     var pdfPath: String {
         switch source {
         case let .material(id):
             let source = course.file.materials.first { $0.id == id }
-            return course.file.materials.first { $0.id == source?.sourceOf }?.path ?? MaterialFormat.builtPDF(of: path) ?? path
+            return source.flatMap { course.file.materials.builtPDF(of: $0) }?.path ?? MaterialFormat.builtPDF(of: path) ?? path
         case let .note(note):
             return course.store.exportPath(of: note)
         }

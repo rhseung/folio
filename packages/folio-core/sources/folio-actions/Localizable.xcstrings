@@ -34,6 +34,17 @@
         }
       }
     },
+    "error.build.output-elsewhere": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 자료를 빌드한 결과가 아니라서 쓰지 않습니다: %@"
+          }
+        }
+      }
+    },
     "error.build.would-replace": {
       "extractionState": "manual",
       "localizations": {

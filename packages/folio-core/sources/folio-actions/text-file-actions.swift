@@ -49,8 +49,7 @@ public struct MaterialBuild {
     @Arg var course: Course.ID
     /// .tex 자료
     @Arg var material: Material.ID
-    // A PDF the app already built off the main thread, since a build can take minutes. Without one the action runs
-    // Tectonic itself.
+    /// 앱이 이 자료를 Tectonic으로 빌드해 둔 PDF. 빌드 출력 폴더 밖의 파일은 받지 않는다. 빼면 직접 빌드한다
     @Hidden var pdf: String?
     /// 같은 이름의 PDF가 Folio가 만든 것이 아니어도 바꾼다
     var overwrite = false
@@ -60,7 +59,7 @@ public struct MaterialBuild {
         let file = try ctx.file(course)
         let m = file.materials[try index(material, in: file.materials, .valueMaterial)]
         guard let built = MaterialFormat.builtPDF(of: m.path) else { throw ActionError.rule(String(localized: .errorMaterialNotTex(m.path))) }
-        let existing = file.materials.first { $0.id == m.sourceOf }
+        let existing = file.materials.builtPDF(of: m)
         let target = existing?.path ?? built
         let exists = FileManager.default.fileExists(atPath: store.fileURL(target).path)
         var ours = false
@@ -73,7 +72,8 @@ public struct MaterialBuild {
             ctx.record(change)
             return
         }
-        let output = try pdf.map { URL(filePath: $0) } ?? Self.compile(store.fileURL(m.path))
+        let source = store.fileURL(m.path)
+        let output = try pdf.map { try Self.output($0, of: source) } ?? Self.compile(source)
         try ctx.io(change) { try store.replaceFile(target, with: output, keepOld: exists && !ours) }
         try ctx.edit(course) { f in
             try store.refreshMaterials(in: &f, device: ctx.device, now: ctx.now)
@@ -82,6 +82,19 @@ public struct MaterialBuild {
                 f.materials[i].builtHash = f.materials[i].hash
             }
         }
+    }
+
+    /// The file takes a tracked PDF's place and its hash is marked as built, so the next build replaces it without
+    /// asking. Any other file passed in could put itself over a course PDF that way.
+    static func output(_ path: String, of source: URL) throws -> URL {
+        #if os(macOS)
+        let folder = TexEngine.outputFolder(for: source).resolvingSymlinksInPath().path + "/"
+        let url = URL(filePath: path).resolvingSymlinksInPath()
+        guard url.path.hasPrefix(folder) else { throw ActionError.rule(String(localized: .errorBuildOutputElsewhere(path))) }
+        return url
+        #else
+        throw ActionError.rule(String(localized: .errorTexMacOnly))
+        #endif
     }
 
     static func compile(_ source: URL) throws -> URL {
@@ -107,7 +120,7 @@ public struct NoteBuild {
     @Arg var course: Course.ID
     /// .tex 노트
     @Arg var note: Note.Path
-    // A PDF the app already built off the main thread, as for `material build`.
+    /// 앱이 이 노트를 Tectonic으로 빌드해 둔 PDF. 빌드 출력 폴더 밖의 파일은 받지 않는다. 빼면 직접 빌드한다
     @Hidden var pdf: String?
 
     public func run(_ ctx: ActionContext) throws {
@@ -121,7 +134,7 @@ public struct NoteBuild {
             ctx.record(change)
             return
         }
-        let built = try pdf.map { URL(filePath: $0) } ?? MaterialBuild.compile(file.url)
+        let built = try pdf.map { try MaterialBuild.output($0, of: file.url) } ?? MaterialBuild.compile(file.url)
         try ctx.io(change) {
             try FileManager.default.createDirectory(at: store.fileURL(target).deletingLastPathComponent(), withIntermediateDirectories: true)
             try store.replaceFile(target, with: built)

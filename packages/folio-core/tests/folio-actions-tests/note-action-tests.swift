@@ -66,8 +66,13 @@ struct NoteActionTests {
 
     @Test func aTexNotesPDFGoesToExports() throws {
         try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "증명", format: .tex))
-        let built = FileManager.default.temporaryDirectory.appending(path: "folio-build-\(UUID().uuidString).pdf")
+        let folder = TexEngine.outputFolder(for: try store().fileURL("Notes/증명.tex"))
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let built = folder.appending(path: "\(UUID().uuidString).pdf")
         try Data("%PDF".utf8).write(to: built)
+        let elsewhere = FileManager.default.temporaryDirectory.appending(path: "folio-\(UUID().uuidString).pdf")
+        try Data("%PDF".utf8).write(to: elsewhere)
+        #expect(throws: ActionError.self) { try run(NoteBuild(course: Self.graphTheory, note: "Notes/증명.tex", pdf: elsewhere.path)) }
         let ctx = try run(NoteBuild(course: Self.graphTheory, note: "Notes/증명.tex", pdf: built.path))
         #expect(ctx.changes.first == Change(.added, "2026-3/EC4207 그래프 이론/Notes/Exports/증명.pdf"))
         #expect(try text("Notes/Exports/증명.pdf") == "%PDF")
