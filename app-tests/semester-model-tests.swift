@@ -60,15 +60,30 @@ struct SemesterModelTests {
         #expect(model.timetable(fall).slots(on: 3).contains { $0.course.id == id && $0.time.startMinute == 16 * 60 })
     }
 
-    @Test func aRecordSheetRefusesAClassEndingBeforeItStarts() throws {
+    @Test func aRecordSheetPassesOnWhatTheRulesRefuse() throws {
         let workspace = try fixtureWorkspace()
-        let record = Course(device: UUID(), at: .now, semesterId: fallTerm, title: "콜로퀴움", credits: 0, gradingMode: .passFail)
-        let sheet = EditRecordModel(workspace: workspace, course: record)
+        let id = UUID()
+        workspace.run(TranscriptAdd(id: id, semester: fallTerm, title: "콜로퀴움", credits: 0))
+        let sheet = EditRecordModel(workspace: workspace, course: try #require(workspace.record(id)))
+        #expect(sheet.canSave && sheet.note == nil && sheet.holdsClasses)
         sheet.schedule = [ClassTime(weekday: 3, startMinute: 17 * 60, endMinute: 16 * 60)]
-        #expect(!sheet.canSave && sheet.note == "수업이 끝나는 시간이 시작 시간보다 늦어야 합니다")
+        #expect(!sheet.canSave && sheet.note?.contains("끝은 시작보다 늦어야 합니다") == true)
         sheet.schedule = []
         sheet.title = "  "
-        #expect(!sheet.canSave)
+        #expect(!sheet.canSave && sheet.note == "과목 이름이 비었습니다")
+        sheet.title = "콜로퀴움"
+        sheet.credits = nil
+        #expect(!sheet.canSave && sheet.note == nil)
+        sheet.credits = -1
+        #expect(!sheet.canSave && sheet.note?.contains("학점이 음수") == true)
+    }
+
+    @Test func aCreditedTermsRecordGetsNoClassTimes() throws {
+        let workspace = try fixtureWorkspace()
+        let term = UUID(), id = UUID()
+        workspace.run(SemesterAdd(id: term, year: 2024, term: .credited, creditedHours: 9))
+        workspace.run(TranscriptAdd(id: id, semester: term, title: "군 복무 인정", credits: 9))
+        #expect(!EditRecordModel(workspace: workspace, course: try #require(workspace.record(id))).holdsClasses)
     }
 
     @Test func aPastTermShowsItsDatesWithoutTheCurrentWeek() throws {

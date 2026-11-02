@@ -21,8 +21,8 @@ struct EditCourseModelTests {
         let model = try model()
         #expect(model.timesNote == nil)
         model.schedule = [ClassTime(weekday: 1, startMinute: 11 * 60, endMinute: 10 * 60)]
-        #expect(model.badTime)
-        #expect(model.timesNote == "수업이 끝나는 시간이 시작 시간보다 늦어야 합니다")
+        // The domain's schedule rule refuses it; the sheet only passes the reason on.
+        #expect(model.timesNote?.contains("끝은 시작보다 늦어야 합니다") == true)
     }
 
     @Test func pickingTheMainCodeMovesItFirst() throws {

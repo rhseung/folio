@@ -14,6 +14,9 @@ public enum Term: String, CaseIterable, Codable, Sendable {
         case .credited: nil
         }
     }
+
+    /// A credited term only records transferred credits, so nothing in it meets in class.
+    public var holdsClasses: Bool { self != .credited }
 }
 
 /// `<year>-<term number>`, e.g. `2026-3`.

@@ -33,9 +33,8 @@ final class TodayModel {
 
     var current: [LoadedCourse] { workspace.currentCourses }
 
-    /// The term's courses kept only in transcript.json; a credited term's never meet.
     var currentRecords: [Course] {
-        guard let semester = workspace.currentSemester, semester.term != .credited else { return [] }
+        guard let semester = workspace.currentSemester, semester.term.holdsClasses else { return [] }
         return workspace.records(in: semester)
     }
 

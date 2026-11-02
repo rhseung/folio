@@ -25,9 +25,7 @@ final class SemesterModel {
     func courses(in semester: Semester) -> [LoadedCourse] { workspace.courses(in: semester) }
 
     /// Courses of a semester that live only in transcript.json (no folder).
-    func records(in semester: Semester) -> [Course] {
-        workspace.transcript.courses.filter { $0.semesterId == semester.id }
-    }
+    func records(in semester: Semester) -> [Course] { workspace.records(in: semester) }
 
     func timetable(_ s: Semester) -> TimetableLayout {
         TimetableLayout(courses: courses(in: s).map(\.file.course) + records(in: s))

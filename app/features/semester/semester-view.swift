@@ -320,7 +320,9 @@ struct EditRecordSheet: View {
                     }
                 }
             }
-            ClassTimesBlock(schedule: $model.schedule, note: String(localized: .classTimesRecordNote))
+            if model.holdsClasses {
+                ClassTimesBlock(schedule: $model.schedule, note: String(localized: .classTimesRecordNote))
+            }
         } onConfirm: {
             if model.confirm() { dismiss() }
         }

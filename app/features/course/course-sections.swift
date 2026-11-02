@@ -353,7 +353,7 @@ struct ClassTimesSheet: View {
 
     var body: some View {
         // The course as the heading: the block below already says 수업 시간, and twice in a row read as a mistake.
-        SheetForm(title: model.course.title, confirm: String(localized: .commonSave), disabled: model.badTime,
+        SheetForm(title: model.course.title, confirm: String(localized: .commonSave), disabled: model.timesNote != nil,
                   note: model.timesNote, carded: false, width: 560) {
             ClassTimesBlock(schedule: $model.schedule)
         } onConfirm: {

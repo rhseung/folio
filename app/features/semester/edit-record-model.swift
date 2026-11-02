@@ -24,19 +24,28 @@ final class EditRecordModel {
         schedule = course.schedule
     }
 
-    var badTime: Bool { schedule.contains { $0.endMinute <= $0.startMinute } }
+    /// A credited term's record never shows on a timetable, so it gets no class times to set.
+    var holdsClasses: Bool { workspace.semester(of: course)?.term.holdsClasses ?? true }
 
-    var canSave: Bool { (credits ?? -1) >= 0 && !title.trimmingCharacters(in: .whitespaces).isEmpty && !badTime }
+    // `course set` has no title field: a record's name goes through `transcript set`.
+    private var rename: TranscriptSet? {
+        let title = title.trimmingCharacters(in: .whitespaces)
+        return title == course.title ? nil : TranscriptSet(course: course.id, title: .set(title))
+    }
 
-    var note: String? { badTime ? String(localized: .classTimesBadTime) : nil }
+    /// Nil while the credits field is empty: there is no number to save yet.
+    private var update: CourseSet? {
+        credits.map { CourseSet(course: course.id, [.credits($0), .gradingMode(mode), .icon(icon), .schedule(schedule)]) }
+    }
+
+    /// Why the domain's rules refuse the draft, tried before saving rather than spelled out again here.
+    var note: String? { rename.flatMap { workspace.refusal($0) } ?? update.flatMap { workspace.refusal($0) } }
+
+    var canSave: Bool { update != nil && note == nil }
 
     func confirm() -> Bool {
-        guard canSave, let credits else { return false }
-        let title = title.trimmingCharacters(in: .whitespaces)
-        // `course set` has no title field: a record's name goes through `transcript set`.
-        if title != course.title {
-            guard workspace.run(TranscriptSet(course: course.id, title: .set(title))) != nil else { return false }
-        }
-        return workspace.run(CourseSet(course: course.id, [.credits(credits), .gradingMode(mode), .icon(icon), .schedule(schedule)])) != nil
+        guard canSave, let update else { return false }
+        if let rename { guard workspace.run(rename) != nil else { return false } }
+        return workspace.run(update) != nil
     }
 }
