@@ -5243,7 +5243,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "예술·체육·건강"
+            "value": "예술"
           }
         }
       }
@@ -5270,6 +5270,17 @@
         }
       }
     },
+    "icon-picker.field.culture": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문화 · 환경"
+          }
+        }
+      }
+    },
     "icon-picker.field.engineering": {
       "extractionState": "manual",
       "localizations": {
@@ -5281,13 +5292,35 @@
         }
       }
     },
+    "icon-picker.field.health": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "체육 · 건강"
+          }
+        }
+      }
+    },
     "icon-picker.field.humanities": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "인문·언어"
+            "value": "인문 · 언어"
+          }
+        }
+      }
+    },
+    "icon-picker.field.life": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "삶 · 관계"
           }
         }
       }
@@ -5299,6 +5332,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "수학"
+          }
+        }
+      }
+    },
+    "icon-picker.field.mind": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "철학 · 심리"
           }
         }
       }
@@ -5320,7 +5364,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "사회·경영"
+            "value": "사회 · 경영"
           }
         }
       }
