@@ -67,15 +67,31 @@ struct TextFileActionTests {
         #expect(try store.readText(Self.tex) == read)
     }
 
-    @Test func buildPlacesThePDFNextToItsSource() throws {
+    func builtPDF(_ text: String) throws -> URL {
+        let url = FileManager.default.temporaryDirectory.appending(path: "folio-build-\(UUID().uuidString).pdf")
+        try Data(text.utf8).write(to: url)
+        return url
+    }
+
+    /// The fixture's Problems.pdf came with the course, so the first build asks; after that the PDF is the build's own
+    /// until something else replaces it.
+    @Test func buildReplacesOnlyItsOwnPDFWithoutAsking() throws {
         let tex = try material(Self.tex)
-        let built = FileManager.default.temporaryDirectory.appending(path: "folio-build-\(UUID().uuidString).pdf")
-        try Data("%PDF-1.7 built".utf8).write(to: built)
-        let ctx = try run(MaterialBuild(course: Self.course, material: tex.id, pdf: built.path))
+        let given = try store.readText("Exams/Midterm/Problems.pdf")
+        #expect(throws: ActionError.self) { try run(MaterialBuild(course: Self.course, material: tex.id, pdf: try builtPDF("%PDF-1.7 built").path)) }
+        #expect(try store.readText("Exams/Midterm/Problems.pdf") == given)
+
+        let ctx = try run(MaterialBuild(course: Self.course, material: tex.id, pdf: try builtPDF("%PDF-1.7 built").path, overwrite: true))
         #expect(ctx.changes.first == Change(.changed, "2026-3/EC4207 그래프 이론/Exams/Midterm/Problems.pdf"))
         #expect(try store.readText("Exams/Midterm/Problems.pdf") == "%PDF-1.7 built")
         let pdf = try material("Exams/Midterm/Problems.pdf")
-        #expect(try material(Self.tex).sourceOf == pdf.id)
+        #expect(try material(Self.tex).sourceOf == pdf.id && pdf.builtHash == pdf.hash)
+
+        try run(MaterialBuild(course: Self.course, material: tex.id, pdf: try builtPDF("%PDF-1.7 again").path))
+        #expect(try store.readText("Exams/Midterm/Problems.pdf") == "%PDF-1.7 again")
+
+        try store.writeText("Exams/Midterm/Problems.pdf", text: "%PDF from elsewhere")
+        #expect(throws: ActionError.self) { try run(MaterialBuild(course: Self.course, material: tex.id, pdf: try builtPDF("%PDF").path)) }
     }
 
     @Test func buildAddsAPDFThatWasNotThere() throws {

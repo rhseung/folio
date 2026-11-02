@@ -26,7 +26,8 @@ public struct MaterialWrite {
     }
 }
 
-/// Puts the PDF next to the `.tex` under the same name, where tracking already reads it as the source's output.
+/// Puts the PDF next to the `.tex` under the same name, where tracking already reads it as the source's output. A PDF
+/// there that this action didn't write is someone's file: replacing it takes `overwrite`, and it goes to the Trash.
 /// No examples: the equivalence test runs each one for real, and CI has no Tectonic.
 @Action("material build", "LaTeX 자료(.tex)를 Tectonic으로 PDF로 만들어 옆에 같은 이름으로 둔다", done: "'{material}'을(를) PDF로 만들었습니다",
         phrases: ["tex 컴파일", "latex 빌드", "PDF 만들기"])
@@ -38,25 +39,34 @@ public struct MaterialBuild {
     // A PDF the app already built off the main thread, since a build can take minutes. Without one the action runs
     // Tectonic itself.
     @Hidden var pdf: String?
+    /// 같은 이름의 PDF가 Folio가 만든 것이 아니어도 바꾼다
+    var overwrite = false
 
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.store(course)
         let file = try ctx.file(course)
         let m = file.materials[try index(material, in: file.materials, .valueMaterial)]
-        guard MaterialFormat(path: m.path) == .tex else { throw ActionError.rule(String(localized: .errorMaterialNotTex(m.path))) }
-        let target = (m.path as NSString).deletingPathExtension + ".pdf"
+        guard let built = MaterialFormat.builtPDF(of: m.path) else { throw ActionError.rule(String(localized: .errorMaterialNotTex(m.path))) }
+        let existing = file.materials.first { $0.id == m.sourceOf }
+        let target = existing?.path ?? built
         let exists = FileManager.default.fileExists(atPath: store.fileURL(target).path)
+        var ours = false
+        if exists, let made = existing?.builtHash { ours = try made == store.hash(target) }
+        if exists, !ours, !overwrite {
+            throw ActionError.conflict(String(localized: .errorBuildWouldReplace(target)))
+        }
         let change = Change(exists ? .changed : .added, try ctx.relative(course, target))
         guard !ctx.dryRun else {
             ctx.record(change)
             return
         }
-        let built = try pdf.map { URL(filePath: $0) } ?? Self.compile(store.fileURL(m.path))
-        try ctx.io(change) { try store.replaceFile(target, with: built) }
+        let output = try pdf.map { URL(filePath: $0) } ?? Self.compile(store.fileURL(m.path))
+        try ctx.io(change) { try store.replaceFile(target, with: output, keepOld: exists && !ours) }
         try ctx.edit(course) { f in
             try store.refreshMaterials(in: &f, device: ctx.device, now: ctx.now)
-            if let made = f.materials.first(where: { $0.path == target }) {
-                try store.rehash(made.id, in: &f, device: ctx.device, now: ctx.now)
+            if let i = f.materials.firstIndex(where: { $0.path == target }) {
+                try store.rehash(f.materials[i].id, in: &f, device: ctx.device, now: ctx.now)
+                f.materials[i].builtHash = f.materials[i].hash
             }
         }
     }

@@ -11,8 +11,16 @@ extension CourseStore {
     }
 
     /// Replaces a file the app made itself, such as a build's PDF. Never used for files the user brought in.
-    public func replaceFile(_ coursePath: String, with source: URL) throws {
-        try CoordinatedFile.write(try Data(contentsOf: source), to: fileURL(coursePath))
+    /// `keepOld` sends the file there to the Trash first, where the user can still take it back.
+    public func replaceFile(_ coursePath: String, with source: URL, keepOld: Bool = false) throws {
+        let data = try Data(contentsOf: source)
+        if keepOld, FileManager.default.fileExists(atPath: fileURL(coursePath).path) { try CoordinatedFile.trash(fileURL(coursePath)) }
+        try CoordinatedFile.write(data, to: fileURL(coursePath))
+    }
+
+    /// Nil when iCloud hasn't downloaded the file yet.
+    public func hash(_ coursePath: String) throws -> String? {
+        try FileHash.sha256(of: fileURL(coursePath))
     }
 
     /// Takes the size and hash of a file just written in place. `refreshMaterials` only rehashes a file whose size

@@ -19,6 +19,12 @@ struct MaterialFormatTests {
         #expect(MaterialFormat.code(language: "python").isText)
         #expect(!MaterialFormat.pdf.isText)
         #expect(!MaterialFormat.other.isText)
+        #expect(!MaterialFormat.markdown.isText)
+    }
+
+    @Test func aTexBuildsToTheSameNamedPDF() {
+        #expect(MaterialFormat.builtPDF(of: "Exams/Midterm/Problems.TEX") == "Exams/Midterm/Problems.pdf")
+        #expect(MaterialFormat.builtPDF(of: "Exams/Midterm/Problems.pdf") == nil)
     }
 
     @Test func texHighlightsAsLatex() {

@@ -21,6 +21,9 @@ final class TextFileModel {
     private(set) var issues: [TexIssue] = []
     /// Bumped after a build so the preview reopens the PDF, which keeps its name.
     private(set) var pdfRevision = 0
+    /// A build that would replace a PDF Folio didn't make, held until the user says to.
+    private var held: URL?
+    var asksToReplace = false
     let engineMissing: Bool
 
     init(workspace: Workspace, course: LoadedCourse, material: UUID) {
@@ -42,7 +45,11 @@ final class TextFileModel {
     var isTex: Bool { format == .tex }
     var dirty: Bool { loaded && text != onDisk }
 
-    var pdfPath: String { (path as NSString).deletingPathExtension + ".pdf" }
+    /// The PDF tracking linked to this source, or where a first build will put it.
+    var pdfPath: String {
+        course.file.materials.first { $0.id == material?.sourceOf }?.path ?? MaterialFormat.builtPDF(of: path) ?? path
+    }
+    var pdfName: String { (pdfPath as NSString).lastPathComponent }
     var pdfURL: URL? {
         let url = course.store.fileURL(pdfPath)
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
@@ -100,8 +107,26 @@ final class TextFileModel {
         }
         issues = result.issues
         guard let pdf = result.pdf else { return }
-        if workspace.run(MaterialBuild(course: course.id, material: materialId, pdf: pdf.path)) != nil { pdfRevision += 1 }
+        place(pdf, overwrite: false)
         #endif
+    }
+
+    func replace() {
+        guard let held else { return }
+        place(held, overwrite: true)
+    }
+
+    private func place(_ pdf: URL, overwrite: Bool) {
+        held = nil
+        do {
+            _ = try workspace.runThrowing(MaterialBuild(course: course.id, material: materialId, pdf: pdf.path, overwrite: overwrite))
+            pdfRevision += 1
+        } catch ActionError.conflict {
+            held = pdf
+            asksToReplace = true
+        } catch {
+            workspace.error = "\(error)"
+        }
     }
 
     /// Only problems in this file can be shown; an `\input` file's line means nothing here.

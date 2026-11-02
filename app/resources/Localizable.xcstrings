@@ -15862,6 +15862,39 @@
           }
         }
       }
+    },
+    "text-file.replace": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘%@’을(를) 바꿀까요?"
+          }
+        }
+      }
+    },
+    "text-file.replace-confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "바꾸기"
+          }
+        }
+      }
+    },
+    "text-file.replace-message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 이름의 PDF가 이미 있는데 Folio가 만든 것이 아닙니다. 받은 파일일 수 있습니다. 바꾸면 원래 파일은 휴지통으로 옮깁니다."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

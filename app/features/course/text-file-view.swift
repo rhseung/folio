@@ -16,7 +16,10 @@ struct TextFileView: View {
     var body: some View {
         VStack(spacing: 0) {
             bar
+            // iPadOS can't run Tectonic, so it gets no build button and no advice to install it.
+            #if os(macOS)
             if model.isTex, model.engineMissing { installHint }
+            #endif
             HStack(spacing: 0) {
                 VStack(spacing: 0) {
                     SourceFileEditor(text: $model.text, language: model.format.highlightLanguage, reveal: $model.reveal)
@@ -58,10 +61,17 @@ struct TextFileView: View {
         } message: {
             Text(.textFileConflictMessage)
         }
+        .alert(String(localized: .textFileReplace(model.pdfName)), isPresented: $model.asksToReplace) {
+            Button(.textFileReplaceConfirm, role: .destructive) { model.replace() }
+            Button(.commonCancel, role: .cancel) {}
+        } message: {
+            Text(.textFileReplaceMessage)
+        }
     }
 
     var bar: some View {
         PageBar {
+            #if os(macOS)
             if model.isTex {
                 Button(.textFileBuild, systemImage: "hammer") { Task { await model.build() } }
                     .help(Text(.textFileBuildHelp))
@@ -73,6 +83,7 @@ struct TextFileView: View {
                     Text(.textFileErrorCount(model.errors.count)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.danger)
                 }
             }
+            #endif
         } trailing: {
             #if os(macOS)
             Button(.materialsOpenWithDefault, systemImage: "arrow.up.forward.app") { NSWorkspace.shared.open(model.fileURL) }

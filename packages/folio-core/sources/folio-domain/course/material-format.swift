@@ -24,9 +24,17 @@ public enum MaterialFormat: Equatable, Sendable {
 
     public var isText: Bool {
         switch self {
-        case .markdown, .tex, .code, .text: true
-        case .pdf, .other: false
+        // Markdown materials stay with the read-only note reader (#179); only notes are written in Folio.
+        case .tex, .code, .text: true
+        case .pdf, .markdown, .other: false
         }
+    }
+
+    /// The PDF a `.tex` at `path` builds to: beside it, same name. Tracking links the pair through this, `material build`
+    /// writes it and the preview falls back to it, so the three can't disagree on a name like `Problems.TEX`.
+    public static func builtPDF(of path: String) -> String? {
+        guard MaterialFormat(path: path) == .tex else { return nil }
+        return (path as NSString).deletingPathExtension + ".pdf"
     }
 
     /// The language name the code highlighter takes, or nil for plain text.

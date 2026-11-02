@@ -34,6 +34,17 @@
         }
       }
     },
+    "error.build.would-replace": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 이름의 PDF가 이미 있고 Folio가 만든 것이 아니라서 바꾸지 않았습니다: %@. 바꾸려면 --overwrite를 줍니다"
+          }
+        }
+      }
+    },
     "error.course.folder-name": {
       "extractionState": "manual",
       "localizations": {

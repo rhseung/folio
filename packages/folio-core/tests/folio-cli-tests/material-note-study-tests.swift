@@ -106,8 +106,8 @@ struct MaterialNoteStudyTests {
     func buildTex() throws {
         let write = ["material", "write", "EC4207/Problems.tex", "--file",
                      try scratch("Problems.tex", "\\documentclass{article}\n\\begin{document}\nHi\n\\end{document}\n")]
-        try h.expectSame(["material", "build", "EC4207/Problems.tex"], setup: [Self.track, write]) { gist in
-            MaterialBuild(course: course, material: try material(gist, "Problems.tex"))
+        try h.expectSame(["material", "build", "EC4207/Problems.tex", "--overwrite"], setup: [Self.track, write]) { gist in
+            MaterialBuild(course: course, material: try material(gist, "Problems.tex"), overwrite: true)
         }
     }
 

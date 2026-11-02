@@ -86,4 +86,11 @@ struct MaterialTrackingTests {
         let pdf = try #require(result.first { $0.path.hasSuffix(".pdf") })
         #expect(result.first { $0.path.hasSuffix(".tex") }?.sourceOf == pdf.id)
     }
+
+    @Test func linksTexToItsPDFIgnoringCase() throws {
+        let scanned: [ScannedEntry] = [.init(path: "HW/hw.PDF"), .init(path: "HW/hw.TEX")]
+        let result = try MaterialTracking.reconcile([], with: scanned, io: io(), device: device, now: t1)
+        let pdf = try #require(result.first { $0.path.hasSuffix(".PDF") })
+        #expect(result.first { $0.path.hasSuffix(".TEX") }?.sourceOf == pdf.id)
+    }
 }

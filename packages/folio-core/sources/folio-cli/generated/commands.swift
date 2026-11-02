@@ -855,6 +855,7 @@ enum GeneratedCommands {
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<.tex 자료>", valueName: "material"), completion: Complete.ref("Material")) var material: String = ""
+        @Flag(help: "같은 이름의 PDF가 Folio가 만든 것이 아니어도 바꾼다") var overwrite = false
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -863,7 +864,8 @@ enum GeneratedCommands {
             let action = FolioActions.MaterialBuild(
                 course: c.id,
                 material: try r.id("Material", materialName, in: c),
-                pdf: nil
+                pdf: nil,
+                overwrite: overwrite
             )
             try perform(spec: action, g, ctx: ctx)
         }
