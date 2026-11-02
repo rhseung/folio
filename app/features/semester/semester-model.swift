@@ -25,9 +25,14 @@ final class SemesterModel {
     func courses(in semester: Semester) -> [LoadedCourse] { workspace.courses(in: semester) }
 
     /// Courses of a semester that live only in transcript.json (no folder).
-    func records(in semester: Semester) -> [Course] {
-        workspace.transcript.courses.filter { $0.semesterId == semester.id }
+    func records(in semester: Semester) -> [Course] { workspace.records(in: semester) }
+
+    func timetable(_ s: Semester) -> TimetableLayout {
+        TimetableLayout(courses: courses(in: s).map(\.file.course) + records(in: s))
     }
+
+    /// Nil for a record: it has no page to open, so the timetable opens its sheet instead.
+    func folderCourse(_ course: Course) -> LoadedCourse? { workspace.course(course.id) }
 
     func isCurrent(_ s: Semester) -> Bool { s.isRunning(on: workspace.today) }
 
@@ -111,21 +116,22 @@ final class SemesterModel {
 }
 
 /// The week as a time grid: which weekdays get a column and which hours the rows span.
+/// Takes plain courses so a record without a folder (a colloquium) sits beside the folder courses.
 struct TimetableLayout {
-    let slots: [(course: LoadedCourse, time: ClassTime)]
+    let slots: [(course: Course, time: ClassTime)]
     /// Monday to Friday, and Saturday and Sunday only when a class falls on them.
     let days: [Int]
     let first: Int
     let last: Int
 
-    init(courses: [LoadedCourse]) {
-        slots = courses.flatMap { c in c.file.course.schedule.map { (c, $0) } }
+    init(courses: [Course]) {
+        slots = courses.flatMap { c in c.schedule.map { (c, $0) } }
         days = Array(1...max(5, slots.map(\.time.weekday).max() ?? 5))
         first = (slots.map(\.time.startMinute).min() ?? 9 * 60) / 60
         last = ((slots.map(\.time.endMinute).max() ?? 18 * 60) + 59) / 60
     }
 
-    func slots(on day: Int) -> [(course: LoadedCourse, time: ClassTime)] { slots.filter { $0.time.weekday == day } }
+    func slots(on day: Int) -> [(course: Course, time: ClassTime)] { slots.filter { $0.time.weekday == day } }
 }
 
 extension Term {

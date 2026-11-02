@@ -49,19 +49,30 @@ final class EditCourseModel {
 
     var folder: String? { workspace.folderName(title: title, codes: codes, number: number) }
 
-    var badTime: Bool { schedule.contains { $0.endMinute <= $0.startMinute } }
+    /// Nil while the credits field is empty: there is no number to save yet.
+    private var update: CourseSet? {
+        credits.map {
+            CourseSet(course: course.id, [.credits($0), .gradingMode(mode), .instructors(people), .categories(categories),
+                                          .color(color), .icon(icon), .schedule(schedule), .reviews(reviews), .sharingApproved(sharingApproved)])
+        }
+    }
 
-    var canSave: Bool { (credits ?? -1) >= 0 && folder != nil && !badTime }
+    /// Why the domain's rules refuse the draft, tried before saving rather than spelled out again here.
+    private var refusal: String? { update.flatMap { workspace.refusal($0) } }
+
+    var canSave: Bool { update != nil && folder != nil && refusal == nil }
 
     /// The folder name follows the title, main code and number, so saving a change to those renames it.
     var note: String? {
         guard let folder else { return String(localized: .courseEditNeedsFolder) }
-        if badTime { return String(localized: .classTimesBadTime) }
+        if let refusal { return refusal }
         let current = course.store.url.lastPathComponent
         return folder == current ? nil : String(localized: .courseEditRenames(current, folder))
     }
 
-    var timesNote: String? { badTime ? String(localized: .classTimesBadTime) : nil }
+    private var scheduleUpdate: CourseSet { CourseSet(course: course.id, [.schedule(schedule)]) }
+
+    var timesNote: String? { workspace.refusal(scheduleUpdate) }
 
     var codeDetail: String? { codes.count > 1 ? String(localized: .courseEditCrossListed) : nil }
 
@@ -87,18 +98,17 @@ final class EditCourseModel {
     var showsSharing: Bool { workspace.requirementCatalog.categories.contains { $0.maxSharedCredits != nil } }
 
     func confirm() -> Bool {
-        guard let credits else { return false }
+        guard let update else { return false }
         let c = course.file.course
         if title != c.title || codes != c.codes || number != c.number {
             guard workspace.run(CourseRename(course: course.id, title: title, codes: codes, number: number)) != nil else { return false }
         }
-        workspace.run(CourseSet(course: course.id, [.credits(credits), .gradingMode(mode), .instructors(people), .categories(categories),
-                                                   .color(color), .icon(icon), .schedule(schedule), .reviews(reviews), .sharingApproved(sharingApproved)]))
+        workspace.run(update)
         return true
     }
 
     func confirmSchedule() {
-        workspace.run(CourseSet(course: course.id, [.schedule(schedule)]))
+        workspace.run(scheduleUpdate)
     }
 }
 

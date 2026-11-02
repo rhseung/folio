@@ -53,6 +53,19 @@ struct CourseWorkTests {
         #expect(Semester(device: device, at: .now, year: 2026, term: .summer).examWeeks.isEmpty)
     }
 
+    @Test func meetingsAreTheDaysClassesInTermAndOutsideExamWeeks() {
+        let fall = Semester(device: device, at: .now, year: 2026, term: .fall, start: LocalDate("2026-08-31"), end: LocalDate("2026-12-18"))
+        let twice = monWed + [ClassTime(weekday: 1, startMinute: 540, endMinute: 600)]
+        func on(_ day: String) -> [SessionPlanner.Suggestion] {
+            SessionPlanner.meetings(schedule: twice, on: LocalDate(day)!, from: fall.start, to: fall.end, examWeeks: fall.examWeeks, calendar: calendar)
+        }
+        #expect(on("2026-10-26").map(\.date) == [date("2026-10-26 09:00"), date("2026-10-26 13:00")])
+        #expect(on("2026-10-26").last?.end == date("2026-10-26 14:15") && on("2026-10-26").last?.room == "203")
+        #expect(on("2026-10-27").isEmpty)
+        // Week 8 is the midterm week; 12-21 is past the term's end.
+        #expect(on("2026-10-19").isEmpty && on("2026-12-21").isEmpty)
+    }
+
     @Test func noSuggestionOutsideTheTerm() {
         let ended = SessionPlanner.suggestion(schedule: monWed, sessions: [], from: nil, to: LocalDate("2026-10-27"), now: date("2026-10-26 15:00"), calendar: calendar)
         #expect(ended == nil)

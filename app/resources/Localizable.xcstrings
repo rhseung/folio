@@ -716,17 +716,6 @@
         }
       }
     },
-    "class-times.bad-time": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수업이 끝나는 시간이 시작 시간보다 늦어야 합니다"
-          }
-        }
-      }
-    },
     "class-times.empty": {
       "extractionState": "manual",
       "localizations": {
@@ -745,6 +734,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "다음 강의를 제안할 때 씁니다"
+          }
+        }
+      }
+    },
+    "class-times.record-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기 시간표에 표시합니다"
           }
         }
       }

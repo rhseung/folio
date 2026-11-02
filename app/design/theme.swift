@@ -286,6 +286,7 @@ private extension UIColor {
 extension Workspace {
     /// `token` previews a color before it is saved; nil uses the stored one.
     func accent(_ id: UUID, token: String? = nil) -> CourseAccent {
+        // A course without a folder (a colloquium) stays gray: it reads as "no color" beside the term's own courses.
         guard let course = course(id) else { return .gray }
         let siblings = semester(of: course.file.course).map { courses(in: $0).map(\.id) } ?? []
         return CourseAccent.resolve(token: token ?? course.file.course.color, position: siblings.firstIndex(of: id) ?? 0)

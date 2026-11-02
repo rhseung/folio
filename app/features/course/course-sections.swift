@@ -314,9 +314,10 @@ struct CourseColorSwatches: View {
 /// The weekly class times, one row each. The next lecture is suggested from these.
 struct ClassTimesBlock: View {
     @Binding var schedule: [ClassTime]
+    var note = String(localized: .classTimesNote)
 
     var body: some View {
-        Block(title: String(localized: .classTimesTitle), note: String(localized: .classTimesNote), trailing: {
+        Block(title: String(localized: .classTimesTitle), note: note, trailing: {
             Button(.classTimesAdd, systemImage: "plus") { schedule.append(ClassTime(weekday: 1, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45)) }
                 .buttonStyle(.ghost)
         }) {
@@ -352,7 +353,7 @@ struct ClassTimesSheet: View {
 
     var body: some View {
         // The course as the heading: the block below already says 수업 시간, and twice in a row read as a mistake.
-        SheetForm(title: model.course.title, confirm: String(localized: .commonSave), disabled: model.badTime,
+        SheetForm(title: model.course.title, confirm: String(localized: .commonSave), disabled: model.timesNote != nil,
                   note: model.timesNote, carded: false, width: 560) {
             ClassTimesBlock(schedule: $model.schedule)
         } onConfirm: {
