@@ -12,6 +12,9 @@ extension Course {
             Check("Course.schedule", String(localized: .ruleCourseSchedule)) { c, _ in
                 c.schedule.allSatisfy { (1...7).contains($0.weekday) && $0.startMinute >= 0 && $0.endMinute <= 24 * 60 && $0.endMinute > $0.startMinute }
             },
+            Check("Course.scheduleLink", String(localized: .ruleCourseScheduleLink)) { c, _ in
+                c.schedule.allSatisfy { $0.link.map { OnlineLink.url($0) != nil } ?? true }
+            },
             Ref(\.semesterId, to: Semester.self, onDelete: .restrict),
             Check("Course.semester", String(localized: .ruleCourseSemester)) { c, _, w in
                 guard let t = w.transcript, let s = c.semesterId else { return true }
@@ -68,6 +71,8 @@ extension CourseFile: Document {
         Items(\.sessions, noun: String(localized: .modelNounSession), name: { s, _ in s.label }) {
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
             Refs(\.materialIds, to: Material.self, onDelete: .nullify)
+            Check("Session.time", String(localized: .ruleSessionTime)) { s, _ in s.end.map { $0 > s.date } ?? true }
+            Check("Session.link", String(localized: .ruleSessionLink)) { s, _ in s.link.map { OnlineLink.url($0) != nil } ?? true }
             Check("Session.pages", String(localized: .ruleSessionPages)) { s, _ in
                 s.materials.allSatisfy { m in
                     (m.firstPage ?? 1) >= 1 && (m.lastPage ?? 1) >= 1 && (m.firstPage ?? 1) <= (m.lastPage ?? Int.max)
@@ -231,6 +236,7 @@ extension Catalog: Document {
 extension Settings: Document {
     public static let model = Model<Settings>(place: String(localized: .modelPlaceSettings)) {
         Rule("Settings.dayBoundary", String(localized: .ruleSettingsDayBoundary)) { s, _ in (0...(8 * 60)).contains(s.dayBoundaryMinutes) }
+        Rule("Settings.classMinutes", String(localized: .ruleSettingsClassMinutes)) { s, _ in (10...300).contains(s.classMinutes) }
         Rule("Settings.dailyLimit", String(localized: .ruleSettingsDailyLimit)) { s, _ in s.review.dailyLimit.map { (1...50).contains($0) } ?? true }
         Rule("Settings.intervals", String(localized: .ruleSettingsIntervals)) { s, _ in
             !s.review.intervals.isEmpty && s.review.intervals.allSatisfy { (1...365).contains($0) }

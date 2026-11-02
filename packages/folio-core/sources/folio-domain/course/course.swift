@@ -66,12 +66,15 @@ public struct ClassTime: Codable, Sendable, Hashable {
     public var startMinute: Int
     public var endMinute: Int
     public var room: String
+    /// For a class held online every week; a session's own link wins over it.
+    public var link: String?
 
-    public init(weekday: Int, startMinute: Int, endMinute: Int, room: String = "") {
+    public init(weekday: Int, startMinute: Int, endMinute: Int, room: String = "", link: String? = nil) {
         self.weekday = weekday
         self.startMinute = startMinute
         self.endMinute = endMinute
         self.room = room
+        self.link = link
     }
 }
 

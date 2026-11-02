@@ -23,6 +23,30 @@ struct SessionsModelTests {
         #expect(model.subtitle(try #require(workspace.course(graphTheory)).file) == "회차 2개 · 복습 노트 없음 1 · 단원 없음 1")
     }
 
+    @Test func aClassWithNoEndOffersJoinUntilTheEndTheFormShows() throws {
+        let workspace = try fixtureWorkspace()
+        workspace.run(CourseSet(course: graphTheory, [.schedule([])]))
+        // 10:30 of the study day, whatever the clock says: late at night the form's end stops at the day's end, which
+        // the button doesn't, and before the day boundary the calendar's today is not the study day.
+        let day = try #require(workspace.today.date(in: Calendar.current))
+        let start = try #require(Calendar.current.date(byAdding: .minute, value: 10 * 60 + 30, to: day))
+        let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: start, link: "https://zoom.us/j/1"))?.made)
+        let s = try #require(workspace.course(graphTheory)?.file.sessions.first { $0.id == id })
+        let model = SessionsModel(workspace: workspace, courseId: graphTheory)
+        func file() throws -> CourseFile { try #require(workspace.course(graphTheory)).file }
+        func formEnd() -> Date { SessionFormModel(workspace: workspace, courseId: graphTheory, session: s).end }
+
+        #expect(formEnd() == start.addingTimeInterval(TimeInterval(workspace.settings.classMinutes * 60)))
+        #expect(model.offersJoin(s, in: try file(), now: formEnd().addingTimeInterval(-60)))
+        #expect(!model.offersJoin(s, in: try file(), now: formEnd()))
+
+        // Off the timetable of a course whose classes run two hours: two hours, in the form and for the button.
+        workspace.run(CourseSet(course: graphTheory, [.schedule([ClassTime(weekday: 1, startMinute: 13 * 60, endMinute: 15 * 60)])]))
+        #expect(formEnd() == start.addingTimeInterval(2 * 3600))
+        #expect(model.offersJoin(s, in: try file(), now: formEnd().addingTimeInterval(-60)))
+        #expect(!model.offersJoin(s, in: try file(), now: formEnd()))
+    }
+
     @Test func timelineRailsStopAtTheEndsAndColorUpToNow() throws {
         let workspace = try fixtureWorkspace()
         let model = SessionsModel(workspace: workspace, courseId: graphTheory)

@@ -161,7 +161,8 @@ public struct CourseSet {
             case .color(let v): c.color = v
             // An empty name clears it too, so the key leaves course.json instead of holding "".
             case .icon(let v): c.icon = v?.isEmpty == false ? v : nil
-            case .schedule(let v): c.schedule = v
+            case .schedule(let v):
+                c.schedule = v.map { var t = $0; t.link = OnlineLink.stored(t.link); return t }
             // Nil stays nil while on, so untouched course.json files keep their shape.
             case .reviews(let v): if v != (c.reviews != false) { c.reviews = v ? nil : false }
             case .finalGrade(let v): c.finalGrade = v

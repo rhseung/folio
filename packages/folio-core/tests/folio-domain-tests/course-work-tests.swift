@@ -94,11 +94,13 @@ struct CourseWorkTests {
         func at(_ s: String) -> Session { Session(device: device, at: .now, week: 9, index: 1, date: date(s)) }
         let past = at("2026-10-19 13:00"), empty = at("2026-11-02 13:00"), noted = at("2026-11-04 13:00"), unitLinked = at("2026-11-09 13:00")
         var topic = at("2026-11-11 13:00"); topic.topic = "행렬식"
+        var online = at("2026-11-12 21:00"); online.link = "https://zoom.us/j/1"
+        var makeup = at("2026-11-13 21:00"); makeup.end = date("2026-11-13 22:15")
         var cancelled = Session(device: device, at: .now, week: 10, index: 1, date: date("2026-11-16 13:00"))
         cancelled.isCancelled = true
         var unit = Unit(device: device, at: .now, title: "고윳값", order: 1)
         unit.sessionIds = [unitLinked.id]
-        let file = CourseFile(course: courses[0], units: [unit], sessions: [past, empty, noted, unitLinked, topic, cancelled])
+        let file = CourseFile(course: courses[0], units: [unit], sessions: [past, empty, noted, unitLinked, topic, online, makeup, cancelled])
         #expect(file.untouchedFutureSessions(now: now, notedSessions: [noted.id]).map(\.id) == [empty.id])
     }
 
@@ -149,6 +151,91 @@ struct CourseWorkTests {
         #expect(monday.end(schedule: [slot], calendar: calendar) == date("2026-10-26 14:15"))
         let midnight = Session(device: device, at: .now, week: 9, index: 1, date: date("2026-10-26 00:00"))
         #expect(midnight.end(schedule: [slot], calendar: calendar) == nil)
+    }
+
+    @Test func aClassWithNoEndRunsTheCoursesUsualLengthElseTheSettings() {
+        // A chemistry lab meets for two hours: a makeup off the timetable runs two hours too.
+        let lab = [ClassTime(weekday: 2, startMinute: 13 * 60, endMinute: 15 * 60), ClassTime(weekday: 4, startMinute: 13 * 60, endMinute: 15 * 60),
+                   ClassTime(weekday: 5, startMinute: 9 * 60, endMinute: 9 * 60 + 50)]
+        #expect(lab.usualMinutes == 120)
+        #expect([ClassTime(weekday: 1, startMinute: 600, endMinute: 650), ClassTime(weekday: 3, startMinute: 600, endMinute: 680)].usualMinutes == 80)
+        #expect([ClassTime]().usualMinutes == nil)
+
+        let makeup = Session(device: device, at: .now, week: 10, index: 3, date: date("2026-11-04 19:00"))
+        #expect(makeup.expectedEnd(schedule: lab, classMinutes: 75, calendar: calendar) == date("2026-11-04 21:00"))
+        // No class times at all, as at a school abroad before they're entered: the settings say.
+        #expect(makeup.expectedEnd(schedule: [], classMinutes: 80, calendar: calendar) == date("2026-11-04 20:20"))
+    }
+
+    @Test func aMakeupKeepsItsOwnEndAndASlotEndIsNotStoredTwice() {
+        let slot = ClassTime(weekday: 1, startMinute: 13 * 60, endMinute: 14 * 60 + 15)
+        var makeup = Session(device: device, at: .now, week: 10, index: 3, date: date("2026-11-04 21:00"))
+        makeup.setEnd(date("2026-11-04 22:15"), schedule: [slot], calendar: calendar)
+        #expect(makeup.end(schedule: [slot], calendar: calendar) == date("2026-11-04 22:15"))
+
+        // The slot already says when a Monday 13:00 class ends, so changing the class times later still moves it.
+        var monday = Session(device: device, at: .now, week: 9, index: 1, date: date("2026-10-26 13:00"))
+        monday.setEnd(date("2026-10-26 14:15"), schedule: [slot], calendar: calendar)
+        #expect(monday.end == nil)
+        monday.setEnd(date("2026-10-26 14:45"), schedule: [slot], calendar: calendar)
+        #expect(monday.end(schedule: [slot], calendar: calendar) == date("2026-10-26 14:45"))
+    }
+
+    @Test func aSessionTakesItsSlotsLinkUnlessItHasItsOwn() {
+        let slot = ClassTime(weekday: 1, startMinute: 13 * 60, endMinute: 14 * 60 + 15, link: "https://zoom.us/j/111")
+        var s = Session(device: device, at: .now, week: 9, index: 1, date: date("2026-10-26 13:00"))
+        #expect(s.link(schedule: [slot], calendar: calendar) == URL(string: "https://zoom.us/j/111"))
+        s.link = "meet.google.com/abc-defg-hij"
+        #expect(s.link(schedule: [slot], calendar: calendar) == URL(string: "https://meet.google.com/abc-defg-hij"))
+        let offSlot = Session(device: device, at: .now, week: 9, index: 2, date: date("2026-10-26 21:00"))
+        #expect(offSlot.link(schedule: [slot], calendar: calendar) == nil)
+    }
+
+    @Test func onlyAWebAddressIsAMeetingLink() {
+        #expect(OnlineLink.url("  https://us06web.zoom.us/j/88470108867?pwd=abc.1 \n") == URL(string: "https://us06web.zoom.us/j/88470108867?pwd=abc.1"))
+        #expect(OnlineLink.url("zoom.us/j/123") == URL(string: "https://zoom.us/j/123"))
+        for bad in ["", "884 7010 8867", "813643", "ftp://zoom.us/j/1", "회의 링크", "localhost"] { #expect(OnlineLink.url(bad) == nil, "\(bad)") }
+    }
+
+    @Test func aZoomLinkOpensTheZoomApp() throws {
+        let web = try #require(URL(string: "https://us06web.zoom.us/j/88470108867?pwd=NrYC.1"))
+        #expect(OnlineLink.appURL(web)?.absoluteString == "zoommtg://zoom.us/join?action=join&confno=88470108867&pwd=NrYC.1")
+        #expect(OnlineLink.appURL(try #require(URL(string: "https://zoom.us/j/123")))?.absoluteString == "zoommtg://zoom.us/join?action=join&confno=123")
+        #expect(OnlineLink.appURL(try #require(URL(string: "https://us06web.zoom.us/launch/jc/884"))) == nil)
+        #expect(OnlineLink.appURL(try #require(URL(string: "https://meet.google.com/abc"))) == nil)
+        #expect(OnlineLink.appURL(try #require(URL(string: "https://notzoom.us/j/123"))) == nil)
+    }
+
+    @Test func movingASessionToAnotherWeekMakesItThatWeeksLast() {
+        let start = LocalDate(year: 2026, month: 9, day: 1)!
+        let a = Session(device: device, at: .now, week: 10, index: 1, date: date("2026-11-03 10:30"))
+        var b = Session(device: device, at: .now, week: 10, index: 2, date: date("2026-11-04 21:00"))
+        b.end = date("2026-11-04 22:15")
+        let c = Session(device: device, at: .now, week: 11, index: 1, date: date("2026-11-10 10:30"))
+        var file = CourseFile(course: courses[0], sessions: [a, b, c])
+
+        // Within its week it keeps its name; its own end moves with it.
+        file.reschedule(b.id, to: date("2026-11-05 20:00"), termStart: start, calendar: calendar)
+        #expect(file.sessions[1].week == 10 && file.sessions[1].index == 2)
+        #expect(file.sessions[1].end == date("2026-11-05 21:15"))
+
+        #expect(file.week(of: date("2026-11-12 20:00"), moving: b.id, termStart: start, calendar: calendar) == 11)
+        file.reschedule(b.id, to: date("2026-11-12 20:00"), termStart: start, calendar: calendar)
+        #expect(file.sessions[1].week == 11 && file.sessions[1].index == 2)
+    }
+
+    @Test func aSessionEndingBeforeItStartsOrABadLinkIsRefused() {
+        func rules(_ s: Session) -> Set<String> {
+            Set(CourseFile.model.violations(in: CourseFile(course: courses[0], sessions: [s])).map(\.rule.name))
+        }
+        var s = Session(device: device, at: .now, week: 10, index: 1, date: date("2026-11-04 21:00"))
+        s.end = date("2026-11-04 20:00")
+        #expect(rules(s).contains("Session.time"))
+        s.end = nil
+        s.link = "813643"
+        #expect(rules(s).contains("Session.link"))
+        s.link = "https://zoom.us/j/1"
+        #expect(rules(s).isDisjoint(with: ["Session.time", "Session.link"]))
     }
 
     // MARK: Quick add
