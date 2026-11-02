@@ -120,15 +120,24 @@ import UIKit
         ceil(text.boundingRect(with: CGSize(width: width, height: .greatestFiniteMagnitude), options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).height)
     }
 
+    static let minimum: CGFloat = 48
+
     /// Shrinks the columns together to the page, but none below its floor: math and pictures don't wrap, so a column
     /// narrower than its widest one cut it off (`min{m,` for `\min\{m,n\}`). Only the room above the floors shrinks.
-    /// When the floors alone are wider than the page they shrink together too: the table is one picture in the note
-    /// column, and a picture wider than the column is cut at its edge, losing whole columns instead of a formula's end.
+    /// When the floors alone are wider than the page they shrink together too, though none below `minimum`: the table
+    /// is one picture in the note column, and a picture wider than the column is cut at its edge, losing whole columns
+    /// instead of a formula's end.
     static func fit(_ widths: [CGFloat], floors: [CGFloat], page: CGFloat) -> [CGFloat] {
         let wanted = zip(widths, floors).map { max($0, $1) }
         let total = wanted.reduce(0, +), base = floors.reduce(0, +)
         guard total > page else { return wanted }
-        guard base < page else { return floors.map { floor($0 * page / base) } }
+        guard base < page else {
+            // The floors give way above the narrowest a column can be and still hold a word, so the wide ones pay.
+            let least = min(minimum, floor(page / CGFloat(floors.count)))
+            let room = page - least * CGFloat(floors.count), over = base - least * CGFloat(floors.count)
+            guard over > 0 else { return floors.map { _ in least } }
+            return floors.map { least + floor(($0 - least) * room / over) }
+        }
         let keep = (page - base) / (total - base)
         return zip(wanted, floors).map { w, f in f + floor((w - f) * keep) }
     }
@@ -138,11 +147,8 @@ import UIKit
     /// and a code block draws nothing in a cell.
     private static func widestMath(_ text: NSAttributedString) -> CGFloat {
         var widest: CGFloat = 0
-        text.enumerateAttribute(.attachment, in: NSRange(location: 0, length: text.length)) { value, range, _ in
-            guard let a = value as? NSTextAttachment,
-                  (text.attribute(.noteAtom, at: range.location, effectiveRange: nil) as? NoteAtom)?.source.hasPrefix("$") == true
-            else { return }
-            widest = max(widest, ceil(a.bounds.width))
+        text.enumerateAttribute(.attachment, in: NSRange(location: 0, length: text.length)) { value, _, _ in
+            if let a = value as? MathAttachment { widest = max(widest, ceil(a.bounds.width)) }
         }
         return widest
     }
@@ -150,8 +156,7 @@ import UIKit
     static func shrunk(_ text: NSAttributedString, to width: CGFloat) -> NSAttributedString {
         let out = NSMutableAttributedString(attributedString: text)
         text.enumerateAttribute(.attachment, in: NSRange(location: 0, length: text.length)) { value, range, _ in
-            guard let a = value as? NSTextAttachment, !(a is CodeAttachment), a.bounds.width > width, width > 0,
-                  (text.attribute(.noteAtom, at: range.location, effectiveRange: nil) as? NoteAtom)?.source.hasPrefix("$") != true
+            guard let a = value as? NSTextAttachment, !(a is CodeAttachment), !(a is MathAttachment), a.bounds.width > width, width > 0
             else { return }
             let smaller = NSTextAttachment()
             smaller.image = a.image
@@ -167,7 +172,7 @@ import UIKit
         let columnCount = cells.map { $0.column + $0.columns }.max()!
         let rowCount = cells.map { $0.row + $0.rows }.max()!
         var widths = (0..<columnCount).map { c in c < fixed.count ? fixed[c] ?? 0 : 0 }
-        var floors = Array(repeating: CGFloat(48), count: columnCount)
+        var floors = Array(repeating: minimum, count: columnCount)
         for cell in cells where cell.columns == 1 {
             floors[cell.column] = max(floors[cell.column], widestMath(cell.text) + padding.width * 2)
             guard cell.column >= fixed.count || fixed[cell.column] == nil else { continue }

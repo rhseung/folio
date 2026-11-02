@@ -306,12 +306,14 @@ struct NoteReaderTests {
         // Floors alone wider than the page: they give way too, so no column falls off the picture's edge.
         #expect(ReaderTable.fit([300, 300], floors: [250, 250], page: 400) == [200, 200])
         #expect(ReaderTable.fit([600, 100], floors: [600, 100], page: 400).reduce(0, +) <= 400)
+        // Short columns keep room for a word; the wide floor gives up the rest.
+        #expect(ReaderTable.fit([600, 48, 48], floors: [600, 48, 48], page: 400) == [304, 48, 48])
     }
 
     /// An image in a cell was sized to the note column, so it shrinks to its own column; math can't, so it doesn't.
     @Test func cellImagesShrinkToTheirColumnButMathDoesNot() throws {
         func piece(_ source: String, width: CGFloat) -> NSAttributedString {
-            let a = NSTextAttachment()
+            let a = source.hasPrefix("$") ? MathAttachment() : NSTextAttachment()
             a.bounds = CGRect(x: 0, y: -2, width: width, height: width / 2)
             return NSAttributedString(attachment: a, attributes: [.noteAtom: NoteAtom(source)])
         }
