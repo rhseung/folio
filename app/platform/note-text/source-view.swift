@@ -68,6 +68,15 @@ struct MarkdownEditor {
     }
 }
 
+/// Room past the note's end. The editor's last line comes up to the middle of the screen, since one writes at the end;
+/// the preview's to the top, since its blocks stand further apart than the source's lines and it must still reach the
+/// line the editor shows at the top.
+enum NoteOverscroll {
+    static func bottom(_ height: CGFloat, preview: Bool) -> CGFloat {
+        preview ? max(0, height - 2 * NoteLook.margin) : (height / 2).rounded()
+    }
+}
+
 #if os(macOS)
 extension MarkdownEditor: NSViewRepresentable {
     func makeNSView(context: Context) -> NSScrollView {
@@ -103,9 +112,16 @@ final class NoteScrollView: NSScrollView {
         document.autoresizingMask = [.width]
         documentView = document
         contentView.postsBoundsChangedNotifications = true
+        automaticallyAdjustsContentInsets = false
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    override func tile() {
+        let bottom = NoteOverscroll.bottom(frame.height, preview: documentView is ReaderTextView)
+        if contentInsets.bottom != bottom { contentInsets = NSEdgeInsets(top: 0, left: 0, bottom: bottom, right: 0) }
+        super.tile()
+    }
 }
 
 /// A TextKit 2 text view for notes: the column centered at the note measure, `NoteFragment`s drawn, and the note's own
@@ -638,6 +654,8 @@ class NoteTextView: UITextView {
     override func layoutSubviews() {
         let inset = max(NoteLook.margin, (bounds.width - NoteLook.measure) / 2 + NoteLook.margin)
         if textContainerInset.left != inset { textContainerInset = UIEdgeInsets(top: NoteLook.margin, left: inset, bottom: NoteLook.margin, right: inset) }
+        let bottom = NoteOverscroll.bottom(bounds.height, preview: self is ReaderTextView)
+        if contentInset.bottom != bottom { contentInset.bottom = bottom }
         super.layoutSubviews()
         if columnWidth != column {
             column = columnWidth

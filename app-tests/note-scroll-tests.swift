@@ -132,4 +132,35 @@ struct NoteScrollTests {
         #expect(view.click(at: bare))
         #expect(body.text.contains("- [x]\n"))
     }
+
+    /// The view's frame cut to the note as laid out, as the app's is, instead of `fit`'s room to spare.
+    static func trim(_ view: NSTextView) {
+        guard let manager = view.textLayoutManager else { return }
+        manager.ensureLayout(for: manager.documentRange)
+        view.setFrameSize(NSSize(width: 900, height: manager.usageBoundsForTextContainer.height + 2 * view.textContainerInset.height))
+    }
+
+    /// One writes at the note's end, so the editor scrolls its last line up to the middle of the screen, not the bottom.
+    @Test func theEditorScrollsItsLastLineToTheMiddle() throws {
+        let text = Self.filler + "\n끝 줄"
+        let (view, _) = Self.source(text)
+        Self.trim(view)
+        let clip = try #require(view.enclosingScrollView?.contentView)
+        clip.scroll(to: clip.constrainBoundsRect(NSRect(origin: NSPoint(x: 0, y: 1_000_000), size: clip.bounds.size)).origin)
+        view.enclosingScrollView?.reflectScrolledClipView(clip)
+        let last = try #require(Self.shown(view, (text as NSString).range(of: "끝 줄").location))
+        #expect(last < clip.bounds.height * 0.6 && last > clip.bounds.height * 0.3, "\(last) of \(clip.bounds.height)")
+    }
+
+    /// With the editor scrolled to the note's end, its top line is half a screen or so above it. The preview, cut to
+    /// its note, brought that line only as far as its own end allowed, short of the top of the screen.
+    @Test func thePreviewFollowsTheEditorToTheEnd() throws {
+        let body = Body(Self.filler + "\n앞 문단\n\n둘째\n\n셋째")
+        let (view, _) = Self.reader(body)
+        Self.trim(view)
+        let line = body.text.components(separatedBy: "\n").firstIndex(of: "앞 문단")! + 1
+        view.follow(line: line, frac: 0)
+        let shown = try #require(Self.shown(view, (view.string as NSString).range(of: "앞 문단").location))
+        #expect(abs(shown - NoteLook.margin) <= 2, "\(shown)")
+    }
 }
