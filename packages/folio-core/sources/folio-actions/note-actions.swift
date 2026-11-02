@@ -75,7 +75,7 @@ public struct NoteAdopt {
 
 /// One kind at a time: becoming another kind lets go of the session or exam the old one belonged to. Writes the
 /// frontmatter and the session's note link together. The command takes each unit as `--unit`, so it is written by hand.
-@Action("note link", "노트의 종류와 회차·시험·단원 연결 정하기", done: "노트 '{note}'을(를) 연결했습니다",
+@Action("note link", "노트의 종류와 회차, 시험, 단원 연결 정하기", done: "노트 '{note}'을(를) 연결했습니다",
         phrases: ["노트 연결", "노트 종류"], cli: .manual)
 public struct NoteLink {
     @Arg var course: Course.ID

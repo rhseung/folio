@@ -1756,7 +1756,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "과목: 목록, 추가, 이름 바꾸기, 학점·평가 방식·색"
+            "value": "과목: 목록, 추가, 이름 바꾸기, 학점, 평가 방식, 색"
           }
         }
       }
@@ -3472,7 +3472,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "자료 파일: 추적, 회차·단원 연결, 이동과 휴지통"
+            "value": "자료 파일: 추적, 회차와 단원 연결, 이동과 휴지통"
           }
         }
       }
@@ -3945,7 +3945,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "표준 입출력으로 MCP를 주고받는다. 클라이언트가 실행하고 대화가 끝나면 함께 끝나므로 켜 둘 서버가 없다. 쓰기 액션 하나가 도구 하나이고(exam add → exam_add), 목록·보기·검색 같은 읽기 명령도 도구가 된다.\n\nClaude Code:      claude mcp add folio -- folio mcp\nClaude 데스크톱:  claude_desktop_config.json의 mcpServers에 {\"folio\": {\"command\": \"<folio 경로>\", \"args\": [\"mcp\"]}}"
+            "value": "표준 입출력으로 MCP를 주고받는다. 클라이언트가 실행하고 대화가 끝나면 함께 끝나므로 켜 둘 서버가 없다. 쓰기 액션 하나가 도구 하나이고(exam add → exam_add), 목록, 보기, 검색 같은 읽기 명령도 도구가 된다.\n\nClaude Code:      claude mcp add folio -- folio mcp\nClaude 데스크톱:  claude_desktop_config.json의 mcpServers에 {\"folio\": {\"command\": \"<folio 경로>\", \"args\": [\"mcp\"]}}"
           }
         }
       }
@@ -4055,7 +4055,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "노트의 종류와 회차·시험·단원 연결 정하기"
+            "value": "노트의 종류와 회차, 시험, 단원 연결 정하기"
           }
         }
       }
@@ -4066,7 +4066,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "러프·복습 노트는 --session, 시험 종합 정리는 --exam, 주제 노트는 --unit을 받는다. 종류를 바꾸면 예전 연결은 떨어진다.\n\n예시:\n  folio note link EC4207/2주차-1 --kind review --session 2주차-1\n  folio note link \"EC4207/매칭 정리\" --kind topic --unit 매칭 --unit \"이분 그래프\""
+            "value": "러프 노트와 복습 노트는 --session, 시험 종합 정리는 --exam, 주제 노트는 --unit을 받는다. 종류를 바꾸면 예전 연결은 떨어진다.\n\n예시:\n  folio note link EC4207/2주차-1 --kind review --session 2주차-1\n  folio note link \"EC4207/매칭 정리\" --kind topic --unit 매칭 --unit \"이분 그래프\""
           }
         }
       }
@@ -6079,7 +6079,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "강의 회차: 목록, 추가, 휴강 표시, 러프·복습 노트"
+            "value": "강의 회차: 목록, 추가, 휴강 표시, 러프 노트와 복습 노트"
           }
         }
       }
