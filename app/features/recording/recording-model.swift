@@ -52,10 +52,12 @@ final class RecordingPlayerModel {
         self.courseId = courseId
         self.store = store
         self.recording = recording
+        // Read before the sheet opens, not in `load`: whether there are lines sets the sheet's height, which would
+        // otherwise jump once it is up.
+        transcript = store.transcript(of: recording)
     }
 
     func load() {
-        transcript = store.transcript(of: recording)
         player.load(store.fileURL(recording.file))
     }
 

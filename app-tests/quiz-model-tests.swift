@@ -173,4 +173,14 @@ struct RecordingPlayerModelTests {
         #expect(model.shownLines.map(\.index) == [0, 2])
         #expect(model.hasLines)
     }
+
+    /// The sheet's height follows whether there are lines, so they must be known before it opens, not after `load`.
+    @Test func readsTheTranscriptBeforeLoading() throws {
+        let f = try QuizFixture()
+        let heard = Recording(device: f.workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a")
+        try f.course.store.saveTranscript(LectureTranscript(locale: "ko-KR", lines: [.init(start: 0, end: 5, text: "그래프 정의")]), of: heard)
+        #expect(RecordingPlayerModel(workspace: f.workspace, courseId: f.courseId, store: f.course.store, recording: heard).hasLines)
+        let silent = Recording(device: f.workspace.device, at: .now, sessionId: nil, file: "Recordings/b.m4a")
+        #expect(!RecordingPlayerModel(workspace: f.workspace, courseId: f.courseId, store: f.course.store, recording: silent).hasLines)
+    }
 }
