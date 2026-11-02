@@ -114,7 +114,11 @@ public enum StandardLayout {
 
     /// `<two-digit week>_<title>`, or `05-1_<title>` when a week has several files.
     public static func isLectureFileName(_ name: String) -> Bool {
-        name.wholeMatch(of: /\d{2}(-\d+)?_.+/) != nil
+        lectureWeek(name) != nil
+    }
+
+    public static func lectureWeek(_ name: String) -> Int? {
+        name.wholeMatch(of: /(\d{2})(-\d+)?_.+/).flatMap { Int($0.1) }
     }
 
     /// `<year> <Midterm|Final|Quiz> (<source>)`, optionally followed by ` Solution`.

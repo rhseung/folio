@@ -9,6 +9,8 @@ final class TranscriptionQueue {
     @ObservationIgnored private var jobs: [UUID: (token: UUID, task: Task<Void, Never>)] = [:]
     @ObservationIgnored private var last: Task<Void, Never>?
 
+    var isRunning: Bool { !phases.isEmpty }
+
     func phase(of id: UUID) -> TranscriptionPhase? { phases[id] }
 
     /// `work` gets a way to report its progress; it throws `CancellationError` when cancelled. Asking again for a

@@ -81,16 +81,21 @@ extension Workspace {
             // Captions missing (the language model was still downloading, or a crash) are made from the audio now;
             // Whisper redoes them all, since it hears Korean and English together where the captions take one language.
             let heard = course.store.transcript(of: recording)?.reaches(recording.duration) == true
-            if !heard || TranscriptionEngine.preferred == .whisper { transcribe(recording, course: course.id) }
+            if !heard || TranscriptionEngine.preferred == .whisper { transcribe(recording, course: course.id, asked: false) }
         } catch {
             self.error = String(localized: .recordingErrorInstallFailed(error.localizedDescription))
         }
     }
 
     /// Replaces the transcript with one made from the whole audio. Goes on after the player closes; a recording
-    /// already queued is not queued again.
-    func transcribe(_ recording: Recording, course id: UUID, engine: TranscriptionEngine = .preferred) {
+    /// already queued is not queued again. Unless someone `asked`, the Whisper model is used only if it is already
+    /// here, and Apple's recognizer does without it.
+    func transcribe(_ recording: Recording, course id: UUID, engine: TranscriptionEngine = .preferred, asked: Bool = true) {
         guard let course = course(id), recording.hasAudio else { return }
+        let mayDownload = asked || WhisperModel.shared.ready
+        let engine = engine == .whisper && !mayDownload ? .apple : engine
+        // Captions already there are better than a redo by the same recognizer.
+        if !asked, engine == .apple, course.store.transcript(of: recording)?.reaches(recording.duration) == true { return }
         let store = course.store
         // Only Apple's recognizer needs it. A crash before the first caption leaves no transcript to say what the
         // captions listened for, but they chose it the same way.
@@ -105,7 +110,7 @@ extension Workspace {
             defer { try? FileManager.default.removeItem(at: copy) }
             try store.copyAudio(of: recording, to: copy)
             let hints = session.map { file.transcriptionHints(for: $0, slides: store.lectureText(file.lecturePages(for: $0))) }
-            let transcript = try await engine.transcribe(copy, locale: locale, hints: hints, report: report)
+            let transcript = try await engine.transcribe(copy, locale: locale, hints: hints, mayDownload: mayDownload, report: report)
             // Deleted meanwhile: saving now would leave a transcript with no recording.
             try Task.checkCancellation()
             guard transcript.replaces(store.transcript(of: recording)) else { return }

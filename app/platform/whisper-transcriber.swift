@@ -15,6 +15,8 @@ actor WhisperTranscriber {
     static var modelFolder: URL { base.appending(path: "models/argmaxinc/whisperkit-coreml/\(variant)", directoryHint: .isDirectory) }
 
     private var kit: WhisperKit?
+    // A transcription awaiting the decoder lets other calls into the actor, so deleting must check it is not mid-run.
+    private var running = 0
     private var download: Task<URL, any Error>?
 
     /// Downloads the model if this device doesn't have it. A second caller waits for the same download.
@@ -56,6 +58,8 @@ actor WhisperTranscriber {
     }
 
     func transcribe(_ url: URL, hints: TranscriptionHints?, report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws -> LectureTranscript {
+        running += 1
+        defer { running -= 1 }
         let kit = try await load(report: report)
         let duration = (try? AVAudioFile(forReading: url)).map { max(Double($0.length) / $0.processingFormat.sampleRate, 1) } ?? 1
         report(.transcribing(0))
@@ -143,16 +147,15 @@ actor WhisperTranscriber {
         return kit
     }
 
-    /// Frees the gigabyte the loaded model holds, and with `delete` the model files.
-    func unload(delete: Bool) async {
+    /// Settings disables deleting while the queue runs; this refuses too, since a job may be loading the model.
+    func deleteModel() async {
+        guard running == 0 else { return }
         download?.cancel()
         await kit?.unloadModels()
         kit = nil
-        if delete {
-            // folio:not-an-action the model lives in this device's Application Support, outside the GIST folder
-            try? FileManager.default.removeItem(at: Self.base)
-            await MainActor.run { WhisperModel.shared.finishDownload(ready: false) }
-        }
+        // folio:not-an-action the model lives in this device's Application Support, outside the GIST folder
+        try? FileManager.default.removeItem(at: Self.base)
+        await MainActor.run { WhisperModel.shared.finishDownload(ready: false) }
     }
 }
 
@@ -184,6 +187,6 @@ final class WhisperModel {
     }
 
     func delete() {
-        Task { await WhisperTranscriber.shared.unload(delete: true) }
+        Task { await WhisperTranscriber.shared.deleteModel() }
     }
 }

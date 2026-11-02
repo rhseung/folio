@@ -68,15 +68,9 @@ extension CourseFile {
         let tagged = materials.filter { $0.isPDF && ($0.sessionIds.contains(session.id) || !unitIds.isDisjoint(with: $0.unitIds)) }
         if !tagged.isEmpty { return tagged.sorted { $0.path < $1.path }.map { LecturePages(path: $0.path) } }
         return materials
-            .filter { $0.isPDF && $0.path.hasPrefix(CourseFolder.lectures.rawValue + "/") && Self.lectureWeek($0.path) == session.week }
+            .filter { $0.isPDF && $0.path.hasPrefix(CourseFolder.lectures.rawValue + "/") && StandardLayout.lectureWeek(($0.path as NSString).lastPathComponent) == session.week }
             .sorted { $0.path < $1.path }
             .map { LecturePages(path: $0.path) }
-    }
-
-    static func lectureWeek(_ path: String) -> Int? {
-        let name = (path as NSString).lastPathComponent
-        guard let match = name.prefixMatch(of: /(\d{2})(-\d+)?_/) else { return nil }
-        return Int(match.1)
     }
 }
 

@@ -9,17 +9,20 @@ enum TranscriptionEngine: String, CaseIterable, Identifiable {
     static let storageKey = "folio.transcriptionEngine"
 
     static var preferred: TranscriptionEngine {
-        UserDefaults.standard.string(forKey: storageKey).flatMap(TranscriptionEngine.init) ?? .whisper
+        UserDefaults.standard.string(forKey: storageKey).flatMap(TranscriptionEngine.init) ?? .standard
     }
 
+    static let standard = TranscriptionEngine.whisper
+
     /// `locale` is a guess (the live captions' language) that only Apple's recognizer needs; Whisper listens for itself.
-    func transcribe(_ url: URL, locale: Locale, hints: TranscriptionHints?,
+    /// Without `mayDownload` Whisper stands in only if its model is here: 630MB is downloaded when someone asked.
+    func transcribe(_ url: URL, locale: Locale, hints: TranscriptionHints?, mayDownload: Bool,
                     report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws -> LectureTranscript {
         switch self {
         case .apple:
             do {
                 return try await AppleFileTranscriber.transcribe(url, locale: locale, hints: hints, report: report)
-            } catch TranscriptionError.localeUnsupported {
+            } catch TranscriptionError.localeUnsupported where mayDownload {
                 // A recording must never be left without a transcript; Whisper hears every language Folio records in.
                 return try await WhisperTranscriber.shared.transcribe(url, hints: hints, report: report)
             }

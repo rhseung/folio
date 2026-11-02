@@ -89,7 +89,7 @@ struct SettingsView: View {
         case .backup: BackupSettingsForm(model: model)
         case .catalog: CatalogEditor()
         case .notes: NoteSettingsForm(settings: $model.settings)
-        case .recording: RecordingSettings()
+        case .recording: RecordingSettings(transcribing: model.transcribing)
         case .claude: ClaudeSettings(model: model)
         }
     }
@@ -278,7 +278,8 @@ private struct NoteSettingsForm: View {
 
 /// This device's choices, not settings.json's: the Whisper model is downloaded per device.
 private struct RecordingSettings: View {
-    @AppStorage(TranscriptionEngine.storageKey) private var engine: TranscriptionEngine = .whisper
+    @AppStorage(TranscriptionEngine.storageKey) private var engine: TranscriptionEngine = .standard
+    let transcribing: Bool
     private var whisper: WhisperModel { .shared }
 
     var body: some View {
@@ -296,6 +297,8 @@ private struct RecordingSettings: View {
                         } else if whisper.ready {
                             Text(.settingsWhisperReady).foregroundStyle(Theme.Palette.textSecondary)
                             Button(.settingsWhisperDelete, role: .destructive) { whisper.delete() }.buttonStyle(.ghost)
+                                .disabled(transcribing)
+                                .help(transcribing ? String(localized: .settingsWhisperDeleteBusy) : "")
                         } else {
                             Button(.settingsWhisperDownload) { whisper.download() }.buttonStyle(.pointing(.bordered))
                         }

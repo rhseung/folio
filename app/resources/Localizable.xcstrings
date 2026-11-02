@@ -15506,7 +15506,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Whisper는 한국어와 영어를 함께 알아듣고 어느 언어로 한 강의인지 스스로 가립니다. 기기 음성 인식은 더 빠르지만 한 언어만 알아들어 영어 용어를 한글 소리로 적곤 하고, 받아쓰지 못하는 언어는 Whisper가 대신 받아씁니다. 두 방식 모두 그 회차 강의 자료에 나온 용어를 참고합니다."
+            "value": "Whisper는 한국어와 영어를 함께 알아듣고 어느 언어로 한 강의인지 스스로 가립니다. 기기 음성 인식은 더 빠르지만 한 언어만 알아들어 영어 용어를 한글 소리로 적곤 합니다. 녹음이 끝난 뒤의 받아쓰기는 모델을 저절로 내려받지 않아서, 모델이 없으면 기기 음성 인식이 맡습니다. 두 방식 모두 그 회차 강의 자료에 나온 용어를 참고합니다."
           }
         }
       }
@@ -15529,6 +15529,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "지우기"
+          }
+        }
+      }
+    },
+    "settings.whisper-delete-busy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받아쓰기가 끝난 뒤 지울 수 있습니다"
           }
         }
       }
