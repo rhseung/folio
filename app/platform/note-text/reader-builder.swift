@@ -407,16 +407,13 @@ struct ReaderBlock {
                 return
             }
         case CBWidget.language:
-            let widget = try? JSONDecoder().decode(CBWidget.self, from: Data(text.utf8))
-            let size = CGSize(width: width - ctx.indent * 2, height: widget?.height ?? 320)
-            guard let widget else {
-                picture(ReaderPictures.placeholder(size), ctx)
-                return
-            }
+            // A block that doesn't decode shows as the code it is, so the mistake can be seen.
+            guard let widget = try? JSONDecoder().decode(CBWidget.self, from: Data(text.utf8)) else { break }
             let file = baseURL.flatMap { StandardLayout.widgetFile(widget.id, noteFolder: $0) }
+            let view = widgets.view(widget.id, file: file, accent: accent)
+            let size = CGSize(width: width - ctx.indent * 2, height: view.pageHeight ?? widget.height ?? 320)
             let style = Self.paragraph(ctx, before: 6, after: NoteLook.blockGap)
-            let attachment = WidgetAttachment(view: widgets.view(widget.id, file: file, accent: accent), size: size)
-            out.append(NSAttributedString(attachment: attachment, attributes: attributes(ctx, style)))
+            out.append(NSAttributedString(attachment: WidgetAttachment(view: view, size: size), attributes: attributes(ctx, style)))
             newline(attributes(ctx, style))
             return
         default:

@@ -50,8 +50,13 @@ struct NoteWidgetTests {
         return try await web.callAsyncJavaScript("return \(expression)", contentWorld: .page)
     }
 
+    static func fitted(_ web: WidgetWebView) async throws -> CGFloat {
+        for _ in 0..<100 where web.pageHeight == nil { try await Task.sleep(for: .milliseconds(50)) }
+        return try #require(web.pageHeight)
+    }
+
     @Test func runsTheWidgetFileInItsBlock() async throws {
-        let html = "<!doctype html><button id=b>0</button><script>window.done = true</script>"
+        let html = "<!doctype html><button id=b>0</button><div style='height:300px'></div><script>window.done = true</script>"
         let (view, _, id) = try Self.reader(widget: html) { "# Title\n\n" + Self.block($0, height: 240) + "\n\nAfter" }
         let widget = try #require(Self.widgets(view).first)
         #expect(widget.bounds.height == 240)
@@ -63,6 +68,24 @@ struct NoteWidgetTests {
         // The note's colors reach the page under the names note pages use.
         let accent = try await Self.value(web, "getComputedStyle(document.documentElement).getPropertyValue('--accent').trim()") as? String
         #expect(accent?.hasPrefix("#") == true)
+    }
+
+    /// The block takes the page's height in place, so up-and-down scrolling never stops inside a widget.
+    @Test func theBlockFitsItsPage() async throws {
+        let html = "<!doctype html><div style='height:500px'></div>"
+        let (view, _, _) = try Self.reader(widget: html) { "Before\n\n" + Self.block($0, height: 200) + "\n\nAfter" }
+        let widget = try #require(Self.widgets(view).first)
+        let web = try #require(widget.view as? WidgetWebView)
+        #expect(try await Self.fitted(web) == 500)
+        #expect(widget.bounds.height == 500)
+        NoteRender.layout(view)
+        #expect(web.frame.height == 500)
+        let after = try #require(NoteRender.caret(view, at: (view.string as NSString).range(of: "After").location))
+        #expect(view.textContainerOrigin.y + after.minY >= web.frame.maxY)
+        // Rendered again, the block starts at the page's height rather than the one written in it.
+        view.show("Intro\n\n" + view.core.shown!)
+        NoteRender.layout(view)
+        #expect(Self.widgets(view).first?.bounds.height == 500)
     }
 
     @Test func theWidgetCannotReachTheNetwork() async throws {
@@ -120,15 +143,33 @@ struct NoteWidgetTests {
         #expect(try await Self.text(web) == String(localized: .notesWidgetNoCourse))
     }
 
-    /// The note takes up-and-down scrolling over a widget unless the widget has more to show.
-    @Test(arguments: [(40, false), (2000, true)])
-    func scrollsOnlyWhenTallerThanItsBlock(height: Int, scrolls: Bool) async throws {
-        let html = "<!doctype html><div style='height:\(height)px'></div><script>const s = 1; window.done = true</script>"
-        let (view, _, _) = try Self.reader(widget: html) { Self.block($0, height: 200) }
+    @Test(arguments: [(100, false), (3000, true)])
+    func scrollsOnlySideways(width: Int, wide: Bool) async throws {
+        let html = "<!doctype html><div style='width:\(width)px;height:40px'></div><script>const s = 1; window.done = true</script>"
+        let (view, _, _) = try Self.reader(widget: html) { Self.block($0) }
         let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
         // A widget may name things as the injected scripts do.
         #expect(try await Self.value(web, "s") as? Int == 1)
-        for _ in 0..<40 where web.scrolls != scrolls { try await Task.sleep(for: .milliseconds(50)) }
-        #expect(web.scrolls == scrolls)
+        _ = try await Self.fitted(web)
+        #expect(web.wide == wide)
+    }
+
+    @Test func aRewrittenFileStartsAnew() async throws {
+        let (view, _, id) = try Self.reader(widget: "<!doctype html><p>one</p>") { Self.block($0) }
+        let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
+        let file = try #require(web.file)
+        try Data("<!doctype html><p>two</p>".utf8).write(to: file)
+        try FileManager.default.setAttributes([.modificationDate: Date().addingTimeInterval(60)], ofItemAtPath: file.path)
+        view.show("Intro\n\n" + Self.block(id))
+        NoteRender.layout(view)
+        let again = try #require(Self.widgets(view).first?.view as? WidgetWebView)
+        #expect(again !== web)
+        #expect(try await Self.text(again) == "two")
+    }
+
+    @Test func aBlockThatDoesNotDecodeShowsItsText() throws {
+        let (view, _, _) = try Self.reader(widget: nil) { _ in "```cb-widget\n{\"id\": 3}\n```" }
+        #expect(Self.widgets(view).isEmpty)
+        #expect(NoteReaderTests.codes(view.core.storage).map(\.code.string) == ["{\"id\": 3}"])
     }
 }

@@ -80,6 +80,7 @@ final class ReaderTextView: NoteTextView, NSTextViewDelegate {
         delegate = self
         core = ReaderCore(storage: textStorage!)
         core.rendered = { [weak self] in self?.rendered() }
+        core.resized = { [weak self] in self?.needsLayout = true }
         core.replacing = { [weak self] swap in
             guard let self, let at = self.clicked ?? self.firstVisible, let y = self.screenY(of: at) else { return swap() }
             swap()
@@ -257,6 +258,7 @@ final class ReaderTextView: NoteTextView, UITextViewDelegate, UIGestureRecognize
         delegate = self
         core = ReaderCore(storage: textStorage)
         core.rendered = { [weak self] in self?.rendered() }
+        core.resized = { [weak self] in self?.setNeedsLayout() }
         let tap = UITapGestureRecognizer(target: self, action: #selector(tapped))
         tap.delegate = self
         addGestureRecognizer(tap)

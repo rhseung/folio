@@ -109,4 +109,7 @@ extension StoredDocument {
 public enum LocalFile {
     public static func read(_ url: URL) -> Data? { try? CoordinatedFile.read(url) }
     public static func exists(_ url: URL) -> Bool { FileManager.default.fileExists(atPath: url.path) }
+    public static func modified(_ url: URL) -> Date? {
+        (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date
+    }
 }

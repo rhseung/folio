@@ -20,24 +20,6 @@ import UIKit
         #endif
     }
 
-    /// Where a widget would be, where widgets don't run.
-    static func placeholder(_ size: CGSize) -> (image: PlatformImage, size: CGSize) {
-        let image = draw(size) { context in
-            let path = CGPath(roundedRect: CGRect(origin: .zero, size: size).insetBy(dx: 1, dy: 1), cornerWidth: 8, cornerHeight: 8, transform: nil)
-            context.addPath(path)
-            context.setFillColor(NoteLook.fill.cgColor)
-            context.fillPath()
-            context.addPath(path)
-            context.setStrokeColor(NoteLook.line.cgColor)
-            context.setLineDash(phase: 0, lengths: [4, 4])
-            context.strokePath()
-            let label = NSAttributedString(string: "widget", attributes: [.font: NoteLook.font(NoteLook.labelSize), .foregroundColor: NoteLook.text3])
-            let s = label.size()
-            withText(context) { label.draw(at: CGPoint(x: (size.width - s.width) / 2, y: (size.height - s.height) / 2)) }
-        }
-        return (image, size)
-    }
-
     static func withText(_ context: CGContext, _ body: () -> Void) {
         #if os(macOS)
         NSGraphicsContext.saveGraphicsState()

@@ -27,6 +27,8 @@ final class WidgetAttachment: NSTextAttachment, ViewAttachment {
 @MainActor final class ReaderWidgets {
     private var views: [String: WidgetWebView] = [:]
     private var used: Set<String> = []
+    /// Called when a widget's page changes height, so its block can follow.
+    var resized: (WidgetWebView) -> Void = { _ in }
 
     func begin() { used = [] }
 
@@ -36,11 +38,14 @@ final class WidgetAttachment: NSTextAttachment, ViewAttachment {
         while used.contains("\(id)#\(n)") { n += 1 }
         let key = "\(id)#\(n)"
         used.insert(key)
-        if let view = views[key], view.file == file {
+        // A rewritten file starts the widget anew; an unchanged one keeps it running.
+        let stamp = file.flatMap { LocalFile.modified($0) }
+        if let view = views[key], view.file == file, view.stamp == stamp {
             view.accent = accent
             return view
         }
-        let view = WidgetWebView(file: file, accent: accent)
+        let view = WidgetWebView(file: file, stamp: stamp, accent: accent)
+        view.resized = { [weak self] in self?.resized($0) }
         views[key] = view
         return view
     }
@@ -52,15 +57,20 @@ final class WidgetAttachment: NSTextAttachment, ViewAttachment {
 /// another page. Widgets are written by Claude or pasted in, so they're treated as untrusted code.
 final class WidgetWebView: WKWebView, AttachedView, WKNavigationDelegate {
     let file: URL?
+    let stamp: Date?
     private let files: WidgetScheme
-    /// Whether the page is taller than its block. Until it is, up-and-down scrolling goes to the note, as over code.
-    private(set) var scrolls = false {
+    /// The page's own height once it has said it. The block takes it, so a widget never scrolls up and down inside the
+    /// note: that scrolling always moves the note, as over code.
+    private(set) var pageHeight: CGFloat?
+    /// A page wider than its block scrolls sideways, which is all a widget scrolls.
+    private(set) var wide = false {
         didSet {
             #if os(iOS)
-            scrollView.isScrollEnabled = scrolls
+            scrollView.isScrollEnabled = wide
             #endif
         }
     }
+    var resized: (WidgetWebView) -> Void = { _ in }
     var accent: CourseAccent {
         didSet {
             guard accent != oldValue else { return }
@@ -69,8 +79,9 @@ final class WidgetWebView: WKWebView, AttachedView, WKNavigationDelegate {
         }
     }
 
-    init(file: URL?, accent: CourseAccent) {
+    init(file: URL?, stamp: Date?, accent: CourseAccent) {
         self.file = file
+        self.stamp = stamp
         self.accent = accent
         files = WidgetScheme(file: file)
         let config = WKWebViewConfiguration()
@@ -100,7 +111,7 @@ final class WidgetWebView: WKWebView, AttachedView, WKNavigationDelegate {
 
     #if os(macOS)
     override func scrollWheel(with event: NSEvent) {
-        if !scrolls, abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) { nextResponder?.scrollWheel(with: event) } else { super.scrollWheel(with: event) }
+        if abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) { nextResponder?.scrollWheel(with: event) } else { super.scrollWheel(with: event) }
     }
     #endif
 
@@ -112,13 +123,23 @@ final class WidgetWebView: WKWebView, AttachedView, WKNavigationDelegate {
         weak var view: WidgetWebView?
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-            if let tall = message.body as? Bool { view?.scrolls = tall }
+            guard let view, let body = message.body as? [String: Any], let h = body["h"] as? Double else { return }
+            view.wide = body["w"] as? Bool ?? false
+            // A page sized by the view (`100vh` plus a margin) would grow with every report; the cap ends that.
+            let height = min(max(CGFloat(h).rounded(.up), 16), WidgetWebView.tallest)
+            guard height != view.pageHeight else { return }
+            view.pageHeight = height
+            view.resized(view)
         }
     }
 
+    static let tallest: CGFloat = 4000
+
+    /// The root element's own box, not `scrollHeight`, which is never less than the view and so could only grow.
     private static let sizeScript = """
-    { const report = () => webkit.messageHandlers.\(SizeReports.name).postMessage(document.documentElement.scrollHeight > innerHeight + 1)
-      new ResizeObserver(report).observe(document.documentElement); addEventListener('resize', report); report() }
+    { const html = document.documentElement
+      const report = () => webkit.messageHandlers.\(SizeReports.name).postMessage({ h: html.getBoundingClientRect().height, w: html.scrollWidth > innerWidth + 1 })
+      new ResizeObserver(report).observe(html); addEventListener('resize', report); report() }
     """
 
     private func installScripts() {
