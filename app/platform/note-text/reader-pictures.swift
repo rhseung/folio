@@ -121,20 +121,24 @@ import UIKit
     }
 
     /// Shrinks the columns together to the page, but none below its floor: math and pictures don't wrap, so a column
-    /// narrower than its widest one cut it off (`min{m,` for `\min\{m,n\}`). Only the room above the floors shrinks,
-    /// and a table whose floors alone are wider than the page keeps them.
+    /// narrower than its widest one cut it off (`min{m,` for `\min\{m,n\}`). Only the room above the floors shrinks.
+    /// When the floors alone are wider than the page they shrink together too: the table is one picture in the note
+    /// column, and a picture wider than the column is cut at its edge, losing whole columns instead of a formula's end.
     static func fit(_ widths: [CGFloat], floors: [CGFloat], page: CGFloat) -> [CGFloat] {
         let wanted = zip(widths, floors).map { max($0, $1) }
         let total = wanted.reduce(0, +), base = floors.reduce(0, +)
-        guard total > page, total > base else { return wanted }
-        let keep = max(0, page - base) / (total - base)
+        guard total > page else { return wanted }
+        guard base < page else { return floors.map { floor($0 * page / base) } }
+        let keep = (page - base) / (total - base)
         return zip(wanted, floors).map { w, f in f + floor((w - f) * keep) }
     }
 
+    /// A code block's attachment spans the whole column it was made for, and in a cell it draws nothing anyway, so it
+    /// doesn't hold a column open.
     private static func widestPicture(_ text: NSAttributedString) -> CGFloat {
         var widest: CGFloat = 0
         text.enumerateAttribute(.attachment, in: NSRange(location: 0, length: text.length)) { value, _, _ in
-            if let a = value as? NSTextAttachment { widest = max(widest, ceil(a.bounds.width)) }
+            if let a = value as? NSTextAttachment, !(a is CodeAttachment) { widest = max(widest, ceil(a.bounds.width)) }
         }
         return widest
     }

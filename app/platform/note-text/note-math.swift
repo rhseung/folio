@@ -148,8 +148,7 @@ import UIKit
         ("rightleftharpoons", "neq", "\u{21CC}"), ("therefore", "neq", "\u{2234}"), ("because", "neq", "\u{2235}"),
         // SwiftMath's `\square` is its input placeholder, drawn in the placeholder color, not the end-of-proof box.
         ("square", "triangle", "\u{25A1}"), ("Box", "triangle", "\u{25A1}"), ("blacksquare", "triangle", "\u{25A0}"),
-        ("varnothing", "emptyset", nil), ("lvert", "vert", nil), ("rvert", "vert", nil),
-        ("lVert", "vert", "\u{2016}"), ("rVert", "vert", "\u{2016}"),
+        ("varnothing", "emptyset", nil),
         ("iint", "int", "\u{222C}"), ("iiint", "int", "\u{222D}"),
     ]
 
@@ -162,6 +161,9 @@ import UIKit
         (#"\\[dt]frac(?![A-Za-z])"#, #"\\frac"#),
         (#"\\not\s*="#, #"\\neq"#),
         (#"\\not\s*\\in(?![A-Za-z])"#, #"\\notin"#),
+        // Spelled, not added as symbols: after `\left` and `\right` SwiftMath looks only in its fixed delimiter table.
+        (#"\\[lr]vert(?![A-Za-z])"#, #"\\vert"#),
+        (#"\\[lr]Vert(?![A-Za-z])"#, #"\\Vert"#),
         // Close enough to read: the label over the arrow or symbol sits as its superscript.
         (#"\\xrightarrow\s*\{([^{}]*)\}"#, #"\\longrightarrow^{$1}"#),
         (#"\\xleftarrow\s*\{([^{}]*)\}"#, #"\\longleftarrow^{$1}"#),
@@ -182,8 +184,67 @@ import UIKit
     static func fill(_ tex: String) -> String {
         _ = registered
         guard tex.contains("\\") else { return tex }
-        return rewrites.reduce(tex) { text, rule in
+        return rewrites.reduce(text(tex)) { text, rule in
             rule.0.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: rule.1)
         }
+    }
+
+    private static let textCommand = try! NSRegularExpression(pattern: #"\\(?:text|textrm|mbox)\s*\{([^{}]*)\}"#)
+    private static var glyphs: Set<String> = []
+
+    /// SwiftMath reads `\text{…}` as upright math, one character at a time: `-` became a spaced minus (`1 − factor`),
+    /// `:` a ratio with relation spacing, and anything past ASCII (`–`, Hangul) was dropped without a word. So each
+    /// such character becomes an ordinary symbol of itself, which SwiftMath sets in a CoreText line that falls back to
+    /// a system font for glyphs the math font lacks. `--` and `---` are dashes, as in LaTeX text.
+    private static func text(_ tex: String) -> String {
+        let whole = tex as NSString
+        var out = "", last = 0
+        for match in textCommand.matches(in: tex, range: NSRange(location: 0, length: whole.length)) {
+            out += whole.substring(with: NSRange(location: last, length: match.range.location - last))
+            out += "\\text{" + plain(whole.substring(with: match.range(at: 1))) + "}"
+            last = match.range.location + match.range.length
+        }
+        return out + whole.substring(from: last)
+    }
+
+    private static func plain(_ body: String) -> String {
+        let body = body.replacingOccurrences(of: "---", with: "\u{2014}").replacingOccurrences(of: "--", with: "\u{2013}")
+        var out = "", i = body.startIndex
+        while i < body.endIndex {
+            let c = body[i]
+            if c == "\\" {
+                // A command or escaped character inside the text stays as written.
+                var j = body.index(after: i)
+                if j < body.endIndex, body[j].isASCII, body[j].isLetter {
+                    while j < body.endIndex, body[j].isASCII, body[j].isLetter { j = body.index(after: j) }
+                } else if j < body.endIndex {
+                    j = body.index(after: j)
+                }
+                out += body[i..<j]
+                i = j
+                continue
+            }
+            // TeX's own specials keep their meaning; letters, digits, spaces and periods SwiftMath already sets right.
+            if c.isASCII && (c.isLetter || c.isNumber || " .$%#&~^_".contains(c)) {
+                out.append(c)
+            } else {
+                out += "{\\" + symbol(c == "'" ? "\u{2019}" : c) + "}"
+            }
+            i = body.index(after: i)
+        }
+        return out
+    }
+
+    /// A command for the character, named in letters only since SwiftMath reads a command's name up to the first
+    /// non-letter. Registered the first time it's needed.
+    private static func symbol(_ c: Character) -> String {
+        let digits = Array("abcdefghijklmnop")
+        let name = "foliotext" + c.unicodeScalars.map { String(String($0.value, radix: 16).map { digits[Int(String($0), radix: 16)!] }) }.joined(separator: "z")
+        if !glyphs.contains(name), let atom = MTMathAtomFactory.atom(forLatexSymbol: "vert") {
+            atom.nucleus = String(c)
+            MTMathAtomFactory.add(latexSymbol: name, value: atom)
+            glyphs.insert(name)
+        }
+        return name
     }
 }

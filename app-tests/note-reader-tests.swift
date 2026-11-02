@@ -267,10 +267,25 @@ struct NoteReaderTests {
         for tex in [#"0, \dots, n-1"#, #"i \bmod n"#, #"a \equiv b \pmod{n}"#, #"a \mod n"#, #"\operatorname{rank} A"#,
                     #"p \implies q"#, #"q \impliedby p"#, #"A \subsetneq B"#, #"a \nmid b"#, #"\therefore x"#, #"\blacksquare"#,
                     #"\square"#, #"\varnothing"#, #"\lvert x \rvert"#, #"\iint f"#, #"\dfrac{1}{2}"#, #"\bigl( x \bigr)"#,
-                    #"\boxed{x}"#, #"a \xrightarrow{f} b"#, #"\overset{?}{=}"#, #"a \not= b"#, #"a \lt b"#] {
+                    #"\boxed{x}"#, #"a \xrightarrow{f} b"#, #"\overset{?}{=}"#, #"a \not= b"#, #"a \lt b"#,
+                    #"\left\lvert x \right\rvert"#, #"\left\lVert x \right\rVert"#, #"\lVert x \rVert"#] {
             #expect(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false) != nil, "\(tex)")
         }
         #expect(NoteMath.picture(#"\notacommand{x}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false) == nil)
+    }
+
+    @Test func textInMathReadsAsText() throws {
+        func width(_ tex: String) throws -> CGFloat {
+            try #require(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false), "\(tex)").size.width
+        }
+        // Math puts room around a minus and a ratio colon; text doesn't.
+        #expect(try width(#"\text{a-b}"#) < width(#"\mathrm{a}-\mathrm{b}"#))
+        #expect(try width(#"\text{a:b}"#) < width(#"\mathrm{a}:\mathrm{b}"#))
+        // Past ASCII SwiftMath dropped the character.
+        #expect(try width(#"\text{a–b}"#) > width(#"\text{ab}"#))
+        #expect(try width(#"\text{a--b}"#) == width(#"\text{a–b}"#))
+        #expect(try width(#"x\text{양이온}"#) > width("x") + 24)
+        #expect(try width(#"\text{König–Egerváry: } \alpha'(G) = \beta(G)"#) > 0)
     }
 
     @Test func tableColumnsShrinkOnlyAboveWhatCannotWrap() {
@@ -280,6 +295,8 @@ struct NoteReaderTests {
         #expect(fitted.reduce(0, +) <= 400)
         #expect(fitted[0] < 200 && fitted[2] < 296)
         #expect(ReaderTable.fit([100, 100], floors: [48, 48], page: 400) == [100, 100])
-        #expect(ReaderTable.fit([300, 300], floors: [250, 250], page: 400) == [250, 250])
+        // Floors alone wider than the page: they give way too, so no column falls off the picture's edge.
+        #expect(ReaderTable.fit([300, 300], floors: [250, 250], page: 400) == [200, 200])
+        #expect(ReaderTable.fit([600, 100], floors: [600, 100], page: 400).reduce(0, +) <= 400)
     }
 }

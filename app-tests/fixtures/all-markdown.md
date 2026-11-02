@@ -81,6 +81,8 @@ $$
 
 SwiftMath에 없는 명령: $0, \dots, n-1$, $i \bmod n$, $a \equiv b \pmod{n}$, $p \implies q$, $A \subsetneq B$, $\operatorname{rank} A$, $\therefore$ $\blacksquare$ $\square$.
 
+수식 안 글: $\text{König–Egerváry: } G \text{ has a 1-factor} \implies \text{양이온, 음이온}$
+
 잘못된 수식: $\notacommand{x}$
 
 ## 인용과 콜아웃
