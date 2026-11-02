@@ -9,8 +9,6 @@ extension NSAttributedString.Key {
     static let noteBox = NSAttributedString.Key("folio.box")
     /// `[NoteBox]`: spines of quotes nested in the paragraph's box, outermost first, each a box indent further in.
     static let noteQuotes = NSAttributedString.Key("folio.quotes")
-    /// `NoteBelow`: a picture drawn under the paragraph, in its paragraph spacing, so no text moves for it.
-    static let noteBelow = NSAttributedString.Key("folio.below")
     /// A color for a thin rule under the paragraph and a short accent bar on it (a level-2 heading).
     static let noteRule = NSAttributedString.Key("folio.rule")
     /// How far `NoteFragment` draws the paragraph's text above where TextKit lays it, to center it in its line.
@@ -42,24 +40,6 @@ final class NoteBox: NSObject, @unchecked Sendable {
         self.joinsAbove = joinsAbove
         self.joinsBelow = joinsBelow
     }
-}
-
-final class NoteBelow: NSObject, @unchecked Sendable {
-    let image: PlatformImage
-    let size: CGSize
-    let gap: CGFloat
-    /// Under the line's start instead of centered.
-    let leading: Bool
-
-    init(image: PlatformImage, size: CGSize, gap: CGFloat, leading: Bool = false) {
-        self.image = image
-        self.size = size
-        self.gap = gap
-        self.leading = leading
-    }
-
-    /// The paragraph spacing that makes room for it.
-    var room: CGFloat { gap * 2 + size.height }
 }
 
 /// Gives every paragraph a fixed line height with its text centered, as Xcode does. With `lineSpacing` alone TextKit 2
@@ -133,22 +113,19 @@ enum NoteAttributes {
         case let (a as NoteBox, b as NoteBox):
             return same(a.fill, b.fill) && same(a.spine, b.spine) && a.first == b.first && a.last == b.last && a.outerTop == b.outerTop
                 && a.outerBottom == b.outerBottom && a.rounded == b.rounded && a.joinsAbove == b.joinsAbove && a.joinsBelow == b.joinsBelow
-        case let (a as NoteBelow, b as NoteBelow):
-            return a.image === b.image && a.size == b.size && a.gap == b.gap && a.leading == b.leading
         case let (a as NSObject, b as NSObject): return a.isEqual(b)
         default: return false
         }
     }
 }
 
-/// Draws what TextKit doesn't: box tints behind paragraphs and pictures under them. Kept to drawing, so the text keeps
+/// Draws what TextKit doesn't: box tints behind paragraphs and rules under headings. Kept to drawing, so the text keeps
 /// the place its paragraph style gives it.
 final class NoteFragment: NSTextLayoutFragment, @unchecked Sendable {
     private var box: NoteBox?
     private var quotes: [NoteBox] = []
     private var spacing: CGFloat = 0
     private(set) var raise: CGFloat = 0
-    private var below: NoteBelow?
     private var rule: PlatformColor?
     private var accent: PlatformColor?
 
@@ -161,7 +138,6 @@ final class NoteFragment: NSTextLayoutFragment, @unchecked Sendable {
         quotes = attributes[.noteQuotes] as? [NoteBox] ?? []
         spacing = (attributes[.paragraphStyle] as? NSParagraphStyle)?.paragraphSpacing ?? 0
         raise = attributes[.noteRaise] as? CGFloat ?? 0
-        below = attributes[.noteBelow] as? NoteBelow
         rule = attributes[.noteRule] as? PlatformColor
     }
 
@@ -181,14 +157,8 @@ final class NoteFragment: NSTextLayoutFragment, @unchecked Sendable {
         return CGRect(x: -frame.minX, y: top, width: width, height: max(0, bottom - top))
     }
 
-    private var belowRect: CGRect? {
-        guard let below, let last = textLineFragments.last else { return nil }
-        let x = below.leading ? 0 : (width - below.size.width) / 2 - layoutFragmentFrame.minX
-        return CGRect(x: x, y: last.typographicBounds.maxY + below.gap, width: below.size.width, height: below.size.height)
-    }
-
     override var renderingSurfaceBounds: CGRect {
-        [boxRect, belowRect].compactMap { $0 }.reduce(super.renderingSurfaceBounds) { $0.union($1) }
+        boxRect.map { super.renderingSurfaceBounds.union($0) } ?? super.renderingSurfaceBounds
     }
 
     /// `rect` with its left corners rounded by `top` and `bottom` (elliptical radii) and its right ones by `right`
@@ -259,22 +229,6 @@ final class NoteFragment: NSTextLayoutFragment, @unchecked Sendable {
                 context.fill(CGRect(x: x, y: y - 0.5, width: 28, height: 2))
             }
         }
-        if let below, let rect = belowRect {
-            draw(below.image, in: rect.offsetBy(dx: point.x, dy: point.y), context: context)
-        }
-    }
-
-    private func draw(_ image: PlatformImage, in rect: CGRect, context: CGContext) {
-        #if os(macOS)
-        NSGraphicsContext.saveGraphicsState()
-        NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: true)
-        image.draw(in: rect, from: .zero, operation: .sourceOver, fraction: 1, respectFlipped: true, hints: nil)
-        NSGraphicsContext.restoreGraphicsState()
-        #else
-        UIGraphicsPushContext(context)
-        image.draw(in: rect)
-        UIGraphicsPopContext()
-        #endif
     }
 }
 

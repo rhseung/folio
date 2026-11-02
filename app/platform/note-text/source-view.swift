@@ -276,16 +276,13 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
     func configure(accent: CourseAccent, syntax: MathSyntax, dark: Bool) {
         accentColors(accent)
-        let next = SourceStyler(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark, width: columnWidth)
+        let next = SourceStyler(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark)
         let changed = styler.map { $0.accent != accent || $0.syntax != syntax || $0.dark != dark || $0.baseURL != baseURL } ?? true
         styler = next
         if changed { restyle() }
     }
 
-    override func columnChanged() {
-        styler?.width = columnWidth
-        restyle()
-    }
+    override func columnChanged() { updateBubble() }
 
     /// Everything shown comes from styling the text as it now stands, after every change, composing ones included; a
     /// change left unstyled even for a moment shows in plain text's 12-point font.
@@ -417,30 +414,60 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         return true
     }
 
-    // MARK: Inline math bubble
+    // MARK: Rendering bubble
 
     override func resignFirstResponder() -> Bool {
         defer { bubble?.removeFromSuperview(); bubble = nil }
         return super.resignFirstResponder()
     }
 
-    /// With the caret in inline math, its rendering floats under the line, over the text, which keeps its place.
+    /// With the caret in math or an image link, its rendering floats by the source, over the text, which keeps its place.
     func updateBubble() {
         bubble?.removeFromSuperview()
         bubble = nil
         let caret = selectedRange()
-        guard window?.firstResponder === self, caret.length == 0, caret.location > 0, let storage = textStorage,
-              caret.location <= storage.length, let styler else { return }
-        var span = NSRange()
-        guard let tex = storage.attribute(.noteMath, at: caret.location - 1, effectiveRange: &span) as? String, caret.location > span.location,
-              let picture = NoteMath.picture(tex, syntax: styler.syntax, display: false, size: NoteLook.body * 1.05, color: NoteLook.text, dark: styler.dark),
-              let window else { return }
-        let screen = firstRect(forCharacterRange: NSRange(location: span.location, length: 1), actualRange: nil)
-        let line = convert(window.convertFromScreen(screen), from: nil)
-        let view = MathBubble(picture: picture)
-        view.setFrameOrigin(NSPoint(x: max(0, line.minX - 10), y: line.maxY + 4))
+        guard window?.firstResponder === self, caret.length == 0, let storage = textStorage, caret.location <= storage.length,
+              let shown = rendering(at: caret.location, in: storage), let window else { return }
+        let text = storage.string as NSString
+        var end = NSMaxRange(shown.span)
+        while end > shown.span.location + 1, text.character(at: end - 1) == 0x0A { end -= 1 }
+        let line = { (i: Int) in self.convert(window.convertFromScreen(self.firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil) }
+        let first = line(shown.span.location), last = line(end - 1)
+        let view = PreviewBubble(image: shown.image, size: shown.size)
+        let size = view.frame.size
+        let x = max(0, min(first.minX - 10, bounds.maxX - size.width - 4))
+        // Under the source, or over it when the screen ends first; never pushing the text.
+        let under = last.maxY + 4, over = first.minY - 4 - size.height
+        let y = under + size.height <= visibleRect.maxY || over < visibleRect.minY ? under : over
+        view.setFrameOrigin(NSPoint(x: x, y: y))
         addSubview(view)
         bubble = view
+    }
+
+    /// What the caret is in: inline math or an image link it's past the start of, or any line of a math block.
+    private func rendering(at caret: Int, in storage: NSTextStorage) -> (image: NSImage, size: CGSize, span: NSRange)? {
+        guard let styler, storage.length > 0 else { return nil }
+        let all = NSRange(location: 0, length: storage.length)
+        var span = NSRange()
+        if caret > 0 {
+            if let tex = storage.attribute(.noteMath, at: caret - 1, longestEffectiveRange: &span, in: all) as? String, caret > span.location,
+               let picture = NoteMath.picture(tex, syntax: styler.syntax, display: false, size: NoteLook.body * 1.05, color: NoteLook.text, dark: styler.dark) {
+                return (picture.image, picture.size, span)
+            }
+            if let source = storage.attribute(.noteImage, at: caret - 1, longestEffectiveRange: &span, in: all) as? String, caret > span.location,
+               let image = NoteImages.load(source, base: baseURL) {
+                // A preview, not the picture at its size: big enough to tell what it is, small enough to keep the note in view.
+                let natural = image.size
+                let scale = min(1, min(columnWidth, 480) / max(1, natural.width), 320 / max(1, natural.height))
+                return (image, CGSize(width: (natural.width * scale).rounded(), height: (natural.height * scale).rounded()), span)
+            }
+        }
+        let at = min(caret, storage.length - 1)
+        if let tex = storage.attribute(.noteMathBlock, at: at, longestEffectiveRange: &span, in: all) as? String,
+           let picture = NoteMath.picture(tex, syntax: styler.syntax, display: true, size: NoteLook.body * 1.1, color: NoteLook.text, dark: styler.dark) {
+            return (picture.image, picture.size, span)
+        }
+        return nil
     }
 
     // MARK: Files
@@ -519,11 +546,11 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     }
 }
 
-/// Rendered inline math over the text, under its source.
-final class MathBubble: NSView {
-    init(picture: NoteMath.Picture) {
+/// Rendered math or an image over the text, by its source.
+final class PreviewBubble: NSView {
+    init(image picture: NSImage, size: CGSize) {
         let pad = CGSize(width: 10, height: 6)
-        super.init(frame: NSRect(origin: .zero, size: CGSize(width: picture.size.width + 2 * pad.width, height: picture.size.height + 2 * pad.height)))
+        super.init(frame: NSRect(origin: .zero, size: CGSize(width: size.width + 2 * pad.width, height: size.height + 2 * pad.height)))
         wantsLayer = true
         layer?.cornerRadius = NoteLook.radius
         layer?.borderWidth = 1
@@ -531,9 +558,9 @@ final class MathBubble: NSView {
         layer?.shadowOpacity = 0.12
         layer?.shadowRadius = 10
         layer?.shadowOffset = CGSize(width: 0, height: -6)
-        let image = NSImageView(frame: NSRect(origin: CGPoint(x: pad.width, y: pad.height), size: picture.size))
-        image.image = picture.image
-        image.imageScaling = .scaleNone
+        let image = NSImageView(frame: NSRect(origin: CGPoint(x: pad.width, y: pad.height), size: size))
+        image.image = picture
+        image.imageScaling = .scaleAxesIndependently
         addSubview(image)
     }
 
@@ -641,8 +668,8 @@ class NoteTextView: UITextView {
     }
 }
 
-/// shortcut: on the iPad, pasted or dropped pictures, ⌘-click links, ticking a task by its box and the inline math
-/// bubble are Mac-only for now; add them when the iPad is used for writing.
+/// shortcut: on the iPad, pasted or dropped pictures, ⌘-click links, ticking a task by its box and the bubble that shows
+/// math and images rendered are Mac-only for now; add them when the iPad is used for writing.
 final class SourceTextView: NoteTextView, UITextViewDelegate {
     var onChange: () -> Void = {}
     var onScroll: @MainActor (Int, Double) -> Void = { _, _ in }
@@ -659,15 +686,10 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
 
     func configure(accent: CourseAccent, syntax: MathSyntax, dark: Bool) {
         accentColors(accent)
-        let next = SourceStyler(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark, width: columnWidth)
+        let next = SourceStyler(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark)
         let changed = styler.map { $0.accent != accent || $0.syntax != syntax || $0.dark != dark || $0.baseURL != baseURL } ?? true
         styler = next
         if changed { restyle() }
-    }
-
-    override func columnChanged() {
-        styler?.width = columnWidth
-        restyle()
     }
 
     func restyle() {

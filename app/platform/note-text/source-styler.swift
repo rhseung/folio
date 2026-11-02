@@ -16,19 +16,22 @@ extension NSAttributedString.Key {
     static let noteTask = NSAttributedString.Key("folio.task")
     /// Inline math's TeX, on its whole `$…$`, for the bubble that shows it rendered.
     static let noteMath = NSAttributedString.Key("folio.math")
+    /// A math block's TeX, on all its lines, and an image link's source, on the link: shown in the same bubble.
+    static let noteMathBlock = NSAttributedString.Key("folio.math-block")
+    static let noteImage = NSAttributedString.Key("folio.image")
     /// Lines of a fenced code block, where Enter is only a line break.
     static let noteCode = NSAttributedString.Key("folio.code")
 }
 
 /// Styles the note's markdown source in place: marks stay in the text, dimmed, and the text after them takes fonts,
 /// weights, colors and tints, never spacing, so every line starts at the same x and the caret walks the raw text
-/// (docs/SPEC.md "편집 방식"). Rendered math and images are drawn under their line by `NoteFragment`.
+/// (docs/SPEC.md "편집 방식"). Rendered math and images only float in a bubble by the caret: drawn in the text, they
+/// added height the text didn't have, so the view couldn't scroll to a picture under the note's last line.
 @MainActor struct SourceStyler {
     var accent: CourseAccent
     var syntax: MathSyntax
     var baseURL: URL?
     var dark: Bool
-    var width: CGFloat
 
     // Font parts, resolved into one font per run at the end, since a run can be bold, in a heading and dimmed at once.
     private static let heading = NSAttributedString.Key("folio.s.heading")
@@ -96,9 +99,8 @@ extension NSAttributedString.Key {
         }
         for block in math.blocks {
             let box = NoteBox(fill: NoteLook.tint(accent.native, 0.06), first: true, last: true)
-            for n in block.lines { w.set(Self.withBreak(lines[n], in: storage), [Self.mono: true, .foregroundColor: accent.inkNative, .noteBox: box]) }
-            if let picture = NoteMath.picture(block.tex, syntax: syntax, display: true, size: NoteLook.body * 1.1, color: NoteLook.text, dark: dark) {
-                w.below(NoteBelow(image: picture.image, size: picture.size, gap: 8), line: lines[block.lines.upperBound], storage: storage)
+            for n in block.lines {
+                w.set(Self.withBreak(lines[n], in: storage), [Self.mono: true, .foregroundColor: accent.inkNative, .noteBox: box, .noteMathBlock: block.tex])
             }
         }
 
@@ -127,10 +129,9 @@ extension NSAttributedString.Key {
         for key in keys { storage.removeAttribute(key, range: all) }
     }
 
-    static func paragraph(spacing: CGFloat = 0) -> NSParagraphStyle {
+    static func paragraph() -> NSParagraphStyle {
         let p = NSMutableParagraphStyle()
         p.lineSpacing = NoteLook.lineSpacing
-        p.paragraphSpacing = spacing
         p.lineBreakStrategy = .hangulWordPriority
         return p
     }
@@ -188,12 +189,6 @@ extension NSAttributedString.Key {
             return out
         }
 
-        func below(_ item: NoteBelow, line: NSRange, storage: NSMutableAttributedString) {
-            let r = SourceStyler.withBreak(line, in: storage)
-            guard r.length > 0 else { return }
-            storage.addAttributes([.noteBelow: item, .paragraphStyle: SourceStyler.paragraph(spacing: item.room)], range: r)
-        }
-
         mutating func walk(_ node: Markup, styler: SourceStyler) {
             styler.visit(node, &self)
             for child in node.children { walk(child, styler: styler) }
@@ -236,9 +231,7 @@ extension NSAttributedString.Key {
             }
         case is Markdown.Image:
             w.set(r, [.foregroundColor: NoteLook.text3, Self.mono: true])
-            if let image = node as? Markdown.Image, let item = picture(image), let line = w.lineRanges(r).last {
-                w.below(item, line: line, storage: w.storage)
-            }
+            if let source = (node as? Markdown.Image)?.source { w.set(r, [.noteImage: source]) }
         case let item as ListItem:
             let line = w.text.lineRange(for: NSRange(location: r.location, length: 0))
             let rest = w.text.substring(with: NSRange(location: r.location, length: NSMaxRange(line) - r.location))
@@ -312,12 +305,6 @@ extension NSAttributedString.Key {
         guard n > 0, r.length >= 2 * n else { return }
         w.marks.append(NSRange(location: r.location, length: n))
         w.marks.append(NSRange(location: NSMaxRange(r) - n, length: n))
-    }
-
-    private func picture(_ image: Markdown.Image) -> NoteBelow? {
-        guard let source = image.source, let picture = NoteImages.load(source, base: baseURL) else { return nil }
-        let size = NoteImages.fit(picture.size, alt: image.plainText, width: width)
-        return NoteBelow(image: picture, size: size, gap: 6)
     }
 }
 
