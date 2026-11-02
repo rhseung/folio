@@ -601,7 +601,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@: 회차 +%2$lld, 시각·주제 보정 %3$lld, 휴강 %4$lld, 노트 연결 %5$lld"
+            "value": "%1$@: 회차 +%2$lld, 시각과 주제 보정 %3$lld, 휴강 %4$lld, 노트 연결 %5$lld"
           }
         }
       }

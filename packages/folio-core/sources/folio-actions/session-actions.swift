@@ -85,7 +85,7 @@ public struct SessionSet {
 
 /// The session's rough or review note, created from its template the first time.
 /// A new review note starts unfinished: making it is not writing it.
-@Action("session note", "회차의 러프·복습 노트. 없으면 템플릿으로 만든다", effect: .creates, done: "회차 '{session}'의 노트",
+@Action("session note", "회차의 러프 노트와 복습 노트. 없으면 템플릿으로 만든다", effect: .creates, done: "회차 '{session}'의 노트",
         examples: ["folio session note EC4207/9주차-1 review"], phrases: ["수업 노트", "강의 필기", "러프 노트", "복습 노트 열기"])
 public struct SessionNote {
     /// The new note's id; unused when the note already exists.
