@@ -252,18 +252,18 @@ struct Segmented<Value: Hashable>: View {
     }
 }
 
-/// Minute of the day as a chip. Drag sideways on the hours or the minutes to scrub them, or click one to pick from a grid;
-/// nothing is typed, so every value it can hold is a real time.
+/// Minute of the day as a chip. Drag sideways on the hours or the minutes to scrub them, or click one to set it on a clock
+/// face; nothing is typed, so every value it can hold is a real time.
 struct TimeMenu: View {
     @Binding var minute: Int
     var hours: ClosedRange<Int> = 0...23
+    @State private var dial: TimeDial.Mode?
 
     var body: some View {
         HStack(spacing: Theme.Space.xxs) {
-            TimePart(value: Binding(get: { minute / 60 }, set: { minute = $0 * 60 + minute % 60 }), values: Array(hours), columns: Self.uses12Hour ? 4 : 6,
-                     label: Self.hourLabel, cellWidth: Self.uses12Hour ? 56 : 38)
+            TimePart(value: Binding(get: { minute / 60 }, set: { minute = $0 * 60 + minute % 60 }), values: Array(hours), label: Self.hourLabel) { dial = .hour }
             Text(":").foregroundStyle(Theme.Palette.textTertiary)
-            TimePart(value: Binding(get: { minute % 60 }, set: { minute = minute / 60 * 60 + $0 }), values: Array(stride(from: 0, to: 60, by: 5)), columns: 4)
+            TimePart(value: Binding(get: { minute % 60 }, set: { minute = minute / 60 * 60 + $0 }), values: Array(stride(from: 0, to: 60, by: 5))) { dial = .minute }
         }
         .monospacedDigit()
         .chip()
@@ -272,6 +272,9 @@ struct TimeMenu: View {
         .accessibilityLabel(Self.label(minute))
         .accessibilityAdjustableAction { direction in
             minute = (minute + (direction == .increment ? 5 : -5) + 1440) % 1440
+        }
+        .popover(item: $dial, arrowEdge: .bottom) { mode in
+            TimeDial(minute: $minute, hours: hours, mode: mode) { dial = nil }
         }
     }
 
@@ -298,11 +301,9 @@ struct TimeMenu: View {
 private struct TimePart: View {
     @Binding var value: Int
     let values: [Int]
-    let columns: Int
     var label: (Int) -> String = { String(format: "%02d", $0) }
-    var cellWidth: CGFloat = 38
+    let pick: () -> Void
     @State private var start: Int?
-    @State private var picking = false
 
     var body: some View {
         Text(label(value))
@@ -320,30 +321,194 @@ private struct TimePart: View {
                     }
                     .onEnded { _ in start = nil }
             )
-            .onTapGesture { picking = true }
+            .onTapGesture(perform: pick)
             #if os(macOS)
             .pointerStyle(.columnResize)
             #endif
             .help(Text(.designDragOrPickHelp))
-            .sensoryFeedback(.selection, trigger: value)
-            .popover(isPresented: $picking) {
-                LazyVGrid(columns: Array(repeating: GridItem(.fixed(cellWidth), spacing: Theme.Space.xs), count: columns), spacing: Theme.Space.xs) {
-                    ForEach(values, id: \.self) { v in
-                        Button {
-                            value = v
-                            picking = false
-                        } label: {
-                            Text(label(v)).monospacedDigit()
-                                .fontWeight(v == value ? .bold : .regular)
-                                .frame(width: cellWidth, height: 28)
-                                .background(v == value ? Theme.Palette.fill : .clear, in: .rect(cornerRadius: Theme.Radius.control))
-                                .contentShape(.rect)
-                        }
-                        .buttonStyle(.pointing(.plain))
-                    }
-                }
-                .padding(Theme.Space.s)
+            // Only while scrubbing: the chip stays live behind an open dial, and the dial gives its own.
+            .sensoryFeedback(.selection, trigger: value) { _, _ in start != nil }
+    }
+}
+
+/// A clock face: click or drag around it to set the hour, which then turns to the minutes; setting those closes it.
+/// The 24-hour clock puts 12–23 on an inner ring, so either clock is one turn of the hand.
+private struct TimeDial: View {
+    enum Mode: Hashable, Identifiable {
+        case hour, minute
+        var id: Self { self }
+    }
+
+    @Binding var minute: Int
+    let hours: ClosedRange<Int>
+    @State var mode: Mode
+    let close: () -> Void
+    @Environment(\.accent) private var accent
+    /// Whether this press landed on a mark the menu allows; only then does releasing it move on.
+    @State private var picked = false
+
+    static let diameter: CGFloat = 224
+    static let cell: CGFloat = 32
+    static let outer = diameter / 2 - cell / 2 - Theme.Space.xs
+    static let inner = outer - cell - Theme.Space.xs
+    /// Presses inside this reach set nothing: the hub has no mark, and its angle is noise.
+    static let hub = inner - cell / 2
+
+    private var hour: Int { minute / 60 }
+    private var twelve: Bool { TimeMenu.uses12Hour }
+
+    var body: some View {
+        VStack(spacing: Theme.Space.l) {
+            header
+            face
+        }
+        .padding(Theme.Space.l)
+        .sensoryFeedback(.selection, trigger: minute)
+    }
+
+    private var header: some View {
+        HStack(spacing: Theme.Space.m) {
+            HStack(spacing: Theme.Space.xxs) {
+                part(twelve ? "\(hour % 12 == 0 ? 12 : hour % 12)" : String(format: "%02d", hour), .hour)
+                Text(":").foregroundStyle(Theme.Palette.textTertiary)
+                part(String(format: "%02d", minute % 60), .minute)
             }
+            .font(Theme.Typeface.figure)
+            Spacer(minLength: 0)
+            if twelve {
+                // A toggle only when both halves hold an hour the menu allows; the day boundary (0–8) just names its
+                // half, or its 12 would read as noon.
+                if hours.contains(where: { $0 < 12 }), hours.contains(where: { $0 >= 12 }) {
+                    Segmented(selection: Binding(get: { hour >= 12 }, set: { pm in setHour(hour % 12 + (pm ? 12 : 0)) }),
+                              options: [(false, Calendar.current.amSymbol), (true, Calendar.current.pmSymbol)])
+                } else {
+                    Text(hour < 12 ? Calendar.current.amSymbol : Calendar.current.pmSymbol)
+                        .font(Theme.Typeface.bodyStrong)
+                        .foregroundStyle(Theme.Palette.textSecondary)
+                }
+            }
+        }
+    }
+
+    private func part(_ text: String, _ m: Mode) -> some View {
+        Button { withAnimation(.snappy) { mode = m } } label: {
+            Text(text).foregroundStyle(mode == m ? Theme.Palette.text : Theme.Palette.textTertiary)
+        }
+        .buttonStyle(.pointing(.plain))
+    }
+
+    /// The marks around the face: where each sits, the value it sets, and what it reads.
+    private var marks: [(angle: Double, radius: CGFloat, value: Int, label: String)] {
+        switch mode {
+        case .minute:
+            return (0..<12).map { (Double($0) * 30, Self.outer, $0 * 5, String(format: "%02d", $0 * 5)) }
+        case .hour where twelve:
+            let half = hour >= 12 ? 12 : 0
+            return (0..<12).map { (Double($0) * 30, Self.outer, $0 + half, "\($0 == 0 ? 12 : $0)") }
+        case .hour:
+            return (0..<24).map { (Double($0 % 12) * 30, $0 < 12 ? Self.outer : Self.inner, $0, String(format: "%02d", $0)) }
+        }
+    }
+
+    private var selected: Int { mode == .hour ? hour : minute % 60 }
+
+    private var face: some View {
+        let center = CGPoint(x: Self.diameter / 2, y: Self.diameter / 2)
+        let marks = marks
+        let chosen = marks.first { $0.value == selected }
+        // Off the 5-minute marks (a time from a file) the hand still points at the exact minute, with no mark lit.
+        let handAngle = chosen?.angle ?? Double(minute % 60) * 6
+        let handRadius = chosen?.radius ?? Self.outer
+        let tip = Self.point(handAngle, handRadius, center)
+        return ZStack {
+            Circle().fill(Theme.Palette.fill)
+            Path { p in
+                p.move(to: center)
+                p.addLine(to: tip)
+            }
+            .stroke(accent.color, lineWidth: 2)
+            Circle().fill(accent.color).frame(width: 6, height: 6).position(center)
+            Circle().fill(accent.color).frame(width: Self.cell, height: Self.cell).position(tip)
+            ForEach(marks, id: \.value) { mark in
+                let allowed = mode == .minute || hours.contains(mark.value)
+                Text(mark.label)
+                    .font(mark.radius == Self.inner ? Theme.Typeface.caption : Theme.Typeface.body)
+                    .monospacedDigit()
+                    .foregroundStyle(mark.value == selected ? Theme.Palette.onFill
+                                     : allowed ? (mark.radius == Self.inner ? Theme.Palette.textSecondary : Theme.Palette.text)
+                                     : Theme.Palette.textTertiary.opacity(0.5))
+                    .frame(width: Self.cell, height: Self.cell)
+                    .position(Self.point(mark.angle, mark.radius, center))
+                    .accessibilityLabel(mode == .hour ? TimeMenu.hourLabel(mark.value) : mark.label)
+                    .accessibilityAddTraits(Self.traits(allowed: allowed, selected: mark.value == selected))
+                    .accessibilityAction { if set(mark.value) { advance() } }
+            }
+        }
+        .frame(width: Self.diameter, height: Self.diameter)
+        .contentShape(.circle)
+        .animation(.snappy, value: mode)
+        .gesture(
+            DragGesture(minimumDistance: 0)
+                .onChanged { g in if pick(at: g.location, center) { picked = true } }
+                .onEnded { _ in
+                    if picked { advance() }
+                    picked = false
+                }
+        )
+        #if os(macOS)
+        .pointerStyle(.link)
+        #endif
+    }
+
+    /// No button for a dimmed hour: pressing it does nothing.
+    private static func traits(allowed: Bool, selected: Bool) -> AccessibilityTraits {
+        var traits: AccessibilityTraits = []
+        if allowed { traits.formUnion(.isButton) }
+        if selected { traits.formUnion(.isSelected) }
+        return traits
+    }
+
+    private static func point(_ degrees: Double, _ radius: CGFloat, _ center: CGPoint) -> CGPoint {
+        let a = degrees * .pi / 180
+        return CGPoint(x: center.x + radius * sin(a), y: center.y - radius * cos(a))
+    }
+
+    private func pick(at p: CGPoint, _ center: CGPoint) -> Bool {
+        let dx = p.x - center.x, dy = p.y - center.y
+        let distance = (dx * dx + dy * dy).squareRoot()
+        guard distance >= Self.hub else { return false }
+        let degrees = (atan2(dx, -dy) * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
+        let slot = Int((degrees / 30).rounded()) % 12
+        switch mode {
+        case .minute:
+            return set(slot * 5)
+        case .hour where twelve:
+            return set(slot + (hour >= 12 ? 12 : 0))
+        case .hour:
+            return set(slot + (distance < (Self.outer + Self.inner) / 2 ? 12 : 0))
+        }
+    }
+
+    /// False for an hour outside `hours`, which leaves the time as it was.
+    @discardableResult
+    private func set(_ value: Int) -> Bool {
+        if mode == .minute {
+            minute = hour * 60 + value
+            return true
+        }
+        guard hours.contains(value) else { return false }
+        minute = value * 60 + minute % 60
+        return true
+    }
+
+    private func setHour(_ h: Int) {
+        // The other half may lack this hour; the nearest one the menu allows stands in.
+        let h = hours.contains(h) ? h : hours.min { abs($0 - h) < abs($1 - h) }!
+        minute = h * 60 + minute % 60
+    }
+
+    private func advance() {
+        if mode == .hour { withAnimation(.snappy) { mode = .minute } } else { close() }
     }
 }
 
