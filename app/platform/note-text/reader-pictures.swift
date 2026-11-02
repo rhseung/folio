@@ -142,6 +142,14 @@ import UIKit
         return zip(wanted, floors).map { w, f in f + floor((w - f) * keep) }
     }
 
+    /// Raises the spanned columns' floors evenly until together they hold `need`.
+    static func spread(_ floors: inout [CGFloat], from column: Int, count: Int, to need: CGFloat) {
+        let have = floors[column..<(column + count)].reduce(0, +)
+        guard need > have else { return }
+        let share = ceil((need - have) / CGFloat(count))
+        for c in column..<(column + count) { floors[c] += share }
+    }
+
     /// Only math holds a column open. Images and code blocks in a cell were sized to the whole note column, not the
     /// cell's, so as floors one would take nearly all of the table; an image shrinks to its column instead (`shrunk`),
     /// and a code block draws nothing in a cell.
@@ -178,6 +186,10 @@ import UIKit
             guard cell.column >= fixed.count || fixed[cell.column] == nil else { continue }
             let natural = ceil(cell.text.boundingRect(with: CGSize(width: 10_000, height: 10_000), options: [.usesLineFragmentOrigin], context: nil).width)
             widths[cell.column] = max(widths[cell.column], min(natural, 360) + padding.width * 2)
+        }
+        // A merged cell's math is spread over the columns it spans, after their own cells have set them.
+        for cell in cells where cell.columns > 1 {
+            spread(&floors, from: cell.column, count: cell.columns, to: widestMath(cell.text) + padding.width * 2)
         }
         widths = fit(widths, floors: floors, page: page)
         func span(_ list: [CGFloat], _ from: Int, _ count: Int) -> CGFloat { list[from..<(from + count)].reduce(0, +) }

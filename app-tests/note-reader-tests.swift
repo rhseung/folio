@@ -308,6 +308,13 @@ struct NoteReaderTests {
         #expect(ReaderTable.fit([600, 100], floors: [600, 100], page: 400).reduce(0, +) <= 400)
         // Short columns keep room for a word; the wide floor gives up the rest.
         #expect(ReaderTable.fit([600, 48, 48], floors: [600, 48, 48], page: 400) == [304, 48, 48])
+        // Math in a cell over two columns raises both, so their sum holds it.
+        var floors: [CGFloat] = [48, 48, 48]
+        ReaderTable.spread(&floors, from: 1, count: 2, to: 224)
+        #expect(floors == [48, 112, 112])
+        ReaderTable.spread(&floors, from: 0, count: 2, to: 100)
+        #expect(floors == [48, 112, 112])
+        #expect(ReaderTable.fit([60, 60, 60], floors: floors, page: 400) == [60, 112, 112])
     }
 
     /// An image in a cell was sized to the note column, so it shrinks to its own column; math can't, so it doesn't.
