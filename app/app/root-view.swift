@@ -324,7 +324,14 @@ struct RootView: View {
         // Folds before where a window-centered search field would begin, so the trail doesn't push it aside; truncates
         // only where the field and the buttons would run out of room.
         let room = windowWidth / 2 - Theme.Size.searchField / 2 - Theme.Space.l - start
-        let limit = windowWidth - start - Theme.Size.searchField - Self.trailingTools
+        #if os(macOS)
+        let timeShown = workspace.recorder.isActive && !sidebarOpen
+        #else
+        let timeShown = workspace.recorder.isActive
+        #endif
+        // The elapsed time takes the record button's place and is wider than it.
+        let tools = Self.trailingTools + (timeShown ? Self.recordingTimeWidth - Theme.Size.toolbarButton : 0)
+        let limit = windowWidth - start - Theme.Size.searchField - tools
         // A course's section and what it opened only while the course is shown: they clear as it goes.
         let steps = if case .course = selection { trail.crumbs } else { [Crumb]() }
         let inset = Theme.Space.m * 2  // the capsule's own padding, left out of the trail's room
@@ -341,6 +348,8 @@ struct RootView: View {
     /// The trailing buttons and the gaps around the search field, measured at their widest (a course, timer shown),
     /// less the Claude button that moved to the page.
     static let trailingTools: CGFloat = 288
+    /// Fixed, so the row doesn't shift as the minutes tick, and wide enough for a class past an hour ("1:15:00").
+    static let recordingTimeWidth: CGFloat = 96
 
     @ViewBuilder var recordButton: some View {
         #if os(macOS)
@@ -384,7 +393,7 @@ struct RootView: View {
             Image(systemName: "record.circle").foregroundStyle(Theme.Palette.danger)
         }
         .labelStyle(.titleAndIcon)
-        .padding(.horizontal, Theme.Space.s)
+        .frame(width: Self.recordingTimeWidth)
     }
 
     var recordMenu: some View {
