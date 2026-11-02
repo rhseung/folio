@@ -10,7 +10,7 @@ enum GeneratedCommands {
     static let component: [any ParsableCommand.Type] = [ComponentAdd.self, ComponentSet.self, ComponentRemove.self]
     static let exam: [any ParsableCommand.Type] = [ExamAdd.self, ExamSet.self, ExamRemove.self, ExamSummary.self]
     static let examPlan: [any ParsableCommand.Type] = [ExamPlanAdd.self]
-    static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialUntrack.self, MaterialTrash.self]
+    static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialUntrack.self, MaterialTrash.self, MaterialBuild.self]
     static let note: [any ParsableCommand.Type] = [NoteAdopt.self, NoteRemove.self]
     static let problemSet: [any ParsableCommand.Type] = [ProblemSetRemove.self, ProblemLinkUnit.self]
     static let recording: [any ParsableCommand.Type] = [RecordingTrim.self]
@@ -845,6 +845,25 @@ enum GeneratedCommands {
             let action = FolioActions.MaterialTrash(
                 course: c.id,
                 material: try r.id("Material", materialName, in: c)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct MaterialBuild: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "build", abstract: "LaTeX 자료(.tex)를 Tectonic으로 PDF로 만들어 옆에 같은 이름으로 둔다", discussion: """
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<.tex 자료>", valueName: "material"), completion: Complete.ref("Material")) var material: String = ""
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, materialName) = try r.split(material)
+            let action = FolioActions.MaterialBuild(
+                course: c.id,
+                material: try r.id("Material", materialName, in: c),
+                pdf: nil
             )
             try perform(spec: action, g, ctx: ctx)
         }

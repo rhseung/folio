@@ -87,6 +87,30 @@ struct MaterialNoteStudyTests {
         }
     }
 
+    @Test func writeText() throws {
+        let text = "\\documentclass{article}\n"
+        let file = try scratch("Problems.tex", text)
+        try h.expectSame(["material", "write", "EC4207/Problems.tex", "--file", file], setup: [Self.track]) { gist in
+            MaterialWrite(course: course, material: try material(gist, "Problems.tex"), text: text)
+        }
+    }
+
+    @Test func writeRefusesAStaleHash() throws {
+        let gist = try Harness.fixtureCopy()
+        _ = h.cli(Self.track, gist: gist)
+        let file = try scratch("Problems.tex", "x")
+        #expect(h.cli(["material", "write", "EC4207/Problems.tex", "--file", file, "--expect", "00"], gist: gist).code == Exit.conflict.rawValue)
+    }
+
+    @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
+    func buildTex() throws {
+        let write = ["material", "write", "EC4207/Problems.tex", "--file",
+                     try scratch("Problems.tex", "\\documentclass{article}\n\\begin{document}\nHi\n\\end{document}\n")]
+        try h.expectSame(["material", "build", "EC4207/Problems.tex"], setup: [Self.track, write]) { gist in
+            MaterialBuild(course: course, material: try material(gist, "Problems.tex"))
+        }
+    }
+
     @Test func untrack() throws {
         try h.expectSame(["material", "untrack", "EC4207/Seating.pdf"], setup: [Self.track]) { gist in
             MaterialUntrack(course: course, material: try material(gist, "Seating.pdf"))

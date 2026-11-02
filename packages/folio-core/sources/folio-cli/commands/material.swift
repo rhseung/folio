@@ -20,7 +20,7 @@ func absolute(_ path: String) -> String {
 struct MaterialCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "material", abstract: String(localized: .materialAbstract),
-        subcommands: [List.self, Show.self, Link.self, Status.self, Kind.self, Relink.self, Track.self, Import.self, Move.self]
+        subcommands: [List.self, Show.self, Link.self, Status.self, Kind.self, Relink.self, Track.self, Import.self, Move.self, Write.self]
             + GeneratedCommands.material)
 
     struct List: ParsableCommand {
@@ -151,6 +151,32 @@ struct MaterialCommand: ParsableCommand {
             let m = try r.material(name, in: c)
             let path = file.hasPrefix("/") || file.hasPrefix("~") ? absolute(file) : c.store?.url.appending(path: file).path ?? absolute(file)
             try perform(spec: MaterialRelink(course: c.id, material: m.id, file: path), g, ctx: ctx)
+        }
+    }
+
+    struct Write: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: String(localized: .materialWriteAbstract), discussion: String(localized: .materialWriteDiscussion))
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpMaterial), valueName: "material"), completion: Complete.materials) var material: String
+        @Option(help: ArgumentHelp(String(localized: .noteWriteHelpFile), valueName: "file"), completion: .file()) var file: String
+        @Option(help: ArgumentHelp(String(localized: .materialWriteHelpExpect), valueName: "hash")) var expect: String?
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, name) = try r.split(material)
+            let m = try r.material(name, in: c)
+            var expected: String?
+            if let expect, let store = c.store, MaterialFormat(path: m.path).isText {
+                let current = try store.readText(m.path)
+                guard contentHash(current) == expect.lowercased() else {
+                    throw CLIError(exit: .conflict, message: String(localized: .materialWriteConflict(m.path)),
+                                   hints: [String(localized: .materialWriteConflictHint(c.code, m.path))])
+                }
+                // The action checks again right before writing, so a change between here and there is caught too.
+                expected = current
+            }
+            try perform(spec: MaterialWrite(course: c.id, material: m.id, text: try readText(file), expected: expected), g, ctx: ctx)
         }
     }
 

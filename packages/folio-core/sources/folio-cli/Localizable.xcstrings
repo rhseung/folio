@@ -7271,6 +7271,61 @@
           }
         }
       }
+    },
+    "material.write.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트 자료(.tex, 코드, .txt 등) 파일 전체를 바꾸기"
+          }
+        }
+      }
+    },
+    "material.write.conflict": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료가 읽은 뒤에 바뀌었습니다: %@"
+          }
+        }
+      }
+    },
+    "material.write.conflict-hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "folio material show %@/%@ --json으로 다시 읽고 고쳐서 쓰기"
+          }
+        }
+      }
+    },
+    "material.write.discussion": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "--expect에 `folio material show --json`의 hash를 주면, 그 뒤에 앱이나 다른 기기에서 파일이 바뀌었을 때 쓰지 않고 종료 코드 6으로 끝난다.\n에이전트는 읽고 고쳐 쓸 때 항상 --expect를 준다. PDF처럼 텍스트가 아닌 파일은 쓰지 않는다.\n\n예시:\n  folio material write EC4207/Assignments/HW01/hw.tex --file hw.tex\n  folio material write EC4207/Assignments/HW01/hw.tex --file hw.tex --expect 9f2c…"
+          }
+        }
+      }
+    },
+    "material.write.help.expect": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "읽을 때의 hash(material show --json). 다르면 쓰지 않는다"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

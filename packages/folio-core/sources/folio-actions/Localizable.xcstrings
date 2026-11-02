@@ -210,6 +210,17 @@
         }
       }
     },
+    "error.material.changed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료가 다른 곳에서 바뀌었습니다: %@"
+          }
+        }
+      }
+    },
     "error.material.import-outside": {
       "extractionState": "manual",
       "localizations": {
@@ -228,6 +239,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "과목 폴더 밖으로는 옮길 수 없습니다: %@"
+          }
+        }
+      }
+    },
+    "error.material.not-tex": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LaTeX 파일(.tex)만 PDF로 만듭니다: %@"
+          }
+        }
+      }
+    },
+    "error.material.not-text": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트 파일이 아니라서 쓸 수 없습니다: %@"
           }
         }
       }
@@ -525,6 +558,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "회차 노트는 러프나 복습 노트입니다"
+          }
+        }
+      }
+    },
+    "error.tex.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF를 만들지 못했습니다.\n%@"
+          }
+        }
+      }
+    },
+    "error.tex.mac-only": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LaTeX 빌드는 Mac에서만 합니다"
+          }
+        }
+      }
+    },
+    "error.tex.not-installed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tectonic이 설치되어 있지 않습니다. 터미널에서 brew install tectonic으로 설치하세요"
           }
         }
       }
