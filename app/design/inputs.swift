@@ -326,7 +326,8 @@ private struct TimePart: View {
             .pointerStyle(.columnResize)
             #endif
             .help(Text(.designDragOrPickHelp))
-            .sensoryFeedback(.selection, trigger: value)
+            // Only while scrubbing: the chip stays live behind an open dial, and the dial gives its own.
+            .sensoryFeedback(.selection, trigger: value) { _, _ in start != nil }
     }
 }
 
@@ -343,11 +344,15 @@ private struct TimeDial: View {
     @State var mode: Mode
     let close: () -> Void
     @Environment(\.accent) private var accent
+    /// Whether this press landed on a mark the menu allows; only then does releasing it move on.
+    @State private var picked = false
 
     static let diameter: CGFloat = 224
     static let cell: CGFloat = 32
     static let outer = diameter / 2 - cell / 2 - Theme.Space.xs
     static let inner = outer - cell - Theme.Space.xs
+    /// Presses inside this reach set nothing: the hub has no mark, and its angle is noise.
+    static let hub = inner - cell / 2
 
     private var hour: Int { minute / 60 }
     private var twelve: Bool { TimeMenu.uses12Hour }
@@ -370,10 +375,17 @@ private struct TimeDial: View {
             }
             .font(Theme.Typeface.figure)
             Spacer(minLength: 0)
-            // Only when both halves hold an hour the menu allows: the day boundary (0–8) never turns to 오후.
-            if twelve, hours.contains(where: { $0 < 12 }), hours.contains(where: { $0 >= 12 }) {
-                Segmented(selection: Binding(get: { hour >= 12 }, set: { pm in setHour(hour % 12 + (pm ? 12 : 0)) }),
-                          options: [(false, Calendar.current.amSymbol), (true, Calendar.current.pmSymbol)])
+            if twelve {
+                // A toggle only when both halves hold an hour the menu allows; the day boundary (0–8) just names its
+                // half, or its 12 would read as noon.
+                if hours.contains(where: { $0 < 12 }), hours.contains(where: { $0 >= 12 }) {
+                    Segmented(selection: Binding(get: { hour >= 12 }, set: { pm in setHour(hour % 12 + (pm ? 12 : 0)) }),
+                              options: [(false, Calendar.current.amSymbol), (true, Calendar.current.pmSymbol)])
+                } else {
+                    Text(hour < 12 ? Calendar.current.amSymbol : Calendar.current.pmSymbol)
+                        .font(Theme.Typeface.bodyStrong)
+                        .foregroundStyle(Theme.Palette.textSecondary)
+                }
             }
         }
     }
@@ -428,8 +440,8 @@ private struct TimeDial: View {
                     .frame(width: Self.cell, height: Self.cell)
                     .position(Self.point(mark.angle, mark.radius, center))
                     .accessibilityLabel(mode == .hour ? TimeMenu.hourLabel(mark.value) : mark.label)
-                    .accessibilityAddTraits(mark.value == selected ? [.isButton, .isSelected] : .isButton)
-                    .accessibilityAction { if allowed { set(mark.value); advance() } }
+                    .accessibilityAddTraits(Self.traits(allowed: allowed, selected: mark.value == selected))
+                    .accessibilityAction { if set(mark.value) { advance() } }
             }
         }
         .frame(width: Self.diameter, height: Self.diameter)
@@ -437,12 +449,23 @@ private struct TimeDial: View {
         .animation(.snappy, value: mode)
         .gesture(
             DragGesture(minimumDistance: 0)
-                .onChanged { g in pick(at: g.location, center) }
-                .onEnded { _ in advance() }
+                .onChanged { g in if pick(at: g.location, center) { picked = true } }
+                .onEnded { _ in
+                    if picked { advance() }
+                    picked = false
+                }
         )
         #if os(macOS)
         .pointerStyle(.link)
         #endif
+    }
+
+    /// No button for a dimmed hour: pressing it does nothing.
+    private static func traits(allowed: Bool, selected: Bool) -> AccessibilityTraits {
+        var traits: AccessibilityTraits = []
+        if allowed { traits.formUnion(.isButton) }
+        if selected { traits.formUnion(.isSelected) }
+        return traits
     }
 
     private static func point(_ degrees: Double, _ radius: CGFloat, _ center: CGPoint) -> CGPoint {
@@ -450,23 +473,32 @@ private struct TimeDial: View {
         return CGPoint(x: center.x + radius * sin(a), y: center.y - radius * cos(a))
     }
 
-    private func pick(at p: CGPoint, _ center: CGPoint) {
+    private func pick(at p: CGPoint, _ center: CGPoint) -> Bool {
         let dx = p.x - center.x, dy = p.y - center.y
+        let distance = (dx * dx + dy * dy).squareRoot()
+        guard distance >= Self.hub else { return false }
         let degrees = (atan2(dx, -dy) * 180 / .pi + 360).truncatingRemainder(dividingBy: 360)
         let slot = Int((degrees / 30).rounded()) % 12
-        let distance = (dx * dx + dy * dy).squareRoot()
         switch mode {
         case .minute:
-            set(slot * 5)
+            return set(slot * 5)
         case .hour where twelve:
-            set(slot + (hour >= 12 ? 12 : 0))
+            return set(slot + (hour >= 12 ? 12 : 0))
         case .hour:
-            set(slot + (distance < (Self.outer + Self.inner) / 2 ? 12 : 0))
+            return set(slot + (distance < (Self.outer + Self.inner) / 2 ? 12 : 0))
         }
     }
 
-    private func set(_ value: Int) {
-        if mode == .minute { minute = hour * 60 + value } else if hours.contains(value) { minute = value * 60 + minute % 60 }
+    /// False for an hour outside `hours`, which leaves the time as it was.
+    @discardableResult
+    private func set(_ value: Int) -> Bool {
+        if mode == .minute {
+            minute = hour * 60 + value
+            return true
+        }
+        guard hours.contains(value) else { return false }
+        minute = value * 60 + minute % 60
+        return true
     }
 
     private func setHour(_ h: Int) {
