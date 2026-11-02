@@ -26,7 +26,10 @@ struct SessionsModelTests {
     @Test func aClassWithNoEndOffersJoinUntilTheEndTheFormShows() throws {
         let workspace = try fixtureWorkspace()
         workspace.run(CourseSet(course: graphTheory, [.schedule([])]))
-        let start = try #require(Calendar.current.dateInterval(of: .minute, for: workspace.now)).start
+        // 10:30 of the study day, whatever the clock says: late at night the form's end stops at the day's end, which
+        // the button doesn't, and before the day boundary the calendar's today is not the study day.
+        let day = try #require(workspace.today.date(in: Calendar.current))
+        let start = try #require(Calendar.current.date(byAdding: .minute, value: 10 * 60 + 30, to: day))
         let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: start, link: "https://zoom.us/j/1"))?.made)
         let s = try #require(workspace.course(graphTheory)?.file.sessions.first { $0.id == id })
         let model = SessionsModel(workspace: workspace, courseId: graphTheory)
