@@ -79,6 +79,10 @@ $$
 \end{aligned}
 $$
 
+SwiftMath에 없는 명령: $0, \dots, n-1$, $i \bmod n$, $a \equiv b \pmod{n}$, $p \implies q$, $A \subsetneq B$, $\operatorname{rank} A$, $\therefore$ $\blacksquare$ $\square$.
+
+수식 안 글: $\text{König–Egerváry: } G \text{ has a 1-factor} \implies \text{양이온, 음이온}$, $\textbf{오차 5% 이내} \text{과제 #3 \& 4} \textit{A & B}$
+
 잘못된 수식: $\notacommand{x}$
 
 ## 인용과 콜아웃
@@ -256,6 +260,11 @@ sequenceDiagram
 | $K_3$ | 3 | 3 |
 | **완전 그래프** $K_n$ | $n$ | $\binom{n}{2}$ |
 | 경로 | `n` | n-1 |
+
+| 그래프 | $\kappa$ | $\kappa'$ | 비고 |
+|---|---|---|---|
+| $K_{m,n}$ | $\min\{m,n\}$ | $\min\{m,n\}$ | 줄바꿈되지 않는 수식이 칸 폭을 정하고, 나머지 열이 그만큼 줄어드는지 보는 긴 설명 |
+| $H_{k,n}$ | $k$ | $k$ | edge 수 $\lceil kn/2 \rceil$, 정점 $0, \dots, n-1$을 원 위에, 번호는 $\bmod n$ |
 
 ```cb-table
 {"columns": [{"width": 120}, {"align": "center"}], "rows": [{"header": true, "cells": [{"text": "항목"}, {"text": "설명"}]}, {"cells": [{"text": "병합", "colspan": 2}]}, {"cells": [{"text": "목록"}, {"text": "- 하나\n- 둘"}]}]}
