@@ -2,6 +2,7 @@ import AppKit
 import FolioDomain
 import FolioMarkdown
 import Foundation
+import SwiftMath
 import Testing
 @testable import Folio
 
@@ -140,6 +141,33 @@ struct NoteReaderTests {
             return box
         }
         #expect(try inked(true) == inked(false))
+    }
+
+    @Test func mathKeepsInkThatLeavesItsBox() throws {
+        func ink(_ image: NSImage) throws -> CGSize {
+            let scale: CGFloat = 2, pad: CGFloat = 40
+            let w = Int((image.size.width + 2 * pad) * scale), h = Int((image.size.height + 2 * pad) * scale)
+            let rep = try #require(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: w, pixelsHigh: h, bitsPerSample: 8, samplesPerPixel: 4,
+                                                    hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
+            rep.size = NSSize(width: CGFloat(w) / scale, height: CGFloat(h) / scale)
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+            image.draw(in: NSRect(origin: CGPoint(x: pad, y: pad), size: image.size))
+            NSGraphicsContext.restoreGraphicsState()
+            var box = CGRect.null
+            for x in 0..<w { for y in 0..<h where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0 { box = box.union(CGRect(x: x, y: y, width: 1, height: 1)) } }
+            return box.size
+        }
+        for tex in [#"G - T"#, #"\bar S"#, #"\|T\| \ge \|\kappa\|"#, #"f"#] {
+            let picture = try #require(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false))
+            // SwiftMath's own picture with room on every side: all the ink the formula has.
+            let whole = MTMathImage(latex: tex, fontSize: 16, textColor: .black, labelMode: .text)
+            whole.contentInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
+            let reference = try #require(whole.asImage().1)
+            let (got, want) = (try ink(picture.image), try ink(reference))
+            // A pixel either way is antialiasing: the two are drawn at different fractions of a point.
+            #expect(abs(got.width - want.width) <= 1 && abs(got.height - want.height) <= 1, "\(tex): \(got) vs \(want)")
+        }
     }
 
     @Test func aTaskShowsItsBoxWithoutABullet() {

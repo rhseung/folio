@@ -74,14 +74,52 @@ import UIKit
         #else
         label.layoutSubviews()
         #endif
-        let image = MTMathImage(latex: tex, fontSize: size, textColor: resolved, labelMode: display ? .display : .text)
-        guard label.error == nil, !tex.isEmpty, let list = label.displayList, case (nil, let picture?) = image.asImage() else {
+        guard label.error == nil, !tex.isEmpty, let list = label.displayList else {
             failed.insert(key)
             return nil
         }
-        let result = Picture(image: picture, size: CGSize(width: ceil(fitted.width), height: ceil(list.ascent + list.descent)), descent: list.descent)
+        let box = CGSize(width: list.width, height: list.ascent + list.descent)
+        var edges = overflow(list, box: box, size: size)
+        // Whole points, so the picture isn't stretched into its bounds.
+        edges.right += ceil(box.width + edges.left + edges.right) - (box.width + edges.left + edges.right)
+        edges.top += ceil(box.height + edges.top + edges.bottom) - (box.height + edges.top + edges.bottom)
+        let image = MTMathImage(latex: tex, fontSize: size, textColor: resolved, labelMode: display ? .display : .text)
+        image.contentInsets = edges
+        guard case (nil, let picture?) = image.asImage() else {
+            failed.insert(key)
+            return nil
+        }
+        let result = Picture(image: picture, size: CGSize(width: round(box.width + edges.left + edges.right), height: round(box.height + edges.top + edges.bottom)),
+                             descent: list.descent + edges.bottom)
         cache[key] = result
         return result
+    }
+
+    /// How far the ink reaches past the typeset box. SwiftMath sizes its picture to the box, which leaves out an italic
+    /// letter's overhang (the T in `G - T`) and an accent over a capital (`\bar S`), so those were cut off.
+    private static func overflow(_ list: MTMathListDisplay, box: CGSize, size: CGFloat) -> MTEdgeInsets {
+        let scale: CGFloat = 2, pad = size
+        let width = Int(((box.width + 2 * pad) * scale).rounded(.up)), height = Int(((box.height + 2 * pad) * scale).rounded(.up))
+        guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
+              let data = context.data else { return MTEdgeInsets() }
+        context.scaleBy(x: scale, y: scale)
+        // The label laid the list out at the box's corner, as the picture will with its insets.
+        context.translateBy(x: pad, y: pad)
+        list.draw(context)
+        let alpha = data.bindMemory(to: UInt8.self, capacity: width * height * 4)
+        var minX = width, maxX = -1, minRow = height, maxRow = -1
+        for row in 0..<height {
+            for x in 0..<width where alpha[(row * width + x) * 4 + 3] > 0 {
+                minX = min(minX, x); maxX = max(maxX, x); minRow = min(minRow, row); maxRow = max(maxRow, row)
+            }
+        }
+        guard maxX >= 0 else { return MTEdgeInsets() }
+        // Rows run from the top, the box's y from the bottom.
+        let ink = CGRect(x: CGFloat(minX) / scale - pad, y: CGFloat(height - 1 - maxRow) / scale - pad,
+                         width: CGFloat(maxX - minX + 1) / scale, height: CGFloat(maxRow - minRow + 1) / scale)
+        return MTEdgeInsets(top: ceil(max(0, ink.maxY - box.height)), left: ceil(max(0, -ink.minX)),
+                            bottom: ceil(max(0, -ink.minY)), right: ceil(max(0, ink.maxX - box.width)))
     }
 
     /// The color as it looks in the given appearance: the picture is drawn once, so a dynamic color can't follow later.
