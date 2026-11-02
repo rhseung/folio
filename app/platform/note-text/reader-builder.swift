@@ -508,7 +508,7 @@ struct ReaderBlock {
     private mutating func displayMath(_ tex: String, _ ctx: Context) {
         let style = Self.paragraph(ctx, before: 10, after: NoteLook.blockGap, alignment: .center)
         if let picture = NoteMath.picture(tex, syntax: syntax, display: true, size: NoteLook.body * 1.1, color: NoteLook.text, dark: dark) {
-            let attachment = NSTextAttachment()
+            let attachment = MathAttachment()
             attachment.image = picture.image
             attachment.bounds = CGRect(x: 0, y: -picture.descent, width: picture.size.width, height: picture.size.height)
             out.append(NSAttributedString(attachment: attachment, attributes: attributes(ctx, style)))
@@ -634,7 +634,7 @@ struct ReaderBlock {
                 var a = attributes(s, paragraph)
                 a[.noteAtom] = NoteAtom("$\(tex)$")
                 if let picture = NoteMath.picture(tex, syntax: syntax, display: false, size: s.size * 1.05, color: s.color, dark: dark) {
-                    let attachment = NSTextAttachment()
+                    let attachment = MathAttachment()
                     attachment.image = picture.image
                     attachment.bounds = CGRect(x: 0, y: -picture.descent, width: picture.size.width, height: picture.size.height)
                     out.append(NSAttributedString(attachment: attachment, attributes: a))

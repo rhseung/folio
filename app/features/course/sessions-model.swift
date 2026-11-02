@@ -57,6 +57,15 @@ final class SessionsModel {
 
     func end(of session: Session, in file: CourseFile) -> Date? { session.end(schedule: file.course.schedule, calendar: calendar) }
 
+    func link(of session: Session, in file: CourseFile) -> URL? { session.link(schedule: file.course.schedule, calendar: calendar) }
+
+    /// The join button stands out only around the class: from the study day it falls on until it ends. Before and
+    /// after, the link stays in the menu.
+    func offersJoin(_ session: Session, in file: CourseFile, now: Date) -> Bool {
+        !session.isCancelled && isToday(session.date)
+            && now < session.expectedEnd(schedule: file.course.schedule, classMinutes: workspace.settings.classMinutes, calendar: calendar)
+    }
+
     func importFiles(_ urls: [URL], into session: Session) {
         workspace.importFiles(urls, into: CourseFolder.lectures.rawValue, week: session.week, session: session.id, course: courseId)
     }

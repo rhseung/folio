@@ -18,7 +18,7 @@ enum FormSnapshots {
             ("course-edit", AnyView(EditCourseSheet(workspace: workspace, course: course))),
             ("course-icon", AnyView(CourseIconPanel(icon: nil, color: workspace.accent(course.id).color) { _ in })),
             ("class-times", AnyView(ClassTimesSheet(workspace: workspace, course: course))),
-            ("session-add", AnyView(AddSessionSheet(course: course))),
+            ("session-add", AnyView(SessionFormSheet(workspace: workspace, course: course))),
             ("note-new", AnyView(NewNoteSheet(workspace: workspace, course: course, kind: .review) { _ in })),
             ("note-new-topic", AnyView(NewNoteSheet(workspace: workspace, course: course, kind: .topic) { _ in })),
             ("exam-new", AnyView(ExamEditor(workspace: workspace, course: course, exam: Exam(device: device, at: .now, kind: .midterm, title: "")))),
@@ -36,6 +36,7 @@ enum FormSnapshots {
             let courses = workspace.allCourseRecords.filter { $0.codes.contains(code.id) }.map(\.id)
             forms.append(("code", AnyView(CodeEditor(model: CodesModel(workspace: workspace), code: .constant(code), programs: [code.program], courses: courses) {})))
         }
+        if let session = file.sessions.first { forms.append(("session-edit", AnyView(SessionFormSheet(workspace: workspace, course: course, session: session)))) }
         if let exam = file.exams.first { forms.append(("exam-edit", AnyView(ExamEditor(workspace: workspace, course: course, exam: exam)))) }
         if let unit = file.units.first { forms.append(("card", AnyView(CardEditorSheet(workspace: workspace, course: course, draft: CardDraft(unitId: unit.id), units: file.units) {}))) }
         return forms

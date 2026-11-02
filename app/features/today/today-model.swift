@@ -96,10 +96,6 @@ final class TodayModel {
         return classes.sorted { $0.0 < $1.0 }.map(\.1).filter { seen.insert($0).inserted }
     }
 
-    func end(of item: TodaySummary.SessionItem) -> Date? {
-        item.session.end(schedule: workspace.course(item.courseId)?.file.course.schedule ?? [], calendar: workspace.calendar)
-    }
-
     /// The course whose class is under way: one already made, the timetable's suggestion not made yet, or a record's slot.
     func nowCourse(at now: Date) -> UUID? {
         if let item = workspace.ongoingClass(at: now) { return item.courseId }
@@ -260,9 +256,11 @@ final class TodayModel {
     }
 
     func ribbonClasses(_ summary: TodaySummary, now: Date) -> [RibbonClass] {
-        // A session without a weekly slot has no end; an hour keeps it a visible block rather than a sliver.
+        // A session without a weekly slot has no end; the expected one keeps it a visible block rather than a sliver.
         let made = summary.classesToday.map { item in
-            RibbonClass(courseId: item.courseId, start: item.session.date, end: end(of: item) ?? item.session.date.addingTimeInterval(3600),
+            RibbonClass(courseId: item.courseId, start: item.session.date,
+                        end: item.session.expectedEnd(schedule: workspace.course(item.courseId)?.file.course.schedule ?? [],
+                                                      classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar),
                         name: sessionName(item.courseId, item.session), sessionId: item.session.id)
         }
         let planned = suggested(now: now, on: summary.studyDay).map {

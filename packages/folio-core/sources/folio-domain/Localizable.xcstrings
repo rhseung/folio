@@ -595,6 +595,17 @@
         }
       }
     },
+    "rule.course.schedule-link": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목 '{name}'의 수업 시간 링크가 웹 주소가 아닙니다"
+          }
+        }
+      }
+    },
     "rule.course.semester": {
       "extractionState": "manual",
       "localizations": {
@@ -947,6 +958,17 @@
         }
       }
     },
+    "rule.session.link": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차 '{name}'의 온라인 링크가 웹 주소가 아닙니다. 회의 ID나 암호가 아니라 초대문의 참가 링크를 넣으세요"
+          }
+        }
+      }
+    },
     "rule.session.pages": {
       "extractionState": "manual",
       "localizations": {
@@ -958,6 +980,17 @@
         }
       }
     },
+    "rule.session.time": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차 '{name}'의 끝 시각은 시작보다 늦어야 합니다"
+          }
+        }
+      }
+    },
     "rule.settings.assignment-lead-hours": {
       "extractionState": "manual",
       "localizations": {
@@ -965,6 +998,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "과제 알림은 마감 1시간 전에서 336시간 전 사이여야 합니다"
+          }
+        }
+      }
+    },
+    "rule.settings.class-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 수업 길이는 10분부터 300분 사이여야 합니다"
           }
         }
       }

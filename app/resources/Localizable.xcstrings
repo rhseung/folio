@@ -16005,6 +16005,193 @@
           }
         }
       }
+    },
+    "sessions.end": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끝"
+          }
+        }
+      }
+    },
+    "sessions.topic": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "주제"
+          }
+        }
+      }
+    },
+    "sessions.topic-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목록에서 회차 제목으로 보입니다"
+          }
+        }
+      }
+    },
+    "sessions.topic-prompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예: 보강"
+          }
+        }
+      }
+    },
+    "sessions.link": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "온라인 링크"
+          }
+        }
+      }
+    },
+    "sessions.link-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Zoom 같은 회의 참가 링크. 비우면 수업 시간의 링크를 씁니다"
+          }
+        }
+      }
+    },
+    "sessions.link-prompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "https://zoom.us/j/…"
+          }
+        }
+      }
+    },
+    "sessions.rename-on-move": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 주로 옮기면 그 주의 마지막 회차가 되어 이름이 바뀝니다. 이미 만든 노트와 녹음의 이름은 그대로입니다."
+          }
+        }
+      }
+    },
+    "sessions.join": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "참가"
+          }
+        }
+      }
+    },
+    "sessions.join-online": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "온라인 수업 참가"
+          }
+        }
+      }
+    },
+    "sessions.online": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "온라인 수업"
+          }
+        }
+      }
+    },
+    "class-times.link": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "온라인 링크"
+          }
+        }
+      }
+    },
+    "class-times.link-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "매주 온라인으로 하는 수업의 회의 링크. 그 시간의 회차가 함께 씁니다"
+          }
+        }
+      }
+    },
+    "class-times.link-prompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "https://zoom.us/j/…"
+          }
+        }
+      }
+    },
+    "settings.class-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 수업 길이"
+          }
+        }
+      }
+    },
+    "settings.class-minutes-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끝 시각도 수업 시간 칸도 없는 회차의 길이. 과목에 수업 시간이 있으면 그 길이를 먼저 씁니다"
+          }
+        }
+      }
+    },
+    "settings.unit-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "분"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

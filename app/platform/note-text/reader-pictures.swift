@@ -120,21 +120,85 @@ import UIKit
         ceil(text.boundingRect(with: CGSize(width: width, height: .greatestFiniteMagnitude), options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).height)
     }
 
+    static let minimum: CGFloat = 48
+
+    /// Shrinks the columns together to the page, but none below its floor: math and pictures don't wrap, so a column
+    /// narrower than its widest one cut it off (`min{m,` for `\min\{m,n\}`). Only the room above the floors shrinks.
+    /// When the floors alone are wider than the page they shrink together too, though none below `minimum`: the table
+    /// is one picture in the note column, and a picture wider than the column is cut at its edge, losing whole columns
+    /// instead of a formula's end.
+    static func fit(_ widths: [CGFloat], floors: [CGFloat], page: CGFloat) -> [CGFloat] {
+        let wanted = zip(widths, floors).map { max($0, $1) }
+        let total = wanted.reduce(0, +), base = floors.reduce(0, +)
+        guard total > page else { return wanted }
+        guard base < page else {
+            // The floors give way above the narrowest a column can be and still hold a word, so the wide ones pay.
+            let least = min(minimum, floor(page / CGFloat(floors.count)))
+            let room = page - least * CGFloat(floors.count), over = base - least * CGFloat(floors.count)
+            guard over > 0 else { return floors.map { _ in least } }
+            return floors.map { least + floor(($0 - least) * room / over) }
+        }
+        let keep = (page - base) / (total - base)
+        return zip(wanted, floors).map { w, f in f + floor((w - f) * keep) }
+    }
+
+    /// Raises the spanned columns' floors evenly until together they hold `need`.
+    static func spread(_ floors: inout [CGFloat], from column: Int, count: Int, to need: CGFloat) {
+        let have = floors[column..<(column + count)].reduce(0, +)
+        guard need > have else { return }
+        let share = ceil((need - have) / CGFloat(count))
+        for c in column..<(column + count) { floors[c] += share }
+    }
+
+    /// Only math holds a column open. Images and code blocks in a cell were sized to the whole note column, not the
+    /// cell's, so as floors one would take nearly all of the table; an image shrinks to its column instead (`shrunk`),
+    /// and a code block draws nothing in a cell.
+    private static func widestMath(_ text: NSAttributedString) -> CGFloat {
+        var widest: CGFloat = 0
+        text.enumerateAttribute(.attachment, in: NSRange(location: 0, length: text.length)) { value, _, _ in
+            if let a = value as? MathAttachment { widest = max(widest, ceil(a.bounds.width)) }
+        }
+        return widest
+    }
+
+    static func shrunk(_ text: NSAttributedString, to width: CGFloat) -> NSAttributedString {
+        let out = NSMutableAttributedString(attributedString: text)
+        text.enumerateAttribute(.attachment, in: NSRange(location: 0, length: text.length)) { value, range, _ in
+            guard let a = value as? NSTextAttachment, !(a is CodeAttachment), !(a is MathAttachment), a.bounds.width > width, width > 0
+            else { return }
+            let smaller = NSTextAttachment()
+            smaller.image = a.image
+            smaller.bounds = CGRect(x: 0, y: a.bounds.minY, width: width, height: floor(a.bounds.height * width / a.bounds.width))
+            out.addAttribute(.attachment, value: smaller, range: range)
+        }
+        return out
+    }
+
     /// Columns take their natural width, shrunk together when the table is wider than the page.
     private static func draw(_ cells: [Cell], widths fixed: [CGFloat?], width page: CGFloat) -> (image: PlatformImage, size: CGSize)? {
         guard !cells.isEmpty else { return nil }
         let columnCount = cells.map { $0.column + $0.columns }.max()!
         let rowCount = cells.map { $0.row + $0.rows }.max()!
         var widths = (0..<columnCount).map { c in c < fixed.count ? fixed[c] ?? 0 : 0 }
-        for cell in cells where cell.columns == 1 && (cell.column >= fixed.count || fixed[cell.column] == nil) {
+        var floors = Array(repeating: minimum, count: columnCount)
+        for cell in cells where cell.columns == 1 {
+            floors[cell.column] = max(floors[cell.column], widestMath(cell.text) + padding.width * 2)
+            guard cell.column >= fixed.count || fixed[cell.column] == nil else { continue }
             let natural = ceil(cell.text.boundingRect(with: CGSize(width: 10_000, height: 10_000), options: [.usesLineFragmentOrigin], context: nil).width)
             widths[cell.column] = max(widths[cell.column], min(natural, 360) + padding.width * 2)
         }
-        widths = widths.map { max($0, 48) }
-        let total = widths.reduce(0, +)
-        if total > page { widths = widths.map { max(48, floor($0 * page / total)) } }
-        var heights = Array(repeating: CGFloat(0), count: rowCount)
+        // A merged cell's math is spread over the columns it spans, after their own cells have set them.
+        for cell in cells where cell.columns > 1 {
+            spread(&floors, from: cell.column, count: cell.columns, to: widestMath(cell.text) + padding.width * 2)
+        }
+        widths = fit(widths, floors: floors, page: page)
         func span(_ list: [CGFloat], _ from: Int, _ count: Int) -> CGFloat { list[from..<(from + count)].reduce(0, +) }
+        let cells = cells.map { cell in
+            var cell = cell
+            cell.text = shrunk(cell.text, to: span(widths, cell.column, cell.columns) - padding.width * 2)
+            return cell
+        }
+        var heights = Array(repeating: CGFloat(0), count: rowCount)
         for cell in cells.sorted(by: { $0.rows < $1.rows }) {
             let need = height(cell.text, span(widths, cell.column, cell.columns) - padding.width * 2) + padding.height * 2
             let have = span(heights, cell.row, cell.rows)

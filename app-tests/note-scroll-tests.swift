@@ -163,4 +163,17 @@ struct NoteScrollTests {
         let shown = try #require(Self.shown(view, (view.string as NSString).range(of: "앞 문단").location))
         #expect(abs(shown - NoteLook.margin) <= 2, "\(shown)")
     }
+
+    @Test func theScrollerRunsTheWholeHeight() throws {
+        for preview in [false, true] {
+            let view: NSTextView = preview ? ReaderTextView() : SourceTextView()
+            let window = Self.host(view)
+            let scroll = try #require(view.enclosingScrollView)
+            scroll.tile()
+            let scroller = try #require(scroll.verticalScroller)
+            #expect(scroll.contentInsets.bottom > 0)
+            #expect(abs(scroller.frame.height - scroll.frame.height) <= 1, "\(preview): \(scroller.frame) in \(scroll.frame)")
+            _ = window
+        }
+    }
 }

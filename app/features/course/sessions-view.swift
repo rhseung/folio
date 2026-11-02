@@ -46,7 +46,7 @@ struct SessionsView: View {
             }
         }
         .sheet(isPresented: $editingTimes) { ClassTimesSheet(workspace: model.workspace, course: course) }
-        .sheet(isPresented: $adding) { AddSessionSheet(course: course) }
+        .sheet(isPresented: $adding) { SessionFormSheet(workspace: model.workspace, course: course) }
         .task(id: file.sessions) { model.loadUntouched(course) }
     }
 
@@ -160,6 +160,7 @@ struct SuggestedSessionRow: View {
                 }
             }
             Spacer(minLength: Theme.Space.m)
+            if today, let link = item.suggestion.link.flatMap(OnlineLink.url) { JoinOnlineButton(url: link).fixedSize() }
             SuggestedSessionActions(item: item, compact: showsCourse, openNote: openNote, editTimes: editTimes).fixedSize()
         }
         .padding(.horizontal, Theme.Space.l)
@@ -211,9 +212,14 @@ struct SuggestedSessionItems: View {
     let primary: Bool
     let openNote: (UUID) -> Void
     var editTimes: (() -> Void)?
+    @Environment(\.openURL) private var openURL
 
     var body: some View {
         let today = workspace.isStudyToday(item.suggestion.date)
+        if let link = item.suggestion.link.flatMap(OnlineLink.url) {
+            Button(.sessionsJoinOnline, systemImage: "video") { JoinOnlineButton.join(link, openURL) }
+            Divider()
+        }
         if primary {
             if today { Button(.sessionsOpenRoughNote) { Self.roughNote(item, workspace, openNote) } } else { Button(.sessionsMakeSession) { Self.make(item, workspace) } }
         }
@@ -250,27 +256,49 @@ struct SuggestedSessionItems: View {
     }
 }
 
-struct AddSessionSheet: View {
-    @Environment(Workspace.self) private var workspace
+/// Adds a session, or edits one when given: off-timetable classes (a makeup, a recitation) need their own end, and an
+/// online one its meeting link.
+struct SessionFormSheet: View {
     @Environment(\.dismiss) private var dismiss
-    let course: LoadedCourse
-    @State private var date: Date
-    @State private var cancelled = false
+    @State private var model: SessionFormModel
 
-    init(course: LoadedCourse) {
-        self.course = course
-        let today = Calendar.current.startOfDay(for: .now)
-        _date = State(initialValue: Calendar.current.date(byAdding: .hour, value: 18, to: today) ?? today)
+    init(workspace: Workspace, course: LoadedCourse, session: Session? = nil) {
+        _model = State(initialValue: SessionFormModel(workspace: workspace, courseId: course.id, session: session))
     }
 
     var body: some View {
-        SheetForm(title: String(localized: .sessionsAdd), confirm: String(localized: .commonAdd)) {
-            FormRow(label: String(localized: .sessionsDate)) { DateChip(date: $date) }
-            FormRow(label: String(localized: .sessionsCancelled), last: true) { Switch(isOn: $cancelled) }
+        SheetForm(title: model.title, confirm: model.confirm, disabled: model.disabled, note: model.note) {
+            FormRow(label: String(localized: .sessionsDate)) { DateChip(date: Binding(get: { model.start }, set: { model.setStart($0) })) }
+            FormRow(label: String(localized: .sessionsEnd)) { TimeMenu(minute: Binding(get: { model.endMinute }, set: { model.setEnd($0) })) }
+            FormRow(label: String(localized: .sessionsTopic), detail: String(localized: .sessionsTopicDetail)) {
+                InlineField(String(localized: .sessionsTopicPrompt), text: $model.topic)
+            }
+            FormRow(label: String(localized: .sessionsLink), detail: String(localized: .sessionsLinkDetail), last: model.session != nil) {
+                InlineField(String(localized: .sessionsLinkPrompt), text: $model.link)
+            }
+            if model.session == nil {
+                FormRow(label: String(localized: .sessionsCancelled), last: true) { Switch(isOn: $model.cancelled) }
+            }
         } onConfirm: {
-            workspace.createSession(at: date, cancelled: cancelled, in: course.id)
+            model.submit()
             dismiss()
         }
+    }
+}
+
+/// Joins an online class: Zoom links go to the Zoom app directly, and anything else (or Zoom when the app isn't
+/// installed) opens in the browser.
+struct JoinOnlineButton: View {
+    @Environment(\.openURL) private var openURL
+    let url: URL
+
+    var body: some View {
+        SessionSlot(String(localized: .sessionsJoin), symbol: "video", help: url.absoluteString, fixed: false) { Self.join(url, openURL) }
+    }
+
+    static func join(_ url: URL, _ openURL: OpenURLAction) {
+        guard let app = OnlineLink.appURL(url) else { return openURL(url) }
+        openURL(app) { accepted in if !accepted { openURL(url) } }
     }
 }
 
@@ -373,12 +401,14 @@ struct SessionRow: View {
     let course: LoadedCourse
     let session: Session
     var now = Date.now
-    /// From the class times; nil for a class off the schedule, which then never shows as under way.
+    /// Its own end, else its class time's; nil for a class with neither, which then never shows as under way.
     var end: Date?
     let openNote: (UUID) -> Void
     @State private var playing: Recording?
     @State private var confirmingDelete = false
     @State private var deleteRefusal: String?
+    @State private var editing = false
+    @Environment(\.openURL) private var openURL
     /// The rail above and below this row's dot: nil at the ends, true once held.
     var above: Bool?
     var below: Bool?
@@ -426,6 +456,7 @@ struct SessionRow: View {
         let late = model.lateMark(session, in: file)
         // Classes still ahead are drawn faint, like the suggested one, so the held ones read as the record.
         let ahead = session.date > now
+        let link = model.link(of: session, in: file)
         let left = model.isOngoing(session, end: end, now: now)
             ? end.map { Text(model.minutesLeft(until: $0, now: now)).fontWeight(.semibold).foregroundStyle(accent.ink) } : nil
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
@@ -438,6 +469,10 @@ struct SessionRow: View {
                 if let line = left ?? model.when(session, now: now).map({ Text($0) }) {
                     line.font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit().lineLimit(1).fixedSize()
                 }
+                if link != nil && !cancelled {
+                    Image(systemName: "video").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                        .help(Text(.sessionsOnline))
+                }
                 if !cancelled { SessionUnitsPicker(course: course, session: session, compact: model.unitsInTitle(session, in: file)) }
             }
         }
@@ -446,6 +481,7 @@ struct SessionRow: View {
         .opacity(ahead ? 0.55 : 1)
         if !cancelled {
             HStack(spacing: Theme.Space.s) {
+                if let link, model.offersJoin(session, in: file, now: now) { JoinOnlineButton(url: link) }
                 if recordingThis {
                     Label(.sessionsRecording, systemImage: "waveform").foregroundStyle(Theme.Palette.danger)
                         .symbolEffect(.variableColor.iterative, isActive: recorder.state == .recording)
@@ -479,12 +515,17 @@ struct SessionRow: View {
             Text(deleteRefusal ?? "")
         }
         .sheet(item: $playing) { RecordingPlayer(workspace: model.workspace, courseId: course.id, store: course.store, recording: $0, title: model.playerTitle(session, in: file)) }
+        .sheet(isPresented: $editing) { SessionFormSheet(workspace: model.workspace, course: course, session: session) }
     }
 
     @ViewBuilder var menuItems: some View {
         let recordings = model.recordings(of: session, in: course.file)
         let recorder = model.workspace.recorder
         let attendance = model.attendance(of: session, in: course.file)
+        if let link = model.link(of: session, in: course.file), !session.isCancelled {
+            Button(.sessionsJoinOnline, systemImage: "video") { JoinOnlineButton.join(link, openURL) }
+            Divider()
+        }
         Button(String(localized: session.roughNoteId == nil ? .sessionsMakeRoughNote : .sessionsOpenRoughNote)) { open(.rough) }
         Button(String(localized: session.reviewNoteId == nil ? .sessionsMakeReviewNote : .sessionsOpenReviewNote)) { open(.review) }
         Toggle(String(localized: .sessionsSkipsReview), isOn: Binding(get: { session.skipsReview }, set: { model.setSkipsReview($0, of: session) }))
@@ -501,6 +542,7 @@ struct SessionRow: View {
             Button(model.playLabel(i, r)) { playing = r }
         }
         Divider()
+        Button(.commonEditEllipsis) { editing = true }
         Toggle(String(localized: .sessionsCancelled), isOn: Binding(get: { session.isCancelled }, set: { model.setCancelled($0, of: session) }))
         Divider()
         Button(.sessionsRemoveSessionEllipsis, role: .destructive) {

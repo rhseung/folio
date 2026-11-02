@@ -26,6 +26,19 @@ struct SessionCommandTests {
         }
     }
 
+    @Test func addOnline() throws {
+        let end = DateArg(argument: "2026-10-28 22:15")!.date
+        try h.expectSame(Self.add + ["--end", "2026-10-28 22:15", "--topic", "보강", "--link", "https://zoom.us/j/1"]) { _ in
+            SessionAdd(id: Self.id, course: Harness.graphTheory, date: date, end: end, topic: "보강", link: "https://zoom.us/j/1")
+        }
+    }
+
+    @Test func setTopicAndLink() throws {
+        try h.expectSame(["session", "set", "EC4207/9주차-1", "--topic", "매칭", "--link", "none"], setup: [Self.add]) { _ in
+            SessionSet(course: Harness.graphTheory, session: Self.id, topic: .set("매칭"), link: .set(nil))
+        }
+    }
+
     @Test func remove() throws {
         try h.expectSame(["session", "rm", "EC4207/9주차-1", "--yes"], setup: [Self.add]) { _ in
             SessionRemove(course: Harness.graphTheory, sessions: [Self.id])

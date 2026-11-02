@@ -177,9 +177,6 @@ struct RootView: View {
                     .rowTools(add: String(localized: .rootAddSemester)) { addingSemester = true }
                     .padding(.leading, Theme.Space.xs)
             }
-            .sheet(isPresented: $addingCourse) {
-                if let current = workspace.currentSemester { AddCourseSheet(workspace: workspace, semester: current) { if let id = $0 { selection = .course(id) } } }
-            }
         }
         .overflowFade(.vertical)
         .focusable(false)
@@ -200,6 +197,11 @@ struct RootView: View {
                 guard let id else { return }
                 selection = .semester(id)
             }
+        }
+        // Outside the List: a sheet on a Section is copied onto every row, and with each copy bound to the same flag,
+        // dismissing one let the next present again.
+        .sheet(isPresented: $addingCourse) {
+            if let current = workspace.currentSemester { AddCourseSheet(workspace: workspace, semester: current) { if let id = $0 { selection = .course(id) } } }
         }
     }
 
