@@ -1,16 +1,24 @@
 import FolioDomain
+import FolioStorage
 import PDFKit
 import SwiftUI
 
 /// A `.tex`, code or text file of the course, edited in place. A `.tex` shows its PDF beside it, built with ⌘B.
 struct TextFileView: View {
     @State private var model: TextFileModel
+    /// A note's kind and links, for the same menu the markdown editor has.
+    @State private var links: NoteEditorModel?
     @State private var controller: PDFController?
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
 
     init(workspace: Workspace, course: LoadedCourse, material: UUID) {
         _model = State(initialValue: TextFileModel(workspace: workspace, course: course, material: material))
+    }
+
+    init(workspace: Workspace, course: LoadedCourse, note: NoteFile) {
+        _model = State(initialValue: TextFileModel(workspace: workspace, course: course, source: .note(note)))
+        _links = State(initialValue: NoteEditorModel(workspace: workspace, course: course, note: note))
     }
 
     var body: some View {
@@ -91,6 +99,7 @@ struct TextFileView: View {
             }
             #endif
         } trailing: {
+            if let links { NoteLinkMenu(model: links) }
             #if os(macOS)
             Button(.materialsOpenWithDefault, systemImage: "arrow.up.forward.app") { NSWorkspace.shared.open(model.fileURL) }
                 .help(Text(.materialsOpenWithDefault))

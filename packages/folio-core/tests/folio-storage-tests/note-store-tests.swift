@@ -12,11 +12,60 @@ struct NoteStoreTests {
         return try #require(try gist.courseStores().first { $0.url.lastPathComponent == "EC4207 그래프 이론" })
     }
 
-    @Test func listsNotesByFrontmatterID() throws {
+    @Test func notesTakeTheirPropertiesFromCourseJSON() throws {
         let notes = try store().notes()
         #expect(notes.map(\.title) == ["2주차-1"])
         #expect(notes.first?.meta.id == UUID(uuidString: "6F1D2C4E-8A3B-4F5E-9C1D-2B7A8E0F3D41"))
         #expect(notes.first?.meta.kind == .rough)
+        #expect(try store().read(#require(notes.first)).hasPrefix("# 2주차-1"))
+    }
+
+    @Test func aFileWithoutAnEntryHasNoIDAndATexFileIsANote() throws {
+        let store = try store()
+        try store.createNote(at: store.newNoteURL(title: "밖에서", format: .markdown), text: "# 밖에서\n")
+        try store.createNote(at: store.newNoteURL(title: "증명", format: .tex), text: "\\documentclass{article}\n")
+        let notes = try store.notes()
+        #expect(notes.map(\.title) == ["2주차-1", "밖에서", "증명"])
+        #expect(notes[1].meta.id == nil && notes[1].format == .markdown)
+        #expect(notes[2].meta.id == nil && notes[2].format == .tex)
+        #expect(try store.note(at: "Notes/증명.tex")?.format == .tex)
+    }
+
+    @Test func newNamesNeverTakeAnExistingFile() throws {
+        let store = try store()
+        let first = store.newNoteURL(title: "2주차-1 정리", format: .markdown)
+        try store.createNote(at: first, text: "")
+        #expect(first.lastPathComponent == "2주차-1 정리.md")
+        #expect(store.newNoteURL(title: "2주차-1 정리", format: .markdown).lastPathComponent == "2주차-1 정리 2.md")
+        // Another format is another file, so the name is free.
+        #expect(store.newNoteURL(title: "2주차-1 정리", format: .tex).lastPathComponent == "2주차-1 정리.tex")
+        #expect(store.newNoteURL(title: "a/b:c", format: .markdown).lastPathComponent == "a-b-c.md")
+    }
+
+    @Test func writingLeavesTheTextAsGiven() throws {
+        let store = try store()
+        let note = try #require(try store.notes().first)
+        let text = "---\ncssclasses: wide\n---\n# 2주차-1\n"
+        try store.write(note, text: text)
+        #expect(try store.read(note) == text)
+        #expect(try store.notes().first?.meta.id == note.meta.id)
+    }
+
+    @Test func frontmatterNotesLoseOnlyFolioKeys() throws {
+        let store = try store()
+        let id = UUID(), session = UUID()
+        let old = store.newNoteURL(title: "예전", format: .markdown)
+        try store.createNote(at: old, text: "---\nid: \(id.uuidString)\nkind: review\nsessionId: \(session.uuidString)\ncssclasses: wide\nmath: asciimath\n---\n# 예전\n")
+        let bare = store.newNoteURL(title: "그냥", format: .markdown)
+        try store.createNote(at: bare, text: "---\nid: \(UUID().uuidString)\n---\n# 그냥\n")
+        try store.createNote(at: store.newNoteURL(title: "남의 것", format: .markdown), text: "---\naliases: [x]\n---\n# 남의 것\n")
+
+        let found = try store.frontmatterNotes()
+        #expect(found.map(\.url.lastPathComponent) == ["그냥.md", "예전.md"])
+        let note = try #require(found.last)
+        #expect(note.meta.id == id && note.meta.kind == .review && note.meta.sessionId == session && note.meta.math == .asciimath)
+        #expect(note.text == "---\ncssclasses: wide\n---\n# 예전\n")
+        #expect(found.first?.text == "# 그냥\n")
     }
 
     @Test func contextImagesReadEmbedsInsideTheCourseAsShrunkJPEG() throws {
@@ -31,7 +80,9 @@ struct NoteStoreTests {
         let path = try store.addNoteAsset(named: "board.png", data: png as Data)
         let outside = store.url.deletingLastPathComponent().appending(path: "secret.png")
         try (png as Data).write(to: outside)
-        let note = try store.createNote(title: "그림", meta: NoteMeta(), body: "")
+        let url = store.newNoteURL(title: "그림", format: .markdown)
+        try store.createNote(at: url, text: "")
+        let note = NoteFile(url: url, meta: NoteMeta())
 
         let images = store.contextImages(of: note, body: "![b|400](\(path)) ![[board.png]] ![x](../../secret.png) ![y](assets/none.png)")
         #expect(images.map(\.name) == ["board.png", "board.png"])
@@ -39,31 +90,6 @@ struct NoteStoreTests {
         let props = try #require(CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any])
         #expect(CGImageSourceGetType(source) as String? == UTType.jpeg.identifier)
         #expect(props[kCGImagePropertyPixelWidth] as? Int == 1568)
-    }
-
-    @Test func createsFromTemplateWithUniqueNames() throws {
-        let store = try store()
-        let unit = UUID()
-        let a = try store.createNote(title: "2주차-1 정리", meta: NoteMeta(kind: .review, unitIds: [unit]))
-        let b = try store.createNote(title: "2주차-1 정리", meta: NoteMeta(kind: .review))
-        #expect(a.title == "2주차-1 정리" && b.title == "2주차-1 정리 2")
-
-        let text = try store.read(a)
-        #expect(text.contains("## 핵심 정의와 정리"))
-        let found = try #require(try store.note(id: a.meta.id!))
-        #expect(found.meta.unitIds == [unit] && found.meta.kind == .review)
-    }
-
-    @Test func savingKeepsUnknownFrontmatter() throws {
-        let store = try store()
-        var note = try #require(try store.notes().first)
-        let original = "---\nid: \(note.meta.id!.uuidString)\nkind: rough\ncssclasses: wide\n---\n# 2주차-1\n"
-        try store.save(note, text: original)
-        note.meta.tags = ["matching"]
-        try store.save(note, text: try store.read(note))
-        let text = try store.read(note)
-        #expect(text.contains("cssclasses: wide"))
-        #expect(text.contains("tags: [matching]"))
     }
 
     @Test func assetsAndExportsAreNotNotes() throws {
@@ -86,16 +112,6 @@ struct NoteStoreTests {
         #expect(try Data(contentsOf: store.noteAssetsURL.appending(path: "graph.png")) == Data("first".utf8))
         #expect(Set(store.noteAssets().map(\.lastPathComponent)) == ["graph.png", "graph 2.png"])
     }
-
-    @Test func mathSyntaxRoundTripsThroughFrontmatterAndDefaultsToLatex() throws {
-        let store = try store()
-        let ascii = try store.createNote(title: "ascii", meta: NoteMeta(math: .asciimath), body: "x")
-        let tex = try store.createNote(title: "tex", meta: NoteMeta(), body: "x")
-        #expect(try store.read(ascii).contains("math: asciimath"))
-        #expect(!(try store.read(tex).contains("math:")))
-        #expect(try store.note(id: ascii.meta.id!)?.meta.math == .asciimath)
-        #expect(try store.note(id: tex.meta.id!)?.meta.math == .latex)
-    }
 }
 
 struct NotionNotesWriterTests {
@@ -112,15 +128,15 @@ struct NotionNotesWriterTests {
                                     images: [.init(source: "notion-file-block://x?name=a.svg", file: "assets/a.svg")])
         let plan = NotionNotePlan(id: id, title: "7주차-2 정리", meta: NoteMeta(id: id, kind: .review), sourceFile: "n.md")
 
-        try store.writeNotionNotes([plan], dump: dump, folder: dumpFolder, links: [:])
-        let note = try #require(try store.note(id: id))
-        let text = try store.read(note)
+        let made = try store.writeNotionNotes([plan], dump: dump, folder: dumpFolder, links: [:], existing: [])
+        let url = try #require(made[id])
+        #expect(url.lastPathComponent == "7주차-2 정리.md")
+        let text = try String(contentsOf: url, encoding: .utf8)
         #expect(text.contains("> [!warning] 주의\n> 본문"))
         #expect(text.contains("![](assets/a.svg)"))
         #expect(FileManager.default.fileExists(atPath: store.url.appending(path: "Notes/assets/a.svg").path))
 
-        try store.writeNotionNotes([plan], dump: dump, folder: dumpFolder, links: [:])
-        #expect(try store.notes().filter { $0.meta.id == id }.count == 1)
+        #expect(try store.writeNotionNotes([plan], dump: dump, folder: dumpFolder, links: [:], existing: [id]).isEmpty)
     }
 }
 

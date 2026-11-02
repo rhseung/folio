@@ -180,16 +180,36 @@ struct MaterialNoteStudyTests {
     }
 
     @Test func noteWrite() throws {
-        let text = "---\nid: \(Self.noteID.uuidString.lowercased())\nkind: rough\n---\n\n# 2주차-1\n\n고쳐 씀\n"
+        let text = "# 2주차-1\n\n고쳐 씀\n"
         try h.expectSame(["note", "write", "EC4207/2주차-1", "--file", try scratch("note.md", text)]) { _ in
             NoteWrite(course: course, note: "Notes/2주차-1.md", text: text)
         }
     }
 
+    /// Writes a note file straight into Notes/, as another editor would, so it has no entry in course.json.
+    func drop(_ gist: URL, _ name: String, _ text: String) throws {
+        let store = try ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now).store(course)
+        try text.write(to: store.url.appending(path: "Notes/\(name)"), atomically: true, encoding: .utf8)
+    }
+
     @Test func noteAdopt() throws {
-        let plain = try scratch("plain.md", "# 바깥에서 만든 노트\n")
-        try h.expectSame(["note", "adopt", "EC4207/2주차-1"], setup: [["note", "write", "EC4207/2주차-1", "--file", plain]]) { _ in
-            NoteAdopt(course: course, note: "Notes/2주차-1.md")
+        try h.expectSame(["note", "adopt", "EC4207/바깥"], prepare: { try drop($0, "바깥.md", "# 바깥에서 만든 노트\n") }) { _ in
+            NoteAdopt(course: course, note: "Notes/바깥.md")
+        }
+    }
+
+    @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
+    func noteBuild() throws {
+        let tex = "\\documentclass{article}\n\\begin{document}\nHi\n\\end{document}\n"
+        try h.expectSame(["note", "build", "EC4207/증명"], prepare: { try drop($0, "증명.tex", tex) }) { _ in
+            NoteBuild(course: course, note: "Notes/증명.tex")
+        }
+    }
+
+    @Test func noteMigrate() throws {
+        let text = "---\nid: 0a1b2c3d-0000-4000-8000-000000000001\nkind: review\ntags: [그래프]\nauthor: 나\n---\n\n# 예전\n"
+        try h.expectSame(["note", "migrate", "EC4207"], prepare: { try drop($0, "예전.md", text) }) { _ in
+            NoteMigrate(course: course)
         }
     }
 

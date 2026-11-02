@@ -11,7 +11,7 @@ enum GeneratedCommands {
     static let exam: [any ParsableCommand.Type] = [ExamAdd.self, ExamSet.self, ExamRemove.self, ExamSummary.self]
     static let examPlan: [any ParsableCommand.Type] = [ExamPlanAdd.self]
     static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialUntrack.self, MaterialTrash.self, MaterialBuild.self]
-    static let note: [any ParsableCommand.Type] = [NoteAdopt.self, NoteRemove.self]
+    static let note: [any ParsableCommand.Type] = [NoteAdopt.self, NoteRemove.self, NoteBuild.self]
     static let problemSet: [any ParsableCommand.Type] = [ProblemSetRemove.self, ProblemLinkUnit.self]
     static let recording: [any ParsableCommand.Type] = [RecordingTrim.self]
     static let review: [any ParsableCommand.Type] = [ReviewRecord.self]
@@ -932,6 +932,25 @@ enum GeneratedCommands {
             let action = FolioActions.NoteRemove(
                 course: c.id,
                 note: try r.path("NotePath", noteName, in: c)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct NoteBuild: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "build", abstract: "LaTeX 노트(.tex)를 Tectonic으로 PDF로 만들어 Notes/Exports에 둔다", discussion: """
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<.tex 노트>", valueName: "note"), completion: Complete.ref("NotePath")) var note: String = ""
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, noteName) = try r.split(note)
+            let action = FolioActions.NoteBuild(
+                course: c.id,
+                note: try r.path("NotePath", noteName, in: c),
+                pdf: nil
             )
             try perform(spec: action, g, ctx: ctx)
         }

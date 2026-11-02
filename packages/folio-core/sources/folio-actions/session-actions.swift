@@ -43,7 +43,7 @@ public struct SessionRemove {
     @Arg var sessions: [Session.ID]
 
     public func run(_ ctx: ActionContext) throws {
-        let noted = Set(try ctx.store(course).notes().compactMap(\.meta.sessionId))
+        let noted = Set(try ctx.notes(course).compactMap(\.meta.sessionId))
         try ctx.edit(course) { f in
             for id in sessions {
                 let s = f.sessions[try index(id, in: f.sessions, .valueSession)]
@@ -108,7 +108,7 @@ public struct SessionNote {
         let title = kind == .rough ? file.name(of: s) : "\(file.name(of: s)) 정리"
         let body = NoteTemplate.body(for: kind, title: title, sections: settings.noteSections(for: kind))
         let made = try ctx.createNote(course, title: title, meta: NoteMeta(id: id, kind: kind, sessionId: s.id, unitIds: s.unitIds,
-                                                                           math: settings.newNoteMath), body: body) ?? id
+                                                                           math: settings.newNoteMath), body: body)
         try ctx.edit(course) { f in
             let i = try index(session, in: f.sessions, .valueSession)
             if kind == .rough {

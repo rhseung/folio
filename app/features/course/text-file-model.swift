@@ -4,12 +4,17 @@ import FolioStorage
 import Foundation
 import Observation
 
-/// One text file of a course open for editing, and for a `.tex` its PDF beside it.
+/// One text file of a course open for editing, and for a `.tex` its PDF: beside a material, in `Notes/Exports` for a note.
 @MainActor @Observable
 final class TextFileModel {
+    enum Source {
+        case material(UUID)
+        case note(NoteFile)
+    }
+
     let workspace: Workspace
     private let initial: LoadedCourse
-    let materialId: UUID
+    let source: Source
     var text = ""
     /// The file as last read or written here. A save finding something else on disk was changed elsewhere (another
     /// device, the CLI) and asks before overwriting it.
@@ -27,10 +32,14 @@ final class TextFileModel {
     var asksToReplace = false
     let engineMissing: Bool
 
-    init(workspace: Workspace, course: LoadedCourse, material: UUID) {
+    convenience init(workspace: Workspace, course: LoadedCourse, material: UUID) {
+        self.init(workspace: workspace, course: course, source: .material(material))
+    }
+
+    init(workspace: Workspace, course: LoadedCourse, source: Source) {
         self.workspace = workspace
         initial = course
-        materialId = material
+        self.source = source
         #if os(macOS)
         engineMissing = TexEngine.locate() == nil
         #else
@@ -39,16 +48,27 @@ final class TextFileModel {
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
-    var material: FolioDomain.Material? { course.file.materials.first { $0.id == materialId } }
-    var path: String { material?.path ?? "" }
+    var path: String {
+        switch source {
+        case let .material(id): course.file.materials.first { $0.id == id }?.path ?? ""
+        case let .note(note): course.store.notePath(of: note.url)
+        }
+    }
+
     var name: String { (path as NSString).lastPathComponent }
     var format: MaterialFormat { MaterialFormat(path: path) }
     var isTex: Bool { format == .tex }
     var dirty: Bool { loaded && text != onDisk }
 
-    /// The PDF tracking linked to this source, or where a first build will put it.
+    /// The PDF tracking linked to this source, or where a first build will put it. A note's goes to Notes/Exports.
     var pdfPath: String {
-        course.file.materials.first { $0.id == material?.sourceOf }?.path ?? MaterialFormat.builtPDF(of: path) ?? path
+        switch source {
+        case let .material(id):
+            let source = course.file.materials.first { $0.id == id }
+            return course.file.materials.first { $0.id == source?.sourceOf }?.path ?? MaterialFormat.builtPDF(of: path) ?? path
+        case let .note(note):
+            return course.store.exportPath(of: note)
+        }
     }
     var pdfName: String { (pdfPath as NSString).lastPathComponent }
     var pdfURL: URL? {
@@ -85,7 +105,11 @@ final class TextFileModel {
         guard loaded, !conflict || force else { return }
         let writing = text
         do {
-            _ = try workspace.runThrowing(MaterialWrite(course: course.id, material: materialId, text: writing, expected: force ? nil : onDisk))
+            let expected = force ? nil : onDisk
+            switch source {
+            case let .material(id): _ = try workspace.runThrowing(MaterialWrite(course: course.id, material: id, text: writing, expected: expected))
+            case .note: _ = try workspace.runThrowing(NoteWrite(course: course.id, note: path, text: writing, expected: expected))
+            }
             onDisk = writing
             conflict = false
         } catch ActionError.conflict {
@@ -106,10 +130,10 @@ final class TextFileModel {
         guard !dirty else { return }
         building = true
         defer { building = false }
-        let source = course.store.fileURL(path)
+        let file = course.store.fileURL(path)
         let result: TexEngine.Build
         do {
-            result = try await Task.detached { try engine.compile(source, into: TexEngine.outputFolder(for: source)) }.value
+            result = try await Task.detached { try engine.compile(file, into: TexEngine.outputFolder(for: file)) }.value
         } catch {
             issues = [TexIssue(.error, message: error.localizedDescription)]
             return
@@ -128,7 +152,10 @@ final class TextFileModel {
     private func place(_ pdf: URL, overwrite: Bool) {
         held = nil
         do {
-            _ = try workspace.runThrowing(MaterialBuild(course: course.id, material: materialId, pdf: pdf.path, overwrite: overwrite))
+            switch source {
+            case let .material(id): _ = try workspace.runThrowing(MaterialBuild(course: course.id, material: id, pdf: pdf.path, overwrite: overwrite))
+            case .note: _ = try workspace.runThrowing(NoteBuild(course: course.id, note: path, pdf: pdf.path))
+            }
             pdfRevision += 1
         } catch ActionError.conflict {
             held = pdf

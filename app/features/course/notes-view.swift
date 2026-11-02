@@ -6,7 +6,6 @@ struct NoteList: View {
     @State private var model: NoteListModel
     @Environment(\.accent) private var accent
     @Binding var selection: UUID?
-    @FocusState private var titleFocused: Bool
 
     init(workspace: Workspace, course: LoadedCourse, selection: Binding<UUID?>) {
         _model = State(initialValue: NoteListModel(workspace: workspace, course: course))
@@ -21,22 +20,12 @@ struct NoteList: View {
                 Caption(String(localized: .notesCount(shown.count)))
                 Spacer()
                 ChoiceMenu(selection: $model.filter, options: model.filterOptions)
-                Button { model.adding.toggle() } label: { Image(systemName: "plus") }
+                Button { model.adding = true } label: { Image(systemName: "plus") }
                     .buttonStyle(.ghost)
                     .help(model.addHelp)
             }
             .padding(.horizontal, Theme.Space.s)
             .padding(.bottom, Theme.Space.xs)
-            if model.adding {
-                TextField(model.titlePrompt, text: $model.newTitle)
-                    .textFieldStyle(.plain)
-                    .focused($titleFocused)
-                    .padding(Theme.Inset.listRow)
-                    .background(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.control))
-                    .onSubmit { if let id = model.create() { selection = id } }
-                    .onKeyPress(.escape) { model.adding = false; return .handled }
-                    .onAppear { titleFocused = true }
-            }
             if shown.isEmpty {
                 Text(model.emptyLine)
                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
@@ -49,6 +38,13 @@ struct NoteList: View {
                         .padding(.horizontal, Theme.Space.s).padding(.top, Theme.Space.m).padding(.bottom, Theme.Space.xxs)
                 }
                 ForEach(part.rows) { row($0) }
+            }
+        }
+        // The filter's kind is the likely one: a + under 단원 정리 makes a topic note.
+        .sheet(isPresented: $model.adding) {
+            NewNoteSheet(workspace: model.workspace, course: model.course, kind: model.filter ?? .free) { id in
+                model.reload()
+                selection = id
             }
         }
         .confirmationDialog(String(localized: .notesDeleteConfirm(model.deleting?.title ?? "")),
@@ -116,7 +112,9 @@ struct NotesView: View {
     }
 
     var body: some View {
-        if let note = model.note(selection) {
+        if let note = model.note(selection), note.format == .tex {
+            TextFileView(workspace: model.workspace, course: model.course, note: note).id(note.url)
+        } else if let note = model.note(selection) {
             NoteEditor(workspace: model.workspace, course: model.course, note: note, insert: insert) { title in
                 if let id = model.noteId(titled: title) { open(id) }
             }
@@ -175,7 +173,7 @@ struct NoteEditor: View {
                     Label(String(localized: .notesMathLabel(model.meta.math.label)), systemImage: "function")
                 }
                 .help(Text(.notesMathHelp(model.meta.math.label)))
-                linkMenu
+                NoteLinkMenu(model: model)
                 if writing {
                     Button { showsAssets.toggle() } label: {
                         Label(.notesAssets, systemImage: "photo.on.rectangle").foregroundStyle(showsAssets ? accent.color : Theme.Palette.textSecondary)
@@ -218,7 +216,7 @@ struct NoteEditor: View {
             try? await Task.sleep(for: .seconds(1))
             if !Task.isCancelled { model.saveNow(force: false) }
         }
-        .onChange(of: model.meta.math) { model.saveIfDirty() }
+        .onChange(of: model.meta.math) { model.saveMath() }
         .onChange(of: scenePhase) { _, phase in if phase != .active { model.saveIfDirty() } }
         .onDisappear { model.saveIfDirty() }
         #if os(macOS)
@@ -246,8 +244,13 @@ struct NoteEditor: View {
         MarkdownEditor(text: $model.body, baseURL: model.baseURL, math: model.meta.math, insert: $model.pendingInsert,
                        saveFile: model.saveFile, openNote: openNote, onScroll: preview.follow)
     }
+}
 
-    var linkMenu: some View {
+/// The note's kind and what it belongs to, one kind at a time. Shared by the markdown editor and a `.tex` note's view.
+struct NoteLinkMenu: View {
+    let model: NoteEditorModel
+
+    var body: some View {
         let meta = model.meta
         let session = model.linkedSession
         let current = model.currentLink

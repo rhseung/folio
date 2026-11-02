@@ -74,15 +74,23 @@ public struct ImportNotes {
                 continue
             }
             let store = try ctx.store(dump.coursePageId)
-            let existing = Set(try store.notes().compactMap(\.meta.id))
+            let existing = Set(try ctx.notes(dump.coursePageId).compactMap(\.meta.id))
             let r = NotionNotesImporter.merge(dump, into: try ctx.file(dump.coursePageId), existingNotes: existing, calendar: ctx.calendar, device: ctx.device, now: ctx.now)
             ctx.note(String(localized: .noteImportNotesCourse(dump.title, r.sessionsAdded, r.notes.count, r.componentsAdded, r.scoresAdded, dump.images.filter { $0.file != nil }.count)))
             for w in r.warnings { ctx.note(String(localized: .noteImportNotesCheck(dump.title, w))) }
+            var paths: [UUID: String] = [:]
             for plan in r.notes where !existing.contains(plan.id) {
-                ctx.record(Change(.added, try ctx.relative(dump.coursePageId, "\(CourseFolder.notes.rawValue)/\(plan.title).md")))
+                let url = store.newNoteURL(title: plan.title, format: .markdown)
+                paths[plan.id] = store.notePath(of: url)
+                ctx.record(Change(.added, ctx.relative(url)))
             }
-            if !ctx.dryRun { try store.writeNotionNotes(r.notes, dump: dump, folder: dumpFolder, links: links) }
-            try ctx.edit(dump.coursePageId) { $0 = r.file }
+            if !ctx.dryRun {
+                for (id, url) in try store.writeNotionNotes(r.notes, dump: dump, folder: dumpFolder, links: links, existing: existing) { paths[id] = store.notePath(of: url) }
+            }
+            try ctx.edit(dump.coursePageId) { f in
+                f = r.file
+                for plan in r.notes { if let path = paths[plan.id] { f.notes.append(NoteEntry(id: plan.id, device: ctx.device, at: ctx.now, path: path, meta: plan.meta)) } }
+            }
         }
     }
 }
@@ -108,7 +116,7 @@ public struct ImportCalendar {
                 continue
             }
             let r = CalendarImporter.merge(group, into: file, semesterStart: start, calendar: ctx.calendar, device: ctx.device, now: ctx.now)
-            let notes = try store.notes()
+            let notes = store.notes(in: file)
             let links = CalendarImporter.noteLinks(sessions: r.file.sessions, notes: notes.compactMap { n in n.meta.id.map { ($0, n.title, n.meta.sessionId) } })
             ctx.note(String(localized: .noteImportCalendarCourse(name, r.added.count, r.filled.count, r.cancelled.count, links.count)))
             if !r.schedule.isEmpty {
@@ -123,11 +131,11 @@ public struct ImportCalendar {
             for s in r.cancelled { ctx.note(String(localized: .noteImportCalendarCancelled(s.name(among: r.file.sessions), shortTime(s.date)))) }
             var result = r.file
             for l in links {
-                guard var note = notes.first(where: { $0.meta.id == l.note }), let i = result.sessions.firstIndex(where: { $0.id == l.session }) else { continue }
+                guard let note = notes.first(where: { $0.meta.id == l.note }), let n = result.notes.firstIndex(where: { $0.id == l.note }),
+                      let i = result.sessions.firstIndex(where: { $0.id == l.session }) else { continue }
                 ctx.note(String(localized: .noteImportCalendarNoteLink(result.sessions[i].name(among: result.sessions), note.title)))
-                let text = try store.read(note)
-                note.meta.sessionId = l.session
-                try ctx.io(Change(.changed, ctx.relative(note.url))) { try store.save(note, text: text) }
+                result.notes[n].sessionId = l.session
+                result.notes[n].touch(by: ctx.device, at: ctx.now)
                 result.sessions[i].reviewNoteId = l.note
                 result.sessions[i].touch(by: ctx.device, at: ctx.now)
             }
