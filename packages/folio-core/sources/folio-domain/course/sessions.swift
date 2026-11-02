@@ -263,6 +263,12 @@ extension CourseFile {
 
 /// A meeting link as pasted from an invite (Zoom, Meet, Teams, ...).
 public enum OnlineLink {
+    /// What a link field stores: trimmed, and nil when nothing is left, so a stray space neither lights the link up
+    /// nor trips the rule with a field that looks empty.
+    public static func stored(_ text: String?) -> String? {
+        text.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.flatMap { $0.isEmpty ? nil : $0 }
+    }
+
     /// The web address in `text`, with `https://` added when it was pasted without one. Nil for anything that isn't
     /// one, which the rules refuse, so a typo never becomes a button that opens nothing.
     public static func url(_ text: String) -> URL? {

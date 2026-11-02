@@ -358,7 +358,7 @@ struct ClassLinkButton: View {
             .popover(isPresented: $open, arrowEdge: .bottom) {
                 VStack(alignment: .leading, spacing: Theme.Space.s) {
                     Text(.classTimesLink).font(Theme.Typeface.bodyStrong)
-                    TextField(String(localized: .sessionsLinkPrompt), text: Binding(get: { link ?? "" }, set: { link = $0.isEmpty ? nil : $0 }))
+                    TextField(String(localized: .sessionsLinkPrompt), text: Binding(get: { link ?? "" }, set: { link = OnlineLink.stored($0) }))
                         .pill(width: 288)
                     Text(.classTimesLinkHelp).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                 }

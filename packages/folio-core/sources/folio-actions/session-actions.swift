@@ -35,18 +35,11 @@ public struct SessionAdd {
             s.id = id
             s.isCancelled = cancelled
             s.topic = topic.trimmingCharacters(in: .whitespaces)
-            s.link = Self.link(link)
+            s.link = OnlineLink.stored(link)
             s.setEnd(end, schedule: f.course.schedule, calendar: ctx.calendar)
             f.sessions.append(s)
         }
         ctx.made(id)
-    }
-}
-
-extension SessionAdd {
-    /// An empty link is no link; anything else is kept as typed and left to the rules to refuse.
-    static func link(_ text: String?) -> String? {
-        text.map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.flatMap { $0.isEmpty ? nil : $0 }
     }
 }
 
@@ -108,7 +101,7 @@ public struct SessionSet {
             try f.update(\.sessions, session) { s in
                 if let end = end.value { s.setEnd(end, schedule: schedule, calendar: ctx.calendar) }
                 if let topic = topic.value { s.topic = topic.trimmingCharacters(in: .whitespaces) }
-                if let link = link.value { s.link = SessionAdd.link(link) }
+                if let link = link.value { s.link = OnlineLink.stored(link) }
                 cancelled.apply(&s.isCancelled)
                 skipsReview.apply(&s.skipsReview)
                 reviewUnfinished.apply(&s.reviewNoteUnfinished)

@@ -86,6 +86,14 @@ struct ActionTests {
         #expect(throws: ActionError.self) { try run(SessionSet(course: Self.graphTheory, session: id, end: .set(now))) }
     }
 
+    @Test func aClassTimeLinkIsTrimmedAndABlankOneIsNone() throws {
+        try run(CourseSet(course: Self.graphTheory, [.schedule([
+            ClassTime(weekday: 1, startMinute: 600, endMinute: 675, link: " "),
+            ClassTime(weekday: 3, startMinute: 600, endMinute: 675, link: " https://zoom.us/j/1 "),
+        ])]))
+        #expect(try file().course.schedule.map(\.link) == [nil, "https://zoom.us/j/1"])
+    }
+
     @Test func aNewExamGetsItsFolder() throws {
         let exam = ExamAdd(course: Self.graphTheory, title: "Quiz1", kind: .quiz, start: now)
         let ctx = try run(exam)
