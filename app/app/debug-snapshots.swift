@@ -14,6 +14,8 @@ final class SnapshotDriver {
     static let webStep = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_WEB"]
     /// A step to linger on, so the real window (toolbar and all, which cacheDisplay leaves out) can be screen-captured.
     static let holdStep = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_HOLD"]
+    /// Shows the recording card in the sidebar as if a lecture were being recorded, without the microphone.
+    static let recording = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_RECORDING"] != nil
     /// A narrower window (e.g. `1100`) to catch labels that wrap or truncate once the columns squeeze.
     static let width = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_WIDTH"].flatMap(Double.init) ?? 1440
 

@@ -100,6 +100,10 @@ struct RootView: View {
         .task {
             // Snapshots are for checking layout; a Touch ID prompt would stall them on locked screens.
             if SnapshotDriver.directory != nil { workspace.gradesUnlocked = true }
+            if SnapshotDriver.recording, let course = workspace.currentCourses.first, let session = course.file.sessions.first {
+                let recording = Recording(device: workspace.device, at: .now, sessionId: session.id, file: "")
+                workspace.recorder.stage(recording, course: course.id, title: "\(course.title) · \(course.file.name(of: session))")
+            }
             let ids = workspace.currentCourses.map(\.id)
             await SnapshotDriver.shared.run(select: { selection = $0 }, courses: ids, semester: workspace.currentSemester?.id)
         }
