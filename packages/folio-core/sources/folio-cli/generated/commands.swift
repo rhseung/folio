@@ -217,7 +217,7 @@ enum GeneratedCommands {
     }
 
     struct SessionNote: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "note", abstract: "회차의 러프·복습 노트. 없으면 템플릿으로 만든다", discussion: """
+        static let configuration = CommandConfiguration(commandName: "note", abstract: "회차의 러프 노트와 복습 노트. 없으면 템플릿으로 만든다", discussion: """
             예시:
               folio session note EC4207/9주차-1 review
             """)
