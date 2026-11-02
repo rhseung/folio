@@ -20,15 +20,6 @@ final class TodayModel {
         var all: [Workspace.ReviewEntry] { queue + deferred }
     }
 
-    /// The class under way: one already made, the timetable's suggestion not made yet, or a record-only course's slot.
-    struct NowClass {
-        var courseId: UUID
-        var name: String
-        var room: String
-        var start: Date
-        var end: Date
-    }
-
     var current: [LoadedCourse] { workspace.currentCourses }
 
     var currentRecords: [Course] {
@@ -109,18 +100,12 @@ final class TodayModel {
         item.session.end(schedule: workspace.course(item.courseId)?.file.course.schedule ?? [], calendar: workspace.calendar)
     }
 
-    func nowClass(at now: Date) -> NowClass? {
-        if let item = workspace.ongoingClass(at: now), let course = workspace.course(item.courseId) {
-            let room = course.file.course.schedule.first { $0.weekday == workspace.calendar.isoWeekday(of: item.session.date) }?.room ?? ""
-            return NowClass(courseId: item.courseId, name: course.file.name(of: item.session), room: room, start: item.session.date, end: item.end)
-        }
-        if let item = workspace.suggestedSessions(now: now).first(where: { $0.suggestion.date <= now }) {
-            return NowClass(courseId: item.courseId, name: item.name, room: item.suggestion.room, start: item.suggestion.date,
-                            end: item.suggestion.end)
-        }
+    /// The course whose class is under way: one already made, the timetable's suggestion not made yet, or a record's slot.
+    func nowCourse(at now: Date) -> UUID? {
+        if let item = workspace.ongoingClass(at: now) { return item.courseId }
+        if let item = workspace.suggestedSessions(now: now).first(where: { $0.suggestion.date <= now }) { return item.courseId }
         let day = workspace.settings.studyDay(of: now, calendar: workspace.calendar)
-        guard let item = recordClasses(on: day).first(where: { $0.meeting.date <= now && now < $0.meeting.end }) else { return nil }
-        return NowClass(courseId: item.course.id, name: "", room: item.meeting.room, start: item.meeting.date, end: item.meeting.end)
+        return recordClasses(on: day).first { $0.meeting.date <= now && now < $0.meeting.end }?.course.id
     }
 
     /// The newest `limit` sessions missing a review note, newest first, and how many older ones are left out.

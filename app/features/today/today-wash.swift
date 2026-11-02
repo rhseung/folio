@@ -9,7 +9,7 @@ struct TodayWash: View {
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { _ in
-            let now = model.nowClass(at: model.workspace.now)
+            let now = model.nowCourse(at: model.workspace.now)
             ZStack {
                 ForEach(Array(courses.enumerated()), id: \.element) { i, id in
                     // Spread edge to edge; a lone course sits left, over the title, rather than dead center.
@@ -19,7 +19,7 @@ struct TodayWash: View {
                 }
                 .opacity(now == nil ? 1 : 0)
                 if let now {
-                    RadialGradient(colors: [model.workspace.accent(now.courseId).color.opacity(Theme.Opacity.courseWash), .clear],
+                    RadialGradient(colors: [model.workspace.accent(now).color.opacity(Theme.Opacity.courseWash), .clear],
                                    center: UnitPoint(x: 0.25, y: 0), startRadius: 0, endRadius: Theme.Size.washReachFocus)
                         .transition(.opacity)
                 }
@@ -27,7 +27,7 @@ struct TodayWash: View {
             .frame(height: Theme.Size.washHeight)
             // The glows alone end in arcs; the mask fades them out evenly at one depth.
             .mask(LinearGradient(stops: [.init(color: .primary, location: 0.3), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
-            .animation(.easeInOut(duration: 0.6), value: now?.courseId)
+            .animation(.easeInOut(duration: 0.6), value: now)
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
