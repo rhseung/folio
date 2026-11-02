@@ -354,21 +354,26 @@ struct RootView: View {
         #else
         // Always here on the iPad, with the card in a popover: the split view hides its sidebar in portrait, compact
         // widths and Slide Over without telling us, and a hidden card left no way to see or stop the recording.
-        if workspace.recorder.isActive {
-            Button { showingRecording = true } label: { recordingTime }
-                .help(Text(.rootRecording))
-                .popover(isPresented: $showingRecording, arrowEdge: .bottom) {
-                    RecordingBar(workspace: workspace) { destination, target in
-                        showingRecording = false
-                        selection = destination
-                        if let target { searchTarget = target }
+        Group {
+            if workspace.recorder.isActive {
+                Button { showingRecording = true } label: { recordingTime }
+                    .help(Text(.rootRecording))
+                    .popover(isPresented: $showingRecording, arrowEdge: .bottom) {
+                        RecordingBar(workspace: workspace) { destination, target in
+                            showingRecording = false
+                            selection = destination
+                            if let target { searchTarget = target }
+                        }
+                        .frame(width: Theme.Size.sidebar)
+                        .padding(Theme.Space.m)
                     }
-                    .frame(width: Theme.Size.sidebar)
-                    .padding(Theme.Space.m)
-                }
-        } else {
-            recordMenu
+            } else {
+                recordMenu
+            }
         }
+        // On the Group, not the button: stopping from the popover removes the button, which takes the popover down
+        // without writing false back, and left true the next recording would open it unasked.
+        .onChange(of: workspace.recorder.isActive) { _, active in if !active { showingRecording = false } }
         #endif
     }
 

@@ -43,7 +43,9 @@ final class SemesterModel {
     private(set) var audio: AudioNotice?
 
     func refreshAudio() async {
-        guard let s = semester, s.isOver(on: workspace.today, among: workspace.transcript.semesters) else { audio = nil; return }
+        // The calendar date, as `RecordingTrim` uses, not the study day: past midnight but before the day boundary the
+        // card would otherwise stay hidden while the action already allows the trim.
+        guard let s = semester, s.isOver(on: LocalDate(workspace.now, in: workspace.calendar), among: workspace.transcript.semesters) else { audio = nil; return }
         let courses = courses(in: s)
         let shelf = courses.map { ($0.store, $0.file.recordings.filter(\.hasAudio)) }
         // Off the main actor: telling whether a recording has lines decodes its whole transcript, and a semester holds
