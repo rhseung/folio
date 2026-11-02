@@ -121,24 +121,28 @@ final class WidgetWebView: WKWebView, AttachedView, WKNavigationDelegate {
     private final class SizeReports: NSObject, WKScriptMessageHandler {
         static let name = "size"
         weak var view: WidgetWebView?
+        private var last: (page: Double, view: Double)?
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-            guard let view, let body = message.body as? [String: Any], let h = body["h"] as? Double else { return }
+            guard let view, let body = message.body as? [String: Any], let page = body["h"] as? Double, let shown = body["v"] as? Double
+            else { return }
             view.wide = body["w"] as? Bool ?? false
-            // A page sized by the view (`100vh` plus a margin) would grow with every report; the cap ends that.
-            let height = min(max(CGFloat(h).rounded(.up), 16), WidgetWebView.tallest)
+            defer { last = (page, shown) }
+            // A page sized by its view (`100vh` and a margin) grows by at least as much as the view just did, and
+            // following it would never end; it keeps the height it has.
+            // The same size comes twice (a resize also reports), and the second must not undo that.
+            if let last, shown != last.view ? page - last.page >= shown - last.view - 0.5 && page > shown + 0.5 : page == last.page { return }
+            let height = max(CGFloat(page).rounded(.up), 16)
             guard height != view.pageHeight else { return }
             view.pageHeight = height
             view.resized(view)
         }
     }
 
-    static let tallest: CGFloat = 4000
-
     /// The root element's own box, not `scrollHeight`, which is never less than the view and so could only grow.
     private static let sizeScript = """
     { const html = document.documentElement
-      const report = () => webkit.messageHandlers.\(SizeReports.name).postMessage({ h: html.getBoundingClientRect().height, w: html.scrollWidth > innerWidth + 1 })
+      const report = () => webkit.messageHandlers.\(SizeReports.name).postMessage({ h: html.getBoundingClientRect().height, v: innerHeight, w: html.scrollWidth > innerWidth + 1 })
       new ResizeObserver(report).observe(html); addEventListener('resize', report); report() }
     """
 
@@ -168,13 +172,18 @@ final class WidgetWebView: WKWebView, AttachedView, WKNavigationDelegate {
         (try? String(data: JSONEncoder().encode(s), encoding: .utf8)) ?? "\"\""
     }
 
-    func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
-        guard let url = action.request.url else { return .cancel }
-        // Frames inside the page fall under its policy, which loads nothing from outside.
-        if action.targetFrame?.isMainFrame == false { return .allow }
+    /// The page's policy stops it loading a frame from outside, but not a blank frame then sent elsewhere, which
+    /// would carry whatever is in its address out; so every frame stays on the page or blank.
+    static func allows(_ url: URL, mainFrame: Bool) -> Bool {
+        if url.scheme == "about" { return !mainFrame }
         var bare = URLComponents(url: url, resolvingAgainstBaseURL: false)
         bare?.fragment = nil
-        if bare?.url == WidgetScheme.page { return .allow }
+        return bare?.url == WidgetScheme.page
+    }
+
+    func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
+        guard let url = action.request.url else { return .cancel }
+        if Self.allows(url, mainFrame: action.targetFrame?.isMainFrame ?? true) { return .allow }
         if action.navigationType == .linkActivated, url.scheme == "http" || url.scheme == "https" {
             #if os(macOS)
             NSWorkspace.shared.open(url)

@@ -104,6 +104,36 @@ struct NoteWidgetTests {
         #expect(try await Self.value(web, "typeof RTCPeerConnection") as? String == "undefined")
     }
 
+    /// A frame sent anywhere but blank is stopped: its address would carry data out.
+    @Test func framesStayOnThePageOrBlank() throws {
+        let page = WidgetScheme.page, out = try #require(URL(string: "https://example.com/?x=1"))
+        for main in [true, false] {
+            #expect(WidgetWebView.allows(page, mainFrame: main))
+            #expect(WidgetWebView.allows(try #require(URL(string: page.absoluteString + "#step")), mainFrame: main))
+            #expect(!WidgetWebView.allows(out, mainFrame: main))
+            #expect(!WidgetWebView.allows(try #require(URL(string: "data:text/html,x")), mainFrame: main))
+        }
+        let blank = try #require(URL(string: "about:blank"))
+        #expect(WidgetWebView.allows(blank, mainFrame: false))
+        #expect(!WidgetWebView.allows(blank, mainFrame: true))
+    }
+
+    /// A page as tall as its view (`100vh`) plus a margin stops growing instead of chasing the view.
+    @Test func aPageSizedByItsViewSettles() async throws {
+        let html = "<!doctype html><div style='height:100vh'></div><div style='height:16px'></div>"
+        let (view, _, _) = try Self.reader(widget: html) { Self.block($0, height: 200) }
+        let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
+        _ = try await Self.fitted(web)
+        for _ in 0..<10 { NoteRender.layout(view); try await Task.sleep(for: .milliseconds(50)) }
+        #expect(try #require(web.pageHeight) <= 232)
+    }
+
+    @Test func aLongPageGetsAllOfItsHeight() async throws {
+        let (view, _, _) = try Self.reader(widget: "<!doctype html><div style='height:6000px'></div>") { Self.block($0) }
+        let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
+        #expect(try await Self.fitted(web) == 6000)
+    }
+
     @Test func keepsItsViewWhenTheNoteIsRenderedAgain() async throws {
         let html = "<!doctype html><script>window.count = 1; window.done = true</script>"
         let (view, _, id) = try Self.reader(widget: html) { Self.block($0) }
