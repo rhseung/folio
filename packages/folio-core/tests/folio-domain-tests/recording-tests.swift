@@ -22,4 +22,29 @@ struct RecordingTests {
         #expect(t.lineIndex(at: 100) == 2)
         #expect(LectureTranscript(locale: "ko_KR").lineIndex(at: 3) == nil)
     }
+
+    @Test func onlyAudioWithATranscriptIsTrimmable() {
+        var gone = Recording(device: UUID(), at: .now, sessionId: nil, file: "Recordings/1주차-1.m4a")
+        gone.audioTrashedAt = .now
+        let heard = Recording(device: UUID(), at: .now, sessionId: nil, file: "Recordings/1주차-2.m4a")
+        let silent = Recording(device: UUID(), at: .now, sessionId: nil, file: "Recordings/2주차-1.m4a")
+        let kept = RecordingRetention.trimmable([gone, heard, silent]) { $0.id != silent.id }
+        #expect(kept.map(\.id) == [heard.id])
+        #expect(!gone.hasAudio && heard.hasAudio)
+    }
+
+    @Test func aSemesterIsOverAfterItsEndOrOnceTheNextOneStarts() {
+        func day(_ m: Int, _ d: Int) -> LocalDate { LocalDate(year: 2026, month: m, day: d)! }
+        var spring = Semester(device: UUID(), at: .now, year: 2026, term: .spring)
+        var fall = Semester(device: UUID(), at: .now, year: 2026, term: .fall)
+        fall.start = day(9, 1)
+        spring.end = day(6, 19)
+        #expect(!spring.isOver(on: day(6, 19), among: [spring, fall]))
+        #expect(spring.isOver(on: day(6, 20), among: [spring, fall]))
+        // No end date: over only once a later semester has begun.
+        spring.end = nil
+        #expect(!spring.isOver(on: day(8, 31), among: [spring, fall]))
+        #expect(spring.isOver(on: day(9, 1), among: [spring, fall]))
+        #expect(!fall.isOver(on: day(12, 31), among: [spring, fall]))
+    }
 }

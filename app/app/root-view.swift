@@ -31,6 +31,7 @@ struct RootView: View {
     @State private var personTarget: UUID?
     @AppStorage(SettingsTab.storageKey) private var settingsTab: SettingsTab = .general
     @AppStorage("sidebarOpen") private var sidebarOpen = true
+    @State private var showingRecording = false
     @State private var quickAdding = false
     @State private var trail = CrumbTrail()
     @Environment(\.colorScheme) private var colorScheme
@@ -82,13 +83,6 @@ struct RootView: View {
                         }
                     }
                 }
-                .overlay(alignment: .bottom) {
-                    if workspace.recorder.isActive {
-                        RecordingBar(workspace: workspace)
-                            .padding(.bottom, Theme.Space.xl)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
-                }
                 .animation(.snappy(duration: 0.3), value: workspace.recorder.isActive)
                 #if os(macOS)
                 // Closing the file on quit keeps the audio playable; the transcript so far is already on disk.
@@ -107,6 +101,10 @@ struct RootView: View {
         .task {
             // Snapshots are for checking layout; a Touch ID prompt would stall them on locked screens.
             if SnapshotDriver.directory != nil { workspace.gradesUnlocked = true }
+            if SnapshotDriver.recording, let course = workspace.currentCourses.first, let session = course.file.sessions.first {
+                let recording = Recording(device: workspace.device, at: .now, sessionId: session.id, file: "")
+                workspace.recorder.stage(recording, course: course.id, title: "\(course.title) · \(course.file.name(of: session))")
+            }
             let ids = workspace.currentCourses.map(\.id)
             await SnapshotDriver.shared.run(select: { selection = $0 }, courses: ids, semester: workspace.currentSemester?.id)
         }
@@ -182,6 +180,14 @@ struct RootView: View {
         }
         .overflowFade(.vertical)
         .focusable(false)
+        if workspace.recorder.isActive {
+            RecordingBar(workspace: workspace) { destination, target in
+                selection = destination
+                if let target { searchTarget = target }
+            }
+                .padding([.horizontal, .bottom], Theme.Space.m)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
         }
         .listStyle(.sidebar)
         .labelStyle(SidebarLabelStyle())
@@ -320,7 +326,14 @@ struct RootView: View {
         // Folds before where a window-centered search field would begin, so the trail doesn't push it aside; truncates
         // only where the field and the buttons would run out of room.
         let room = windowWidth / 2 - Theme.Size.searchField / 2 - Theme.Space.l - start
-        let limit = windowWidth - start - Theme.Size.searchField - Self.trailingTools
+        #if os(macOS)
+        let timeShown = workspace.recorder.isActive && !sidebarOpen
+        #else
+        let timeShown = workspace.recorder.isActive
+        #endif
+        // The elapsed time takes the record button's place and is wider than it.
+        let tools = Self.trailingTools + (timeShown ? Self.recordingTimeWidth - Theme.Size.toolbarButton : 0)
+        let limit = windowWidth - start - Theme.Size.searchField - tools
         // A course's section and what it opened only while the course is shown: they clear as it goes.
         let steps = if case .course = selection { trail.crumbs } else { [Crumb]() }
         let inset = Theme.Space.m * 2  // the capsule's own padding, left out of the trail's room
@@ -337,8 +350,55 @@ struct RootView: View {
     /// The trailing buttons and the gaps around the search field, measured at their widest (a course, timer shown),
     /// less the Claude button that moved to the page.
     static let trailingTools: CGFloat = 288
+    /// Fixed, so the row doesn't shift as the minutes tick, and wide enough for a class past an hour ("1:15:00").
+    static let recordingTimeWidth: CGFloat = 96
 
-    var recordButton: some View {
+    @ViewBuilder var recordButton: some View {
+        #if os(macOS)
+        // The recording's card lives in the sidebar; folded away, the time stands in for it here and opens it.
+        if workspace.recorder.isActive && !sidebarOpen {
+            Button { sidebarOpen = true } label: { recordingTime }
+                .help(Text(.rootRecording))
+        } else {
+            recordMenu
+        }
+        #else
+        // Always here on the iPad, with the card in a popover: the split view hides its sidebar in portrait, compact
+        // widths and Slide Over without telling us, and a hidden card left no way to see or stop the recording.
+        Group {
+            if workspace.recorder.isActive {
+                Button { showingRecording = true } label: { recordingTime }
+                    .help(Text(.rootRecording))
+                    .popover(isPresented: $showingRecording, arrowEdge: .bottom) {
+                        RecordingBar(workspace: workspace) { destination, target in
+                            showingRecording = false
+                            selection = destination
+                            if let target { searchTarget = target }
+                        }
+                        .frame(width: Theme.Size.sidebar)
+                        .padding(Theme.Space.m)
+                    }
+            } else {
+                recordMenu
+            }
+        }
+        // On the Group, not the button: stopping from the popover removes the button, which takes the popover down
+        // without writing false back, and left true the next recording would open it unasked.
+        .onChange(of: workspace.recorder.isActive) { _, active in if !active { showingRecording = false } }
+        #endif
+    }
+
+    var recordingTime: some View {
+        Label {
+            Text(RecordingTime.label(workspace.recorder.elapsed)).monospacedDigit()
+        } icon: {
+            Image(systemName: "record.circle").foregroundStyle(Theme.Palette.danger)
+        }
+        .labelStyle(.titleAndIcon)
+        .frame(width: Self.recordingTimeWidth)
+    }
+
+    var recordMenu: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let ongoing = workspace.ongoingClass(at: context.date)
             Menu {

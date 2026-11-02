@@ -24,6 +24,19 @@ extension CourseStore {
         return path
     }
 
+    /// To the Trash rather than removed, so it can still be put back; the transcript stays. Already gone (another
+    /// device trimmed it first) is not an error.
+    public func trashAudio(of recording: Recording) throws {
+        let url = fileURL(recording.file)
+        guard FileManager.default.fileExists(atPath: url.path) else { return }
+        try CoordinatedFile.trash(url)
+    }
+
+    public func audioSize(of recording: Recording) -> Int64 {
+        guard recording.hasAudio else { return 0 }
+        return Int64((try? fileURL(recording.file).resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)
+    }
+
     /// Only after the user confirmed the deletion.
     public func deleteFiles(of recording: Recording) throws {
         try CoordinatedFile.remove(fileURL(recording.file))

@@ -173,4 +173,32 @@ struct RecordingPlayerModelTests {
         #expect(model.shownLines.map(\.index) == [0, 2])
         #expect(model.hasLines)
     }
+
+    /// The sheet's height follows whether there are lines, so they must be known before it opens, not after `load`.
+    @Test func readsTheTranscriptBeforeLoading() throws {
+        let f = try QuizFixture()
+        let heard = Recording(device: f.workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a")
+        try f.course.store.saveTranscript(LectureTranscript(locale: "ko-KR", lines: [.init(start: 0, end: 5, text: "그래프 정의")]), of: heard)
+        #expect(RecordingPlayerModel(workspace: f.workspace, courseId: f.courseId, store: f.course.store, recording: heard).hasLines)
+        let silent = Recording(device: f.workspace.device, at: .now, sessionId: nil, file: "Recordings/b.m4a")
+        #expect(!RecordingPlayerModel(workspace: f.workspace, courseId: f.courseId, store: f.course.store, recording: silent).hasLines)
+    }
+}
+
+@MainActor
+struct RecordingBarModelTests {
+    /// Like the course column's recent sessions: the rough note, else the review note, else the sessions list.
+    @Test func theSessionOpensItsNoteElseTheSessionsList() throws {
+        let workspace = try fixtureWorkspace()
+        let session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now))?.made)
+        let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a")
+        workspace.recorder.stage(recording, course: graphTheory, title: "그래프 이론")
+        let model = RecordingBarModel(workspace: workspace)
+        #expect(model.sessionTarget == SearchTarget(courseId: graphTheory, section: .sessions))
+
+        let review = try #require(workspace.run(SessionNote(course: graphTheory, session: session, kind: .review))?.made)
+        #expect(model.sessionTarget == SearchTarget(courseId: graphTheory, section: .notes, noteId: review))
+        let rough = try #require(workspace.run(SessionNote(course: graphTheory, session: session, kind: .rough))?.made)
+        #expect(model.sessionTarget == SearchTarget(courseId: graphTheory, section: .notes, noteId: rough))
+    }
 }

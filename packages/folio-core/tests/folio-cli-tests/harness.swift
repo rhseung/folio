@@ -39,9 +39,12 @@ struct Harness {
     }
 
     /// `action` may read the prepared copy (to look up ids the setup made).
-    func expectSame(_ args: [String], setup: [[String]] = [], _ action: (GISTStore) throws -> any Action,
-                    sourceLocation: SourceLocation = #_sourceLocation) throws {
+    /// `prepare` writes into both copies what no command can make (a recording's audio and transcript).
+    func expectSame(_ args: [String], setup: [[String]] = [], prepare: (URL) throws -> Void = { _ in },
+                    _ action: (GISTStore) throws -> any Action, sourceLocation: SourceLocation = #_sourceLocation) throws {
         let (a, b) = (try Self.fixtureCopy(), try Self.fixtureCopy())
+        try prepare(a)
+        try prepare(b)
         for line in setup {
             for gist in [a, b] {
                 let r = cli(line, gist: gist)

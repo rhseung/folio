@@ -200,6 +200,24 @@ final class LectureRecorder {
         state = .idle
     }
 
+    #if DEBUG
+    /// For window snapshots (`FOLIO_SNAPSHOT_RECORDING`): the card as it looks mid-lecture, with no microphone or file.
+    func stage(_ recording: Recording, course: UUID, title: String) {
+        courseId = course
+        self.recording = recording
+        self.title = title
+        state = .recording
+        elapsed = 2951
+        level = 0.6
+        bookmarks = [612]
+        lines = [
+            .init(start: 2890, end: 2912, text: "그래서 이 문법은 모호하지 않다는 걸 보이려면 유도 트리가 하나뿐이라는 걸 보여야 하고요"),
+            .init(start: 2912, end: 2934, text: "왼쪽 재귀를 없애는 방법은 지난 시간에 본 것처럼 새 비단말을 하나 도입하는 겁니다"),
+        ]
+        volatile = "이제 이걸 LL(1) 파싱 표로 옮겨 보면"
+    }
+    #endif
+
     private func take(_ result: SpeechTranscriber.Result) {
         let text = String(result.text.characters).trimmingCharacters(in: .whitespacesAndNewlines)
         if result.isFinal {

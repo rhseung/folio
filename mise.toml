@@ -33,7 +33,7 @@ description = "Write the CLI commands of the actions declared with @Action (sour
 run = "swift run -q --package-path packages/folio-core folio-gen"
 
 [tasks.fixture]
-description = "Write a fake GIST folder to run the app or the CLI on: mise run fixture -- <folder> [standard|legacy]"
+description = "Write a fake GIST folder to run the app or the CLI on: mise run fixture -- <folder> [standard|legacy|busyDay|manyExams|quietDay|empty]"
 run = "swift run -q --package-path packages/folio-core folio-fixture"
 
 [tasks.cli]

@@ -22,6 +22,53 @@ final class SemesterModel {
 
     var semester: Semester? { workspace.transcript.semesters.first { $0.id == semesterID } }
 
+    // MARK: Recording audio
+
+    /// A finished semester's recordings whose audio can go (`RecordingRetention`), by course.
+    struct AudioNotice {
+        struct Item: Identifiable {
+            let course: LoadedCourse
+            let count: Int
+            let bytes: Int64
+            var id: UUID { course.id }
+        }
+        let items: [Item]
+        /// Recordings with no transcript, whose audio stays.
+        let kept: Int
+        var count: Int { items.map(\.count).reduce(0, +) }
+        var bytes: Int64 { items.map(\.bytes).reduce(0, +) }
+    }
+
+    /// Read once when the page opens, not on every draw: it opens each recording's transcript.
+    private(set) var audio: AudioNotice?
+
+    func refreshAudio() async {
+        // The calendar date, as `RecordingTrim` uses, not the study day: past midnight but before the day boundary the
+        // card would otherwise stay hidden while the action already allows the trim.
+        guard let s = semester, s.isOver(on: LocalDate(workspace.now, in: workspace.calendar), among: workspace.transcript.semesters) else { audio = nil; return }
+        let courses = courses(in: s)
+        let shelf = courses.map { ($0.store, $0.file.recordings.filter(\.hasAudio)) }
+        // Off the main actor: telling whether a recording has lines decodes its whole transcript, and a semester holds
+        // dozens of 75-minute ones, which froze the page as it opened.
+        let tallies = await Task.detached {
+            shelf.map { store, withAudio in
+                let trimmable = RecordingRetention.trimmable(withAudio) { store.transcript(of: $0)?.lines.isEmpty == false }
+                return (count: trimmable.count, kept: withAudio.count - trimmable.count, bytes: trimmable.map { store.audioSize(of: $0) }.reduce(0, +))
+            }
+        }.value
+        let items = zip(courses, tallies).filter { $1.count > 0 }.map { AudioNotice.Item(course: $0, count: $1.count, bytes: $1.bytes) }
+        audio = items.isEmpty ? nil : AudioNotice(items: items, kept: tallies.map(\.kept).reduce(0, +))
+    }
+
+    var trimAudio: RecordingTrim { RecordingTrim(semester: semesterID) }
+
+    func trimConfirmation() -> String { workspace.confirmation(trimAudio) ?? "" }
+
+    func trim() async {
+        workspace.run(trimAudio)
+        await refreshAudio()
+    }
+
     func courses(in semester: Semester) -> [LoadedCourse] { workspace.courses(in: semester) }
 
     /// Courses of a semester that live only in transcript.json (no folder).

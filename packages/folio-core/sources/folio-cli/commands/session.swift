@@ -80,3 +80,7 @@ struct SessionCommand: ParsableCommand {
 struct AttendanceCommand: ParsableCommand {
     static let configuration = CommandConfiguration(commandName: "attendance", abstract: String(localized: .attendanceAbstract), subcommands: GeneratedCommands.attendance)
 }
+
+struct RecordingCommand: ParsableCommand {
+    static let configuration = CommandConfiguration(commandName: "recording", abstract: String(localized: .recordingAbstract), subcommands: GeneratedCommands.recording)
+}

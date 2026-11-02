@@ -9538,6 +9538,17 @@
         }
       }
     },
+    "recording.audio-trashed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기가 끝나 오디오는 휴지통으로 옮겼고 받아쓰기만 남았습니다"
+          }
+        }
+      }
+    },
     "recording.back-15": {
       "extractionState": "manual",
       "localizations": {
@@ -9688,6 +9699,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 언어는 받아쓰기를 쓸 수 없어 소리만 녹음합니다"
+          }
+        }
+      }
+    },
+    "recording.open-course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목 열기"
+          }
+        }
+      }
+    },
+    "recording.open-session": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 회차의 노트 열기"
+          }
+        }
+      }
+    },
+    "recording.open-sessions": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 과목의 회차 목록 열기"
           }
         }
       }
@@ -11855,6 +11899,83 @@
           "stringUnit": {
             "state": "translated",
             "value": "학사 자료"
+          }
+        }
+      }
+    },
+    "semester.audio.confirm-message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "휴지통에서 되살릴 수 있습니다."
+          }
+        }
+      }
+    },
+    "semester.audio.detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기가 끝났으니 오디오를 휴지통으로 옮겨 공간을 비울 수 있습니다. 받아쓰기와 표시한 지점은 남습니다."
+          }
+        }
+      }
+    },
+    "semester.audio.detail-kept": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기가 끝났으니 오디오를 휴지통으로 옮겨 공간을 비울 수 있습니다. 받아쓰기와 표시한 지점은 남고, 받아쓰기가 없는 녹음 %lld개는 오디오를 그대로 둡니다."
+          }
+        }
+      }
+    },
+    "semester.audio.row": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld개 · %2$@"
+          }
+        }
+      }
+    },
+    "semester.audio.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 오디오 %1$lld개 · %2$@"
+          }
+        }
+      }
+    },
+    "semester.audio.trim": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오디오 지우기"
+          }
+        }
+      }
+    },
+    "semester.audio.trim-ellipsis": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오디오 지우기…"
           }
         }
       }

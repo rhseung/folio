@@ -15,6 +15,10 @@ public struct Recording: Entity {
     public var duration: TimeInterval
     /// Seconds into the audio marked while recording.
     public var bookmarks: [TimeInterval]
+    /// When the audio went to the Trash to save space, its transcript and bookmarks kept. Nil while the audio is there.
+    public var audioTrashedAt: Date?
+
+    public var hasAudio: Bool { audioTrashedAt == nil }
 
     public init(id: UUID = UUID(), device: DeviceID, at now: Date, sessionId: UUID?, file: String, duration: TimeInterval = 0, bookmarks: [TimeInterval] = []) {
         self.id = id

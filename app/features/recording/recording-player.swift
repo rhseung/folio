@@ -27,9 +27,16 @@ struct RecordingPlayer: View {
                         .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                 }
                 Spacer()
-                TextField(String(localized: .recordingSearch), text: $model.query).pill(width: 180)
+                if model.hasLines {
+                    TextField(String(localized: .recordingSearch), text: $model.query).pill(width: 180)
+                }
             }
-            transport
+            if recording.hasAudio {
+                transport
+            } else {
+                Label(.recordingAudioTrashed, systemImage: "waveform.slash")
+                    .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+            }
             Card {
                 if model.hasLines {
                     ScrollViewReader { proxy in
@@ -69,7 +76,8 @@ struct RecordingPlayer: View {
             }
         }
         .padding(Theme.Space.xl)
-        .frame(width: 640, height: 680)
+        // Tall only with lines to scroll: a recording without a transcript sat in the middle of an empty sheet.
+        .frame(width: 640, height: model.hasLines ? 680 : nil)
         .background(Theme.Palette.page)
         .font(Theme.Typeface.body)
         .task { model.load() }
@@ -137,6 +145,8 @@ struct RecordingPlayer: View {
             .contentShape(.rect)
         }
         .buttonStyle(.pointing(.plain))
+        // With the audio gone there is nothing to seek to; the line is only read.
+        .allowsHitTesting(recording.hasAudio)
         .animation(.snappy(duration: 0.25), value: playing)
     }
 
