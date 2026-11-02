@@ -11,6 +11,7 @@ final class EditRecordModel {
     var title: String
     var credits: Double?
     var mode: GradingMode
+    var icon: String?
     var schedule: [ClassTime]
 
     init(workspace: Workspace, course: Course) {
@@ -19,6 +20,7 @@ final class EditRecordModel {
         title = course.title
         credits = course.credits
         mode = course.gradingMode
+        icon = course.icon
         schedule = course.schedule
     }
 
@@ -35,6 +37,6 @@ final class EditRecordModel {
         if title != course.title {
             guard workspace.run(TranscriptSet(course: course.id, title: .set(title))) != nil else { return false }
         }
-        return workspace.run(CourseSet(course: course.id, [.credits(credits), .gradingMode(mode), .schedule(schedule)])) != nil
+        return workspace.run(CourseSet(course: course.id, [.credits(credits), .gradingMode(mode), .icon(icon), .schedule(schedule)])) != nil
     }
 }

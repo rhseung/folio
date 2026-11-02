@@ -134,7 +134,7 @@ private struct Builder {
         }
         // A colloquium keeps only a grade record but still meets every week.
         let colloquium = try run(TranscriptAdd(semester: fall, title: "콜로퀴움", credits: 0, mode: .passFail), at: setup)
-        try run(CourseSet(course: colloquium, fields: [.schedule(slots([4], 960, 1050, "Lecture Hall"))]), at: setup)
+        try run(CourseSet(course: colloquium, fields: [.schedule(slots([3], 1050, 1110, "Lecture Hall"))]), at: setup)
 
         let staffed: [(UUID, [UUID], FolioDomain.Category)] = [
             (graph, [people[0].id, people[3].id], major), (robotics, [people[1].id], major), (os, [people[2].id], major),

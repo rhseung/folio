@@ -440,7 +440,7 @@ struct NowClassCard: View {
             HStack(alignment: .center, spacing: Theme.Space.l) {
                 VStack(alignment: .leading, spacing: Theme.Space.xs) {
                     Text(item.room.isEmpty ? .todayNowClass : .todayNowClassRoom(item.room)).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink)
-                    Text("\(model.title(item.courseId)) · \(item.name)").font(Theme.Typeface.figureCompact).lineLimit(1)
+                    Text(model.classTitle(item.courseId, item.name)).font(Theme.Typeface.figureCompact).lineLimit(1)
                     HStack(spacing: Theme.Space.tight) {
                         Text("\(model.time(item.start)) – \(model.time(item.end))").foregroundStyle(Theme.Palette.textSecondary)
                         Text("·").foregroundStyle(Theme.Palette.textTertiary)

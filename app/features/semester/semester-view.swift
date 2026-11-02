@@ -40,7 +40,7 @@ struct SemesterView: View {
                         ForEach(Array(records.enumerated()), id: \.element.id) { i, course in
                             CardRow(last: i == records.count - 1) {
                                 Button { editingRecord = course } label: {
-                                    courseLabel(mark: CourseMark(icon: "doc.text", color: Theme.Palette.textTertiary, font: Theme.Glyph.lineTitle, duotone: true),
+                                    courseLabel(mark: CourseMark(icon: course.icon, color: model.workspace.accent(course.id).color, font: Theme.Glyph.lineTitle, duotone: true),
                                                 title: course.title, detail: model.detail(course))
                                 }
                                 .buttonStyle(.pointing(.plain))
@@ -312,8 +312,11 @@ struct EditRecordSheet: View {
                 Card {
                     FormRow(label: String(localized: .courseEditName)) { InlineField(String(localized: .courseEditNameExample), text: $model.title) }
                     FormRow(label: String(localized: .courseEditCredits)) { CreditsField(credits: $model.credits) }
-                    FormRow(label: String(localized: .courseEditGrading), last: true) {
+                    FormRow(label: String(localized: .courseEditGrading)) {
                         ChoiceMenu(selection: $model.mode, options: [GradingMode.relative, .absolute, .passFail].map { ($0, $0.label) })
+                    }
+                    FormRow(label: String(localized: .courseEditIcon), last: true) {
+                        CourseIconPicker(icon: $model.icon, color: model.workspace.accent(model.course.id).color)
                     }
                 }
             }
