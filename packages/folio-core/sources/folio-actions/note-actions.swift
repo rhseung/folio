@@ -4,40 +4,76 @@ import FolioStorage
 import Foundation
 
 func note(_ ctx: ActionContext, course: UUID, path: String) throws -> NoteFile {
-    guard let note = try ctx.store(course).note(at: path) else {
+    guard let note = try ctx.store(course).note(at: path, in: ctx.file(course)) else {
         throw ActionError.notFound(String(localized: .errorNotFoundNote("\(path)")))
     }
     return note
 }
 
 func note(_ ctx: ActionContext, course: UUID, id: UUID) throws -> NoteFile {
-    guard let note = try ctx.store(course).note(id: id) else { throw ActionError.notFound(String(localized: .errorNotFoundNote("\(id)"))) }
+    guard let note = try ctx.store(course).note(id: id, in: ctx.file(course)) else { throw ActionError.notFound(String(localized: .errorNotFoundNote("\(id)"))) }
     return note
 }
 
-/// A note in `Notes/` with `body`, or the template for its kind. The command reads the body from a file or standard
-/// input, so it is written by hand.
-@Action("note add", "Notes 폴더에 노트 만들기. 본문을 주지 않으면 종류의 템플릿", effect: .creates, done: "노트 '{title}'을(를) 만들었습니다",
+/// A note in `Notes/` with `body`, or the template for its kind and format. The command reads the body from a file or
+/// standard input, so it is written by hand.
+@Action("note add", "Notes 폴더에 마크다운이나 LaTeX 노트 만들기. 본문을 주지 않으면 종류의 템플릿", effect: .creates, done: "노트 '{title}'을(를) 만들었습니다",
         phrases: ["노트 만들기", "새 노트", "정리 노트 쓰기"], cli: .manual)
 public struct NoteAdd {
     @New var id: Note.ID
     @Arg var course: Course.ID
     @Arg var title: String
     var kind: NoteKind = .free
+    var format: NoteFormat = .markdown
     var body: String?
+    var session: Session.ID?
+    var exam: Exam.ID?
+    var units: [FolioDomain.Unit.ID] = []
 
     public func run(_ ctx: ActionContext) throws {
         let title = title.trimmingCharacters(in: .whitespaces)
         guard !title.isEmpty else { throw ActionError.rule(String(localized: .errorNoteTitleEmpty)) }
         let settings = try ctx.settings()
-        let body = body ?? NoteTemplate.body(for: kind, title: title, sections: settings.noteSections(for: kind))
-        ctx.made(try ctx.createNote(course, title: title, meta: NoteMeta(id: id, kind: kind, math: settings.newNoteMath), body: body) ?? id)
+        var meta = NoteMeta(id: id, kind: kind, math: settings.newNoteMath)
+        try NoteLinks(kind: kind, session: session, exam: exam, units: units).apply(to: &meta, in: try ctx.file(course))
+        let body = body ?? NoteTemplate.body(for: kind, title: title, sections: settings.noteSections(for: kind), format: format)
+        let made = try ctx.createNote(course, title: title, meta: meta, format: format, body: body)
+        if let session = meta.sessionId {
+            try ctx.edit(course) { f in
+                f.linkNote(made, to: session, as: kind)
+                // As `session note` does: making a review note is not writing it.
+                if kind == .review, let i = f.sessions.firstIndex(where: { $0.id == session }) { f.sessions[i].reviewNoteUnfinished = true }
+            }
+        }
+        ctx.made(made)
     }
 }
 
-/// Writes the whole file, frontmatter included. With `expected`, refuses when the file is no longer that text: it was
-/// changed elsewhere since it was read. The command reads the text from a file and checks `--expect` against a hash.
-@Action("note write", "노트 파일 전체를 바꾸기. frontmatter까지 그대로 쓴다", done: "노트 '{note}'을(를) 썼습니다",
+/// What a note of each kind points at; the others are dropped, so a note has one kind's links at a time.
+struct NoteLinks {
+    var kind: NoteKind
+    var session: Session.ID?
+    var exam: Exam.ID?
+    var units: [FolioDomain.Unit.ID]
+
+    /// Checked here as well as by the model, for an error that names what is missing.
+    func apply(to meta: inout NoteMeta, in course: CourseFile, keepUnits: Bool = false) throws {
+        if kind == .rough || kind == .review, let session {
+            guard let s = course.sessions.first(where: { $0.id == session }) else { throw ActionError.notFound(String(localized: .errorNotFoundSession)) }
+            if s.isCancelled { throw ActionError.rule(String(localized: .errorNoteCancelledSession)) }
+        }
+        if kind == .examSummary, let exam, !course.exams.contains(where: { $0.id == exam }) { throw ActionError.notFound(String(localized: .errorNotFoundExam)) }
+        if kind == .topic, let u = units.first(where: { u in !course.units.contains { $0.id == u } }) { throw ActionError.notFound(String(localized: .errorNotFoundUnitId("\(u)"))) }
+        meta.kind = kind
+        meta.sessionId = kind == .rough || kind == .review ? session : nil
+        meta.examId = kind == .examSummary ? exam : nil
+        meta.unitIds = kind == .topic ? units : keepUnits ? meta.unitIds : []
+    }
+}
+
+/// Writes the whole file as given. With `expected`, refuses when the file is no longer that text: it was changed
+/// elsewhere since it was read. The command reads the text from a file and checks `--expect` against a hash.
+@Action("note write", "노트 파일 전체를 바꾸기. 노트의 프로퍼티는 course.json에 있어 그대로다", done: "노트 '{note}'을(를) 썼습니다",
         phrases: ["노트 수정", "노트 내용 바꾸기"], cli: .manual)
 public struct NoteWrite {
     @Arg var course: Course.ID
@@ -53,7 +89,8 @@ public struct NoteWrite {
     }
 }
 
-/// Gives a note made outside Folio an id in its frontmatter, so sessions and searches can point at it.
+/// Gives a note made outside Folio an entry in course.json, so sessions and searches can point at it. The file is
+/// left as it is.
 @Action("note adopt", "Folio 밖에서 만든 노트에 ID 붙이기", done: "노트 '{note}'에 ID를 붙였습니다",
         examples: ["folio note adopt EC4207/Notes/외부.md"], phrases: ["밖에서 만든 노트 등록"])
 public struct NoteAdopt {
@@ -69,13 +106,15 @@ public struct NoteAdopt {
             return
         }
         let store = try ctx.store(course)
-        ctx.made(try ctx.io(Change(.changed, ctx.relative(file.url))) { try store.ensureID(file) } ?? UUID())
+        let id = UUID()
+        try ctx.edit(course) { $0.notes.append(NoteEntry(id: id, device: ctx.device, at: ctx.now, path: store.notePath(of: file.url), meta: NoteMeta(id: id))) }
+        ctx.made(id)
     }
 }
 
 /// One kind at a time: becoming another kind lets go of the session or exam the old one belonged to. Writes the
-/// frontmatter and the session's note link together. The command takes each unit as `--unit`, so it is written by hand.
-@Action("note link", "노트의 종류와 회차, 시험, 단원 연결 정하기", done: "노트 '{note}'을(를) 연결했습니다",
+/// note's entry and the session's note link together. The command takes each unit as `--unit`, so it is written by hand.
+@Action("note link", "노트의 종류와 회차, 시험, 단원 연결, 수식 문법 정하기", done: "노트 '{note}'을(를) 연결했습니다",
         phrases: ["노트 연결", "노트 종류"], cli: .manual)
 public struct NoteLink {
     @Arg var course: Course.ID
@@ -84,25 +123,55 @@ public struct NoteLink {
     var session: Session.ID?
     var exam: Exam.ID?
     var units: [FolioDomain.Unit.ID] = []
+    /// 수식 문법. 빼면 그대로
+    var math: MathSyntax?
 
     public func run(_ ctx: ActionContext) throws {
-        let store = try ctx.store(course)
-        let course = try ctx.file(self.course)
-        // The note's frontmatter isn't part of the course file, so the model can't check where it points.
-        if kind == .rough || kind == .review, let session {
-            guard let s = course.sessions.first(where: { $0.id == session }) else { throw ActionError.notFound(String(localized: .errorNotFoundSession)) }
-            if s.isCancelled { throw ActionError.rule(String(localized: .errorNoteCancelledSession)) }
+        var meta = try FolioActions.note(ctx, course: self.course, id: note).meta
+        // Units a note had stay when it becomes another kind: they are what it is about, not a place it belongs.
+        try NoteLinks(kind: kind, session: session, exam: exam, units: units).apply(to: &meta, in: try ctx.file(self.course), keepUnits: true)
+        meta.math = math ?? meta.math
+        try ctx.edit(self.course) { f in
+            guard let i = f.notes.firstIndex(where: { $0.id == note }) else { return }
+            f.notes[i].apply(meta)
+            f.notes[i].touch(by: ctx.device, at: ctx.now)
+            f.linkNote(note, to: meta.sessionId, as: kind)
         }
-        if kind == .examSummary, let exam, !course.exams.contains(where: { $0.id == exam }) { throw ActionError.notFound(String(localized: .errorNotFoundExam)) }
-        if kind == .topic, let u = units.first(where: { u in !course.units.contains { $0.id == u } }) { throw ActionError.notFound(String(localized: .errorNotFoundUnitId("\(u)"))) }
-        var file = try FolioActions.note(ctx, course: self.course, id: note)
-        file.meta.kind = kind
-        file.meta.sessionId = kind == .rough || kind == .review ? session : nil
-        file.meta.examId = kind == .examSummary ? exam : nil
-        file.meta.unitIds = kind == .topic ? units : file.meta.unitIds
-        let text = try store.read(file)
-        try ctx.io(Change(.changed, ctx.relative(file.url))) { try store.save(file, text: text) }
-        try ctx.edit(self.course) { $0.linkNote(note, to: file.meta.sessionId, as: kind) }
+    }
+}
+
+/// Moves Folio's properties out of the notes' frontmatter into course.json, once, for notes from before #206. The
+/// entries are saved before any file is touched, and a note that already has one is only cleaned, so a run that stops
+/// halfway is finished by running it again. A link to a session, unit or exam that is gone is dropped: the model would
+/// refuse the whole file for it. The course may be left out, which generated commands can't take, so the command is
+/// written by hand.
+@Action("note migrate", "노트 frontmatter의 프로퍼티를 course.json으로 옮기고 파일에서 지우기. 예전 노트를 한 번 정리한다",
+        done: "노트 프로퍼티를 course.json으로 옮겼습니다", phrases: ["노트 프로퍼티 옮기기", "frontmatter 정리"], cli: .manual)
+public struct NoteMigrate {
+    /// 과목. 빼면 모든 과목
+    @Arg var course: Course.ID?
+
+    public func run(_ ctx: ActionContext) throws {
+        let courses = try course.map { [$0] } ?? ctx.gist.courseStores().map { try $0.load().model.course.id }
+        for course in courses {
+            let store = try ctx.store(course)
+            let notes = try store.frontmatterNotes()
+            guard !notes.isEmpty else { continue }
+            try ctx.edit(course) { f in
+                for n in notes where !f.notes.contains(where: { $0.path == store.notePath(of: n.url) }) {
+                    var meta = n.meta
+                    meta.sessionId = meta.sessionId.flatMap { id in f.sessions.contains { $0.id == id } ? id : nil }
+                    meta.examId = meta.examId.flatMap { id in f.exams.contains { $0.id == id } ? id : nil }
+                    meta.unitIds = meta.unitIds.filter { id in f.units.contains { $0.id == id } }
+                    // A note copied in Finder carries the original's id; the copy gets its own.
+                    let id = meta.id.flatMap { id in f.notes.contains { $0.id == id } ? nil : id } ?? UUID()
+                    f.notes.append(NoteEntry(id: id, device: ctx.device, at: ctx.now, path: store.notePath(of: n.url), meta: meta))
+                }
+            }
+            for n in notes {
+                try ctx.io(Change(.changed, ctx.relative(n.url))) { try store.write(NoteFile(url: n.url, meta: NoteMeta(id: nil)), text: n.text) }
+            }
+        }
     }
 }
 
@@ -119,7 +188,12 @@ public struct NoteRemove {
 
     public func run(_ ctx: ActionContext) throws {
         let file = try FolioActions.note(ctx, course: course, path: note)
-        if let id = file.meta.id { try ctx.edit(course) { $0.forgetNote(id) } }
+        if let id = file.meta.id {
+            try ctx.edit(course) { f in
+                f.forgetNote(id)
+                f.notes.removeAll { $0.id == id }
+            }
+        }
         let store = try ctx.store(course)
         try ctx.io(Change(.removed, ctx.relative(file.url))) { try store.trashNote(file) }
     }

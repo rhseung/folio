@@ -309,6 +309,17 @@
         }
       }
     },
+    "model.noun.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트"
+          }
+        }
+      }
+    },
     "model.noun.person": {
       "extractionState": "manual",
       "localizations": {
@@ -800,6 +811,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "평어가 비었습니다"
+          }
+        }
+      }
+    },
+    "rule.note.path": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 파일에 노트 항목은 하나만 있어야 합니다"
           }
         }
       }

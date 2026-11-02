@@ -97,3 +97,34 @@ public struct MaterialBuild {
         #endif
     }
 }
+
+/// A note's PDF goes to `Notes/Exports/<title>.pdf`, where exported notes go, not beside it: Notes/ holds only notes.
+/// No examples, for the same reason as `material build`.
+@Action("note build", "LaTeX 노트(.tex)를 Tectonic으로 PDF로 만들어 Notes/Exports에 둔다", done: "노트 '{note}'을(를) PDF로 만들었습니다",
+        phrases: ["tex 노트 컴파일", "노트 PDF 만들기"])
+public struct NoteBuild {
+    /// 과목
+    @Arg var course: Course.ID
+    /// .tex 노트
+    @Arg var note: Note.Path
+    // A PDF the app already built off the main thread, as for `material build`.
+    @Hidden var pdf: String?
+
+    public func run(_ ctx: ActionContext) throws {
+        let store = try ctx.store(course)
+        let file = try FolioActions.note(ctx, course: course, path: note)
+        guard file.format == .tex else { throw ActionError.rule(String(localized: .errorMaterialNotTex(note))) }
+        let target = store.exportPath(of: file)
+        let exists = FileManager.default.fileExists(atPath: store.fileURL(target).path)
+        let change = Change(exists ? .changed : .added, try ctx.relative(course, target))
+        guard !ctx.dryRun else {
+            ctx.record(change)
+            return
+        }
+        let built = try pdf.map { URL(filePath: $0) } ?? MaterialBuild.compile(file.url)
+        try ctx.io(change) {
+            try FileManager.default.createDirectory(at: store.fileURL(target).deletingLastPathComponent(), withIntermediateDirectories: true)
+            try store.replaceFile(target, with: built)
+        }
+    }
+}

@@ -192,7 +192,7 @@ public struct ExamSummary {
     public func run(_ ctx: ActionContext) throws {
         let file = try ctx.file(course)
         let exam = file.exams[try index(exam, in: file.exams, .valueExam)]
-        if let existing = try ctx.store(course).notes().first(where: { $0.meta.kind == .examSummary && $0.meta.examId == exam.id })?.meta.id {
+        if let existing = try ctx.notes(course).first(where: { $0.meta.kind == .examSummary && $0.meta.examId == exam.id })?.meta.id {
             ctx.made(existing)
             return
         }
@@ -200,7 +200,7 @@ public struct ExamSummary {
         let title = "\(exam.title) 종합 정리"
         let body = NoteTemplate.body(for: .examSummary, title: title, sections: settings.noteSections(for: .examSummary))
         let meta = NoteMeta(id: note, kind: .examSummary, unitIds: exam.scopeUnitIds, examId: exam.id, math: settings.newNoteMath)
-        ctx.made(try ctx.createNote(course, title: title, meta: meta, body: body) ?? note)
+        ctx.made(try ctx.createNote(course, title: title, meta: meta, body: body))
     }
 }
 

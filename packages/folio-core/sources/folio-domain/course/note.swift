@@ -33,6 +33,68 @@ public struct NoteMeta: Equatable, Sendable {
     }
 }
 
+public enum NoteFormat: String, Codable, Sendable, CaseIterable {
+    case markdown, tex
+
+    public var fileExtension: String {
+        switch self {
+        case .markdown: "md"
+        case .tex: "tex"
+        }
+    }
+
+    public init?(path: String) {
+        guard let format = Self.allCases.first(where: { $0.fileExtension == (path as NSString).pathExtension.lowercased() }) else { return nil }
+        self = format
+    }
+}
+
+/// A note's properties, kept in course.json beside its path instead of in the file. A `.tex` file has no place for
+/// them that TeX and other editors leave alone, and keeping them out of both formats lets the two work the same way.
+public struct NoteEntry: Entity {
+    public var id: UUID
+    public var createdAt: Date
+    public var updatedAt: Date
+    public var updatedBy: DeviceID
+
+    /// Relative to the course folder, `/`-separated, like a material's.
+    public var path: String
+    public var kind: NoteKind
+    public var sessionId: UUID?
+    public var unitIds: [UUID]
+    public var examId: UUID?
+    public var tags: [String]
+    public var math: MathSyntax
+
+    public init(id: UUID, device: DeviceID, at date: Date, path: String, meta: NoteMeta) {
+        self.id = id
+        createdAt = date
+        updatedAt = date
+        updatedBy = device
+        self.path = path
+        kind = meta.kind
+        sessionId = meta.sessionId
+        unitIds = meta.unitIds
+        examId = meta.examId
+        tags = meta.tags
+        math = meta.math
+    }
+
+    public var meta: NoteMeta {
+        NoteMeta(id: id, kind: kind, sessionId: sessionId, unitIds: unitIds, examId: examId, tags: tags, math: math)
+    }
+
+    /// Everything but the id, which an entry keeps for life.
+    public mutating func apply(_ meta: NoteMeta) {
+        kind = meta.kind
+        sessionId = meta.sessionId
+        unitIds = meta.unitIds
+        examId = meta.examId
+        tags = meta.tags
+        math = meta.math
+    }
+}
+
 /// Note bodies. Settings may override the section headings; these are the defaults.
 public enum NoteTemplate {
     public static func defaultSections(for kind: NoteKind) -> [String] {
@@ -44,8 +106,31 @@ public enum NoteTemplate {
         }
     }
 
-    public static func body(for kind: NoteKind, title: String, sections: [String]? = nil) -> String {
-        (["# \(title)"] + (sections ?? defaultSections(for: kind)).map { "\n## \($0)\n" }).joined(separator: "\n") + "\n"
+    public static func body(for kind: NoteKind, title: String, sections: [String]? = nil, format: NoteFormat = .markdown) -> String {
+        let sections = sections ?? defaultSections(for: kind)
+        switch format {
+        case .markdown:
+            return (["# \(title)"] + sections.map { "\n## \($0)\n" }).joined(separator: "\n") + "\n"
+        case .tex:
+            // kotex because notes are Korean; the AMS packages because most notes are math.
+            let preamble = ["\\documentclass[11pt]{article}", "\\usepackage{kotex}", "\\usepackage{amsmath, amssymb, amsthm}", "", "\\begin{document}", ""]
+            let heading = ["\\section*{\(texEscaped(title))}", ""]
+            let parts = sections.flatMap { ["\\subsection*{\(texEscaped($0))}", "", ""] }
+            return (preamble + heading + parts + ["\\end{document}"]).joined(separator: "\n") + "\n"
+        }
+    }
+
+    /// A title is plain text, so TeX's special characters in it are written as themselves.
+    static func texEscaped(_ text: String) -> String {
+        text.map { c -> String in
+            switch c {
+            case "\\": "\\textbackslash{}"
+            case "~": "\\textasciitilde{}"
+            case "^": "\\textasciicircum{}"
+            case "#", "$", "%", "&", "_", "{", "}": "\\\(c)"
+            default: String(c)
+            }
+        }.joined()
     }
 }
 
