@@ -9692,6 +9692,28 @@
         }
       }
     },
+    "recording.open-course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목 열기"
+          }
+        }
+      }
+    },
+    "recording.open-session": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 회차의 노트 열기"
+          }
+        }
+      }
+    },
     "recording.pause": {
       "extractionState": "manual",
       "localizations": {

@@ -13,7 +13,19 @@ final class RecordingBarModel {
     var recording: Bool { recorder.state == .recording }
     var preparing: Bool { recorder.state == .preparing }
     var recentLines: [LectureTranscript.Line] { Array(recorder.lines.suffix(40)) }
-    var title: String { preparing ? String(localized: .recordingPreparing) : recorder.title }
+    var course: LoadedCourse? { recorder.courseId.flatMap { workspace.course($0) } }
+    var accent: CourseAccent { recorder.courseId.map { workspace.accent($0) } ?? CourseAccent.gray }
+    var courseTitle: String { preparing ? String(localized: .recordingPreparing) : course?.title ?? recorder.title }
+    /// Like a recent session in the course column: its rough note, else its review note, else the sessions list.
+    var sessionTarget: SearchTarget? {
+        guard let course, let id = recorder.recording?.sessionId, let session = course.file.sessions.first(where: { $0.id == id }) else { return nil }
+        if let note = session.roughNoteId ?? session.reviewNoteId { return SearchTarget(courseId: course.id, section: .notes, noteId: note) }
+        return SearchTarget(courseId: course.id, section: .sessions)
+    }
+    var sessionName: String? {
+        guard let course, let id = recorder.recording?.sessionId, let session = course.file.sessions.first(where: { $0.id == id }) else { return nil }
+        return course.file.name(of: session)
+    }
     var line: String {
         recorder.volatile.isEmpty ? (recorder.lines.last?.text ?? recorder.transcriptionNote ?? String(localized: .recordingListening)) : recorder.volatile
     }

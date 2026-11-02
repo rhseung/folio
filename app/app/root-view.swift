@@ -82,13 +82,6 @@ struct RootView: View {
                         }
                     }
                 }
-                .overlay(alignment: .bottom) {
-                    if workspace.recorder.isActive {
-                        RecordingBar(workspace: workspace)
-                            .padding(.bottom, Theme.Space.xl)
-                            .transition(.move(edge: .bottom).combined(with: .opacity))
-                    }
-                }
                 .animation(.snappy(duration: 0.3), value: workspace.recorder.isActive)
                 #if os(macOS)
                 // Closing the file on quit keeps the audio playable; the transcript so far is already on disk.
@@ -185,6 +178,14 @@ struct RootView: View {
         }
         .overflowFade(.vertical)
         .focusable(false)
+        if workspace.recorder.isActive {
+            RecordingBar(workspace: workspace) { destination, target in
+                selection = destination
+                if let target { searchTarget = target }
+            }
+                .padding([.horizontal, .bottom], Theme.Space.m)
+                .transition(.move(edge: .bottom).combined(with: .opacity))
+        }
         }
         .listStyle(.sidebar)
         .labelStyle(SidebarLabelStyle())
@@ -336,7 +337,29 @@ struct RootView: View {
     /// less the Claude button that moved to the page.
     static let trailingTools: CGFloat = 288
 
-    var recordButton: some View {
+    @ViewBuilder var recordButton: some View {
+        #if os(macOS)
+        // The recording's card lives in the sidebar; folded away, the time stands in for it here and opens it.
+        if workspace.recorder.isActive && !sidebarOpen {
+            Button { sidebarOpen = true } label: {
+                Label {
+                    Text(RecordingTime.label(workspace.recorder.elapsed)).monospacedDigit()
+                } icon: {
+                    Image(systemName: "record.circle").foregroundStyle(Theme.Palette.danger)
+                }
+                .labelStyle(.titleAndIcon)
+                .padding(.horizontal, Theme.Space.s)
+            }
+            .help(Text(.rootRecording))
+        } else {
+            recordMenu
+        }
+        #else
+        recordMenu
+        #endif
+    }
+
+    var recordMenu: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let ongoing = workspace.ongoingClass(at: context.date)
             Menu {
