@@ -172,11 +172,11 @@ public enum SessionPlanner {
 }
 
 extension CourseFile {
-    /// Sessions made ahead of time that nothing has touched yet: in the future, not cancelled, and with no topic,
-    /// note, ink, material, unit, attendance or recording. `notedSessions` are those a note's frontmatter points to.
+    /// Sessions made ahead of time that nothing has touched yet: in the future, not cancelled, and with no topic, end,
+    /// link, note, ink, material, unit, attendance or recording. An end or link is a makeup someone set up on purpose. `notedSessions` are those a note's frontmatter points to.
     public func untouchedFutureSessions(now: Date, notedSessions: Set<UUID>) -> [Session] {
         sessions.filter { s in
-            s.date > now && !s.isCancelled && s.topic.isEmpty && isUnlinked(s, notedSessions: notedSessions)
+            s.date > now && !s.isCancelled && s.topic.isEmpty && s.end == nil && s.link == nil && isUnlinked(s, notedSessions: notedSessions)
         }
     }
 

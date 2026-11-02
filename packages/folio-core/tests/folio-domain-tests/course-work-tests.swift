@@ -94,11 +94,13 @@ struct CourseWorkTests {
         func at(_ s: String) -> Session { Session(device: device, at: .now, week: 9, index: 1, date: date(s)) }
         let past = at("2026-10-19 13:00"), empty = at("2026-11-02 13:00"), noted = at("2026-11-04 13:00"), unitLinked = at("2026-11-09 13:00")
         var topic = at("2026-11-11 13:00"); topic.topic = "행렬식"
+        var online = at("2026-11-12 21:00"); online.link = "https://zoom.us/j/1"
+        var makeup = at("2026-11-13 21:00"); makeup.end = date("2026-11-13 22:15")
         var cancelled = Session(device: device, at: .now, week: 10, index: 1, date: date("2026-11-16 13:00"))
         cancelled.isCancelled = true
         var unit = Unit(device: device, at: .now, title: "고윳값", order: 1)
         unit.sessionIds = [unitLinked.id]
-        let file = CourseFile(course: courses[0], units: [unit], sessions: [past, empty, noted, unitLinked, topic, cancelled])
+        let file = CourseFile(course: courses[0], units: [unit], sessions: [past, empty, noted, unitLinked, topic, online, makeup, cancelled])
         #expect(file.untouchedFutureSessions(now: now, notedSessions: [noted.id]).map(\.id) == [empty.id])
     }
 

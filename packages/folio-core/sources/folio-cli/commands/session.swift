@@ -52,7 +52,12 @@ struct SessionCommand: ParsableCommand {
             say(f.name(of: s).styled(.bold))
             say(String(localized: .sessionShowDate(when(s.date, now: r.ctx.now, time: true))))
             if s.isCancelled { say(String(localized: .sessionShowCancelled)) }
+            if let end = s.end(schedule: f.course.schedule, calendar: .current) {
+                say(String(localized: .sessionShowEnd(end.formatted(date: .omitted, time: .shortened))))
+            }
             if !s.topic.isEmpty { say(String(localized: .sessionShowTopic(s.topic))) }
+            // The slot's link counts too: that's the one the join button opens.
+            if let link = s.link(schedule: f.course.schedule, calendar: .current) { say(String(localized: .sessionShowLink(link.absoluteString))) }
             let units = s.unitIds.compactMap { id in f.units.first { $0.id == id }?.title }
             if !units.isEmpty {
                 say(String(localized: .sessionShowUnits))

@@ -87,10 +87,10 @@ final class SessionFormModel {
         if let edit { workspace.run(edit) } else { workspace.run(add) }
     }
 
-    private var trimmedLink: String { link.trimmingCharacters(in: .whitespacesAndNewlines) }
+    private var storedLink: String? { OnlineLink.stored(link) }
 
     private var add: SessionAdd {
-        SessionAdd(course: courseId, date: start, end: end, topic: topic, link: trimmedLink.isEmpty ? nil : trimmedLink, cancelled: cancelled)
+        SessionAdd(course: courseId, date: start, end: end, topic: topic, link: storedLink, cancelled: cancelled)
     }
 
     /// Only what changed; nil while adding.
@@ -100,7 +100,7 @@ final class SessionFormModel {
                           date: start == session.date ? .keep : .set(start),
                           end: endPatch(session),
                           topic: topic == session.topic ? .keep : .set(topic),
-                          link: trimmedLink == (session.link ?? "") ? .keep : .set(trimmedLink.isEmpty ? nil : trimmedLink))
+                          link: storedLink == session.link ? .keep : .set(storedLink))
     }
 
     /// Saves the end the form shows. Unmoved and unpicked, the end stays as it is. Moved, the form's end goes to the
