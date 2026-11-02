@@ -48,9 +48,19 @@ struct RecordingBar: View {
             HStack(spacing: Theme.Space.m) {
                 LevelMeter(level: model.recording ? recorder.level : 0)
                 Spacer(minLength: 0)
-                Button { recorder.bookmark() } label: { Image(systemName: "bookmark") }
-                    .help(Text(.recordingBookmarkHelp(recorder.bookmarks.count)))
-                    .symbolEffect(.bounce, value: recorder.bookmarks.count)
+                // Filled with a count once marked: an outline that only bounced looked as if the click did nothing.
+                Button { recorder.bookmark() } label: {
+                    HStack(spacing: Theme.Space.xxs) {
+                        Image(systemName: recorder.bookmarks.isEmpty ? "bookmark" : "bookmark.fill")
+                            .symbolEffect(.bounce, value: recorder.bookmarks.count)
+                            .contentTransition(.symbolEffect(.replace))
+                        if !recorder.bookmarks.isEmpty {
+                            Text(recorder.bookmarks.count, format: .number).font(Theme.Typeface.label).monospacedDigit()
+                                .contentTransition(.numericText())
+                        }
+                    }
+                }
+                .help(Text(.recordingBookmarkHelp(recorder.bookmarks.count)))
                 Button { model.toggle() } label: {
                     Image(systemName: model.recording ? "pause.fill" : "record.circle").contentTransition(.symbolEffect(.replace))
                 }

@@ -116,6 +116,7 @@ extension SettingsTab {
         case .backup: String(localized: .settingsTabBackup)
         case .catalog: String(localized: .settingsTabCatalog)
         case .notes: String(localized: .settingsTabNotes)
+        case .recording: String(localized: .settingsTabRecording)
         case .claude: "Claude"
         }
     }

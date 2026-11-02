@@ -420,7 +420,7 @@ struct SessionRow: View {
         let file = course.file
         let recordings = model.recordings(of: session, in: file)
         let recorder = model.workspace.recorder
-        let recordingThis = recorder.isActive && recordings.contains { $0.id == recorder.recording?.id }
+        let recordingThis = recordings.contains { $0.id == recorder.current }
         let cancelled = session.isCancelled
         let today = model.isToday(session.date)
         let late = model.lateMark(session, in: file)

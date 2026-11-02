@@ -34,7 +34,8 @@ extension Workspace {
 
     /// The entry goes first: a file left behind by a failed delete is harmless, an entry pointing at nothing is not.
     func deleteRecording(_ recording: Recording, course id: UUID) {
-        guard let course = course(id), recorder.recording?.id != recording.id, !finishingRecordings.contains(recording.id) else { return }
+        guard let course = course(id), recorder.current != recording.id, !finishingRecordings.contains(recording.id) else { return }
+        transcriptions.cancel(recording.id)
         editRecordings(id) { $0.removeAll { $0.id == recording.id } }
         perform { try course.store.deleteFiles(of: recording) }
     }
@@ -48,7 +49,7 @@ extension Workspace {
 
     /// Recordings left on this device by a quit or a crash. The one being recorded is not among them.
     func recoverRecordings() {
-        for pending in pendingRecordings.all() where pending.recording.id != recorder.recording?.id {
+        for pending in pendingRecordings.all() where pending.recording.id != recorder.current {
             Task { await finishRecording(pending) }
         }
     }
@@ -74,8 +75,34 @@ extension Workspace {
                 if let i = list.firstIndex(where: { $0.id == id }) { list[i] = recording } else { list.append(recording) }
             }
             local.remove(id)
+            // Captions missing (the language model was still downloading, or a crash) are made from the audio now;
+            // Whisper redoes them all, since it hears Korean and English together where the captions take one language.
+            let heard = course.store.transcript(of: recording)?.lines.isEmpty == false
+            if !heard || TranscriptionEngine.preferred == .whisper { transcribe(recording, course: course.id) }
         } catch {
             self.error = String(localized: .recordingErrorInstallFailed(error.localizedDescription))
+        }
+    }
+
+    /// Replaces the transcript with one made from the whole audio. Goes on after the player closes; a recording
+    /// already queued is not queued again.
+    func transcribe(_ recording: Recording, course id: UUID, engine: TranscriptionEngine = .preferred) {
+        guard let course = course(id), recording.hasAudio else { return }
+        let store = course.store
+        // The captions saved the language picked when recording began, even when they heard nothing.
+        let locale = Locale(identifier: store.transcript(of: recording)?.locale ?? "ko-KR")
+        let copy = URL.cachesDirectory.appending(path: "Folio/Transcribing/\(recording.id.uuidString).\((recording.file as NSString).pathExtension)")
+        transcriptions.run(recording.id, failed: { [weak self] error in
+            self?.error = String(localized: .recordingErrorTranscribeFailed(error.localizedDescription))
+        }) { report in
+            // folio:not-an-action a copy in this device's caches, outside the GIST folder
+            defer { try? FileManager.default.removeItem(at: copy) }
+            try store.copyAudio(of: recording, to: copy)
+            let transcript = try await engine.transcribe(copy, locale: locale, report: report)
+            // Deleted meanwhile: saving now would leave a transcript with no recording.
+            try Task.checkCancellation()
+            // folio:not-an-action a transcript is the recording's output, like the captions saved while recording
+            try store.saveTranscript(transcript, of: recording)
         }
     }
 
