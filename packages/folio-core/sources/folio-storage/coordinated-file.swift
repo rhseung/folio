@@ -108,4 +108,5 @@ extension StoredDocument {
 /// Read-only access for the app's web views, which show a note's images by absolute URL.
 public enum LocalFile {
     public static func read(_ url: URL) -> Data? { try? CoordinatedFile.read(url) }
+    public static func exists(_ url: URL) -> Bool { FileManager.default.fileExists(atPath: url.path) }
 }

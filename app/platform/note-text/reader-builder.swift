@@ -73,8 +73,7 @@ struct ReaderBlock {
     var width: CGFloat
     /// Callouts folded or unfolded by a click, against how the note starts them.
     var toggled: Set<Int> = []
-    /// Where widgets run; without it a widget shows as an empty box.
-    var widgets: ReaderWidgets?
+    let widgets: ReaderWidgets
 
     private var out = NSMutableAttributedString()
     private var calloutCount = 0
@@ -82,7 +81,7 @@ struct ReaderBlock {
     /// The block ID taken off the last paragraph.
     private var lastID: String?
 
-    init(accent: CourseAccent, syntax: MathSyntax, baseURL: URL?, dark: Bool, width: CGFloat, toggled: Set<Int> = [], widgets: ReaderWidgets? = nil) {
+    init(accent: CourseAccent, syntax: MathSyntax, baseURL: URL?, dark: Bool, width: CGFloat, toggled: Set<Int> = [], widgets: ReaderWidgets) {
         self.widgets = widgets
         self.accent = accent
         self.syntax = syntax
@@ -104,8 +103,8 @@ struct ReaderBlock {
         out = NSMutableAttributedString()
         calloutCount = 0
         counters = [:]
-        widgets?.begin()
-        defer { widgets?.end() }
+        widgets.begin()
+        defer { widgets.end() }
         var blocks: [ReaderBlock] = []
         let children = Array(note.document.children)
         var previousCallout: String?
@@ -410,7 +409,7 @@ struct ReaderBlock {
         case CBWidget.language:
             let widget = try? JSONDecoder().decode(CBWidget.self, from: Data(text.utf8))
             let size = CGSize(width: width - ctx.indent * 2, height: widget?.height ?? 320)
-            guard let widget, let widgets else {
+            guard let widget else {
                 picture(ReaderPictures.placeholder(size), ctx)
                 return
             }

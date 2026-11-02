@@ -97,13 +97,38 @@ struct NoteWidgetTests {
         #expect(web.superview == nil)
     }
 
-    @Test func aMissingFileSaysSo() async throws {
-        let (view, _, id) = try Self.reader(widget: nil) { Self.block($0) }
-        let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
+    static func text(_ web: WKWebView) async throws -> String? {
         for _ in 0..<100 where try await web.callAsyncJavaScript("return document.readyState", contentWorld: .page) as? String != "complete" {
             try await Task.sleep(for: .milliseconds(50))
         }
-        let text = try await web.callAsyncJavaScript("return document.body.textContent", contentWorld: .page) as? String
-        #expect(text?.contains(id.uuidString) == true)
+        return try await web.callAsyncJavaScript("return document.body.textContent", contentWorld: .page) as? String
+    }
+
+    @Test func aMissingFileSaysSo() async throws {
+        let (view, _, id) = try Self.reader(widget: nil) { Self.block($0) }
+        let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
+        #expect(try await Self.text(web) == String(localized: .notesWidgetMissing(id.uuidString + ".html")))
+    }
+
+    @Test func aNoteOutsideItsCourseNotesSaysSo() async throws {
+        let (view, _, _) = try Self.reader(widget: nil) { Self.block($0) }
+        view.baseURL = FileManager.default.temporaryDirectory
+        view.configure(accent: CourseAccent.presets[0].accent, syntax: .latex, dark: false)
+        NoteRender.layout(view)
+        let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
+        #expect(web.file == nil)
+        #expect(try await Self.text(web) == String(localized: .notesWidgetNoCourse))
+    }
+
+    /// The note takes up-and-down scrolling over a widget unless the widget has more to show.
+    @Test(arguments: [(40, false), (2000, true)])
+    func scrollsOnlyWhenTallerThanItsBlock(height: Int, scrolls: Bool) async throws {
+        let html = "<!doctype html><div style='height:\(height)px'></div><script>const s = 1; window.done = true</script>"
+        let (view, _, _) = try Self.reader(widget: html) { Self.block($0, height: 200) }
+        let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
+        // A widget may name things as the injected scripts do.
+        #expect(try await Self.value(web, "s") as? Int == 1)
+        for _ in 0..<40 where web.scrolls != scrolls { try await Task.sleep(for: .milliseconds(50)) }
+        #expect(web.scrolls == scrolls)
     }
 }

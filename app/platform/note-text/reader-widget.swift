@@ -53,6 +53,14 @@ final class WidgetAttachment: NSTextAttachment, ViewAttachment {
 final class WidgetWebView: WKWebView, AttachedView, WKNavigationDelegate {
     let file: URL?
     private let files: WidgetScheme
+    /// Whether the page is taller than its block. Until it is, up-and-down scrolling goes to the note, as over code.
+    private(set) var scrolls = false {
+        didSet {
+            #if os(iOS)
+            scrollView.isScrollEnabled = scrolls
+            #endif
+        }
+    }
     var accent: CourseAccent {
         didSet {
             guard accent != oldValue else { return }
@@ -69,7 +77,11 @@ final class WidgetWebView: WKWebView, AttachedView, WKNavigationDelegate {
         config.websiteDataStore = .nonPersistent()
         config.preferences.javaScriptCanOpenWindowsAutomatically = false
         config.setURLSchemeHandler(files, forURLScheme: WidgetScheme.scheme)
+        let sizes = SizeReports()
+        // In a world of its own, so the widget's code can neither see nor fake the reports.
+        config.userContentController.add(sizes, contentWorld: Self.world, name: SizeReports.name)
         super.init(frame: .zero, configuration: config)
+        sizes.view = self
         installScripts()
         navigationDelegate = self
         #if os(macOS)
@@ -78,19 +90,46 @@ final class WidgetWebView: WKWebView, AttachedView, WKNavigationDelegate {
         isOpaque = false
         backgroundColor = .clear
         scrollView.backgroundColor = .clear
+        scrollView.alwaysBounceVertical = false
+        scrollView.isScrollEnabled = false
         #endif
         load(URLRequest(url: WidgetScheme.page))
     }
 
     required init?(coder: NSCoder) { nil }
 
+    #if os(macOS)
+    override func scrollWheel(with event: NSEvent) {
+        if !scrolls, abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) { nextResponder?.scrollWheel(with: event) } else { super.scrollWheel(with: event) }
+    }
+    #endif
+
+    private static let world = WKContentWorld.world(name: "folio-widget")
+
+    /// Holds the view weakly: the content controller keeps its handlers, and the view keeps the controller.
+    private final class SizeReports: NSObject, WKScriptMessageHandler {
+        static let name = "size"
+        weak var view: WidgetWebView?
+
+        func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+            if let tall = message.body as? Bool { view?.scrolls = tall }
+        }
+    }
+
+    private static let sizeScript = """
+    { const report = () => webkit.messageHandlers.\(SizeReports.name).postMessage(document.documentElement.scrollHeight > innerHeight + 1)
+      new ResizeObserver(report).observe(document.documentElement); addEventListener('resize', report); report() }
+    """
+
     private func installScripts() {
         let scripts = configuration.userContentController
         scripts.removeAllUserScripts()
         scripts.addUserScript(WKUserScript(source: Self.noPeers, injectionTime: .atDocumentStart, forMainFrameOnly: false))
-        let theme = "const s = document.createElement('style'); s.id = 'folio-theme'; s.textContent = \(Self.quoted(Self.themeCSS(accent)));"
-            + " document.documentElement.prepend(s);"
+        // In a block: a top-level name here would clash with the same name declared by the widget's own script.
+        let theme = "{ const s = document.createElement('style'); s.id = 'folio-theme'; s.textContent = \(Self.quoted(Self.themeCSS(accent)));"
+            + " document.documentElement.prepend(s) }"
         scripts.addUserScript(WKUserScript(source: theme, injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        scripts.addUserScript(WKUserScript(source: Self.sizeScript, injectionTime: .atDocumentEnd, forMainFrameOnly: true, in: Self.world))
     }
 
     /// The note's colors under the names note pages use (`var(--accent)`), and a page that starts out like the note:
@@ -141,7 +180,7 @@ final class WidgetWebView: WKWebView, AttachedView, WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, start task: any WKURLSchemeTask) {
         guard task.request.url == Self.page else { return task.didFailWithError(URLError(.fileDoesNotExist)) }
-        let data = file.flatMap { LocalFile.read($0) } ?? Self.missing(file)
+        let data = file.flatMap { LocalFile.read($0) } ?? Self.notice(file)
         let headers = ["Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": Self.policy]
         task.didReceive(HTTPURLResponse(url: Self.page, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: headers)!)
         task.didReceive(data)
@@ -150,10 +189,14 @@ final class WidgetWebView: WKWebView, AttachedView, WKNavigationDelegate {
 
     func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) {}
 
-    private static func missing(_ file: URL?) -> Data {
-        let name = file?.lastPathComponent ?? ""
-        let text = String(localized: .notesWidgetMissing(name))
+    private static func notice(_ file: URL?) -> Data {
+        let text = switch file {
+        case nil: String(localized: .notesWidgetNoCourse)
+        case let file? where LocalFile.exists(file): String(localized: .notesWidgetUnreadable(file.lastPathComponent))
+        case let file?: String(localized: .notesWidgetMissing(file.lastPathComponent))
+        }
+        let escaped = text
             .replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;")
-        return Data("<!doctype html><p style=\"color:var(--text-3);font-size:12px;padding:12px\">\(text)</p>".utf8)
+        return Data("<!doctype html><p style=\"color:var(--text-3);font-size:12px;padding:12px\">\(escaped)</p>".utf8)
     }
 }
