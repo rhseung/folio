@@ -28,7 +28,7 @@ import UIKit
     var dirty: Int?
     private var timer: Timer?
     let storage: NSTextStorage
-    private let widgets = ReaderWidgets()
+    let widgets = ReaderWidgets()
     /// Called after the text is swapped for a new rendering.
     var rendered: () -> Void = {}
     /// Wraps swapping the text, so the view can keep its place on screen.

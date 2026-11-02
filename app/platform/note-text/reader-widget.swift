@@ -25,7 +25,7 @@ final class WidgetAttachment: NSTextAttachment, ViewAttachment {
 /// Keeps each widget's web view across renderings: the note is rendered anew on every edit, and a new view would
 /// restart the widget and lose what was done in it.
 @MainActor final class ReaderWidgets {
-    private var views: [String: WidgetWebView] = [:]
+    private(set) var views: [String: WidgetWebView] = [:]
     private var used: Set<String> = []
     /// Called when a widget's page changes height, so its block can follow.
     var resized: (WidgetWebView) -> Void = { _ in }

@@ -93,8 +93,16 @@ struct NoteWidgetTests {
         <!doctype html><script>
         window.violations = 0
         document.addEventListener('securitypolicyviolation', () => window.violations++)
-        fetch('https://example.com/').then(() => window.fetched = 'loaded', () => window.fetched = 'blocked')
-          .finally(() => setTimeout(() => window.done = true, 50))
+        const blank = document.createElement('iframe')
+        document.documentElement.append(blank)
+        window.blankPeers = typeof blank.contentWindow.RTCPeerConnection
+        const written = document.createElement('iframe')
+        written.srcdoc = '<p>frame'
+        const loaded = new Promise(done => written.onload = done)
+          .then(() => window.writtenPeers = typeof written.contentWindow.RTCPeerConnection)
+        document.documentElement.append(written)
+        const fetched = fetch('https://example.com/').then(() => window.fetched = 'loaded', () => window.fetched = 'blocked')
+        Promise.allSettled([fetched, loaded]).then(() => setTimeout(() => window.done = true, 50))
         </script>
         """
         let (view, _, _) = try Self.reader(widget: html) { Self.block($0) }
@@ -102,6 +110,9 @@ struct NoteWidgetTests {
         #expect(try await Self.value(web, "window.fetched") as? String == "blocked")
         #expect(try await Self.value(web, "window.violations") as? Int ?? 0 > 0)
         #expect(try await Self.value(web, "typeof RTCPeerConnection") as? String == "undefined")
+        // A frame of the page's own has a window of its own, with its own copy of everything the page lost.
+        #expect(try await Self.value(web, "window.blankPeers") as? String == "undefined")
+        #expect(try await Self.value(web, "window.writtenPeers") as? String == "undefined")
     }
 
     /// A frame sent anywhere but blank is stopped: its address would carry data out.
@@ -196,6 +207,15 @@ struct NoteWidgetTests {
         let again = try #require(Self.widgets(view).first?.view as? WidgetWebView)
         #expect(again !== web)
         #expect(try await Self.text(again) == "two")
+    }
+
+    @Test func aWidgetInATableCellDoesNotRun() throws {
+        let (view, _, _) = try Self.reader(widget: "<p>x") { id in
+            let table = ["rows": [["cells": [["text": "```cb-widget\n{\"id\": \"\(id)\"}\n```"]]]]]
+            let json = String(data: try! JSONSerialization.data(withJSONObject: table), encoding: .utf8)!
+            return "```cb-table\n\(json)\n```"
+        }
+        #expect(view.core.widgets.views.isEmpty)
     }
 
     @Test func aBlockThatDoesNotDecodeShowsItsText() throws {

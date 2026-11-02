@@ -76,6 +76,8 @@ struct ReaderBlock {
     let widgets: ReaderWidgets
 
     private var out = NSMutableAttributedString()
+    /// A table cell has no view of its own to put a widget over, so a widget there would run unseen.
+    private var inCell = false
     private var calloutCount = 0
     private var counters: [String: Int] = [:]
     /// The block ID taken off the last paragraph.
@@ -407,8 +409,8 @@ struct ReaderBlock {
                 return
             }
         case CBWidget.language:
-            // A block that doesn't decode shows as the code it is, so the mistake can be seen.
-            guard let widget = try? JSONDecoder().decode(CBWidget.self, from: Data(text.utf8)) else { break }
+            // A block that doesn't decode shows as the code it is, so the mistake can be seen; so does one in a table cell.
+            guard !inCell, let widget = try? JSONDecoder().decode(CBWidget.self, from: Data(text.utf8)) else { break }
             let file = baseURL.flatMap { StandardLayout.widgetFile(widget.id, noteFolder: $0) }
             let view = widgets.view(widget.id, file: file, accent: accent)
             let size = CGSize(width: width - ctx.indent * 2, height: view.pageHeight ?? widget.height ?? 320)
@@ -697,7 +699,8 @@ struct ReaderBlock {
     mutating func cell(markdown: String, weight: PlatformFont.Weight) -> NSAttributedString {
         let saved = out
         out = NSMutableAttributedString()
-        defer { out = saved }
+        inCell = true
+        defer { out = saved; inCell = false }
         for node in ParsedNote(markdown).document.children {
             if let p = node as? Paragraph {
                 paragraph(Array(p.inlineChildren), Context(), style: Self.paragraph(Context(), after: 4, lineSpacing: 4))
