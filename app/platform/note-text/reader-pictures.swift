@@ -120,19 +120,39 @@ import UIKit
         ceil(text.boundingRect(with: CGSize(width: width, height: .greatestFiniteMagnitude), options: [.usesLineFragmentOrigin, .usesFontLeading], context: nil).height)
     }
 
+    /// Shrinks the columns together to the page, but none below its floor: math and pictures don't wrap, so a column
+    /// narrower than its widest one cut it off (`min{m,` for `\min\{m,n\}`). Only the room above the floors shrinks,
+    /// and a table whose floors alone are wider than the page keeps them.
+    static func fit(_ widths: [CGFloat], floors: [CGFloat], page: CGFloat) -> [CGFloat] {
+        let wanted = zip(widths, floors).map { max($0, $1) }
+        let total = wanted.reduce(0, +), base = floors.reduce(0, +)
+        guard total > page, total > base else { return wanted }
+        let keep = max(0, page - base) / (total - base)
+        return zip(wanted, floors).map { w, f in f + floor((w - f) * keep) }
+    }
+
+    private static func widestPicture(_ text: NSAttributedString) -> CGFloat {
+        var widest: CGFloat = 0
+        text.enumerateAttribute(.attachment, in: NSRange(location: 0, length: text.length)) { value, _, _ in
+            if let a = value as? NSTextAttachment { widest = max(widest, ceil(a.bounds.width)) }
+        }
+        return widest
+    }
+
     /// Columns take their natural width, shrunk together when the table is wider than the page.
     private static func draw(_ cells: [Cell], widths fixed: [CGFloat?], width page: CGFloat) -> (image: PlatformImage, size: CGSize)? {
         guard !cells.isEmpty else { return nil }
         let columnCount = cells.map { $0.column + $0.columns }.max()!
         let rowCount = cells.map { $0.row + $0.rows }.max()!
         var widths = (0..<columnCount).map { c in c < fixed.count ? fixed[c] ?? 0 : 0 }
-        for cell in cells where cell.columns == 1 && (cell.column >= fixed.count || fixed[cell.column] == nil) {
+        var floors = Array(repeating: CGFloat(48), count: columnCount)
+        for cell in cells where cell.columns == 1 {
+            floors[cell.column] = max(floors[cell.column], widestPicture(cell.text) + padding.width * 2)
+            guard cell.column >= fixed.count || fixed[cell.column] == nil else { continue }
             let natural = ceil(cell.text.boundingRect(with: CGSize(width: 10_000, height: 10_000), options: [.usesLineFragmentOrigin], context: nil).width)
             widths[cell.column] = max(widths[cell.column], min(natural, 360) + padding.width * 2)
         }
-        widths = widths.map { max($0, 48) }
-        let total = widths.reduce(0, +)
-        if total > page { widths = widths.map { max(48, floor($0 * page / total)) } }
+        widths = fit(widths, floors: floors, page: page)
         var heights = Array(repeating: CGFloat(0), count: rowCount)
         func span(_ list: [CGFloat], _ from: Int, _ count: Int) -> CGFloat { list[from..<(from + count)].reduce(0, +) }
         for cell in cells.sorted(by: { $0.rows < $1.rows }) {

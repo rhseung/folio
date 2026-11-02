@@ -262,4 +262,24 @@ struct NoteReaderTests {
         #expect(edits.all.isEmpty)
         #expect(!(view.textStorage?.string.contains("x") ?? true))
     }
+
+    @Test func everydayCommandsSwiftMathLacksStillDraw() throws {
+        for tex in [#"0, \dots, n-1"#, #"i \bmod n"#, #"a \equiv b \pmod{n}"#, #"a \mod n"#, #"\operatorname{rank} A"#,
+                    #"p \implies q"#, #"q \impliedby p"#, #"A \subsetneq B"#, #"a \nmid b"#, #"\therefore x"#, #"\blacksquare"#,
+                    #"\square"#, #"\varnothing"#, #"\lvert x \rvert"#, #"\iint f"#, #"\dfrac{1}{2}"#, #"\bigl( x \bigr)"#,
+                    #"\boxed{x}"#, #"a \xrightarrow{f} b"#, #"\overset{?}{=}"#, #"a \not= b"#, #"a \lt b"#] {
+            #expect(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false) != nil, "\(tex)")
+        }
+        #expect(NoteMath.picture(#"\notacommand{x}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false) == nil)
+    }
+
+    @Test func tableColumnsShrinkOnlyAboveWhatCannotWrap() {
+        // Math 80 wide in the middle column; the table wants 600 on a 400 page.
+        let fitted = ReaderTable.fit([200, 104, 296], floors: [48, 104, 48], page: 400)
+        #expect(fitted[1] == 104)
+        #expect(fitted.reduce(0, +) <= 400)
+        #expect(fitted[0] < 200 && fitted[2] < 296)
+        #expect(ReaderTable.fit([100, 100], floors: [48, 48], page: 400) == [100, 100])
+        #expect(ReaderTable.fit([300, 300], floors: [250, 250], page: 400) == [250, 250])
+    }
 }

@@ -117,10 +117,16 @@ final class NoteScrollView: NSScrollView {
 
     required init?(coder: NSCoder) { fatalError() }
 
+    // The room past the note's end is a content inset, and AppKit insets the scrollers by it too: the track stopped
+    // at half the editor's height and near the top of the preview. A negative `scrollerInsets` doesn't undo that, so
+    // the vertical scroller is stretched back to the bottom after AppKit places it.
     override func tile() {
         let bottom = NoteOverscroll.bottom(frame.height, preview: documentView is ReaderTextView)
         if contentInsets.bottom != bottom { contentInsets = NSEdgeInsets(top: 0, left: 0, bottom: bottom, right: 0) }
         super.tile()
+        if let scroller = verticalScroller, scroller.frame.maxY < bounds.maxY {
+            scroller.frame.size.height = bounds.maxY - scroller.frame.minY
+        }
     }
 }
 

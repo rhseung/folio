@@ -47,7 +47,7 @@ import UIKit
     private static var failed: Set<String> = []
 
     static func tex(_ source: String, _ syntax: MathSyntax) -> String {
-        syntax == .asciimath ? NoteScripts.tex(fromAsciiMath: source) : source
+        TeXGaps.fill(syntax == .asciimath ? NoteScripts.tex(fromAsciiMath: source) : source)
     }
 
     /// Nil when SwiftMath can't read the TeX; the caller shows the source instead.
@@ -131,5 +131,59 @@ import UIKit
         #else
         return color.resolvedColor(with: UITraitCollection(userInterfaceStyle: dark ? .dark : .light))
         #endif
+    }
+}
+
+/// Everyday LaTeX that SwiftMath leaves out. One unknown command made the whole formula fall back to its source, and
+/// notes use these often (`\dots`, `\implies`, `\operatorname`). Symbols go into SwiftMath's own table, copied from a
+/// symbol of the same kind so they space as relations or operators should; commands that need upright letters or
+/// arguments are spelled with ones it has. The rest stay unknown and still show their source.
+@MainActor enum TeXGaps {
+    /// Name, the symbol to copy for its kind, and the glyph if it differs.
+    private static let symbols: [(String, String, String?)] = [
+        ("dots", "ldots", nil), ("dotsc", "ldots", nil), ("dotsb", "cdots", nil),
+        ("implies", "Longrightarrow", nil), ("impliedby", "Longleftarrow", nil),
+        ("subsetneq", "subset", "\u{228A}"), ("supsetneq", "supset", "\u{228B}"), ("nmid", "mid", "\u{2224}"),
+        ("lt", "neq", "<"), ("gt", "neq", ">"), ("lesssim", "neq", "\u{2272}"), ("gtrsim", "neq", "\u{2273}"),
+        ("rightleftharpoons", "neq", "\u{21CC}"), ("therefore", "neq", "\u{2234}"), ("because", "neq", "\u{2235}"),
+        // SwiftMath's `\square` is its input placeholder, drawn in the placeholder color, not the end-of-proof box.
+        ("square", "triangle", "\u{25A1}"), ("Box", "triangle", "\u{25A1}"), ("blacksquare", "triangle", "\u{25A0}"),
+        ("varnothing", "emptyset", nil), ("lvert", "vert", nil), ("rvert", "vert", nil),
+        ("lVert", "vert", "\u{2016}"), ("rVert", "vert", "\u{2016}"),
+        ("iint", "int", "\u{222C}"), ("iiint", "int", "\u{222D}"),
+    ]
+
+    private static let rewrites: [(NSRegularExpression, String)] = [
+        (#"\\operatorname\*?\s*\{([^{}]*)\}"#, #"\\mathrm{$1}\\,"#),
+        (#"\\pmod\s*\{([^{}]*)\}"#, #"\\quad(\\mathrm{mod}\\,\\,$1)"#),
+        (#"\\pmod\s*([A-Za-z0-9])"#, #"\\quad(\\mathrm{mod}\\,\\,$1)"#),
+        (#"\\bmod(?![A-Za-z])"#, #"\\>\\mathrm{mod}\\>"#),
+        (#"\\mod(?![A-Za-z])"#, #"\\quad\\mathrm{mod}\\,\\,"#),
+        (#"\\[dt]frac(?![A-Za-z])"#, #"\\frac"#),
+        (#"\\not\s*="#, #"\\neq"#),
+        (#"\\not\s*\\in(?![A-Za-z])"#, #"\\notin"#),
+        // Close enough to read: the label over the arrow or symbol sits as its superscript.
+        (#"\\xrightarrow\s*\{([^{}]*)\}"#, #"\\longrightarrow^{$1}"#),
+        (#"\\xleftarrow\s*\{([^{}]*)\}"#, #"\\longleftarrow^{$1}"#),
+        (#"\\overset\s*\{([^{}]*)\}\s*\{([^{}]*)\}"#, #"{$2}^{$1}"#),
+        // Sizes and decorations SwiftMath can't draw: the content stays, as a group.
+        (#"\\(?:big|Big|bigg|Bigg)[lrm]?(?![A-Za-z])"#, ""),
+        (#"\\(?:boxed|cancel|underbrace|overbrace)(?![A-Za-z])"#, ""),
+    ].map { (try! NSRegularExpression(pattern: $0.0), $0.1) }
+
+    private static let registered: Void = {
+        for (name, kind, glyph) in symbols {
+            guard let atom = MTMathAtomFactory.atom(forLatexSymbol: kind) else { continue }
+            if let glyph { atom.nucleus = glyph }
+            MTMathAtomFactory.add(latexSymbol: name, value: atom)
+        }
+    }()
+
+    static func fill(_ tex: String) -> String {
+        _ = registered
+        guard tex.contains("\\") else { return tex }
+        return rewrites.reduce(tex) { text, rule in
+            rule.0.stringByReplacingMatches(in: text, range: NSRange(text.startIndex..., in: text), withTemplate: rule.1)
+        }
     }
 }
