@@ -4775,6 +4775,17 @@
         }
       }
     },
+    "recording.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "강의 녹음"
+          }
+        }
+      }
+    },
     "requirement.abstract": {
       "extractionState": "manual",
       "localizations": {

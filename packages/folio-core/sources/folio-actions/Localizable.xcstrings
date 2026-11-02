@@ -474,6 +474,17 @@
         }
       }
     },
+    "error.recording.semester-not-over": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 끝나지 않은 학기입니다. 녹음 오디오는 학기가 끝난 뒤에 지웁니다."
+          }
+        }
+      }
+    },
     "error.review.end-before-start": {
       "extractionState": "manual",
       "localizations": {
@@ -1009,6 +1020,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "문제 묶음"
+          }
+        }
+      }
+    },
+    "value.semester": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기"
           }
         }
       }

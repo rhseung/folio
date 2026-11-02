@@ -8,6 +8,7 @@ struct SemesterView: View {
     @Environment(\.searchTarget) private var searchTarget
     @State private var addingCourse = false
     @State private var editingRecord: Course?
+    @State private var confirmingTrim = false
 
     init(workspace: Workspace, semesterID: UUID, openCourse: @escaping (UUID) -> Void) {
         _model = State(initialValue: SemesterModel(workspace: workspace, semesterID: semesterID))
@@ -22,6 +23,8 @@ struct SemesterView: View {
                 PageHeader(title: semester.title, subtitle: model.subtitle(semester))
 
                 StatStrip(items: model.stats(semester))
+
+                if let audio = model.audio { audioCard(audio) }
 
                 Block(title: String(localized: .semesterCourses), note: String(localized: .semesterCoursesNote), trailing: { Button(.semesterCoursesAdd) { addingCourse = true }.buttonStyle(.ghost) }) {
                     Card {
@@ -98,6 +101,7 @@ struct SemesterView: View {
                 }
             }
             .navigationTitle(semester.title)
+            .task(id: semester.id) { model.refreshAudio() }
             .sheet(isPresented: $addingCourse) { AddCourseSheet(workspace: model.workspace, semester: semester) { if let id = $0 { openCourse(id) } } }
             .sheet(item: $editingRecord) { EditRecordSheet(workspace: model.workspace, course: $0) }
         } else {
@@ -139,6 +143,29 @@ struct SemesterView: View {
     /// RootView turns a search target into the course's selection, so this reaches its exams page from here.
     func showExams(_ course: UUID) {
         searchTarget.wrappedValue = SearchTarget(courseId: course, section: .exams)
+    }
+
+    /// Offered once the semester is over; the audio goes only once the user agrees, and only to the Trash.
+    func audioCard(_ audio: SemesterModel.AudioNotice) -> some View {
+        NoticeCard(title: String(localized: .semesterAudioTitle(audio.count, audio.bytes.formatted(.byteCount(style: .file)))),
+                   detail: audio.kept > 0 ? String(localized: .semesterAudioDetailKept(audio.kept)) : String(localized: .semesterAudioDetail),
+                   systemImage: "waveform.badge.minus") {
+            Button(.semesterAudioTrimEllipsis) { confirmingTrim = true }.buttonStyle(.pointing(.bordered))
+        } rows: {
+            ForEach(Array(audio.items.enumerated()), id: \.element.id) { i, item in
+                CardRow(last: i == audio.items.count - 1) {
+                    Text(item.course.title).lineLimit(1)
+                    Spacer()
+                    Text(.semesterAudioRow(item.count, item.bytes.formatted(.byteCount(style: .file))))
+                        .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
+                }
+            }
+        }
+        .confirmationDialog(model.trimConfirmation(), isPresented: $confirmingTrim) {
+            Button(.semesterAudioTrim, role: .destructive) { model.trim() }
+        } message: {
+            Text(.semesterAudioConfirmMessage)
+        }
     }
 
     func examsBlock(_ courses: [LoadedCourse]) -> some View {

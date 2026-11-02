@@ -22,6 +22,49 @@ final class SemesterModel {
 
     var semester: Semester? { workspace.transcript.semesters.first { $0.id == semesterID } }
 
+    // MARK: Recording audio
+
+    /// A finished semester's recordings whose audio can go (`RecordingRetention`), by course.
+    struct AudioNotice {
+        struct Item: Identifiable {
+            let course: LoadedCourse
+            let count: Int
+            let bytes: Int64
+            var id: UUID { course.id }
+        }
+        let items: [Item]
+        /// Recordings with no transcript, whose audio stays.
+        let kept: Int
+        var count: Int { items.map(\.count).reduce(0, +) }
+        var bytes: Int64 { items.map(\.bytes).reduce(0, +) }
+    }
+
+    /// Read once when the page opens, not on every draw: it opens each recording's transcript.
+    private(set) var audio: AudioNotice?
+
+    func refreshAudio() {
+        guard let s = semester, s.isOver(on: workspace.today, among: workspace.transcript.semesters) else { audio = nil; return }
+        var items: [AudioNotice.Item] = [], kept = 0
+        for course in courses(in: s) {
+            let withAudio = course.file.recordings.filter(\.hasAudio)
+            let trimmable = RecordingRetention.trimmable(withAudio) { course.store.transcript(of: $0)?.lines.isEmpty == false }
+            kept += withAudio.count - trimmable.count
+            if !trimmable.isEmpty {
+                items.append(.init(course: course, count: trimmable.count, bytes: trimmable.map { course.store.audioSize(of: $0) }.reduce(0, +)))
+            }
+        }
+        audio = items.isEmpty ? nil : AudioNotice(items: items, kept: kept)
+    }
+
+    var trimAudio: RecordingTrim { RecordingTrim(semester: semesterID) }
+
+    func trimConfirmation() -> String { workspace.confirmation(trimAudio) ?? "" }
+
+    func trim() {
+        workspace.run(trimAudio)
+        refreshAudio()
+    }
+
     func courses(in semester: Semester) -> [LoadedCourse] { workspace.courses(in: semester) }
 
     /// Courses of a semester that live only in transcript.json (no folder).

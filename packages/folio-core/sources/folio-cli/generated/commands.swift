@@ -13,6 +13,7 @@ enum GeneratedCommands {
     static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialUntrack.self, MaterialTrash.self]
     static let note: [any ParsableCommand.Type] = [NoteAdopt.self, NoteRemove.self]
     static let problemSet: [any ParsableCommand.Type] = [ProblemSetRemove.self, ProblemLinkUnit.self]
+    static let recording: [any ParsableCommand.Type] = [RecordingTrim.self]
     static let review: [any ParsableCommand.Type] = [ReviewRecord.self]
     static let score: [any ParsableCommand.Type] = [ScoreAdd.self, ScoreSet.self, ScoreRemove.self]
     static let semester: [any ParsableCommand.Type] = [SemesterAdd.self, SemesterSet.self]
@@ -844,6 +845,28 @@ enum GeneratedCommands {
             let action = FolioActions.MaterialTrash(
                 course: c.id,
                 material: try r.id("Material", materialName, in: c)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct RecordingTrim: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "trim", abstract: "지난 학기 녹음의 오디오를 휴지통으로 옮기고 받아쓰기는 남기기", discussion: """
+            받아쓰기가 없는 녹음은 오디오를 남긴다. 휴지통에서 되살릴 수 있다.
+
+            실행하기 전에 확인을 받는다.
+
+            예시:
+              folio recording trim 2026-1 --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("학기. 2026-1 또는 \"2026 spring\"", valueName: "semester"), completion: Complete.ref("Semester")) var semester: String = ""
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let action = FolioActions.RecordingTrim(
+                semester: try r.id("Semester", semester, in: nil)
             )
             try perform(spec: action, g, ctx: ctx)
         }

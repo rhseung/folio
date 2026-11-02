@@ -58,10 +58,12 @@ final class RecordingPlayerModel {
     }
 
     func load() {
-        player.load(store.fileURL(recording.file))
+        if recording.hasAudio { player.load(store.fileURL(recording.file)) }
     }
 
-    var subtitle: String { recording.startedAt.formatted(date: .abbreviated, time: .shortened) + " · " + RecordingTime.label(player.duration) }
+    var subtitle: String {
+        recording.startedAt.formatted(date: .abbreviated, time: .shortened) + " · " + RecordingTime.label(recording.hasAudio ? player.duration : recording.duration)
+    }
     var hasLines: Bool { !(transcript?.lines.isEmpty ?? true) }
     var current: Int? { transcript?.lineIndex(at: player.time) }
 

@@ -31,7 +31,12 @@ struct RecordingPlayer: View {
                     TextField(String(localized: .recordingSearch), text: $model.query).pill(width: 180)
                 }
             }
-            transport
+            if recording.hasAudio {
+                transport
+            } else {
+                Label(.recordingAudioTrashed, systemImage: "waveform.slash")
+                    .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+            }
             Card {
                 if model.hasLines {
                     ScrollViewReader { proxy in
@@ -140,6 +145,8 @@ struct RecordingPlayer: View {
             .contentShape(.rect)
         }
         .buttonStyle(.pointing(.plain))
+        // With the audio gone there is nothing to seek to; the line is only read.
+        .allowsHitTesting(recording.hasAudio)
         .animation(.snappy(duration: 0.25), value: playing)
     }
 

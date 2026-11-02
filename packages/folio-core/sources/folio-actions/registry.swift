@@ -10,6 +10,7 @@ public enum Actions {
         ScoreAdd.self, ScoreSet.self, ScoreRemove.self, ComponentAdd.self, ComponentSet.self, ComponentRemove.self, ComponentMove.self, PolicySet.self,
         MaterialLinkSession.self, MaterialLinkUnit.self, MaterialStatusSet.self, MaterialKindSet.self, MaterialRelink.self, MaterialUntrack.self,
         MaterialTrack.self, MaterialImport.self, MaterialMove.self, MaterialTrash.self, CleanupApply.self, CleanupUndo.self,
+        RecordingTrim.self,
         NoteAdd.self, NoteWrite.self, NoteAdopt.self, NoteLink.self, NoteRemove.self,
         QuizCardSave.self, QuizCardRemove.self, QuizRecord.self,
         ProblemSetSave.self, ProblemSetRemove.self, ProblemLinkUnit.self, ProblemRecord.self,

@@ -1,5 +1,6 @@
 import FolioActions
 import FolioDomain
+import FolioStorage
 import Foundation
 import Testing
 @testable import Folio
@@ -19,6 +20,34 @@ struct SemesterModelTests {
         #expect(open.count == 17 && open[0].0 == nil && open[0].1 == "없음")
         // A default exam week past the term's end still gets a row.
         #expect(model.weekOptions(fall, fallback: 20).count == 20)
+    }
+
+    @Test func aFinishedSemesterOffersToTrimOnlyTranscribedAudio() throws {
+        let workspace = try fixtureWorkspace()
+        let linearAlgebra = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
+        let ctx = ActionContext(gist: try #require(workspace.gist), device: workspace.device, now: workspace.now)
+        let store = try ctx.store(linearAlgebra)
+        let heard = Recording(device: workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a", duration: 60)
+        let silent = Recording(device: workspace.device, at: .now, sessionId: nil, file: "Recordings/b.m4a", duration: 60)
+        try FileManager.default.createDirectory(at: store.recordingsURL, withIntermediateDirectories: true)
+        for r in [heard, silent] { try Data("audio".utf8).write(to: store.fileURL(r.file)) }
+        try store.saveTranscript(LectureTranscript(locale: "ko-KR", lines: [.init(start: 0, end: 5, text: "행렬")]), of: heard)
+        try ctx.edit(linearAlgebra) { $0.recordings = [heard, silent] }
+        workspace.reload()
+
+        let model = SemesterModel(workspace: workspace, semesterID: springTerm)
+        model.refreshAudio()
+        let audio = try #require(model.audio)
+        #expect(audio.items.map(\.count) == [1] && audio.kept == 1)
+        model.trim()
+        #expect(model.audio == nil)
+        #expect(workspace.course(linearAlgebra)?.file.recordings.filter(\.hasAudio).map(\.id) == [silent.id])
+    }
+
+    @Test func aSemesterUnderWayOffersNothing() throws {
+        let model = SemesterModel(workspace: try fixtureWorkspace(), semesterID: fallTerm)
+        model.refreshAudio()
+        #expect(model.audio == nil)
     }
 
     @Test func settingAWeekWritesTheSemester() throws {
