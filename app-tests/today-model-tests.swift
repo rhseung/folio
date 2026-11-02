@@ -117,9 +117,8 @@ struct TodayModelTests {
         let ribbon = model.ribbonClasses(model.summary(now: at(20)), now: at(20)).filter { $0.courseId == id }
         #expect(ribbon.map(\.start) == [at(21)] && ribbon.first?.sessionId == nil && ribbon.first?.suggested == nil)
         #expect(model.nextClass(after: at(20))?.courseId == id)
-        let now = try #require(model.nowClass(at: at(21, 30)))
-        #expect(now.courseId == id && now.room == "Hall" && now.end == at(22))
-        #expect(model.classTitle(id, now.name) == "콜로퀴움")
+        #expect(model.nowCourse(at: at(21, 30)) == id && model.nowCourse(at: at(22)) != id)
+        #expect(model.classTitle(id, "") == "콜로퀴움")
         #expect(model.week(around: day).first { $0.day == day }?.courses.contains(id) == true)
         #expect(model.week(around: day).first { $0.day != day }?.courses.contains(id) == false)
     }

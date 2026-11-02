@@ -20,17 +20,6 @@ final class TodayModel {
         var all: [Workspace.ReviewEntry] { queue + deferred }
     }
 
-    /// Where the 지금 수업 card's class comes from: one already made, or the timetable's suggestion not made yet.
-    struct NowClass {
-        var courseId: UUID
-        var name: String
-        var room: String
-        var start: Date
-        var end: Date
-        var sessionId: UUID?
-        var suggested: Workspace.SuggestedSession?
-    }
-
     var current: [LoadedCourse] { workspace.currentCourses }
 
     var currentRecords: [Course] {
@@ -111,19 +100,12 @@ final class TodayModel {
         item.session.end(schedule: workspace.course(item.courseId)?.file.course.schedule ?? [], calendar: workspace.calendar)
     }
 
-    func nowClass(at now: Date) -> NowClass? {
-        if let item = workspace.ongoingClass(at: now), let course = workspace.course(item.courseId) {
-            let room = course.file.course.schedule.first { $0.weekday == workspace.calendar.isoWeekday(of: item.session.date) }?.room ?? ""
-            return NowClass(courseId: item.courseId, name: course.file.name(of: item.session), room: room, start: item.session.date, end: item.end, sessionId: item.session.id)
-        }
-        // Under way but not made yet: the card offers what starting the class needs.
-        if let item = workspace.suggestedSessions(now: now).first(where: { $0.suggestion.date <= now }) {
-            return NowClass(courseId: item.courseId, name: item.name, room: item.suggestion.room, start: item.suggestion.date,
-                            end: item.suggestion.end, suggested: item)
-        }
+    /// The course whose class is under way: one already made, the timetable's suggestion not made yet, or a record's slot.
+    func nowCourse(at now: Date) -> UUID? {
+        if let item = workspace.ongoingClass(at: now) { return item.courseId }
+        if let item = workspace.suggestedSessions(now: now).first(where: { $0.suggestion.date <= now }) { return item.courseId }
         let day = workspace.settings.studyDay(of: now, calendar: workspace.calendar)
-        guard let item = recordClasses(on: day).first(where: { $0.meeting.date <= now && now < $0.meeting.end }) else { return nil }
-        return NowClass(courseId: item.course.id, name: "", room: item.meeting.room, start: item.meeting.date, end: item.meeting.end)
+        return recordClasses(on: day).first { $0.meeting.date <= now && now < $0.meeting.end }?.course.id
     }
 
     /// The newest `limit` sessions missing a review note, newest first, and how many older ones are left out.
@@ -305,16 +287,6 @@ final class TodayModel {
         let records = (0..<8).flatMap { recordClasses(on: today.adding(days: $0)) }.filter { $0.meeting.date > now }
             .map { (courseId: $0.course.id, date: $0.meeting.date) }
         return (made + planned + records).min { $0.date < $1.date }
-    }
-
-    /// The 지금 수업 card's side panel: the class after this one, or how tomorrow starts once today's are done.
-    func nextPanel(now: Date, studyDay: LocalDate) -> (title: String, detail: String) {
-        let next = nextClass(after: now)
-        let day = next.map { workspace.settings.studyDay(of: $0.date, calendar: workspace.calendar) }
-        if let next, day == studyDay { return (title(next.courseId), time(next.date)) }
-        let tomorrow = next.flatMap { day == studyDay.adding(days: 1) ? $0 : nil }
-        return (String(localized: .todayNextTodayDone),
-                tomorrow.map { String(localized: .todayNextTomorrow(time($0.date))) } ?? String(localized: .todayNextTomorrowNone))
     }
 
     /// `월요일 오전 9:00`, the line an empty day's ribbon gives for the next class; the date too once it's over a week out.
