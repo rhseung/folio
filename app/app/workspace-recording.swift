@@ -8,7 +8,7 @@ extension Workspace {
         PendingRecordings(url: URL.applicationSupportDirectory.appending(path: "Folio/Recording", directoryHint: .isDirectory))
     }
 
-    func startRecording(_ session: Session, in course: LoadedCourse, locale: Locale) async {
+    func startRecording(_ session: Session, in course: LoadedCourse) async {
         guard !recorder.isActive else { return }
         let pending = pendingRecordings
         var started: UUID?
@@ -23,9 +23,12 @@ extension Workspace {
             // folio:not-an-action recording is not an action
             recorder.saveProgress = { [id = course.id] recording in try? pending.save(PendingRecording(courseId: id, recording: recording)) }
             try await recorder.start(recording, at: pending.audioURL(of: recording.id), course: course.id,
-                                     title: "\(course.file.course.title) · \(course.file.name(of: session))", locale: locale)
+                                     title: "\(course.file.course.title) · \(course.file.name(of: session))", locale: captionLocale(of: course))
             // Listed from the start, so the session shows it is being recorded.
             editRecordings(course.id) { $0.append(recording) }
+            let (store, courseFile, pages) = (course.store, course.file, course.file.lecturePages(for: session))
+            let hints = await Task.detached { courseFile.transcriptionHints(for: session, slides: store.lectureText(pages)) }.value
+            await recorder.use(hints, for: recording.id)
         } catch {
             if let started { pending.remove(started) }
             self.error = error.localizedDescription
@@ -77,7 +80,7 @@ extension Workspace {
             local.remove(id)
             // Captions missing (the language model was still downloading, or a crash) are made from the audio now;
             // Whisper redoes them all, since it hears Korean and English together where the captions take one language.
-            let heard = course.store.transcript(of: recording)?.lines.isEmpty == false
+            let heard = course.store.transcript(of: recording)?.reaches(recording.duration) == true
             if !heard || TranscriptionEngine.preferred == .whisper { transcribe(recording, course: course.id) }
         } catch {
             self.error = String(localized: .recordingErrorInstallFailed(error.localizedDescription))
@@ -89,8 +92,11 @@ extension Workspace {
     func transcribe(_ recording: Recording, course id: UUID, engine: TranscriptionEngine = .preferred) {
         guard let course = course(id), recording.hasAudio else { return }
         let store = course.store
-        // The captions saved the language picked when recording began, even when they heard nothing.
-        let locale = Locale(identifier: store.transcript(of: recording)?.locale ?? "ko-KR")
+        // Only Apple's recognizer needs it. A crash before the first caption leaves no transcript to say what the
+        // captions listened for, but they chose it the same way.
+        let locale = store.transcript(of: recording).map { Locale(identifier: $0.locale) } ?? captionLocale(of: course)
+        let file = course.file
+        let session = file.sessions.first { $0.id == recording.sessionId }
         let copy = URL.cachesDirectory.appending(path: "Folio/Transcribing/\(recording.id.uuidString).\((recording.file as NSString).pathExtension)")
         transcriptions.run(recording.id, failed: { [weak self] error in
             self?.error = String(localized: .recordingErrorTranscribeFailed(error.localizedDescription))
@@ -98,12 +104,20 @@ extension Workspace {
             // folio:not-an-action a copy in this device's caches, outside the GIST folder
             defer { try? FileManager.default.removeItem(at: copy) }
             try store.copyAudio(of: recording, to: copy)
-            let transcript = try await engine.transcribe(copy, locale: locale, report: report)
+            let hints = session.map { file.transcriptionHints(for: $0, slides: store.lectureText(file.lecturePages(for: $0))) }
+            let transcript = try await engine.transcribe(copy, locale: locale, hints: hints, report: report)
             // Deleted meanwhile: saving now would leave a transcript with no recording.
             try Task.checkCancellation()
+            guard transcript.replaces(store.transcript(of: recording)) else { return }
             // folio:not-an-action a transcript is the recording's output, like the captions saved while recording
             try store.saveTranscript(transcript, of: recording)
         }
+    }
+
+    /// Captions take one language, so they follow the course's last transcript, which Whisper heard for itself.
+    private func captionLocale(of course: LoadedCourse) -> Locale {
+        let latest = course.file.recordings.sorted { $0.createdAt > $1.createdAt }.lazy.compactMap { course.store.transcript(of: $0) }.first
+        return Locale(identifier: latest?.locale ?? "ko-KR")
     }
 
     /// Recording is not an action, so its list is the one place the app writes course.json itself.

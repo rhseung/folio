@@ -278,7 +278,7 @@ private struct NoteSettingsForm: View {
 
 /// This device's choices, not settings.json's: the Whisper model is downloaded per device.
 private struct RecordingSettings: View {
-    @AppStorage(TranscriptionEngine.storageKey) private var engine: TranscriptionEngine = .apple
+    @AppStorage(TranscriptionEngine.storageKey) private var engine: TranscriptionEngine = .whisper
     private var whisper: WhisperModel { .shared }
 
     var body: some View {

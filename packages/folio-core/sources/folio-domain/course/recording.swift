@@ -79,4 +79,20 @@ public struct LectureTranscript: Codable, Sendable, Equatable {
     }
 
     public var text: String { lines.map(\.text).joined(separator: "\n") }
+
+    /// Captions cut off by a crash end well before the audio does: they are saved every few seconds while the last
+    /// sentences are still being decoded. A lecture that runs on in silence fails this too and is heard again, which
+    /// costs only time.
+    public func reaches(_ duration: TimeInterval) -> Bool {
+        guard let last = lines.last else { return false }
+        return last.end >= duration - Self.tailAllowance
+    }
+
+    static let tailAllowance: TimeInterval = 60
+
+    /// A transcript made from the audio that heard nothing (a quiet room, or every line a filler) must not wipe the
+    /// captions: nothing records the old file, so it could not be got back.
+    public func replaces(_ existing: LectureTranscript?) -> Bool {
+        !lines.isEmpty || existing?.lines.isEmpty != false
+    }
 }

@@ -9,20 +9,22 @@ enum TranscriptionEngine: String, CaseIterable, Identifiable {
     static let storageKey = "folio.transcriptionEngine"
 
     static var preferred: TranscriptionEngine {
-        UserDefaults.standard.string(forKey: storageKey).flatMap(TranscriptionEngine.init) ?? .apple
+        UserDefaults.standard.string(forKey: storageKey).flatMap(TranscriptionEngine.init) ?? .whisper
     }
 
-    func transcribe(_ url: URL, locale: Locale, report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws -> LectureTranscript {
+    /// `locale` is a guess (the live captions' language) that only Apple's recognizer needs; Whisper listens for itself.
+    func transcribe(_ url: URL, locale: Locale, hints: TranscriptionHints?,
+                    report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws -> LectureTranscript {
         switch self {
         case .apple:
             do {
-                return try await AppleFileTranscriber.transcribe(url, locale: locale, report: report)
+                return try await AppleFileTranscriber.transcribe(url, locale: locale, hints: hints, report: report)
             } catch TranscriptionError.localeUnsupported {
                 // A recording must never be left without a transcript; Whisper hears every language Folio records in.
-                return try await WhisperTranscriber.shared.transcribe(url, locale: locale, report: report)
+                return try await WhisperTranscriber.shared.transcribe(url, hints: hints, report: report)
             }
         case .whisper:
-            return try await WhisperTranscriber.shared.transcribe(url, locale: locale, report: report)
+            return try await WhisperTranscriber.shared.transcribe(url, hints: hints, report: report)
         }
     }
 }
@@ -50,7 +52,7 @@ enum TranscriptionError: LocalizedError {
 /// The same recognizer as the live captions, run over the whole file. Unlike a lecture that is starting, this can wait
 /// for the language model to download.
 enum AppleFileTranscriber {
-    static func transcribe(_ url: URL, locale: Locale, report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws -> LectureTranscript {
+    static func transcribe(_ url: URL, locale: Locale, hints: TranscriptionHints?, report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws -> LectureTranscript {
         guard SpeechTranscriber.isAvailable, let supported = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else {
             throw TranscriptionError.localeUnsupported
         }
@@ -73,6 +75,7 @@ enum AppleFileTranscriber {
         report(.transcribing(0))
 
         let analyzer = SpeechAnalyzer(modules: [transcriber])
+        if let hints { try await analyzer.setContext(SpeechAssets.context(hints)) }
         return try await withTaskCancellationHandler {
             async let lines = collect(transcriber, duration: duration, report: report)
             if let end = try await analyzer.analyzeSequence(from: file) {
@@ -107,6 +110,13 @@ enum SpeechAssets {
         try await reserve(locale)
         guard await AssetInventory.status(forModules: [transcriber]) != .installed else { return nil }
         return try await AssetInventory.assetInstallationRequest(supporting: [transcriber])
+    }
+
+    /// The slides' terms, which the recognizer then prefers over words that sound alike.
+    static func context(_ hints: TranscriptionHints) -> AnalysisContext {
+        let context = AnalysisContext()
+        context.contextualStrings[.general] = hints.terms
+        return context
     }
 
     /// An app holds a few locales at most; the one needed now takes the place of another.

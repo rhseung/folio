@@ -172,7 +172,7 @@ final class SessionsModel {
 
     func setSkipsReview(_ skips: Bool, of session: Session) { workspace.setSkipsReview(skips, of: session.id, in: courseId) }
 
-    func record(_ session: Session, locale: Locale) { workspace.record(session.id, in: courseId, locale: locale) }
+    func record(_ session: Session) { workspace.record(session.id, in: courseId) }
 
     func note(_ kind: NoteKind, of session: Session) -> UUID? { workspace.note(kind, of: session.id, in: courseId) }
 

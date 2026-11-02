@@ -11265,28 +11265,6 @@
         }
       }
     },
-    "root.record-english": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음 시작 (영어)"
-          }
-        }
-      }
-    },
-    "root.record-korean": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음 시작 (한국어)"
-          }
-        }
-      }
-    },
     "root.record-session": {
       "extractionState": "manual",
       "localizations": {
@@ -12783,13 +12761,13 @@
         }
       }
     },
-    "sessions.record-english": {
+    "sessions.record": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "녹음 시작 (영어)"
+            "value": "녹음 시작"
           }
         }
       }
@@ -12801,17 +12779,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 수업을 녹음하고 받아씁니다"
-          }
-        }
-      }
-    },
-    "sessions.record-korean": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음 시작 (한국어)"
           }
         }
       }
@@ -15539,7 +15506,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "기기 음성 인식은 빠르지만 한 언어만 알아들어 영어 용어를 한글 소리로 적곤 합니다. Whisper는 한국어와 영어를 함께 알아듣는 대신 더 오래 걸립니다. 기기 음성 인식이 어떤 언어를 받아쓰지 못하면 Whisper가 대신 받아씁니다."
+            "value": "Whisper는 한국어와 영어를 함께 알아듣고 어느 언어로 한 강의인지 스스로 가립니다. 기기 음성 인식은 더 빠르지만 한 언어만 알아들어 영어 용어를 한글 소리로 적곤 하고, 받아쓰지 못하는 언어는 Whisper가 대신 받아씁니다. 두 방식 모두 그 회차 강의 자료에 나온 용어를 참고합니다."
           }
         }
       }

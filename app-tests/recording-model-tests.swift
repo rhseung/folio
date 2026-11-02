@@ -113,3 +113,54 @@ struct RecordingBarModelTests {
         #expect(model.sessionTarget == SearchTarget(courseId: graphTheory, section: .notes, noteId: rough))
     }
 }
+
+private actor Overlap {
+    private var running = 0
+    private(set) var most = 0
+    private(set) var runs = 0
+    func enter() { running += 1; runs += 1; most = max(most, running) }
+    func leave() { running -= 1 }
+}
+
+@MainActor
+struct TranscriptionQueueTests {
+    @Test func aCancelledJobIsNotOverlappedByTheOneAskedForAgain() async throws {
+        let queue = TranscriptionQueue()
+        let overlap = Overlap()
+        let id = UUID()
+        // Like Whisper mid-window: it notices the cancel only when its current step ends.
+        let work: @Sendable (@escaping @Sendable (TranscriptionPhase) -> Void) async throws -> Void = { _ in
+            await overlap.enter()
+            let until = ContinuousClock.now + .milliseconds(200)
+            while ContinuousClock.now < until { await Task.yield() }
+            await overlap.leave()
+        }
+        queue.run(id, failed: { _ in }, work)
+        try await Task.sleep(for: .milliseconds(50))
+        queue.cancel(id)
+        #expect(queue.phase(of: id) == nil)
+        queue.run(id, failed: { _ in }, work)
+        #expect(queue.phase(of: id) == .waiting)
+        let deadline = ContinuousClock.now + .seconds(5)
+        while queue.phase(of: id) != nil, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(20)) }
+        #expect(queue.phase(of: id) == nil)
+        #expect(await overlap.runs == 2)
+        #expect(await overlap.most == 1)
+    }
+
+    @Test func askingAgainForAQueuedRecordingDoesNothing() async throws {
+        let queue = TranscriptionQueue()
+        let overlap = Overlap()
+        let id = UUID()
+        let work: @Sendable (@escaping @Sendable (TranscriptionPhase) -> Void) async throws -> Void = { _ in
+            await overlap.enter()
+            try? await Task.sleep(for: .milliseconds(100))
+            await overlap.leave()
+        }
+        queue.run(id, failed: { _ in }, work)
+        queue.run(id, failed: { _ in }, work)
+        let deadline = ContinuousClock.now + .seconds(5)
+        while queue.phase(of: id) != nil, ContinuousClock.now < deadline { try await Task.sleep(for: .milliseconds(20)) }
+        #expect(await overlap.runs == 1)
+    }
+}

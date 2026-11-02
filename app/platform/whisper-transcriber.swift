@@ -19,7 +19,11 @@ actor WhisperTranscriber {
 
     /// Downloads the model if this device doesn't have it. A second caller waits for the same download.
     func prepare(report: @escaping @Sendable (Double) -> Void) async throws -> URL {
-        if await WhisperModel.shared.ready { return Self.modelFolder }
+        if await WhisperModel.shared.ready {
+            if FileManager.default.fileExists(atPath: Self.modelFolder.path) { return Self.modelFolder }
+            // Removed outside the app: downloaded again rather than failing every load.
+            await MainActor.run { WhisperModel.shared.finishDownload(ready: false) }
+        }
         if let download { return try await download.value }
         let task = Task {
             try await WhisperKit.download(variant: Self.variant, downloadBase: Self.base) { progress in
@@ -33,6 +37,7 @@ actor WhisperTranscriber {
         defer { download = nil }
         do {
             let folder = try await task.value
+            Self.excludeFromBackup()
             await MainActor.run { WhisperModel.shared.finishDownload(ready: true) }
             return folder
         } catch {
@@ -41,10 +46,20 @@ actor WhisperTranscriber {
         }
     }
 
-    func transcribe(_ url: URL, locale: Locale, report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws -> LectureTranscript {
+    /// Kept in Application Support rather than caches, which the system empties when space runs low and would cost a
+    /// 630MB download before the next lecture; but it can always be downloaded again, so it stays out of backups.
+    private static func excludeFromBackup() {
+        var base = base
+        var values = URLResourceValues()
+        values.isExcludedFromBackup = true
+        try? base.setResourceValues(values)
+    }
+
+    func transcribe(_ url: URL, hints: TranscriptionHints?, report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws -> LectureTranscript {
         let kit = try await load(report: report)
         let duration = (try? AVAudioFile(forReading: url)).map { max(Double($0.length) / $0.processingFormat.sampleRate, 1) } ?? 1
         report(.transcribing(0))
+        let language = try await language(of: url, duration: duration, in: kit)
         // Windows are decoded in parallel and report out of order, so progress is the furthest point heard yet.
         let furthest = Furthest()
         kit.segmentDiscoveryCallback = { segments in
@@ -53,10 +68,11 @@ actor WhisperTranscriber {
         }
         defer { kit.segmentDiscoveryCallback = nil }
         let options = DecodingOptions(
-            // The language picked when recording: with none, Whisper's prompt assumes English.
-            task: .transcribe, language: locale.language.languageCode?.identifier ?? "ko",
+            // Fixed for the whole lecture: left to each 30-second window, a stretch of English terms flips it to English.
+            task: .transcribe, language: language,
             // Segment text otherwise carries <|ko|>-style tokens.
             skipSpecialTokens: true,
+            promptTokens: hints.flatMap { promptTokens($0, in: kit) },
             // Cuts the audio at silences, so a long quiet stretch doesn't make Whisper invent a sentence.
             chunkingStrategy: .vad)
         // A lecture read whole is several hundred megabytes of samples; streamed, a few.
@@ -71,7 +87,35 @@ actor WhisperTranscriber {
                 guard !text.isEmpty, !Self.isFiller(text) else { return nil }
                 return .init(start: Double(s.start), end: Double(s.end), text: text)
             }
-        return LectureTranscript(locale: locale.identifier, lines: lines)
+        return LectureTranscript(locale: language == "en" ? "en-US" : "ko-KR", lines: lines)
+    }
+
+    /// Korean or English, by three windows across the lecture: the opening minutes are often small talk or silence.
+    /// Korean when unsure, since a Korean lecture with English terms is the common case and Korean decoding keeps them.
+    private func language(of url: URL, duration: Double, in kit: WhisperKit) async throws -> String {
+        var english = 0, korean = 0
+        for at in [0.2, 0.5, 0.8] {
+            let start = max(0, duration * at - 15)
+            guard let buffer = try? AudioProcessor.loadAudio(fromPath: url.path, startTime: start, endTime: min(duration, start + 30)),
+                  let result = try? await kit.detectLangauge(audioArray: AudioProcessor.convertBufferToArray(buffer: buffer))
+            else { continue }
+            let ko = result.langProbs["ko"] ?? -.infinity, en = result.langProbs["en"] ?? -.infinity
+            if en > ko { english += 1 } else { korean += 1 }
+        }
+        try Task.checkCancellation()
+        return english > korean ? "en" : "ko"
+    }
+
+    /// Whisper reads the prompt as what was said just before, so it writes the slides' terms in their own spelling.
+    /// It keeps the last 224 tokens of a prompt; the least telling terms go first to stay well under that.
+    private func promptTokens(_ hints: TranscriptionHints, in kit: WhisperKit) -> [Int]? {
+        guard let tokenizer = kit.tokenizer else { return nil }
+        var count = hints.terms.count
+        while true {
+            let tokens = tokenizer.encode(text: " " + hints.prompt(terms: count)).filter { $0 < tokenizer.specialTokens.specialTokenBegin }
+            if tokens.count <= 150 || count == 0 { return tokens }
+            count -= max(1, count / 8)
+        }
     }
 
     /// Whisper fills a pause with a line it saw often in training, the close of a video. Its scores rate it as sure as

@@ -241,6 +241,12 @@ final class LectureRecorder {
         }
     }
 
+    /// Given once recording runs: the slides are read from the course folder, which may first have to download.
+    func use(_ hints: TranscriptionHints, for recording: UUID) async {
+        guard current == recording, let analyzer else { return }
+        try? await analyzer.setContext(SpeechAssets.context(hints))
+    }
+
     private func teardown() {
         resultsTask?.cancel()
         clockTask?.cancel()
