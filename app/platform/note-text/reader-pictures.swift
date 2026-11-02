@@ -133,14 +133,32 @@ import UIKit
         return zip(wanted, floors).map { w, f in f + floor((w - f) * keep) }
     }
 
-    /// A code block's attachment spans the whole column it was made for, and in a cell it draws nothing anyway, so it
-    /// doesn't hold a column open.
-    private static func widestPicture(_ text: NSAttributedString) -> CGFloat {
+    /// Only math holds a column open. Images and code blocks in a cell were sized to the whole note column, not the
+    /// cell's, so as floors one would take nearly all of the table; an image shrinks to its column instead (`shrunk`),
+    /// and a code block draws nothing in a cell.
+    private static func widestMath(_ text: NSAttributedString) -> CGFloat {
         var widest: CGFloat = 0
-        text.enumerateAttribute(.attachment, in: NSRange(location: 0, length: text.length)) { value, _, _ in
-            if let a = value as? NSTextAttachment, !(a is CodeAttachment) { widest = max(widest, ceil(a.bounds.width)) }
+        text.enumerateAttribute(.attachment, in: NSRange(location: 0, length: text.length)) { value, range, _ in
+            guard let a = value as? NSTextAttachment,
+                  (text.attribute(.noteAtom, at: range.location, effectiveRange: nil) as? NoteAtom)?.source.hasPrefix("$") == true
+            else { return }
+            widest = max(widest, ceil(a.bounds.width))
         }
         return widest
+    }
+
+    static func shrunk(_ text: NSAttributedString, to width: CGFloat) -> NSAttributedString {
+        let out = NSMutableAttributedString(attributedString: text)
+        text.enumerateAttribute(.attachment, in: NSRange(location: 0, length: text.length)) { value, range, _ in
+            guard let a = value as? NSTextAttachment, !(a is CodeAttachment), a.bounds.width > width, width > 0,
+                  (text.attribute(.noteAtom, at: range.location, effectiveRange: nil) as? NoteAtom)?.source.hasPrefix("$") != true
+            else { return }
+            let smaller = NSTextAttachment()
+            smaller.image = a.image
+            smaller.bounds = CGRect(x: 0, y: a.bounds.minY, width: width, height: floor(a.bounds.height * width / a.bounds.width))
+            out.addAttribute(.attachment, value: smaller, range: range)
+        }
+        return out
     }
 
     /// Columns take their natural width, shrunk together when the table is wider than the page.
@@ -151,14 +169,19 @@ import UIKit
         var widths = (0..<columnCount).map { c in c < fixed.count ? fixed[c] ?? 0 : 0 }
         var floors = Array(repeating: CGFloat(48), count: columnCount)
         for cell in cells where cell.columns == 1 {
-            floors[cell.column] = max(floors[cell.column], widestPicture(cell.text) + padding.width * 2)
+            floors[cell.column] = max(floors[cell.column], widestMath(cell.text) + padding.width * 2)
             guard cell.column >= fixed.count || fixed[cell.column] == nil else { continue }
             let natural = ceil(cell.text.boundingRect(with: CGSize(width: 10_000, height: 10_000), options: [.usesLineFragmentOrigin], context: nil).width)
             widths[cell.column] = max(widths[cell.column], min(natural, 360) + padding.width * 2)
         }
         widths = fit(widths, floors: floors, page: page)
-        var heights = Array(repeating: CGFloat(0), count: rowCount)
         func span(_ list: [CGFloat], _ from: Int, _ count: Int) -> CGFloat { list[from..<(from + count)].reduce(0, +) }
+        let cells = cells.map { cell in
+            var cell = cell
+            cell.text = shrunk(cell.text, to: span(widths, cell.column, cell.columns) - padding.width * 2)
+            return cell
+        }
+        var heights = Array(repeating: CGFloat(0), count: rowCount)
         for cell in cells.sorted(by: { $0.rows < $1.rows }) {
             let need = height(cell.text, span(widths, cell.column, cell.columns) - padding.width * 2) + padding.height * 2
             let have = span(heights, cell.row, cell.rows)

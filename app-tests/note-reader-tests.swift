@@ -307,4 +307,20 @@ struct NoteReaderTests {
         #expect(ReaderTable.fit([300, 300], floors: [250, 250], page: 400) == [200, 200])
         #expect(ReaderTable.fit([600, 100], floors: [600, 100], page: 400).reduce(0, +) <= 400)
     }
+
+    /// An image in a cell was sized to the note column, so it shrinks to its own column; math can't, so it doesn't.
+    @Test func cellImagesShrinkToTheirColumnButMathDoesNot() throws {
+        func piece(_ source: String, width: CGFloat) -> NSAttributedString {
+            let a = NSTextAttachment()
+            a.bounds = CGRect(x: 0, y: -2, width: width, height: width / 2)
+            return NSAttributedString(attachment: a, attributes: [.noteAtom: NoteAtom(source)])
+        }
+        let text = NSMutableAttributedString(attributedString: piece("![](a.png)", width: 564))
+        text.append(piece("$x$", width: 300))
+        let out = ReaderTable.shrunk(text, to: 200)
+        let image = try #require(out.attribute(.attachment, at: 0, effectiveRange: nil) as? NSTextAttachment)
+        let math = try #require(out.attribute(.attachment, at: 1, effectiveRange: nil) as? NSTextAttachment)
+        #expect(image.bounds.width == 200 && image.bounds.height == 100)
+        #expect(math.bounds.width == 300)
+    }
 }
