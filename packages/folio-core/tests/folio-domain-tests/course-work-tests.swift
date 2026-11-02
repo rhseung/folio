@@ -203,6 +203,7 @@ struct CourseWorkTests {
         #expect(file.sessions[1].week == 10 && file.sessions[1].index == 2)
         #expect(file.sessions[1].end == date("2026-11-05 21:15"))
 
+        #expect(file.week(of: date("2026-11-12 20:00"), moving: b.id, termStart: start, calendar: calendar) == 11)
         file.reschedule(b.id, to: date("2026-11-12 20:00"), termStart: start, calendar: calendar)
         #expect(file.sessions[1].week == 11 && file.sessions[1].index == 2)
     }

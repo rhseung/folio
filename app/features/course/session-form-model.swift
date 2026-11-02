@@ -103,20 +103,18 @@ final class SessionFormModel {
                           link: trimmedLink == (session.link ?? "") ? .keep : .set(trimmedLink.isEmpty ? nil : trimmedLink))
     }
 
-    /// A picked end is stored. An end of the session's own moves with it in the action. One the slot gave stays the
-    /// slot's on another slot, and is kept only when the class moves off the timetable, so it keeps its length.
+    /// Saves the end the form shows. Unmoved and unpicked, the end stays as it is. Moved, the form's end goes to the
+    /// action, which drops it again when it is the new slot's own, so the slot keeps giving it; a class with no end
+    /// at all (a date-only import) gets none.
     private func endPatch(_ session: Session) -> Patch<Date?> {
         if endPicked { return .set(end) }
-        guard start != session.date, session.end == nil, session.slot(in: schedule, calendar: calendar) != nil, slot(at: start) == nil else { return .keep }
-        return .set(end)
+        guard start != session.date else { return .keep }
+        return slot(at: start) != nil || session.end(schedule: schedule, calendar: calendar) != nil ? .set(end) : .keep
     }
 
     private func movesWeek(_ session: Session, _ file: CourseFile) -> Bool {
-        guard start != session.date else { return false }
-        let others = file.sessions.filter { $0.id != session.id }
-        let termStart = workspace.semester(of: file.course)?.start
-        let anchor = termStart?.date(in: calendar) ?? (others.map(\.date) + [start]).min()!
-        return SessionPlanner.week(of: start, anchor: anchor, calendar: calendar) != session.week
+        start != session.date
+            && file.week(of: start, moving: session.id, termStart: workspace.semester(of: file.course)?.start, calendar: calendar) != session.week
     }
 
     private static func minute(of date: Date, from start: Date, calendar: Calendar) -> Int {

@@ -64,6 +64,18 @@ struct SessionFormModelTests {
         // Off the timetable it keeps its 75 minutes.
         let evening = wednesday.addingTimeInterval(6 * 3600)
         #expect(try moved(to: evening).end == evening.addingTimeInterval(75 * 60))
+
+        // A makeup with an end of its own, moved onto Wednesday's slot: what the form showed is what's saved.
+        let makeupId = try #require(workspace.run(SessionAdd(course: graphTheory, date: monday.addingTimeInterval(8 * 3600),
+                                                             end: monday.addingTimeInterval(8 * 3600 + 75 * 60)))?.made)
+        let makeup = try #require(try file(workspace).sessions.first { $0.id == makeupId })
+        let model = SessionFormModel(workspace: workspace, courseId: graphTheory, session: makeup)
+        model.setStart(wednesday)
+        #expect(model.end == wednesday.addingTimeInterval(2 * 3600))
+        model.submit()
+        let saved = try #require(try file(workspace).sessions.first { $0.id == makeupId })
+        #expect(saved.end == nil)
+        #expect(saved.end(schedule: try file(workspace).course.schedule, calendar: calendar) == model.end)
     }
 
     @Test func editingChangesOnlyWhatChanged() throws {

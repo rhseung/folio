@@ -242,14 +242,22 @@ extension CourseFile {
     public mutating func reschedule(_ id: UUID, to date: Date, termStart: LocalDate?, calendar: Calendar) {
         guard let i = sessions.firstIndex(where: { $0.id == id }) else { return }
         let others = sessions.filter { $0.id != id }
-        let anchor = termStart?.date(in: calendar) ?? (others.map(\.date) + [date]).min()!
-        let week = SessionPlanner.week(of: date, anchor: anchor, calendar: calendar)
+        let week = week(of: date, moving: id, termStart: termStart, calendar: calendar)
         if week != sessions[i].week {
             sessions[i].week = week
             sessions[i].index = (others.filter { $0.week == week }.map(\.index).max() ?? 0) + 1
         }
         if let end = sessions[i].end { sessions[i].end = end.addingTimeInterval(date.timeIntervalSince(sessions[i].date)) }
         sessions[i].date = date
+    }
+}
+
+extension CourseFile {
+    /// The week session `id` lands in when moved to `date`: counted from the term's start, or without one from the
+    /// earliest of the other sessions and `date`.
+    public func week(of date: Date, moving id: UUID, termStart: LocalDate?, calendar: Calendar) -> Int {
+        let anchor = termStart?.date(in: calendar) ?? (sessions.filter { $0.id != id }.map(\.date) + [date]).min()!
+        return SessionPlanner.week(of: date, anchor: anchor, calendar: calendar)
     }
 }
 
