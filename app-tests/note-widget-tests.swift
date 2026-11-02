@@ -118,14 +118,15 @@ struct NoteWidgetTests {
         #expect(!WidgetWebView.allows(blank, mainFrame: true))
     }
 
-    /// A page as tall as its view (`100vh`) plus a margin stops growing instead of chasing the view.
-    @Test func aPageSizedByItsViewSettles() async throws {
-        let html = "<!doctype html><div style='height:100vh'></div><div style='height:16px'></div>"
-        let (view, _, _) = try Self.reader(widget: html) { Self.block($0, height: 200) }
+    /// A page sized by its view, taller or shorter than it, takes the block's height instead of chasing the view.
+    @Test(arguments: ["<div style='height:100vh'></div><div style='height:16px'></div>", "<div style='height:50vh'></div>"])
+    func aPageSizedByItsViewTakesTheBlocksHeight(body: String) async throws {
+        let (view, _, _) = try Self.reader(widget: "<!doctype html>" + body) { Self.block($0, height: 200) }
         let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
         _ = try await Self.fitted(web)
         for _ in 0..<10 { NoteRender.layout(view); try await Task.sleep(for: .milliseconds(50)) }
-        #expect(try #require(web.pageHeight) <= 232)
+        #expect(web.pageHeight == 200)
+        #expect(web.frame.height == 200)
     }
 
     @Test func aLongPageGetsAllOfItsHeight() async throws {

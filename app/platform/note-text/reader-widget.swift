@@ -54,7 +54,7 @@ final class WidgetAttachment: NSTextAttachment, ViewAttachment {
 }
 
 /// A widget's page, cut off from everything but its own file: no network, nothing kept between runs, no going to
-/// another page. Widgets are written by Claude or pasted in, so they're treated as untrusted code.
+/// another page or opening one. Widgets are written by Claude or pasted in, so they're treated as untrusted code.
 final class WidgetWebView: WKWebView, AttachedView, WKNavigationDelegate {
     let file: URL?
     let stamp: Date?
@@ -122,16 +122,30 @@ final class WidgetWebView: WKWebView, AttachedView, WKNavigationDelegate {
         static let name = "size"
         weak var view: WidgetWebView?
         private var last: (page: Double, view: Double)?
+        /// The view's height at the first report, which is the height written in the block.
+        private var start: Double?
+        private var followsView = false
 
         func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
             guard let view, let body = message.body as? [String: Any], let page = body["h"] as? Double, let shown = body["v"] as? Double
             else { return }
             view.wide = body["w"] as? Bool ?? false
+            // Before the view is placed it has no height, and a page sized by it would report none.
+            guard shown >= 1, !followsView else { return }
             defer { last = (page, shown) }
-            // A page sized by its view (`100vh` and a margin) grows by at least as much as the view just did, and
-            // following it would never end; it keeps the height it has.
-            // The same size comes twice (a resize also reports), and the second must not undo that.
-            if let last, shown != last.view ? page - last.page >= shown - last.view - 0.5 && page > shown + 0.5 : page == last.page { return }
+            let start = start ?? shown
+            self.start = start
+            // A page that changes when only its view did is sized by the view (`100vh`, `50vh`), so following it would
+            // grow or shrink it without end; it takes the block's height.
+            if let last, abs(shown - last.view) >= 0.5, abs(page - last.page) >= 0.5 {
+                followsView = true
+                fit(view, start)
+                return
+            }
+            fit(view, page)
+        }
+
+        private func fit(_ view: WidgetWebView, _ page: Double) {
             let height = max(CGFloat(page).rounded(.up), 16)
             guard height != view.pageHeight else { return }
             view.pageHeight = height
@@ -181,17 +195,11 @@ final class WidgetWebView: WKWebView, AttachedView, WKNavigationDelegate {
         return bare?.url == WidgetScheme.page
     }
 
+    /// Links don't open either: a script's click on a link it made looks the same as the reader's, and the address
+    /// could carry data out.
     func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
         guard let url = action.request.url else { return .cancel }
-        if Self.allows(url, mainFrame: action.targetFrame?.isMainFrame ?? true) { return .allow }
-        if action.navigationType == .linkActivated, url.scheme == "http" || url.scheme == "https" {
-            #if os(macOS)
-            NSWorkspace.shared.open(url)
-            #else
-            await UIApplication.shared.open(url)
-            #endif
-        }
-        return .cancel
+        return Self.allows(url, mainFrame: action.targetFrame?.isMainFrame ?? true) ? .allow : .cancel
     }
 }
 
