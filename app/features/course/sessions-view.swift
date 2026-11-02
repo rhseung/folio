@@ -481,7 +481,7 @@ struct SessionRow: View {
         .opacity(ahead ? 0.55 : 1)
         if !cancelled {
             HStack(spacing: Theme.Space.s) {
-                if let link, model.offersJoin(session, end: end, now: now) { JoinOnlineButton(url: link) }
+                if let link, model.offersJoin(session, in: file, now: now) { JoinOnlineButton(url: link) }
                 if recordingThis {
                     Label(.sessionsRecording, systemImage: "waveform").foregroundStyle(Theme.Palette.danger)
                         .symbolEffect(.variableColor.iterative, isActive: recorder.state == .recording)

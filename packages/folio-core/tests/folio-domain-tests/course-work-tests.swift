@@ -151,6 +151,20 @@ struct CourseWorkTests {
         #expect(midnight.end(schedule: [slot], calendar: calendar) == nil)
     }
 
+    @Test func aClassWithNoEndRunsTheCoursesUsualLengthElseTheSettings() {
+        // A chemistry lab meets for two hours: a makeup off the timetable runs two hours too.
+        let lab = [ClassTime(weekday: 2, startMinute: 13 * 60, endMinute: 15 * 60), ClassTime(weekday: 4, startMinute: 13 * 60, endMinute: 15 * 60),
+                   ClassTime(weekday: 5, startMinute: 9 * 60, endMinute: 9 * 60 + 50)]
+        #expect(lab.usualMinutes == 120)
+        #expect([ClassTime(weekday: 1, startMinute: 600, endMinute: 650), ClassTime(weekday: 3, startMinute: 600, endMinute: 680)].usualMinutes == 80)
+        #expect([ClassTime]().usualMinutes == nil)
+
+        let makeup = Session(device: device, at: .now, week: 10, index: 3, date: date("2026-11-04 19:00"))
+        #expect(makeup.expectedEnd(schedule: lab, classMinutes: 75, calendar: calendar) == date("2026-11-04 21:00"))
+        // No class times at all, as at a school abroad before they're entered: the settings say.
+        #expect(makeup.expectedEnd(schedule: [], classMinutes: 80, calendar: calendar) == date("2026-11-04 20:20"))
+    }
+
     @Test func aMakeupKeepsItsOwnEndAndASlotEndIsNotStoredTwice() {
         let slot = ClassTime(weekday: 1, startMinute: 13 * 60, endMinute: 14 * 60 + 15)
         var makeup = Session(device: device, at: .now, week: 10, index: 3, date: date("2026-11-04 21:00"))

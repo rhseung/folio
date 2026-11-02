@@ -236,6 +236,7 @@ extension Catalog: Document {
 extension Settings: Document {
     public static let model = Model<Settings>(place: String(localized: .modelPlaceSettings)) {
         Rule("Settings.dayBoundary", String(localized: .ruleSettingsDayBoundary)) { s, _ in (0...(8 * 60)).contains(s.dayBoundaryMinutes) }
+        Rule("Settings.classMinutes", String(localized: .ruleSettingsClassMinutes)) { s, _ in (10...300).contains(s.classMinutes) }
         Rule("Settings.dailyLimit", String(localized: .ruleSettingsDailyLimit)) { s, _ in s.review.dailyLimit.map { (1...50).contains($0) } ?? true }
         Rule("Settings.intervals", String(localized: .ruleSettingsIntervals)) { s, _ in
             !s.review.intervals.isEmpty && s.review.intervals.allSatisfy { (1...365).contains($0) }

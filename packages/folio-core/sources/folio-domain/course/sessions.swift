@@ -217,15 +217,17 @@ extension Session {
         return schedule.first { $0.weekday == weekday && $0.startMinute == minute }
     }
 
-    /// GIST's usual class: how long a session with no end of its own and no timetable slot is taken to last, so the
-    /// form, the join button and the day ribbon agree on when it ends.
-    public static let usualLength: TimeInterval = 75 * 60
-
     /// When the class ends: its own end, else from the weekly slot it starts in. Nil when neither (a date-only import).
     public func end(schedule: [ClassTime], calendar: Calendar) -> Date? {
         if let end = self.end { return end }
         guard let slot = slot(in: schedule, calendar: calendar) else { return nil }
         return date.addingTimeInterval(TimeInterval((slot.endMinute - slot.startMinute) * 60))
+    }
+
+    /// When the class is taken to end, for a session that doesn't say: the course's usual class from its start, else
+    /// `classMinutes` from the settings. One answer for the form, the join button and the day ribbon.
+    public func expectedEnd(schedule: [ClassTime], classMinutes: Int, calendar: Calendar) -> Date {
+        end(schedule: schedule, calendar: calendar) ?? date.addingTimeInterval(TimeInterval((schedule.usualMinutes ?? classMinutes) * 60))
     }
 
     /// The meeting to join: the session's own link, else its slot's, so a course held online needs the link only once.
@@ -266,6 +268,15 @@ extension CourseFile {
 }
 
 /// A meeting link as pasted from an invite (Zoom, Meet, Teams, ...).
+extension [ClassTime] {
+    /// The course's usual class in minutes: its most common slot length, the longer on a tie, so a makeup for a two-hour
+    /// lab runs two hours. Nil without class times.
+    public var usualMinutes: Int? {
+        let counts = Dictionary(map { $0.endMinute - $0.startMinute }.filter { $0 > 0 }.map { ($0, 1) }, uniquingKeysWith: +)
+        return counts.max { ($0.value, $0.key) < ($1.value, $1.key) }?.key
+    }
+}
+
 public enum OnlineLink {
     /// What a link field stores: trimmed, and nil when nothing is left, so a stray space neither lights the link up
     /// nor trips the rule with a field that looks empty.

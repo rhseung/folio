@@ -980,6 +980,17 @@
         }
       }
     },
+    "rule.settings.class-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 수업 길이는 10분부터 300분 사이여야 합니다"
+          }
+        }
+      }
+    },
     "rule.settings.daily-limit": {
       "extractionState": "manual",
       "localizations": {

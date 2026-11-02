@@ -7260,6 +7260,50 @@
           }
         }
       }
+    },
+    "settings.show.class-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 수업 길이"
+          }
+        }
+      }
+    },
+    "settings.show.minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld분"
+          }
+        }
+      }
+    },
+    "session.show.end": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "  끝    %@"
+          }
+        }
+      }
+    },
+    "session.show.link": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "  링크  %@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

@@ -27,9 +27,10 @@ final class SessionFormModel {
         let calendar = workspace.calendar
         let start = session?.date ?? calendar.date(byAdding: .hour, value: 18, to: calendar.startOfDay(for: workspace.now))!
         let schedule = workspace.course(courseId)?.file.course.schedule ?? []
-        let end = session?.end(schedule: schedule, calendar: calendar)
+        let minutes = schedule.usualMinutes ?? workspace.settings.classMinutes
+        let end = session?.end(schedule: schedule, calendar: calendar) ?? start.addingTimeInterval(TimeInterval(minutes * 60))
         self.start = start
-        endMinute = Self.minute(of: end ?? start.addingTimeInterval(Session.usualLength), from: start, calendar: calendar)
+        endMinute = Self.minute(of: end, from: start, calendar: calendar)
         topic = session?.topic ?? ""
         link = session?.link ?? ""
     }

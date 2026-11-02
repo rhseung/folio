@@ -121,6 +121,11 @@ private struct GeneralSettings: View {
                 FormRow(label: String(localized: .settingsDayBoundary), detail: String(localized: .settingsDayBoundaryDetail)) {
                     TimeMenu(minute: $model.settings.dayBoundaryMinutes, hours: 0...8)
                 }
+                FormRow(label: String(localized: .settingsClassMinutes), detail: String(localized: .settingsClassMinutesDetail)) {
+                    ScrubField(value: Binding(get: { Double(model.settings.classMinutes) }, set: { model.settings.classMinutes = Int($0.rounded()) }),
+                               range: 10...300, step: 5, width: 80)
+                    Text(.settingsUnitMinutes).foregroundStyle(Theme.Palette.textSecondary)
+                }
                 FormRow(label: String(localized: .settingsDailyLimit), detail: String(localized: .settingsDailyLimitDetail)) {
                     let limit = model.settings.review.dailyLimit
                     ScrubField(value: Binding(get: { Double(limit ?? 10) }, set: { model.settings.review.dailyLimit = Int($0.rounded()) }),

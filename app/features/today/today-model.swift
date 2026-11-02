@@ -260,9 +260,11 @@ final class TodayModel {
     }
 
     func ribbonClasses(_ summary: TodaySummary, now: Date) -> [RibbonClass] {
-        // A session without a weekly slot has no end; the usual length keeps it a visible block rather than a sliver.
+        // A session without a weekly slot has no end; the expected one keeps it a visible block rather than a sliver.
         let made = summary.classesToday.map { item in
-            RibbonClass(courseId: item.courseId, start: item.session.date, end: end(of: item) ?? item.session.date.addingTimeInterval(Session.usualLength),
+            RibbonClass(courseId: item.courseId, start: item.session.date,
+                        end: item.session.expectedEnd(schedule: workspace.course(item.courseId)?.file.course.schedule ?? [],
+                                                      classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar),
                         name: sessionName(item.courseId, item.session), sessionId: item.session.id)
         }
         let planned = suggested(now: now, on: summary.studyDay).map {

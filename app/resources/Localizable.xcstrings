@@ -15818,6 +15818,39 @@
           }
         }
       }
+    },
+    "settings.class-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 수업 길이"
+          }
+        }
+      }
+    },
+    "settings.class-minutes-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끝 시각도 수업 시간 칸도 없는 회차의 길이. 과목에 수업 시간이 있으면 그 길이를 먼저 씁니다"
+          }
+        }
+      }
+    },
+    "settings.unit-minutes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "분"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
