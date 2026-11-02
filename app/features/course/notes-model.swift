@@ -12,7 +12,6 @@ final class NoteListModel {
     private let initial: LoadedCourse
     private(set) var notes: [NoteFile] = []
     var filter: NoteKind?
-    var newTitle = ""
     var adding = false
     var deleting: NoteFile?
 
@@ -40,7 +39,6 @@ final class NoteListModel {
 
     var filterOptions: [(NoteKind?, String)] { [(NoteKind?.none, String(localized: .notesFilterAll))] + NoteKind.allCases.map { (Optional($0), $0.label) } }
     var addHelp: String { filter.map { String(localized: .notesNewKind($0.label)) } ?? String(localized: .notesNewFree) }
-    var titlePrompt: String { filter.map { String(localized: .notesNewKindTitle($0.label)) } ?? String(localized: .notesNewTitle) }
     var emptyLine: String { filter.map { String(localized: .notesKindEmpty($0.label)) } ?? String(localized: .notesEmpty) }
 
     static func parts(_ notes: [NoteFile], file: CourseFile) -> [Part] {
@@ -99,15 +97,6 @@ final class NoteListModel {
         return id
     }
 
-    func create() -> UUID? {
-        let title = newTitle.trimmingCharacters(in: .whitespaces)
-        guard !title.isEmpty, let id = workspace.run(NoteAdd(course: course.id, title: title, kind: filter ?? .free))?.made else { return nil }
-        newTitle = ""
-        adding = false
-        reload()
-        return id
-    }
-
     /// Sessions let go of the note first: a note left behind by a failed trash is harmless, a link to nothing is not.
     func delete(_ note: NoteFile) {
         if let path = course.store.coursePath(of: note.url) { workspace.run(NoteRemove(course: course.id, note: path)) }
@@ -136,7 +125,8 @@ final class NotesModel {
     }
 }
 
-/// The frontmatter (tags, aliases, IDs) is kept aside and written back unchanged, except the math syntax set here.
+/// The note's own frontmatter (tags, aliases) is kept aside and written back unchanged; Folio's properties are in
+/// course.json and change through `note link`.
 @MainActor @Observable
 final class NoteEditorModel {
     let workspace: Workspace
@@ -146,6 +136,7 @@ final class NoteEditorModel {
     var meta = NoteMeta()
     var body = ""
     private var saved = ""
+    /// Loading a note sets the picker too, which must not count as choosing a syntax.
     private var savedMath = MathSyntax.latex
     /// Set to insert at the editor's cursor; the editor clears it once inserted.
     var pendingInsert: String?
@@ -161,11 +152,12 @@ final class NoteEditorModel {
         self.workspace = workspace
         initial = course
         self.note = note
+        meta = note.meta
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
     var store: CourseStore { course.store }
-    var dirty: Bool { body != saved || meta.math != savedMath }
+    var dirty: Bool { body != saved }
     var baseURL: URL { note.url.deletingLastPathComponent() }
 
     func load() {
@@ -176,17 +168,20 @@ final class NoteEditorModel {
         savedMath = meta.math
     }
 
+    func saveMath() {
+        guard meta.math != savedMath else { return }
+        savedMath = meta.math
+        saveLinks()
+    }
+
     func saveNow(force: Bool) {
         guard !conflict || force else { return }
-        guard let path = store.coursePath(of: note.url) else { return }
-        var fm = frontmatter
-        meta.apply(to: &fm)
-        let text = fm.render(body: body)
+        let path = store.notePath(of: note.url)
+        let text = frontmatter.render(body: body)
         do {
             try workspace.runThrowing(NoteWrite(course: course.id, note: path, text: text, expected: force ? nil : onDisk))
             onDisk = text
             saved = body
-            savedMath = meta.math
         } catch ActionError.conflict {
             conflict = true
         } catch {
@@ -255,13 +250,9 @@ final class NoteEditorModel {
         saveLinks()
     }
 
-    // The body is saved first, so the link action rewrites the frontmatter of the text on screen; reading the file back
-    // afterwards keeps the editor's next save from taking that write for someone else's.
     private func saveLinks() {
-        saveNow(force: false)
-        guard !conflict, let id = meta.id else { return }
-        workspace.run(NoteLink(course: course.id, note: id, kind: meta.kind, session: meta.sessionId, exam: meta.examId, units: meta.unitIds))
-        onDisk = (try? store.read(note)) ?? onDisk
+        guard let id = meta.id else { return }
+        workspace.run(NoteLink(course: course.id, note: id, kind: meta.kind, session: meta.sessionId, exam: meta.examId, units: meta.unitIds, math: meta.math))
         workspace.notesRevision += 1
     }
 

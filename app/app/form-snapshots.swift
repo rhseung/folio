@@ -19,6 +19,8 @@ enum FormSnapshots {
             ("course-icon", AnyView(CourseIconPanel(icon: nil, color: workspace.accent(course.id).color) { _ in })),
             ("class-times", AnyView(ClassTimesSheet(workspace: workspace, course: course))),
             ("session-add", AnyView(AddSessionSheet(course: course))),
+            ("note-new", AnyView(NewNoteSheet(workspace: workspace, course: course, kind: .review) { _ in })),
+            ("note-new-topic", AnyView(NewNoteSheet(workspace: workspace, course: course, kind: .topic) { _ in })),
             ("exam-new", AnyView(ExamEditor(workspace: workspace, course: course, exam: Exam(device: device, at: .now, kind: .midterm, title: "")))),
             ("assignment", AnyView(AssignmentSheet(workspace: workspace, course: course, assignment: file.assignments.first ?? Assignment(device: device, at: .now, title: "")))),
             ("component", AnyView(ComponentSheet(workspace: workspace, course: course, component: component))),

@@ -54,6 +54,19 @@ struct TextFileModelTests {
         #expect(try course.store.readText("Exams/Midterm/Problems.tex") == "여기서 고침\n")
     }
 
+    /// A `.tex` note saves through `note write` and keeps its PDF in Notes/Exports, not among the notes.
+    @Test func aTexNoteOpensAsAFile() throws {
+        let id = try #require(workspace.run(NoteAdd(course: graphTheory, title: "증명", format: .tex))?.made)
+        let note = try #require(try workspace.course(graphTheory)?.store.note(id: id))
+        let model = TextFileModel(workspace: workspace, course: course, source: .note(note))
+        model.load()
+        #expect(model.isTex && model.path == "Notes/증명.tex" && model.pdfPath == "Notes/Exports/증명.pdf")
+        model.text = "\\documentclass{article}\n"
+        model.saveIfDirty()
+        #expect(!model.dirty && model.issues.isEmpty)
+        #expect(try course.store.readText("Notes/증명.tex") == "\\documentclass{article}\n")
+    }
+
     @Test func onlyThisFilesIssuesJump() throws {
         let model = try model("Exams/Midterm/Problems.tex")
         let here = TexIssue(.error, file: "Problems.tex", line: 3, message: "Undefined control sequence")
