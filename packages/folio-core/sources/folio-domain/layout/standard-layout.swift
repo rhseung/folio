@@ -1,4 +1,4 @@
-// Single source of truth for folder and file names in docs/SPEC.md "표준 폴더 구조" and "이름 규칙".
+// Single source of truth for folder and file names (AGENTS.md "폴더 구조와 이름 규칙").
 // Other layers derive names from these types; never spell the strings elsewhere.
 
 public enum Term: String, CaseIterable, Codable, Sendable {
@@ -50,7 +50,7 @@ public enum CourseFolder: String, CaseIterable, Sendable {
     case exams = "Exams"
     case notes = "Notes"
     case ink = "Ink"
-    /// Lecture recordings and their transcripts (docs/SPEC.md "강의 녹음").
+    /// Lecture recordings and their transcripts.
     case recordings = "Recordings"
     case archive = "Archive"
     case metadata = ".folio"

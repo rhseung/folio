@@ -111,7 +111,7 @@ public struct CourseStore: Sendable {
     public var courseFileURL: URL { metadataURL.appending(path: StandardLayout.courseFile) }
     public var log: EventLog { EventLog(folder: metadataURL.appending(path: StandardLayout.logsFolder)) }
 
-    /// Creates the standard folder for an assignment or exam (docs/SPEC.md "구조 유지"). Creating is not moving,
+    /// Creates the standard folder for an assignment or exam. Creating is not moving,
     /// so it needs no approval. Returns the course-relative path, or nil when the item has no standard folder.
     @discardableResult
     public func ensureFolder(assignmentTitle: String) throws -> String? {
@@ -181,7 +181,7 @@ public struct CourseStore: Sendable {
 
 enum FileHash {
     /// Streams the file so large textbooks don't load into memory. Nil if iCloud hasn't downloaded it yet,
-    /// because reading would force a download (docs/SPEC.md: download only when opened).
+    /// because reading would force a download.
     static func sha256(of url: URL) throws -> String? {
         let status = try url.resourceValues(forKeys: [.ubiquitousItemDownloadingStatusKey]).ubiquitousItemDownloadingStatus
         if let status, status != .current { return nil }

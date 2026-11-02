@@ -1,6 +1,6 @@
 import Foundation
 
-/// ```` ```cb-table ```` holding JSON (docs/SPEC.md "표 블록"): used only when a table needs merged cells or
+/// ```` ```cb-table ```` holding JSON: used only when a table needs merged cells or
 /// block content in cells; simple tables stay plain markdown tables.
 public struct CBTable: Codable, Equatable, Sendable {
     public static let language = "cb-table"

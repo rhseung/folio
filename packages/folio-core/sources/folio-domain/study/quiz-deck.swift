@@ -4,7 +4,7 @@ import Foundation
 /// A card's or problem's attempts in time order, as study days.
 public typealias AttemptHistory = [(day: LocalDate, verdict: Verdict)]
 
-/// Counts for a group of cards or problems under the wrong-answer flow (docs/SPEC.md "통계").
+/// Counts for a group of cards or problems under the wrong-answer flow.
 public struct WrongTally: Equatable, Sendable {
     public var items = 0
     public var attempted = 0

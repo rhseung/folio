@@ -1,7 +1,7 @@
 import FolioDomain
 import Foundation
 
-/// What an action does to the data, for whoever runs it: removing and moving always ask first (docs/SPEC.md "쓰기와 안전").
+/// What an action does to the data, for whoever runs it: removing and moving always ask first.
 public enum Effect: String, Codable, Sendable {
     case creates, changes, removes, moves, logs
 }

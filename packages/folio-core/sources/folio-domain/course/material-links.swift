@@ -45,7 +45,7 @@ extension CourseFile {
             .compactMap { s in s.materials.first { $0.materialId == material }.map { (s, $0) } }
     }
 
-    /// Points a material at a file the user picked (docs/SPEC.md "파일 추적": "다른 파일을 지정").
+    /// Points a material at a file the user picked.
     /// A refresh usually registered that file as a new material when the original went missing; that duplicate
     /// is dropped and everything that referred to it is moved here, so the user's links survive under the original ID.
     public mutating func relinkMaterial(_ id: UUID, to path: String, hash: String?, size: Int64?, bookmark: Data?, device: DeviceID, now: Date) {

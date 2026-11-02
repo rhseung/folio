@@ -3,8 +3,8 @@ import FolioStorage
 import Foundation
 
 /// One change to the user's data. The app's screens and the `folio` CLI build the same value and run it the same way,
-/// so the files they leave behind are the same (docs/SPEC.md "액션").
-/// Declared with `@Action`, which writes `spec` and checks the declaration; see docs/SPEC.md "액션".
+/// so the files they leave behind are the same.
+/// Declared with `@Action`, which writes `spec` and checks the declaration.
 public protocol Action: Codable, Sendable {
     static var spec: ActionSpec { get }
     func run(_ ctx: ActionContext) throws
@@ -15,7 +15,7 @@ extension Action {
     public static var command: String { spec.command }
 }
 
-/// Why an action refused to run. Each case is its own CLI exit code (docs/SPEC.md "출력").
+/// Why an action refused to run. Each case is its own CLI exit code.
 public enum ActionError: Error, Equatable, CustomStringConvertible {
     case notFound(String)
     /// The data rules forbid it, e.g. deleting a session that a note still points at.

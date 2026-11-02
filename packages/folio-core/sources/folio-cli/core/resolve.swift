@@ -159,8 +159,7 @@ final class Resolver {
     }
 }
 
-/// fzf for ambiguous names, only where a person is at the terminal: an agent must get exit 3, not a prompt that waits
-/// (docs/SPEC.md "fzf와 셸 완성").
+/// fzf for ambiguous names, only where a person is at the terminal: an agent must get exit 3, not a prompt that waits.
 enum Picker {
     nonisolated(unsafe) static var allowed = false
     nonisolated(unsafe) static var gist: String?

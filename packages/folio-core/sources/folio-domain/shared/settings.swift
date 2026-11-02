@@ -3,10 +3,10 @@ import Foundation
 /// `GIST/.folio/settings.json`. Every user-tunable number lives here; the defaults below are the only place
 /// they are written down.
 public struct Settings: Codable, Sendable, Equatable {
-    /// Minutes after midnight when "today" turns over (docs/SPEC.md "하루 경계"). 240 = 04:00.
+    /// Minutes after midnight when "today" turns over. 240 = 04:00.
     public var dayBoundaryMinutes: Int
     public var review: ReviewSettings
-    /// "노트 작성 규칙", always sent to Claude with the course context (docs/SPEC.md "노트 템플릿").
+    /// "노트 작성 규칙", always sent to Claude with the course context.
     public var noteRules: String
     public var notifications: NotificationSettings
     public var backup: BackupSettings
@@ -98,7 +98,7 @@ public struct ReviewSettings: Codable, Sendable, Equatable {
     }
 }
 
-/// Weights of the overdue-priority terms (docs/SPEC.md "밀린 복습의 우선순위").
+/// Weights of the overdue-priority terms.
 public struct PriorityWeights: Codable, Sendable, Equatable {
     /// × (days overdue / current interval)
     public var overdue: Double
@@ -117,7 +117,7 @@ public struct PriorityWeights: Codable, Sendable, Equatable {
     }
 }
 
-/// docs/SPEC.md "알림". Times are minutes after midnight in real (clock) time.
+/// Notification timing. Times are minutes after midnight in real (clock) time.
 public struct NotificationSettings: Codable, Sendable, Equatable {
     public var assignmentDue = true
     public var assignmentLeadHours = [24, 3]
@@ -146,7 +146,7 @@ public struct NotificationSettings: Codable, Sendable, Equatable {
     }
 }
 
-/// docs/SPEC.md "백업". Only the Mac app backs up.
+/// Only the Mac app backs up.
 public struct BackupSettings: Codable, Sendable, Equatable {
     public var enabled = true
     /// Local folder outside iCloud; `~` is expanded on the device that backs up.

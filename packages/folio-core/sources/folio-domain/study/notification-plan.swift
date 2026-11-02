@@ -1,6 +1,6 @@
 import Foundation
 
-/// One local notification to schedule (docs/SPEC.md "알림"). The app turns `kind` into text.
+/// One local notification to schedule. The app turns `kind` into text.
 public struct PlannedNotification: Sendable, Equatable {
     public enum Kind: Sendable, Equatable {
         case assignmentDue(hoursBefore: Int)
@@ -22,7 +22,7 @@ public struct PlannedNotification: Sendable, Equatable {
 }
 
 public enum NotificationPlan {
-    /// Deadlines and exams use real time (docs/SPEC.md "하루 경계").
+    /// Deadlines and exams use real time.
     /// - Parameter reviewCount: units in the review queue at a given moment.
     public static func build(courses: [CourseFile], reviewCount: (Date) -> Int, settings: NotificationSettings,
                              now: Date, calendar: Calendar, reviewDays: Int = 7) -> [PlannedNotification] {

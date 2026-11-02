@@ -1,6 +1,6 @@
 import Foundation
 
-/// Notion data as read through the Notion MCP (docs/SPEC.md "기존 데이터 이전"), in a Notion-independent shape.
+/// Notion data as read through the Notion MCP, in a Notion-independent shape.
 /// IDs are the Notion page IDs, so importing twice yields the same entity IDs.
 /// Judgement calls the spec assigns to Claude (rule text → aggregation and attendance caps, exam times written in
 /// page bodies) are already resolved in this file; the original text stays in `policy.notes` and `memo`.
@@ -223,7 +223,7 @@ public enum NotionImporter {
         )
     }
 
-    /// `<semester folder>/<code><number> ...`, trying every cross-listed code (docs/SPEC.md: 학기와 과목 코드로 짝짓는다).
+    /// `<semester folder>/<code><number> ...`, trying every cross-listed code.
     static func courseFolder(for row: NotionExport.CourseRow, in semester: Semester, prefixes: [UUID: String], gist: FolderTree) -> String? {
         guard let folder = semester.folder, let node = gist[child: folder.name] else { return nil }
         let number = row.number.split(separator: "-").first.map(String.init) ?? row.number

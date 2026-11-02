@@ -3,7 +3,7 @@ import FolioDomain
 import Foundation
 import LocalAuthentication
 
-/// docs/SPEC.md "성적 잠금" in the terminal. Each run is its own process, so an unlock is kept as a file's time, not in
+/// The grades lock in the terminal. Each run is its own process, so an unlock is kept as a file's time, not in
 /// memory. Like the app's lock it hides grades from someone looking at the screen; course.json stays readable.
 enum GradesLock {
     /// Its modification date is when the lock comes back.

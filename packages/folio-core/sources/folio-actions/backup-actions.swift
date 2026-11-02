@@ -9,7 +9,7 @@ extension ActionContext {
     }
 }
 
-/// Today's archive in the backup folder from settings.json (docs/SPEC.md "백업"). Nothing inside the GIST folder
+/// Today's archive in the backup folder from settings.json. Nothing inside the GIST folder
 /// changes, so the archive's path goes to `notes` rather than `changes`.
 @Action("backup create", "오늘 백업을 만든다", effect: .creates, done: "백업을 만들었습니다", phrases: ["백업하기"], cli: .manual)
 public struct BackupCreate {

@@ -3,7 +3,7 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
-/// Nothing leaves the device until the user presses send (docs/SPEC.md "데이터 전송 원칙").
+/// Nothing leaves the device until the user presses send.
 struct ClaudePanel: View {
     @State private var model: ClaudeModel
     @Environment(\.accent) private var accent

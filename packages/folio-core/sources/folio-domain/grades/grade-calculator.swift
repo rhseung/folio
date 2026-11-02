@@ -1,6 +1,6 @@
 import Foundation
 
-/// docs/SPEC.md "성적 계산". All scores are on a 0-100 scale; ratios are 0-1.
+/// All scores are on a 0-100 scale; ratios are 0-1.
 public enum GradeCalculator {
     public struct ComponentResult: Sendable, Equatable {
         public var componentId: UUID

@@ -3,7 +3,7 @@ import Foundation
 
 public struct ContextItem: Sendable, Equatable, Identifiable {
     public enum Tier: Int, Sendable, Comparable {
-        // Order from docs/SPEC.md "맥락 구성"; later tiers are dropped first when over budget.
+        // Later tiers are dropped first when over budget.
         case courseSummary, userRules, focus, related, search
         public static func < (a: Tier, b: Tier) -> Bool { a.rawValue < b.rawValue }
     }

@@ -1,6 +1,6 @@
 import Foundation
 
-/// One-line add such as `선대 HW5 금 23:59` (docs/SPEC.md "과제 빠른 추가"). The result is shown before saving.
+/// One-line add such as `선대 HW5 금 23:59`. The result is shown before saving.
 public struct QuickAdd: Equatable, Sendable {
     public var courseId: UUID?
     public var title: String

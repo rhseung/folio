@@ -12,7 +12,7 @@ public enum CardSource: String, Codable, Sendable, CaseIterable {
     case ai, manual, material
 }
 
-/// `.folio/quizzes/<unit ID>.json` holds one unit's cards (docs/SPEC.md "QuizCard").
+/// `.folio/quizzes/<unit ID>.json` holds one unit's cards.
 public struct QuizFile: Codable, Sendable, Equatable {
     public var unitId: UUID
     public var cards: [QuizCard]
@@ -110,7 +110,7 @@ public struct ProblemAttemptEvent: LogEvent, Equatable {
     }
 }
 
-/// Problem sets, past exams, textbook exercises: numbered problems tracked like cards (docs/SPEC.md "ProblemSet").
+/// Problem sets, past exams, textbook exercises: numbered problems tracked like cards.
 public struct ProblemSet: Entity {
     public var id: UUID
     public var createdAt: Date
@@ -146,7 +146,7 @@ public struct ProblemSet: Entity {
     }
 }
 
-/// The wrong-answer flow (docs/SPEC.md "오답 흐름") for cards and problems alike.
+/// The wrong-answer flow for cards and problems alike.
 public enum WrongStatus: Equatable, Sendable {
     case neverWrong
     /// Wrong or partial and not yet answered correctly since.

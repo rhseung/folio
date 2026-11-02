@@ -23,7 +23,7 @@ extension Sequence<LoggedEvent> {
 }
 
 /// `.folio/logs/<device ID>.jsonl`. Each device appends only to its own file and never edits a line,
-/// so two devices never write the same file (docs/SPEC.md "동기화와 충돌 방지").
+/// so two devices never write the same file.
 public struct EventLog: Sendable {
     static let schemaVersion = 1
 

@@ -2,7 +2,7 @@ import FolioDomain
 import Foundation
 
 #if os(macOS)
-/// Daily backups (docs/SPEC.md "백업"). Nothing here writes inside the GIST folder.
+/// Daily backups. Nothing here writes inside the GIST folder.
 /// On the GIST folder's own volume a backup is an APFS clone of the whole folder, which costs disk only for
 /// files changed since. A clone can't cross volumes, and copying every lecture daily would cost gigabytes, so
 /// elsewhere it falls back to zipping GIST/.folio and each course's Notes, Ink and .folio.

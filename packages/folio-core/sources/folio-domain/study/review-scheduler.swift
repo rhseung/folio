@@ -68,7 +68,7 @@ public struct ReviewState: Sendable, Equatable {
 }
 
 public enum ReviewScheduler {
-    /// Replays reviews and wrong cards in day order (docs/SPEC.md "간격").
+    /// Replays reviews and wrong cards in day order.
     public static func state(of input: UnitReviewInput, settings: ReviewSettings, today: LocalDate) -> ReviewState {
         let steps = settings.intervals
         let last = steps.count - 1

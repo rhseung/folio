@@ -1,7 +1,7 @@
 import FolioStorage
 import Foundation
 
-/// docs/SPEC.md "출력": every failure maps to one of these.
+/// Every failure maps to one of these.
 enum Exit: Int32 {
     case success = 0, unexpected = 1, usage = 2, notFound = 3, rule = 4, needsConfirmation = 5, conflict = 6, coverage = 7
 
@@ -43,14 +43,14 @@ final class Sink: @unchecked Sendable {
 func say(_ line: String = "") { Sink.current.out(line) }
 func warn(_ line: String) { Sink.current.err(line) }
 
-/// Same field names and date format as course.json (docs/SPEC.md "출력").
+/// Same field names and date format as course.json.
 func printJSON(_ value: some Encodable) throws {
     say(String(decoding: try JSONEncoder.folio.encode(value), as: UTF8.self))
 }
 
 // MARK: Style
 
-/// The terminal's 16 colors, so light and dark themes both read (docs/SPEC.md "사람용 출력").
+/// The terminal's 16 colors, so light and dark themes both read.
 enum Style {
     case bold, dim, green, yellow, red, blue, magenta, cyan
 

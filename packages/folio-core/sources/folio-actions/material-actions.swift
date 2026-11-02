@@ -100,7 +100,7 @@ public struct MaterialRelink {
     }
 }
 
-/// Stops tracking the file. Links to it from sessions, units, quizzes and notes stay, as docs/SPEC.md "파일 추적" asks.
+/// Stops tracking the file. Links to it from sessions, units, quizzes and notes stay.
 @Action("material untrack", "자료 추적 그만두기. 파일과 연결은 그대로 둔다", done: "자료 '{material}'의 추적을 그만뒀습니다",
         examples: ["folio material untrack EC4207/Seating.pdf"], phrases: ["추적 그만", "자료 목록에서 빼기"])
 public struct MaterialUntrack {
@@ -144,7 +144,7 @@ public struct MaterialTrack {
     }
 }
 
-/// Copies files in from outside into `folder` (docs/SPEC.md "구조 유지"), registers them, and links them to `session`.
+/// Copies files in from outside into `folder`, registers them, and links them to `session`.
 /// `week` puts the week in front of the name, as `Lectures` asks. A file already in this course is linked where it is.
 @Action("material import", "바깥 파일을 과목 폴더로 복사해 등록하고 회차에 연결", effect: .creates, done: "파일을 {folder}(으)로 가져왔습니다",
         phrases: ["파일 가져오기", "다운로드한 자료 넣기", "외부 파일 복사"], cli: .manual)

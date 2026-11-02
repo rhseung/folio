@@ -1,6 +1,6 @@
 import Foundation
 
-/// docs/SPEC.md "졸업 요건": what on the requirements page waits on the student, worked out once for the app and
+/// What on the requirements page waits on the student, worked out once for the app and
 /// `folio requirement check`. `catalog` is already scoped to the declared programs.
 /// A new check adds a `Kind`, its field here and whatever it reads (a course database, say) to `init`.
 public struct RequirementAudit: Sendable, Equatable {

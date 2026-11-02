@@ -1,8 +1,8 @@
 import FolioDomain
 import Foundation
 
-// Courses without a folder (credited terms, colloquia) keep only a grade record in transcript.json (docs/SPEC.md
-// "기존 데이터 이전"). Courses with a folder are changed with `course set`.
+// Courses without a folder (credited terms, colloquia) keep only a grade record in transcript.json.
+// Courses with a folder are changed with `course set`.
 
 @Action("transcript add", "폴더 없는 과목의 성적 기록 추가. 인정학기 과목, 콜로퀴움 등", effect: .creates, done: "과목 '{title}'의 기록을 추가했습니다",
         examples: [#"folio transcript add "2024 credited" "군 복무 인정" --credits 9 --mode pass_fail --dry-run  인정학기 과목"#],

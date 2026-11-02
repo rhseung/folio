@@ -30,7 +30,7 @@ public enum AssignmentFiles {
     }
 }
 
-/// Where a deadline stands, for badges. Real clock time, not the study-day boundary (docs/SPEC.md "하루 경계").
+/// Where a deadline stands, for badges. Real clock time, not the study-day boundary.
 public enum DueState: Equatable, Sendable {
     case none
     case overdue(days: Int)

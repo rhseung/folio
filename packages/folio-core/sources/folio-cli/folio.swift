@@ -17,7 +17,7 @@ struct Folio: ParsableCommand {
         ]
     )
 
-    /// Below the command list, as docs/SPEC.md "도움말" asks; ArgumentParser would put a discussion above it.
+    /// Below the command list; ArgumentParser would put a discussion above it.
     static let footer = String(localized: .folioFooter)
 
     /// ArgumentParser's help labels are English and fixed; these sit at line starts or in parentheses, so columns stay aligned.
@@ -103,7 +103,7 @@ struct Folio: ParsableCommand {
                 report(typo, json: json)
                 return typo.exit.rawValue
             }
-            // ArgumentParser's own usage failures exit 64; the SPEC gives usage errors 2.
+            // ArgumentParser's own usage failures exit 64; Folio gives usage errors 2.
             let exit: Exit = code == .validationFailure ? .usage : Exit(rawValue: code.rawValue) ?? .unexpected
             report(CLIError(exit: exit, message: exit == .unexpected ? String(describing: error) : fullMessage(for: error)), json: json)
             return exit.rawValue

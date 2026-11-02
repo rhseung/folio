@@ -1,6 +1,6 @@
 import Foundation
 
-/// One lecture recording (docs/SPEC.md "강의 녹음"): an audio file under `Recordings/`, with its transcript beside it.
+/// One lecture recording: an audio file under `Recordings/`, with its transcript beside it.
 public struct Recording: Entity {
     public var id: UUID
     public var createdAt: Date

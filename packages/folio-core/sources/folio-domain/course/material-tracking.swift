@@ -54,7 +54,7 @@ public enum MaterialTracking {
         return match.flatMap { overrides[$0] } ?? MaterialRole(path: path)
     }
 
-    /// Matches tracked materials to what is on disk (docs/SPEC.md "파일 추적", "미분류 파일"):
+    /// Matches tracked materials to what is on disk:
     /// same path → bookmark → content hash; unmatched materials become `missing` (links are kept),
     /// and new files are registered, classified by folder when the folder has a role.
     public static func reconcile(
@@ -129,7 +129,7 @@ public enum MaterialTracking {
         return result
     }
 
-    /// A `.tex` next to a same-named PDF is that PDF's source (docs/SPEC.md "색인 제외 대상").
+    /// A `.tex` next to a same-named PDF is that PDF's source.
     static func linkTexSources(_ materials: inout [Material]) {
         let pdfs = Dictionary(
             materials.filter { $0.path.hasSuffix(".pdf") }.map { ($0.path.dropLast(4), $0.id) },

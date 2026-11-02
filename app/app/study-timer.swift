@@ -5,7 +5,7 @@ import SwiftUI
 import AppKit
 #endif
 
-/// Records study time (docs/SPEC.md "공부 시간"): automatically while a course screen is in front and the user is
+/// Records study time: automatically while a course screen is in front and the user is
 /// active, and by hand with the manual timer for study done away from the app. Each finished span becomes one
 /// `study_session` event in that course's device log.
 @MainActor @Observable

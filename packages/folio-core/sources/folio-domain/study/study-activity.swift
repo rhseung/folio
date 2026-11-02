@@ -1,6 +1,6 @@
 import Foundation
 
-/// Auto-recorded study time for the course screen in front (docs/SPEC.md "공부 시간"). Recording stops
+/// Auto-recorded study time for the course screen in front. Recording stops
 /// `idleLimit` after the last input; the next input starts a new span.
 public struct ActivitySpan: Sendable, Equatable {
     public static let idleLimit: TimeInterval = 5 * 60

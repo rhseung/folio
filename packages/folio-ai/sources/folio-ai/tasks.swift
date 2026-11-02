@@ -85,8 +85,7 @@ public struct ClaudeClient: Sendable {
         try await send(task, request(task, system: system, messages: messages), onText: onText)
     }
 
-    /// A reply that doesn't decode is asked for once more, then reported
-    /// (docs/SPEC.md "스키마에 맞지 않는 응답은 한 번 다시 요청").
+    /// A reply that doesn't decode is asked for once more, then reported.
     public func structured<T: Decodable & Sendable>(_ task: ClaudeTask, as _: T.Type, schema: JSONValue,
                                                     system: [ContentBlock], messages: [Message]) async throws -> T {
         let req = request(task, system: system, messages: messages, schema: schema)
