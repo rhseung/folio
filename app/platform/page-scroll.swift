@@ -13,19 +13,22 @@ private struct NoBounce: NSViewRepresentable {
     func updateNSView(_ view: Probe, context: Context) {}
 
     final class Probe: NSView {
-        private var watch: NSKeyValueObservation?
+        private var watches: [NSKeyValueObservation] = []
 
         // Watched, not set once: SwiftUI sets the scroll view's elasticity from its own bounce behavior after this view
-        // is placed, on a later pass than anything scheduled here, and that undid a value set only once.
+        // is placed, on a later pass than anything scheduled here, and that undid a value set only once. It resets only
+        // the axis it scrolls on (vertical here); the other is watched too so this doesn't hang on that.
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
-            guard let scroll = enclosingScrollView else { return }
-            scroll.horizontalScrollElasticity = .none
-            watch = scroll.observe(\.verticalScrollElasticity, options: [.initial, .new]) { scroll, _ in
-                MainActor.assumeIsolated {
-                    if scroll.verticalScrollElasticity != .none { scroll.verticalScrollElasticity = .none }
-                }
-            }
+            guard let scroll = enclosingScrollView else { return watches = [] }
+            watches = [
+                scroll.observe(\.verticalScrollElasticity, options: [.initial, .new]) { scroll, _ in
+                    MainActor.assumeIsolated { if scroll.verticalScrollElasticity != .none { scroll.verticalScrollElasticity = .none } }
+                },
+                scroll.observe(\.horizontalScrollElasticity, options: [.initial, .new]) { scroll, _ in
+                    MainActor.assumeIsolated { if scroll.horizontalScrollElasticity != .none { scroll.horizontalScrollElasticity = .none } }
+                },
+            ]
         }
     }
 }
@@ -37,16 +40,25 @@ private struct NoBounce: UIViewRepresentable {
     final class Probe: UIView {
         private var watch: NSKeyValueObservation?
 
+        // Watched like the Mac's elasticity, and set again on each layout too: UIKit doesn't promise KVO for `bounces`,
+        // and a change the watch missed would leave the page bouncing as a value set once did on the Mac.
         override func didMoveToWindow() {
             super.didMoveToWindow()
+            guard let scroll = enclosingScrollView else { return watch = nil }
+            watch = scroll.observe(\.bounces, options: [.initial, .new]) { scroll, _ in
+                MainActor.assumeIsolated { if scroll.bounces { scroll.bounces = false } }
+            }
+        }
+
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            if let scroll = enclosingScrollView, scroll.bounces { scroll.bounces = false }
+        }
+
+        var enclosingScrollView: UIScrollView? {
             var view = superview
             while let current = view, !(current is UIScrollView) { view = current.superview }
-            guard let scroll = view as? UIScrollView else { return }
-            watch = scroll.observe(\.bounces, options: [.initial, .new]) { scroll, _ in
-                MainActor.assumeIsolated {
-                    if scroll.bounces { scroll.bounces = false }
-                }
-            }
+            return view as? UIScrollView
         }
     }
 }
