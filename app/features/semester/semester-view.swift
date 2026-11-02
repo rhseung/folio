@@ -7,6 +7,7 @@ struct SemesterView: View {
     let openCourse: (UUID) -> Void
     @Environment(\.searchTarget) private var searchTarget
     @State private var addingCourse = false
+    @State private var editingRecord: Course?
 
     init(workspace: Workspace, semesterID: UUID, openCourse: @escaping (UUID) -> Void) {
         _model = State(initialValue: SemesterModel(workspace: workspace, semesterID: semesterID))
@@ -38,9 +39,14 @@ struct SemesterView: View {
                         }
                         ForEach(Array(records.enumerated()), id: \.element.id) { i, course in
                             CardRow(last: i == records.count - 1) {
-                                courseLabel(mark: CourseMark(icon: "doc.text", color: Theme.Palette.textTertiary, font: Theme.Glyph.lineTitle, duotone: true), title: course.title, detail: model.detail(course))
+                                Button { editingRecord = course } label: {
+                                    courseLabel(mark: CourseMark(icon: "doc.text", color: Theme.Palette.textTertiary, font: Theme.Glyph.lineTitle, duotone: true),
+                                                title: course.title, detail: model.detail(course))
+                                }
+                                .buttonStyle(.pointing(.plain))
                                 gradeMenu(course)
                             }
+                            .contextMenu { recordMenu(course) }
                         }
                     }
                 }
@@ -48,7 +54,7 @@ struct SemesterView: View {
                 // A credited term is only a record of transferred credits: no dates, classes or exams.
                 if semester.term != .credited {
                     Block(String(localized: .semesterTimetable)) {
-                        Timetable(model: model, courses: courses, today: model.markedWeekday(semester), open: openCourse) { courseMenu($0) }
+                        Timetable(model: model, layout: model.timetable(semester), today: model.markedWeekday(semester), open: open) { timetableMenu($0) }
                     }
 
                     // Short lists of equal weight, side by side when there's room, as on Today.
@@ -93,6 +99,7 @@ struct SemesterView: View {
             }
             .navigationTitle(semester.title)
             .sheet(isPresented: $addingCourse) { AddCourseSheet(workspace: model.workspace, semester: semester) { if let id = $0 { openCourse(id) } } }
+            .sheet(item: $editingRecord) { EditRecordSheet(workspace: model.workspace, course: $0) }
         } else {
             ContentUnavailableView(String(localized: .semesterNotFound), systemImage: "calendar")
         }
@@ -115,6 +122,18 @@ struct SemesterView: View {
         #if os(macOS)
         Button(.commonShowInFinder, systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([course.store.url]) }
         #endif
+    }
+
+    func recordMenu(_ course: Course) -> some View {
+        Button(.commonEditEllipsis, systemImage: "pencil") { editingRecord = course }
+    }
+
+    func open(_ course: Course) {
+        if model.folderCourse(course) != nil { openCourse(course.id) } else { editingRecord = course }
+    }
+
+    @ViewBuilder func timetableMenu(_ course: Course) -> some View {
+        if let loaded = model.folderCourse(course) { courseMenu(loaded) } else { recordMenu(course) }
     }
 
     /// RootView turns a search target into the course's selection, so this reaches its exams page from here.
@@ -193,17 +212,16 @@ struct SemesterView: View {
 /// and as tall as it lasts, so free periods and back-to-back classes read at a glance.
 struct Timetable<Menu: View>: View {
     let model: SemesterModel
-    let courses: [LoadedCourse]
+    let layout: TimetableLayout
     /// The ISO weekday to mark, while the semester is running.
     var today: Int?
-    let open: (UUID) -> Void
-    @ViewBuilder let menu: (LoadedCourse) -> Menu
+    let open: (Course) -> Void
+    @ViewBuilder let menu: (Course) -> Menu
 
     static var hourHeight: CGFloat { 48 }
     static var gutter: CGFloat { 28 }
 
     var body: some View {
-        let layout = TimetableLayout(courses: courses)
         let (days, first, last) = (layout.days, layout.first, layout.last)
         let height = CGFloat(max(last - first, 1)) * Self.hourHeight
         Card(padding: Theme.Space.m) {
@@ -248,7 +266,7 @@ struct Timetable<Menu: View>: View {
     }
 
     // shortcut: two classes at the same time on one day draw over each other; split the column if that ever happens.
-    func column(_ slots: [(course: LoadedCourse, time: ClassTime)], first: Int, height: CGFloat) -> some View {
+    func column(_ slots: [(course: Course, time: ClassTime)], first: Int, height: CGFloat) -> some View {
         ZStack(alignment: .top) {
             Color.clear
             ForEach(Array(slots.enumerated()), id: \.offset) { _, item in
@@ -267,7 +285,7 @@ struct Timetable<Menu: View>: View {
                 .background(accent.tint, in: .rect(cornerRadius: Theme.Radius.control - 2))
                 .overlay(alignment: .leading) { accent.color.frame(width: 4).clipShape(.rect(cornerRadius: Theme.Radius.mark)) }
                 .clipShape(.rect(cornerRadius: Theme.Radius.control - 2))
-                .opens { open(course.id) }
+                .opens { open(course) }
                 .contextMenu { menu(course) }
                 .offset(y: CGFloat(slot.startMinute - first * 60) / 60 * Self.hourHeight + 1)
                 .help("\(course.title) · \(TimeMenu.range(slot.startMinute, slot.endMinute))" + (slot.room.isEmpty ? "" : " · \(slot.room)"))
@@ -275,6 +293,34 @@ struct Timetable<Menu: View>: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: height)
+    }
+}
+
+/// A course without a folder has no page of its own, so its few properties are edited here.
+struct EditRecordSheet: View {
+    @State private var model: EditRecordModel
+    @Environment(\.dismiss) private var dismiss
+
+    init(workspace: Workspace, course: Course) {
+        _model = State(initialValue: EditRecordModel(workspace: workspace, course: course))
+    }
+
+    var body: some View {
+        SheetForm(title: String(localized: .courseEdit), confirm: String(localized: .commonSave), disabled: !model.canSave,
+                  note: model.note, carded: false, width: 560) {
+            Block(String(localized: .courseEditCourse), note: String(localized: .semesterCoursesRecordOnly)) {
+                Card {
+                    FormRow(label: String(localized: .courseEditName)) { InlineField(String(localized: .courseEditNameExample), text: $model.title) }
+                    FormRow(label: String(localized: .courseEditCredits)) { CreditsField(credits: $model.credits) }
+                    FormRow(label: String(localized: .courseEditGrading), last: true) {
+                        ChoiceMenu(selection: $model.mode, options: [GradingMode.relative, .absolute, .passFail].map { ($0, $0.label) })
+                    }
+                }
+            }
+            ClassTimesBlock(schedule: $model.schedule, note: String(localized: .classTimesRecordNote))
+        } onConfirm: {
+            if model.confirm() { dismiss() }
+        }
     }
 }
 

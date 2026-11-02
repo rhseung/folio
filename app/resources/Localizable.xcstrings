@@ -749,6 +749,17 @@
         }
       }
     },
+    "class-times.record-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기 시간표에 표시합니다"
+          }
+        }
+      }
+    },
     "class-times.room": {
       "extractionState": "manual",
       "localizations": {

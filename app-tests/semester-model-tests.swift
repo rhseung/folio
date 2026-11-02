@@ -40,6 +40,37 @@ struct SemesterModelTests {
         #expect(model.exams(of: model.courses(in: fall)).map(\.exam.title) == ["중간", "기말"])
     }
 
+    @Test func aRecordWithClassTimesJoinsTheTimetable() throws {
+        let workspace = try fixtureWorkspace()
+        let model = SemesterModel(workspace: workspace, semesterID: fallTerm)
+        let id = UUID()
+        workspace.run(TranscriptAdd(id: id, semester: fallTerm, title: "콜로퀴움", credits: 0))
+        let fall = try #require(model.semester)
+        let record = try #require(model.records(in: fall).first { $0.id == id })
+        #expect(model.folderCourse(record) == nil)
+        #expect(!model.timetable(fall).slots.contains { $0.course.id == id })
+
+        let sheet = EditRecordModel(workspace: workspace, course: record)
+        sheet.title = "GIST대학 콜로퀴움"
+        sheet.schedule = [ClassTime(weekday: 3, startMinute: 16 * 60, endMinute: 17 * 60)]
+        #expect(sheet.confirm())
+
+        let saved = try #require(model.records(in: fall).first { $0.id == id })
+        #expect(saved.title == "GIST대학 콜로퀴움" && saved.credits == 0)
+        #expect(model.timetable(fall).slots(on: 3).contains { $0.course.id == id && $0.time.startMinute == 16 * 60 })
+    }
+
+    @Test func aRecordSheetRefusesAClassEndingBeforeItStarts() throws {
+        let workspace = try fixtureWorkspace()
+        let record = Course(device: UUID(), at: .now, semesterId: fallTerm, title: "콜로퀴움", credits: 0, gradingMode: .passFail)
+        let sheet = EditRecordModel(workspace: workspace, course: record)
+        sheet.schedule = [ClassTime(weekday: 3, startMinute: 17 * 60, endMinute: 16 * 60)]
+        #expect(!sheet.canSave && sheet.note == "수업이 끝나는 시간이 시작 시간보다 늦어야 합니다")
+        sheet.schedule = []
+        sheet.title = "  "
+        #expect(!sheet.canSave)
+    }
+
     @Test func aPastTermShowsItsDatesWithoutTheCurrentWeek() throws {
         let model = SemesterModel(workspace: try fixtureWorkspace(), semesterID: springTerm)
         let spring = try #require(model.semester)
