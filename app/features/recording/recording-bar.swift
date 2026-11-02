@@ -25,7 +25,7 @@ struct RecordingBar: View {
                         Button { open(.course(target.courseId), target) } label: {
                             Text(session).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
                         }
-                        .help(Text(.recordingOpenSession))
+                        .help(Text(target.noteId == nil ? .recordingOpenSessions : .recordingOpenSession))
                     }
                 }
                 .buttonStyle(.pointing(.plain))

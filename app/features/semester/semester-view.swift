@@ -101,7 +101,7 @@ struct SemesterView: View {
                 }
             }
             .navigationTitle(semester.title)
-            .task(id: semester.id) { model.refreshAudio() }
+            .task(id: semester.id) { await model.refreshAudio() }
             .sheet(isPresented: $addingCourse) { AddCourseSheet(workspace: model.workspace, semester: semester) { if let id = $0 { openCourse(id) } } }
             .sheet(item: $editingRecord) { EditRecordSheet(workspace: model.workspace, course: $0) }
         } else {
@@ -162,7 +162,7 @@ struct SemesterView: View {
             }
         }
         .confirmationDialog(model.trimConfirmation(), isPresented: $confirmingTrim) {
-            Button(.semesterAudioTrim, role: .destructive) { model.trim() }
+            Button(.semesterAudioTrim, role: .destructive) { Task { await model.trim() } }
         } message: {
             Text(.semesterAudioConfirmMessage)
         }

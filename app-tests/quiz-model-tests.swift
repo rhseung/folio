@@ -184,3 +184,21 @@ struct RecordingPlayerModelTests {
         #expect(!RecordingPlayerModel(workspace: f.workspace, courseId: f.courseId, store: f.course.store, recording: silent).hasLines)
     }
 }
+
+@MainActor
+struct RecordingBarModelTests {
+    /// Like the course column's recent sessions: the rough note, else the review note, else the sessions list.
+    @Test func theSessionOpensItsNoteElseTheSessionsList() throws {
+        let workspace = try fixtureWorkspace()
+        let session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now))?.made)
+        let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a")
+        workspace.recorder.stage(recording, course: graphTheory, title: "그래프 이론")
+        let model = RecordingBarModel(workspace: workspace)
+        #expect(model.sessionTarget == SearchTarget(courseId: graphTheory, section: .sessions))
+
+        let review = try #require(workspace.run(SessionNote(course: graphTheory, session: session, kind: .review))?.made)
+        #expect(model.sessionTarget == SearchTarget(courseId: graphTheory, section: .notes, noteId: review))
+        let rough = try #require(workspace.run(SessionNote(course: graphTheory, session: session, kind: .rough))?.made)
+        #expect(model.sessionTarget == SearchTarget(courseId: graphTheory, section: .notes, noteId: rough))
+    }
+}

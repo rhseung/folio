@@ -1,6 +1,6 @@
 import Foundation
 
-/// Which recordings' audio can go once their semester is over (docs/SPEC.md "강의 녹음"). Only the audio goes; a recording
+/// Which recordings' audio can go once their semester is over (#199). Only the audio goes; a recording
 /// without a transcript keeps it, since removing it would leave nothing of the lecture.
 public enum RecordingRetention {
     public static func trimmable(_ recordings: [Recording], transcribed: (Recording) -> Bool) -> [Recording] {

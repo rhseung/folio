@@ -24,16 +24,18 @@ public struct RecordingTrim {
             let course = file.course.id
             let trimmed = RecordingRetention.trimmable(file.recordings) { store.transcript(of: $0)?.lines.isEmpty == false }
             guard !trimmed.isEmpty else { continue }
-            for r in trimmed {
-                ctx.record(Change(.removed, try ctx.relative(course, r.file)))
-                if !ctx.dryRun { try store.trashAudio(of: r) }
-            }
+            // The entry goes first: audio left behind by a failed trash is harmless, an entry saying there is audio
+            // where there is none sends the player to a missing file and keeps the notice counting it.
             let ids = Set(trimmed.map(\.id))
             try ctx.edit(course) { f in
                 for i in f.recordings.indices where ids.contains(f.recordings[i].id) {
                     f.recordings[i].audioTrashedAt = ctx.now
                     f.recordings[i].touch(by: ctx.device, at: ctx.now)
                 }
+            }
+            for r in trimmed {
+                ctx.record(Change(.removed, try ctx.relative(course, r.file)))
+                if !ctx.dryRun { try store.trashAudio(of: r) }
             }
         }
     }

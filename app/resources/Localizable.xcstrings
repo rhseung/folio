@@ -9725,6 +9725,17 @@
         }
       }
     },
+    "recording.open-sessions": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 과목의 회차 목록 열기"
+          }
+        }
+      }
+    },
     "recording.pause": {
       "extractionState": "manual",
       "localizations": {

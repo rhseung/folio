@@ -22,7 +22,7 @@ struct SemesterModelTests {
         #expect(model.weekOptions(fall, fallback: 20).count == 20)
     }
 
-    @Test func aFinishedSemesterOffersToTrimOnlyTranscribedAudio() throws {
+    @Test func aFinishedSemesterOffersToTrimOnlyTranscribedAudio() async throws {
         let workspace = try fixtureWorkspace()
         let linearAlgebra = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
         let ctx = ActionContext(gist: try #require(workspace.gist), device: workspace.device, now: workspace.now)
@@ -36,17 +36,17 @@ struct SemesterModelTests {
         workspace.reload()
 
         let model = SemesterModel(workspace: workspace, semesterID: springTerm)
-        model.refreshAudio()
+        await model.refreshAudio()
         let audio = try #require(model.audio)
         #expect(audio.items.map(\.count) == [1] && audio.kept == 1)
-        model.trim()
+        await model.trim()
         #expect(model.audio == nil)
         #expect(workspace.course(linearAlgebra)?.file.recordings.filter(\.hasAudio).map(\.id) == [silent.id])
     }
 
-    @Test func aSemesterUnderWayOffersNothing() throws {
+    @Test func aSemesterUnderWayOffersNothing() async throws {
         let model = SemesterModel(workspace: try fixtureWorkspace(), semesterID: fallTerm)
-        model.refreshAudio()
+        await model.refreshAudio()
         #expect(model.audio == nil)
     }
 

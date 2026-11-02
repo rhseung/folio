@@ -31,6 +31,7 @@ struct RootView: View {
     @State private var personTarget: UUID?
     @AppStorage(SettingsTab.storageKey) private var settingsTab: SettingsTab = .general
     @AppStorage("sidebarOpen") private var sidebarOpen = true
+    @State private var showingRecording = false
     @State private var quickAdding = false
     @State private var trail = CrumbTrail()
     @Environment(\.colorScheme) private var colorScheme
@@ -345,22 +346,40 @@ struct RootView: View {
         #if os(macOS)
         // The recording's card lives in the sidebar; folded away, the time stands in for it here and opens it.
         if workspace.recorder.isActive && !sidebarOpen {
-            Button { sidebarOpen = true } label: {
-                Label {
-                    Text(RecordingTime.label(workspace.recorder.elapsed)).monospacedDigit()
-                } icon: {
-                    Image(systemName: "record.circle").foregroundStyle(Theme.Palette.danger)
-                }
-                .labelStyle(.titleAndIcon)
-                .padding(.horizontal, Theme.Space.s)
-            }
-            .help(Text(.rootRecording))
+            Button { sidebarOpen = true } label: { recordingTime }
+                .help(Text(.rootRecording))
         } else {
             recordMenu
         }
         #else
-        recordMenu
+        // Always here on the iPad, with the card in a popover: the split view hides its sidebar in portrait, compact
+        // widths and Slide Over without telling us, and a hidden card left no way to see or stop the recording.
+        if workspace.recorder.isActive {
+            Button { showingRecording = true } label: { recordingTime }
+                .help(Text(.rootRecording))
+                .popover(isPresented: $showingRecording, arrowEdge: .bottom) {
+                    RecordingBar(workspace: workspace) { destination, target in
+                        showingRecording = false
+                        selection = destination
+                        if let target { searchTarget = target }
+                    }
+                    .frame(width: Theme.Size.sidebar)
+                    .padding(Theme.Space.m)
+                }
+        } else {
+            recordMenu
+        }
         #endif
+    }
+
+    var recordingTime: some View {
+        Label {
+            Text(RecordingTime.label(workspace.recorder.elapsed)).monospacedDigit()
+        } icon: {
+            Image(systemName: "record.circle").foregroundStyle(Theme.Palette.danger)
+        }
+        .labelStyle(.titleAndIcon)
+        .padding(.horizontal, Theme.Space.s)
     }
 
     var recordMenu: some View {

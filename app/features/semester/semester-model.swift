@@ -42,27 +42,29 @@ final class SemesterModel {
     /// Read once when the page opens, not on every draw: it opens each recording's transcript.
     private(set) var audio: AudioNotice?
 
-    func refreshAudio() {
+    func refreshAudio() async {
         guard let s = semester, s.isOver(on: workspace.today, among: workspace.transcript.semesters) else { audio = nil; return }
-        var items: [AudioNotice.Item] = [], kept = 0
-        for course in courses(in: s) {
-            let withAudio = course.file.recordings.filter(\.hasAudio)
-            let trimmable = RecordingRetention.trimmable(withAudio) { course.store.transcript(of: $0)?.lines.isEmpty == false }
-            kept += withAudio.count - trimmable.count
-            if !trimmable.isEmpty {
-                items.append(.init(course: course, count: trimmable.count, bytes: trimmable.map { course.store.audioSize(of: $0) }.reduce(0, +)))
+        let courses = courses(in: s)
+        let shelf = courses.map { ($0.store, $0.file.recordings.filter(\.hasAudio)) }
+        // Off the main actor: telling whether a recording has lines decodes its whole transcript, and a semester holds
+        // dozens of 75-minute ones, which froze the page as it opened.
+        let tallies = await Task.detached {
+            shelf.map { store, withAudio in
+                let trimmable = RecordingRetention.trimmable(withAudio) { store.transcript(of: $0)?.lines.isEmpty == false }
+                return (count: trimmable.count, kept: withAudio.count - trimmable.count, bytes: trimmable.map { store.audioSize(of: $0) }.reduce(0, +))
             }
-        }
-        audio = items.isEmpty ? nil : AudioNotice(items: items, kept: kept)
+        }.value
+        let items = zip(courses, tallies).filter { $1.count > 0 }.map { AudioNotice.Item(course: $0, count: $1.count, bytes: $1.bytes) }
+        audio = items.isEmpty ? nil : AudioNotice(items: items, kept: tallies.map(\.kept).reduce(0, +))
     }
 
     var trimAudio: RecordingTrim { RecordingTrim(semester: semesterID) }
 
     func trimConfirmation() -> String { workspace.confirmation(trimAudio) ?? "" }
 
-    func trim() {
+    func trim() async {
         workspace.run(trimAudio)
-        refreshAudio()
+        await refreshAudio()
     }
 
     func courses(in semester: Semester) -> [LoadedCourse] { workspace.courses(in: semester) }
