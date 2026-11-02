@@ -584,6 +584,17 @@
         }
       }
     },
+    "rule.course.schedule-link": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목 '{name}'의 수업 시간 링크가 웹 주소가 아닙니다"
+          }
+        }
+      }
+    },
     "rule.course.semester": {
       "extractionState": "manual",
       "localizations": {
@@ -925,6 +936,17 @@
         }
       }
     },
+    "rule.session.link": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차 '{name}'의 온라인 수업 링크가 웹 주소가 아닙니다"
+          }
+        }
+      }
+    },
     "rule.session.pages": {
       "extractionState": "manual",
       "localizations": {
@@ -932,6 +954,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "회차 '{name}'의 자료 쪽수가 잘못되었습니다: 1쪽부터이고 끝 쪽이 시작 쪽보다 앞설 수 없습니다"
+          }
+        }
+      }
+    },
+    "rule.session.time": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차 '{name}'의 끝 시각은 시작보다 늦어야 합니다"
           }
         }
       }

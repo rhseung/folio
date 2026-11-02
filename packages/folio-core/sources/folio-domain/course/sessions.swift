@@ -55,6 +55,10 @@ public struct Session: Entity {
     public var reviewNoteId: UUID?
     public var inkIds: [UUID]
     public var materials: [SessionMaterial]
+    /// Set only for a class off the weekly times (a makeup at 21:00, say); the rest end with their slot.
+    public var end: Date?
+    /// An online class's meeting link, pasted from the invite. Without one the class takes its slot's link.
+    public var link: String?
     // Optional so course.json files from before it decode, and left out of the file unless set.
     private var noReview: Bool?
     // Same optional trick: notes from before it, and imported ones, count as written.
@@ -109,6 +113,7 @@ public enum SessionPlanner {
         public var date: Date
         public var end: Date
         public var room: String
+        public var link: String?
     }
 
     /// The lecture under way or next on the schedule, within the coming week, that no session stands for yet. A session
@@ -130,7 +135,7 @@ public enum SessionPlanner {
                 let finish = calendar.date(byAdding: .minute, value: slot.endMinute, to: day)!
                 guard finish > now, !exams.contains(where: { $0.start < finish && $0.end > begin }) else { continue }
                 let taken = sessions.contains { $0.date == begin || $0.date == day }
-                if !taken { return Suggestion(date: begin, end: finish, room: slot.room) }
+                if !taken { return Suggestion(date: begin, end: finish, room: slot.room, link: slot.link) }
             }
         }
         return nil
@@ -145,7 +150,7 @@ public enum SessionPlanner {
         let weekday = calendar.isoWeekday(of: date)
         return schedule.filter { $0.weekday == weekday }.sorted { $0.startMinute < $1.startMinute }.map { slot in
             Suggestion(date: calendar.date(byAdding: .minute, value: slot.startMinute, to: date)!,
-                       end: calendar.date(byAdding: .minute, value: slot.endMinute, to: date)!, room: slot.room)
+                       end: calendar.date(byAdding: .minute, value: slot.endMinute, to: date)!, room: slot.room, link: slot.link)
         }
     }
 
@@ -205,12 +210,76 @@ extension LocalDate {
 }
 
 extension Session {
-    /// When the class ends, from the weekly slot it starts in. Nil when no slot matches (a date-only import).
-    public func end(schedule: [ClassTime], calendar: Calendar) -> Date? {
+    /// The weekly slot the class starts in, if any.
+    public func slot(in schedule: [ClassTime], calendar: Calendar) -> ClassTime? {
         let minute = calendar.component(.hour, from: date) * 60 + calendar.component(.minute, from: date)
         let weekday = calendar.isoWeekday(of: date)
-        guard let slot = schedule.first(where: { $0.weekday == weekday && $0.startMinute == minute }) else { return nil }
+        return schedule.first { $0.weekday == weekday && $0.startMinute == minute }
+    }
+
+    /// When the class ends: its own end, else from the weekly slot it starts in. Nil when neither (a date-only import).
+    public func end(schedule: [ClassTime], calendar: Calendar) -> Date? {
+        if let end = self.end { return end }
+        guard let slot = slot(in: schedule, calendar: calendar) else { return nil }
         return date.addingTimeInterval(TimeInterval((slot.endMinute - slot.startMinute) * 60))
+    }
+
+    /// The meeting to join: the session's own link, else its slot's, so a course held online needs the link only once.
+    public func link(schedule: [ClassTime], calendar: Calendar) -> URL? {
+        (self.link ?? slot(in: schedule, calendar: calendar)?.link).flatMap(OnlineLink.url)
+    }
+
+    /// Keeps an end only when the slot doesn't already give it, so changing the class times later still moves the class's end.
+    public mutating func setEnd(_ end: Date?, schedule: [ClassTime], calendar: Calendar) {
+        self.end = nil
+        if let end, end != self.end(schedule: schedule, calendar: calendar) { self.end = end }
+    }
+}
+
+extension CourseFile {
+    /// Moves a session to `date`. Another week makes it the last of that week, as a new session would be; its name
+    /// changes then, but names already written into notes and recordings stay. An end of its own moves with it.
+    public mutating func reschedule(_ id: UUID, to date: Date, termStart: LocalDate?, calendar: Calendar) {
+        guard let i = sessions.firstIndex(where: { $0.id == id }) else { return }
+        let others = sessions.filter { $0.id != id }
+        let anchor = termStart?.date(in: calendar) ?? (others.map(\.date) + [date]).min()!
+        let week = SessionPlanner.week(of: date, anchor: anchor, calendar: calendar)
+        if week != sessions[i].week {
+            sessions[i].week = week
+            sessions[i].index = (others.filter { $0.week == week }.map(\.index).max() ?? 0) + 1
+        }
+        if let end = sessions[i].end { sessions[i].end = end.addingTimeInterval(date.timeIntervalSince(sessions[i].date)) }
+        sessions[i].date = date
+    }
+}
+
+/// A meeting link as pasted from an invite (Zoom, Meet, Teams, ...).
+public enum OnlineLink {
+    /// The web address in `text`, with `https://` added when it was pasted without one. Nil for anything that isn't
+    /// one, which the rules refuse, so a typo never becomes a button that opens nothing.
+    public static func url(_ text: String) -> URL? {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, !trimmed.contains(where: \.isWhitespace) else { return nil }
+        let full = trimmed.contains("://") ? trimmed : "https://" + trimmed
+        guard let url = URL(string: full), let scheme = url.scheme?.lowercased(), scheme == "https" || scheme == "http",
+              let host = url.host(), host.contains(".") else { return nil }
+        return url
+    }
+
+    /// Zoom's own scheme for a `zoom.us/j/<id>` link. The web link opens a browser tab that asks before handing over
+    /// to the app; this goes to the app at once. Nil for anything else, which opens as it is.
+    public static func appURL(_ url: URL) -> URL? {
+        guard let host = url.host()?.lowercased(), host == "zoom.us" || host.hasSuffix(".zoom.us") else { return nil }
+        let parts = url.pathComponents.filter { $0 != "/" }
+        guard parts.count >= 2, parts[0] == "j", parts[1].allSatisfy(\.isNumber) else { return nil }
+        var app = URLComponents()
+        app.scheme = "zoommtg"
+        app.host = "zoom.us"
+        app.path = "/join"
+        let pwd = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?.first { $0.name == "pwd" }?.value
+        app.queryItems = [URLQueryItem(name: "action", value: "join"), URLQueryItem(name: "confno", value: parts[1])]
+            + (pwd.map { [URLQueryItem(name: "pwd", value: $0)] } ?? [])
+        return app.url
     }
 }
 

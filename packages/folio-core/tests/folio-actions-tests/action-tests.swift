@@ -65,6 +65,27 @@ struct ActionTests {
         #expect(try file().sessions.map(\.id) == [kept])
     }
 
+    @Test func aMakeupHeldOnlineKeepsItsTopicEndAndLink() throws {
+        let id = UUID()
+        let end = now.addingTimeInterval(75 * 60)
+        try run(SessionAdd(id: id, course: Self.graphTheory, date: now, end: end, topic: " 보강 ", link: " https://zoom.us/j/123 "))
+        var s = try #require(try file().sessions.first { $0.id == id })
+        #expect(s.topic == "보강" && s.end == end && s.link == "https://zoom.us/j/123")
+
+        try run(SessionSet(course: Self.graphTheory, session: id, topic: .set("행복의 조건 보강"), link: .set(nil)))
+        s = try #require(try file().sessions.first { $0.id == id })
+        #expect(s.topic == "행복의 조건 보강" && s.link == nil && s.end == end)
+
+        // Moved a day on, its own end moves with it.
+        let later = now.addingTimeInterval(86_400)
+        try run(SessionSet(course: Self.graphTheory, session: id, date: .set(later)))
+        s = try #require(try file().sessions.first { $0.id == id })
+        #expect(s.date == later && s.end == end.addingTimeInterval(86_400))
+
+        #expect(throws: ActionError.self) { try run(SessionSet(course: Self.graphTheory, session: id, link: .set("813643"))) }
+        #expect(throws: ActionError.self) { try run(SessionSet(course: Self.graphTheory, session: id, end: .set(now))) }
+    }
+
     @Test func aNewExamGetsItsFolder() throws {
         let exam = ExamAdd(course: Self.graphTheory, title: "Quiz1", kind: .quiz, start: now)
         let ctx = try run(exam)

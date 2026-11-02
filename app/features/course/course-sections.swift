@@ -225,7 +225,7 @@ struct EditCourseSheet: View {
     var body: some View {
         let course = model.course
         SheetForm(title: String(localized: .courseEdit), confirm: String(localized: .commonSave), disabled: !model.canSave,
-                  note: model.note, carded: false, width: 560) {
+                  note: model.note, carded: false, width: 600) {
             Block(String(localized: .courseEditCourse)) {
                 Card {
                     FormRow(label: String(localized: .courseEditName)) { InlineField(String(localized: .courseEditNameExample), text: $model.title) }
@@ -332,13 +332,39 @@ struct ClassTimesBlock: View {
                         Text("–").foregroundStyle(Theme.Palette.textTertiary)
                         TimeMenu(minute: $schedule.element(at: i, fallback: slot).endMinute)
                         Spacer(minLength: Theme.Space.m)
-                        TextField(String(localized: .classTimesRoom), text: $schedule.element(at: i, fallback: slot).room).pill(width: 130)
+                        TextField(String(localized: .classTimesRoom), text: $schedule.element(at: i, fallback: slot).room).pill(width: 112)
+                        ClassLinkButton(link: $schedule.element(at: i, fallback: slot).link)
                         Button(.commonDelete, systemImage: "minus.circle") { schedule.remove(at: i) }
                             .buttonStyle(.ghostIcon).tint(Theme.Palette.danger)
                     }
                 }
             }
         }
+    }
+}
+
+/// A class time's meeting link, for a course held online every week. In a popover, since most slots have none and the
+/// row has no room for a second field.
+struct ClassLinkButton: View {
+    @Binding var link: String?
+    @State private var open = false
+
+    var body: some View {
+        let has = !(link ?? "").isEmpty
+        Button(String(localized: .classTimesLink), systemImage: has ? "video.fill" : "video") { open = true }
+            .buttonStyle(.ghostIcon)
+            .tint(has ? Theme.Palette.text : Theme.Palette.textTertiary)
+            .help(link.flatMap { $0.isEmpty ? nil : $0 } ?? String(localized: .classTimesLinkHelp))
+            .popover(isPresented: $open, arrowEdge: .bottom) {
+                VStack(alignment: .leading, spacing: Theme.Space.s) {
+                    Text(.classTimesLink).font(Theme.Typeface.bodyStrong)
+                    TextField(String(localized: .sessionsLinkPrompt), text: Binding(get: { link ?? "" }, set: { link = $0.isEmpty ? nil : $0 }))
+                        .pill(width: 288)
+                    Text(.classTimesLinkHelp).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                }
+                .padding(Theme.Space.l)
+                .frame(width: 320)
+            }
     }
 }
 
@@ -354,7 +380,7 @@ struct ClassTimesSheet: View {
     var body: some View {
         // The course as the heading: the block below already says 수업 시간, and twice in a row read as a mistake.
         SheetForm(title: model.course.title, confirm: String(localized: .commonSave), disabled: model.timesNote != nil,
-                  note: model.timesNote, carded: false, width: 560) {
+                  note: model.timesNote, carded: false, width: 600) {
             ClassTimesBlock(schedule: $model.schedule)
         } onConfirm: {
             model.confirmSchedule()
