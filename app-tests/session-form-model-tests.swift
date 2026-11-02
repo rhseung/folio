@@ -29,11 +29,41 @@ struct SessionFormModelTests {
     @Test func aMeetingIDOrAnEarlyEndCannotBeSaved() throws {
         let workspace = try fixtureWorkspace()
         let model = SessionFormModel(workspace: workspace, courseId: graphTheory)
+        // The form says what the save rules say, not a copy of them.
         model.link = "884 7010 8867"
-        #expect(model.disabled && model.note == String(localized: .sessionsLinkInvalid))
+        #expect(model.disabled && model.note?.contains("참가 링크") == true)
         model.link = ""
         model.setEnd(17 * 60)
-        #expect(model.disabled && model.note == String(localized: .sessionsEndBeforeStart))
+        #expect(model.disabled && model.note?.contains("끝 시각") == true)
+    }
+
+    @Test func aClassMovedToAnotherSlotEndsWithThatSlotAndOffTheTimetableKeepsItsLength() throws {
+        let workspace = try fixtureWorkspace()
+        let calendar = workspace.calendar
+        workspace.run(CourseSet(course: graphTheory, [.schedule([ClassTime(weekday: 1, startMinute: 13 * 60, endMinute: 14 * 60 + 15),
+                                                                ClassTime(weekday: 3, startMinute: 13 * 60, endMinute: 15 * 60)])]))
+        let monday = calendar.date(byAdding: .hour, value: 13, to: calendar.startOfWeek(containing: workspace.now))!
+        let wednesday = monday.addingTimeInterval(2 * 86_400)
+
+        func moved(to date: Date) throws -> Session {
+            let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: monday))?.made)
+            let session = try #require(try file(workspace).sessions.first { $0.id == id })
+            #expect(session.end == nil)
+            let model = SessionFormModel(workspace: workspace, courseId: graphTheory, session: session)
+            model.setStart(date)
+            #expect(model.note == nil || model.note == String(localized: .sessionsRenameOnMove))
+            model.submit()
+            return try #require(try file(workspace).sessions.first { $0.id == id })
+        }
+
+        // Onto Wednesday's longer slot: still the slot's end, so changing Wednesday's times later moves it.
+        let onSlot = try moved(to: wednesday)
+        #expect(onSlot.end == nil)
+        #expect(onSlot.end(schedule: try file(workspace).course.schedule, calendar: calendar) == wednesday.addingTimeInterval(2 * 3600))
+
+        // Off the timetable it keeps its 75 minutes.
+        let evening = wednesday.addingTimeInterval(6 * 3600)
+        #expect(try moved(to: evening).end == evening.addingTimeInterval(75 * 60))
     }
 
     @Test func editingChangesOnlyWhatChanged() throws {

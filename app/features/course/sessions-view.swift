@@ -291,15 +291,9 @@ struct SessionFormSheet: View {
 struct JoinOnlineButton: View {
     @Environment(\.openURL) private var openURL
     let url: URL
-    var prominent = false
 
     var body: some View {
-        if prominent {
-            Button(.sessionsJoin, systemImage: "video") { Self.join(url, openURL) }
-                .buttonStyle(.pointing(.borderedProminent)).help(url.absoluteString)
-        } else {
-            SessionSlot(String(localized: .sessionsJoin), symbol: "video", help: url.absoluteString, fixed: false) { Self.join(url, openURL) }
-        }
+        SessionSlot(String(localized: .sessionsJoin), symbol: "video", help: url.absoluteString, fixed: false) { Self.join(url, openURL) }
     }
 
     static func join(_ url: URL, _ openURL: OpenURLAction) {

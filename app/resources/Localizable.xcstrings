@@ -15742,28 +15742,6 @@
         }
       }
     },
-    "sessions.end-before-start": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "끝 시각은 시작보다 늦어야 합니다."
-          }
-        }
-      }
-    },
-    "sessions.link-invalid": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "온라인 링크는 웹 주소여야 합니다. 회의 ID와 암호가 아니라 초대문의 참가 링크를 넣으세요."
-          }
-        }
-      }
-    },
     "sessions.rename-on-move": {
       "extractionState": "manual",
       "localizations": {

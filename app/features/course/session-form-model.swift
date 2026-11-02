@@ -16,8 +16,8 @@ final class SessionFormModel {
     var topic: String
     var link: String
     var cancelled = false
-    private let initialEnd: Date?
-    /// A session that never had an end (a date-only import) gets one only when the user picks it.
+    /// The end is stored only when the user picks it or a class moves off the timetable; otherwise the slot keeps
+    /// giving it, so editing the class times later still moves it.
     private var endPicked = false
 
     init(workspace: Workspace, courseId: UUID, session: Session? = nil) {
@@ -28,7 +28,6 @@ final class SessionFormModel {
         let start = session?.date ?? calendar.date(byAdding: .hour, value: 18, to: calendar.startOfDay(for: workspace.now))!
         let schedule = workspace.course(courseId)?.file.course.schedule ?? []
         let end = session?.end(schedule: schedule, calendar: calendar)
-        initialEnd = end
         self.start = start
         // A class off the timetable gets GIST's usual 75 minutes to start from.
         endMinute = Self.minute(of: end ?? start.addingTimeInterval(75 * 60), from: start, calendar: calendar)
@@ -47,11 +46,22 @@ final class SessionFormModel {
 
     var end: Date { calendar.date(byAdding: .minute, value: endMinute, to: calendar.startOfDay(for: start))! }
 
-    /// Moving the start keeps the class as long as it was.
+    private var schedule: [ClassTime] { workspace.course(courseId)?.file.course.schedule ?? [] }
+
+    /// The timetable slot a class starting at `date` falls in, if any.
+    private func slot(at date: Date) -> ClassTime? {
+        Session(device: workspace.device, at: date, week: 1, index: 1, date: date).slot(in: schedule, calendar: calendar)
+    }
+
+    /// Onto a timetable slot the class ends with the slot, unless an end was picked; elsewhere it keeps its length.
     func setStart(_ date: Date) {
         let length = end.timeIntervalSince(start)
         start = date
-        endMinute = Self.minute(of: date.addingTimeInterval(length), from: date, calendar: calendar)
+        if !endPicked, let slot = slot(at: date) {
+            endMinute = slot.endMinute
+        } else {
+            endMinute = Self.minute(of: date.addingTimeInterval(length), from: date, calendar: calendar)
+        }
     }
 
     func setEnd(_ minute: Int) {
@@ -59,30 +69,46 @@ final class SessionFormModel {
         endPicked = true
     }
 
-    /// Why the form can't be saved, or a word about what saving does; nil when there's nothing to say.
+    /// Why the form can't be saved, from the same rules every save is checked by, or else a word about what saving
+    /// does; nil when there's nothing to say.
     var note: String? {
-        if end <= start { return String(localized: .sessionsEndBeforeStart) }
-        if !link.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, OnlineLink.url(link) == nil { return String(localized: .sessionsLinkInvalid) }
+        if let refusal { return refusal }
         if let session, let file = workspace.course(courseId)?.file, movesWeek(session, file) { return String(localized: .sessionsRenameOnMove) }
         return nil
     }
 
-    var disabled: Bool { end <= start || (!link.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && OnlineLink.url(link) == nil) }
+    var disabled: Bool { refusal != nil }
+
+    private var refusal: String? {
+        if let edit { workspace.refusal(edit) } else { workspace.refusal(add) }
+    }
 
     func submit() {
-        let link = link.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let session else {
-            workspace.run(SessionAdd(course: courseId, date: start, end: end, topic: topic, link: link.isEmpty ? nil : link, cancelled: cancelled))
-            return
-        }
-        // Only what changed. An end the timetable gives isn't stored, so editing the class times later still moves it;
-        // a moved class keeps its length, which the action stores only when it leaves its slot.
-        let endPatch: Patch<Date?> = endPicked || (initialEnd != nil && start != session.date) ? .set(end) : .keep
-        workspace.run(SessionSet(course: courseId, session: session.id,
-                                 date: start == session.date ? .keep : .set(start),
-                                 end: endPatch,
-                                 topic: topic == session.topic ? .keep : .set(topic),
-                                 link: link == (session.link ?? "") ? .keep : .set(link.isEmpty ? nil : link)))
+        if let edit { workspace.run(edit) } else { workspace.run(add) }
+    }
+
+    private var trimmedLink: String { link.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    private var add: SessionAdd {
+        SessionAdd(course: courseId, date: start, end: end, topic: topic, link: trimmedLink.isEmpty ? nil : trimmedLink, cancelled: cancelled)
+    }
+
+    /// Only what changed; nil while adding.
+    private var edit: SessionSet? {
+        guard let session else { return nil }
+        return SessionSet(course: courseId, session: session.id,
+                          date: start == session.date ? .keep : .set(start),
+                          end: endPatch(session),
+                          topic: topic == session.topic ? .keep : .set(topic),
+                          link: trimmedLink == (session.link ?? "") ? .keep : .set(trimmedLink.isEmpty ? nil : trimmedLink))
+    }
+
+    /// A picked end is stored. An end of the session's own moves with it in the action. One the slot gave stays the
+    /// slot's on another slot, and is kept only when the class moves off the timetable, so it keeps its length.
+    private func endPatch(_ session: Session) -> Patch<Date?> {
+        if endPicked { return .set(end) }
+        guard start != session.date, session.end == nil, session.slot(in: schedule, calendar: calendar) != nil, slot(at: start) == nil else { return .keep }
+        return .set(end)
     }
 
     private func movesWeek(_ session: Session, _ file: CourseFile) -> Bool {
