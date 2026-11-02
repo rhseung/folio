@@ -15,9 +15,40 @@ permissions:
   id-token: write
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      docs: ${{ steps.files.outputs.docs }}
+    steps:
+      - id: files
+        if: github.event_name == 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          files=$(gh pr diff "$PR" -R "$GITHUB_REPOSITORY" --name-only)
+          if [ -n "$files" ] && ! grep -qvE '\.md$|^docs/' <<< "$files"; then
+            echo docs=true >> "$GITHUB_OUTPUT"
+          else
+            echo docs=false >> "$GITHUB_OUTPUT"
+          fi
+
   # claude[bot]'s approval is what the main ruleset requires, so this review is a merge gate. What it looks for is in
   # .github/review.md.
   review:
-    if: vars.ENABLE_CLAUDE_REVIEW == 'true'
+    needs: changes
+    if: vars.ENABLE_CLAUDE_REVIEW == 'true' && needs.changes.outputs.docs != 'true'
     uses: rhseung/claude-review-plugin/.github/workflows/review.yml@main
     secrets: inherit
+
+  # Docs-only PRs skip code review, but the ruleset still needs one approval. A new push dismisses it and this job
+  # approves again, so a later code commit falls back to the review above.
+  approve-docs:
+    needs: changes
+    if: needs.changes.outputs.docs == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+        run: gh pr review "$PR" -R "$GITHUB_REPOSITORY" --approve -b "Docs-only change, approved without code review."
