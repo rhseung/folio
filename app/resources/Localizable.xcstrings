@@ -14147,28 +14147,6 @@
         }
       }
     },
-    "today.now-class": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지금 수업"
-          }
-        }
-      }
-    },
-    "today.now-class.room": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지금 수업 · %@"
-          }
-        }
-      }
-    },
     "today.progress.streak": {
       "extractionState": "manual",
       "localizations": {
@@ -15280,50 +15258,6 @@
         }
       }
     },
-    "today.next": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다음"
-          }
-        }
-      }
-    },
-    "today.next.today-done": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘 수업 끝"
-          }
-        }
-      }
-    },
-    "today.next.tomorrow": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내일 첫 수업 %@"
-          }
-        }
-      }
-    },
-    "today.next.tomorrow-none": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내일은 수업 없음"
-          }
-        }
-      }
-    },
     "today.line.no-classes": {
       "extractionState": "manual",
       "localizations": {
@@ -15463,28 +15397,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ %2$@ 마감"
-          }
-        }
-      }
-    },
-    "today.now-class.remaining": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld분 남음"
-          }
-        }
-      }
-    },
-    "today.now-class.note": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트"
           }
         }
       }

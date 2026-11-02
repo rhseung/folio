@@ -29,13 +29,7 @@ struct TodayView: View {
         } content: {
             TodayHeader(model: model, summary: summary, classes: classes, reviews: reviews)
             DayRibbonCard(model: model, summary: summary, classes: classes, go: go, openNote: openNote)
-
-            // One slot for both: an empty NowClassCard still took a stack slot and left a double gap above the field.
-            VStack(alignment: .leading, spacing: 0) {
-                NowClassCard(model: model, studyDay: summary.studyDay)
-                QuickAddField(workspace: model.workspace)
-            }
-
+            QuickAddField(workspace: model.workspace)
             AttendanceWarnings(model: model)
             agenda(summary)
             ExamPlanTodayBlock(courses: model.current)
@@ -403,71 +397,6 @@ struct TodayView: View {
 
     func openNote(in course: UUID) -> (UUID) -> Void {
         { searchTarget.wrappedValue = SearchTarget(courseId: course, section: .notes, noteId: $0) }
-    }
-}
-
-struct NowClassCard: View {
-    let model: TodayModel
-    let studyDay: LocalDate
-    @Environment(\.searchTarget) private var searchTarget
-
-    var body: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { _ in
-            let now = model.workspace.now
-            if let item = model.nowClass(at: now) {
-                card(item, now: now) {
-                    if let suggested = item.suggested {
-                        SuggestedSessionActions(item: suggested) { open(suggested.courseId, $0) }
-                    } else if let sessionId = item.sessionId {
-                        Button(.todayNowClassNote) { if let id = model.workspace.note(.rough, of: sessionId, in: item.courseId) { open(item.courseId, id) } }
-                            .buttonStyle(.ghost)
-                            .help(Text(.sessionsOpenRoughNote))
-                    }
-                }
-            }
-        }
-    }
-
-    func open(_ course: UUID, _ note: UUID) {
-        searchTarget.wrappedValue = SearchTarget(courseId: course, section: .notes, noteId: note)
-    }
-
-    /// Progress lives on the day ribbon's line now; the card keeps the minutes as words.
-    func card(_ item: TodayModel.NowClass, now: Date, @ViewBuilder actions: () -> some View) -> some View {
-        let accent = model.workspace.accent(item.courseId)
-        let next = model.nextPanel(now: now, studyDay: studyDay)
-        return HStack(spacing: 0) {
-            HStack(alignment: .center, spacing: Theme.Space.l) {
-                VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                    Text(item.room.isEmpty ? .todayNowClass : .todayNowClassRoom(item.room)).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink)
-                    Text(model.classTitle(item.courseId, item.name)).font(Theme.Typeface.figureCompact).lineLimit(1)
-                    HStack(spacing: Theme.Space.tight) {
-                        Text("\(model.time(item.start)) – \(model.time(item.end))").foregroundStyle(Theme.Palette.textSecondary)
-                        Text("·").foregroundStyle(Theme.Palette.textTertiary)
-                        Text(.todayNowClassRemaining(Int(item.end.timeIntervalSince(now) / 60) + 1)).fontWeight(.semibold).foregroundStyle(accent.ink)
-                    }
-                    .font(Theme.Typeface.caption).monospacedDigit()
-                }
-                Spacer(minLength: Theme.Space.m)
-                actions()
-            }
-            .padding(Theme.Inset.stat)
-            .frame(maxHeight: .infinity)
-            .background(accent.tint)
-            Theme.Palette.lineSoft.frame(width: 1)
-            VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                Text(.todayNext).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
-                Text(next.title).font(Theme.Typeface.bodyStrong).lineLimit(1)
-                Text(next.detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
-            }
-            .padding(Theme.Inset.stat)
-            .frame(width: 200, alignment: .leading)
-        }
-        .fixedSize(horizontal: false, vertical: true)
-        .background(Theme.Palette.card)
-        .clipShape(.rect(cornerRadius: Theme.Radius.card))
-        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.card).strokeBorder(accent.color.opacity(0.35)))
-        .padding(.bottom, Theme.Space.l)
     }
 }
 
