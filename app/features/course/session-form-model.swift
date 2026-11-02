@@ -27,8 +27,9 @@ final class SessionFormModel {
         let calendar = workspace.calendar
         let start = session?.date ?? calendar.date(byAdding: .hour, value: 18, to: calendar.startOfDay(for: workspace.now))!
         let schedule = workspace.course(courseId)?.file.course.schedule ?? []
-        let minutes = schedule.usualMinutes ?? workspace.settings.classMinutes
-        let end = session?.end(schedule: schedule, calendar: calendar) ?? start.addingTimeInterval(TimeInterval(minutes * 60))
+        // A class being added has no session yet; a stand-in at its start asks the same question the join button does.
+        let end = (session ?? Session(device: workspace.device, at: start, week: 1, index: 1, date: start))
+            .expectedEnd(schedule: schedule, classMinutes: workspace.settings.classMinutes, calendar: calendar)
         self.start = start
         endMinute = Self.minute(of: end, from: start, calendar: calendar)
         topic = session?.topic ?? ""

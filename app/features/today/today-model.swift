@@ -96,10 +96,6 @@ final class TodayModel {
         return classes.sorted { $0.0 < $1.0 }.map(\.1).filter { seen.insert($0).inserted }
     }
 
-    func end(of item: TodaySummary.SessionItem) -> Date? {
-        item.session.end(schedule: workspace.course(item.courseId)?.file.course.schedule ?? [], calendar: workspace.calendar)
-    }
-
     /// The course whose class is under way: one already made, the timetable's suggestion not made yet, or a record's slot.
     func nowCourse(at now: Date) -> UUID? {
         if let item = workspace.ongoingClass(at: now) { return item.courseId }

@@ -267,7 +267,6 @@ extension CourseFile {
     }
 }
 
-/// A meeting link as pasted from an invite (Zoom, Meet, Teams, ...).
 extension [ClassTime] {
     /// The course's usual class in minutes: its most common slot length, the longer on a tie, so a makeup for a two-hour
     /// lab runs two hours. Nil without class times.
@@ -277,6 +276,7 @@ extension [ClassTime] {
     }
 }
 
+/// A meeting link as pasted from an invite (Zoom, Meet, Teams, ...).
 public enum OnlineLink {
     /// What a link field stores: trimmed, and nil when nothing is left, so a stray space neither lights the link up
     /// nor trips the rule with a field that looks empty.
