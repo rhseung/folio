@@ -158,14 +158,14 @@ Me/GIST/
     EC4207 그래프 이론/
       Syllabus/                # 강의계획서, OT 자료, 수업 운영 안내
       Lectures/                # 강의 슬라이드. 05_Matchings.pdf
-      Exercises/               # 교수가 준 채점 없는 연습 문제
+      Exercises/               # 교수가 준 채점 없는 연습 문제, 시험 정리 노트를 빌드한 PDF
       Textbooks/               # 교재, 참고서, 해설집
       Assignments/
         HW03/                  # 과제 하나에 폴더 하나. 안의 파일은 원래 이름 유지
         Lab03/                 # 실험 보고서. 매뉴얼은 그 실험 회차의 강의 자료로 Lectures에 둔다
       Exams/
         Past/                  # 족보. 2024 Midterm (소순범).pdf
-        Midterm/               # 이 시험 하나에 딸린 파일. Guideline, Seating, 직접 만든 문제집, Summary
+        Midterm/               # 이 시험 하나에 딸린 파일. Guideline, Seating, 직접 만든 문제집
       Notes/                   # Folio 마크다운 노트
         assets/                # 노트에 넣은 그림과 파일
       Ink/                     # PencilKit 필기 (.drawing)
@@ -185,7 +185,7 @@ Me/GIST/
 - `Lectures`의 파일은 `<주차 두 자리>_<제목>`이고, 한 주에 여러 개면 `05-1_`, `05-2_`로 나눈다.
 - `Assignments/<과제>`는 종류 접두어와 두 자리 번호다(`HW`, `Lab`, `Report`, `Project`, `SP`, `Reading`, 평가 항목에 맞춰 추가). 안의 파일 이름은 바꾸지 않는다. 제출본은 교수가 정한 형식을 따라야 하기 때문이다. 문제, 제출본, 해설 같은 역할은 `course.json`에 기록한다. 코드 과제는 프로젝트를 이 폴더에 그대로 두고, `.git`이 있는 폴더는 이름도 바꾸지 않는다.
 - `Exams/Past`의 족보는 `<연도> <Midterm|Final|Quiz> (<출처>)`이고 해설은 같은 이름에 ` Solution`을 붙인다. 시험별 폴더(`Midterm`, `Final`, `Quiz1`)는 Exam과 1:1이며, 대비 자료가 없는 작은 퀴즈는 폴더를 만들지 않는다.
-- `Exercises`에는 교수가 준 연습 문제만 둔다. 직접 만든 문제집은 대상 시험 폴더에 둔다. 노트를 내보낸 PDF는 시험 종합 정리면 그 시험 폴더에, 그 밖은 `Notes/Exports`에 둔다.
+- `Exercises`에는 교수가 준 연습 문제와 시험 정리 노트를 빌드한 PDF를 둔다. 직접 만든 문제집은 대상 시험 폴더에 둔다. 그 밖의 노트를 빌드한 PDF는 `Notes/Exports/<제목>.pdf`에 둔다.
 - 앱 밖의 파일은 복사해서 들여오고, 같은 이름이 있으면 ` 2`를 붙여 덮어쓰지 않는다.
 
 ## 실제 데이터 위치

@@ -78,15 +78,15 @@ public struct ImportNotes {
             let r = NotionNotesImporter.merge(dump, into: try ctx.file(dump.coursePageId), existingNotes: existing, calendar: ctx.calendar, device: ctx.device, now: ctx.now)
             ctx.note(String(localized: .noteImportNotesCourse(dump.title, r.sessionsAdded, r.notes.count, r.componentsAdded, r.scoresAdded, dump.images.filter { $0.file != nil }.count)))
             for w in r.warnings { ctx.note(String(localized: .noteImportNotesCheck(dump.title, w))) }
-            var paths: [UUID: String] = [:]
+            // Two Notion pages often share a title ("숙제"), so each name is chosen before any file exists.
+            var urls: [UUID: URL] = [:]
             for plan in r.notes where !existing.contains(plan.id) {
-                let url = store.newNoteURL(title: plan.title, format: .markdown)
-                paths[plan.id] = store.notePath(of: url)
+                let url = store.newNoteURL(title: plan.title, format: .markdown, avoiding: Set(urls.values.map { $0.deletingPathExtension().lastPathComponent }))
+                urls[plan.id] = url
                 ctx.record(Change(.added, ctx.relative(url)))
             }
-            if !ctx.dryRun {
-                for (id, url) in try store.writeNotionNotes(r.notes, dump: dump, folder: dumpFolder, links: links, existing: existing) { paths[id] = store.notePath(of: url) }
-            }
+            if !ctx.dryRun { try store.writeNotionNotes(r.notes, dump: dump, folder: dumpFolder, links: links, at: urls) }
+            let paths = urls.mapValues { store.notePath(of: $0) }
             try ctx.edit(dump.coursePageId) { f in
                 f = r.file
                 for plan in r.notes { if let path = paths[plan.id] { f.notes.append(NoteEntry(id: plan.id, device: ctx.device, at: ctx.now, path: path, meta: plan.meta)) } }

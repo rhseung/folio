@@ -37,8 +37,9 @@ struct NoteStoreTests {
         try store.createNote(at: first, text: "")
         #expect(first.lastPathComponent == "2주차-1 정리.md")
         #expect(store.newNoteURL(title: "2주차-1 정리", format: .markdown).lastPathComponent == "2주차-1 정리 2.md")
-        // Another format is another file, so the name is free.
-        #expect(store.newNoteURL(title: "2주차-1 정리", format: .tex).lastPathComponent == "2주차-1 정리.tex")
+        // The title is the file name, so another format doesn't free it.
+        #expect(store.newNoteURL(title: "2주차-1 정리", format: .tex).lastPathComponent == "2주차-1 정리 2.tex")
+        #expect(store.newNoteURL(title: "숙제", format: .markdown, avoiding: ["숙제", "숙제 2"]).lastPathComponent == "숙제 3.md")
         #expect(store.newNoteURL(title: "a/b:c", format: .markdown).lastPathComponent == "a-b-c.md")
     }
 
@@ -128,15 +129,16 @@ struct NotionNotesWriterTests {
                                     images: [.init(source: "notion-file-block://x?name=a.svg", file: "assets/a.svg")])
         let plan = NotionNotePlan(id: id, title: "7주차-2 정리", meta: NoteMeta(id: id, kind: .review), sourceFile: "n.md")
 
-        let made = try store.writeNotionNotes([plan], dump: dump, folder: dumpFolder, links: [:], existing: [])
-        let url = try #require(made[id])
+        let url = store.newNoteURL(title: plan.title, format: .markdown)
+        try store.writeNotionNotes([plan], dump: dump, folder: dumpFolder, links: [:], at: [id: url])
         #expect(url.lastPathComponent == "7주차-2 정리.md")
         let text = try String(contentsOf: url, encoding: .utf8)
         #expect(text.contains("> [!warning] 주의\n> 본문"))
         #expect(text.contains("![](assets/a.svg)"))
         #expect(FileManager.default.fileExists(atPath: store.url.appending(path: "Notes/assets/a.svg").path))
 
-        #expect(try store.writeNotionNotes([plan], dump: dump, folder: dumpFolder, links: [:], existing: [id]).isEmpty)
+        try store.writeNotionNotes([plan], dump: dump, folder: dumpFolder, links: [:], at: [:])
+        #expect(!FileManager.default.fileExists(atPath: store.url.appending(path: "Notes/7주차-2 정리 2.md").path))
     }
 }
 

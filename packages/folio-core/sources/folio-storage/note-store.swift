@@ -96,20 +96,30 @@ extension CourseStore {
     }
 
     /// Where a new note titled `title` goes: `Notes/<title>.<ext>`, or ` 2`, ` 3`, ... when the name is taken.
-    public func newNoteURL(title: String, format: NoteFormat) -> URL {
+    /// A name is taken in any format, since the title is the file name: `증명.md` beside `증명.tex` would be two notes
+    /// that links and the list can't tell apart. `taken` holds names chosen for notes not written yet.
+    public func newNoteURL(title: String, format: NoteFormat, avoiding taken: Set<String> = []) -> URL {
+        let taken = Set(taken.map { $0.lowercased() })
+        let isFree = { (name: String) in
+            !taken.contains(name.lowercased()) && NoteFormat.allCases.allSatisfy {
+                !FileManager.default.fileExists(atPath: self.notesURL.appending(path: "\(name).\($0.fileExtension)").path)
+            }
+        }
         let base = Self.fileName(for: title)
         var name = base
         var n = 2
-        while FileManager.default.fileExists(atPath: notesURL.appending(path: "\(name).\(format.fileExtension)").path) {
+        while !isFree(name) {
             name = "\(base) \(n)"
             n += 1
         }
         return notesURL.appending(path: "\(name).\(format.fileExtension)")
     }
 
-    /// Where a note's PDF goes, by title, wherever in Notes/ the note sits.
+    /// Where a note's PDF goes, by title, wherever in Notes/ the note sits. An exam summary's goes to Exercises with
+    /// the rest of what was made to prepare for an exam.
     public func exportPath(of note: NoteFile) -> String {
-        "\(CourseFolder.notes.rawValue)/\(StandardLayout.noteExportsFolder)/\(note.title).pdf"
+        guard note.meta.kind != .examSummary else { return "\(CourseFolder.exercises.rawValue)/\(note.title).pdf" }
+        return "\(CourseFolder.notes.rawValue)/\(StandardLayout.noteExportsFolder)/\(note.title).pdf"
     }
 
     /// Creates the file only; the caller adds its entry to course.json.

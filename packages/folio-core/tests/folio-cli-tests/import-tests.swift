@@ -41,17 +41,26 @@ struct ImportCommandTests {
         try expectSameFiles(a, b)
     }
 
+    /// Two pages titled "숙제" get names apart before either file exists, so a dry run passes and shows where they go.
     @Test func notes() throws {
         let note = UUID()
         _ = try payload("dump/\(Harness.graphTheory)/notes/a.md", "본문")
         _ = try payload("dump/\(Harness.graphTheory)/index.json", """
             {"coursePageId": "\(Harness.graphTheory)", "title": "그래프 이론", "images": [], "scores": [],
-             "notes": [{"id": "\(note)", "title": "7주차-2", "kind": "러프", "date": "2026-10-14", "file": "notes/a.md"}]}
+             "notes": [{"id": "\(note)", "title": "7주차-2", "kind": "러프", "date": "2026-10-14", "file": "notes/a.md"},
+                       {"id": "\(UUID())", "title": "숙제", "file": "notes/a.md"},
+                       {"id": "\(UUID())", "title": "숙제", "file": "notes/a.md"}]}
             """)
         let folder = dir.appending(path: "dump").path
         try h.expectSame(["import", "notes", folder]) { _ in ImportNotes(folder: folder) }
         let r = h.cli(["import", "notes", folder, "--dry-run"], gist: try Harness.fixtureCopy())
-        #expect(r.out.contains("노트 +1") && r.out.contains("Notes/7주차-2.md"), "\(r.out)")
+        #expect(r.code == 0, "\(r.err)")
+        #expect(r.out.contains("노트 +3") && r.out.contains("Notes/7주차-2.md"), "\(r.out)")
+        #expect(r.out.contains("Notes/숙제.md") && r.out.contains("Notes/숙제 2.md"), "\(r.out)")
+        let gist = try Harness.fixtureCopy()
+        #expect(h.cli(["import", "notes", folder], gist: gist).code == 0)
+        let notes = try ActionContext(gist: GISTStore(url: gist), device: UUID()).file(Harness.graphTheory).notes.map(\.path)
+        #expect(notes.contains("Notes/숙제.md") && notes.contains("Notes/숙제 2.md"))
     }
 
     @Test func calendar() throws {

@@ -11,7 +11,13 @@ final class NewNoteModel {
     var title = ""
     var format = NoteFormat.markdown
     var kind: NoteKind {
-        didSet { if kind != oldValue { suggestTitle() } }
+        didSet {
+            guard kind != oldValue else { return }
+            // The picker shows nothing for a session it no longer lists, so keeping the id would link a session that
+            // already has this kind's note, taking it from that note.
+            if let sessionId, !sessionOptions.contains(where: { $0.id == sessionId }) { self.sessionId = nil }
+            suggestTitle()
+        }
     }
     var sessionId: UUID? {
         didSet { suggestTitle() }

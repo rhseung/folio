@@ -79,6 +79,16 @@ struct NoteActionTests {
         #expect(throws: ActionError.self) { try run(NoteBuild(course: Self.graphTheory, note: "Notes/2주차-1.md", pdf: built.path)) }
     }
 
+    @Test func anExamSummarysPDFGoesToExercises() throws {
+        try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "중간 정리", kind: .examSummary, format: .tex))
+        let folder = TexEngine.outputFolder(for: try store().fileURL("Notes/중간 정리.tex"))
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let built = folder.appending(path: "\(UUID().uuidString).pdf")
+        try Data("%PDF".utf8).write(to: built)
+        try run(NoteBuild(course: Self.graphTheory, note: "Notes/중간 정리.tex", pdf: built.path))
+        #expect(try text("Exercises/중간 정리.pdf") == "%PDF")
+    }
+
     /// Unknown keys stay in the file; references to things that are gone are dropped; an id another note already has
     /// (a copy made in Finder) is replaced; a second run finds nothing to do.
     @Test func migrationMovesFolioKeysOnly() throws {

@@ -203,6 +203,21 @@ struct NotesModelTests {
         #expect(!sheet.sessionOptions.contains { $0.id == session })
     }
 
+    /// The picker lists only sessions without this kind's note; a session picked for another kind is dropped rather
+    /// than linked, which would take the session from the note it already has.
+    @Test func changingKindDropsASessionThatAlreadyHasThatNote() throws {
+        let (workspace, course) = try fixtureCourse()
+        let session = try #require(workspace.run(SessionAdd(course: linearAlgebra, date: .now))?.made)
+        let review = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "복습", kind: .review, session: session))?.made)
+        let sheet = NewNoteModel(workspace: workspace, course: course, kind: .rough)
+        sheet.sessionId = session
+        sheet.kind = .review
+        #expect(sheet.sessionId == nil)
+        sheet.title = "다른 복습"
+        _ = try #require(sheet.add())
+        #expect(workspace.course(linearAlgebra)?.file.sessions.first { $0.id == session }?.reviewNoteId == review)
+    }
+
     /// A block typed into in the read view lands on the lines the parser marked, counted in the same body the editor
     /// holds; lines that changed since are left alone.
     @Test func readViewEditsReplaceTheirOwnLines() throws {
