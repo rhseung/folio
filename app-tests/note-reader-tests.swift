@@ -286,6 +286,14 @@ struct NoteReaderTests {
         #expect(try width(#"\text{a--b}"#) == width(#"\text{a–b}"#))
         #expect(try width(#"x\text{양이온}"#) > width("x") + 24)
         #expect(try width(#"\text{König–Egerváry: } \alpha'(G) = \beta(G)"#) > 0)
+        // SwiftMath dropped `$ % # ~` and read `&` as a table column.
+        #expect(try width(#"\text{5% 이내}"#) > width(#"\text{5 이내}"#))
+        #expect(try width(#"\text{#3}"#) > width(#"\text{3}"#))
+        #expect(try width(#"\text{A&B}"#) == width(#"\text{A\&B}"#))
+        #expect(try width(#"\text{a~b}"#) == width(#"\text{a b}"#))
+        // Only `\text` kept its spaces.
+        #expect(try width(#"\textbf{a b}"#) > width(#"\textbf{ab}"#))
+        #expect(try width(#"\textit{강조}"#) > 24)
     }
 
     @Test func tableColumnsShrinkOnlyAboveWhatCannotWrap() {

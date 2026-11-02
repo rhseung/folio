@@ -633,6 +633,9 @@ class NoteTextView: UITextView {
         manager.delegate = layout
         backgroundColor = .clear
         alwaysBounceVertical = true
+        // The room past the note's end is a content inset, and UIKit would shorten the indicator by it too.
+        automaticallyAdjustsScrollIndicatorInsets = false
+        verticalScrollIndicatorInsets = .zero
         autocorrectionType = .no
         autocapitalizationType = .none
         smartQuotesType = .no

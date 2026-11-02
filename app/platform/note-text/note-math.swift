@@ -189,19 +189,22 @@ import UIKit
         }
     }
 
-    private static let textCommand = try! NSRegularExpression(pattern: #"\\(?:text|textrm|mbox)\s*\{([^{}]*)\}"#)
+    private static let textCommand = try! NSRegularExpression(pattern: #"\\(text|textrm|textbf|textit|texttt|textsf|mbox)\s*\{([^{}]*)\}"#)
     private static var glyphs: Set<String> = []
 
-    /// SwiftMath reads `\text{…}` as upright math, one character at a time: `-` became a spaced minus (`1 − factor`),
-    /// `:` a ratio with relation spacing, and anything past ASCII (`–`, Hangul) was dropped without a word. So each
-    /// such character becomes an ordinary symbol of itself, which SwiftMath sets in a CoreText line that falls back to
-    /// a system font for glyphs the math font lacks. `--` and `---` are dashes, as in LaTeX text.
+    /// SwiftMath reads `\text{…}` and its styled kin as math in that font, one character at a time: `-` became a
+    /// spaced minus (`1 − factor`), `:` a ratio with relation spacing, `$ % # ~` and anything past ASCII (`–`, Hangul)
+    /// were dropped without a word, and `&` split the formula into table columns. Only `\text` kept its spaces. So
+    /// each such character becomes an ordinary symbol of itself, which SwiftMath sets in a CoreText line that falls
+    /// back to a system font for glyphs the math font lacks, and spaces are spelled `\ `. `--` and `---` are dashes,
+    /// as in LaTeX text.
     private static func text(_ tex: String) -> String {
         let whole = tex as NSString
         var out = "", last = 0
         for match in textCommand.matches(in: tex, range: NSRange(location: 0, length: whole.length)) {
             out += whole.substring(with: NSRange(location: last, length: match.range.location - last))
-            out += "\\text{" + plain(whole.substring(with: match.range(at: 1))) + "}"
+            let command = whole.substring(with: match.range(at: 1))
+            out += "\\" + (command == "mbox" ? "text" : command) + "{" + plain(whole.substring(with: match.range(at: 2))) + "}"
             last = match.range.location + match.range.length
         }
         return out + whole.substring(from: last)
@@ -220,12 +223,18 @@ import UIKit
                 } else if j < body.endIndex {
                     j = body.index(after: j)
                 }
-                out += body[i..<j]
+                // SwiftMath has no `\&` command, though it has the other escaped specials.
+                out += body[i..<j] == "\\&" ? "{\\" + symbol("&") + "}" : String(body[i..<j])
                 i = j
                 continue
             }
-            // TeX's own specials keep their meaning; letters, digits, spaces and periods SwiftMath already sets right.
-            if c.isASCII && (c.isLetter || c.isNumber || " .$%#&~^_".contains(c)) {
+            if c == " " || c == "~" {
+                out += "\\ "
+            } else if c.isASCII && (c.isLetter || c.isNumber || c == ".") {
+                // SwiftMath already sets these as text does.
+                out.append(c)
+            } else if c == "^" || c == "_" {
+                // Scripts in text are an error in LaTeX, so a note that has them means them as scripts.
                 out.append(c)
             } else {
                 out += "{\\" + symbol(c == "'" ? "\u{2019}" : c) + "}"
