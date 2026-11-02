@@ -9,3 +9,6 @@ xcuserdata/
 
 # Agent worktrees
 .claude/worktrees/
+
+# Request bodies the review bot writes when it runs locally
+.claude-review/

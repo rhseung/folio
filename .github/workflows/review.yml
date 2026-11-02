@@ -1,0 +1,23 @@
+name: review
+
+on:
+  pull_request:
+    types: [opened, synchronize, ready_for_review, reopened]
+  pull_request_review_comment:
+    types: [created]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  actions: read
+  id-token: write
+
+jobs:
+  # claude[bot]'s approval is what the main ruleset requires, so this review is a merge gate. What it looks for is in
+  # .github/review.md.
+  review:
+    if: vars.ENABLE_CLAUDE_REVIEW == 'true'
+    uses: rhseung/claude-review-plugin/.github/workflows/review.yml@main
+    secrets: inherit

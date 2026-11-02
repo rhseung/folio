@@ -34,9 +34,10 @@ jobs:
       matrix:
         # test-app builds the Mac app to host the screen-model tests, so it stands in for build-mac.
         task: [test-app, build-ipad]
-        # The iPad build adds little over the Mac one on every PR, so it runs only once a change lands.
-        exclude:
-          - task: ${{ github.event_name == 'pull_request' && 'build-ipad' || 'none' }}
+    env:
+      # Every other check builds Debug, so the iPad build goes Release: it also catches code that reaches what only
+      # exists under #if DEBUG. It runs on PRs because macOS-only APIs broke main three times when it ran after merging.
+      FOLIO_CONFIGURATION: ${{ matrix.task == 'build-ipad' && 'Release' || 'Debug' }}
     steps:
       - uses: actions/checkout@v7
       - run: sudo ln -sfn "$XCODE" /Applications/Xcode.app

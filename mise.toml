@@ -95,9 +95,9 @@ ditto .build/xcode/Build/Products/Release/Folio.app /Applications/Folio.app
 """
 
 [tasks.build-ipad]
-description = "Build the app for the iPad simulator"
+description = "Build the app for the iPad simulator (FOLIO_CONFIGURATION=Release for a Release build)"
 depends = ["generate"]
-run = "xcodebuild -scheme Folio -destination 'generic/platform=iOS Simulator' build -quiet -skipMacroValidation"
+run = "xcodebuild -scheme Folio -configuration \"${FOLIO_CONFIGURATION:-Debug}\" -destination 'generic/platform=iOS Simulator' build -quiet -skipMacroValidation"
 
 [tasks.build-web]
 description = "Bundle AsciiMath conversion, code highlighting and the Claude panel math into app/resources/web"
