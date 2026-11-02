@@ -23,6 +23,18 @@ struct SessionsModelTests {
         #expect(model.subtitle(try #require(workspace.course(graphTheory)).file) == "회차 2개 · 복습 노트 없음 1 · 단원 없음 1")
     }
 
+    @Test func aClassWithNoEndOffersJoinUntilTheEndTheFormShows() throws {
+        let workspace = try fixtureWorkspace()
+        workspace.run(CourseSet(course: graphTheory, [.schedule([])]))
+        let start = try #require(Calendar.current.dateInterval(of: .minute, for: workspace.now)).start
+        let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: start, link: "https://zoom.us/j/1"))?.made)
+        let s = try #require(workspace.course(graphTheory)?.file.sessions.first { $0.id == id })
+        let model = SessionsModel(workspace: workspace, courseId: graphTheory)
+        let formEnd = SessionFormModel(workspace: workspace, courseId: graphTheory, session: s).end
+        #expect(model.offersJoin(s, end: nil, now: formEnd.addingTimeInterval(-60)))
+        #expect(!model.offersJoin(s, end: nil, now: formEnd))
+    }
+
     @Test func timelineRailsStopAtTheEndsAndColorUpToNow() throws {
         let workspace = try fixtureWorkspace()
         let model = SessionsModel(workspace: workspace, courseId: graphTheory)

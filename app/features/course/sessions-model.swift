@@ -62,7 +62,7 @@ final class SessionsModel {
     /// The join button stands out only around the class: from the study day it falls on until it ends. Before and
     /// after, the link stays in the menu.
     func offersJoin(_ session: Session, end: Date?, now: Date) -> Bool {
-        !session.isCancelled && isToday(session.date) && now < (end ?? session.date.addingTimeInterval(3600))
+        !session.isCancelled && isToday(session.date) && now < (end ?? session.date.addingTimeInterval(Session.usualLength))
     }
 
     func importFiles(_ urls: [URL], into session: Session) {

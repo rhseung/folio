@@ -218,6 +218,10 @@ extension Session {
     }
 
     /// When the class ends: its own end, else from the weekly slot it starts in. Nil when neither (a date-only import).
+    /// GIST's usual class: how long a session with no end of its own and no timetable slot is taken to last, so the
+    /// form, the join button and the day ribbon agree on when it ends.
+    public static let usualLength: TimeInterval = 75 * 60
+
     public func end(schedule: [ClassTime], calendar: Calendar) -> Date? {
         if let end = self.end { return end }
         guard let slot = slot(in: schedule, calendar: calendar) else { return nil }

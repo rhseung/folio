@@ -29,8 +29,7 @@ final class SessionFormModel {
         let schedule = workspace.course(courseId)?.file.course.schedule ?? []
         let end = session?.end(schedule: schedule, calendar: calendar)
         self.start = start
-        // A class off the timetable gets GIST's usual 75 minutes to start from.
-        endMinute = Self.minute(of: end ?? start.addingTimeInterval(75 * 60), from: start, calendar: calendar)
+        endMinute = Self.minute(of: end ?? start.addingTimeInterval(Session.usualLength), from: start, calendar: calendar)
         topic = session?.topic ?? ""
         link = session?.link ?? ""
     }

@@ -15807,6 +15807,17 @@
           }
         }
       }
+    },
+    "class-times.link-prompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "https://zoom.us/j/…"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
