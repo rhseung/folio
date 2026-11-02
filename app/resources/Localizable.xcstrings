@@ -15895,6 +15895,17 @@
           }
         }
       }
+    },
+    "text-file.unreadable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 내려받지 않았거나, 없어졌거나, UTF-8 텍스트가 아니라서 여기서 열지 않습니다."
+          }
+        }
+      }
     }
   },
   "version": "1.0"

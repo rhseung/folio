@@ -64,6 +64,19 @@ struct TextFileModelTests {
         #expect(model.reveal == nil)
         model.jump(to: here)
         #expect(model.reveal == 3)
+        let namesake = TexIssue(.error, file: "sections/Problems.tex", line: 9, message: "Undefined control sequence")
+        #expect(!model.isHere(namesake))
+        #expect(model.isHere(TexIssue(.error, file: "./Problems.tex", line: 1, message: "x")))
+    }
+
+    /// An empty editor over a file that couldn't be read would look like an empty file, and saving would replace it.
+    @Test func aFileThatCantBeReadDoesNotOpenEmpty() throws {
+        try Data([0xC7, 0xD1, 0x0A]).write(to: course.store.fileURL("Exams/Midterm/Problems.tex"))
+        let model = try model("Exams/Midterm/Problems.tex")
+        #expect(model.unreadable && !model.dirty)
+        model.text = "x"
+        model.saveNow(force: true)
+        #expect(try Data(contentsOf: course.store.fileURL("Exams/Midterm/Problems.tex")) == Data([0xC7, 0xD1, 0x0A]))
     }
 
     @Test func materialsOpenTextHereAndOthersElsewhere() throws {

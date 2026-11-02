@@ -276,6 +276,17 @@
         }
       }
     },
+    "error.material.not-utf8": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "UTF-8 텍스트가 아니라서 Folio에서 고치지 않습니다: %@"
+          }
+        }
+      }
+    },
     "error.material.outside-course": {
       "extractionState": "manual",
       "localizations": {

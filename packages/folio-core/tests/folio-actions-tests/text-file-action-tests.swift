@@ -52,6 +52,19 @@ struct TextFileActionTests {
         #expect(try store.readText(Self.tex).hasSuffix("바깥에서 고침\n"))
     }
 
+    /// A CP949 `.csv` from Excel would come back as U+FFFD wherever it didn't decode as UTF-8.
+    @Test func aFileThatIsNotUTF8IsLeftAsItIs() throws {
+        let cp949 = Data([0xC7, 0xD1, 0xB1, 0xDB, 0x2C, 0x31, 0x0A])  // "한글,1\n"
+        try cp949.write(to: store.fileURL("Exams/Midterm/scores.csv"))
+        try run(MaterialTrack(course: Self.course))
+        let m = try material("Exams/Midterm/scores.csv")
+        #expect(throws: StorageError.notUTF8("Exams/Midterm/scores.csv")) { try store.readText(m.path) }
+        #expect(throws: ActionError.rule("UTF-8 텍스트가 아니라서 Folio에서 고치지 않습니다: Exams/Midterm/scores.csv")) {
+            try run(MaterialWrite(course: Self.course, material: m.id, text: "x"))
+        }
+        #expect(try Data(contentsOf: store.fileURL(m.path)) == cp949)
+    }
+
     @Test func aPDFIsNotText() throws {
         let m = try material("Exams/Midterm/Problems.pdf")
         #expect(throws: ActionError.rule("텍스트 파일이 아니라서 쓸 수 없습니다: Exams/Midterm/Problems.pdf")) {

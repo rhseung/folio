@@ -22,7 +22,13 @@ struct TextFileView: View {
             #endif
             HStack(spacing: 0) {
                 VStack(spacing: 0) {
-                    SourceFileEditor(text: $model.text, language: model.format.highlightLanguage, reveal: $model.reveal)
+                    if model.unreadable {
+                        ContentUnavailableView(String(localized: .materialsViewerCannotOpen), systemImage: "doc.questionmark",
+                                               description: Text(.textFileUnreadable))
+                            .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    } else {
+                        SourceFileEditor(text: $model.text, language: model.format.highlightLanguage, reveal: $model.reveal)
+                    }
                     if !model.issues.isEmpty { issueList }
                 }
                 .frame(maxWidth: .infinity)

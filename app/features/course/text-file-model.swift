@@ -15,6 +15,7 @@ final class TextFileModel {
     /// device, the CLI) and asks before overwriting it.
     private var onDisk = ""
     private(set) var loaded = false
+    private(set) var unreadable = false
     var conflict = false
     var reveal: Int?
     private(set) var building = false
@@ -66,10 +67,18 @@ final class TextFileModel {
     var errors: [TexIssue] { issues.filter { $0.severity == .error } }
     var shownIssues: [TexIssue] { errors + issues.filter { $0.severity == .warning } }
 
+    /// A file that can't be read (not downloaded yet, gone, not UTF-8) leaves the editor closed: an empty editor would
+    /// look like an empty file, and saving it would replace the real one.
     func load() {
-        onDisk = (try? course.store.readText(path)) ?? ""
-        text = onDisk
-        loaded = true
+        do {
+            onDisk = try course.store.readText(path)
+            text = onDisk
+            loaded = true
+            unreadable = false
+        } catch {
+            loaded = false
+            unreadable = true
+        }
     }
 
     func saveNow(force: Bool) {
@@ -129,10 +138,12 @@ final class TextFileModel {
         }
     }
 
-    /// Only problems in this file can be shown; an `\input` file's line means nothing here.
+    /// Only problems in this file can be shown; an `\input` file's line means nothing here. Tectonic runs in the
+    /// document's folder and names files from there, so `sections/Problems.tex` is another file with the same name.
     func isHere(_ issue: TexIssue) -> Bool {
         guard let file = issue.file, issue.line != nil else { return false }
-        return (file as NSString).lastPathComponent == name
+        let relative = file.hasPrefix("./") ? String(file.dropFirst(2)) : file
+        return relative == name || URL(filePath: file).standardizedFileURL == fileURL.standardizedFileURL
     }
 
     func jump(to issue: TexIssue) {

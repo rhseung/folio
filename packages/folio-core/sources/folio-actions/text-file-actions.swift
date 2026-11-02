@@ -17,12 +17,25 @@ public struct MaterialWrite {
         let file = try ctx.file(course)
         let m = file.materials[try index(material, in: file.materials, .valueMaterial)]
         guard !m.isFolder, MaterialFormat(path: m.path).isText else { throw ActionError.rule(String(localized: .errorMaterialNotText(m.path))) }
-        if let expected, try store.readText(m.path) != expected {
+        if let expected, try Self.read(store, m.path) != expected {
             throw ActionError.conflict(String(localized: .errorMaterialChanged(m.path)))
         }
+        if expected == nil { _ = try Self.read(store, m.path) }
         try ctx.io(Change(.changed, try ctx.relative(course, m.path))) { try store.writeText(m.path, text: text) }
         guard !ctx.dryRun else { return }
         try ctx.edit(course) { f in try store.rehash(material, in: &f, device: ctx.device, now: ctx.now) }
+    }
+}
+
+extension MaterialWrite {
+    /// Only UTF-8 is replaced: a file in another encoding would be rewritten as UTF-8, which the program that made it
+    /// may not read.
+    static func read(_ store: CourseStore, _ path: String) throws -> String {
+        do {
+            return try store.readText(path)
+        } catch StorageError.notUTF8 {
+            throw ActionError.rule(String(localized: .errorMaterialNotUtf8(path)))
+        }
     }
 }
 
