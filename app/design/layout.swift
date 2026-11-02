@@ -17,6 +17,7 @@ struct Page<Content: View, Backdrop: View>: View {
                 .padding(.bottom, Theme.Space.xxl * 2)
                 .frame(maxWidth: .infinity)
                 .background(alignment: .top) { backdrop }
+                .pageScrollWithoutBounce()
         }
         .background(Theme.Palette.page)
         // No edge effect under the toolbar: on this flat paper it reads as a header band with a rule across the page.
