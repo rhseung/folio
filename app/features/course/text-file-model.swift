@@ -154,7 +154,7 @@ final class TextFileModel {
         do {
             switch source {
             case let .material(id): _ = try workspace.runThrowing(MaterialBuild(course: course.id, material: id, pdf: pdf.path, overwrite: overwrite))
-            case .note: _ = try workspace.runThrowing(NoteBuild(course: course.id, note: path, pdf: pdf.path))
+            case .note: _ = try workspace.runThrowing(NoteBuild(course: course.id, note: path, pdf: pdf.path, overwrite: overwrite))
             }
             pdfRevision += 1
         } catch ActionError.conflict {

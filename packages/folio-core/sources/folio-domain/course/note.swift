@@ -65,6 +65,8 @@ public struct NoteEntry: Entity {
     public var examId: UUID?
     public var tags: [String]
     public var math: MathSyntax
+    /// The hash of the PDF `note build` last wrote. A different file in that place is someone else's export.
+    public var builtHash: String?
 
     public init(id: UUID, device: DeviceID, at date: Date, path: String, meta: NoteMeta) {
         self.id = id

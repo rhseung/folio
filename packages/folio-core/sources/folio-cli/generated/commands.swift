@@ -938,10 +938,11 @@ enum GeneratedCommands {
     }
 
     struct NoteBuild: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "build", abstract: "LaTeX 노트(.tex)를 Tectonic으로 PDF로 만들어 Notes/Exports에 둔다", discussion: """
+        static let configuration = CommandConfiguration(commandName: "build", abstract: "LaTeX 노트(.tex)를 Tectonic으로 PDF로 만들어 Notes/Exports(시험 정리는 Exercises)에 둔다", discussion: """
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<.tex 노트>", valueName: "note"), completion: Complete.ref("NotePath")) var note: String = ""
+        @Flag(help: "그 자리의 PDF가 이 노트를 빌드한 것이 아니어도 바꾼다") var overwrite = false
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -950,7 +951,8 @@ enum GeneratedCommands {
             let action = FolioActions.NoteBuild(
                 course: c.id,
                 note: try r.path("NotePath", noteName, in: c),
-                pdf: nil
+                pdf: nil,
+                overwrite: overwrite
             )
             try perform(spec: action, g, ctx: ctx)
         }

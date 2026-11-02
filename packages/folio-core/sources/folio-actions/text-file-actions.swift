@@ -111,9 +111,11 @@ public struct MaterialBuild {
     }
 }
 
-/// A note's PDF goes to `Notes/Exports/<title>.pdf`, where exported notes go, not beside it: Notes/ holds only notes.
-/// No examples, for the same reason as `material build`.
-@Action("note build", "LaTeX 노트(.tex)를 Tectonic으로 PDF로 만들어 Notes/Exports에 둔다", done: "노트 '{note}'을(를) PDF로 만들었습니다",
+/// A note's PDF goes to `Notes/Exports/<title>.pdf` (an exam summary's to Exercises), not beside it: Notes/ holds only
+/// notes. The place is chosen by title, so two notes can share it and another tool's export may already be there; as
+/// with `material build`, only a PDF this action wrote is replaced without `overwrite`, and a replaced one goes to the
+/// Trash. No examples, for the same reason as `material build`.
+@Action("note build", "LaTeX 노트(.tex)를 Tectonic으로 PDF로 만들어 Notes/Exports(시험 정리는 Exercises)에 둔다", done: "노트 '{note}'을(를) PDF로 만들었습니다",
         phrases: ["tex 노트 컴파일", "노트 PDF 만들기"])
 public struct NoteBuild {
     /// 과목
@@ -122,6 +124,8 @@ public struct NoteBuild {
     @Arg var note: Note.Path
     /// 앱이 이 노트를 Tectonic으로 빌드해 둔 PDF. 빌드 출력 폴더 밖의 파일은 받지 않는다. 빼면 직접 빌드한다
     @Hidden var pdf: String?
+    /// 그 자리의 PDF가 이 노트를 빌드한 것이 아니어도 바꾼다
+    var overwrite = false
 
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.store(course)
@@ -129,6 +133,12 @@ public struct NoteBuild {
         guard file.format == .tex else { throw ActionError.rule(String(localized: .errorMaterialNotTex(note))) }
         let target = store.exportPath(of: file)
         let exists = FileManager.default.fileExists(atPath: store.fileURL(target).path)
+        let entry = try ctx.file(course).notes.first { $0.id == file.meta.id }
+        var ours = false
+        if exists, let made = entry?.builtHash { ours = try made == store.hash(target) }
+        if exists, !ours, !overwrite {
+            throw ActionError.conflict(String(localized: .errorBuildWouldReplace(target)))
+        }
         let change = Change(exists ? .changed : .added, try ctx.relative(course, target))
         guard !ctx.dryRun else {
             ctx.record(change)
@@ -137,7 +147,12 @@ public struct NoteBuild {
         let built = try pdf.map { try MaterialBuild.output($0, of: file.url) } ?? MaterialBuild.compile(file.url)
         try ctx.io(change) {
             try FileManager.default.createDirectory(at: store.fileURL(target).deletingLastPathComponent(), withIntermediateDirectories: true)
-            try store.replaceFile(target, with: built)
+            try store.replaceFile(target, with: built, keepOld: exists && !ours)
+        }
+        guard let id = entry?.id else { return }
+        let hash = try store.hash(target)
+        try ctx.edit(course) { f in
+            if let i = f.notes.firstIndex(where: { $0.id == id }) { f.notes[i].builtHash = hash }
         }
     }
 }

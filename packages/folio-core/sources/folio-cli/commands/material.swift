@@ -62,7 +62,10 @@ struct MaterialCommand: ParsableCommand {
             let r = Resolver(try CLI.context(g))
             let (c, name) = try r.split(material)
             let m = try r.material(name, in: c)
-            if g.json { return try printJSON(m) }
+            if g.json {
+                guard MaterialFormat(path: m.path).isText, let text = try? c.store?.readText(m.path) else { return try printJSON(m) }
+                return try printJSON(TextMaterial(material: m, text: text))
+            }
             let f = try c.requireFile()
             courseHeader(c, catalog: try? r.ctx.catalog())
             let url = c.store.map { $0.url.appending(path: m.path) }
@@ -224,5 +227,21 @@ struct MaterialCommand: ParsableCommand {
             let result = try perform(spec: MaterialMove(course: c.id, material: m.id, to: to), g, ctx: ctx)
             if !g.json, let batch = result.made { say(String(localized: .materialMvUndo(batch.uuidString)).styled(.dim)) }
         }
+    }
+}
+
+/// A text material's JSON also carries the file as it is now and the hash `material write --expect` compares. The
+/// material's own `hash` is from the last tracking, so after a change from another device it would never match.
+struct TextMaterial: Encodable {
+    var material: Material
+    var text: String
+
+    private enum Keys: String, CodingKey { case text, contentHash }
+
+    func encode(to encoder: Encoder) throws {
+        try material.encode(to: encoder)
+        var c = encoder.container(keyedBy: Keys.self)
+        try c.encode(text, forKey: .text)
+        try c.encode(contentHash(text), forKey: .contentHash)
     }
 }

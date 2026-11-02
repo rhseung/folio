@@ -102,6 +102,21 @@ struct MaterialNoteStudyTests {
         #expect(h.cli(["material", "write", "EC4207/Problems.tex", "--file", file, "--expect", "00"], gist: gist).code == Exit.conflict.rawValue)
     }
 
+    /// The file changes on another device after tracking; `material show --json` reads it again, so its hash still
+    /// opens the write.
+    @Test func writeTakesTheHashShowReadsNow() throws {
+        let gist = try Harness.fixtureCopy()
+        _ = h.cli(Self.track, gist: gist)
+        let tex = gist.appending(path: "2026-3/EC4207 그래프 이론/Exams/Midterm/Problems.tex")
+        try "% 다른 기기에서 고침\n".write(to: tex, atomically: true, encoding: .utf8)
+        let shown = try #require(try JSONSerialization.jsonObject(with: Data(h.cli(["material", "show", "EC4207/Problems.tex", "--json"], gist: gist).out.utf8)) as? [String: Any])
+        #expect(shown["text"] as? String == "% 다른 기기에서 고침\n" && shown["path"] as? String == "Exams/Midterm/Problems.tex")
+        let hash = try #require(shown["contentHash"] as? String)
+        let file = try scratch("Problems.tex", "x")
+        #expect(h.cli(["material", "write", "EC4207/Problems.tex", "--file", file, "--expect", hash], gist: gist).code == 0)
+        #expect(try String(contentsOf: tex, encoding: .utf8) == "x")
+    }
+
     @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
     func buildTex() throws {
         let write = ["material", "write", "EC4207/Problems.tex", "--file",

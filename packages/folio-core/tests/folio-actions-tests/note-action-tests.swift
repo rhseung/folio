@@ -79,6 +79,31 @@ struct NoteActionTests {
         #expect(throws: ActionError.self) { try run(NoteBuild(course: Self.graphTheory, note: "Notes/2주차-1.md", pdf: built.path)) }
     }
 
+    /// Exports are placed by title, so another tool's export can sit there already. Like `material build`, only this
+    /// note's own PDF is replaced without asking, and a replaced one goes to the Trash.
+    @Test func aNoteBuildReplacesOnlyItsOwnPDF() throws {
+        try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "증명", format: .tex))
+        let folder = TexEngine.outputFolder(for: try store().fileURL("Notes/증명.tex"))
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        func built(_ text: String) throws -> String {
+            let url = folder.appending(path: "\(UUID().uuidString).pdf")
+            try Data(text.utf8).write(to: url)
+            return url.path
+        }
+        let exports = try store().fileURL("Notes/Exports")
+        try FileManager.default.createDirectory(at: exports, withIntermediateDirectories: true)
+        try Data("%PDF theirs".utf8).write(to: exports.appending(path: "증명.pdf"))
+
+        #expect(throws: ActionError.conflict("같은 이름의 PDF가 이미 있고 Folio가 만든 것이 아니라서 바꾸지 않았습니다: Notes/Exports/증명.pdf. 바꾸려면 --overwrite를 줍니다")) {
+            try run(NoteBuild(course: Self.graphTheory, note: "Notes/증명.tex", pdf: try built("%PDF mine")))
+        }
+        #expect(try text("Notes/Exports/증명.pdf") == "%PDF theirs")
+        try run(NoteBuild(course: Self.graphTheory, note: "Notes/증명.tex", pdf: try built("%PDF mine"), overwrite: true))
+        #expect(try text("Notes/Exports/증명.pdf") == "%PDF mine")
+        try run(NoteBuild(course: Self.graphTheory, note: "Notes/증명.tex", pdf: try built("%PDF again")))
+        #expect(try text("Notes/Exports/증명.pdf") == "%PDF again")
+    }
+
     @Test func anExamSummarysPDFGoesToExercises() throws {
         try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "중간 정리", kind: .examSummary, format: .tex))
         let folder = TexEngine.outputFolder(for: try store().fileURL("Notes/중간 정리.tex"))
