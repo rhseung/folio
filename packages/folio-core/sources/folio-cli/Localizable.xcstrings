@@ -4676,17 +4676,6 @@
         }
       }
     },
-    "quiz.no-course-folder": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@은(는) 과목 폴더가 없습니다"
-          }
-        }
-      }
-    },
     "quiz.record.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -5442,17 +5431,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@을(를) 하나 이상 주세요"
-          }
-        }
-      }
-    },
-    "resolve.no-course-folder": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@은(는) 과목 폴더가 없습니다"
           }
         }
       }
