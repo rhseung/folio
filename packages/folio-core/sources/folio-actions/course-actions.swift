@@ -2,9 +2,9 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-@Action("semester add", "학기 추가. 학기 폴더를 만든다. 인정학기는 폴더 없이 기록만", effect: .creates, done: "학기 '{year} {term}'을(를) 추가했습니다",
+@Action("semester add", "학기 추가. 학기 폴더를 만든다. 인정학기는 출처 이름으로 _Credited/<출처> 폴더를 만든다", effect: .creates, done: "학기 '{year} {term}'을(를) 추가했습니다",
         examples: ["folio semester add 2027 spring --start 2027-03-02 --end 2027-06-18",
-                   "folio semester add 2024 credited --credited-hours 9 --dry-run  군 복무 인정학기"],
+                   #"folio semester add 2024 credited --source "군 복무" --credited-hours 9 --dry-run  인정학기"#],
         phrases: ["학기 추가", "새 학기", "학기 만들기", "인정학기 추가"])
 public struct SemesterAdd {
     @New var id: Semester.ID
@@ -18,10 +18,14 @@ public struct SemesterAdd {
     var end: LocalDate?
     /// 인정학기의 인정 학점
     var creditedHours: Double?
+    /// 인정학기의 출처. 영재고 AP. 폴더 이름이 된다
+    var source: String?
 
     public func run(_ ctx: ActionContext) throws {
         var semester = Semester(id: id, device: ctx.device, at: ctx.now, year: year, term: term, start: start, end: end)
         semester.creditedHours = creditedHours
+        semester.source = source
+        guard term != .credited || source != nil else { throw ActionError.rule(String(localized: .errorCreditedNeedsSource(semester.name))) }
         try ctx.editTranscript { t in
             guard term == .credited || !t.semesters.contains(where: { $0.year == year && $0.term == term }) else {
                 throw ActionError.rule(String(localized: .errorSemesterExists(semester.folder?.name ?? "\(year)")))
@@ -29,12 +33,45 @@ public struct SemesterAdd {
             guard !t.semesters.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenSemester("\(id)"))) }
             t.semesters.append(semester)
         }
-        if let folder = semester.folder {
-            try ctx.io(Change(.added, folder.name + "/")) {
-                try FileManager.default.createDirectory(at: ctx.gist.url.appending(path: folder.name), withIntermediateDirectories: true)
+        if let folder = semester.coursesFolder {
+            try ctx.io(Change(.added, folder + "/")) {
+                try FileManager.default.createDirectory(at: ctx.gist.url.appending(path: folder), withIntermediateDirectories: true)
             }
         }
         ctx.made(id)
+    }
+}
+
+/// The source names the term's folder, so changing it renames `_Credited/<source>` too, through `moves.jsonl`.
+@Action("semester source", "인정학기의 출처 정하기. 폴더가 있으면 _Credited/<출처> 폴더 이름도 바뀌므로 확인을 받는다", effect: .moves,
+        confirm: "인정학기 '{semester}'의 출처를 '{source}'(으)로 정합니다.", done: "인정학기 '{semester}'의 출처를 '{source}'(으)로 정했습니다",
+        examples: [#"folio semester source "영재고 AP" "영재고 AP 과정" --dry-run"#], phrases: ["인정학기 출처", "출처 바꾸기"])
+public struct SemesterSource {
+    /// 인정학기
+    @Arg var semester: Semester.ID
+    /// 출처. 영재고 AP
+    @Arg var source: String
+
+    public func run(_ ctx: ActionContext) throws {
+        guard let old = try ctx.transcript().semesters.first(where: { $0.id == semester }) else {
+            throw ActionError.notFound(String(localized: .errorNotFoundSemester))
+        }
+        if let from = old.coursesFolder, let to = StandardLayout.creditedFolder(source: source), from != to,
+           FileManager.default.fileExists(atPath: ctx.gist.url.appending(path: from).path) {
+            try ctx.io(Change(.moved, from, to: to)) {
+                try MoveJournal.apply([PlannedMove(from: from, to: to)], in: ctx.gist.url, device: ctx.device, now: ctx.now)
+            }
+            ctx.invalidate()
+        }
+        try ctx.editTranscript { t in
+            guard !t.semesters.contains(where: { $0.id != semester && $0.term == .credited && $0.source == source }) else {
+                throw ActionError.rule(String(localized: .errorCreditedSourceTaken(source)))
+            }
+            try t.update(\.semesters, semester) { s in
+                s.source = source
+                s.touch(by: ctx.device, at: ctx.now)
+            }
+        }
     }
 }
 
@@ -83,21 +120,26 @@ public struct CourseAdd {
     var mode: GradingMode
 
     public func run(_ ctx: ActionContext) throws {
-        guard let semester = try ctx.transcript().semesters.first(where: { $0.id == self.semester }), let semesterFolder = semester.folder else {
+        try Self.create(Course(id: id, device: ctx.device, at: ctx.now, semesterId: semester, title: title, codes: [code], number: number,
+                               credits: credits, gradingMode: mode), ctx)
+        ctx.made(id)
+    }
+
+    /// `<term folder>/<code><number> <title>/.folio/course.json`, the folder named from the course.
+    static func create(_ course: Course, _ ctx: ActionContext) throws {
+        guard let semester = try ctx.transcript().semesters.first(where: { $0.id == course.semesterId }) else {
             throw ActionError.notFound(String(localized: .errorNotFoundSemester))
         }
+        guard let parent = semester.coursesFolder else { throw ActionError.rule(String(localized: .errorCreditedNeedsSource(semester.name))) }
         // Course folders are found by the id in their course.json, so a second folder with this id would be unreachable.
-        guard !ctx.hasFolder(id) else { throw ActionError.rule(String(localized: .errorIdTakenCourse("\(id)"))) }
-        let folder = try CourseRename.folderName(title: title, codes: [code], number: number, catalog: ctx.catalog())
-        let course = Course(id: id, device: ctx.device, at: ctx.now, semesterId: semester.id, title: title, codes: [code], number: number,
-                            credits: credits, gradingMode: mode)
-        let path = "\(semesterFolder.name)/\(folder)"
+        guard !ctx.hasFolder(course.id) else { throw ActionError.rule(String(localized: .errorIdTakenCourse("\(course.id)"))) }
+        let folder = try CourseRename.folderName(title: course.title, codes: course.codes, number: course.number, catalog: ctx.catalog())
+        let path = "\(parent)/\(folder)"
         guard !FileManager.default.fileExists(atPath: ctx.gist.url.appending(path: path).path) else {
             throw ActionError.rule(String(localized: .errorFolderExists(path)))
         }
         try ctx.io(Change(.added, path + "/")) { try ctx.gist.createCourse(course, folderName: folder, in: semester) }
         ctx.invalidate()
-        ctx.made(id)
     }
 }
 
@@ -137,8 +179,7 @@ public struct CourseRename {
     }
 }
 
-/// A course with a folder saves to its course.json; one without (credited terms, colloquia) to transcript.json. The
-/// command reads names (grades, people, categories) into ids, so it is written by hand.
+/// The command reads names (grades, people, categories) into ids, so it is written by hand.
 @Action("course set", "과목의 학점, 평가 방식, 색, 아이콘, 성적, 교수, 분류, 학과 인정 바꾸기. 준 것만 바꾼다", done: "과목 '{course}'을(를) 바꿨습니다", phrases: ["교수님", "교수 이름", "학점 수정", "학점 바꾸기", "받은 성적", "학점 변경", "과목 색", "교수 지정", "성적 입력", "평가 방식"], cli: .manual)
 public struct CourseSet {
     public enum Field: Codable, Sendable, Equatable {
@@ -172,15 +213,7 @@ public struct CourseSet {
     }
 
     public func run(_ ctx: ActionContext) throws {
-        if ctx.hasFolder(course) {
-            try ctx.edit(course) { apply(to: &$0.course) }
-            return
-        }
-        try ctx.editTranscript { t in
-            guard let i = t.courses.firstIndex(where: { $0.id == course }) else { throw ActionError.notFound(String(localized: .errorNotFoundCourse)) }
-            apply(to: &t.courses[i])
-            t.courses[i].touch(by: ctx.device, at: ctx.now)
-        }
+        try ctx.edit(course) { apply(to: &$0.course) }
     }
 }
 

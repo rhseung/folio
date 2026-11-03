@@ -78,6 +78,17 @@
         }
       }
     },
+    "import.notion.no-folder-name": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목 '%@'의 폴더 이름을 만들 수 없어 건너뜁니다. 강의 코드와 번호를 확인하세요"
+          }
+        }
+      }
+    },
     "import.notion.no-semester": {
       "extractionState": "manual",
       "localizations": {
@@ -991,6 +1002,17 @@
         }
       }
     },
+    "rule.semester.source": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "학기 '{name}'의 출처는 인정학기에만 두고, 폴더 이름으로 쓸 수 있어야 합니다(/, :를 쓰지 않고 .으로 시작하지 않음)"
+          }
+        }
+      }
+    },
     "rule.session.link": {
       "extractionState": "manual",
       "localizations": {
@@ -1075,6 +1097,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "복습 간격은 1일에서 365일 사이여야 합니다"
+          }
+        }
+      }
+    },
+    "rule.transcript.credited-sources": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인정학기 '%@'의 출처가 다른 인정학기와 같습니다. 출처마다 폴더가 하나입니다"
           }
         }
       }

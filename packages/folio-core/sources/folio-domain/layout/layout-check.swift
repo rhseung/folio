@@ -24,17 +24,12 @@ public struct LayoutIssue: Hashable, Sendable {
 public enum LayoutCheck {
     public static func issues(in gist: FolderTree, extraAssignmentPrefixes: [String] = []) -> [LayoutIssue] {
         var issues: [LayoutIssue] = []
-        for item in gist.children {
-            if item.name == StandardLayout.metadataFolder { continue }
-            guard SemesterFolder(name: item.name) != nil, !item.isFile else {
-                issues.append(.init(.unexpectedRootItem, item.name))
-                continue
-            }
-            for child in item.children {
-                let path = "\(item.name)/\(child.name)"
+        func courses(in folder: FolderTree, at base: String, admin: Bool) {
+            for child in folder.children {
+                let path = "\(base)/\(child.name)"
                 if child.isFile {
                     issues.append(.init(.fileInSemesterFolder, path))
-                } else if child.name == StandardLayout.adminFolder {
+                } else if admin && child.name == StandardLayout.adminFolder {
                     continue
                 } else if !StandardLayout.isCourseFolderName(child.name) {
                     issues.append(.init(.invalidCourseFolderName, path))
@@ -42,6 +37,21 @@ public enum LayoutCheck {
                     issues += courseIssues(child, at: path, extraAssignmentPrefixes: extraAssignmentPrefixes)
                 }
             }
+        }
+        for item in gist.children {
+            if item.name == StandardLayout.metadataFolder { continue }
+            if item.name == StandardLayout.creditedFolder, !item.isFile {
+                for source in item.children {
+                    let path = "\(item.name)/\(source.name)"
+                    if source.isFile { issues.append(.init(.fileInSemesterFolder, path)) } else { courses(in: source, at: path, admin: false) }
+                }
+                continue
+            }
+            guard SemesterFolder(name: item.name) != nil, !item.isFile else {
+                issues.append(.init(.unexpectedRootItem, item.name))
+                continue
+            }
+            courses(in: item, at: item.name, admin: true)
         }
         return issues
     }

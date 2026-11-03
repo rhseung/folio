@@ -76,7 +76,8 @@ public enum CleanupPlanner {
             skip.contains { path == $0 || path.hasPrefix($0 + "/") }
         }
 
-        for semester in gist.children where semester.name != StandardLayout.metadataFolder {
+        // `_Credited` is made by Folio in the standard shape, so there is nothing to tidy there.
+        for semester in gist.children where semester.name != StandardLayout.metadataFolder && semester.name != StandardLayout.creditedFolder {
             guard SemesterFolder(name: semester.name) != nil, !semester.isFile, !isSkipped(semester.name) else {
                 skipped.append(semester.name)
                 continue

@@ -61,16 +61,16 @@ enum Complete {
     }
 
     static let sessions = items { r, c in
-        c.file.map { f in f.sessions.map { s in (f.name(of: s), joined(day(s.date, r), s.isCancelled ? String(localized: .completionCancelled) : s.topic)) } } ?? []
+        c.file.sessions.map { s in (c.file.name(of: s), joined(day(s.date, r), s.isCancelled ? String(localized: .completionCancelled) : s.topic)) }
     }
-    static let exams = items { r, c in c.file?.exams.map { ($0.title, joined($0.kind.rawValue, day($0.start, r))) } ?? [] }
-    static let units = items { _, c in c.file?.units.map { ($0.title, "") } ?? [] }
-    static let assignments = items { r, c in c.file?.assignments.map { ($0.title, joined($0.status.rawValue, day($0.due, r))) } ?? [] }
-    static let materials = items { _, c in c.file?.materials.map { ($0.path, $0.role?.rawValue ?? "") } ?? [] }
-    static let components = items { _, c in c.file?.components.map { ($0.name, "\($0.weight.formatted())%") } ?? [] }
-    static let problemSets = items { _, c in c.file?.problemSets.map { ($0.title, "") } ?? [] }
+    static let exams = items { r, c in c.file.exams.map { ($0.title, joined($0.kind.rawValue, day($0.start, r))) } }
+    static let units = items { _, c in c.file.units.map { ($0.title, "") } }
+    static let assignments = items { r, c in c.file.assignments.map { ($0.title, joined($0.status.rawValue, day($0.due, r))) } }
+    static let materials = items { _, c in c.file.materials.map { ($0.path, $0.role?.rawValue ?? "") } }
+    static let components = items { _, c in c.file.components.map { ($0.name, "\($0.weight.formatted())%") } }
+    static let problemSets = items { _, c in c.file.problemSets.map { ($0.title, "") } }
     static let notes = items { _, c in
-        guard let store = c.store else { return [] }
+        let store = c.store
         return ((try? store.notes()) ?? []).map { n in
             let path = store.coursePath(of: n.url) ?? n.title
             return (path, path.hasSuffix(n.title + ".md") ? "" : n.title)
@@ -88,6 +88,6 @@ enum Complete {
     static let componentNames = CompletionKind.custom { words, _, _ in
         guard let r = resolver(words) else { return [] }
         let course = words.dropFirst().lazy.filter { !$0.hasPrefix("-") }.compactMap { try? r.course($0) }.first
-        return described(course?.file?.components.map { ($0.name, "\($0.weight.formatted())%") } ?? [])
+        return described(course?.file.components.map { ($0.name, "\($0.weight.formatted())%") } ?? [])
     }
 }
