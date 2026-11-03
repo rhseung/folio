@@ -122,6 +122,18 @@ struct NotionNotesImportTests {
         #expect(r.warnings.count == 1)
     }
 
+    /// A note imported before and unlinked since stays unlinked; importing again doesn't set the session's side alone.
+    @Test func anImportedNoteThatWasUnlinkedStaysSo() {
+        let rough = note("7주차-2", nil, "2026-10-14")
+        let dump = NotionCourseDump(coursePageId: UUID(), title: "그래프 이론", notes: [rough], scores: [], images: [])
+        let first = NotionNotesImporter.merge(dump, into: CourseFile(course: Course(device: device, at: now, title: "그래프 이론")),
+                                              existingNotes: [], calendar: calendar, device: device, now: now)
+        var file = first.file
+        file.forgetNote(rough.id)
+        let again = NotionNotesImporter.merge(dump, into: file, existingNotes: [rough.id], calendar: calendar, device: device, now: now)
+        #expect(again.file.sessions[0].roughNoteId == nil && again.warnings.isEmpty)
+    }
+
     @Test func scoresGoUnderTheirTopLevelComponent() {
         let quiz = NotionCourseDump.ScoreRow(id: UUID(), name: "Quiz", weight: 10, score: nil, max: nil, parentId: nil)
         let q1 = NotionCourseDump.ScoreRow(id: UUID(), name: "Quiz 1", weight: nil, score: 35, max: 50, parentId: quiz.id)
