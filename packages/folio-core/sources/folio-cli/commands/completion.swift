@@ -63,7 +63,7 @@ enum Complete {
     static let sessions = items { r, c in
         c.file.sessions.map { s in (c.file.name(of: s), joined(day(s.date, r), s.isCancelled ? String(localized: .completionCancelled) : s.topic)) }
     }
-    static let exams = items { r, c in c.file.exams.map { ($0.title, joined($0.kind.rawValue, day($0.start, r))) } }
+    static let exams = items { r, c in c.file.exams.map { ($0.title, day($0.start, r)) } }
     static let units = items { _, c in c.file.units.map { ($0.title, "") } }
     static let assignments = items { r, c in c.file.assignments.map { ($0.title, joined($0.status.rawValue, day($0.due, r))) } }
     static let materials = items { _, c in c.file.materials.map { ($0.path, $0.role?.rawValue ?? "") } }

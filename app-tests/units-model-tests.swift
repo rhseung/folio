@@ -35,9 +35,22 @@ struct UnitsModelTests {
         workspace.run(UnitLink(course: graphTheory, unit: unitId, sessions: ids))
         let f = try file(workspace)
         let unit = try #require(f.units.first)
-        let names = model.sessions(of: unit, in: f).map { f.name(of: $0) }
+        let names = model.sessions(of: unit, in: f).map { f.day(of: $0, calendar: workspace.calendar) }
         #expect(model.sessionsLine(unit, in: f) == "\(names.prefix(3).joined(separator: ", ")) 외 1")
         #expect(model.detail(unit, state: nil, in: f) == model.sessionsLine(unit, in: f))
+    }
+
+    @Test func linkMenuLeavesOutCancelledClassesUnlessLinked() throws {
+        let workspace = try fixtureWorkspace()
+        let model = UnitsModel(workspace: workspace, courseId: graphTheory)
+        let unitId = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
+        let day = { (d: Int) in Calendar.current.date(byAdding: .day, value: -d, to: .now)! }
+        let held = try #require(workspace.run(SessionAdd(course: graphTheory, date: day(2)))?.made)
+        let cancelled = try #require(workspace.run(SessionAdd(course: graphTheory, date: day(1), cancelled: true))?.made)
+        func menu() throws -> [UUID] { model.linkMenu(try #require(try file(workspace).units.first), in: try file(workspace)).map(\.id) }
+        #expect(try menu() == [held])
+        workspace.run(UnitLink(course: graphTheory, unit: unitId, sessions: [cancelled]))
+        #expect(try menu() == [cancelled, held])
     }
 
     @Test func subtitleCountsUnitsDueAndUnlinkedClasses() throws {

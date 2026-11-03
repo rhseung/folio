@@ -140,6 +140,9 @@ struct TodayModelTests {
 
         let ribbon = model.ribbonClasses(model.summary(now: at(20)), now: at(20)).filter { $0.courseId == id }
         #expect(ribbon.map(\.start) == [at(21)] && ribbon.first?.sessionId == nil)
+        // A planned class has no name yet; its tooltip skips the empty part instead of doubling the dot.
+        let help = model.ribbonHelp(try #require(ribbon.first))
+        #expect(help.hasPrefix(model.title(id) + " · ") && !help.contains(" ·  · ") && help.components(separatedBy: " · ").count == 2)
         #expect(model.nextClass(after: at(20))?.courseId == id)
         #expect(model.nowCourse(at: at(21, 30)) == id && model.nowCourse(at: at(22)) != id)
         #expect(model.week(around: day).first { $0.day == day }?.courses.contains(id) == true)

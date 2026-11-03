@@ -120,8 +120,8 @@ public struct CourseStore: Sendable {
     }
 
     @discardableResult
-    public func ensureFolder(exam: Exam, among exams: [Exam]) throws -> String? {
-        guard let path = MaterialIntake.folder(of: exam, among: exams) else { return nil }
+    public func ensureFolder(exam: Exam) throws -> String? {
+        guard let path = MaterialIntake.folder(of: exam) else { return nil }
         return try ensure(path)
     }
 

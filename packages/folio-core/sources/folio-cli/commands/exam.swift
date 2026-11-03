@@ -17,16 +17,18 @@ struct ExamCommand: ParsableCommand {
         func run() throws {
             let r = Resolver(try CLI.context(g))
             let c = try r.course(course)
-            let exams = c.file.exams.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }
+            let file = c.file
+            let exams = file.exams.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }
+            func component(_ e: Exam) -> String { e.componentId.flatMap { id in file.components.first { $0.id == id }?.name } ?? "" }
             if g.json { return try printJSON(exams) }
             if lines {
-                for e in exams { line(["\(c.code)/\(e.title)", e.title, e.start.map { $0.formatted(date: .numeric, time: .shortened) } ?? "", e.kind.rawValue]) }
+                for e in exams { line(["\(c.code)/\(e.title)", e.title, e.start.map { $0.formatted(date: .numeric, time: .shortened) } ?? "", component(e)]) }
                 return
             }
             courseHeader(c, catalog: try? r.ctx.catalog())
-            var t = Table(header: [String(localized: .examListHeaderExam), String(localized: .examListHeaderTime), String(localized: .examListHeaderKind), String(localized: .examListHeaderLocation), String(localized: .examListHeaderScope)], shrink: [3])
+            var t = Table(header: [String(localized: .examListHeaderExam), String(localized: .examListHeaderTime), String(localized: .examListHeaderComponent), String(localized: .examListHeaderLocation), String(localized: .examListHeaderScope)], shrink: [3])
             for e in exams {
-                let cells = [e.title, e.start.map { when($0, now: r.ctx.now, time: true) } ?? "-", e.kind.rawValue.toned, e.location,
+                let cells = [e.title, e.start.map { when($0, now: r.ctx.now, time: true) } ?? "-", component(e).toned, e.location,
                              e.scopeUnitIds.isEmpty ? "" : String(localized: .examListUnits(e.scopeUnitIds.count))]
                 t.rows.append((e.end ?? e.start).map { $0 < r.ctx.now } ?? false ? cells.map { $0.styled(.dim) } : cells)
             }
@@ -48,7 +50,6 @@ struct ExamCommand: ParsableCommand {
             let f = c.file
             courseHeader(c, catalog: try? r.ctx.catalog())
             say(e.title.styled(.bold))
-            say(String(localized: .examShowKind(e.kind.rawValue)))
             if let start = e.start { say(String(localized: .examShowTime(when(start, now: r.ctx.now, time: true))) + (e.end.map { " – \($0.formatted(date: .omitted, time: .shortened))" } ?? "")) }
             if !e.location.isEmpty { say(String(localized: .examShowLocation(e.location))) }
             if let comp = e.componentId.flatMap({ id in f.components.first { $0.id == id } }) { say(String(localized: .examShowComponent(comp.name))) }

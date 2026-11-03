@@ -72,9 +72,17 @@ final class Resolver {
         return (try self.course(String(ref[..<slash])), String(ref[ref.index(after: slash)...]))
     }
 
+    /// By name (`10주차-1`), by day (`11/3`, `11-03`, `2026-11-03`), or by what it covered. Two classes on one day
+    /// match the day together, so the error lists their names.
     func session(_ name: String, in c: CourseRef) throws -> Session {
         let f = c.file
-        return try pick(name, f.sessions, what: "회차", names: { [f.name(of: $0)] }, ref: { "\(c.code)/\(f.name(of: $0))" })
+        let cal = ctx.calendar
+        func days(_ s: Session) -> [String] {
+            let d = cal.dateComponents([.year, .month, .day], from: s.date)
+            return ["\(d.month!)/\(d.day!)", String(format: "%02d-%02d", d.month!, d.day!), String(format: "%04d-%02d-%02d", d.year!, d.month!, d.day!)]
+        }
+        return try pick(name, f.sessions, what: "회차", names: { [f.name(of: $0)] + days($0) + [f.subject(of: $0) ?? ""] },
+                        ref: { "\(c.code)/\(f.name(of: $0))" })
     }
 
     func exam(_ name: String, in c: CourseRef) throws -> Exam {

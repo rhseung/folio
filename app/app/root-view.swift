@@ -103,7 +103,7 @@ struct RootView: View {
             if SnapshotDriver.directory != nil { workspace.gradesUnlocked = true }
             if SnapshotDriver.recording, let course = workspace.currentCourses.first, let session = course.file.sessions.first {
                 let recording = Recording(device: workspace.device, at: .now, sessionId: session.id, file: "")
-                workspace.recorder.stage(recording, course: course.id, title: "\(course.title) · \(course.file.name(of: session))",
+                workspace.recorder.stage(recording, course: course.id, title: "\(course.title) · \(course.file.title(of: session, calendar: workspace.calendar))",
                                          paused: SnapshotDriver.recordingPaused, level: SnapshotDriver.recordingLevel)
             }
             let ids = workspace.currentCourses.map(\.id)
@@ -411,7 +411,7 @@ struct RootView: View {
             }
             .disabled(ongoing == nil || workspace.recorder.isActive)
             .help(workspace.recorder.isActive ? String(localized: .rootRecording)
-                  : ongoing.flatMap { o in workspace.course(o.courseId).map { String(localized: .rootRecordSession($0.title, $0.file.name(of: o.session))) } }
+                  : ongoing.flatMap { o in workspace.course(o.courseId).map { String(localized: .rootRecordSession($0.title, $0.file.subject(of: o.session) ?? $0.file.day(of: o.session, calendar: workspace.calendar))) } }
                   ?? String(localized: .rootRecordUnavailable))
         }
     }
@@ -488,7 +488,7 @@ struct RootView: View {
             // A line icon, not a tile: with twenty-odd courses, tiles turn the sidebar into confetti.
             CourseMark(icon: course.file.course.icon, color: accent.color, filled: selection == .course(course.id), duotone: true)
         }
-        .help(ongoing.map { String(localized: .rootInClass(course.file.name(of: $0.session))) } ?? hint.map(hintHelp) ?? "")
+        .help(ongoing.map { String(localized: .rootInClass(course.file.subject(of: $0.session) ?? course.file.day(of: $0.session, calendar: workspace.calendar))) } ?? hint.map(hintHelp) ?? "")
         .padding(.leading, SidebarGuide.indent)
         .sidebarRow(.course(course.id), $selection, fill: accent.tint, guide: last ? .lastCourse : .course, progress: ongoing?.fraction(at: now))
     }

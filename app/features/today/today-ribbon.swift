@@ -190,7 +190,7 @@ struct DayRibbonCard: View {
         // Unfaded paper under a faded block, so the track line behind it does not show through.
         .background(Theme.Palette.card, in: shape)
         .contentShape(shape)
-        .help("\(model.title(item.courseId)) · \(item.name) · \(model.time(item.start)) – \(model.time(item.end))")
+        .help(model.ribbonHelp(item))
         if let suggested = item.suggested {
             // Not made yet: what starting it needs sits in a popover, as on the class's own row elsewhere.
             Button { opened = item.id } label: { label }

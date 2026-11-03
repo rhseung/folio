@@ -7,7 +7,7 @@ struct ExamPlanTests {
     let at = Date(timeIntervalSince1970: 1_790_000_000)
 
     func exam(_ title: String = "Midterm", start: Date? = nil, plan: [ExamPlanItem] = []) -> Exam {
-        var e = Exam(device: device, at: at, kind: .midterm, title: title, start: start)
+        var e = Exam(device: device, at: at, title: title, start: start)
         e.plan = plan
         return e
     }

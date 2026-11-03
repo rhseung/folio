@@ -26,6 +26,14 @@ struct SessionCommandTests {
         }
     }
 
+    @Test func setByDay() throws {
+        for day in ["EC4207/10/28", "EC4207/10-28", "EC4207/2026-10-28"] {
+            try h.expectSame(["session", "set", day, "--cancelled", "true"], setup: [Self.add]) { _ in
+                SessionSet(course: Harness.graphTheory, session: Self.id, cancelled: .set(true))
+            }
+        }
+    }
+
     @Test func addOnline() throws {
         let end = DateArg(argument: "2026-10-28 22:15")!.date
         try h.expectSame(Self.add + ["--end", "2026-10-28 22:15", "--topic", "보강", "--link", "https://zoom.us/j/1"]) { _ in

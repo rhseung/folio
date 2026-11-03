@@ -41,7 +41,7 @@ extension CourseFile {
     }
 
     public func sessionLinks(of material: UUID) -> [(session: Session, link: SessionMaterial)] {
-        sessions.sorted { ($0.week, $0.index) < ($1.week, $1.index) }
+        sessions.sorted(by: Session.inOrder)
             .compactMap { s in s.materials.first { $0.materialId == material }.map { (s, $0) } }
     }
 

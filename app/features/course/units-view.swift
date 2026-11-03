@@ -141,10 +141,7 @@ struct UnitsView: View {
                           systemImage: "link.badge.plus", trailing: { EmptyView() }) {
             ForEach(Array(shown.enumerated()), id: \.element.id) { i, s in
                 CardRow(last: i == shown.count - 1 && sessions.count <= shown.count) {
-                    VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                        Text(course.file.title(of: s)).lineLimit(1)
-                        Text(s.date.formatted(.dateTime.month().day().weekday())).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
-                    }
+                    Text(course.file.title(of: s, calendar: model.workspace.calendar)).lineLimit(1)
                     Spacer(minLength: Theme.Space.m)
                     SessionUnitsPicker(course: course, session: s)
                 }
@@ -219,9 +216,7 @@ struct UnitDetail: View {
             StatStrip(items: model.stats(unit, state: state, reviews: history.count))
 
             Block(title: String(localized: .unitsSessionsBlock), note: sessions.isEmpty ? nil : String(localized: .unitsTimes(sessions.count))) {
-                ToggleMenu(title: String(localized: .unitsLinkSessions), items: file.sessions.sorted { $0.date < $1.date }.map {
-                    (id: $0.id, label: file.title(of: $0), on: unit.sessionIds.contains($0.id))
-                }) { id in model.toggle(session: id, in: unit) }
+                ToggleMenu(title: String(localized: .unitsLinkSessions), items: model.linkMenu(unit, in: file)) { id in model.toggle(session: id, in: unit) }
             } content: {
                 Card {
                     if sessions.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .unitsSessionsEmpty)) } }
@@ -290,7 +285,7 @@ struct UnitDetail: View {
                             ForEach(model.examsByDate(file)) { exam in
                                 let on = exam.scopeUnitIds.contains(unit.id)
                                 Button { model.toggleScope(exam, unit: unit) } label: {
-                                    Label(exam.title.isEmpty ? exam.kind.label : exam.title, systemImage: on ? "checkmark" : "plus")
+                                    Label(exam.title, systemImage: on ? "checkmark" : "plus")
                                         .font(Theme.Typeface.caption.weight(on ? .semibold : .regular))
                                         .foregroundStyle(on ? accent.ink : Theme.Palette.textSecondary)
                                         .padding(Theme.Inset.toggle)

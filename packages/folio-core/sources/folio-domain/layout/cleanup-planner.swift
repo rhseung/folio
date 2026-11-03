@@ -159,7 +159,9 @@ struct CoursePlanner {
                 let path = "\(base)/\(item.name)"
                 if item.name == StandardLayout.pastExamsFolder {
                     pastExams(item.children, in: path, source: nil)
-                } else if item.isFile || !StandardLayout.isExamFolderName(item.name) {
+                } else if item.isFile {
+                    // Any folder here is an exam's own, named from its title (as the layout check holds); only loose
+                    // files go to an exam. The tree alone can't tell which exam a folder belongs to.
                     moves.append(.init(from: path, to: "\(base)/\(Keywords.defaultExam)/\(item.name)", review: .guessedExam))
                 }
             }
@@ -373,11 +375,11 @@ enum Keywords {
     static var quiz: Regex<Substring> { #/quiz|퀴즈/# }
 
     /// When the target exam is unknown, material goes to the midterm folder and is flagged.
-    static let defaultExam = ExamKind.midterm.folderName()!
+    static let defaultExam = StandardLayout.midtermFolder
 
     static func examFolder(in lower: String) -> String? {
-        if lower.contains(midterm) { return ExamKind.midterm.folderName() }
-        if lower.contains(final) { return ExamKind.final.folderName() }
+        if lower.contains(midterm) { return StandardLayout.midtermFolder }
+        if lower.contains(final) { return StandardLayout.finalFolder }
         return nil
     }
 
@@ -442,7 +444,7 @@ enum Keywords {
         guard let year = rest.firstMatch(of: /20\d{2}/).map({ String($0.output) }) else { return nil }
         rest.replace(year, with: "")
         let kinds: [(String, Regex<Substring>)] = [
-            (ExamKind.midterm.folderName()!, midterm), (ExamKind.final.folderName()!, final), (StandardLayout.quizFolderPrefix, quiz),
+            (StandardLayout.midtermFolder, midterm), (StandardLayout.finalFolder, final), (StandardLayout.quizFolderPrefix, quiz),
         ]
         guard let (kind, regex) = kinds.first(where: { rest.contains($0.1) }) else { return nil }
         rest.replace(regex, with: "")

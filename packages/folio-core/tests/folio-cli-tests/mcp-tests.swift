@@ -39,10 +39,10 @@ struct MCPTests {
 
     @Test func writesThroughTheSameRun() throws {
         let (a, b) = (try Harness.fixtureCopy(), try Harness.fixtureCopy())
-        let input: JSONValue = ["course": "EC4207", "title": "중간고사 대비 퀴즈", "location": "A동", "kind": "quiz"]
+        let input: JSONValue = ["course": "EC4207", "title": "중간고사 대비 퀴즈", "location": "A동"]
         let (failed, texts) = try call(MCPServer(gist: nil, propose: false), a, "exam_add", input)
         #expect(!failed, "\(texts)")
-        let r = h.cli(["exam", "add", "EC4207", "중간고사 대비 퀴즈", "--location", "A동", "--kind", "quiz"], gist: b)
+        let r = h.cli(["exam", "add", "EC4207", "중간고사 대비 퀴즈", "--location", "A동"], gist: b)
         #expect(r.code == 0, "\(r.err)")
         let (fa, fb) = (try Harness.files(a), try Harness.files(b))
         #expect(fa.keys.sorted() == fb.keys.sorted())
@@ -63,7 +63,7 @@ struct MCPTests {
         let (a, b) = (try Harness.fixtureCopy(), try Harness.fixtureCopy())
         let before = try Harness.files(a)
         let (failed, texts) = try call(MCPServer(gist: nil, propose: true), a, "exam_add",
-                                       ["course": "EC4207", "title": "제안 퀴즈", "location": "B동", "kind": "quiz"])
+                                       ["course": "EC4207", "title": "제안 퀴즈", "location": "B동"])
         #expect(!failed, "\(texts)")
         #expect(try Harness.files(a) == before)
         let proposal = try #require(texts.compactMap(ActionProposal.init(text:)).first)

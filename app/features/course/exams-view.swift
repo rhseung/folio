@@ -58,7 +58,7 @@ struct ExamsView: View {
     }
 
     func section(_ exam: Exam, states: [UUID: ReviewState]) -> some View {
-        Block(title: exam.title, note: exam.kind.label) {
+        Block(title: exam.title, note: model.component(of: exam)) {
             if let start = exam.start { DdayChip(days: model.days(to: start)) }
         } content: {
             Card {
@@ -282,9 +282,6 @@ struct ExamEditor: View {
         SheetForm(title: model.title, confirm: model.confirm, disabled: model.disabled, note: model.note, carded: false, width: 560) {
             Block(String(localized: .examsEditorExam)) {
                 Card {
-                    FormRow(label: String(localized: .examsEditorKind)) {
-                        ChoiceMenu(selection: $model.draft.kind, options: [ExamKind.midterm, .final, .quiz, .other].map { ($0, $0.label) })
-                    }
                     FormRow(label: String(localized: .examsEditorName), last: course.file.components.isEmpty) { InlineField(model.namePrompt, text: $model.draft.title) }
                     if !course.file.components.isEmpty {
                         FormRow(label: String(localized: .examsEditorComponent), last: true) {

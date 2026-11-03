@@ -58,7 +58,7 @@ final class UnitsModel {
     func exams(of unit: FolioDomain.Unit, in file: CourseFile) -> [Exam] { file.exams.filter { $0.scopeUnitIds.contains(unit.id) } }
 
     func sessionsLine(_ unit: FolioDomain.Unit, in file: CourseFile) -> String {
-        let names = sessions(of: unit, in: file).map { file.name(of: $0) }
+        let names = sessions(of: unit, in: file).map { file.day(of: $0, calendar: workspace.calendar) }
         return names.isEmpty ? String(localized: .unitsNoSessions)
             : names.count > 3 ? String(localized: .unitsSessionsMore(names.prefix(3).joined(separator: ", "), names.count - 3)) : names.joined(separator: ", ")
     }
@@ -151,7 +151,7 @@ final class UnitsModel {
                 let links = file.sessionLinks(of: m.id).filter { ids.contains($0.session.id) }
                 guard m.unitIds.contains(unit.id) || !links.isEmpty else { return nil }
                 let role = m.status == .unclassified ? String(localized: .unitsUnclassified) : (m.role ?? .other).label
-                return (m, ([role] + links.map { file.name(of: $0.session) + $0.link.pageLabel }).joined(separator: " · "))
+                return (m, ([role] + links.map { file.day(of: $0.session, calendar: workspace.calendar) + $0.link.pageLabel }).joined(separator: " · "))
             }
             .sorted { a, b in
                 let (x, y) = (roles.firstIndex { $0 == a.material.role } ?? roles.count, roles.firstIndex { $0 == b.material.role } ?? roles.count)
@@ -175,6 +175,12 @@ final class UnitsModel {
 
     func setParent(_ parent: UUID?, of unit: FolioDomain.Unit) {
         workspace.run(UnitMove(course: courseId, unit: unit.id, target: .parent(parent)))
+    }
+
+    func linkMenu(_ unit: FolioDomain.Unit, in file: CourseFile) -> [(id: UUID, label: String, on: Bool)] {
+        file.linkableSessions { unit.sessionIds.contains($0.id) }.reversed().map {
+            (id: $0.id, label: file.title(of: $0, calendar: workspace.calendar), on: unit.sessionIds.contains($0.id))
+        }
     }
 
     func toggle(session: UUID, in unit: FolioDomain.Unit) {

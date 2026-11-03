@@ -92,11 +92,11 @@ struct NotificationPlanTests {
             Assignment(device: device, at: now, title: "HW5", due: at(24, 23)),
             Assignment(device: device, at: now, title: "HW4", due: at(23, 14)),  // 24h reminder already past
         ]
-        var exam = Exam(device: device, at: now, kind: .midterm, title: "중간고사")
+        var exam = Exam(device: device, at: now, title: "중간고사")
         exam.start = at(26, 9)
         file.exams = [exam]
         file.policy.attendanceCap = [AttendanceCap(absences: 6, maxGrade: UUID())]
-        let sessions = (0..<5).map { Session(device: device, at: now, week: 1, index: $0, date: at(1 + $0, 9)) }
+        let sessions = (0..<5).map { Session(device: device, at: now, week: 1, date: at(1 + $0, 9)) }
         file.sessions = sessions
         file.attendance = sessions.map { Attendance(device: device, at: now, sessionId: $0.id, state: .absent) }
 

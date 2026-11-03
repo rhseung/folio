@@ -28,7 +28,7 @@ final class SessionFormModel {
         let start = session?.date ?? calendar.date(byAdding: .hour, value: 18, to: calendar.startOfDay(for: workspace.now))!
         let schedule = workspace.course(courseId)?.file.course.schedule ?? []
         // A class being added has no session yet; a stand-in at its start asks the same question the join button does.
-        let end = (session ?? Session(device: workspace.device, at: start, week: 1, index: 1, date: start))
+        let end = (session ?? Session(device: workspace.device, at: start, week: 1, date: start))
             .expectedEnd(schedule: schedule, classMinutes: workspace.settings.classMinutes, calendar: calendar)
         self.start = start
         endMinute = Self.minute(of: end, from: start, calendar: calendar)
@@ -38,7 +38,7 @@ final class SessionFormModel {
 
     var title: String {
         guard let session, let file = workspace.course(courseId)?.file else { return String(localized: .sessionsAdd) }
-        return String(localized: .commonEditNamed(file.name(of: session)))
+        return String(localized: .commonEditNamed(file.day(of: session, calendar: workspace.calendar)))
     }
 
     var confirm: String { String(localized: session == nil ? .commonAdd : .commonSave) }
@@ -51,7 +51,7 @@ final class SessionFormModel {
 
     /// The timetable slot a class starting at `date` falls in, if any.
     private func slot(at date: Date) -> ClassTime? {
-        Session(device: workspace.device, at: date, week: 1, index: 1, date: date).slot(in: schedule, calendar: calendar)
+        Session(device: workspace.device, at: date, week: 1, date: date).slot(in: schedule, calendar: calendar)
     }
 
     /// Onto a timetable slot the class ends with the slot, unless an end was picked; elsewhere it keeps its length.

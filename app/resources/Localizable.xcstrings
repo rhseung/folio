@@ -3983,50 +3983,6 @@
         }
       }
     },
-    "exam-kind.final": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기말고사"
-          }
-        }
-      }
-    },
-    "exam-kind.midterm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "중간고사"
-          }
-        }
-      }
-    },
-    "exam-kind.other": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기타"
-          }
-        }
-      }
-    },
-    "exam-kind.quiz": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "퀴즈"
-          }
-        }
-      }
-    },
     "exams.add": {
       "extractionState": "manual",
       "localizations": {
@@ -4133,17 +4089,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "시험 폴더 Exams/%@도 만듭니다"
-          }
-        }
-      }
-    },
-    "exams.editor.kind": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "종류"
           }
         }
       }
@@ -12904,6 +12849,17 @@
         }
       }
     },
+    "sessions.days-later-at": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld일 후 %2$@"
+          }
+        }
+      }
+    },
     "sessions.empty": {
       "extractionState": "manual",
       "localizations": {
@@ -13047,17 +13003,6 @@
         }
       }
     },
-    "sessions.next": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다음 강의"
-          }
-        }
-      }
-    },
     "sessions.open-review-note": {
       "extractionState": "manual",
       "localizations": {
@@ -13076,6 +13021,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "러프 노트 열기"
+          }
+        }
+      }
+    },
+    "sessions.planned": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예정된 수업"
+          }
+        }
+      }
+    },
+    "sessions.planned-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시간표로 계산한 수업입니다. 메뉴에서 휴강이나 결석을 고르면 회차로 저장합니다."
           }
         }
       }

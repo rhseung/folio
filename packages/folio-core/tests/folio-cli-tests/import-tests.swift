@@ -84,9 +84,9 @@ struct ImportCommandTests {
 
     @Test func exams() throws {
         let path = try payload("exams.json", """
-            [{"course": "EC4207 그래프 이론", "kind": "midterm", "start": "2026-10-20T11:00:00Z", "end": "2026-10-20T13:45:00Z",
+            [{"course": "EC4207 그래프 이론", "title": "중간고사", "start": "2026-10-20T11:00:00Z", "end": "2026-10-20T13:45:00Z",
               "location": "C104", "memo": ""},
-             {"course": "XX0000 없음", "kind": "final", "start": "2026-12-16T00:00:00Z", "end": "2026-12-16T02:00:00Z",
+             {"course": "XX0000 없음", "title": "기말고사", "start": "2026-12-16T00:00:00Z", "end": "2026-12-16T02:00:00Z",
               "location": "", "memo": ""}]
             """)
         try h.expectSame(["import", "exams", path]) { _ in

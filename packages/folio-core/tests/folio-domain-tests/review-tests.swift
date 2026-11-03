@@ -155,19 +155,19 @@ struct TodayTests {
     @Test func collectsTodayAcrossCourses() {
         let now = at(23, 2, 0)  // 02:00 Friday → study day is Thursday the 22nd
         var file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"))
-        file.exams = [Exam(device: device, at: now, kind: .midterm, title: "Midterm", start: at(27, 19))]
+        file.exams = [Exam(device: device, at: now, title: "Midterm", start: at(27, 19))]
         var late = Assignment(device: device, at: now, title: "HW5", due: at(23, 3, 0))     // still "today" in study time
         late.status = .todo
         let nextWeek = Assignment(device: device, at: now, title: "HW6", due: at(28, 23, 59))
         let gone = Assignment(device: device, at: now, title: "HW4", due: at(23, 1, 0))     // already passed
         let project = Assignment(device: device, at: now, title: "Project", due: at(31, 23, 59))  // past the week
         file.assignments = [late, nextWeek, gone, project]
-        var written = Session(device: device, at: now, week: 7, index: 1, date: at(20, 10))
+        var written = Session(device: device, at: now, week: 7, date: at(20, 10))
         written.reviewNoteId = UUID()
         file.sessions = [
             written,
-            Session(device: device, at: now, week: 7, index: 2, date: at(22, 10)),
-            Session(device: device, at: now, week: 7, index: 3, date: at(23, 10)),
+            Session(device: device, at: now, week: 7, date: at(22, 10)),
+            Session(device: device, at: now, week: 7, date: at(23, 10)),
         ]
 
         let t = TodaySummary.build(courses: [file], now: now, settings: Settings(), calendar: calendar)
@@ -185,7 +185,7 @@ struct TodayTests {
 
     @Test func aReviewNoteMadeButNotWrittenStillAsksToBeWritten() throws {
         let now = at(23, 12)
-        var session = Session(device: device, at: now, week: 7, index: 1, date: at(20, 10))
+        var session = Session(device: device, at: now, week: 7, date: at(20, 10))
         session.reviewNoteId = UUID()
         session.reviewNoteUnfinished = true
         #expect(session.needsReviewNote(at: now))
@@ -208,11 +208,11 @@ struct TodayTests {
         func hint(_ at: Date = now) -> TodaySummary.CourseHint? {
             TodaySummary.build(courses: [file], now: at, settings: Settings(), calendar: calendar).hint(for: id, now: at)
         }
-        file.exams = [Exam(device: device, at: now, kind: .midterm, title: "Midterm", start: at(31, 19))]
+        file.exams = [Exam(device: device, at: now, title: "Midterm", start: at(31, 19))]
         #expect(hint() == nil)  // eight days out
         file.exams[0].start = at(30, 19)
         #expect(hint() == .exam(days: 7))
-        file.sessions = [Session(device: device, at: now, week: 7, index: 1, date: at(23, 10)), Session(device: device, at: now, week: 7, index: 2, date: at(23, 15))]
+        file.sessions = [Session(device: device, at: now, week: 7, date: at(23, 10)), Session(device: device, at: now, week: 7, date: at(23, 15))]
         #expect(hint() == .nextClass(at(23, 15)))  // the morning class is over
         #expect(hint(at(23, 16)) == .exam(days: 7))
         let hw = Assignment(device: device, at: now, title: "HW5", due: at(23, 23, 59))
@@ -223,9 +223,9 @@ struct TodayTests {
     @Test func sessionsNeedingNoReviewAskForNoNoteAndDontRestartUnits() throws {
         let now = at(23, 12)
         var file = CourseFile(course: Course(device: device, at: now, title: "컴파일러"))
-        var taught = Session(device: device, at: now, week: 7, index: 1, date: at(20, 10))
+        var taught = Session(device: device, at: now, week: 7, date: at(20, 10))
         taught.reviewNoteId = UUID()
-        var grading = Session(device: device, at: now, week: 7, index: 2, date: at(22, 10))
+        var grading = Session(device: device, at: now, week: 7, date: at(22, 10))
         grading.skipsReview = true
         file.sessions = [taught, grading]
         var unit = Unit(device: device, at: now, title: "파싱", order: 1)
@@ -236,8 +236,8 @@ struct TodayTests {
         #expect(!file.needsReviewNote(grading, at: now))
         var noReviews = file
         noReviews.course.reviews = false
-        #expect(file.needsReviewNote(Session(device: device, at: now, week: 7, index: 3, date: at(20, 10)), at: now))
-        #expect(!noReviews.needsReviewNote(Session(device: device, at: now, week: 7, index: 3, date: at(20, 10)), at: now))
+        #expect(file.needsReviewNote(Session(device: device, at: now, week: 7, date: at(20, 10)), at: now))
+        #expect(!noReviews.needsReviewNote(Session(device: device, at: now, week: 7, date: at(20, 10)), at: now))
         #expect(TodaySummary.build(courses: [file], now: now, settings: Settings(), calendar: calendar).missingReviewNotes.isEmpty)
         let input = UnitReviewInput.all(for: file, reviews: [], settings: Settings(), calendar: calendar, now: now)
         #expect(input.first?.startDay == LocalDate("2026-10-20") && input.first?.needsReviewNote == false)
@@ -250,7 +250,7 @@ struct TodayTests {
         let now = at(23, 12)
         func course(_ title: String, unit: String) -> CourseFile {
             var file = CourseFile(course: Course(device: device, at: now, title: title))
-            var s = Session(device: device, at: now, week: 1, index: 1, date: at(10, 10))
+            var s = Session(device: device, at: now, week: 1, date: at(10, 10))
             s.reviewNoteId = UUID()
             var u = Unit(device: device, at: now, title: unit, order: 1)
             u.sessionIds = [s.id]
@@ -267,7 +267,7 @@ struct TodayTests {
         let now = at(23, 12)
         var file = CourseFile(course: Course(device: device, at: now, title: "선형대수학"))
         file.policy.attendanceCap = [AttendanceCap(absences: 6, maxGrade: UUID())]
-        let sessions = (0..<6).map { Session(device: device, at: now, week: 1, index: $0, date: at(1 + $0, 9)) }
+        let sessions = (0..<6).map { Session(device: device, at: now, week: 1, date: at(1 + $0, 9)) }
         file.sessions = sessions
         file.attendance = sessions.prefix(4).map { Attendance(device: device, at: now, sessionId: $0.id, state: .absent) }
         #expect(file.capOneAway(at: now) == nil)
@@ -279,10 +279,10 @@ struct TodayTests {
     @Test func aHeldClassWithNoUnitIsFlaggedUntilOneIsLinked() {
         let now = at(23, 12)
         var file = CourseFile(course: Course(device: device, at: now, title: "선형대수학"))
-        let held = Session(device: device, at: now, week: 9, index: 1, date: at(22, 10))
-        var grading = Session(device: device, at: now, week: 9, index: 2, date: at(22, 14))
+        let held = Session(device: device, at: now, week: 9, date: at(22, 10))
+        var grading = Session(device: device, at: now, week: 9, date: at(22, 14))
         grading.skipsReview = true
-        let ahead = Session(device: device, at: now, week: 9, index: 3, date: at(24, 10))
+        let ahead = Session(device: device, at: now, week: 9, date: at(24, 10))
         file.sessions = [held, grading, ahead]
         file.units = [Unit(device: device, at: now, title: "고윳값", order: 1)]
         #expect(file.sessions.filter { file.needsUnits($0, at: now) }.map(\.id) == [held.id])
@@ -300,9 +300,9 @@ struct TodayTests {
     @Test func aRecitationIsNumberedLikeAnyClass() {
         var file = CourseFile(course: Course(device: device, at: at(20, 9), title: "선형대수학"))
         file.sessions = [
-            Session(device: device, at: at(20, 9), week: 9, index: 1, date: at(20, 14, 30)),
-            Session(device: device, at: at(20, 9), week: 9, index: 2, date: at(20, 18, 30)),
-            Session(device: device, at: at(20, 9), week: 9, index: 3, date: at(22, 14, 30)),
+            Session(device: device, at: at(20, 9), week: 9, date: at(20, 14, 30)),
+            Session(device: device, at: at(20, 9), week: 9, date: at(20, 18, 30)),
+            Session(device: device, at: at(20, 9), week: 9, date: at(22, 14, 30)),
         ]
         #expect(file.sessions.map { file.name(of: $0) } == ["9주차-1", "9주차-2", "9주차-3"])
     }
@@ -310,7 +310,7 @@ struct TodayTests {
     @Test func ongoingClassRunsFromItsStartToItsOwnOrItsSlotsEnd() {
         var file = CourseFile(course: Course(device: device, at: at(22, 9), title: "그래프 이론"))
         file.course.schedule = [ClassTime(weekday: 4, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45)]  // Thursday
-        file.sessions = [Session(device: device, at: at(22, 9), week: 7, index: 1, date: at(22, 10, 30))]
+        file.sessions = [Session(device: device, at: at(22, 9), week: 7, date: at(22, 10, 30))]
         #expect(TodaySummary.ongoingClass(in: [file], at: at(22, 10, 29), calendar: calendar) == nil)
         let ongoing = TodaySummary.ongoingClass(in: [file], at: at(22, 11, 0), calendar: calendar)
         #expect(ongoing?.end == at(22, 11, 45))
@@ -320,7 +320,7 @@ struct TodayTests {
         #expect(TodaySummary.ongoingClass(in: [file], at: at(22, 11, 0), calendar: calendar) == nil)
 
         // A makeup off the timetable runs to its own end.
-        var makeup = Session(device: device, at: at(22, 9), week: 7, index: 2, date: at(22, 21))
+        var makeup = Session(device: device, at: at(22, 9), week: 7, date: at(22, 21))
         makeup.end = at(22, 22, 15)
         file.sessions.append(makeup)
         #expect(TodaySummary.ongoingClass(in: [file], at: at(22, 22), calendar: calendar)?.end == at(22, 22, 15))
@@ -330,7 +330,7 @@ struct TodayTests {
     @Test func courseWithReviewsOffHasNoReviewsOrMissingNotes() {
         let now = at(23, 12)
         var file = CourseFile(course: Course(device: device, at: now, title: "행복의 조건"))
-        let session = Session(device: device, at: now, week: 7, index: 1, date: at(20, 10))
+        let session = Session(device: device, at: now, week: 7, date: at(20, 10))
         var unit = Unit(device: device, at: now, title: "행복", order: 0)
         unit.sessionIds = [session.id]
         file.sessions = [session]

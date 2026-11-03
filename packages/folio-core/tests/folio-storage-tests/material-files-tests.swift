@@ -14,7 +14,7 @@ struct MaterialFilesTests {
         var doc = try store.load()
         try store.refreshMaterials(in: &doc.model, device: device, now: now)
         let lecture = try #require(doc.model.materials.first { $0.path == "Lectures/05_Matchings.pdf" })
-        let session = Session(device: device, at: now, week: 5, index: 1, date: now)
+        let session = Session(device: device, at: now, week: 5, date: now)
         doc.model.sessions.append(session)
         doc.model.linkMaterial(lecture.id, session: session.id, firstPage: 2, lastPage: 9)
         try store.save(doc)

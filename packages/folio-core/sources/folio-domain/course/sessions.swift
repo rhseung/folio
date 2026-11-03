@@ -46,8 +46,6 @@ public struct Session: Entity {
     public var updatedBy: DeviceID
 
     public var week: Int
-    /// Order within the week, from 1.
-    public var index: Int
     public var date: Date
     public var topic: String
     public var unitIds: [UUID]
@@ -85,13 +83,12 @@ public struct Session: Entity {
         set { reviewNoteDraft = newValue ? true : nil }
     }
 
-    public init(id: UUID = UUID(), device: DeviceID, at now: Date, week: Int, index: Int, date: Date) {
+    public init(id: UUID = UUID(), device: DeviceID, at now: Date, week: Int, date: Date) {
         self.id = id
         self.createdAt = now
         self.updatedAt = now
         self.updatedBy = device
         self.week = week
-        self.index = index
         self.date = date
         self.topic = ""
         self.unitIds = []
@@ -99,9 +96,18 @@ public struct Session: Entity {
         self.materials = []
     }
 
-    /// `9주차-2`; also the default title of the session's rough note and recording. A recitation is numbered like any
-    /// other class. Not stored, so names already written into notes and recordings stay as they were.
-    public func name(among sessions: [Session]) -> String { "\(week)주차-\(index)" }
+    /// `9주차-2`: the second class of week 9 by date; also the default title of the session's rough note and recording.
+    /// The number isn't stored, so a makeup added before a class moves that class's name; names already written into
+    /// notes and recordings stay as they were.
+    public func name(among sessions: [Session]) -> String {
+        let week = (sessions.contains { $0.id == id } ? sessions : sessions + [self]).filter { $0.week == self.week }
+        return "\(self.week)주차-\(week.sorted(by: Session.inOrder).firstIndex { $0.id == id }! + 1)"
+    }
+
+    /// By date; two classes at the same time (date-only imports) keep the order they were made in, so names don't flip.
+    public static func inOrder(_ a: Session, _ b: Session) -> Bool {
+        (a.date, a.createdAt, a.id.uuidString) < (b.date, b.createdAt, b.id.uuidString)
+    }
 
     public func needsReviewNote(at now: Date) -> Bool { !isCancelled && !skipsReview && date <= now && (reviewNoteId == nil || reviewNoteUnfinished) }
 }
@@ -117,38 +123,59 @@ public enum SessionPlanner {
     }
 
     /// The lecture under way or next on the schedule, within the coming week, that no session stands for yet. A session
-    /// starting at that time (or a date-only one that day) stands for it even when cancelled, so a 휴강 moves on to the next.
-    /// Exam weeks (counted from `start`) hold no lectures, nor does a class time an exam overlaps.
+    /// starting within its time (or a date-only one that day) stands for it even when cancelled, so a 휴강 moves on to the next.
+    /// Exam weeks (counted from `start`) hold no lectures. An exam in a class's time is part of that class, so it
+    /// doesn't take the class away.
     public static func suggestion(schedule: [ClassTime], sessions: [Session], from start: LocalDate?, to end: LocalDate?,
-                                  examWeeks: Set<Int> = [], exams: [DateInterval] = [], now: Date, calendar: Calendar) -> Suggestion? {
+                                  examWeeks: Set<Int> = [], now: Date, calendar: Calendar) -> Suggestion? {
+        planned(schedule: schedule, sessions: sessions, from: start, to: end, examWeeks: examWeeks,
+                days: 8, now: now, calendar: calendar).first
+    }
+
+    /// Every class the schedule still holds, from the one under way to the term's end, that no session stands for,
+    /// by the same rules as `suggestion`. Nothing is stored: a class is made a session only when something is done to
+    /// it, so a change to the class times or the term moves the plan with it. Without an end, the coming week only;
+    /// `days` caps it sooner.
+    public static func planned(schedule: [ClassTime], sessions: [Session], from start: LocalDate?, to end: LocalDate?,
+                               examWeeks: Set<Int> = [], days: Int? = nil,
+                               now: Date, calendar: Calendar) -> [Suggestion] {
+        guard !schedule.isEmpty else { return [] }
         let today = calendar.startOfDay(for: now)
         let anchor = start?.date(in: calendar)
-        for offset in 0..<8 {
+        let limit = days ?? (end == nil ? 8 : Int.max)
+        let dates = sessions.map(\.date)
+        let dateOnly = Set(dates)
+        var result: [Suggestion] = []
+        var offset = 0
+        while offset < limit {
             let day = calendar.date(byAdding: .day, value: offset, to: today)!
+            offset += 1
             let local = LocalDate(day, in: calendar)
+            // End first: a term saved with its start after its end would otherwise skip days forever.
+            if let end, local > end { break }
             if let start, local < start { continue }
-            if let end, local > end { return nil }
             if let anchor, examWeeks.contains(week(of: day, anchor: anchor, calendar: calendar)) { continue }
             let weekday = calendar.isoWeekday(of: day)
             for slot in schedule.filter({ $0.weekday == weekday }).sorted(by: { $0.startMinute < $1.startMinute }) {
                 let begin = calendar.date(byAdding: .minute, value: slot.startMinute, to: day)!
                 let finish = calendar.date(byAdding: .minute, value: slot.endMinute, to: day)!
-                guard finish > now, !exams.contains(where: { $0.start < finish && $0.end > begin }) else { continue }
-                let taken = sessions.contains { $0.date == begin || $0.date == day }
-                if !taken { return Suggestion(date: begin, end: finish, room: slot.room, link: slot.link) }
+                guard finish > now else { continue }
+                // Anywhere in the slot, not only at its start: a class that began late, or one imported from a calendar
+                // event that starts off the slot, is still that class. A makeup outside the slot stays its own.
+                if !dateOnly.contains(day) && !dates.contains(where: { $0 >= begin && $0 < finish }) {
+                    result.append(Suggestion(date: begin, end: finish, room: slot.room, link: slot.link))
+                }
             }
         }
-        return nil
+        return result
     }
 
     /// A new session at `date`. Its week counts Monday-based weeks from the term's start (or, without one, from the
-    /// earliest session); it goes last in its week, so names already given to that week's sessions don't shift.
+    /// earliest session).
     public static func session(at date: Date, sessions: [Session], termStart: LocalDate?,
                                calendar: Calendar, device: DeviceID, now: Date) -> Session {
         let anchor = termStart?.date(in: calendar) ?? sessions.map(\.date).min() ?? date
-        let week = week(of: date, anchor: anchor, calendar: calendar)
-        let index = (sessions.filter { $0.week == week }.map(\.index).max() ?? 0) + 1
-        return Session(device: device, at: now, week: week, index: index, date: date)
+        return Session(device: device, at: now, week: week(of: date, anchor: anchor, calendar: calendar), date: date)
     }
 
     /// Monday-based weeks, the week holding `anchor` being the first.
@@ -230,16 +257,11 @@ extension Session {
 }
 
 extension CourseFile {
-    /// Moves a session to `date`. Another week makes it the last of that week, as a new session would be; its name
-    /// changes then, but names already written into notes and recordings stay. An end of its own moves with it.
+    /// Moves a session to `date`, and into that date's week. Its name follows the new date, but names already written
+    /// into notes and recordings stay. An end of its own moves with it.
     public mutating func reschedule(_ id: UUID, to date: Date, termStart: LocalDate?, calendar: Calendar) {
         guard let i = sessions.firstIndex(where: { $0.id == id }) else { return }
-        let others = sessions.filter { $0.id != id }
-        let week = week(of: date, moving: id, termStart: termStart, calendar: calendar)
-        if week != sessions[i].week {
-            sessions[i].week = week
-            sessions[i].index = (others.filter { $0.week == week }.map(\.index).max() ?? 0) + 1
-        }
+        sessions[i].week = week(of: date, moving: id, termStart: termStart, calendar: calendar)
         if let end = sessions[i].end { sessions[i].end = end.addingTimeInterval(date.timeIntervalSince(sessions[i].date)) }
         sessions[i].date = date
     }
@@ -353,6 +375,31 @@ extension CourseFile {
 extension CourseFile {
     public func name(of session: Session) -> String { session.name(among: sessions) }
 
+    /// Nothing was taught at a cancelled class, so a link list leaves it out; one linked already stays so it can be unlinked.
+    public func linkableSessions(keeping linked: (Session) -> Bool) -> [Session] {
+        sessions.filter { !$0.isCancelled || linked($0) }.sorted(by: Session.inOrder)
+    }
+
+    /// What the class covered: its topic, else the deepest units linked to it. Nil when neither says.
+    public func subject(of session: Session) -> String? {
+        if !session.topic.isEmpty { return session.topic }
+        let units = UnitTree.deepest(units(of: session), in: units)
+        return units.isEmpty ? nil : units.map(\.title).joined(separator: " · ")
+    }
+
+    /// `11/3(화)`, where what the class covered is already said around it (a unit's own classes, say).
+    public func day(of session: Session, calendar: Calendar) -> String {
+        let c = calendar.dateComponents([.month, .day], from: session.date)
+        return String(localized: .sessionDay(c.month!, c.day!, ClassTime.weekdayNames[calendar.isoWeekday(of: session.date) - 1]))
+    }
+
+    /// `11/3(화): 행복에도 습관이 무섭다`, or the day alone when nothing says what the class covered. The day tells
+    /// classes apart where `10주차-2` doesn't; the name stays for files and the command line.
+    public func title(of session: Session, calendar: Calendar) -> String {
+        let day = day(of: session, calendar: calendar)
+        return subject(of: session).map { String(localized: .sessionTitled(day, $0)) } ?? day
+    }
+
     /// A rough note is named after its session, a review note "<session> 정리". The title becomes the file name, so
     /// `session note` and the new-note sheet must name a session's note the same way.
     public func noteTitle(for session: Session, kind: NoteKind) -> String {
@@ -373,11 +420,6 @@ extension CourseFile {
     /// `units` linked to the session, in outline order.
     public func units(of session: Session) -> [Unit] {
         UnitTree.outline(units).map(\.unit).filter { $0.sessionIds.contains(session.id) }
-    }
-
-    /// `9주차-1 · 그래프의 정의`, or the name alone without a topic.
-    public func title(of session: Session) -> String {
-        session.topic.isEmpty ? name(of: session) : "\(name(of: session)) · \(session.topic)"
     }
 }
 

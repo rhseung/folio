@@ -29,10 +29,10 @@ final class SessionsModel {
                 + (unlinked > 0 ? [String(localized: .sessionsMissingUnits(unlinked))] : [])).joined(separator: " · ")
     }
 
-    func suggested(_ course: LoadedCourse) -> Workspace.SuggestedSession? { workspace.suggestedSession(for: course, now: workspace.now) }
-
     struct TimelineRow: Identifiable {
         let item: SessionTimeline.Item
+        /// For a planned class, what its menu acts on.
+        var planned: Workspace.SuggestedSession?
         let first: Bool
         /// The rail above and below the line's dot: nil at the ends, true once held.
         let above: Bool?
@@ -42,17 +42,40 @@ final class SessionsModel {
 
     func timeline(_ file: CourseFile, now: Date? = nil) -> [TimelineRow] {
         let now = now ?? workspace.now
-        let items = SessionTimeline.items(file, calendar: calendar)
+        let plan = workspace.course(courseId).map { workspace.plannedSessions(for: $0, now: now) } ?? []
+        let byDate = Dictionary(plan.map { ($0.draft.date, $0) }, uniquingKeysWith: { a, _ in a })
+        let items = SessionTimeline.items(file, planned: plan.map(\.draft), classMinutes: workspace.settings.classMinutes, calendar: calendar)
         return items.indices.map { i in
-            TimelineRow(item: items[i], first: i == 0, above: i == 0 ? nil : items[i].held(at: now),
-                        below: i == items.count - 1 ? nil : items[i + 1].held(at: now))
+            var planned: Workspace.SuggestedSession?
+            if case .planned(let s, _) = items[i] { planned = byDate[s.date] }
+            return TimelineRow(item: items[i], planned: planned, first: i == 0, above: i == 0 ? nil : items[i].held(at: now),
+                               below: i == items.count - 1 ? nil : items[i + 1].held(at: now))
         }
+    }
+
+    /// `14일 후 오전 10:30 · 203`: the day is in the gutter.
+    func plannedLine(_ item: Workspace.SuggestedSession, now: Date? = nil) -> String {
+        let date = item.suggestion.date
+        let clock = TimeMenu.label(calendar.component(.hour, from: date) * 60 + calendar.component(.minute, from: date))
+        return Self.ahead(date, clock: clock, now: now ?? workspace.now, calendar: calendar) + (item.suggestion.room.isEmpty ? "" : " · \(item.suggestion.room)")
     }
 
     func isThisWeek(_ date: Date) -> Bool { calendar.startOfWeek(containing: date) == calendar.startOfWeek(containing: workspace.now) }
 
     func examLine(_ exam: Exam, _ date: Date) -> String {
-        (exam.title.isEmpty ? exam.kind.label : exam.title) + " · " + date.formatted(.dateTime.month().day().weekday())
+        ([exam.title, date.formatted(.dateTime.month().day().weekday())] + (examTime(exam).map { [$0] } ?? [])).joined(separator: " · ")
+    }
+
+    func examTime(_ exam: Exam) -> String? {
+        guard let start = exam.start else { return nil }
+        let minute = { (d: Date) in self.calendar.component(.hour, from: d) * 60 + self.calendar.component(.minute, from: d) }
+        return exam.end.map { TimeMenu.range(minute(start), minute($0)) } ?? TimeMenu.label(minute(start))
+    }
+
+    /// Days left only while the exam is ahead. A past one keeps its red but says nothing more: its score is a grade
+    /// and stays on the grades page.
+    func examDays(_ exam: Exam, now: Date) -> Int? {
+        exam.start.flatMap { $0 > now ? max(workspace.days(to: $0), 0) : nil }
     }
 
     func end(of session: Session, in file: CourseFile) -> Date? { session.end(schedule: file.course.schedule, calendar: calendar) }
@@ -118,12 +141,9 @@ final class SessionsModel {
 
     func isToday(_ date: Date) -> Bool { workspace.isStudyToday(date) }
 
-    /// The title says what the class covered: its topic, else its units, else its name (9주차-1), which only repeats
-    /// the week line and otherwise lives in the tooltip. The kind (실험) is left out: a lab is a class like any other.
-    func title(of session: Session, in file: CourseFile) -> String {
-        let units = UnitTree.deepest(file.units(of: session), in: file.units)
-        return !session.topic.isEmpty ? session.topic : !units.isEmpty ? units.map(\.title).joined(separator: " · ") : file.name(of: session)
-    }
+    /// The title says what the class covered, else its name (9주차-1): the day is in the gutter beside it. The kind
+    /// (실험) is left out: a lab is a class like any other.
+    func title(of session: Session, in file: CourseFile) -> String { file.subject(of: session) ?? file.name(of: session) }
 
     /// Units that only restate the title (Lab04 Thin-layer chromatography under Thin-layer chromatography) shrink to their icon.
     func unitsInTitle(_ session: Session, in file: CourseFile) -> Bool {
@@ -147,7 +167,8 @@ final class SessionsModel {
         switch days {
         case 0: return String(localized: .sessionsTodayAt(clock))
         case 1: return String(localized: .sessionsTomorrowAt(clock))
-        default: return String(localized: .sessionsDaysLater(days))
+        // The gutter shows only the day, so the start time stays in the line.
+        default: return clock.isEmpty ? String(localized: .sessionsDaysLater(days)) : String(localized: .sessionsDaysLaterAt(days, clock))
         }
     }
 
@@ -159,10 +180,10 @@ final class SessionsModel {
         String(localized: .sessionsPlayRecording(index + 1, RecordingTime.label(recording.duration)))
     }
 
-    func playerTitle(_ session: Session, in file: CourseFile) -> String { "\(file.course.title) · \(file.name(of: session))" }
+    func playerTitle(_ session: Session, in file: CourseFile) -> String { "\(file.course.title) · \(file.title(of: session, calendar: calendar))" }
 
     func removeConfirmation(_ session: Session, in file: CourseFile) -> String {
-        String(localized: .sessionsRemoveConfirm(file.name(of: session)))
+        String(localized: .sessionsRemoveConfirm(file.day(of: session, calendar: calendar)))
     }
 
     // MARK: A session's actions

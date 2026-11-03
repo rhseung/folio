@@ -51,8 +51,6 @@ extension Session {
         get { materials.map(\.materialId) }
         set { materials = materials.filter { newValue.contains($0.materialId) } }
     }
-
-    var label: String { "\(week)주차-\(index)" }
 }
 
 extension CourseFile: Document {
@@ -68,7 +66,7 @@ extension CourseFile: Document {
             Refs(\.sessionIds, to: Session.self, onDelete: .nullify)
             Refs(\.examIds, to: Exam.self, onDelete: .nullify)
         }
-        Items(\.sessions, noun: String(localized: .modelNounSession), name: { s, _ in s.label }) {
+        Items(\.sessions, noun: String(localized: .modelNounSession), name: { s, f in f.name(of: s) }) {
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
             Refs(\.materialIds, to: Material.self, onDelete: .nullify)
             Check("Session.time", String(localized: .ruleSessionTime)) { s, _ in s.end.map { $0 > s.date } ?? true }
@@ -133,7 +131,7 @@ extension CourseFile: Document {
             Ref(\.examId, to: Exam.self, onDelete: .nullify)
             Ref(\.assignmentId, to: Assignment.self, onDelete: .nullify)
         }
-        Items(\.attendance, noun: String(localized: .modelNounAttendance), name: { a, f in f.sessions.first { $0.id == a.sessionId }?.label ?? a.id.uuidString }) {
+        Items(\.attendance, noun: String(localized: .modelNounAttendance), name: { a, f in f.sessions.first { $0.id == a.sessionId }.map(f.name(of:)) ?? a.id.uuidString }) {
             Ref(\.sessionId, to: Session.self, onDelete: .restrict)
             Check("Attendance.cancelled", String(localized: .ruleAttendanceCancelled)) { a, f in
                 f.sessions.first { $0.id == a.sessionId }?.isCancelled != true

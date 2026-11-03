@@ -57,7 +57,7 @@ final class ReviewModel {
 
     func sessionLine(_ course: LoadedCourse, _ unit: FolioDomain.Unit) -> String? {
         let sessions = course.file.sessions.filter { unit.sessionIds.contains($0.id) }.sorted { $0.date < $1.date }
-        return sessions.isEmpty ? nil : sessions.map { course.file.name(of: $0) }.joined(separator: ", ")
+        return sessions.isEmpty ? nil : sessions.map { course.file.day(of: $0, calendar: workspace.calendar) }.joined(separator: ", ")
     }
 
     func load(course: LoadedCourse, unit: FolioDomain.Unit) {

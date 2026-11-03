@@ -87,17 +87,16 @@ struct StandardLayoutTests {
     #expect(MaterialIntake.freeName("code", taken: ["code"]) == "code 2")
 }
 
-@Test func anExamsFolderFollowsAStandardTitleElseItsKind() {
-    let quiz = Exam(device: UUID(), at: .now, kind: .quiz, title: "Quiz2")
-    let renamed = Exam(device: UUID(), at: .now, kind: .midterm, title: "중간고사")
-    let other = Exam(device: UUID(), at: .now, kind: .other, title: "구술")
-    let titled = Exam(device: UUID(), at: .now, kind: .quiz, title: "쪽지시험")
-    let exams = [renamed, quiz, titled]
-    #expect(MaterialIntake.folder(of: quiz, among: exams) == "Exams/Quiz2")
-    #expect(MaterialIntake.folder(of: renamed, among: exams) == "Exams/Midterm")
-    #expect(MaterialIntake.folder(of: other, among: exams) == nil)
-    // The course's second quiz, made as Quiz2 when it was added.
-    #expect(MaterialIntake.folder(of: titled, among: exams) == "Exams/Quiz2")
+@Test func anExamKeepsItsOwnFolderAndANewOneIsNamedByTitle() {
+    var midterm = Exam(device: UUID(), at: .now, title: "중간고사")
+    midterm.folder = "Midterm"
+    let loose = Exam(device: UUID(), at: .now, title: "구술")
+    #expect(MaterialIntake.folder(of: midterm) == "Exams/Midterm")
+    #expect(MaterialIntake.folder(of: loose) == nil)
+    #expect(MaterialIntake.examFolder(title: "Midterm", among: [midterm]) == "Midterm 2")
+    #expect(MaterialIntake.examFolder(title: " Past ", among: []) == "Past 2")
+    #expect(MaterialIntake.examFolder(title: "1/2차: 필기", among: []) == "1-2차- 필기")
+    #expect(MaterialIntake.examFolder(title: "..", among: []) == "Exam")
 }
 
 @Test func aPathTreeFoldsSharedFoldersAndSortsNaturally() {

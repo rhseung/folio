@@ -66,7 +66,7 @@ struct RecordedPagesTests {
         let a = Material(device: device, at: now, path: "Lectures/a.pdf", role: .lecture, status: .classified)
         let b = Material(device: device, at: now, path: "Lectures/b.pdf", role: .lecture, status: .classified)
         file.materials = [a, b]
-        file.sessions = [Session(device: device, at: now, week: 5, index: 1, date: now)]
+        file.sessions = [Session(device: device, at: now, week: 5, date: now)]
         let session = file.sessions[0].id
         file.linkMaterial(a.id, session: session, firstPage: 1, lastPage: 3)
         let r = recording([PageVisit(at: 0, materialId: a.id, page: 8), PageVisit(at: 60, materialId: b.id, page: 2),

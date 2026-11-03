@@ -58,7 +58,7 @@ struct NotionImportTests {
         let linear = try #require(result.courseFiles["2026-3/GS2004 선형대수학"])
         #expect(linear.policy.attendanceCap == [AttendanceCap(absences: 6, maxGrade: b0)])
         #expect(linear.policy.notes == "원문")
-        #expect(linear.exams.first.map { ($0.kind, $0.location) }! == (.midterm, "C104"))
+        #expect(linear.exams.first.map { ($0.title, $0.folder, $0.location) }! == ("Midterm", "Midterm", "C104"))
     }
 
     @Test func creditedTermAndCatalog() throws {
@@ -95,7 +95,8 @@ struct NotionNotesImportTests {
                                               existingNotes: [], calendar: calendar, device: device, now: now)
         #expect(first.sessionsAdded == 1)
         let session = first.file.sessions[0]
-        #expect(session.name(among: [session]) == "7주차-2" && session.roughNoteId == rough.id && session.reviewNoteId == review.id)
+        // The only class known in week 7, so it is 7주차-1 here whatever Notion called it.
+        #expect(session.week == 7 && session.roughNoteId == rough.id && session.reviewNoteId == review.id)
         #expect(first.notes.count == 3)
         #expect(first.notes.first { $0.id == topic.id }?.meta.kind == .topic)
         #expect(first.notes.first { $0.id == review.id }?.meta.sessionId == session.id)
@@ -109,19 +110,31 @@ struct NotionNotesImportTests {
     @Test func aSessionsNoteIsNotTakenByAnImportedOne() {
         let ours = UUID()
         var file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"))
-        var session = Session(device: device, at: now, week: 7, index: 2, date: now)
+        var session = Session(device: device, at: now, week: 7, date: now)
         session.roughNoteId = ours
         file.sessions = [session]
         var meta = NoteMeta(id: ours)
         meta.kind = .rough
         meta.sessionId = session.id
-        file.notes = [NoteEntry(id: ours, device: device, at: now, path: "Notes/7주차-2.md", meta: meta)]
-        let rough = note("7주차-2", nil, "2026-10-14")
+        file.notes = [NoteEntry(id: ours, device: device, at: now, path: "Notes/7주차-1.md", meta: meta)]
+        let rough = note("7주차-1", nil, "2026-10-14")
         let dump = NotionCourseDump(coursePageId: UUID(), title: "그래프 이론", notes: [rough], scores: [], images: [])
         let r = NotionNotesImporter.merge(dump, into: file, existingNotes: [ours], calendar: calendar, device: device, now: now)
         #expect(r.file.sessions[0].roughNoteId == ours)
         #expect(r.notes.first { $0.id == rough.id }?.meta.sessionId == nil)
         #expect(r.warnings.count == 1)
+    }
+
+    /// Notion numbered a week's classes in the order they were added, so `7주차-2` can come before `7주차-1`. Two
+    /// numbers are still two classes, even when the date order names the first one `7주차-1`.
+    @Test func twoNotionNumbersInAWeekStayTwoSessions() {
+        let second = note("7주차-2", nil, "2026-10-13")
+        let first = note("7주차-1", nil, "2026-10-15")
+        let dump = NotionCourseDump(coursePageId: UUID(), title: "그래프 이론", notes: [first, second], scores: [], images: [])
+        let r = NotionNotesImporter.merge(dump, into: CourseFile(course: Course(device: device, at: now, title: "그래프 이론")),
+                                          existingNotes: [], calendar: calendar, device: device, now: now)
+        #expect(r.sessionsAdded == 2 && r.file.sessions.count == 2 && r.warnings.isEmpty)
+        #expect(Set(r.notes.compactMap(\.meta.sessionId)) == Set(r.file.sessions.map(\.id)))
     }
 
     /// A note imported before and unlinked since stays unlinked; importing again doesn't set the session's side alone.

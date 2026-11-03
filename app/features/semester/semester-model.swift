@@ -145,7 +145,7 @@ final class SemesterModel {
         courses.flatMap { c in c.file.exams.compactMap { e in e.start.map { ExamItem(course: c, exam: e, start: $0) } } }.sorted { $0.start < $1.start }
     }
 
-    func examTitle(_ exam: Exam) -> String { exam.title.isEmpty ? exam.kind.label : exam.title }
+    func examTitle(_ exam: Exam) -> String { exam.title }
 
     func adminFiles(_ s: Semester) -> [URL] { workspace.gist?.adminFiles(of: s) ?? [] }
 

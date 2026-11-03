@@ -2,7 +2,8 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// Sessions are made as classes happen: the weekly schedule only suggests the next lecture, and the rest are added by hand.
+/// Sessions are made as classes happen. The classes the weekly schedule still holds show faint on the timeline, and
+/// doing something to one (a 휴강, an absence) makes it a session; anything off the schedule is added by hand.
 struct SessionsView: View {
     @Environment(\.accent) private var accent
     @State private var model: SessionsModel
@@ -29,13 +30,6 @@ struct SessionsView: View {
             }
             if file.course.schedule.isEmpty { schedule }
             if !model.untouched.isEmpty { untouchedCard }
-            // shortcut: worked out when the page redraws, not on a timer, so a class ending while the page sits open
-            // keeps its suggestion until the next change; a TimelineView left an empty gap whenever nothing was suggested.
-            if let item = model.suggested(course) {
-                Block(String(localized: .sessionsNext), note: String(localized: .sessionsSuggested)) {
-                    SuggestedSessionRow(item: item, openNote: openNote) { editingTimes = true }
-                }
-            }
             let rows = model.timeline(file)
             if !rows.isEmpty {
                 // One timeline down the page instead of a card per week: a row gets the full width for its title. The rail
@@ -70,16 +64,24 @@ struct SessionsView: View {
             TimelineLine(above: above, below: below, month: date) { Color.clear.frame(height: 18) }
         case .exam(let exam, let date):
             TimelineLine(above: above, below: below, marker: true) {
-                Text(model.examLine(exam, date))
-                    .font(Theme.Typeface.label).foregroundStyle(Theme.Palette.danger)
-                    .padding(.vertical, Theme.Space.m).padding(.leading, SessionRow.rowPadding)
+                HStack(spacing: Theme.Space.s) {
+                    Text(model.examLine(exam, date)).font(Theme.Typeface.label).foregroundStyle(Theme.Palette.danger).lineLimit(1)
+                    if let days = model.examDays(exam, now: model.workspace.now) { DdayChip(days: days) }
+                }
+                .padding(.vertical, Theme.Space.m).padding(.leading, SessionRow.rowPadding)
             }
-        case .session(let session):
+        case .session(let session, let exams):
             let end = model.end(of: session, in: file)
             TimelineView(.periodic(from: .now, by: 30)) { _ in
-                SessionRow(model: model, course: course, session: session, now: model.workspace.now, end: end, openNote: openNote, above: above, below: below)
+                SessionRow(model: model, course: course, session: session, now: model.workspace.now, end: end, openNote: openNote,
+                           exams: exams, above: above, below: below)
             }
             .fileDrop { model.importFiles($0, into: session) }
+        case .planned(_, let exams):
+            if let item = row.planned {
+                PlannedSessionRow(model: model, item: item, line: model.plannedLine(item), openNote: openNote, editTimes: { editingTimes = true },
+                                  exams: exams, above: above, below: below)
+            }
         }
     }
 
@@ -128,6 +130,71 @@ struct SessionsView: View {
     }
 }
 
+/// A class the schedule still holds, not saved: faint, with a dashed dot. Its menu makes the session first, so a 휴강
+/// or an absence known weeks ahead has something to hang on.
+struct PlannedSessionRow: View {
+    @Environment(\.accent) private var accent
+    @Environment(Workspace.self) private var workspace
+    let model: SessionsModel
+    let item: Workspace.SuggestedSession
+    let line: String
+    let openNote: (UUID) -> Void
+    var editTimes: (() -> Void)?
+    var exams: [Exam] = []
+    var above: Bool?
+    var below: Bool?
+    @State private var hovering = false
+
+    var body: some View {
+        let date = item.suggestion.date
+        let tab = ClassExamCard.height(exams)
+        HStack(alignment: .top, spacing: 0) {
+            VStack(spacing: 0) {
+                Text("\(workspace.calendar.component(.day, from: date))").font(Theme.Typeface.figureMedium.weight(.semibold)).monospacedDigit()
+                Text(date.formatted(.dateTime.weekday())).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+            }
+            .frame(width: SessionRow.gutter)
+            .padding(.top, SessionRow.rowPadding - 2 + tab)
+            .opacity(0.4)
+            Rail(above: above, below: below, dotY: SessionRow.dotY + tab) {
+                Circle().strokeBorder(Theme.Palette.lineStrong, style: StrokeStyle(lineWidth: 1.5, dash: [2, 2]))
+                    .background(Theme.Palette.page, in: .circle).frame(width: 10, height: 10)
+            }
+            HStack(alignment: .top, spacing: Theme.Space.m) {
+                VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+                    Text(.sessionsPlanned).font(Theme.Typeface.bodyStrong).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                    Text(line).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit().lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                // Today's class keeps the one-click start a saved session's row has: its rough note and the meeting.
+                if workspace.isStudyToday(date) {
+                    HStack(spacing: Theme.Space.s) {
+                        if let link = item.suggestion.link.flatMap(OnlineLink.url) { JoinOnlineButton(url: link) }
+                        SessionSlot(String(localized: .sessionsSlotRough), symbol: "plus", tint: accent.ink, help: String(localized: .sessionsSlotRoughMakeHelp)) {
+                            SuggestedSessionItems.roughNote(item, workspace, openNote)
+                        }
+                    }
+                }
+                Menu { SuggestedSessionItems(item: item, primary: true, openNote: openNote, editTimes: editTimes) } label: {
+                    Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary).frame(width: 24, height: 24).contentShape(.rect)
+                }
+                .menuStyle(.button)
+                .menuIndicator(.hidden)
+                .buttonStyle(.borderless).pointingHand()
+                .fixedSize()
+                .help(Text(.sessionsSuggestionMenuHelp))
+            }
+            .padding(SessionRow.rowPadding)
+            .background(hovering ? Theme.Palette.text.opacity(0.04) : .clear, in: .rect(cornerRadius: Theme.Radius.control))
+            .contentShape(.rect)
+            .onHover { hovering = $0 }
+            .contextMenu { SuggestedSessionItems(item: item, primary: true, openNote: openNote, editTimes: editTimes) }
+            .help(Text(.sessionsPlannedHelp))
+            .modifier(ClassExamCard(model: model, exams: exams, now: workspace.now))
+        }
+    }
+}
+
 /// The lecture the schedule says is under way or next, not made yet: a dashed row. Starting its rough note or a
 /// recording makes the session first; 휴강 saves it cancelled, so the suggestion moves to the next lecture.
 struct SuggestedSessionRow: View {
@@ -145,7 +212,8 @@ struct SuggestedSessionRow: View {
             if showsCourse {
                 Text(date.formatted(date: .omitted, time: .shortened)).timeColumn().font(Theme.Typeface.caption).monospacedDigit().fixedSize()
                 CourseMark(workspace, item.courseId)
-                Text("\(workspace.course(item.courseId)?.title ?? "") · \(item.name)").lineLimit(1)
+                // Today's own list: the day goes without saying.
+                Text(workspace.course(item.courseId)?.title ?? "").lineLimit(1)
                     .help(Text(.sessionsSuggested))
             } else {
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
@@ -155,8 +223,10 @@ struct SuggestedSessionRow: View {
                 .frame(width: 96, alignment: .leading)
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     Text(.sessionsLecture).font(Theme.Typeface.bodyStrong)
-                    Text(item.name + (item.suggestion.room.isEmpty ? "" : " · \(item.suggestion.room)"))
-                        .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                    // The day is beside it already.
+                    if !item.suggestion.room.isEmpty {
+                        Text(item.suggestion.room).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                    }
                 }
             }
             Spacer(minLength: Theme.Space.m)
@@ -392,6 +462,61 @@ struct Rail<Dot: View>: View {
     func color(_ held: Bool) -> Color { held ? accent.color.opacity(0.5) : Theme.Palette.line }
 }
 
+/// Exams held in the class's time, as a card tucked behind the class that shows only its top line. The class stays
+/// the row: the exam is something that happens in it. Applied last, so the class covers the card's lower edge.
+struct ClassExamCard: ViewModifier {
+    let model: SessionsModel
+    let exams: [Exam]
+    let now: Date
+    static let line: CGFloat = 20
+    static let inset: CGFloat = 6
+    /// How far the card runs on under the class, so it reads as behind it rather than above it.
+    static let tuck: CGFloat = 8
+
+    /// The card's visible part, which the row's gutter and dot drop by to stay level with the class.
+    static func height(_ exams: [Exam]) -> CGFloat {
+        exams.isEmpty ? 0 : CGFloat(exams.count) * line + CGFloat(exams.count - 1) * 2 + inset * 2
+    }
+
+    func body(content: Content) -> some View {
+        if exams.isEmpty {
+            content
+        } else {
+            content
+                // On the shape alone, so the row's text casts none.
+                .background { RoundedRectangle(cornerRadius: Theme.Radius.control).fill(Theme.Palette.page).shadow(color: .black.opacity(0.06), radius: 3, y: -2) }
+                .background(alignment: .top) { card.fixedSize(horizontal: false, vertical: true).offset(y: -Self.height(exams)) }
+                .padding(.top, Self.height(exams))
+        }
+    }
+
+    var card: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            ForEach(exams) { exam in
+                HStack(spacing: Theme.Space.s) {
+                    Image(systemName: "flag.fill").font(Theme.Typeface.caption)
+                    Text(exam.title).font(Theme.Typeface.caption.weight(.semibold)).lineLimit(1)
+                    if let time = model.examTime(exam) { Text(time).font(Theme.Typeface.caption).monospacedDigit().lineLimit(1).fixedSize() }
+                    Spacer(minLength: Theme.Space.s)
+                    if let days = model.examDays(exam, now: now) { DdayChip(days: days) }
+                }
+                .frame(height: Self.line)
+            }
+        }
+        .foregroundStyle(Theme.Palette.danger)
+        .padding(.horizontal, SessionRow.rowPadding)
+        .padding(.top, Self.inset)
+        .padding(.bottom, Self.inset + Self.tuck)
+        .background(Theme.Palette.dangerFill, in: .rect(topLeadingRadius: Theme.Radius.control, topTrailingRadius: Theme.Radius.control))
+        .overlay {
+            UnevenRoundedRectangle(topLeadingRadius: Theme.Radius.control, topTrailingRadius: Theme.Radius.control)
+                .strokeBorder(Theme.Palette.danger.opacity(0.2), lineWidth: 1)
+        }
+        // Narrower than the class, as a card further back would be.
+        .padding(.horizontal, Theme.Space.m)
+    }
+}
+
 /// Date, what the class covered, then only the notes that exist. Creating notes, attendance and cancelling live in one menu,
 /// except today's rough note, which is a single click away.
 struct SessionRow: View {
@@ -403,6 +528,7 @@ struct SessionRow: View {
     /// Its own end, else its class time's; nil for a class with neither, which then never shows as under way.
     var end: Date?
     let openNote: (UUID) -> Void
+    var exams: [Exam] = []
     @State private var playing: Recording?
     @State private var confirmingDelete = false
     @State private var deleteRefusal: String?
@@ -421,6 +547,7 @@ struct SessionRow: View {
     var body: some View {
         let ongoing = model.isOngoing(session, end: end, now: now)
         let ahead = session.date > now
+        let tab = ClassExamCard.height(exams)
         HStack(alignment: .top, spacing: 0) {
             // The day large, the weekday under it; the month is marked on the timeline where it changes.
             VStack(spacing: 0) {
@@ -430,9 +557,9 @@ struct SessionRow: View {
                 Text(session.date.formatted(.dateTime.weekday())).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
             }
             .frame(width: Self.gutter)
-            .padding(.top, Self.rowPadding - 2)
+            .padding(.top, Self.rowPadding - 2 + tab)
             .opacity(ahead ? 0.55 : 1)
-            Rail(above: above, below: below, dotY: Self.dotY) {
+            Rail(above: above, below: below, dotY: Self.dotY + tab) {
                 dot(progress: model.progress(session, end: end, now: now), ahead: ahead, cancelled: session.isCancelled)
             }
             // One stack, so a right click anywhere on the row opens the ⋯ menu's items.
@@ -442,6 +569,7 @@ struct SessionRow: View {
                 .contentShape(.rect)
                 .onHover { hovering = $0 }
                 .contextMenu { menuItems }
+                .modifier(ClassExamCard(model: model, exams: exams, now: now))
         }
     }
 

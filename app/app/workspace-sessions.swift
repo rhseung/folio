@@ -7,24 +7,28 @@ extension Workspace {
     struct SuggestedSession: Identifiable {
         var courseId: UUID
         var suggestion: SessionPlanner.Suggestion
-        /// What it will be called once made, e.g. `9주차-2`.
-        var name: String
+        /// The session it would be, unsaved: its week places it on the timeline.
+        var draft: Session
         var id: UUID { courseId }
     }
 
     func suggestedSession(for course: LoadedCourse, now: Date) -> SuggestedSession? {
+        plan(for: course, now: now, days: 8).first
+    }
+
+    /// Every class left in the term that no session stands for yet, for marking ahead (a 휴강 two weeks off).
+    func plannedSessions(for course: LoadedCourse, now: Date) -> [SuggestedSession] {
+        plan(for: course, now: now, days: nil)
+    }
+
+    private func plan(for course: LoadedCourse, now: Date, days: Int?) -> [SuggestedSession] {
         let file = course.file
         let semester = semester(of: file.course)
-        // A quiz is usually given in class, so only the larger exams take the class time away.
-        let exams = file.exams.filter { $0.kind != .quiz }.compactMap { e in
-            e.start.map { DateInterval(start: $0, end: max(e.end ?? $0, $0.addingTimeInterval(60))) }
+        return SessionPlanner.planned(schedule: file.course.schedule, sessions: file.sessions, from: semester?.start, to: semester?.end,
+                                      examWeeks: semester?.examWeeks ?? [], days: days, now: now, calendar: calendar).map { s in
+            let draft = SessionPlanner.session(at: s.date, sessions: file.sessions, termStart: semester?.start, calendar: calendar, device: device, now: now)
+            return SuggestedSession(courseId: course.id, suggestion: s, draft: draft)
         }
-        guard let s = SessionPlanner.suggestion(schedule: file.course.schedule, sessions: file.sessions, from: semester?.start,
-                                                to: semester?.end, examWeeks: semester?.examWeeks ?? [], exams: exams,
-                                                now: now, calendar: calendar) else { return nil }
-        let draft = SessionPlanner.session(at: s.date, sessions: file.sessions, termStart: semester?.start,
-                                           calendar: calendar, device: device, now: now)
-        return SuggestedSession(courseId: course.id, suggestion: s, name: draft.name(among: file.sessions + [draft]))
     }
 
     func suggestedSessions(now: Date) -> [SuggestedSession] {

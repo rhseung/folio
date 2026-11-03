@@ -90,7 +90,7 @@ final class MaterialsModel {
 
     /// Standard folders by hand, with each exam's prep folder; `Lectures` is offered with a session where it is needed.
     var places: [String] {
-        let exams = course.file.exams.compactMap { MaterialIntake.folder(of: $0, among: course.file.exams) }
+        let exams = course.file.exams.compactMap { MaterialIntake.folder(of: $0) }
         return Array((MaterialIntake.places(assignmentFolders: assignmentFolders) + exams).uniqued())
     }
 
@@ -101,7 +101,7 @@ final class MaterialsModel {
 
     func linkLine(_ m: FolioDomain.Material) -> String {
         let file = course.file
-        let sessions = file.sessionLinks(of: m.id).map { s, link in file.name(of: s) + link.pageLabel }
+        let sessions = file.sessionLinks(of: m.id).map { s, link in file.day(of: s, calendar: workspace.calendar) + link.pageLabel }
         let units = file.units.filter { m.unitIds.contains($0.id) }.map(\.title)
         return (sessions + (units.isEmpty ? [] : [String(localized: .materialsLinkUnits(units.joined(separator: ", ")))])).joined(separator: " · ")
     }
@@ -188,15 +188,15 @@ final class MaterialsModel {
 
     // MARK: Links
 
-    var sessions: [Session] { course.file.sessions.sorted { ($0.week, $0.index) < ($1.week, $1.index) } }
+    func sessions(linking material: UUID) -> [Session] {
+        course.file.linkableSessions { $0.materials.contains { $0.materialId == material } }
+    }
     /// Outline order: `order` counts among siblings only, so sorting by it alone interleaves chapters and their units.
     var units: [(unit: FolioDomain.Unit, depth: Int)] { UnitTree.outline(course.file.units) }
 
     func unitIds(of material: UUID) -> [UUID] { materials.first { $0.id == material }?.unitIds ?? [] }
 
-    func sessionTitle(_ s: Session) -> String {
-        s.topic.isEmpty ? course.file.name(of: s) : "\(course.file.name(of: s)) · \(s.topic)"
-    }
+    func sessionTitle(_ s: Session) -> String { course.file.title(of: s, calendar: workspace.calendar) }
 
     func link(_ material: UUID, session: UUID, linked: Bool) {
         workspace.run(MaterialLinkSession(course: course.id, material: material, session: session, linked: linked))
@@ -293,10 +293,11 @@ final class ImportPlaceModel {
         self.course = course
         self.files = files
         self.places = places
-        session = sessions.last { $0.date <= workspace.now }?.id
+        // Slides often come before the class, so one later today counts as today's.
+        session = sessions.last { $0.date <= workspace.now || workspace.isStudyToday($0.date) }?.id
     }
 
-    var sessions: [Session] { course.file.sessions.filter { !$0.isCancelled }.sorted { ($0.week, $0.index) < ($1.week, $1.index) } }
+    var sessions: [Session] { course.file.sessions.filter { !$0.isCancelled }.sorted(by: Session.inOrder) }
 
     var title: String {
         String(localized: files.count == 1 ? .materialsImportOne(files[0].lastPathComponent) : .materialsImportMany(files.count))
@@ -325,7 +326,8 @@ final class ImportPlaceModel {
     }
 
     var sessionOptions: [(UUID?, String)] {
-        [(nil, String(localized: .materialsImportNoSession))] + sessions.map { ($0.id, course.file.name(of: $0) + ($0.topic.isEmpty ? "" : " · \($0.topic)")) }
+        // Newest first: the file is almost always for a recent class.
+        [(nil, String(localized: .materialsImportNoSession))] + sessions.reversed().map { ($0.id, course.file.title(of: $0, calendar: workspace.calendar)) }
     }
 
     /// The newest folder of a kind first: the latest assignment or exam is the likely one.

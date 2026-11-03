@@ -30,7 +30,7 @@ struct ReviewLogTests {
 
         var doc = try store.load()
         let unit = FolioDomain.Unit(device: device, at: at(1, 9), title: "Matchings", order: 1)
-        var session = Session(device: device, at: at(1, 9), week: 2, index: 1, date: at(1, 10))
+        var session = Session(device: device, at: at(1, 9), week: 2, date: at(1, 10))
         session.reviewNoteId = UUID()
         doc.model.units = [unit]
         doc.model.sessions = [session]

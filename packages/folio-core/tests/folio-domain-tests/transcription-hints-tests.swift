@@ -9,7 +9,7 @@ struct TranscriptionHintsTests {
     func course(_ paths: [String]) -> CourseFile {
         var file = CourseFile(course: Course(device: device, at: now, title: "컴파일러"))
         file.materials = paths.map { Material(device: device, at: now, path: $0, role: .lecture, status: .classified) }
-        file.sessions = [Session(device: device, at: now, week: 5, index: 1, date: now)]
+        file.sessions = [Session(device: device, at: now, week: 5, date: now)]
         return file
     }
 

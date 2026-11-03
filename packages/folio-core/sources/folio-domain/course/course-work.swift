@@ -1,17 +1,13 @@
 import Foundation
 
-public enum ExamKind: String, Codable, Sendable, CaseIterable {
-    case midterm, final, quiz, other
-}
-
-/// One exam; maps 1:1 to an `Exams/<name>` folder when it has prep material.
+/// One exam; maps 1:1 to its `Exams/<folder>` folder. A quiz and a final are the same thing here: what an exam counts
+/// for is its grade component, what it covers is its scope.
 public struct Exam: Entity {
     public var id: UUID
     public var createdAt: Date
     public var updatedAt: Date
     public var updatedBy: DeviceID
 
-    public var kind: ExamKind
     public var title: String
     /// Real clock time; exam times ignore the day boundary so they are never seen late.
     public var start: Date?
@@ -24,13 +20,16 @@ public struct Exam: Entity {
     public var componentId: UUID?
     public var memo: String
     public var plan: [ExamPlanItem]
+    /// The prep folder's name under `Exams`, kept rather than worked out from the title: a renamed exam keeps its
+    /// folder, and folders made before titles named them (`Midterm` for 중간고사) keep pointing at their files.
+    public var folder: String?
 
-    public init(id: UUID = UUID(), device: DeviceID, at date: Date, kind: ExamKind, title: String, start: Date? = nil, end: Date? = nil, location: String = "") {
+    public init(id: UUID = UUID(), device: DeviceID, at date: Date, title: String, start: Date? = nil, end: Date? = nil, location: String = "",
+                folder: String? = nil) {
         self.id = id
         self.createdAt = date
         self.updatedAt = date
         self.updatedBy = device
-        self.kind = kind
         self.title = title
         self.start = start
         self.end = end
@@ -40,6 +39,7 @@ public struct Exam: Entity {
         self.allowed = ""
         self.memo = ""
         self.plan = []
+        self.folder = folder
     }
 }
 
@@ -51,7 +51,6 @@ extension Exam {
         createdAt = try c.decode(Date.self, forKey: .createdAt)
         updatedAt = try c.decode(Date.self, forKey: .updatedAt)
         updatedBy = try c.decode(DeviceID.self, forKey: .updatedBy)
-        kind = try c.decode(ExamKind.self, forKey: .kind)
         title = try c.decode(String.self, forKey: .title)
         start = try c.decodeIfPresent(Date.self, forKey: .start)
         end = try c.decodeIfPresent(Date.self, forKey: .end)
@@ -62,6 +61,7 @@ extension Exam {
         componentId = try c.decodeIfPresent(UUID.self, forKey: .componentId)
         memo = try c.decode(String.self, forKey: .memo)
         plan = try c.decodeIfPresent([ExamPlanItem].self, forKey: .plan) ?? []
+        folder = try c.decodeIfPresent(String.self, forKey: .folder)
     }
 }
 

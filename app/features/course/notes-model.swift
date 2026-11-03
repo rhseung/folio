@@ -67,7 +67,7 @@ final class NoteListModel {
                 let (x, y) = (a.exam?.start ?? .distantFuture, b.exam?.start ?? .distantFuture)
                 return x != y ? x < y : byTitle(a.note, b.note)
             }
-            .map { n, e in Row(note: n, detail: detail(n, e.map { $0.title.isEmpty ? $0.kind.label : $0.title } ?? String(localized: .notesNoExam))) }
+            .map { n, e in Row(note: n, detail: detail(n, e.map { $0.title } ?? String(localized: .notesNoExam))) }
 
         let units = UnitTree.outline(file.units).map(\.unit)
         let topics = notes.filter { $0.meta.kind == .topic }.sorted(by: byTitle).map { n in
@@ -225,12 +225,12 @@ final class NoteEditorModel {
     var outline: [(unit: FolioDomain.Unit, depth: Int)] { UnitTree.outline(course.file.units) }
     var linkedSession: Session? { course.file.session(pointingAt: meta.id) }
 
-    func sessionName(_ s: Session) -> String { course.file.name(of: s) }
+    func sessionName(_ s: Session) -> String { course.file.title(of: s, calendar: workspace.calendar) }
 
     var currentLink: String {
         switch meta.kind {
         case .rough, .review:
-            linkedSession.map { String(localized: .notesLinkSession(sessionName($0), meta.kind.label)) } ?? String(localized: .notesLinkNoSession(meta.kind.label))
+            linkedSession.map { String(localized: .notesLinkSession(course.file.day(of: $0, calendar: workspace.calendar), meta.kind.label)) } ?? String(localized: .notesLinkNoSession(meta.kind.label))
         case .examSummary:
             linkExams.first { $0.id == meta.examId }.map { String(localized: .notesLinkExam($0.title)) } ?? String(localized: .notesLinkNoExam)
         case .topic:

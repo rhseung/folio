@@ -60,7 +60,7 @@ final class NewNoteModel {
 
     var examOptions: [PickOption<UUID?>] {
         let exams = course.file.exams.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }
-        return [PickOption(id: nil, title: String(localized: .commonNone))] + exams.map { PickOption(id: $0.id, title: $0.title.isEmpty ? $0.kind.label : $0.title) }
+        return [PickOption(id: nil, title: String(localized: .commonNone))] + exams.map { PickOption(id: $0.id, title: $0.title) }
     }
 
     var unitOptions: [PickOption<UUID>] { UnitTree.outline(course.file.units).map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) } }

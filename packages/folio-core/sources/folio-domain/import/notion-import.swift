@@ -194,9 +194,9 @@ public enum NotionImporter {
             }
 
             var file = CourseFile(course: course)
-            for (kind, exam) in [(ExamKind.midterm, row.midterm), (.final, row.final)] {
+            for (name, exam) in [(StandardLayout.midtermFolder, row.midterm), (StandardLayout.finalFolder, row.final)] {
                 guard let exam else { continue }
-                file.exams.append(Exam(device: device, at: now, kind: kind, title: kind.folderName() ?? "", start: exam.start, end: exam.end, location: exam.location ?? ""))
+                file.exams.append(Exam(device: device, at: now, title: name, start: exam.start, end: exam.end, location: exam.location ?? "", folder: name))
             }
             for (order, c) in (row.components ?? []).enumerated() {
                 file.components.append(GradeComponent(id: c.id, device: device, at: now, name: c.name, weight: c.weight, order: order,

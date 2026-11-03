@@ -4,9 +4,9 @@ import Foundation
 
 // MARK: Exams
 
-@Action("exam add", "시험 추가. 시험 폴더(Exams/<이름>)도 만든다", effect: .creates, done: "시험 '{title}'을(를) 추가했습니다",
-        examples: [#"folio exam add EC4207 중간고사 --kind midterm --start "2026-10-21 10:00" --end "2026-10-21 12:00" --location B101"#,
-                   "folio exam add EC4207 Quiz1 --kind quiz --start 2026-09-30 --dry-run"],
+@Action("exam add", "시험 추가. 시험 폴더(Exams/<제목>)도 만든다", effect: .creates, done: "시험 '{title}'을(를) 추가했습니다",
+        examples: [#"folio exam add EC4207 중간고사 --start "2026-10-21 10:00" --end "2026-10-21 12:00" --location B101"#,
+                   "folio exam add EC4207 Quiz1 --start 2026-09-30 --dry-run"],
         phrases: ["기말고사 추가", "중간고사 등록", "시험 추가", "중간고사 추가", "기말 등록", "퀴즈 일정"])
 public struct ExamAdd {
     @New var id: Exam.ID
@@ -14,8 +14,6 @@ public struct ExamAdd {
     @Arg var course: Course.ID
     /// 시험 제목
     @Arg var title: String
-    /// 종류
-    var kind: ExamKind = .other
     /// 시작 일시
     var start: Date?
     /// 끝 일시
@@ -34,26 +32,25 @@ public struct ExamAdd {
     var memo: String = ""
 
     public func run(_ ctx: ActionContext) throws {
-        var exam = Exam(id: id, device: ctx.device, at: ctx.now, kind: kind, title: title, start: start, end: end, location: location)
+        var exam = Exam(id: id, device: ctx.device, at: ctx.now, title: title, start: start, end: end, location: location)
         (exam.componentId, exam.scopeText, exam.allowed, exam.memo) = (component, scopeText, allowed, memo)
         try ctx.edit(course) { f in
             guard !f.exams.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenExam("\(id)"))) }
+            exam.folder = MaterialIntake.examFolder(title: title, among: f.exams)
             f.exams.append(exam)
             f.setScope(scope, exam: id)
         }
-        // The same path the exam screen and materials read, so a quiz named freely still gets its own QuizN.
-        let exams = try ctx.file(course).exams
-        if let path = MaterialIntake.folder(of: exam, among: exams) {
+        if let path = MaterialIntake.folder(of: exam) {
             let store = try ctx.store(course)
             if !FileManager.default.fileExists(atPath: store.fileURL(path).path) {
-                try ctx.io(Change(.added, ctx.relative(store.fileURL(path)) + "/")) { try store.ensureFolder(exam: exam, among: exams) }
+                try ctx.io(Change(.added, ctx.relative(store.fileURL(path)) + "/")) { try store.ensureFolder(exam: exam) }
             }
         }
         ctx.made(id)
     }
 }
 
-@Action("exam set", "시험의 제목, 종류, 일시, 장소, 성적 항목, 범위 바꾸기. 준 것만 바뀐다", done: "시험 '{exam}'을(를) 바꿨습니다",
+@Action("exam set", "시험의 제목, 일시, 장소, 성적 항목, 범위 바꾸기. 준 것만 바뀐다. 제목을 바꿔도 시험 폴더는 그대로다", done: "시험 '{exam}'을(를) 바꿨습니다",
         examples: [#"folio exam set EC4207/중간고사 --start "2026-10-22 10:00" --end "2026-10-22 12:00""#,
                    "folio exam set EC4207/Quiz1 --location B203", "folio exam set EC4207/Quiz1 --end none --component none --dry-run"],
         phrases: ["시험 날짜 변경", "시험 시간", "시험 장소", "고사실"])
@@ -63,8 +60,6 @@ public struct ExamSet {
     @Arg var exam: Exam.ID
     /// 새 제목
     var title: Patch<String>
-    /// 종류
-    var kind: Patch<ExamKind>
     /// 시작 일시
     var start: Patch<Date?>
     /// 끝 일시
@@ -86,7 +81,6 @@ public struct ExamSet {
         try ctx.edit(course) { f in
             try f.update(\.exams, exam) { e in
                 title.apply(&e.title)
-                kind.apply(&e.kind)
                 start.apply(&e.start)
                 end.apply(&e.end)
                 location.apply(&e.location)

@@ -27,7 +27,7 @@ final class RecordingBarModel {
     }
     var sessionName: String? {
         guard let course, let id = recorder.recording?.sessionId, let session = course.file.sessions.first(where: { $0.id == id }) else { return nil }
-        return course.file.name(of: session)
+        return course.file.title(of: session, calendar: workspace.calendar)
     }
     var line: String {
         recorder.volatile.isEmpty ? (recorder.lines.last?.text ?? recorder.transcriptionNote ?? String(localized: .recordingListening)) : recorder.volatile

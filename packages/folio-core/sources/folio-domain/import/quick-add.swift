@@ -175,18 +175,6 @@ extension AssignmentKind {
     }
 }
 
-extension ExamKind {
-    /// `Midterm`, `Final`, `Quiz2`; nil for `other`, which has no standard folder.
-    public func folderName(number: Int? = nil) -> String? {
-        switch self {
-        case .midterm: "Midterm"
-        case .final: "Final"
-        case .quiz: StandardLayout.quizFolderPrefix + "\(number ?? 1)"
-        case .other: nil
-        }
-    }
-}
-
 extension AssignmentKind {
     /// Assignment folders (`HW01`, `SP02`) no assignment maps to yet; their names become the new assignments' titles.
     public static func unmatchedFolders(_ folders: [String], assignments: [Assignment]) -> [String] {

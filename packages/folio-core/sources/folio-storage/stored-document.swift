@@ -36,15 +36,60 @@ extension Transcript: StoredModel {
 }
 
 extension CourseFile: StoredModel {
-    public static let schemaVersion = 2
-    public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [1: dropSessionKind]
+    public static let schemaVersion = 4
+    public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [1: dropSessionKind, 2: dropSessionIndex, 3: dropExamKind]
+
+    /// v3 exams had a kind (midterm, final, quiz, other) the prep folder was named from. The exam now keeps the folder
+    /// it had, so its files stay put. An `other` exam had none; it gets one from its title, as a new exam would, after
+    /// the others, so it never takes a name a real folder already holds.
+    static func dropExamKind(_ raw: inout JSONValue) throws {
+        guard case .array(var exams)? = raw["exams"] else { return }
+        var quizzes = 0
+        var unnamed: [Int] = []
+        for i in exams.indices {
+            let kind = exams[i]["kind"]
+            exams[i]["kind"] = nil
+            if kind == .string("quiz") { quizzes += 1 }
+            let title = exams[i]["title"].flatMap { if case .string(let t) = $0 { t } else { nil } } ?? ""
+            // The v3 rule: a title that is a standard folder name names the folder, else the kind does.
+            let named = StandardLayout.isExamFolderName(title) && title != StandardLayout.pastExamsFolder
+            let byKind: String? = switch kind {
+            case .string("midterm"): StandardLayout.midtermFolder
+            case .string("final"): StandardLayout.finalFolder
+            case .string("quiz"): StandardLayout.quizFolderPrefix + "\(quizzes)"
+            default: nil
+            }
+            if let folder = named ? title : byKind {
+                exams[i]["folder"] = .string(folder)
+                if title.isEmpty { exams[i]["title"] = .string(folder) }
+            } else {
+                unnamed.append(i)
+            }
+        }
+        var taken = Set(exams.compactMap { e in e["folder"].flatMap { if case .string(let f) = $0 { f } else { nil } } })
+        for i in unnamed {
+            let title = exams[i]["title"].flatMap { if case .string(let t) = $0 { t } else { nil } } ?? ""
+            let folder = MaterialIntake.examFolder(title: title, taken: taken)
+            taken.insert(folder)
+            exams[i]["folder"] = .string(folder)
+            if title.isEmpty { exams[i]["title"] = .string(folder) }
+        }
+        raw["exams"] = .array(exams)
+    }
+
+    /// v2 stored each session's place in its week, given as "last + 1" when it was made, so a makeup added first took
+    /// 10주차-2 and the class before it 10주차-3. The place now follows the dates in the week.
+    static func dropSessionIndex(_ raw: inout JSONValue) throws {
+        guard case .array(var sessions)? = raw["sessions"] else { return }
+        for i in sessions.indices { sessions[i]["index"] = nil }
+        raw["sessions"] = .array(sessions)
+    }
 
     /// v1 sessions had a `kind` and a lab number. A session is now one class: `cancelled` is a flag, a lab is a unit
     /// the session links to, and recitations and makeups are plain sessions.
     static func dropSessionKind(_ raw: inout JSONValue) throws {
         guard case .array(var sessions)? = raw["sessions"] else { return }
         var labs: [(index: Int, number: Int)] = []
-        var recitationWeeks: Set<JSONValue> = []
         for i in sessions.indices {
             let kind = sessions[i]["kind"]
             let number = sessions[i]["lab"]
@@ -55,20 +100,12 @@ extension CourseFile: StoredModel {
             // Keeps what the name `9주차 리시테이션` used to say.
             case .string("recitation"):
                 if sessions[i]["topic"] == .string("") { sessions[i]["topic"] = .string("리시테이션") }
-                if let week = sessions[i]["week"] { recitationWeeks.insert(week) }
             // A lab without a number keeps only the units it already links to: guessing one from its place among labs
             // linked a real session to the wrong lab.
             case .string("lab"):
                 if case .number(let n)? = number { labs.append((i, Int(n))) }
             default: break
             }
-        }
-        // v1 left recitations out of a week's numbering, so their stored index trails the lectures'. Numbered in date
-        // order, `2주차-2` is the class after `2주차-1`. The dates are one fixed ISO format, so they sort as strings.
-        func date(_ i: Int) -> String { if case .string(let d)? = sessions[i]["date"] { d } else { "" } }
-        for week in recitationWeeks {
-            let inWeek = sessions.indices.filter { sessions[$0]["week"] == week }.sorted { date($0) < date($1) }
-            for (n, i) in inWeek.enumerated() { sessions[i]["index"] = .number(Double(n + 1)) }
         }
         raw["sessions"] = .array(sessions)
         guard !labs.isEmpty else { return }

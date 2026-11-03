@@ -95,7 +95,7 @@ struct ActionTests {
     }
 
     @Test func aNewExamGetsItsFolder() throws {
-        let exam = ExamAdd(course: Self.graphTheory, title: "Quiz1", kind: .quiz, start: now)
+        let exam = ExamAdd(course: Self.graphTheory, title: "Quiz1", start: now)
         let ctx = try run(exam)
         let folder = try #require(ctx.changes.first { $0.path.hasSuffix("/") }).path
         #expect(FileManager.default.fileExists(atPath: gist.url.appending(path: folder).path))
