@@ -209,13 +209,13 @@ final class LectureRecorder {
 
     #if DEBUG
     /// For window snapshots (`FOLIO_SNAPSHOT_RECORDING`): the card as it looks mid-lecture, with no microphone or file.
-    func stage(_ recording: Recording, course: UUID, title: String) {
+    func stage(_ recording: Recording, course: UUID, title: String, paused: Bool = false, level: Float = 0.6) {
         courseId = course
         self.recording = recording
         self.title = title
-        state = .recording
+        state = paused ? .paused : .recording
         elapsed = 2951
-        level = 0.6
+        self.level = paused ? 0 : level
         bookmarks = [612]
         lines = [
             .init(start: 2890, end: 2912, text: "그래서 이 문법은 모호하지 않다는 걸 보이려면 유도 트리가 하나뿐이라는 걸 보여야 하고요"),

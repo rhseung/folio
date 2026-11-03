@@ -14,8 +14,11 @@ final class SnapshotDriver {
     static let webStep = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_WEB"]
     /// A step to linger on, so the real window (toolbar and all, which cacheDisplay leaves out) can be screen-captured.
     static let holdStep = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_HOLD"]
-    /// Shows the recording card in the sidebar as if a lecture were being recorded, without the microphone.
+    /// Shows the recording card in the sidebar as if a lecture were being recorded, without the microphone: `paused`
+    /// shows it paused, a number (`0.3`) at that level.
     static let recording = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_RECORDING"] != nil
+    static let recordingPaused = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_RECORDING"] == "paused"
+    static let recordingLevel = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_RECORDING"].flatMap(Float.init) ?? 0.6
     /// A narrower window (e.g. `1100`) to catch labels that wrap or truncate once the columns squeeze.
     static let width = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_WIDTH"].flatMap(Double.init) ?? 1440
 
