@@ -405,6 +405,52 @@ struct NoteReaderTests {
         #expect(NoteMath.picture(#"\notacommand{x}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false) == nil)
     }
 
+    @Test func doubleStruckCapitalsUseTheAMSFont() throws {
+        func fonts(_ display: MTDisplay) -> [String] {
+            if let line = display as? MTCTLineDisplay {
+                return (CTLineGetGlyphRuns(line.line) as? [CTRun] ?? []).map {
+                    let attributes = CTRunGetAttributes($0) as NSDictionary
+                    return CTFontCopyPostScriptName(attributes[kCTFontAttributeName] as! CTFont) as String
+                }
+            }
+            var found: [String] = [], mirror: Mirror? = Mirror(reflecting: display)
+            while let m = mirror {
+                for child in m.children {
+                    if let part = child.value as? MTDisplay { found += fonts(part) }
+                    if let parts = child.value as? [MTDisplay] { found += parts.flatMap(fonts) }
+                }
+                mirror = m.superclassMirror
+            }
+            return found
+        }
+        for tex in [NoteMath.tex("u in F^2, RR", .asciimath), NoteMath.tex(#"\sqrt{\mathbb{Z}}"#, .latex), NoteMath.tex(#"\frac{\mathbb{Q}}{2}"#, .latex)] {
+            let list = try #require(NoteMath.typeset(tex, display: false, size: 16, color: .black), "\(tex)")
+            #expect(fonts(list).contains("KaTeX_AMS-Regular"), "\(tex)")
+        }
+        // Kerned back to Latin Modern's width, so what SwiftMath placed after the letter stays put.
+        let swapped = try #require(NoteMath.typeset(NoteMath.tex(#"\mathbb{R}^2"#, .latex), display: false, size: 16, color: .black))
+        #expect(fonts(swapped).contains("KaTeX_AMS-Regular"))
+        let line = try #require(swapped.subDisplays.first as? MTCTLineDisplay)
+        #expect(abs(CTLineGetTypographicBounds(line.line, nil, nil, nil) - line.width) < 0.01)
+        // The AMS M is a third wider than Latin Modern's; SwiftMath makes room for it rather than overlapping the next.
+        let pair = try #require(NoteMath.picture(#"\mathbb{MM}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false))
+        #expect(pair.size.width >= 2 * 0.944 * 16 - 1)
+        // With no room after it, an AMS letter would run into what follows, so a formula with a body that can't be
+        // split, or a double-struck capital typed as itself, stays as written and all Latin Modern, with no room added.
+        for tex in [#"\mathbb{R^2}"#, #"\mathbb{R\times S}"#, #"\mathbb{M} + \mathbb{R^2}"#, #"ℝ + \mathbb{M}"#] {
+            #expect(NoteMath.tex(tex, .latex) == tex)
+            let list = try #require(NoteMath.typeset(NoteMath.tex(tex, .latex), display: false, size: 16, color: .black), "\(tex)")
+            #expect(!fonts(list).contains("KaTeX_AMS-Regular"), "\(tex)")
+            #expect(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false) != nil, "\(tex)")
+        }
+        // A ℝ typed in text is hidden in a command once text is filled, so it must be seen before.
+        let typed = try #require(NoteMath.typeset(NoteMath.tex(#"\text{ℝ} = \mathbb{R}"#, .latex), display: false, size: 16, color: .black))
+        #expect(!fonts(typed).contains("KaTeX_AMS-Regular"))
+        // A longer command that starts the same is left alone, so it still shows as source rather than as 𝕞1.
+        #expect(NoteMath.tex(#"\mathbbm{1}"#, .latex) == #"\mathbbm{1}"#)
+        #expect(NoteMath.picture(#"\mathbbm{1}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false) == nil)
+    }
+
     @Test func textInMathReadsAsText() throws {
         func width(_ tex: String) throws -> CGFloat {
             try #require(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false), "\(tex)").size.width
