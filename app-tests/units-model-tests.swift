@@ -35,7 +35,7 @@ struct UnitsModelTests {
         workspace.run(UnitLink(course: graphTheory, unit: unitId, sessions: ids))
         let f = try file(workspace)
         let unit = try #require(f.units.first)
-        let names = model.sessions(of: unit, in: f).map { f.name(of: $0) }
+        let names = model.sessions(of: unit, in: f).map { f.day(of: $0, calendar: workspace.calendar) }
         #expect(model.sessionsLine(unit, in: f) == "\(names.prefix(3).joined(separator: ", ")) 외 1")
         #expect(model.detail(unit, state: nil, in: f) == model.sessionsLine(unit, in: f))
     }

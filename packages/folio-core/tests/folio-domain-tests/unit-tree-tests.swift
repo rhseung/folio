@@ -59,7 +59,7 @@ struct UnitTreeTests {
         let parent = unit("P", 1)
         let removed = unit("R", 1, parent: parent)
         let child = unit("K", 1, parent: removed)
-        var session = Session(device: device, at: now, week: 1, index: 1, date: now)
+        var session = Session(device: device, at: now, week: 1, date: now)
         var exam = Exam(device: device, at: now, kind: .midterm, title: "중간고사")
         session.unitIds = [removed.id]
         exam.scopeUnitIds = [removed.id, parent.id]
@@ -72,7 +72,7 @@ struct UnitTreeTests {
 
     @Test func togglesKeepBothSidesInStep() {
         let u = unit("U", 1)
-        let s = Session(device: device, at: now, week: 1, index: 1, date: now)
+        let s = Session(device: device, at: now, week: 1, date: now)
         let e = Exam(device: device, at: now, kind: .final, title: "기말고사")
         var file = CourseFile(course: Course(device: device, at: now, title: "T"), units: [u], sessions: [s], exams: [e])
         file.toggle(session: s.id, unit: u.id)

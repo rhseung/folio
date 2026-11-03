@@ -79,8 +79,7 @@ public enum CalendarImporter {
                 continue
             }
             let week = calendar.dateComponents([.day], from: firstMonday, to: calendar.startOfDay(for: m.start)).day! / 7 + 1
-            let index = (file.sessions.filter { $0.week == week }.map(\.index).max() ?? 0) + 1
-            var s = Session(device: device, at: now, week: week, index: index, date: m.start)
+            var s = Session(device: device, at: now, week: week, date: m.start)
             s.topic = m.topic
             file.sessions.append(s)
             matched.insert(s.id)

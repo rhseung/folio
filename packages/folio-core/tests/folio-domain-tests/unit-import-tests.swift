@@ -8,8 +8,8 @@ struct UnitImportTests {
 
     /// Units link to sessions on both sides, an existing unit keeps its ID, and a second run changes nothing.
     @Test func addsUnitsLinksSessionsAndIsIdempotent() {
-        let s1 = Session(device: device, at: now, week: 2, index: 1, date: now)
-        let s2 = Session(device: device, at: now, week: 3, index: 1, date: now)
+        let s1 = Session(device: device, at: now, week: 2, date: now)
+        let s2 = Session(device: device, at: now, week: 3, date: now)
         let trees = Unit(device: device, at: now, title: "Trees", order: 0)
         let file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"), units: [trees], sessions: [s1, s2])
         let specs = [
@@ -35,10 +35,10 @@ struct ExamScopeTests {
 
     /// Everything taught before the midterm is its scope: covered sections bring their chapter; later and cancelled classes don't count.
     @Test func midtermScopeIsWhatWasTaughtBeforeIt() {
-        let before = Session(device: device, at: now, week: 2, index: 1, date: now - 86_400)
-        var cancelled = Session(device: device, at: now, week: 3, index: 1, date: now - 3600)
+        let before = Session(device: device, at: now, week: 2, date: now - 86_400)
+        var cancelled = Session(device: device, at: now, week: 3, date: now - 3600)
         cancelled.isCancelled = true
-        let after = Session(device: device, at: now, week: 9, index: 1, date: now + 86_400)
+        let after = Session(device: device, at: now, week: 9, date: now + 86_400)
         let chapter = Unit(device: device, at: now, title: "Ch1", order: 0)
         var section = Unit(device: device, at: now, title: "1.1", order: 0, parentId: chapter.id)
         section.sessionIds = [before.id]

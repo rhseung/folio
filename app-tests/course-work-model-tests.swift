@@ -128,6 +128,23 @@ struct MaterialsModelTests {
         #expect(model.kinds.first?.isLecture == true)
     }
 
+    /// `10주차-3` said nothing about which class; the day and what it covered do, newest first.
+    @Test func importSessionsReadByDayNewestFirst() throws {
+        let workspace = try fixtureWorkspace()
+        // A makeup set up first, then the class before it: made out of date order on purpose.
+        for days in [-1, -2] {
+            workspace.run(SessionAdd(course: graphTheory, date: Calendar.current.date(byAdding: .day, value: days, to: .now)!, topic: days == -1 ? "보강" : ""))
+        }
+        let course = try #require(workspace.course(graphTheory))
+        let model = ImportPlaceModel(workspace: workspace, course: course, files: [URL(filePath: "/tmp/a.pdf")], places: [])
+        let options = model.sessionOptions.dropFirst()
+        let sessions = options.map { id in course.file.sessions.first { $0.id == id.0 }! }
+        #expect(sessions.count >= 2 && options.first?.1.hasSuffix(": 보강") == true)
+        #expect(model.session == sessions.first?.id)
+        #expect(sessions.map(\.date) == sessions.map(\.date).sorted(by: >))
+        #expect(options.allSatisfy { $0.1.wholeMatch(of: #/\d{1,2}/\d{1,2}\([월화수목금토일]\)(: .+)?/#) != nil })
+    }
+
     @Test func trackingFillsTheTreeAndFoldersOpenOnToggle() throws {
         let (workspace, course) = try fixtureCourse()
         workspace.run(MaterialTrack(course: linearAlgebra))

@@ -225,12 +225,12 @@ final class NoteEditorModel {
     var outline: [(unit: FolioDomain.Unit, depth: Int)] { UnitTree.outline(course.file.units) }
     var linkedSession: Session? { course.file.session(pointingAt: meta.id) }
 
-    func sessionName(_ s: Session) -> String { course.file.name(of: s) }
+    func sessionName(_ s: Session) -> String { course.file.title(of: s, calendar: workspace.calendar) }
 
     var currentLink: String {
         switch meta.kind {
         case .rough, .review:
-            linkedSession.map { String(localized: .notesLinkSession(sessionName($0), meta.kind.label)) } ?? String(localized: .notesLinkNoSession(meta.kind.label))
+            linkedSession.map { String(localized: .notesLinkSession(course.file.day(of: $0, calendar: workspace.calendar), meta.kind.label)) } ?? String(localized: .notesLinkNoSession(meta.kind.label))
         case .examSummary:
             linkExams.first { $0.id == meta.examId }.map { String(localized: .notesLinkExam($0.title)) } ?? String(localized: .notesLinkNoExam)
         case .topic:

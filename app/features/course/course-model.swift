@@ -41,13 +41,9 @@ final class CourseModel {
         Array(file.sessions.filter { $0.date <= workspace.now && !$0.isCancelled }.sorted { $0.date > $1.date }.prefix(4))
     }
 
-    func recentTitle(_ s: Session, in file: CourseFile) -> String {
-        s.topic.isEmpty ? file.name(of: s) : "\(file.name(of: s)) · \(s.topic)"
-    }
+    func recentTitle(_ s: Session, in file: CourseFile) -> String { file.title(of: s, calendar: workspace.calendar) }
 
-    func recentDetail(_ s: Session, in file: CourseFile) -> String {
-        s.date.formatted(.dateTime.month().day().weekday()) + " · " + noteState(s, in: file)
-    }
+    func recentDetail(_ s: Session, in file: CourseFile) -> String { noteState(s, in: file) }
 
     func noteState(_ session: Session, in file: CourseFile) -> String {
         if session.reviewNoteId != nil { return String(localized: session.reviewNoteUnfinished ? .courseReviewNoteDraft : .courseReviewNote) }
@@ -139,9 +135,9 @@ final class CourseModel {
     func stats(_ file: CourseFile, reviews: [Workspace.ReviewEntry], suggested: Workspace.SuggestedSession?, now: Date) -> [StatStrip.Item] {
         // A class the timetable promises counts before it is made; without it a course that makes sessions as it goes
         // never showed a next class.
-        let made: (date: Date, name: String)? = file.sessions.filter { $0.date > now && !$0.isCancelled }.min { $0.date < $1.date }
-            .map { (date: $0.date, name: file.name(of: $0)) }
-        let planned: (date: Date, name: String)? = suggested.flatMap { $0.suggestion.date > now ? (date: $0.suggestion.date, name: $0.name) : nil }
+        let made: (date: Date, subject: String?)? = file.sessions.filter { $0.date > now && !$0.isCancelled }.min { $0.date < $1.date }
+            .map { (date: $0.date, subject: file.subject(of: $0)) }
+        let planned: (date: Date, subject: String?)? = suggested.flatMap { $0.suggestion.date > now ? (date: $0.suggestion.date, subject: nil) : nil }
         let nextClass = [made, planned].compactMap { $0 }.min { $0.date < $1.date }
         let nextExam = file.exams.compactMap { e in e.start.map { (e, $0) } }.filter { $0.1 > now }.min { $0.1 < $1.1 }
         let nextDue = file.assignments.compactMap { a in a.due.map { (a, $0) } }
@@ -152,7 +148,7 @@ final class CourseModel {
         if let next = nextClass {
             // The weekday rides in the detail: with it the date was cut off in a narrow window.
             items.append(.init(title: String(localized: .courseNextClass), value: next.date.formatted(.dateTime.month().day()),
-                               detail: "\(next.date.formatted(.dateTime.weekday())) \(next.date.formatted(date: .omitted, time: .shortened)) · \(next.name)"))
+                               detail: "\(next.date.formatted(.dateTime.weekday())) \(next.date.formatted(date: .omitted, time: .shortened))" + (next.subject.map { " · \($0)" } ?? "")))
         } else {
             items.append(.init(title: String(localized: .courseNextClass), value: "-"))
         }

@@ -94,6 +94,9 @@ public enum NotionNotesImporter {
         var result = NotionMergeResult(file: file, notes: [], sessionsAdded: 0, componentsAdded: 0, scoresAdded: 0, warnings: [])
 
         let dump = cleaned(dump)
+        // Notion's `7주차-2` -> the session made or found for it. Names here follow the dates, so the second class
+        // Notion knew of in a week may be named 7주차-1; a rerun finds it by the notes it already links.
+        var named: [String: UUID] = [:]
         for row in dump.notes.sorted(by: { ($0.date ?? "", $0.title) < ($1.date ?? "", $1.title) }) {
             guard let source = row.file else { continue }
             var sessionId: UUID?
@@ -101,12 +104,15 @@ public enum NotionNotesImporter {
             if let s = session(of: row.title) {
                 let review = row.kind == "복습" || (row.kind == nil && s.review)
                 kind = review ? .review : .rough
+                let key = "\(s.week)주차-\(s.index)"
                 let index: Int
-                if let existing = file.sessions.firstIndex(where: { $0.week == s.week && $0.index == s.index }) {
+                if let existing = file.sessions.firstIndex(where: { $0.roughNoteId == row.id || $0.reviewNoteId == row.id })
+                    ?? named[key].flatMap({ id in file.sessions.firstIndex { $0.id == id } })
+                    ?? file.sessions.firstIndex(where: { file.name(of: $0) == key }) {
                     index = existing
                 } else {
                     let day = row.date.flatMap(LocalDate.init).flatMap { $0.date(in: calendar) } ?? now
-                    file.sessions.append(Session(device: device, at: now, week: s.week, index: s.index, date: day))
+                    file.sessions.append(Session(device: device, at: now, week: s.week, date: day))
                     result.sessionsAdded += 1
                     index = file.sessions.count - 1
                 }
@@ -116,12 +122,13 @@ public enum NotionNotesImporter {
                     file.sessions[index].roughNoteId = row.id
                 }
                 sessionId = file.sessions[index].id
+                named[key] = sessionId
             }
             if !existingNotes.contains(row.id) {
                 result.notes.append(NotionNotePlan(id: row.id, title: row.title, meta: NoteMeta(id: row.id, kind: kind, sessionId: sessionId), sourceFile: source))
             }
         }
-        file.sessions.sort { ($0.week, $0.index) < ($1.week, $1.index) }
+        file.sessions.sort(by: Session.inOrder)
 
         mergeScores(dump.scores, into: &file, result: &result, device: device, now: now)
         result.file = file

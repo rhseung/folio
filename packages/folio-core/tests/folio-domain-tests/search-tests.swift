@@ -53,7 +53,7 @@ struct SearchTests {
             Material(device: device, at: now, path: "junk.txt", status: .ignored),
         ]
         file.assignments = [Assignment(device: device, at: now, title: "HW3")]
-        var session = Session(device: device, at: now, week: 2, index: 1, date: now)
+        var session = Session(device: device, at: now, week: 2, date: now)
         session.topic = "Matchings"
         file.sessions = [session]
         file.units = [Unit(device: device, at: now, title: "Covers", order: 1)]

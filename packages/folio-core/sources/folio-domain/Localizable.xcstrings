@@ -1101,6 +1101,28 @@
         }
       }
     },
+    "session.day": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld/%2$lld(%3$@)"
+          }
+        }
+      }
+    },
+    "session.titled": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: %2$@"
+          }
+        }
+      }
+    },
     "study-time.hours": {
       "extractionState": "manual",
       "localizations": {

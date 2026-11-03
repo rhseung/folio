@@ -118,12 +118,9 @@ final class SessionsModel {
 
     func isToday(_ date: Date) -> Bool { workspace.isStudyToday(date) }
 
-    /// The title says what the class covered: its topic, else its units, else its name (9주차-1), which only repeats
-    /// the week line and otherwise lives in the tooltip. The kind (실험) is left out: a lab is a class like any other.
-    func title(of session: Session, in file: CourseFile) -> String {
-        let units = UnitTree.deepest(file.units(of: session), in: file.units)
-        return !session.topic.isEmpty ? session.topic : !units.isEmpty ? units.map(\.title).joined(separator: " · ") : file.name(of: session)
-    }
+    /// The title says what the class covered, else its name (9주차-1): the day is in the gutter beside it. The kind
+    /// (실험) is left out: a lab is a class like any other.
+    func title(of session: Session, in file: CourseFile) -> String { file.subject(of: session) ?? file.name(of: session) }
 
     /// Units that only restate the title (Lab04 Thin-layer chromatography under Thin-layer chromatography) shrink to their icon.
     func unitsInTitle(_ session: Session, in file: CourseFile) -> Bool {
@@ -159,10 +156,10 @@ final class SessionsModel {
         String(localized: .sessionsPlayRecording(index + 1, RecordingTime.label(recording.duration)))
     }
 
-    func playerTitle(_ session: Session, in file: CourseFile) -> String { "\(file.course.title) · \(file.name(of: session))" }
+    func playerTitle(_ session: Session, in file: CourseFile) -> String { "\(file.course.title) · \(file.title(of: session, calendar: calendar))" }
 
     func removeConfirmation(_ session: Session, in file: CourseFile) -> String {
-        String(localized: .sessionsRemoveConfirm(file.name(of: session)))
+        String(localized: .sessionsRemoveConfirm(file.day(of: session, calendar: calendar)))
     }
 
     // MARK: A session's actions

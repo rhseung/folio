@@ -31,9 +31,9 @@ struct CourseWorkTests {
     }
 
     @Test func aSessionAtThatTimeEvenCancelledMovesTheSuggestionOn() {
-        var cancelled = Session(device: device, at: .now, week: 9, index: 1, date: date("2026-10-26 13:00"))
+        var cancelled = Session(device: device, at: .now, week: 9, date: date("2026-10-26 13:00"))
         cancelled.isCancelled = true
-        let dateOnly = Session(device: device, at: .now, week: 9, index: 2, date: date("2026-10-28 00:00"))
+        let dateOnly = Session(device: device, at: .now, week: 9, date: date("2026-10-28 00:00"))
         let s = SessionPlanner.suggestion(schedule: monWed, sessions: [cancelled, dateOnly], from: nil, to: nil, now: date("2026-10-26 09:00"), calendar: calendar)
         #expect(s?.date == date("2026-11-02 13:00"))
     }
@@ -73,11 +73,11 @@ struct CourseWorkTests {
         #expect(before?.date == date("2026-10-28 13:00"))
     }
 
-    @Test func newSessionsCountWeeksFromTheTermStartAndGoLastInTheWeek() {
+    @Test func newSessionsCountWeeksFromTheTermStart() {
         // Term starts Wednesday 2026-09-02: that week is 1, so 2026-10-26 is 9주차.
         let first = SessionPlanner.session(at: date("2026-10-26 13:00"), sessions: [], termStart: LocalDate("2026-09-02"),
                                            calendar: calendar, device: device, now: .now)
-        #expect(first.week == 9 && first.index == 1)
+        #expect(first.week == 9 && first.name(among: [first]) == "9주차-1")
         let recitation = SessionPlanner.session(at: date("2026-10-27 19:00"), sessions: [first], termStart: LocalDate("2026-09-02"),
                                                 calendar: calendar, device: device, now: .now)
         let second = SessionPlanner.session(at: date("2026-10-28 13:00"), sessions: [first, recitation], termStart: LocalDate("2026-09-02"),
@@ -91,12 +91,12 @@ struct CourseWorkTests {
 
     @Test func untouchedFutureSessionsLeaveAnythingUsedAlone() {
         let now = date("2026-10-26 12:00")
-        func at(_ s: String) -> Session { Session(device: device, at: .now, week: 9, index: 1, date: date(s)) }
+        func at(_ s: String) -> Session { Session(device: device, at: .now, week: 9, date: date(s)) }
         let past = at("2026-10-19 13:00"), empty = at("2026-11-02 13:00"), noted = at("2026-11-04 13:00"), unitLinked = at("2026-11-09 13:00")
         var topic = at("2026-11-11 13:00"); topic.topic = "행렬식"
         var online = at("2026-11-12 21:00"); online.link = "https://zoom.us/j/1"
         var makeup = at("2026-11-13 21:00"); makeup.end = date("2026-11-13 22:15")
-        var cancelled = Session(device: device, at: .now, week: 10, index: 1, date: date("2026-11-16 13:00"))
+        var cancelled = Session(device: device, at: .now, week: 10, date: date("2026-11-16 13:00"))
         cancelled.isCancelled = true
         var unit = Unit(device: device, at: .now, title: "고윳값", order: 1)
         unit.sessionIds = [unitLinked.id]
@@ -106,8 +106,8 @@ struct CourseWorkTests {
 
     /// A past session can be deleted too, as long as nothing points at it.
     @Test func onlyAnUnlinkedSessionIsDeletable() {
-        let held = Session(device: device, at: .now, week: 8, index: 1, date: date("2026-10-19 13:00"))
-        let attended = Session(device: device, at: .now, week: 8, index: 2, date: date("2026-10-21 13:00"))
+        let held = Session(device: device, at: .now, week: 8, date: date("2026-10-19 13:00"))
+        let attended = Session(device: device, at: .now, week: 8, date: date("2026-10-21 13:00"))
         var file = CourseFile(course: courses[0], sessions: [held, attended])
         file.attendance = [Attendance(device: device, at: .now, sessionId: attended.id, state: .late)]
         #expect(file.isUnlinked(held, notedSessions: []))
@@ -116,8 +116,8 @@ struct CourseWorkTests {
     }
 
     @Test func anAbsenceMarkedAheadCountsFromItsClass() {
-        let held = Session(device: device, at: .now, week: 9, index: 1, date: date("2026-10-26 13:00"))
-        let ahead = Session(device: device, at: .now, week: 10, index: 1, date: date("2026-11-02 13:00"))
+        let held = Session(device: device, at: .now, week: 9, date: date("2026-10-26 13:00"))
+        let ahead = Session(device: device, at: .now, week: 10, date: date("2026-11-02 13:00"))
         var file = CourseFile(course: courses[0], sessions: [held, ahead])
         file.attendance = [held, ahead].map { Attendance(device: device, at: .now, sessionId: $0.id, state: .absent) }
         #expect(file.heldAttendance(at: date("2026-11-02 12:59")).map(\.sessionId) == [held.id])
@@ -126,10 +126,10 @@ struct CourseWorkTests {
 
     @Test func aDeletedNoteLeavesTheSessionsThatUsedIt() {
         let gone = UUID(), kept = UUID()
-        var a = Session(device: device, at: .now, week: 8, index: 1, date: date("2026-10-19 13:00"))
+        var a = Session(device: device, at: .now, week: 8, date: date("2026-10-19 13:00"))
         a.roughNoteId = gone
         a.reviewNoteId = kept
-        var b = Session(device: device, at: .now, week: 8, index: 2, date: date("2026-10-21 13:00"))
+        var b = Session(device: device, at: .now, week: 8, date: date("2026-10-21 13:00"))
         b.reviewNoteId = gone
         var file = CourseFile(course: courses[0], sessions: [a, b])
         file.forgetNote(gone)
@@ -147,9 +147,9 @@ struct CourseWorkTests {
 
     @Test func sessionEndsWhereItsWeeklySlotEnds() {
         let slot = ClassTime(weekday: 1, startMinute: 13 * 60, endMinute: 14 * 60 + 15)
-        let monday = Session(device: device, at: .now, week: 9, index: 1, date: date("2026-10-26 13:00"))
+        let monday = Session(device: device, at: .now, week: 9, date: date("2026-10-26 13:00"))
         #expect(monday.end(schedule: [slot], calendar: calendar) == date("2026-10-26 14:15"))
-        let midnight = Session(device: device, at: .now, week: 9, index: 1, date: date("2026-10-26 00:00"))
+        let midnight = Session(device: device, at: .now, week: 9, date: date("2026-10-26 00:00"))
         #expect(midnight.end(schedule: [slot], calendar: calendar) == nil)
     }
 
@@ -161,7 +161,7 @@ struct CourseWorkTests {
         #expect([ClassTime(weekday: 1, startMinute: 600, endMinute: 650), ClassTime(weekday: 3, startMinute: 600, endMinute: 680)].usualMinutes == 80)
         #expect([ClassTime]().usualMinutes == nil)
 
-        let makeup = Session(device: device, at: .now, week: 10, index: 3, date: date("2026-11-04 19:00"))
+        let makeup = Session(device: device, at: .now, week: 10, date: date("2026-11-04 19:00"))
         #expect(makeup.expectedEnd(schedule: lab, classMinutes: 75, calendar: calendar) == date("2026-11-04 21:00"))
         // No class times at all, as at a school abroad before they're entered: the settings say.
         #expect(makeup.expectedEnd(schedule: [], classMinutes: 80, calendar: calendar) == date("2026-11-04 20:20"))
@@ -169,12 +169,12 @@ struct CourseWorkTests {
 
     @Test func aMakeupKeepsItsOwnEndAndASlotEndIsNotStoredTwice() {
         let slot = ClassTime(weekday: 1, startMinute: 13 * 60, endMinute: 14 * 60 + 15)
-        var makeup = Session(device: device, at: .now, week: 10, index: 3, date: date("2026-11-04 21:00"))
+        var makeup = Session(device: device, at: .now, week: 10, date: date("2026-11-04 21:00"))
         makeup.setEnd(date("2026-11-04 22:15"), schedule: [slot], calendar: calendar)
         #expect(makeup.end(schedule: [slot], calendar: calendar) == date("2026-11-04 22:15"))
 
         // The slot already says when a Monday 13:00 class ends, so changing the class times later still moves it.
-        var monday = Session(device: device, at: .now, week: 9, index: 1, date: date("2026-10-26 13:00"))
+        var monday = Session(device: device, at: .now, week: 9, date: date("2026-10-26 13:00"))
         monday.setEnd(date("2026-10-26 14:15"), schedule: [slot], calendar: calendar)
         #expect(monday.end == nil)
         monday.setEnd(date("2026-10-26 14:45"), schedule: [slot], calendar: calendar)
@@ -183,11 +183,11 @@ struct CourseWorkTests {
 
     @Test func aSessionTakesItsSlotsLinkUnlessItHasItsOwn() {
         let slot = ClassTime(weekday: 1, startMinute: 13 * 60, endMinute: 14 * 60 + 15, link: "https://zoom.us/j/111")
-        var s = Session(device: device, at: .now, week: 9, index: 1, date: date("2026-10-26 13:00"))
+        var s = Session(device: device, at: .now, week: 9, date: date("2026-10-26 13:00"))
         #expect(s.link(schedule: [slot], calendar: calendar) == URL(string: "https://zoom.us/j/111"))
         s.link = "meet.google.com/abc-defg-hij"
         #expect(s.link(schedule: [slot], calendar: calendar) == URL(string: "https://meet.google.com/abc-defg-hij"))
-        let offSlot = Session(device: device, at: .now, week: 9, index: 2, date: date("2026-10-26 21:00"))
+        let offSlot = Session(device: device, at: .now, week: 9, date: date("2026-10-26 21:00"))
         #expect(offSlot.link(schedule: [slot], calendar: calendar) == nil)
     }
 
@@ -206,29 +206,58 @@ struct CourseWorkTests {
         #expect(OnlineLink.appURL(try #require(URL(string: "https://notzoom.us/j/123"))) == nil)
     }
 
-    @Test func movingASessionToAnotherWeekMakesItThatWeeksLast() {
+    /// A makeup set up before the class earlier that week used to take 10주차-2 and push the class to 10주차-3.
+    @Test func namesFollowTheDatesNotTheOrderMade() {
+        let makeup = Session(device: device, at: date("2026-11-01 09:00"), week: 10, date: date("2026-11-04 21:00"))
+        let tuesday = Session(device: device, at: date("2026-11-03 10:00"), week: 10, date: date("2026-11-03 10:30"))
+        var file = CourseFile(course: courses[0], sessions: [makeup, tuesday])
+        #expect([tuesday, makeup].map(file.name(of:)) == ["10주차-1", "10주차-2"])
+        // A session not yet in the file is named where its date puts it.
+        let monday = Session(device: device, at: .now, week: 10, date: date("2026-11-02 10:30"))
+        #expect(monday.name(among: file.sessions) == "10주차-1")
+        file.sessions.removeAll { $0.id == tuesday.id }
+        #expect(file.name(of: makeup) == "10주차-1")
+    }
+
+    @Test func titleIsTheDayAndWhatTheClassCovered() {
+        var s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
+        var file = CourseFile(course: courses[0], sessions: [s])
+        #expect(file.title(of: s, calendar: calendar) == "11/3(화)")
+        let parent = Unit(device: device, at: .now, title: "행복", order: 1)
+        var child = Unit(device: device, at: .now, title: "습관", order: 1, parentId: parent.id)
+        child.sessionIds = [s.id]
+        file.units = [parent, child]
+        #expect(file.title(of: s, calendar: calendar) == "11/3(화): 습관")
+        s.topic = "행복에도 습관이 무섭다"
+        #expect(file.title(of: s, calendar: calendar) == "11/3(화): 행복에도 습관이 무섭다")
+    }
+
+    @Test func movingASessionNamesItByItsNewDate() {
         let start = LocalDate(year: 2026, month: 9, day: 1)!
-        let a = Session(device: device, at: .now, week: 10, index: 1, date: date("2026-11-03 10:30"))
-        var b = Session(device: device, at: .now, week: 10, index: 2, date: date("2026-11-04 21:00"))
+        let a = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
+        var b = Session(device: device, at: .now, week: 10, date: date("2026-11-04 21:00"))
         b.end = date("2026-11-04 22:15")
-        let c = Session(device: device, at: .now, week: 11, index: 1, date: date("2026-11-10 10:30"))
+        let c = Session(device: device, at: .now, week: 11, date: date("2026-11-10 10:30"))
         var file = CourseFile(course: courses[0], sessions: [a, b, c])
 
         // Within its week it keeps its name; its own end moves with it.
         file.reschedule(b.id, to: date("2026-11-05 20:00"), termStart: start, calendar: calendar)
-        #expect(file.sessions[1].week == 10 && file.sessions[1].index == 2)
+        #expect(file.sessions[1].week == 10 && file.name(of: file.sessions[1]) == "10주차-2")
         #expect(file.sessions[1].end == date("2026-11-05 21:15"))
 
         #expect(file.week(of: date("2026-11-12 20:00"), moving: b.id, termStart: start, calendar: calendar) == 11)
         file.reschedule(b.id, to: date("2026-11-12 20:00"), termStart: start, calendar: calendar)
-        #expect(file.sessions[1].week == 11 && file.sessions[1].index == 2)
+        #expect(file.sessions[1].week == 11 && file.name(of: file.sessions[1]) == "11주차-2")
+        // Moved before the class that week, it takes the first name.
+        file.reschedule(b.id, to: date("2026-11-09 20:00"), termStart: start, calendar: calendar)
+        #expect(file.name(of: file.sessions[1]) == "11주차-1" && file.name(of: file.sessions[2]) == "11주차-2")
     }
 
     @Test func aSessionEndingBeforeItStartsOrABadLinkIsRefused() {
         func rules(_ s: Session) -> Set<String> {
             Set(CourseFile.model.violations(in: CourseFile(course: courses[0], sessions: [s])).map(\.rule.name))
         }
-        var s = Session(device: device, at: .now, week: 10, index: 1, date: date("2026-11-04 21:00"))
+        var s = Session(device: device, at: .now, week: 10, date: date("2026-11-04 21:00"))
         s.end = date("2026-11-04 20:00")
         #expect(rules(s).contains("Session.time"))
         s.end = nil

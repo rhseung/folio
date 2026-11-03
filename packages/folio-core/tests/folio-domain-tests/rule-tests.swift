@@ -7,7 +7,7 @@ struct RuleTests {
     static let device = UUID()
     static let now = Date(timeIntervalSince1970: 1_793_149_200)
 
-    static let session = Session(device: device, at: now, week: 2, index: 1, date: now)
+    static let session = Session(device: device, at: now, week: 2, date: now)
     static let unit = Unit(device: device, at: now, title: "트리", order: 0)
     static let component = GradeComponent(device: device, at: now, name: "과제", weight: 30)
 

@@ -9,7 +9,7 @@ struct MaterialLinkTests {
     func file() -> CourseFile {
         var file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"))
         file.materials = [Material(device: device, at: now, path: "Lectures/05_Matchings.pdf", role: .lecture, status: .classified)]
-        file.sessions = [2, 1].map { Session(device: device, at: now, week: $0, index: 1, date: now) }
+        file.sessions = [2, 1].map { Session(device: device, at: now, week: $0, date: now + Double($0) * 7 * 86_400) }
         file.units = [Unit(device: device, at: now, title: "Matchings", order: 1)]
         return file
     }

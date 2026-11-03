@@ -23,7 +23,7 @@ extension Workspace {
             // folio:not-an-action recording is not an action
             recorder.saveProgress = { [id = course.id] recording in try? pending.save(PendingRecording(courseId: id, recording: recording)) }
             try await recorder.start(recording, at: pending.audioURL(of: recording.id), course: course.id,
-                                     title: "\(course.file.course.title) · \(course.file.name(of: session))", locale: captionLocale(of: course))
+                                     title: "\(course.file.course.title) · \(course.file.title(of: session, calendar: calendar))", locale: captionLocale(of: course))
             // Listed from the start, so the session shows it is being recorded.
             editRecordings(course.id) { $0.append(recording) }
             let (store, courseFile, pages) = (course.store, course.file, course.file.lecturePages(for: session))

@@ -4,7 +4,7 @@ import FolioFixtures
 import Foundation
 import Testing
 
-/// course.json v1 -> v2: sessions lose `kind` and `lab`; a lab becomes a unit the session links to.
+/// course.json v1 -> v3: sessions lose `kind` and `lab`, and then `index`; a lab becomes a unit the session links to.
 struct SessionKindMigrationTests {
     let gist: URL
     var url: URL { gist.appending(path: "2026-3/EC4207 그래프 이론/.folio/course.json") }
@@ -61,12 +61,12 @@ struct SessionKindMigrationTests {
         #expect(file.labNumbers["Thin-layer chromatography"] == 4)
     }
 
-    @Test func weeksWithARecitationAreNumberedByDate() throws {
-        let s = try StoredDocument<CourseFile>.read(from: url).model.sessions
-        #expect(s[2...4].map(\.index) == [1, 2, 3])
-        #expect(s[0].index == 1 && s[1].index == 2)
-        // A week without a recitation keeps its numbers.
-        #expect(s[7].index == 1)
+    @Test func weeksAreNumberedByDate() throws {
+        let file = try StoredDocument<CourseFile>.read(from: url).model
+        let s = file.sessions
+        // The stored 1, 3, 2 gives way to the dates.
+        #expect(s[2...4].map(file.name(of:)) == ["5주차-1", "5주차-2", "5주차-3"])
+        #expect(file.name(of: s[0]) == "2주차-1" && file.name(of: s[1]) == "2주차-2")
     }
 
     @Test func readingTwiceMakesTheSameUnit() throws {
@@ -78,9 +78,9 @@ struct SessionKindMigrationTests {
     @Test func savedFileDropsKindAndKeepsUnknownFields() throws {
         try StoredDocument<CourseFile>.read(from: url).write(to: url)
         let raw = try JSONFormat.decoder.decode(JSONValue.self, from: Data(contentsOf: url))
-        #expect(raw["schemaVersion"] == .number(2))
+        #expect(raw["schemaVersion"] == .number(3))
         guard case .array(let sessions)? = raw["sessions"] else { Issue.record("no sessions"); return }
-        #expect(sessions.allSatisfy { $0["kind"] == nil && $0["lab"] == nil })
+        #expect(sessions.allSatisfy { $0["kind"] == nil && $0["lab"] == nil && $0["index"] == nil })
         #expect(sessions[0]["cancelled"] == .bool(true) && sessions[1]["cancelled"] == nil)
         #expect(sessions[0]["futureSessionField"] == .string("keep me"))
     }

@@ -161,8 +161,9 @@ final class TodayModel {
         name.isEmpty ? title(id) : "\(title(id)) · \(name)"
     }
 
+    /// `11/3(화): 습관`: a review note owed may be days old, so the day says which class.
     func sessionName(_ course: UUID, _ session: Session) -> String {
-        workspace.course(course)?.file.name(of: session) ?? ""
+        workspace.course(course)?.file.title(of: session, calendar: workspace.calendar) ?? ""
     }
 
     func examTitle(_ item: TodaySummary.ExamItem) -> String { "\(title(item.courseId)) · \(item.exam.title)" }
@@ -261,10 +262,10 @@ final class TodayModel {
             RibbonClass(courseId: item.courseId, start: item.session.date,
                         end: item.session.expectedEnd(schedule: workspace.course(item.courseId)?.file.course.schedule ?? [],
                                                       classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar),
-                        name: sessionName(item.courseId, item.session), sessionId: item.session.id)
+                        name: workspace.course(item.courseId)?.file.subject(of: item.session) ?? "", sessionId: item.session.id)
         }
         let planned = suggested(now: now, on: summary.studyDay).map {
-            RibbonClass(courseId: $0.courseId, start: $0.suggestion.date, end: $0.suggestion.end, name: $0.name, suggested: $0)
+            RibbonClass(courseId: $0.courseId, start: $0.suggestion.date, end: $0.suggestion.end, name: "", suggested: $0)
         }
         let records = recordClasses(on: summary.studyDay).map {
             RibbonClass(courseId: $0.course.id, start: $0.meeting.date, end: $0.meeting.end, name: "")

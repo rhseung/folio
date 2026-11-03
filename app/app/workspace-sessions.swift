@@ -7,7 +7,7 @@ extension Workspace {
     struct SuggestedSession: Identifiable {
         var courseId: UUID
         var suggestion: SessionPlanner.Suggestion
-        /// What it will be called once made, e.g. `9주차-2`.
+        /// The day it falls on, `11/4(수)`.
         var name: String
         var id: UUID { courseId }
     }
@@ -24,7 +24,7 @@ extension Workspace {
                                                 now: now, calendar: calendar) else { return nil }
         let draft = SessionPlanner.session(at: s.date, sessions: file.sessions, termStart: semester?.start,
                                            calendar: calendar, device: device, now: now)
-        return SuggestedSession(courseId: course.id, suggestion: s, name: draft.name(among: file.sessions + [draft]))
+        return SuggestedSession(courseId: course.id, suggestion: s, name: file.day(of: draft, calendar: calendar))
     }
 
     func suggestedSessions(now: Date) -> [SuggestedSession] {

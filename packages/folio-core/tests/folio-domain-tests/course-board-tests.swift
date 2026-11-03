@@ -45,9 +45,9 @@ struct CourseBoardTests {
 
     @Test func aNoteBelongsToTheSessionPointingAtItBeforeItsFrontmatter() {
         let note = UUID()
-        var pointing = Session(device: device, at: now, week: 3, index: 1, date: now)
+        var pointing = Session(device: device, at: now, week: 3, date: now)
         pointing.reviewNoteId = note
-        let named = Session(device: device, at: now, week: 2, index: 1, date: now)
+        let named = Session(device: device, at: now, week: 2, date: now)
         let file = CourseFile(course: Course(device: device, at: now, title: ""), sessions: [named, pointing])
         #expect(file.session(of: NoteMeta(id: note, kind: .review, sessionId: named.id))?.id == pointing.id)
         #expect(file.session(of: NoteMeta(id: UUID(), kind: .rough, sessionId: named.id))?.id == named.id)

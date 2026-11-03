@@ -21,7 +21,7 @@ struct CalendarImportTests {
     }
 
     @Test func fillsKnownDaysAndAddsTheRest() {
-        var existing = Session(device: device, at: now, week: 2, index: 1, date: calendar.startOfDay(for: at(8, 0)))
+        var existing = Session(device: device, at: now, week: 2, date: calendar.startOfDay(for: at(8, 0)))
         existing.topic = "Vectors"
         let file = CourseFile(course: Course(device: device, at: now, title: "선형대수학"), sessions: [existing])
         let recitation = CalendarMeeting(course: "GS2004 선형대수학", start: at(8, 18, 30), end: at(8, 19, 30), room: "C110")
@@ -34,7 +34,9 @@ struct CalendarImportTests {
         #expect(r.file.sessions.first { $0.id == existing.id }?.date == at(8, 14, 30))
         #expect(r.file.sessions.first { $0.id == existing.id }?.topic == "Vectors")
         // Week 2 keeps 2-1 for the day's first meeting; the recitation that evening is a session of its own.
-        #expect(r.added.filter { $0.week == 2 }.map { [$0.date, Double($0.index)] as [AnyHashable] } == [[at(8, 18, 30), 2.0], [at(10, 14, 30), 3.0]])
+        let week2 = r.added.filter { $0.week == 2 }
+        #expect(week2.map(\.date) == [at(8, 18, 30), at(10, 14, 30)])
+        #expect(week2.map(r.file.name(of:)) == ["2주차-2", "2주차-3"])
         #expect(r.added.filter { $0.week == 4 }.map(\.date) == [at(22, 14, 30), at(23, 21)])
         #expect(r.file.course.schedule.map(\.weekday) == [2])
         #expect(r.cancelled.isEmpty)
@@ -44,7 +46,7 @@ struct CalendarImportTests {
     }
 
     @Test func linksNotesNamedAfterTopics() {
-        var lab = Session(device: device, at: now, week: 3, index: 1, date: at(16, 10, 30))
+        var lab = Session(device: device, at: now, week: 3, date: at(16, 10, 30))
         lab.topic = "Accuracy & Precision"
         let taken = UUID(), free = UUID()
         let links = CalendarImporter.noteLinks(sessions: [lab], notes: [
@@ -55,8 +57,8 @@ struct CalendarImportTests {
 
     /// A day the calendar skips inside its span is a cancelled class; the session stays, marked.
     @Test func sessionsOnSkippedDaysAreCancelled() {
-        let holiday = Session(device: device, at: now, week: 6, index: 1, date: calendar.startOfDay(for: at(5, 0, month: 10)))
-        let late = Session(device: device, at: now, week: 16, index: 1, date: at(14, 14, 30, month: 12))
+        let holiday = Session(device: device, at: now, week: 6, date: calendar.startOfDay(for: at(5, 0, month: 10)))
+        let late = Session(device: device, at: now, week: 16, date: at(14, 14, 30, month: 12))
         let file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"), sessions: [holiday, late])
         var after = lecture(7)
         after.start = at(7, 14, 30, month: 10)
