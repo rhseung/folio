@@ -74,7 +74,8 @@ enum NoteLines {
             // spare and keeps the fixed height, which pads it above and below as any other line.
             let line = ascent + descent
             let big = line > 0 ? pictures.filter { $0.height > 2 * line } : []
-            let tall = words || big.count < pictures.count ? big : []
+            let uneven = big.count < pictures.count || Set(big.map(\.height)).count > 1
+            let tall = words || uneven ? big : []
             for bounds in pictures where !tall.contains(bounds) {
                 ascent = max(ascent, bounds.maxY)
                 descent = max(descent, -bounds.minY)

@@ -256,8 +256,10 @@ struct NoteReaderTests {
 
     /// Unbounded, a picture's line took no gap, so the text under it sat closer than any two lines of text; and a
     /// paragraph of pictures alone fixed every line to the tallest, so a small picture under a big one stood as tall.
-    @Test func aPicturesLineKeepsTheGapAndAShortPictureItsHeight() throws {
-        let (view, _) = Self.reader("![큰 그림](assets/sample.png)\n첫 줄\n\n![큰 그림](assets/sample.png)\n![작은 그림|40](assets/sample.png)")
+    /// Both sizes of the second picture: shorter than the text's double, and taller but still short of the first.
+    @Test(arguments: [40, 200])
+    func aPicturesLineKeepsTheGapAndAShortPictureItsHeight(small: Int) throws {
+        let (view, _) = Self.reader("![큰 그림](assets/sample.png)\n첫 줄\n\n![큰 그림](assets/sample.png)\n![작은 그림|\(small)](assets/sample.png)")
         let manager = try #require(view.textLayoutManager)
         var fragments: [NSTextLayoutFragment] = []
         manager.enumerateTextLayoutFragments(from: manager.documentRange.location, options: []) { fragments.append($0); return true }
@@ -266,7 +268,8 @@ struct NoteReaderTests {
         let text = fragments[0].textLineFragments
         #expect(text.count == 2 && text[1].typographicBounds.minY - text[0].typographicBounds.maxY == gap)
         let pictures = fragments[1].textLineFragments
-        #expect(pictures.count == 2 && pictures[1].typographicBounds.height < pictures[0].typographicBounds.height / 2)
+        // Fixed to the tallest, both lines were the same height.
+        #expect(pictures.count == 2 && pictures[1].typographicBounds.height < pictures[0].typographicBounds.height, "\(small)")
     }
 
     /// A picture, formula or table alone in its paragraph has no shorter line to keep; freed like one beside text, its
