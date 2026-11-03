@@ -296,6 +296,49 @@ struct NoteReaderTests {
         }
     }
 
+    static func boxPadding(_ view: NSTextView, top: String, bottom: String) throws -> (top: CGFloat, bottom: CGFloat) {
+        let manager = try #require(view.textLayoutManager)
+        manager.ensureLayout(for: manager.documentRange)
+        let shown = view.string as NSString
+        func line(_ word: String) throws -> (NoteFragment, NSTextLineFragment, NSFont) {
+            let at = shown.range(of: word).location
+            let location = try #require(manager.location(manager.documentRange.location, offsetBy: at))
+            let fragment = try #require(manager.textLayoutFragment(for: location) as? NoteFragment)
+            let inFragment = at - manager.offset(from: manager.documentRange.location, to: fragment.rangeInElement.location)
+            let l = try #require(fragment.textLineFragments.first { NSLocationInRange(inFragment, $0.characterRange) })
+            let font = try #require(view.textStorage?.attribute(.font, at: at, effectiveRange: nil) as? NSFont)
+            return (fragment, l, font)
+        }
+        func baseline(_ f: NoteFragment, _ l: NSTextLineFragment) -> CGFloat { f.layoutFragmentFrame.minY + l.typographicBounds.minY + l.glyphOrigin.y - f.raise }
+        let (tf, tl, tfont) = try line(top), (bf, bl, bfont) = try line(bottom)
+        let boxTop = tf.layoutFragmentFrame.minY + (try #require(tf.boxRect)).minY
+        let boxBottom = bf.layoutFragmentFrame.minY + (try #require(bf.boxRect)).maxY
+        return (baseline(tf, tl) - tfont.ascender - boxTop, boxBottom - (baseline(bf, bl) - bfont.descender))
+    }
+
+    /// The gap a picture's paragraph keeps as line spacing falls over each line but the note's first and under none,
+    /// so left alone it moved the paragraph's text half a gap down and its last line half a gap closer to what follows,
+    /// a box's padding included. Next to a picture, the text keeps its place and a box its padding.
+    @Test(arguments: [
+        ("> [!note] 제목\n> 설명\n> 끝", "> [!note] 제목\n> 설명\n> ![그림](assets/sample.png)\n> 끝"),
+        ("> 설명\n> 끝", "> 설명\n> ![그림](assets/sample.png)\n> 끝"),
+        ("설명\n끝", "설명\n![그림](assets/sample.png)\n끝"),
+    ])
+    func textByAPictureKeepsItsPlaceAndItsBoxsPadding(plain: String, pictured: String) throws {
+        func measure(_ source: String) throws -> [CGFloat] {
+            let (view, _) = Self.reader("앞\n\n" + source + "\n\n뒤")
+            NoteRender.write(view, "reader-padding-\(source.hasPrefix("> [!") ? "callout" : source.hasPrefix(">") ? "quote" : "text")-\(source.contains("![") ? "picture" : "plain")")
+            let above = try #require(NoteRender.drawnBaseline(view, of: "앞")), first = try #require(NoteRender.drawnBaseline(view, of: "설명"))
+            let last = try #require(NoteRender.drawnBaseline(view, of: "끝")), below = try #require(NoteRender.drawnBaseline(view, of: "뒤"))
+            guard source.hasPrefix(">") else { return [first - above, below - last] }
+            // The box's top is over its first paragraph, a callout's title.
+            let pad = try Self.boxPadding(view, top: source.hasPrefix("> [!") ? "제목" : "설명", bottom: "끝")
+            return [first - above, below - last, pad.top, pad.bottom]
+        }
+        let a = try measure(plain), b = try measure(pictured)
+        #expect(zip(a, b).allSatisfy { abs($0 - $1) <= 0.5 }, "\(a) vs \(b)")
+    }
+
     @Test func aParagraphWithAPictureStillWritesBack() throws {
         let edits = Edits()
         let source = "![그림](assets/sample.png)\n첫 줄\n둘째 줄"

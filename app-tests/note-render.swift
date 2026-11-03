@@ -54,6 +54,17 @@ import FolioDomain
         return (baseline - font.ascender, line.typographicBounds.height - baseline + font.descender)
     }
 
+    /// Where the text holding `word` is drawn, in the view: TextKit's baseline less the fragment's raise.
+    static func drawnBaseline(_ view: NSTextView, of word: String) -> CGFloat? {
+        let at = (view.string as NSString).range(of: word).location
+        guard at != NSNotFound, let manager = view.textLayoutManager,
+              let location = manager.location(manager.documentRange.location, offsetBy: at),
+              let fragment = manager.textLayoutFragment(for: location) else { return nil }
+        let inFragment = at - manager.offset(from: manager.documentRange.location, to: fragment.rangeInElement.location)
+        guard let line = fragment.textLineFragments.first(where: { NSLocationInRange(inFragment, $0.characterRange) }) else { return nil }
+        return fragment.layoutFragmentFrame.minY + line.typographicBounds.minY + line.glyphOrigin.y - ((fragment as? NoteFragment)?.raise ?? 0)
+    }
+
     static func write(_ view: NSView, _ name: String) {
         guard let dir = ProcessInfo.processInfo.environment["FOLIO_NOTE_RENDER"] else { return }
         guard let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }

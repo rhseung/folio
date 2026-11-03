@@ -84,15 +84,19 @@ enum NoteLines {
                 .mutableCopy() as? NSMutableParagraphStyle else { continue }
             let natural = ascent + descent
             let height = ((natural + style.lineSpacing) / 2).rounded() * 2
-            // Unbounded, a line takes its own height and nothing for the gap, so a picture's line keeps the gap as
-            // spacing under every line, and the text's lines are that much shorter to come out the same height. The
-            // text stands in the middle of that shorter line, where the caret and selection are, so the paragraph's
-            // last line has half a gap more under it than other text, which comes off the paragraph's spacing. Moving
-            // the other half over the paragraph can't be done: any spacing before it brings a whole gap with it.
+            // Unbounded, a line takes its own height and nothing for the gap, so a picture's line keeps the gap as line
+            // spacing, and the text's lines are that much shorter to come out the same height, with their text in the
+            // middle, where the caret and selection are. TextKit puts the gap over every line but the note's first and
+            // none under the last, so half a gap moves from the spacing before the paragraph to the spacing after it
+            // (a box's padding is part of both). Where there's less than half a gap before, the rest comes off the
+            // paragraph above, unless that's the end of another box, whose padding it is.
             let gap = tall.isEmpty ? 0 : style.lineSpacing
             let box = height - gap
             style.lineSpacing = gap
-            style.paragraphSpacing = max(0, style.paragraphSpacing - gap / 2)
+            style.paragraphSpacing += gap / 2
+            let short = max(0, gap / 2 - style.paragraphSpacingBefore)
+            style.paragraphSpacingBefore = max(0, style.paragraphSpacingBefore - gap / 2)
+            if short > 0, p.location > 0 { trim(text, above: p, by: short) }
             style.minimumLineHeight = box
             style.maximumLineHeight = tall.isEmpty ? height : 0
             text.addAttribute(.paragraphStyle, value: style, range: p)
@@ -102,6 +106,16 @@ enum NoteLines {
             text.addAttribute(.noteRaise, value: (raise * 2).rounded() / 2, range: p)
             text.addAttribute(.noteCaret, value: natural.rounded(), range: p)
         }
+    }
+
+    private static func trim(_ text: NSMutableAttributedString, above p: NSRange, by amount: CGFloat) {
+        let above = (text.string as NSString).paragraphRange(for: NSRange(location: p.location - 1, length: 0))
+        let box = text.attribute(.noteBox, at: above.location, effectiveRange: nil) as? NoteBox
+        guard box == nil || box === text.attribute(.noteBox, at: p.location, effectiveRange: nil) as? NoteBox || box?.last == false,
+              let style = (text.attribute(.paragraphStyle, at: above.location, effectiveRange: nil) as? NSParagraphStyle)?
+                .mutableCopy() as? NSMutableParagraphStyle else { return }
+        style.paragraphSpacing = max(0, style.paragraphSpacing - amount)
+        text.addAttribute(.paragraphStyle, value: style, range: above)
     }
 
     /// The text view's caret is the whole line once its height is fixed, a gap taller than the text it stands in.
