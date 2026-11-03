@@ -4,7 +4,8 @@ import FolioStorage
 import Foundation
 import Observation
 
-/// One text file of a course open for editing, and for a `.tex` its PDF: beside a material, in `Notes/Exports` for a note.
+/// One text file of a course open for editing, and for a `.tex` its PDF: beside a material, where `note build` puts a
+/// note's.
 @MainActor @Observable
 final class TextFileModel {
     enum Source {

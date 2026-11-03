@@ -216,7 +216,12 @@ struct MaterialNoteStudyTests {
     @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
     func noteBuild() throws {
         let tex = "\\documentclass{article}\n\\begin{document}\nHi\n\\end{document}\n"
-        try h.expectSame(["note", "build", "EC4207/증명"], prepare: { try drop($0, "증명.tex", tex) }) { _ in
+        let id = UUID()
+        let prepare = { (gist: URL) in
+            try NoteAdd(id: id, course: course, title: "증명", format: .tex).run(ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now))
+            try drop(gist, "증명.tex", tex)
+        }
+        try h.expectSame(["note", "build", "EC4207/증명"], prepare: prepare) { _ in
             NoteBuild(course: course, note: "Notes/증명.tex")
         }
     }

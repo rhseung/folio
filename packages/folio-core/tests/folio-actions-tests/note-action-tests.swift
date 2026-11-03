@@ -104,6 +104,14 @@ struct NoteActionTests {
         #expect(try text("Notes/Exports/증명.pdf") == "%PDF again")
     }
 
+    /// Without an entry there is nowhere to keep the hash, so the next build couldn't tell its own PDF.
+    @Test func aNoteWithoutAnEntryIsNotBuilt() throws {
+        try "\\documentclass{article}\n".write(to: try store().url.appending(path: "Notes/바깥.tex"), atomically: true, encoding: .utf8)
+        #expect(throws: ActionError.rule("course.json에 항목이 없는 노트라서 빌드하지 않습니다: Notes/바깥.tex. 먼저 folio note adopt로 들입니다")) {
+            try run(NoteBuild(course: Self.graphTheory, note: "Notes/바깥.tex"))
+        }
+    }
+
     @Test func anExamSummarysPDFGoesToExercises() throws {
         try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "중간 정리", kind: .examSummary, format: .tex))
         let folder = TexEngine.outputFolder(for: try store().fileURL("Notes/중간 정리.tex"))
@@ -112,6 +120,7 @@ struct NoteActionTests {
         try Data("%PDF".utf8).write(to: built)
         try run(NoteBuild(course: Self.graphTheory, note: "Notes/중간 정리.tex", pdf: built.path))
         #expect(try text("Exercises/중간 정리.pdf") == "%PDF")
+        #expect(try file().materials.contains { $0.path == "Exercises/중간 정리.pdf" })
     }
 
     /// Unknown keys stay in the file; references to things that are gone are dropped; an id another note already has

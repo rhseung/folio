@@ -166,7 +166,7 @@ Me/GIST/
       Exams/
         Past/                  # 족보. 2024 Midterm (소순범).pdf
         Midterm/               # 이 시험 하나에 딸린 파일. Guideline, Seating, 직접 만든 문제집
-      Notes/                   # Folio 마크다운 노트
+      Notes/                   # Folio 노트(마크다운 .md, LaTeX .tex)
         assets/                # 노트에 넣은 그림과 파일
       Ink/                     # PencilKit 필기 (.drawing)
       Recordings/              # 강의 녹음(.m4a)과 받아쓰기(.transcript.json). 2주차-1.m4a

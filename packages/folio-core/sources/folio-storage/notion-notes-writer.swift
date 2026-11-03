@@ -3,10 +3,8 @@ import FolioMarkdown
 import Foundation
 
 extension CourseStore {
-    /// Notes whose ID already exists and existing assets are left alone. Returns where each new note went; the caller
-    /// adds their entries to course.json.
-    @discardableResult
-    /// Writes each plan that has a place in `urls`. The caller picks the places, so a dry run reports the same paths.
+    /// Writes each plan that has a place in `urls`; existing assets are left alone. The caller picks the places, so a
+    /// dry run reports the same paths, and adds the entries to course.json.
     public func writeNotionNotes(_ plans: [NotionNotePlan], dump: NotionCourseDump, folder: URL, links: [String: String], at urls: [UUID: URL]) throws {
         guard plans.contains(where: { urls[$0.id] != nil }) else { return }
         var images: [String: String] = [:]

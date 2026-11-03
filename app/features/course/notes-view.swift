@@ -112,13 +112,15 @@ struct NotesView: View {
     }
 
     var body: some View {
-        if let note = model.note(selection), note.format == .tex {
-            TextFileView(workspace: model.workspace, course: model.course, note: note).id(note.url)
-        } else if let note = model.note(selection) {
-            NoteEditor(workspace: model.workspace, course: model.course, note: note, insert: insert) { title in
-                if let id = model.noteId(titled: title) { open(id) }
+        if let note = model.note(selection) {
+            if note.format == .tex {
+                TextFileView(workspace: model.workspace, course: model.course, note: note).id(note.url)
+            } else {
+                NoteEditor(workspace: model.workspace, course: model.course, note: note, insert: insert) { title in
+                    if let id = model.noteId(titled: title) { open(id) }
+                }
+                .id(note.url)
             }
-            .id(note.url)
         } else {
             ContentUnavailableView(String(localized: .notesChoose), systemImage: "doc.text", description: Text(.notesChooseDetail))
                 .frame(maxWidth: .infinity, maxHeight: .infinity)

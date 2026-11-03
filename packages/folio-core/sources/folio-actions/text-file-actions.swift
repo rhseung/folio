@@ -133,9 +133,13 @@ public struct NoteBuild {
         guard file.format == .tex else { throw ActionError.rule(String(localized: .errorMaterialNotTex(note))) }
         let target = store.exportPath(of: file)
         let exists = FileManager.default.fileExists(atPath: store.fileURL(target).path)
-        let entry = try ctx.file(course).notes.first { $0.id == file.meta.id }
+        // The entry holds the hash that tells this build's PDF from someone else's; without one every later build would
+        // ask about the PDF it just made.
+        guard let entry = try ctx.file(course).notes.first(where: { $0.id == file.meta.id }) else {
+            throw ActionError.rule(String(localized: .errorNoteBuildNoEntry(note)))
+        }
         var ours = false
-        if exists, let made = entry?.builtHash { ours = try made == store.hash(target) }
+        if exists, let made = entry.builtHash { ours = try made == store.hash(target) }
         if exists, !ours, !overwrite {
             throw ActionError.conflict(String(localized: .errorBuildWouldReplace(target)))
         }
@@ -149,10 +153,12 @@ public struct NoteBuild {
             try FileManager.default.createDirectory(at: store.fileURL(target).deletingLastPathComponent(), withIntermediateDirectories: true)
             try store.replaceFile(target, with: built, keepOld: exists && !ours)
         }
-        guard let id = entry?.id else { return }
         let hash = try store.hash(target)
         try ctx.edit(course) { f in
-            if let i = f.notes.firstIndex(where: { $0.id == id }) { f.notes[i].builtHash = hash }
+            if let i = f.notes.firstIndex(where: { $0.id == entry.id }) { f.notes[i].builtHash = hash }
+            // An exam summary's PDF lands in Exercises, a material folder, so it is tracked right away as material build does.
+            try store.refreshMaterials(in: &f, device: ctx.device, now: ctx.now)
+            if let i = f.materials.firstIndex(where: { $0.path == target }) { try store.rehash(f.materials[i].id, in: &f, device: ctx.device, now: ctx.now) }
         }
     }
 }

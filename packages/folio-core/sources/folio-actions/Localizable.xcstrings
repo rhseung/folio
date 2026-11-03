@@ -507,6 +507,17 @@
         }
       }
     },
+    "error.note-build.no-entry": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "course.json에 항목이 없는 노트라서 빌드하지 않습니다: %@. 먼저 folio note adopt로 들입니다"
+          }
+        }
+      }
+    },
     "error.note.cancelled-session": {
       "extractionState": "manual",
       "localizations": {
