@@ -74,9 +74,9 @@ public struct ImportNotes {
                 continue
             }
             let store = try ctx.store(dump.coursePageId)
-            // An entry whose file was deleted or renamed outside Folio still holds its id and path; planning that note
-            // again would add a second entry with both.
-            let existing = Set(try ctx.notes(dump.coursePageId).compactMap(\.meta.id)).union(try ctx.file(dump.coursePageId).notes.map(\.id))
+            // Entries, not files: one whose file was deleted or renamed outside Folio still holds its id and path, and
+            // planning that note again would add a second entry with both.
+            let existing = Set(try ctx.file(dump.coursePageId).notes.map(\.id))
             let r = NotionNotesImporter.merge(dump, into: try ctx.file(dump.coursePageId), existingNotes: existing, calendar: ctx.calendar, device: ctx.device, now: ctx.now)
             ctx.note(String(localized: .noteImportNotesCourse(dump.title, r.sessionsAdded, r.notes.count, r.componentsAdded, r.scoresAdded, dump.images.filter { $0.file != nil }.count)))
             for w in r.warnings { ctx.note(String(localized: .noteImportNotesCheck(dump.title, w))) }
