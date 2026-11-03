@@ -292,21 +292,23 @@ struct NoteReaderTests {
             }
             return found
         }
-        for tex in [NoteMath.tex("u in F^2, RR", .asciimath), #"\sqrt{\mathbb{Z}}"#, #"\frac{\mathbb{Q}}{2}"#] {
+        for tex in [NoteMath.tex("u in F^2, RR", .asciimath), NoteMath.tex(#"\sqrt{\mathbb{Z}}"#, .latex), NoteMath.tex(#"\frac{\mathbb{Q}}{2}"#, .latex)] {
             let list = try #require(NoteMath.typeset(tex, display: false, size: 16, color: .black), "\(tex)")
             #expect(fonts(list).contains("KaTeX_AMS-Regular"), "\(tex)")
         }
         // Kerned back to Latin Modern's width, so what SwiftMath placed after the letter stays put.
-        let swapped = try #require(NoteMath.typeset(#"\mathbb{R}^2"#, display: false, size: 16, color: .black))
+        let swapped = try #require(NoteMath.typeset(NoteMath.tex(#"\mathbb{R}^2"#, .latex), display: false, size: 16, color: .black))
+        #expect(fonts(swapped).contains("KaTeX_AMS-Regular"))
         let line = try #require(swapped.subDisplays.first as? MTCTLineDisplay)
         #expect(abs(CTLineGetTypographicBounds(line.line, nil, nil, nil) - line.width) < 0.01)
         // The AMS M is a third wider than Latin Modern's; SwiftMath makes room for it rather than overlapping the next.
         let pair = try #require(NoteMath.picture(#"\mathbb{MM}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false))
         #expect(pair.size.width >= 2 * 0.944 * 16 - 1)
         // A body that isn't plain letters stays as written and still draws, in Latin Modern.
-        // With no room after it, an AMS letter would run into what follows, so the whole formula keeps Latin Modern.
-        for tex in [#"\mathbb{R^2}"#, #"\mathbb{R\times S}"#, #"\mathbb{R} + \mathbb{M^2}"#] {
-            #expect(tex.contains("+") || NoteMath.tex(tex, .latex) == tex)
+        // With no room after it, an AMS letter would run into what follows, so a formula with a body that can't be
+        // split, or a double-struck capital typed as itself, stays as written and all Latin Modern, with no room added.
+        for tex in [#"\mathbb{R^2}"#, #"\mathbb{R\times S}"#, #"\mathbb{M} + \mathbb{R^2}"#, #"ℝ + \mathbb{M}"#] {
+            #expect(NoteMath.tex(tex, .latex) == tex)
             let list = try #require(NoteMath.typeset(NoteMath.tex(tex, .latex), display: false, size: 16, color: .black), "\(tex)")
             #expect(!fonts(list).contains("KaTeX_AMS-Regular"), "\(tex)")
             #expect(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false) != nil, "\(tex)")

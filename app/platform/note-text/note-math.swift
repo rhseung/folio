@@ -71,7 +71,11 @@ final class MathAttachment: NSTextAttachment {}
         edges.right += ceil(box.width + edges.left + edges.right) - (box.width + edges.left + edges.right)
         edges.top += ceil(box.height + edges.top + edges.bottom) - (box.height + edges.top + edges.bottom)
         let canvas = CGSize(width: round(box.width + edges.left + edges.right), height: round(box.height + edges.top + edges.bottom))
-        let result = Picture(image: draw(list, size: canvas, offset: CGPoint(x: edges.left, y: edges.bottom)), size: canvas, descent: list.descent + edges.bottom)
+        guard let image = draw(list, size: canvas, offset: CGPoint(x: edges.left, y: edges.bottom)) else {
+            failed.insert(key)
+            return nil
+        }
+        let result = Picture(image: image, size: canvas, descent: list.descent + edges.bottom)
         cache[key] = result
         return result
     }
@@ -99,11 +103,13 @@ final class MathAttachment: NSTextAttachment {}
         #endif
         guard label.error == nil, let list = label.displayList else { return nil }
         // Rebuilding lines walks every glyph, so formulas without the letters skip it.
-        if Blackboard.reservedEverywhere(tex) { Blackboard.restyle(list) }
+        if Blackboard.reserved(tex) { Blackboard.restyle(list) }
         return list
     }
 
-    private static func draw(_ list: MTMathListDisplay, size: CGSize, offset: CGPoint) -> PlatformImage {
+    /// Nil for a formula with no area (`\,`), which has nothing to draw into.
+    private static func draw(_ list: MTMathListDisplay, size: CGSize, offset: CGPoint) -> PlatformImage? {
+        guard size.width > 0, size.height > 0 else { return nil }
         #if os(macOS)
         // Drawn once, now, so the cache keeps a bitmap and not SwiftMath's display tree, which a deferred drawing
         // handler would have to hold and touch off the main actor. At the sharpest attached screen's scale but never
@@ -112,12 +118,11 @@ final class MathAttachment: NSTextAttachment {}
         let width = Int((size.width * scale).rounded(.up)), height = Int((size.height * scale).rounded(.up))
         guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
                                       space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
-        else { return NSImage(size: size) }
+        else { return nil }
         context.scaleBy(x: scale, y: scale)
         context.translateBy(x: offset.x, y: offset.y)
         list.draw(context)
-        guard let image = context.makeImage() else { return NSImage(size: size) }
-        return NSImage(cgImage: image, size: size)
+        return context.makeImage().map { NSImage(cgImage: $0, size: size) }
         #else
         return UIGraphicsImageRenderer(size: size).image { renderer in
             renderer.cgContext.translateBy(x: 0, y: size.height)
@@ -176,37 +181,40 @@ final class MathAttachment: NSTextAttachment {}
 @MainActor enum Blackboard {
     private static let ams: CGFont? = Bundle.main.url(forResource: "KaTeX_AMS-Regular.ttf", withExtension: nil)
         .flatMap { CGDataProvider(url: $0 as CFURL) }.flatMap { CGFont($0) }
-    private static let capitals = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    nonisolated private static let capitals = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     // Only bodies of plain letters and digits are split; `\mathbb{R^2}` or `\mathbb{R\times S}` split by character
     // would leave `\mathbb{^}` or `\mathbb{\}`, which SwiftMath can't read, so those stay as written.
     private static let mathbb = try! NSRegularExpression(pattern: #"\\mathbb\s*(?:\{([A-Za-z0-9\s]*)\}|([A-Za-z0-9]))"#)
 
     /// Each `\mathbb` capital as its own command followed by its room, so it can be one letter wide in either font.
+    /// All or nothing: a body it can't split (`\mathbb{R^2}`) or a double-struck capital typed as itself (ℝ) would get
+    /// the AMS letter with no room after it, so then the formula is left as written and stays Latin Modern.
     static func reserve(_ tex: String) -> String {
-        guard ams != nil, tex.contains("\\mathbb") else { return tex }
+        guard ams != nil, tex.contains("\\mathbb"),
+              !tex.unicodeScalars.contains(where: { typed.contains($0) }) else { return tex }
         let whole = tex as NSString
+        let matches = mathbb.matches(in: tex, range: NSRange(location: 0, length: whole.length))
+        guard matches.count == tex.components(separatedBy: "\\mathbb").count - 1 else { return tex }
         var out = "", last = 0
-        for match in mathbb.matches(in: tex, range: NSRange(location: 0, length: whole.length)) {
+        for match in matches {
             out += whole.substring(with: NSRange(location: last, length: match.range.location - last))
             let body = match.range(at: 1).location != NSNotFound ? whole.substring(with: match.range(at: 1)) : whole.substring(with: match.range(at: 2))
-            // Lowercase letters and digits have no AMS form; they stay Latin Modern's.
-            out += body.filter { !$0.isWhitespace }.map { letter in
-                guard let room = room(letter) else { return "\\mathbb{\(letter)}" }
-                return "\\mathbb{\(letter)}\\\(room) "
-            }.joined()
+            for letter in body where !letter.isWhitespace {
+                // Lowercase letters and digits have no AMS form; they stay Latin Modern's.
+                guard capitals.contains(letter) else { out += "\\mathbb{\(letter)}"; continue }
+                guard let room = room(letter) else { return tex }
+                out += "\\mathbb{\(letter)}\\\(room) "
+            }
             last = match.range.location + match.range.length
         }
         return out + whole.substring(from: last)
     }
 
-    private static let split = try! NSRegularExpression(pattern: #"\\mathbb\{[A-Za-z0-9]\}"#)
+    /// Whether `reserve` made room, so the formula's double-struck capitals are all ones it can swap.
+    static func reserved(_ tex: String) -> Bool { tex.contains("\\" + roomPrefix) }
 
-    /// Whether the TeX has `\mathbb` letters and `reserve` split every one of them. A body it left whole has no room
-    /// after it, so a wider AMS letter there would run into what follows; such a formula stays all Latin Modern.
-    static func reservedEverywhere(_ tex: String) -> Bool {
-        let all = tex.components(separatedBy: "\\mathbb").count - 1
-        return all > 0 && split.numberOfMatches(in: tex, range: NSRange(location: 0, length: (tex as NSString).length)) == all
-    }
+    private static let roomPrefix = "foliobbroom"
+    private static let typed = Set(capitals.compactMap(doubleStruck))
 
     private static var rooms: [Character: String?] = [:]
 
@@ -226,7 +234,7 @@ final class MathAttachment: NSTextAttachment {}
                let narrow = advance(MathFont.latinModernFont.ctFont(withSize: size), String(scalar)) {
                 // A quad, 18mu, is the font size.
                 space.space = (wide - narrow) / size * 18
-                name = "foliobbroom" + String(letter).lowercased()
+                name = roomPrefix + String(letter).lowercased()
                 MTMathAtomFactory.add(latexSymbol: name!, value: space)
             }
         }
@@ -318,7 +326,7 @@ final class MathAttachment: NSTextAttachment {}
     }
 
     /// Where SwiftMath finds the letter's double-struck form: in Letterlike Symbols for the ones Unicode had first.
-    private static func doubleStruck(_ letter: Character) -> Unicode.Scalar? {
+    nonisolated private static func doubleStruck(_ letter: Character) -> Unicode.Scalar? {
         let older: [Character: UInt32] = ["C": 0x2102, "H": 0x210D, "N": 0x2115, "P": 0x2119, "Q": 0x211A, "R": 0x211D, "Z": 0x2124]
         guard let offset = capitals.firstIndex(of: letter).map({ capitals.distance(from: capitals.startIndex, to: $0) }) else { return nil }
         return Unicode.Scalar(older[letter] ?? 0x1D538 + UInt32(offset))
