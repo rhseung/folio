@@ -140,6 +140,21 @@ struct NoteWidgetTests {
         #expect(web.frame.height == 200)
     }
 
+    /// Content that grows again while the block is following it (a font, an image, a chart drawn a frame later) isn't
+    /// a page sized by its view, and gets all of its height.
+    @Test func aPageThatGrowsTwiceGetsAllOfItsHeight() async throws {
+        let html = """
+        <!doctype html><div id=d style='height:400px'></div>
+        <script>addEventListener('resize', () => { if (innerHeight > 300) d.style.height = '420px' })</script>
+        """
+        let (view, _, _) = try Self.reader(widget: html) { Self.block($0, height: 200) }
+        let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
+        _ = try await Self.fitted(web)
+        for _ in 0..<10 { NoteRender.layout(view); try await Task.sleep(for: .milliseconds(50)) }
+        #expect(web.pageHeight == 420)
+        #expect(web.frame.height == 420)
+    }
+
     @Test func aLongPageGetsAllOfItsHeight() async throws {
         let (view, _, _) = try Self.reader(widget: "<!doctype html><div style='height:6000px'></div>") { Self.block($0) }
         let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
