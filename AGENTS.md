@@ -136,7 +136,7 @@ PageHeader(title: String(localized: .sessionsAdd))   // String을 받는 API
 이 원칙들은 사용자의 실제 학업 자료를 다루기 때문에 반드시 지킵니다.
 
 1. **파일이 원본이다.** 모든 상태는 GIST 폴더 안의 파일(`course.json`, `transcript.json`, 마크다운 노트, `.drawing`, 기기별 `.jsonl` 로그)에 저장한다. 앱 내부의 SQLite는 검색과 집계를 위한 캐시이며, 지워도 파일에서 다시 만들 수 있어야 한다.
-2. **폴더 구조는 Folio가 정한다.** GIST 폴더는 아래 "폴더 구조와 이름 규칙"을 따른다. 과목 폴더의 하위 폴더는 `Syllabus`, `Lectures`, `Exercises`, `Textbooks`, `Assignments/<과제>`, `Exams/Past`, `Exams/<시험>`, `Notes`, `Ink`, `Recordings`, `Archive`, `.folio`만 쓴다. 과제와 시험은 하나당 폴더 하나이고, 시험 폴더는 데이터 모델의 Exam과 1:1로 대응한다. 과제 폴더 안의 파일 이름은 바꾸지 않는다. 예전 학기의 다양한 폴더 이름을 허용하는 분기 코드를 만들지 않는다. 기존 폴더는 일회성 정리 도구로 표준 구조에 맞춘다.
+2. **폴더 구조는 Folio가 정한다.** GIST 폴더는 아래 "폴더 구조와 이름 규칙"을 따른다. 과목 폴더의 하위 폴더는 `Syllabus`, `Lectures`, `Exercises`, `Textbooks`, `Inherited`, `Assignments/<과제>`, `Exams/<시험>`, `Study`, `Notes`, `Ink`, `Recordings`, `Archive`, `.folio`만 쓴다. 과제와 시험은 하나당 폴더 하나이고, 시험 폴더는 데이터 모델의 Exam과 1:1로 대응한다. 과제 폴더 안의 파일 이름은 바꾸지 않는다. 예전 학기의 다양한 폴더 이름을 허용하는 분기 코드를 만들지 않는다. 기존 폴더는 일회성 정리 도구로 표준 구조에 맞춘다.
 3. **삭제와 이동은 사용자 승인 후에만 한다.** 파일 이동, 이름 변경, 삭제는 사용자가 확인 화면에서 승인한 경우에만 수행한다. 수행한 이동과 이름 변경은 `.folio/moves.jsonl`에 기록해 되돌릴 수 있게 한다. Claude가 제안한 분류와 위치도 제안으로만 저장한다.
 4. **쓰기는 원자적으로 한다.** 파일 쓰기는 `NSFileCoordinator`를 거치고, 임시 파일에 쓴 뒤 교체하는 방식으로 한다. iCloud 충돌 사본은 `NSFileVersion`으로 감지한다.
 5. **로그는 추가만 한다.** `.folio/logs/<기기 ID>.jsonl`은 각 기기가 자기 파일에만 줄을 추가한다. 기존 줄을 고치거나 지우지 않는다.
@@ -145,7 +145,7 @@ PageHeader(title: String(localized: .sessionsAdd))   // String을 받는 API
 
 ### 폴더 구조와 이름 규칙
 
-코드의 단일 출처는 `standard-layout.swift`다. 이 절은 그 규칙을 사람이 읽는 형태로 적는다. 과목 폴더는 받은 자료(`Syllabus`, `Lectures`, `Exercises`, `Textbooks`), 해야 할 일(`Assignments`, `Exams`), 내가 만든 것(`Notes`, `Ink`, `Recordings`, `Archive`)으로 나뉜다.
+코드의 단일 출처는 `standard-layout.swift`다. 이 절은 그 규칙을 사람이 읽는 형태로 적는다. 과목 폴더는 출처로만 나뉜다. 받은 것(`Syllabus`, `Lectures`, `Exercises`, `Textbooks`, `Inherited`), 평가 기록(`Assignments/<과제>`, `Exams/<시험>`), 내가 만든 것(`Study`, `Notes`, `Ink`, `Recordings`, `Archive`)이다. 어느 시험이나 단원을 위한 파일인지는 폴더가 아니라 `course.json`의 연결(ID)로 표시한다.
 
 ```text
 Me/GIST/
@@ -158,14 +158,16 @@ Me/GIST/
     EC4207 그래프 이론/
       Syllabus/                # 강의계획서, OT 자료, 수업 운영 안내
       Lectures/                # 강의 슬라이드. 05_Matchings.pdf
-      Exercises/               # 교수가 준 채점 없는 연습 문제, 시험 정리 노트를 빌드한 PDF
+      Exercises/               # 교수가 준 채점 없는 연습 문제만
       Textbooks/               # 교재, 참고서, 해설집
+      Inherited/               # 선배와 이전 학기에서 받은 자료. 원래 이름 그대로
+        관훈 선배 리포트/      # 출처별 하위 폴더는 있어도 되고 없어도 된다
       Assignments/
         HW03/                  # 과제 하나에 폴더 하나. 안의 파일은 원래 이름 유지
         Lab03/                 # 실험 보고서. 매뉴얼은 그 실험 회차의 강의 자료로 Lectures에 둔다
       Exams/
-        Past/                  # 족보. 2024 Midterm (소순범).pdf
-        Midterm/               # 이 시험 하나에 딸린 파일. Guideline, Seating, 직접 만든 문제집
+        Midterm/               # 이 시험의 기록만. 시험 안내, 좌석표, 받은 시험지와 해설, 채점된 답안
+      Study/                   # 직접 만든 파일. 문제집, 모의고사, 요약 PDF와 .tex 원본, 노트를 내보낸 PDF
       Notes/                   # Folio 노트(마크다운 .md, LaTeX .tex)
         assets/                # 노트에 넣은 그림과 파일
       Ink/                     # PencilKit 필기 (.drawing)
@@ -187,8 +189,10 @@ Me/GIST/
 - 과목 폴더는 `<대표 과목코드> <과목명>`이다. 원본은 `course.json`이고, 과목 편집에서 바꾸면 앱이 폴더 이름을 맞춘다(저장 전 새 이름을 보여 주는 것이 승인이며 `moves.jsonl`에 남긴다). 과목 폴더 최상위에는 파일을 두지 않는다. 모든 과목은 과목 폴더와 `course.json`을 가진다. 과목을 만들 때는 `.folio`만 만들고, 하위 폴더는 처음 필요할 때 만든다.
 - `Lectures`의 파일은 `<주차 두 자리>_<제목>`이고, 한 주에 여러 개면 `05-1_`, `05-2_`로 나눈다.
 - `Assignments/<과제>`는 종류 접두어와 두 자리 번호다(`HW`, `Lab`, `Report`, `Project`, `SP`, `Reading`, 평가 항목에 맞춰 추가). 안의 파일 이름은 바꾸지 않는다. 제출본은 교수가 정한 형식을 따라야 하기 때문이다. 문제, 제출본, 해설 같은 역할은 `course.json`에 기록한다. 코드 과제는 프로젝트를 이 폴더에 그대로 두고, `.git`이 있는 폴더는 이름도 바꾸지 않는다.
-- `Exams/Past`의 족보는 `<연도> <Midterm|Final|Quiz> (<출처>)`이고 해설은 같은 이름에 ` Solution`을 붙인다. 시험별 폴더는 Exam과 1:1이다. 새 시험은 제목으로 폴더를 만들고(`Exams/중간고사`), 폴더 이름은 `course.json`에 남겨 제목을 바꿔도 그대로 둔다. 예전 시험의 `Midterm`, `Final`, `Quiz1`도 그대로 쓴다.
-- `Exercises`에는 교수가 준 연습 문제와 시험 정리 노트를 빌드한 PDF를 둔다. 직접 만든 문제집은 대상 시험 폴더에 둔다. 그 밖의 노트를 빌드한 PDF는 `Notes/Exports/<제목>.pdf`에 둔다.
+- 시험별 폴더 `Exams/<시험>`은 Exam과 1:1이고, `Assignments/<과제>`처럼 그 시험의 기록만 둔다. 폴더는 처음 파일이 들어갈 때 만들고, 시험을 추가해도 빈 폴더를 만들지 않는다. 폴더 이름은 새 시험의 제목으로 정하고(`Exams/중간고사`) `course.json`에 남겨, 제목을 바꿔도 그대로 둔다. 예전 시험의 `Midterm`, `Final`, `Quiz1`도 그대로 쓴다.
+- `Inherited`에는 선배와 이전 학기에서 받은 자료를 종류와 상관없이 원래 이름으로 둔다. 출처별 하위 폴더(`Inherited/관훈 선배 리포트/`)는 써도 되고, 낱개 파일은 `Inherited`에 바로 둔다. 족보 시험지(해설 포함)인지는 이름이 아니라 `course.json`의 자료 종류(`pastExam`)로 표시하고, 시험에 쓸 자료는 그 시험에 연결한다(`material link-exam`). `Exams/Past`는 없앴다.
+- `Exercises`에는 교수가 준 채점 없는 연습 문제만 둔다.
+- `Study`에는 직접 만든 파일을 둔다. 문제집, 모의고사, 요약 PDF와 `.tex` 원본, 노트를 빌드한 PDF(`Study/<제목>.pdf`)가 여기 온다. 어느 시험·단원용인지는 `material link-exam`, `material link-unit`으로 연결하고, 시험 화면은 시험 폴더의 파일과 연결된 자료를 함께 센다. Folio 마크다운 노트는 `Notes`에 둔다.
 - 앱 밖의 파일은 복사해서 들여오고, 같은 이름이 있으면 ` 2`를 붙여 덮어쓰지 않는다.
 
 ## 실제 데이터 위치
@@ -202,7 +206,7 @@ Me/GIST/
 
 - `FolioFixtures`에는 가짜 GIST 폴더를 두 벌 둔다. 파일 목록과 내용은 `packages/folio-core/sources/folio-fixtures`에 코드로 있다.
     - `Fixture.standard`: 표준 구조를 따르는 폴더. 앱의 일반 기능 테스트에 쓴다.
-    - `Fixture.legacy`: 현재 실제 폴더처럼 정리되지 않은 폴더. 정리 도구 테스트에만 쓴다. 한국어 하위 폴더(`강의자료`, `노트`, `숙제`, `족보`), 과목마다 다른 영어 하위 폴더(`Lectures`, `Homeworks`, `Exam Review`, `Slow Problems`, `Books`), `족보 (소순범)` 같은 이름, 학기 폴더의 `학사` 폴더와 흩어진 학사 파일, 과목 폴더 최상위의 강의계획서, 교재, 시험 안내, 자리 배치표, `Manuals` 폴더, `.git`이 있는 코드 과제 폴더, 같은 이름의 `.tex`와 PDF, 학업 외 폴더(`과대표`, `GIST OTP`)를 포함한다.
+    - `Fixture.legacy`: 현재 실제 폴더처럼 정리되지 않은 폴더. 정리 도구 테스트에만 쓴다. 한국어 하위 폴더(`강의자료`, `노트`, `숙제`, `족보`), 과목마다 다른 영어 하위 폴더(`Lectures`, `Homeworks`, `Exam Review`, `Slow Problems`, `Books`), `족보 (소순범)` 같은 이름, 학기 폴더의 `학사` 폴더와 흩어진 학사 파일, 과목 폴더 최상위의 강의계획서, 교재, 시험 안내, 자리 배치표, `Manuals` 폴더, `.git`이 있는 코드 과제 폴더, 같은 이름의 `.tex`와 PDF, 학업 외 폴더(`과대표`, `GIST OTP`)를 포함한다. 예전 정리 규칙이 남긴 모양도 넣는다. `Exam Review`를 `Exercises`로 옮긴 기록(`.folio/moves.jsonl`)과 그 파일들, 직접 만든 파일과 빈 퀴즈 폴더가 있는 시험 폴더, 선배 레포트 폴더가 든 `Exams/Past`, `Notes/Exports`다.
 - 정리 도구는 `legacy`를 정리한 결과가 표준 구조를 만족하는지, `moves.jsonl`로 되돌리면 원래 상태와 같아지는지 테스트한다.
 - 성적 계산 테스트에는 지어낸 등급과 손으로 계산한 기대값을 쓴다. 저장소가 공개라서 실제 성적과 GPA는 테스트, 픽스처, 문서에 넣지 않는다.
 - 계산 로직에는 손으로 계산한 예시와 함께, 무작위 입력에서도 지켜져야 하는 성질을 `PropertyBased`(`propertyCheck`)로 검사한다(예: `GradePropertyTests`). 예시가 정답을 고정하고, 성질 테스트는 예시가 놓친 경계를 찾는다. 실패하면 출력된 시드를 `.fixedSeed(...)`로 붙여 다시 돌린다.
@@ -230,7 +234,7 @@ Me/GIST/
 - 에이전트 스킬: 원본은 `packages/folio-core/sources/folio-cli/commands/skill.swift`. 고친 뒤 `mise run cli -- skill > .claude/skills/folio/SKILL.md`로 사본을 맞춘다(테스트가 확인한다). 다른 에이전트에는 `folio skill --install <스킬 폴더>`
 - 액션 커버리지: `mise run cli -- actions --check`. 모든 액션에 명령과 동등성 테스트가 있고 앱이 액션 밖에서 쓰지 않는지 본다. `mise run test`가 함께 돌린다
 - 구조 검사: `check`
-- 폴더 정리: `cleanup plan --out plan.json [--skip <경로>]`, 검토 뒤 `cleanup apply --plan plan.json --backup <iCloud 밖 폴더> [--include-flagged]`, 되돌리기는 `cleanup undo <batch ID>`
+- 폴더 정리: `cleanup plan --out plan.json [--skip <경로>]`, 검토 뒤 `cleanup apply --plan plan.json --backup <iCloud 밖 폴더> [--include-flagged]`, 되돌리기는 `cleanup undo <batch ID>`. 계획은 `Exams/Past`를 `Inherited`로(낱개 파일은 족보로 표시), `Exam Review`와 `moves.jsonl`이 `Exam Review`에서 왔다고 기록한 `Exercises`의 파일을 `Study`로(시험 연결), `Notes/Exports`를 `Study`로 옮기고 빈 시험 폴더를 지운다. 출처가 불확실한 파일(그런 `Exercises`에 섞인 나머지, 이름에 정리·요약·대비·mock이 든 파일)은 검토 표시라 `--include-flagged` 없이는 옮기지 않는다. 되돌려도 `course.json`에 쓴 연결과 족보 표시는 남는다
 - 노션 가져오기: `import notion <export.json>`. `export.json`은 Notion MCP로 읽은 내용을 `NotionExport` 형식으로 담은 파일이며, 실제 학업 데이터라 저장소에 넣지 않는다. 새 파일만 만들고 기존 파일은 덮어쓰지 않는다
 - 노션 강의 정리와 점수: `import notes <덤프 폴더>`. 덤프 폴더는 과목마다 `<노션 페이지 ID>/index.json`, `notes/`, `assets/`를 가진다(`NotionCourseDump`). 노트 ID는 노션 페이지 ID라 다시 실행해도 중복되지 않고, 기존 항목은 덧붙이기만 한다
 - 자료 등록과 과제 폴더 반영: `material track [<과목>]`. 과목을 빼면 모든 과목의 파일을 추적 목록에 넣고, `Assignments/` 폴더 중 과제가 없는 것에 과제를 만든다
