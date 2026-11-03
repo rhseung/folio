@@ -526,7 +526,11 @@ struct ReaderBlock {
 
     private mutating func displayMath(_ tex: String, _ ctx: Context) {
         let style = Self.paragraph(ctx, before: 10, after: NoteLook.blockGap, alignment: .center)
-        if let picture = NoteMath.picture(tex, syntax: syntax, display: true, size: NoteLook.body * 1.1, color: NoteLook.text, dark: dark) {
+        let room = width - ctx.indent * 2
+        let picture = NoteMath.picture(tex, syntax: syntax, display: true, size: NoteLook.body * 1.1, color: NoteLook.text, dark: dark)
+        if let picture, picture.size.width > room {
+            out.append(NSAttributedString(attachment: WideMathAttachment(picture: picture, width: room, below: 12), attributes: attributes(ctx, style)))
+        } else if let picture {
             let attachment = MathAttachment()
             attachment.image = picture.image
             attachment.bounds = CGRect(x: 0, y: -picture.descent, width: picture.size.width, height: picture.size.height)

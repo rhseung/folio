@@ -224,6 +224,32 @@ struct NoteReaderTests {
         #expect(edits.all.first.map { [String($0.from), String($0.to), $0.old, $0.new] } == ["5", "5", "둘째 문단", "둘째 문단 더\n새 줄"])
     }
 
+    static let wideMath = """
+    where $\\tilde{A}_{1j}$: the $(n-1) \\times (n-1)$ matrix obtained from A by deleting the 1st row and the jth column of it.
+
+    Ex. Let
+
+    $$A = \\begin{pmatrix} 2 & 0 & 0 & 1 \\\\ 0 & 1 & 0 & 0 \\\\ 1 & 0 & -1 & 0 \\\\ 1 & 1 & 1 & 1 \\end{pmatrix} \\det(A) = (-1)^{1+1} \\cdot 2 \\cdot \\det\\begin{pmatrix} 1 & 0 & 0 \\\\ 0 & -1 & 0 \\\\ 1 & 1 & 1 \\end{pmatrix} + (-1)^{1+2} \\cdot 0 \\cdot \\det\\begin{pmatrix} 0 & 0 & 0 \\\\ 1 & -1 & 0 \\\\ 1 & 1 & 1 \\end{pmatrix} + (-1)^{1+3} \\cdot 0 \\cdot 0$$
+
+    Then the last line.
+    """
+
+    /// Wider than the column, a formula scrolls on its own; left in the text, TextKit moved the whole page over to show
+    /// it and cut off the end of every other line.
+    @Test func aWideFormulaScrollsInsteadOfMovingThePage() throws {
+        let (view, _) = Self.reader(Self.wideMath, width: 600)
+        NoteRender.write(view, "reader-wide-math")
+        let shown = view.string as NSString
+        let first = try #require(NoteRender.caret(view, at: shown.range(of: "where").location))
+        let last = try #require(NoteRender.caret(view, at: shown.range(of: "Then").location))
+        let padding = try #require(view.textContainer).lineFragmentPadding
+        #expect(first.minX == padding && last.minX == padding, "\(first) \(last)")
+        let scroll = try #require(view.subviews.compactMap { $0 as? NSScrollView }.first)
+        #expect(scroll.frame.width == view.columnWidth)
+        #expect(try #require(scroll.documentView).frame.width > view.columnWidth)
+        #expect(scroll.frame.minX >= view.textContainerOrigin.x - 1)
+    }
+
     @Test func typedMarkupIsEscaped() {
         #expect(ReaderMarkdown.escape("a*b [[c x_y * z") == "a\\*b \\[[c x_y * z")
         #expect(ReaderMarkdown.lines("# 아님\n- 아님\n1. 아님") == "\\# 아님\n\\- 아님\n1\\. 아님")
