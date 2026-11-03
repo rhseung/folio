@@ -333,6 +333,24 @@ struct NoteReaderTests {
         #expect(zip(a, b).allSatisfy { abs($0 - $1) <= 0.5 }, "\(a) vs \(b)")
     }
 
+    /// The half gap a picture's paragraph takes from the one above comes out of the gap outside a box that ends there,
+    /// not out of its padding, and not left over as extra room.
+    @Test(arguments: ["> [!note] 제목\n> 끝", "> 끝", "```\ncode\n```"])
+    func aPictureAfterABoxKeepsTheGapAndThePadding(box: String) throws {
+        func measure(_ tail: String) throws -> [CGFloat] {
+            let (view, _) = Self.reader(box + "\n\n첫 줄\n" + tail)
+            NoteRender.write(view, "reader-after-box-\(box.prefix(3) == "```" ? "code" : box.hasPrefix("> [!") ? "callout" : "quote")-\(tail.contains("![") ? "picture" : "plain")")
+            let at = (view.string as NSString).range(of: "첫 줄").location
+            let end = try #require(NoteRender.line(view, at: at - 1)?.fragment as? NoteFragment)
+            let boxBottom = end.layoutFragmentFrame.minY + (try #require(end.boxRect)).maxY
+            var out = [try #require(NoteRender.drawnBaseline(view, of: "첫 줄")) - boxBottom]
+            if box.hasPrefix(">") { out.append(try Self.boxPadding(view, top: box.hasPrefix("> [!") ? "제목" : "끝", bottom: "끝").bottom) }
+            return out
+        }
+        let a = try measure("둘째"), b = try measure("![그림](assets/sample.png)")
+        #expect(zip(a, b).allSatisfy { abs($0 - $1) <= 0.5 }, "\(a) vs \(b)")
+    }
+
     @Test func aParagraphWithAPictureStillWritesBack() throws {
         let edits = Edits()
         let source = "![그림](assets/sample.png)\n첫 줄\n둘째 줄"
