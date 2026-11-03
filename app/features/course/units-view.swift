@@ -141,9 +141,7 @@ struct UnitsView: View {
                           systemImage: "link.badge.plus", trailing: { EmptyView() }) {
             ForEach(Array(shown.enumerated()), id: \.element.id) { i, s in
                 CardRow(last: i == shown.count - 1 && sessions.count <= shown.count) {
-                    VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                        Text(course.file.title(of: s, calendar: model.workspace.calendar)).lineLimit(1)
-                    }
+                    Text(course.file.title(of: s, calendar: model.workspace.calendar)).lineLimit(1)
                     Spacer(minLength: Theme.Space.m)
                     SessionUnitsPicker(course: course, session: s)
                 }

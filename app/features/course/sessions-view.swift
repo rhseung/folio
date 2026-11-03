@@ -133,6 +133,7 @@ struct SessionsView: View {
 /// A class the schedule still holds, not saved: faint, with a dashed dot. Its menu makes the session first, so a 휴강
 /// or an absence known weeks ahead has something to hang on.
 struct PlannedSessionRow: View {
+    @Environment(\.accent) private var accent
     @Environment(Workspace.self) private var workspace
     let model: SessionsModel
     let item: Workspace.SuggestedSession
@@ -165,6 +166,15 @@ struct PlannedSessionRow: View {
                     Text(line).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit().lineLimit(1)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
+                // Today's class keeps the one-click start a saved session's row has: its rough note and the meeting.
+                if workspace.isStudyToday(date) {
+                    HStack(spacing: Theme.Space.s) {
+                        if let link = item.suggestion.link.flatMap(OnlineLink.url) { JoinOnlineButton(url: link) }
+                        SessionSlot(String(localized: .sessionsSlotRough), symbol: "plus", tint: accent.ink, help: String(localized: .sessionsSlotRoughMakeHelp)) {
+                            SuggestedSessionItems.roughNote(item, workspace, openNote)
+                        }
+                    }
+                }
                 Menu { SuggestedSessionItems(item: item, primary: true, openNote: openNote, editTimes: editTimes) } label: {
                     Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary).frame(width: 24, height: 24).contentShape(.rect)
                 }
