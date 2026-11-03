@@ -21,6 +21,10 @@ final class LectureRecorder {
     /// Words heard but not settled yet; they settle into `lines`.
     private(set) var volatile = ""
     private(set) var bookmarks: [TimeInterval] = []
+    /// Lecture pages on screen in the app while recording.
+    private(set) var pages: [PageVisit] = []
+    /// What the captions were last told; also what the sidebar card's transcript shows.
+    private(set) var context: TranscriptionContext?
     private(set) var locale = Locale(identifier: "ko-KR")
     private(set) var transcriptionNote: String?
 
@@ -102,6 +106,8 @@ final class LectureRecorder {
             lines = []
             volatile = ""
             bookmarks = []
+            pages = []
+            context = nil
             elapsed = 0
             state = .recording
             #if os(iOS)
@@ -182,11 +188,27 @@ final class LectureRecorder {
         state = .recording
     }
 
-    func bookmark() {
-        guard isActive, var recording else { return }
-        bookmarks.append(elapsed)
+    /// The recording as it stands, for saving progress: `recording` holds only what it started with. Its length is the
+    /// audio so far, which is where the page on screen now stops counting; left at 0 it never would.
+    var snapshot: Recording? {
+        guard isActive, var recording else { return nil }
+        recording.duration = elapsed
         recording.bookmarks = bookmarks
-        saveProgress(recording)
+        recording.pages = pages
+        return recording
+    }
+
+    func bookmark() {
+        guard isActive else { return }
+        bookmarks.append(elapsed)
+        if let snapshot { saveProgress(snapshot) }
+    }
+
+    /// `page` (1-based) of a lecture file came on screen, or with nil the file closed.
+    func show(_ material: UUID, page: Int?) {
+        guard let snapshot, let visit = snapshot.visit(material, page: page, at: elapsed) else { return }
+        pages.append(visit)
+        if let latest = self.snapshot { saveProgress(latest) }
     }
 
     func stop() async -> (Recording, LectureTranscript)? {
@@ -199,7 +221,8 @@ final class LectureRecorder {
         if !volatile.isEmpty { lines.append(.init(start: lines.last?.end ?? 0, end: seconds, text: volatile)) }
         recording.duration = seconds
         recording.bookmarks = bookmarks
-        let transcript = LectureTranscript(locale: locale.identifier, lines: lines)
+        recording.pages = pages
+        let transcript = LectureTranscript(locale: locale.identifier, lines: lines, context: context)
         teardown()
         state = .idle
         return (recording, transcript)
@@ -212,7 +235,7 @@ final class LectureRecorder {
         sink?.close()
         if let recording, !lines.isEmpty || !volatile.isEmpty {
             let heard = volatile.isEmpty ? lines : lines + [.init(start: lines.last?.end ?? 0, end: elapsed, text: volatile)]
-            saveTranscript(recording, LectureTranscript(locale: locale.identifier, lines: heard))
+            saveTranscript(recording, LectureTranscript(locale: locale.identifier, lines: heard, context: context))
         }
         teardown()
         state = .idle
@@ -245,18 +268,30 @@ final class LectureRecorder {
             // Saved as lines settle (at most every few seconds), so a crash keeps what was said.
             if let recording, Date.now.timeIntervalSince(lastTranscriptSave) > 5 {
                 lastTranscriptSave = .now
-                saveTranscript(recording, LectureTranscript(locale: locale.identifier, lines: lines))
+                saveTranscript(recording, LectureTranscript(locale: locale.identifier, lines: lines, context: context))
             }
         } else {
             volatile = text
         }
     }
 
-    /// Given once recording runs: the slides are read from the course folder, which may first have to download.
-    func use(_ hints: TranscriptionHints, for recording: UUID) async {
-        guard current == recording, let analyzer else { return }
+    /// Given once recording runs, and again when the pages on screen change: the slides are read from the course
+    /// folder, which may first have to download. Kept without captions too, to show what the transcript will hear.
+    func use(_ context: TranscriptionContext, hints: TranscriptionHints, for recording: UUID, telling: Int) async {
+        guard current == recording, telling == tellings else { return }
+        self.context = context
+        guard let analyzer else { return }
         try? await analyzer.setContext(SpeechAssets.context(hints))
     }
+
+    /// Numbers each reading of the slides. A download can make an earlier reading finish after a later one, and its
+    /// narrower pages would then overwrite what the captions were told.
+    func telling() -> Int {
+        tellings += 1
+        return tellings
+    }
+
+    @ObservationIgnored private var tellings = 0
 
     /// The clock stops first. It restarts an engine it finds stopped, and stopping awaits the transcriber for seconds:
     /// it put the microphone back on with a fresh tap, and the next recording's tap on the same bus crashed the app.
@@ -275,6 +310,7 @@ final class LectureRecorder {
         analyzer = nil
         level = 0
         transcriptionNote = nil
+        context = nil
         #if os(iOS)
         UIApplication.shared.isIdleTimerDisabled = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)

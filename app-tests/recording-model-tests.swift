@@ -154,6 +154,109 @@ struct RecordingBarModelTests {
     }
 }
 
+/// A class of graph theory with the matchings slides tracked, and a recording of it with a transcript.
+@MainActor
+struct TranscriptionContextModelTests {
+    let workspace: Workspace
+    let session: UUID
+    let slides: FolioDomain.Material
+
+    init() throws {
+        workspace = try fixtureWorkspace()
+        workspace.run(MaterialTrack(course: graphTheory))
+        session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now))?.made)
+        slides = try #require(workspace.course(graphTheory)?.file.materials.first { $0.path == "Lectures/05_Matchings.pdf" })
+    }
+
+    var file: CourseFile { workspace.course(graphTheory)!.file }
+    var store: CourseStore { workspace.course(graphTheory)!.store }
+
+    func player(context: TranscriptionContext?, lines: Bool = true, pages: [PageVisit] = []) throws -> RecordingPlayerModel {
+        let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a", duration: 300, pages: pages)
+        try FileManager.default.createDirectory(at: store.recordingsURL, withIntermediateDirectories: true)
+        try Data("audio".utf8).write(to: store.fileURL(recording.file))
+        try store.saveTranscript(LectureTranscript(locale: "ko-KR", lines: lines ? [.init(start: 0, end: 5, text: "매칭")] : [], context: context), of: recording)
+        let ctx = ActionContext(gist: try #require(workspace.gist), device: workspace.device, now: workspace.now)
+        try ctx.edit(graphTheory) { $0.recordings = [recording] }
+        workspace.reload()
+        return RecordingPlayerModel(workspace: workspace, courseId: graphTheory, store: store, recording: recording)
+    }
+
+    func current() throws -> TranscriptionContext {
+        file.transcriptionContext(for: try #require(file.sessions.first { $0.id == session }))
+    }
+
+    @Test func showsWhatTheTranscriptWasToldAndNoticesLinksSince() throws {
+        workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: 3, lastPage: 12))
+        let model = try player(context: try current().reading("matching matching augmenting path augmenting path"))
+        #expect(model.showsContext && model.contextNote == nil && model.contextTermsRead)
+        #expect(model.shownContext?.slides.map(\.path) == ["Lectures/05_Matchings.pdf"])
+        #expect(model.contextSummary.hasPrefix("05_Matchings.pdf 3–12쪽"))
+        #expect(!model.contextChanged)
+
+        workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: 3, lastPage: 20))
+        #expect(model.contextChanged)
+        // Still what it was told, not the new range.
+        #expect(model.shownContext?.slides.first?.last == 12)
+    }
+
+    @Test func noSlidesSaysWhatWasUsedInsteadWithoutAWarning() throws {
+        let bare = try player(context: try current())
+        #expect(bare.contextSummary == String(localized: .recordingContextNothing))
+        let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
+        workspace.run(UnitLink(course: graphTheory, unit: unit, sessions: [session]))
+        let withUnit = try player(context: try current())
+        #expect(withUnit.contextSummary == String(localized: .recordingContextNoSlides))
+        #expect(withUnit.shownContext?.topics == ["매칭"])
+        #expect(withUnit.materialsTarget == SearchTarget(courseId: graphTheory, section: .materials))
+    }
+
+    @Test func anOldTranscriptSaysItKeptNoContext() async throws {
+        let model = try player(context: nil)
+        #expect(model.contextNote == String(localized: .recordingContextUnrecorded))
+        // Nothing to compare with, so nothing to redo for.
+        #expect(!model.contextChanged)
+        await model.loadContext()
+        #expect(model.contextTermsRead)
+        let upcoming = try player(context: nil, lines: false)
+        #expect(upcoming.contextNote == String(localized: .recordingContextUpcoming))
+    }
+
+    @Test func pagesKeptWhileRecordingAreTheContext() throws {
+        let model = try player(context: nil, pages: [PageVisit(at: 0, materialId: slides.id, page: 4), PageVisit(at: 60, materialId: slides.id, page: 6)])
+        #expect(model.shownContext?.source == .recording)
+        #expect(model.shownContext?.slides.map { [$0.first, $0.last] } == [[4, 6]])
+    }
+
+    @Test func lecturePagesTurnedWhileRecordingAreKept() throws {
+        let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a")
+        workspace.recorder.stage(recording, course: graphTheory, title: "그래프 이론")
+        workspace.showing(page: 3, of: slides, course: graphTheory)
+        workspace.showing(page: 3, of: slides, course: graphTheory)
+        workspace.showing(page: 4, of: slides, course: graphTheory)
+        // Another course's file, and a file that isn't a lecture, are not this class's slides.
+        workspace.showing(page: 1, of: slides, course: linearAlgebraID)
+        var syllabus = slides
+        syllabus.role = .syllabus
+        workspace.showing(page: 1, of: syllabus, course: graphTheory)
+        workspace.showing(page: nil, of: slides, course: graphTheory)
+        #expect(workspace.recorder.snapshot?.pages.map(\.page) == [3, 4, nil])
+        #expect(workspace.recorder.snapshot?.pages.allSatisfy { $0.materialId == slides.id } == true)
+        // The page on screen counts up to now, not up to a length still 0 while recording.
+        #expect(workspace.recorder.snapshot?.duration == workspace.recorder.elapsed)
+    }
+
+    @Test func theCardSaysItIsStillReadingUntilTheCaptionsAreTold() throws {
+        let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a")
+        workspace.recorder.stage(recording, course: graphTheory, title: "그래프 이론")
+        let model = RecordingBarModel(workspace: workspace)
+        #expect(model.contextSummary == String(localized: .recordingContextReading))
+        #expect(model.materialsTarget == SearchTarget(courseId: graphTheory, section: .materials))
+    }
+
+    let linearAlgebraID = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
+}
+
 private actor Overlap {
     private var running = 0
     private(set) var most = 0

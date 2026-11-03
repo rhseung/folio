@@ -9,6 +9,8 @@ struct RecordingPlayer: View {
     let title: String
     @State private var model: RecordingPlayerModel
     @State private var deleting = false
+    @State private var showingContext = false
+    @Environment(\.searchTarget) private var searchTarget
     private var player: AudioPlayback { model.player }
     private var recording: Recording { model.recording }
 
@@ -66,6 +68,7 @@ struct RecordingPlayer: View {
                     }
                 }
             }
+            if model.showsContext { contextBlock }
             HStack {
                 Button(.recordingCopy, systemImage: "doc.on.doc") { copy(model.transcript?.text ?? "") }.disabled(!model.hasLines)
                     .buttonStyle(.ghost)
@@ -95,10 +98,44 @@ struct RecordingPlayer: View {
         .frame(width: 640, height: model.hasLines ? 680 : nil)
         .background(Theme.Palette.page)
         .font(Theme.Typeface.body)
-        .task { model.load() }
+        .task {
+            model.load()
+            await model.loadContext()
+        }
         .onDisappear { player.stop() }
         // A finished job (or a cancelled one, which leaves the old transcript) has written what there is to show.
         .onChange(of: model.phase == nil) { _, done in if done { model.reloadTranscript() } }
+    }
+
+    /// Folded to one line under the transcript: it explains the transcript, it isn't what the player is for.
+    var contextBlock: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            if model.contextChanged {
+                NoticeCard(title: String(localized: .recordingContextChanged), detail: String(localized: .recordingContextChangedDetail)) {
+                    Button(.recordingRetranscribe) { model.transcribe() }.buttonStyle(.ghost).disabled(!model.canTranscribe)
+                }
+            }
+            Block(title: String(localized: .recordingContextTitle), note: model.contextSummary) {
+                Button { withAnimation(.snappy(duration: 0.25)) { showingContext.toggle() } } label: {
+                    Image(systemName: showingContext ? "chevron.up" : "chevron.down")
+                }
+                .buttonStyle(.ghost)
+                .help(Text(showingContext ? .recordingContextHide : .recordingContextShow))
+            } content: {
+                if showingContext, let context = model.shownContext {
+                    if let note = model.contextNote {
+                        Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                    }
+                    Card {
+                        TranscriptionContextRows(context: context, termsRead: model.contextTermsRead) {
+                            searchTarget.wrappedValue = model.materialsTarget
+                            dismiss()
+                        }
+                    }
+                    .transition(.opacity)
+                }
+            }
+        }
     }
 
     var progressRow: some View {
