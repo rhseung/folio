@@ -16,7 +16,7 @@ func fixtureWorkspace() throws -> Workspace {
     // With FOLIO_GIST set, open() leaves the remembered folder alone, so a test never repoints the real app or `folio`.
     setenv(Workspace.environmentKey, url.path(percentEncoded: false), 1)
     let workspace = Workspace()
-    // Before opening, whose reload recovers leftovers: the default is this Mac's own unfinished recordings.
+    // Before opening, whose reload recovers leftovers: left unset, the first use stops the test (LocalFolders).
     workspace.pendingRecordings = PendingRecordings(url: URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory))
     workspace.open(url, remember: false)
     return workspace

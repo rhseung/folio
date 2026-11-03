@@ -37,8 +37,9 @@ final class Workspace {
     /// Recordings being compressed into their course folder; each runs once even when a reload asks again.
     var finishingRecordings = Set<UUID>()
     @ObservationIgnored var recoveryTried = Set<UUID>()
-    /// Tests, previews and renders point it at a folder of their own, away from this Mac's unfinished recordings.
-    @ObservationIgnored var pendingRecordings = PendingRecordings(url: URL.applicationSupportDirectory.appending(path: "Folio/Recording", directoryHint: .isDirectory))
+    /// Lazy so tests, previews and renders can give a folder of their own before the first use; one that forgets
+    /// stops there (`LocalFolders`) instead of recovering this Mac's unfinished recordings into a fixture.
+    @ObservationIgnored lazy var pendingRecordings = PendingRecordings(url: LocalFolders.applicationSupport("Recording"))
     let transcriptions = TranscriptionQueue()
     @ObservationIgnored private var watcher: GISTWatcher?
     @ObservationIgnored private var lastOwnWrite = Date.distantPast
@@ -61,7 +62,7 @@ final class Workspace {
     init() {
         // The test host and Xcode previews must never open the saved folder: that is the real GIST folder.
         let env = ProcessInfo.processInfo.environment
-        if env["XCTestConfigurationFilePath"] != nil || env["XCODE_RUNNING_FOR_PREVIEWS"] == "1" { return }
+        if LocalFolders.isIsolated(env) { return }
         if let path = env[Self.environmentKey] {
             open(URL(filePath: path, directoryHint: .isDirectory), remember: false)
         } else if let data = UserDefaults.standard.data(forKey: Self.bookmarkKey) {

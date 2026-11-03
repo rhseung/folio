@@ -11,7 +11,7 @@ actor WhisperTranscriber {
     static let shared = WhisperTranscriber()
     /// Large v3 Turbo, compressed: Argmax's recommendation for accuracy on Mac and iPad, about 630MB.
     static let variant = "openai_whisper-large-v3-v20240930_626MB"
-    static let base = URL.applicationSupportDirectory.appending(path: "Folio/Whisper", directoryHint: .isDirectory)
+    static var base: URL { LocalFolders.applicationSupport("Whisper") }
     static var modelFolder: URL { base.appending(path: "models/argmaxinc/whisperkit-coreml/\(variant)", directoryHint: .isDirectory) }
 
     private var kit: WhisperKit?
