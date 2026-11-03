@@ -117,6 +117,18 @@ final class NoteScrollView: NSScrollView {
 
     required init?(coder: NSCoder) { fatalError() }
 
+    // The scroll view takes a click over its document itself and hands it to the document view, so a widget over the
+    // text never got one; a widget under the point gets it. Only widgets: a code block's text view would take the
+    // keyboard, and with it the note's shortcuts and find bar.
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        let hit = super.hitTest(point)
+        guard hit === self || hit === contentView, let document = documentView else { return hit }
+        let inClip = contentView.convert(point, from: superview)
+        guard let under = document.hitTest(inClip), under !== document,
+              sequence(first: under, next: \.superview).contains(where: { $0 is WidgetWebView }) else { return hit }
+        return under
+    }
+
     // The room past the note's end is a content inset, and AppKit insets the scrollers by it too: the track stopped
     // at half the editor's height and near the top of the preview. A negative `scrollerInsets` doesn't undo that, so
     // the vertical scroller is stretched back to the bottom after AppKit places it.
