@@ -203,6 +203,8 @@ struct TranscriptionContextModelTests {
         workspace.showing(page: nil, of: slides, course: graphTheory)
         #expect(workspace.recorder.snapshot?.pages.map(\.page) == [3, 4, nil])
         #expect(workspace.recorder.snapshot?.pages.allSatisfy { $0.materialId == slides.id } == true)
+        // The page on screen counts up to now, not up to a length still 0 while recording.
+        #expect(workspace.recorder.snapshot?.duration == workspace.recorder.elapsed)
     }
 
     @Test func theCardSaysItIsStillReadingUntilTheCaptionsAreTold() throws {

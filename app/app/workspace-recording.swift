@@ -70,8 +70,18 @@ extension Workspace {
 
     func stopRecording() async {
         // Stopped first, whatever happens to the course: the microphone must not stay on.
-        guard let id = recorder.courseId, let (recording, transcript) = await recorder.stop() else { return }
-        if let course = course(id) { perform { try course.store.saveTranscript(transcript, of: recording) } }
+        guard let id = recorder.courseId, let (recording, captions) = await recorder.stop() else { return }
+        if let course = course(id) {
+            var transcript = captions
+            // Told while recording, the captions missed the page still on screen at the end. Made again from the whole
+            // recording it is what the player compares the course with later; left as it was, every recording would
+            // read as told something other than its links.
+            if let session = course.file.sessions.first(where: { $0.id == recording.sessionId }) {
+                let (store, file) = (course.store, course.file)
+                transcript.context = await Task.detached { store.transcriptionContext(file, session: session, recording: recording) }.value
+            }
+            perform { try course.store.saveTranscript(transcript, of: recording) }
+        }
         await finishRecording(PendingRecording(courseId: id, recording: recording))
     }
 

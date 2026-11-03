@@ -175,9 +175,11 @@ final class LectureRecorder {
         state = .recording
     }
 
-    /// The recording as it stands, for saving progress: `recording` holds only what it started with.
+    /// The recording as it stands, for saving progress: `recording` holds only what it started with. Its length is the
+    /// audio so far, which is where the page on screen now stops counting; left at 0 it never would.
     var snapshot: Recording? {
         guard isActive, var recording else { return nil }
+        recording.duration = elapsed
         recording.bookmarks = bookmarks
         recording.pages = pages
         return recording
