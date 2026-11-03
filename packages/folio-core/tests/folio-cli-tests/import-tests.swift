@@ -61,6 +61,13 @@ struct ImportCommandTests {
         #expect(h.cli(["import", "notes", folder], gist: gist).code == 0)
         let notes = try ActionContext(gist: GISTStore(url: gist), device: UUID()).file(Harness.graphTheory).notes.map(\.path)
         #expect(notes.contains("Notes/숙제.md") && notes.contains("Notes/숙제 2.md"))
+
+        // A note deleted in Finder keeps its entry; importing again leaves both alone instead of adding it twice.
+        try FileManager.default.removeItem(at: gist.appending(path: "2026-3/EC4207 그래프 이론/Notes/7주차-2.md"))
+        let again = h.cli(["import", "notes", folder], gist: gist)
+        #expect(again.code == 0, "\(again.err)")
+        let after = try ActionContext(gist: GISTStore(url: gist), device: UUID()).file(Harness.graphTheory).notes
+        #expect(after.filter { $0.id == note }.count == 1 && after.count == notes.count)
     }
 
     @Test func calendar() throws {
