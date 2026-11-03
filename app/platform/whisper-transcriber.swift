@@ -202,6 +202,8 @@ final class WhisperModel {
     fileprivate func finishDownload(ready: Bool) {
         self.ready = ready
         downloading = nil
+        // A failed download sets its reason after this, so success and deletion both clear an old one.
+        failure = nil
         UserDefaults.standard.set(ready, forKey: Self.readyKey)
     }
 
