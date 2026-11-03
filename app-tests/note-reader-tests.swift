@@ -269,6 +269,18 @@ struct NoteReaderTests {
         #expect(pictures.count == 2 && pictures[1].typographicBounds.height < pictures[0].typographicBounds.height / 2)
     }
 
+    /// A picture, formula or table alone in its paragraph has no shorter line to keep; freed like one beside text, its
+    /// line lost the room above it and the block sat high, unlike a smaller one.
+    @Test(arguments: ["![그림](assets/sample.png)", "$$\\begin{pmatrix} 1 \\\\ 2 \\\\ 3 \\\\ 4 \\end{pmatrix}$$", "| 가 |\n| --- |\n| 나 |\n| 다 |\n| 라 |"])
+    func aBlockAloneKeepsItsFixedLine(source: String) throws {
+        let (view, _) = Self.reader("앞\n\n" + source + "\n\n뒤")
+        let storage = try #require(view.textStorage)
+        let at = (storage.string as NSString).range(of: "\u{FFFC}").location
+        #expect(at != NSNotFound)
+        let style = try #require(storage.attribute(.paragraphStyle, at: at, effectiveRange: nil) as? NSParagraphStyle)
+        #expect(style.maximumLineHeight == style.minimumLineHeight && style.lineSpacing == 0, "\(source)")
+    }
+
     /// By a tall picture a line is shorter by the gap kept under it. Centered on the full height, its text sat half the
     /// gap under the middle of the line, and the caret and selection, which follow the line, stood above the text.
     @Test func textByAPictureStandsInTheMiddleOfItsLine() throws {
