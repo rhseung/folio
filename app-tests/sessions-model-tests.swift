@@ -12,15 +12,15 @@ struct SessionsModelTests {
         return try #require(workspace.course(graphTheory)?.file.sessions.first { $0.id == id })
     }
 
-    @Test func subtitleCountsMissingNotesAndUnitsOnlyOnceUnitsExist() throws {
+    @Test func subtitleCountsSessionsAndMissingReviewNotes() throws {
         let workspace = try fixtureWorkspace()
+        // No timetable, so nothing is planned and the count of classes left stays out.
+        workspace.run(CourseSet(course: graphTheory, [.schedule([])]))
         let model = SessionsModel(workspace: workspace, courseId: graphTheory)
         #expect(model.subtitle(try #require(workspace.course(graphTheory)).file) == "회차가 아직 없습니다")
         _ = try session(workspace, daysFromNow: -2)
         _ = try session(workspace, daysFromNow: 3)
         #expect(model.subtitle(try #require(workspace.course(graphTheory)).file) == "회차 2개 · 복습 노트 없음 1")
-        workspace.run(UnitAdd(course: graphTheory, title: "매칭"))
-        #expect(model.subtitle(try #require(workspace.course(graphTheory)).file) == "회차 2개 · 복습 노트 없음 1 · 단원 없음 1")
     }
 
     @Test func aClassWithNoEndOffersJoinUntilTheEndTheFormShows() throws {
@@ -47,17 +47,20 @@ struct SessionsModelTests {
         #expect(!model.offersJoin(s, in: try file(), now: formEnd()))
     }
 
-    @Test func timelineRailsStopAtTheEndsAndColorUpToNow() throws {
+    /// An exam in a week with no class still gets that week, between the classes' own.
+    @Test func weeksHoldTheirClassesAndAnExamOpensItsOwnWeek() throws {
         let workspace = try fixtureWorkspace()
+        workspace.run(CourseSet(course: graphTheory, [.schedule([])]))
         let model = SessionsModel(workspace: workspace, courseId: graphTheory)
         _ = try session(workspace, daysFromNow: -14)
         _ = try session(workspace, daysFromNow: 14)
-        let rows = model.timeline(try #require(workspace.course(graphTheory)).file)
-        #expect(rows.first?.first == true && rows.first?.above == nil)
-        #expect(rows.last?.below == nil)
-        // The past session's line is held, the future one's isn't.
-        let sessions = rows.filter { if case .session = $0.item { true } else { false } }
-        #expect(sessions.map(\.above) == [true, false])
+        workspace.run(ExamAdd(course: graphTheory, title: "중간", start: Calendar.current.date(byAdding: .day, value: 1, to: .now)!))
+        let weeks = model.weeks(try #require(workspace.course(graphTheory)).file)
+        #expect(weeks.count == 3)
+        #expect(weeks.map(\.start) == weeks.map(\.start).sorted())
+        #expect(weeks.map { $0.rows.count } == [1, 1, 1])
+        #expect(weeks.filter(\.thisWeek).count <= 1)
+        if case .exam(let exam, _) = weeks[1].rows[0].item { #expect(exam.title == "중간") } else { Issue.record("no exam row") }
     }
 
     /// A 휴강 weeks ahead: the class shows on the timeline before it is a session, and marking it saves one.
@@ -70,7 +73,7 @@ struct SessionsModelTests {
         let end = try #require(semester.end?.date(in: workspace.calendar))
         // Mid-term, on the semester's own dates rather than the clock, so the plan has weeks left to show.
         let now = try #require(semester.start?.date(in: workspace.calendar)).addingTimeInterval(7 * 7 * 86_400)
-        func planned() throws -> [Workspace.SuggestedSession] { model.timeline(try #require(workspace.course(graphTheory)).file, now: now).compactMap(\.planned) }
+        func planned() throws -> [Workspace.SuggestedSession] { model.weeks(try #require(workspace.course(graphTheory)).file, now: now).flatMap(\.rows).compactMap(\.planned) }
 
         let plan = try planned()
         #expect(plan.count >= 2 && plan.allSatisfy { $0.suggestion.date > now && $0.suggestion.date <= end })
@@ -81,13 +84,16 @@ struct SessionsModelTests {
         let saved = try #require(workspace.course(graphTheory)?.file.sessions.first { $0.date == second.suggestion.date })
         #expect(saved.isCancelled && saved.week == second.draft.week)
         #expect(try planned().map(\.suggestion.date) == plan.map(\.suggestion.date).filter { $0 != second.suggestion.date })
+        #expect(model.subtitle(try #require(workspace.course(graphTheory)).file, now: now).contains("남은 수업 \(plan.count - 1)개"))
     }
 
-    @Test func titleFallsBackFromTopicToUnitsToName() throws {
+    /// A class without a topic or units is just "수업": the tile already gives its day.
+    @Test func titleFallsBackFromTopicToUnitsToClass() throws {
         let workspace = try fixtureWorkspace()
         let model = SessionsModel(workspace: workspace, courseId: graphTheory)
         let s = try session(workspace, daysFromNow: -1)
-        #expect(model.title(of: s, in: try #require(workspace.course(graphTheory)).file) == workspace.course(graphTheory)?.file.name(of: s))
+        #expect(model.title(of: s, in: try #require(workspace.course(graphTheory)).file) == "수업")
+        #expect(!model.hasSubject(s, in: try #require(workspace.course(graphTheory)).file))
         let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
         workspace.run(UnitLink(course: graphTheory, unit: unit, sessions: [s.id]))
         #expect(model.title(of: s, in: try #require(workspace.course(graphTheory)).file) == "매칭")
@@ -95,16 +101,6 @@ struct SessionsModelTests {
         topic.topic = "매칭 이론"
         #expect(model.title(of: topic, in: try #require(workspace.course(graphTheory)).file) == "매칭 이론")
         #expect(model.unitsInTitle(topic, in: try #require(workspace.course(graphTheory)).file))
-    }
-
-    @Test func aheadSaysTodayTomorrowOrHowManyDays() {
-        let calendar = Calendar.current
-        let now = calendar.date(bySettingHour: 9, minute: 0, second: 0, of: .now)!
-        let later = { (days: Int) in calendar.date(byAdding: .day, value: days, to: now)! }
-        #expect(SessionsModel.ahead(later(0), clock: "13:00", now: now, calendar: calendar) == "오늘 13:00")
-        #expect(SessionsModel.ahead(later(1), clock: "13:00", now: now, calendar: calendar) == "내일 13:00")
-        #expect(SessionsModel.ahead(later(5), clock: "13:00", now: now, calendar: calendar) == "5일 후 13:00")
-        #expect(SessionsModel.ahead(later(5), clock: "", now: now, calendar: calendar) == "5일 후")
     }
 
     @Test func untouchedFutureSessionsAreListedAndRemovedTogether() throws {

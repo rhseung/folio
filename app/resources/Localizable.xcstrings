@@ -12838,28 +12838,6 @@
         }
       }
     },
-    "sessions.days-later": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld일 후"
-          }
-        }
-      }
-    },
-    "sessions.days-later-at": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld일 후 %2$@"
-          }
-        }
-      }
-    },
     "sessions.empty": {
       "extractionState": "manual",
       "localizations": {
@@ -12992,17 +12970,6 @@
         }
       }
     },
-    "sessions.missing-units": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원 없음 %lld"
-          }
-        }
-      }
-    },
     "sessions.open-review-note": {
       "extractionState": "manual",
       "localizations": {
@@ -13021,17 +12988,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "러프 노트 열기"
-          }
-        }
-      }
-    },
-    "sessions.planned": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예정된 수업"
           }
         }
       }
@@ -13333,28 +13289,6 @@
         }
       }
     },
-    "sessions.today-at": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘 %@"
-          }
-        }
-      }
-    },
-    "sessions.tomorrow-at": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "내일 %@"
-          }
-        }
-      }
-    },
     "sessions.units-help": {
       "extractionState": "manual",
       "localizations": {
@@ -13461,6 +13395,116 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld주차"
+          }
+        }
+      }
+    },
+    "sessions.class": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업"
+          }
+        }
+      }
+    },
+    "sessions.now": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금"
+          }
+        }
+      }
+    },
+    "sessions.remaining": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "남은 수업 %lld개"
+          }
+        }
+      }
+    },
+    "sessions.next-exam": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음 시험 %1$@ %2$@"
+          }
+        }
+      }
+    },
+    "sessions.exam-week": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 주간"
+          }
+        }
+      }
+    },
+    "sessions.month": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld월"
+          }
+        }
+      }
+    },
+    "sessions.review-done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 완료"
+          }
+        }
+      }
+    },
+    "sessions.review-writing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 쓰는 중"
+          }
+        }
+      }
+    },
+    "sessions.review-missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 없음"
+          }
+        }
+      }
+    },
+    "sessions.units-add": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원"
           }
         }
       }
