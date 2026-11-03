@@ -15555,6 +15555,17 @@
         }
       }
     },
+    "settings.whisper-download-failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내려받지 못했습니다: %@"
+          }
+        }
+      }
+    },
     "settings.whisper-downloading": {
       "extractionState": "manual",
       "localizations": {

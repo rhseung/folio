@@ -64,6 +64,11 @@ struct TranscriptionHintsTests {
         #expect(terms.firstIndex { $0.lowercased() == "left factoring" }! < terms.firstIndex(of: "uses")!)
     }
 
+    @Test func tiesAreOrderedTheSameEveryRun() {
+        let terms = LectureTerms.terms(in: "shift-reduce conflict, shift-reduce conflict, beta alpha, gamma")
+        #expect(terms == ["shift-reduce conflict", "shift-reduce", "conflict", "beta", "alpha", "gamma"])
+    }
+
     @Test func theMostUsedSpellingWins() {
         let terms = LectureTerms.terms(in: "lookahead Lookahead lookahead")
         #expect(terms == ["lookahead"])

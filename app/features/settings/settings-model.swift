@@ -18,8 +18,6 @@ final class SettingsModel {
 
     init(workspace: Workspace) { self.workspace = workspace }
 
-    var transcribing: Bool { workspace.transcriptions.isRunning }
-
     func load() {
         settings = workspace.settings
         loaded = true

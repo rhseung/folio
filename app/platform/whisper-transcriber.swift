@@ -57,9 +57,29 @@ actor WhisperTranscriber {
         try? base.setResourceValues(values)
     }
 
+    /// `running` and the busy flag it shows count until Whisper actually returns. A cancelled job comes off the queue at
+    /// once but holds the model until its current window is decoded.
     func transcribe(_ url: URL, hints: TranscriptionHints?, report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws -> LectureTranscript {
         running += 1
-        defer { running -= 1 }
+        await showBusy()
+        do {
+            let transcript = try await run(url, hints: hints, report: report)
+            running -= 1
+            await showBusy()
+            return transcript
+        } catch {
+            running -= 1
+            await showBusy()
+            throw error
+        }
+    }
+
+    private func showBusy() async {
+        let busy = running > 0
+        await MainActor.run { WhisperModel.shared.busy = busy }
+    }
+
+    private func run(_ url: URL, hints: TranscriptionHints?, report: @escaping @Sendable (TranscriptionPhase) -> Void) async throws -> LectureTranscript {
         let kit = try await load(report: report)
         let duration = (try? AVAudioFile(forReading: url)).map { max(Double($0.length) / $0.processingFormat.sampleRate, 1) } ?? 1
         report(.transcribing(0))
@@ -147,7 +167,7 @@ actor WhisperTranscriber {
         return kit
     }
 
-    /// Settings disables deleting while the queue runs; this refuses too, since a job may be loading the model.
+    /// Settings disables deleting while `busy`; this refuses too, for a job that starts in between.
     func deleteModel() async {
         guard running == 0 else { return }
         download?.cancel()
@@ -175,6 +195,9 @@ final class WhisperModel {
     private(set) var ready = UserDefaults.standard.bool(forKey: readyKey)
     /// 0...1 while the model downloads.
     fileprivate(set) var downloading: Double?
+    /// Whisper is transcribing with the model, which then can't be deleted.
+    fileprivate(set) var busy = false
+    private(set) var failure: String?
 
     fileprivate func finishDownload(ready: Bool) {
         self.ready = ready
@@ -183,7 +206,12 @@ final class WhisperModel {
     }
 
     func download() {
-        Task { _ = try? await WhisperTranscriber.shared.prepare { _ in } }
+        failure = nil
+        Task {
+            do { _ = try await WhisperTranscriber.shared.prepare { _ in } } catch {
+                failure = String(localized: .settingsWhisperDownloadFailed(error.localizedDescription))
+            }
+        }
     }
 
     func delete() {

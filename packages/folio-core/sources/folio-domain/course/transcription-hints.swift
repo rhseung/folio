@@ -103,9 +103,14 @@ public enum LectureTerms {
             // A pair once is just two words that met; a pair is a term when it comes back.
             key.contains(" ") ? entry.count >= 2 : true
         }
-        return kept.values
-            .sorted { ($0.count, -$0.first) > ($1.count, -$1.first) }
+        // Fully ordered: Whisper's prompt drops terms from the end, so a tie left to the dictionary's order would
+        // give the same slides a different prompt each run. A pair goes before the word it starts with.
+        return kept
+            .sorted { a, b in
+                (a.value.count, -a.value.first, a.key.count, b.key) > (b.value.count, -b.value.first, b.key.count, a.key)
+            }
             .prefix(limit)
+            .map(\.value)
             .map { entry in
                 // The spelling the slides use most, the first one on a tie.
                 entry.forms.max { a, b in a.value < b.value || (a.value == b.value && a.key > b.key) }!.key
