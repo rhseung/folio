@@ -295,9 +295,11 @@ final class LectureRecorder {
 
     /// The clock stops first. It restarts an engine it finds stopped, and stopping awaits the transcriber for seconds:
     /// it put the microphone back on with a fresh tap, and the next recording's tap on the same bus crashed the app.
+    /// The clock also brought the level down, so it goes to zero here, or the card would glow on through those seconds.
     private func stopEngine() {
         clockTask?.cancel()
         clockTask = nil
+        level = 0
         engine.inputNode.removeTap(onBus: 0)
         engine.stop()
     }
@@ -308,7 +310,6 @@ final class LectureRecorder {
         resultsTask = nil
         sink = nil
         analyzer = nil
-        level = 0
         transcriptionNote = nil
         context = nil
         #if os(iOS)
