@@ -107,7 +107,9 @@ struct TodayView: View {
 
     func deadlinesBlock(_ summary: TodaySummary) -> some View {
         let (shown, more) = model.shownDeadlines(model.deadlineRows(summary.deadlines, studyDay: summary.studyDay))
-        return Block(String(localized: .todayDeadlines), note: summary.deadlines.isEmpty ? nil : "\(summary.deadlines.count)") {
+        return Block(title: String(localized: .todayDeadlines), note: summary.deadlines.isEmpty ? nil : "\(summary.deadlines.count)", trailing: {
+            if more > 0 { Button(String(localized: .todayMore(more))) { model.showsAllDeadlines = true }.buttonStyle(.ghost) }
+        }) {
             if summary.deadlines.isEmpty {
                 EmptyCard(symbol: "checkmark", tone: .success, title: String(localized: .todayDeadlinesEmpty),
                           detail: String(localized: .todayDeadlinesEmptyDetail))
@@ -117,7 +119,6 @@ struct TodayView: View {
                     // instead of leaving a white strip above or below it.
                     VStack(spacing: 0) {
                         ForEach(shown) { deadlineRow($0) }
-                        if more > 0 { listMore(more) { model.showsAllDeadlines = true } }
                     }
                     .clipShape(.rect(cornerRadius: Theme.Radius.card))
                 }
