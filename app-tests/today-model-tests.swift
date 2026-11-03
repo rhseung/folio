@@ -85,6 +85,25 @@ struct TodayModelTests {
         #expect(model.editing?.course.id == graphTheory)
     }
 
+    @Test func deadlineDaysFollowTheDayBoundary() throws {
+        let workspace = try fixtureWorkspace()
+        let model = TodayModel(workspace: workspace)
+        let c = workspace.calendar
+        func at(_ day: Int, _ hour: Int) -> Date { c.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour))! }
+        #expect(workspace.settings.dayBoundaryMinutes == 4 * 60)
+        // At 02:00 on the 29th the study day is still the 28th: 03:00 falls before the boundary, 05:00 after it.
+        let dues = [("before", at(29, 3)), ("after", at(29, 5)), ("nextNight", at(30, 2)), ("third", at(30, 5))]
+        for (title, due) in dues { workspace.run(AssignmentAdd(course: graphTheory, title: title, due: due)) }
+        let summary = model.summary(now: at(29, 2))
+        let rows = model.deadlineRows(summary.deadlines.filter { dues.map(\.0).contains($0.assignment.title) }, studyDay: summary.studyDay)
+        #expect(rows.map(\.item.assignment.title) == ["before", "after", "nextNight", "third"])
+        #expect(rows[0].due.hasPrefix("오늘 "))
+        #expect(rows[1].due.hasPrefix("내일 "))
+        #expect(rows[2].due.hasPrefix("내일 "))
+        #expect(rows[3].due == "2일 후")
+        #expect(rows.map(\.urgency) == [.urgent, .urgent, .urgent, .soon])
+    }
+
     @Test func unitGroupsKeepQueueOrderAndEachUnitsPlaceInIt() throws {
         let workspace = try fixtureWorkspace()
         let model = TodayModel(workspace: workspace)

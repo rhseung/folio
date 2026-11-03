@@ -201,8 +201,9 @@ final class TodayModel {
         let calendar = workspace.calendar
         return items.compactMap { item in
             guard let due = item.assignment.due else { return nil }
-            // `isToday` follows the day boundary: 01:00 tonight is today though its calendar day is tomorrow.
-            let days = item.isToday ? 0 : max(1, studyDay.days(until: LocalDate(due, in: calendar)))
+            // Counted in study days, not calendar days: with a 04:00 boundary, 02:00 the night after next is still
+            // tomorrow's work, and counting it as two days off would drop it out of the urgent rows.
+            let days = studyDay.days(until: workspace.settings.studyDay(of: due, calendar: calendar))
             let time = due.formatted(date: .omitted, time: .shortened)
             return switch days {
             case 0: DeadlineRow(item: item, urgency: .urgent, due: String(localized: .todayDeadlinesTodayAt(time)))
