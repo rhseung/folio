@@ -57,6 +57,9 @@ final class LectureRecorder {
     /// While preparing, `recording` and its bookmarks and pages are still the previous recording's, and saving them
     /// then wrote that recording under the new one's course.
     private var running: Bool { state == .recording || state == .paused }
+    /// The recording that pages and bookmarks go to. Unlike `current` it comes on only once the course is set, so a
+    /// page already open when recording starts is told when it can be kept.
+    var capturing: UUID? { running ? recording?.id : nil }
 
     /// Starts recording into `file`, an uncompressed CAF on this device: unlike AAC, it stays readable up to the last
     /// buffer if the app dies mid-lecture. Transcription is best effort; the audio never waits on it.

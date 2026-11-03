@@ -75,9 +75,6 @@ struct RecordingPlayerModelTests {
     /// with each file change.
     @Test func aLeftoverRecordingIsTriedOncePerLaunch() async throws {
         let workspace = try fixtureWorkspace()
-        let folder = URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
-        defer { try? FileManager.default.removeItem(at: folder) }
-        workspace.pendingRecordings = PendingRecordings(url: folder)
         let recording = Recording(device: workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a")
         try workspace.pendingRecordings.save(PendingRecording(courseId: linearAlgebra, recording: recording))
         try Data("not audio".utf8).write(to: workspace.pendingRecordings.audioURL(of: recording.id))
@@ -95,9 +92,6 @@ struct RecordingPlayerModelTests {
 
     @Test func aLeftoverOfAnotherFolderIsLeftAlone() async throws {
         let workspace = try fixtureWorkspace()
-        let folder = URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
-        defer { try? FileManager.default.removeItem(at: folder) }
-        workspace.pendingRecordings = PendingRecordings(url: folder)
         let recording = Recording(device: workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a")
         try workspace.pendingRecordings.save(PendingRecording(courseId: UUID(), recording: recording))
         try Data("not audio".utf8).write(to: workspace.pendingRecordings.audioURL(of: recording.id))
