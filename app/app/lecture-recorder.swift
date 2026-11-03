@@ -39,23 +39,16 @@ final class LectureRecorder {
     /// Keeps the bookmarks beside the audio, so a crash doesn't lose them.
     @ObservationIgnored var saveProgress: (Recording) -> Void = { _ in }
     @ObservationIgnored private var lastRestart = Date.distantPast
-    @ObservationIgnored private var starting: UUID?
 
     var isActive: Bool { state != .idle }
     /// `recording` outlives the recording, so the sidebar card keeps its course and session while it slides away;
     /// asking it instead once read a finished recording as still under way, and deleting it was refused.
-    /// While starting, `recording` is still the previous one: recovery took the new one's empty file for a crash's
-    /// leftover and moved it into the course folder, and the lecture went on into a deleted file.
-    var current: UUID? {
-        switch state {
-        case .idle: nil
-        case .preparing: starting
-        case .recording, .paused, .stopping: recording?.id
-        }
-    }
+    /// It names the new recording from the moment it starts preparing: recovery took the new one's empty file for a
+    /// crash's leftover and moved it into the course folder, and the lecture went on into a deleted file.
+    var current: UUID? { isActive ? recording?.id : nil }
 
-    /// While preparing, `recording` and its bookmarks and pages are still the previous recording's, and saving them
-    /// then wrote that recording under the new one's course.
+    /// Progress is saved only once the microphone runs: while preparing there is nothing to keep, and a start that
+    /// fails leaves no recording to save into.
     private var running: Bool { state == .recording || state == .paused }
     /// The recording that pages and bookmarks go to. Unlike `current` it comes on only once the course is set, so a
     /// page already open when recording starts is told when it can be kept.
@@ -66,8 +59,17 @@ final class LectureRecorder {
     func start(_ recording: Recording, at file: URL, course: UUID, title: String, locale: Locale) async throws {
         guard state == .idle else { return }
         state = .preparing
-        starting = recording.id
-        defer { starting = nil }
+        // Set before the first wait, which can take seconds: the card would otherwise show the last lecture's time,
+        // bookmarks and captions while it prepares.
+        self.recording = recording
+        courseId = course
+        self.title = title
+        lines = []
+        volatile = ""
+        bookmarks = []
+        pages = []
+        context = nil
+        elapsed = 0
         do {
             guard await AVAudioApplication.requestRecordPermission() else { throw RecorderError.microphoneDenied }
             #if os(iOS)
@@ -107,16 +109,7 @@ final class LectureRecorder {
             try engine.start()
 
             self.sink = sink
-            self.recording = recording
-            self.courseId = course
-            self.title = title
             self.locale = transcription?.2 ?? locale
-            lines = []
-            volatile = ""
-            bookmarks = []
-            pages = []
-            context = nil
-            elapsed = 0
             state = .recording
             #if os(iOS)
             // A lecture is long; an auto-locked iPad stops the microphone.
