@@ -78,6 +78,15 @@ struct CourseWorkTests {
         #expect(flipped.isEmpty)
     }
 
+    /// The class began late, or came in from a calendar event a few minutes off the slot: still that class.
+    @Test func aSessionInsideTheSlotStandsForIt() {
+        let late = Session(device: device, at: .now, week: 10, date: date("2026-11-04 13:30"))
+        let makeup = Session(device: device, at: .now, week: 11, date: date("2026-11-09 18:00"))
+        let plan = SessionPlanner.planned(schedule: monWed, sessions: [late, makeup], from: nil, to: LocalDate("2026-11-11"),
+                                          now: date("2026-11-03 09:00"), calendar: calendar)
+        #expect(plan.map(\.date) == ["2026-11-09 13:00", "2026-11-11 13:00"].map(date))
+    }
+
     @Test func plannedClassesSitInTheirWeeksOnTheTimeline() {
         let made = Session(device: device, at: .now, week: 10, date: date("2026-11-04 13:00"))
         let planned = Session(device: device, at: .now, week: 10, date: date("2026-11-02 13:00"))

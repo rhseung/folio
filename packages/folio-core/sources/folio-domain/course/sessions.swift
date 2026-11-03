@@ -123,7 +123,7 @@ public enum SessionPlanner {
     }
 
     /// The lecture under way or next on the schedule, within the coming week, that no session stands for yet. A session
-    /// starting at that time (or a date-only one that day) stands for it even when cancelled, so a 휴강 moves on to the next.
+    /// starting within its time (or a date-only one that day) stands for it even when cancelled, so a 휴강 moves on to the next.
     /// Exam weeks (counted from `start`) hold no lectures. An exam in a class's time is part of that class, so it
     /// doesn't take the class away.
     public static func suggestion(schedule: [ClassTime], sessions: [Session], from start: LocalDate?, to end: LocalDate?,
@@ -143,7 +143,8 @@ public enum SessionPlanner {
         let today = calendar.startOfDay(for: now)
         let anchor = start?.date(in: calendar)
         let limit = days ?? (end == nil ? 8 : Int.max)
-        let taken = Set(sessions.map(\.date))
+        let dates = sessions.map(\.date)
+        let dateOnly = Set(dates)
         var result: [Suggestion] = []
         var offset = 0
         while offset < limit {
@@ -159,8 +160,9 @@ public enum SessionPlanner {
                 let begin = calendar.date(byAdding: .minute, value: slot.startMinute, to: day)!
                 let finish = calendar.date(byAdding: .minute, value: slot.endMinute, to: day)!
                 guard finish > now else { continue }
-                // A session at that time, or a date-only one that day, stands for it even when cancelled.
-                if !taken.contains(begin) && !taken.contains(day) {
+                // Anywhere in the slot, not only at its start: a class that began late, or one imported from a calendar
+                // event that starts off the slot, is still that class. A makeup outside the slot stays its own.
+                if !dateOnly.contains(day) && !dates.contains(where: { $0 >= begin && $0 < finish }) {
                     result.append(Suggestion(date: begin, end: finish, room: slot.room, link: slot.link))
                 }
             }
