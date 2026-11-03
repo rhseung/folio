@@ -56,14 +56,7 @@ public struct SemesterSource {
         guard let old = try ctx.transcript().semesters.first(where: { $0.id == semester }) else {
             throw ActionError.notFound(String(localized: .errorNotFoundSemester))
         }
-        if let from = old.coursesFolder, let to = StandardLayout.creditedFolder(source: source), from != to,
-           FileManager.default.fileExists(atPath: ctx.gist.url.appending(path: from).path) {
-            try ctx.io(Change(.moved, from, to: to)) {
-                try MoveJournal.apply([PlannedMove(from: from, to: to)], in: ctx.gist.url, device: ctx.device, now: ctx.now)
-            }
-            ctx.invalidate()
-        }
-        try ctx.editTranscript { t in
+        let edit: (inout Transcript) throws -> Void = { t in
             guard !t.semesters.contains(where: { $0.id != semester && $0.term == .credited && $0.source == source }) else {
                 throw ActionError.rule(String(localized: .errorCreditedSourceTaken(source)))
             }
@@ -72,6 +65,16 @@ public struct SemesterSource {
                 s.touch(by: ctx.device, at: ctx.now)
             }
         }
+        // Checked before the move: on a regular term, `coursesFolder` is the whole semester folder.
+        try ctx.checkTranscript(edit)
+        if let from = old.coursesFolder, let to = StandardLayout.creditedFolder(source: source), from != to,
+           FileManager.default.fileExists(atPath: ctx.gist.url.appending(path: from).path) {
+            try ctx.io(Change(.moved, from, to: to)) {
+                try MoveJournal.apply([PlannedMove(from: from, to: to)], in: ctx.gist.url, device: ctx.device, now: ctx.now)
+            }
+            ctx.invalidate()
+        }
+        try ctx.editTranscript(edit)
     }
 }
 

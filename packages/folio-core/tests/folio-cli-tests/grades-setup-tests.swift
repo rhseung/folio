@@ -88,7 +88,27 @@ struct GradesSetupTests {
         #expect(h.cli(["semester", "source", "영재고 AP", "영재고 AP 과정", "--yes"], gist: gist).code == 0)
         #expect(FileManager.default.fileExists(atPath: gist.appending(path: "_Credited/영재고 AP 과정/GS1101 일반물리학 및 연습 I/.folio/course.json").path))
         #expect(try GISTStore(url: gist).courseStores().contains { $0.url.lastPathComponent == "GS1101 일반물리학 및 연습 I" })
+    }
+
+    /// A refused source moves nothing: on a regular term the folder that would move is the whole semester's.
+    @Test func refusedSourceLeavesFolders() throws {
+        let gist = try Harness.fixtureCopy()
+        func exists(_ path: String) -> Bool { FileManager.default.fileExists(atPath: gist.appending(path: path).path) }
+        let fall = try FileManager.default.contentsOfDirectory(atPath: gist.appending(path: "2026-3").path).sorted()
         #expect(h.cli(["semester", "source", "2026-3", "가을", "--yes"], gist: gist).code != 0)  // only credited terms have one
+        #expect(try FileManager.default.contentsOfDirectory(atPath: gist.appending(path: "2026-3").path).sorted() == fall)
+        #expect(!exists("_Credited/가을"))
+        #expect(h.cli(["semester", "source", "영재고 AP", "영재고/AP", "--yes"], gist: gist).code != 0)
+        #expect(exists("_Credited/영재고 AP/GS1101 일반물리학 및 연습 I"))
+
+        let store = GISTStore(url: gist)
+        var doc = try store.loadTranscript()
+        doc.model.semesters.append(Semester(device: h.device, at: h.now, year: 2024, term: .credited, source: "군 복무"))
+        try store.save(doc)
+        try FileManager.default.createDirectory(at: gist.appending(path: "_Credited/군 복무"), withIntermediateDirectories: true)
+        #expect(h.cli(["semester", "source", "영재고 AP", "군 복무", "--yes"], gist: gist).code != 0)  // taken
+        #expect(exists("_Credited/영재고 AP/GS1101 일반물리학 및 연습 I"))
+        #expect(try store.loadTranscript().model.semesters.filter { $0.source == "영재고 AP" }.count == 1)
     }
 
     @Test func transcriptAddMakesFolder() throws {
