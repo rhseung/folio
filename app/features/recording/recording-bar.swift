@@ -61,14 +61,15 @@ struct RecordingBar: View {
                     }
                 }
                 .help(Text(.recordingBookmarkHelp(recorder.bookmarks.count)))
+                .disabled(model.settling)
                 Button { model.toggle() } label: {
                     Image(systemName: model.recording ? "pause.fill" : "record.circle").contentTransition(.symbolEffect(.replace))
                 }
                 .help(Text(model.recording ? .recordingPause : .recordingResume))
-                .disabled(model.preparing)
+                .disabled(model.settling)
                 Button { Task { await model.stop() } } label: { Image(systemName: "stop.fill") }
                 .help(Text(.recordingStop))
-                .disabled(model.preparing)
+                .disabled(model.settling)
                 Button { showingTranscript.toggle() } label: { Image(systemName: "text.quote") }
                     .help(Text(showingTranscript ? .recordingCollapse : .recordingExpand))
                     // Beside the sidebar, not inside it: the transcript wants a reading width the sidebar doesn't have.

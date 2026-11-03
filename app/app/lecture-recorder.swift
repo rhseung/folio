@@ -9,7 +9,8 @@ import UIKit
 /// both the audio file and the transcriber, so transcript times line up with the file even across pauses.
 @MainActor @Observable
 final class LectureRecorder {
-    enum State { case idle, preparing, recording, paused }
+    /// `stopping` lasts the seconds the transcriber takes to finish; a second stop then appended the last words twice.
+    enum State { case idle, preparing, recording, paused, stopping }
 
     private(set) var state = State.idle
     private(set) var courseId: UUID?
@@ -49,9 +50,13 @@ final class LectureRecorder {
         switch state {
         case .idle: nil
         case .preparing: starting
-        case .recording, .paused: recording?.id
+        case .recording, .paused, .stopping: recording?.id
         }
     }
+
+    /// While preparing, `recording` and its bookmarks and pages are still the previous recording's, and saving them
+    /// then wrote that recording under the new one's course.
+    private var running: Bool { state == .recording || state == .paused }
 
     /// Starts recording into `file`, an uncompressed CAF on this device: unlike AAC, it stays readable up to the last
     /// buffer if the app dies mid-lecture. Transcription is best effort; the audio never waits on it.
@@ -191,7 +196,7 @@ final class LectureRecorder {
     /// The recording as it stands, for saving progress: `recording` holds only what it started with. Its length is the
     /// audio so far, which is where the page on screen now stops counting; left at 0 it never would.
     var snapshot: Recording? {
-        guard isActive, var recording else { return nil }
+        guard running, var recording else { return nil }
         recording.duration = elapsed
         recording.bookmarks = bookmarks
         recording.pages = pages
@@ -199,7 +204,7 @@ final class LectureRecorder {
     }
 
     func bookmark() {
-        guard isActive else { return }
+        guard running else { return }
         bookmarks.append(elapsed)
         if let snapshot { saveProgress(snapshot) }
     }
@@ -212,7 +217,8 @@ final class LectureRecorder {
     }
 
     func stop() async -> (Recording, LectureTranscript)? {
-        guard isActive, var recording else { return nil }
+        guard running, var recording else { return nil }
+        state = .stopping
         stopEngine()
         let seconds = sink?.seconds ?? elapsed
         sink?.close()
