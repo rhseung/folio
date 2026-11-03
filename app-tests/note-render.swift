@@ -46,8 +46,10 @@ import FolioDomain
     static func gaps(_ view: NSTextView, at offset: Int) -> (above: CGFloat, below: CGFloat)? {
         guard let manager = view.textLayoutManager, let storage = view.textStorage,
               let location = manager.location(manager.documentRange.location, offsetBy: offset),
-              let fragment = manager.textLayoutFragment(for: location), let line = fragment.textLineFragments.first,
+              let fragment = manager.textLayoutFragment(for: location),
               let font = storage.attribute(.font, at: offset, effectiveRange: nil) as? NSFont else { return nil }
+        let inFragment = offset - manager.offset(from: manager.documentRange.location, to: fragment.rangeInElement.location)
+        guard let line = fragment.textLineFragments.first(where: { NSLocationInRange(inFragment, $0.characterRange) }) else { return nil }
         let baseline = line.glyphOrigin.y - ((fragment as? NoteFragment)?.raise ?? 0)
         return (baseline - font.ascender, line.typographicBounds.height - baseline + font.descender)
     }
