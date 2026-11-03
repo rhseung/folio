@@ -37,7 +37,7 @@ final class Workspace {
     /// Recordings being compressed into their course folder; each runs once even when a reload asks again.
     var finishingRecordings = Set<UUID>()
     @ObservationIgnored var recoveryTried = Set<UUID>()
-    /// Tests point it at a folder of their own, away from this Mac's unfinished recordings.
+    /// Tests, previews and renders point it at a folder of their own, away from this Mac's unfinished recordings.
     @ObservationIgnored var pendingRecordings = PendingRecordings(url: URL.applicationSupportDirectory.appending(path: "Folio/Recording", directoryHint: .isDirectory))
     let transcriptions = TranscriptionQueue()
     @ObservationIgnored private var watcher: GISTWatcher?
