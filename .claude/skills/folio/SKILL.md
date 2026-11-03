@@ -57,9 +57,9 @@ folio exam plan add EC4207/중간고사 --day 2026-10-19 "매칭 문제 풀기" 
 # 점수
 folio score add EC4207 --component 과제 --title HW2 --score 8 --max 10 --dry-run
 
-# 인정학기와 폴더 없는 과목
-folio semester add 2024 credited --credited-hours 9 --dry-run
-folio transcript add "2024 credited" "군 복무 인정" --credits 9 --mode pass_fail --dry-run
+# 인정학기와 지난 과목. 모든 과목에 폴더가 있고, 인정학기 과목은 _Credited/<출처>에 둔다
+folio semester add 2024 credited --source "군 복무" --credited-hours 9 --dry-run
+folio transcript add "영재고 AP" "일반물리학 및 연습 II" --code GS --number 1102 --mode pass_fail --dry-run
 
 # 복습
 folio review record EC4207/매칭 good --start "2026-10-28 20:00" --end "2026-10-28 20:40" --dry-run
