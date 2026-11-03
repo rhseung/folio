@@ -222,6 +222,11 @@ final class TodayModel {
         return (made + planned).sorted { $0.start < $1.start }
     }
 
+    /// A planned class, or one with no topic or unit yet, has no name; its part is left out rather than left blank.
+    func ribbonHelp(_ item: RibbonClass) -> String {
+        [title(item.courseId), item.name, "\(time(item.start)) – \(time(item.end))"].filter { !$0.isEmpty }.joined(separator: " · ")
+    }
+
     func ribbon(_ classes: [RibbonClass], on day: LocalDate) -> DayRibbon {
         DayRibbon(day: day, classes: classes.map { DateInterval(start: $0.start, end: max($0.start, $0.end)) }, calendar: workspace.calendar)
     }
