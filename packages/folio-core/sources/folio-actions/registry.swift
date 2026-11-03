@@ -11,7 +11,7 @@ public enum Actions {
         MaterialLinkSession.self, MaterialLinkUnit.self, MaterialStatusSet.self, MaterialKindSet.self, MaterialRelink.self, MaterialUntrack.self,
         MaterialTrack.self, MaterialImport.self, MaterialMove.self, MaterialTrash.self, MaterialWrite.self, MaterialBuild.self, CleanupApply.self, CleanupUndo.self,
         RecordingTrim.self,
-        NoteAdd.self, NoteWrite.self, NoteAdopt.self, NoteLink.self, NoteRemove.self, NoteMigrate.self, NoteBuild.self,
+        NoteAdd.self, NoteWrite.self, NoteAdopt.self, NoteLink.self, NoteRemove.self, NoteBuild.self,
         QuizCardSave.self, QuizCardRemove.self, QuizRecord.self,
         ProblemSetSave.self, ProblemSetRemove.self, ProblemLinkUnit.self, ProblemRecord.self,
         ReviewRecord.self, ReviewSkip.self,

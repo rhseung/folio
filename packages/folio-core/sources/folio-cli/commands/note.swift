@@ -30,7 +30,7 @@ func readText(_ source: String) throws -> String {
 struct NoteCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "note", abstract: String(localized: .noteAbstract),
-        subcommands: [List.self, Show.self, Add.self, Write.self, Link.self, Migrate.self] + GeneratedCommands.note)
+        subcommands: [List.self, Show.self, Add.self, Write.self, Link.self] + GeneratedCommands.note)
 
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .noteListAbstract), discussion: String(localized: .noteListDiscussion))
@@ -113,18 +113,6 @@ struct NoteCommand: ParsableCommand {
                                       session: try session.map { try r.session(c.local($0), in: c).id }, exam: try exam.map { try r.exam(c.local($0), in: c).id },
                                       units: try unit.map { try r.unit(c.local($0), in: c).id }),
                         g, ctx: ctx)
-        }
-    }
-
-    struct Migrate: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .noteMigrateAbstract), discussion: String(localized: .noteMigrateDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .noteMigrateHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String?
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            let id = try course.map { try Resolver(ctx).course($0).id }
-            try perform(spec: NoteMigrate(course: id), g, ctx: ctx)
         }
     }
 

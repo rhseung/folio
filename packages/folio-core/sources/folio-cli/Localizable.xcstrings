@@ -7305,39 +7305,6 @@
         }
       }
     },
-    "note.migrate.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트 frontmatter의 프로퍼티를 course.json으로 옮기고 파일에서 지우기. 예전 노트를 한 번 정리한다"
-          }
-        }
-      }
-    },
-    "note.migrate.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Folio가 쓴 키(id, kind, sessionId, unitIds, examId, tags, math)만 옮기고, 다른 키는 파일에 남긴다. 실제 폴더에서는 백업한 뒤 --dry-run으로 먼저 본다.\n\n예시:\n  folio note migrate --dry-run\n  folio note migrate EC4207"
-          }
-        }
-      }
-    },
-    "note.migrate.help.course": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목. 빼면 모든 과목"
-          }
-        }
-      }
-    },
     "note.link.help.math": {
       "extractionState": "manual",
       "localizations": {

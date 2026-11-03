@@ -52,23 +52,6 @@ struct NoteStoreTests {
         #expect(try store.notes().first?.meta.id == note.meta.id)
     }
 
-    @Test func frontmatterNotesLoseOnlyFolioKeys() throws {
-        let store = try store()
-        let id = UUID(), session = UUID()
-        let old = store.newNoteURL(title: "예전", format: .markdown)
-        try store.createNote(at: old, text: "---\nid: \(id.uuidString)\nkind: review\nsessionId: \(session.uuidString)\ncssclasses: wide\nmath: asciimath\n---\n# 예전\n")
-        let bare = store.newNoteURL(title: "그냥", format: .markdown)
-        try store.createNote(at: bare, text: "---\nid: \(UUID().uuidString)\n---\n# 그냥\n")
-        try store.createNote(at: store.newNoteURL(title: "남의 것", format: .markdown), text: "---\naliases: [x]\n---\n# 남의 것\n")
-
-        let found = try store.frontmatterNotes()
-        #expect(found.map(\.url.lastPathComponent) == ["그냥.md", "예전.md"])
-        let note = try #require(found.last)
-        #expect(note.meta.id == id && note.meta.kind == .review && note.meta.sessionId == session && note.meta.math == .asciimath)
-        #expect(note.text == "---\ncssclasses: wide\n---\n# 예전\n")
-        #expect(found.first?.text == "# 그냥\n")
-    }
-
     @Test func contextImagesReadEmbedsInsideTheCourseAsShrunkJPEG() throws {
         let store = try store()
         // A 2000x1000 PNG: wide enough to be shrunk to the 1568px edge.

@@ -226,13 +226,6 @@ struct MaterialNoteStudyTests {
         }
     }
 
-    @Test func noteMigrate() throws {
-        let text = "---\nid: 0a1b2c3d-0000-4000-8000-000000000001\nkind: review\ntags: [그래프]\nauthor: 나\n---\n\n# 예전\n"
-        try h.expectSame(["note", "migrate", "EC4207"], prepare: { try drop($0, "예전.md", text) }) { _ in
-            NoteMigrate(course: course)
-        }
-    }
-
     @Test func noteLink() throws {
         try h.expectSame(["note", "link", "EC4207/2주차-1", "--kind", "review", "--session", "9주차-1"], setup: [SessionCommandTests.add]) { _ in
             NoteLink(course: course, note: Self.noteID, kind: .review, session: SessionCommandTests.id)

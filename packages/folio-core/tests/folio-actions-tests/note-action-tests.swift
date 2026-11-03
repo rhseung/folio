@@ -147,39 +147,4 @@ struct NoteActionTests {
         #expect(try text("Exercises/중간 정리.pdf") == "%PDF")
         #expect(try file().materials.contains { $0.path == "Exercises/중간 정리.pdf" })
     }
-
-    /// Unknown keys stay in the file; references to things that are gone are dropped; an id another note already has
-    /// (a copy made in Finder) is replaced; a second run finds nothing to do.
-    @Test func migrationMovesFolioKeysOnly() throws {
-        let gone = UUID()
-        let notes = try store().url.appending(path: "Notes")
-        try "---\nid: \(Self.note.uuidString)\nkind: review\nsessionId: \(gone.uuidString)\nauthor: 나\n---\n\n# 사본\n"
-            .write(to: notes.appending(path: "사본.md"), atomically: true, encoding: .utf8)
-        try run(NoteMigrate(course: Self.graphTheory))
-
-        let entry = try #require(try file().notes.first { $0.path == "Notes/사본.md" })
-        #expect(entry.id != Self.note && entry.kind == .review && entry.sessionId == nil)
-        #expect(try text("Notes/사본.md") == "---\nauthor: 나\n---\n\n# 사본\n")
-
-        let after = try file()
-        try run(NoteMigrate(course: Self.graphTheory))
-        #expect(try file().notes == after.notes)
-    }
-
-    /// Before #206 a note that lost its session kept it in its frontmatter, so two notes may claim one session.
-    @Test func migrationKeepsOneReviewNotePerSession() throws {
-        let session = UUID()
-        try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
-        let notes = try store().url.appending(path: "Notes")
-        for name in ["정리", "정리 2"] {
-            try "---\nid: \(UUID().uuidString)\nkind: review\nsessionId: \(session.uuidString)\n---\n\n# \(name)\n"
-                .write(to: notes.appending(path: "\(name).md"), atomically: true, encoding: .utf8)
-        }
-        try run(NoteMigrate(course: Self.graphTheory))
-        let claims = try file().notes.filter { $0.path.hasPrefix("Notes/정리") }
-        #expect(claims.count == 2 && claims.count { $0.sessionId == session } == 1)
-        // The session points back at the one that kept it, so it no longer asks for a review note.
-        let kept = try #require(claims.first { $0.sessionId == session })
-        #expect(try file().sessions.first { $0.id == session }?.reviewNoteId == kept.id)
-    }
 }

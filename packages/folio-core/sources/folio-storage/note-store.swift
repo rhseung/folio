@@ -1,5 +1,4 @@
 import FolioDomain
-import FolioMarkdown
 import Foundation
 
 /// The file name is the title; the course file's note entry at the same path holds the rest.
@@ -12,24 +11,6 @@ public struct NoteFile: Equatable, Sendable {
     public init(url: URL, meta: NoteMeta) {
         self.url = url
         self.meta = meta
-    }
-}
-
-extension NoteMeta {
-    /// Folio's keys in a note's frontmatter, from before the properties moved to course.json. Only the one-time
-    /// `note migrate` reads them.
-    static let frontmatterKeys = ["id", "kind", "sessionId", "unitIds", "examId", "tags", "math"]
-
-    init(frontmatter fm: Frontmatter) {
-        self.init(
-            id: fm["id"].flatMap(UUID.init(uuidString:)),
-            kind: fm["kind"].flatMap(NoteKind.init(rawValue:)) ?? .free,
-            sessionId: fm["sessionId"].flatMap(UUID.init(uuidString:)),
-            unitIds: fm.list("unitIds").compactMap(UUID.init(uuidString:)),
-            examId: fm["examId"].flatMap(UUID.init(uuidString:)),
-            tags: fm.list("tags"),
-            math: fm["math"].flatMap(MathSyntax.init(rawValue:)) ?? .latex
-        )
     }
 }
 

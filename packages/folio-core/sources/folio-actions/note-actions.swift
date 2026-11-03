@@ -145,49 +145,6 @@ public struct NoteLink {
     }
 }
 
-/// Moves Folio's properties out of the notes' frontmatter into course.json, once, for notes from before #206. The
-/// entries are saved before any file is touched, and a note that already has one is only cleaned, so a run that stops
-/// halfway is finished by running it again. A link to a session, unit or exam that is gone is dropped, as is a second
-/// note of one kind on a session: the model would refuse the whole file for either. The course may be left out, which generated commands can't take, so the command is
-/// written by hand.
-@Action("note migrate", "노트 frontmatter의 프로퍼티를 course.json으로 옮기고 파일에서 지우기. 예전 노트를 한 번 정리한다",
-        done: "노트 프로퍼티를 course.json으로 옮겼습니다", phrases: ["노트 프로퍼티 옮기기", "frontmatter 정리"], cli: .manual)
-public struct NoteMigrate {
-    /// 과목. 빼면 모든 과목
-    @Arg var course: Course.ID?
-
-    public func run(_ ctx: ActionContext) throws {
-        let courses = try course.map { [$0] } ?? ctx.gist.courseStores().map { try $0.load().model.course.id }
-        for course in courses {
-            let store = try ctx.store(course)
-            let notes = try store.frontmatterNotes()
-            guard !notes.isEmpty else { continue }
-            try ctx.edit(course) { f in
-                for n in notes where !f.notes.contains(where: { $0.path == store.notePath(of: n.url) }) {
-                    var meta = n.meta
-                    meta.sessionId = meta.sessionId.flatMap { id in f.sessions.contains { $0.id == id } ? id : nil }
-                    meta.examId = meta.examId.flatMap { id in f.exams.contains { $0.id == id } ? id : nil }
-                    meta.unitIds = meta.unitIds.filter { id in f.units.contains { $0.id == id } }
-                    // A note copied in Finder carries the original's id; the copy gets its own.
-                    let id = meta.id.flatMap { id in f.notes.contains { $0.id == id } ? nil : id } ?? UUID()
-                    // Before #206 taking a session's note left the old one's frontmatter pointing at it. The note the
-                    // session points back to keeps the link; any other of that kind loses it. The one that keeps it is
-                    // linked from the session too, or the session would still ask for that note.
-                    if meta.kind == .rough || meta.kind == .review, let s = f.sessions.first(where: { $0.id == meta.sessionId }) {
-                        let pointed = s.note(of: meta.kind)
-                        let taken = pointed.map { $0 != id } ?? false || f.notes.contains { $0.sessionId == s.id && $0.kind == meta.kind }
-                        if taken { meta.sessionId = nil } else { f.linkNote(id, to: s.id, as: meta.kind) }
-                    }
-                    f.notes.append(NoteEntry(id: id, device: ctx.device, at: ctx.now, path: store.notePath(of: n.url), meta: meta))
-                }
-            }
-            for n in notes {
-                try ctx.io(Change(.changed, ctx.relative(n.url))) { try store.write(NoteFile(url: n.url, meta: NoteMeta(id: nil)), text: n.text) }
-            }
-        }
-    }
-}
-
 /// Sessions let go of the note first: a note left behind by a failed trash is harmless, a link to nothing is not.
 /// The note goes to the Trash; its images stay in `assets/`, which other notes may share.
 @Action("note rm", "노트를 휴지통으로. 회차의 연결도 뗀다", discussion: "그림은 assets에 남는다.", effect: .removes,
