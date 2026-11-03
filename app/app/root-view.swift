@@ -401,15 +401,11 @@ struct RootView: View {
     var recordMenu: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let ongoing = workspace.ongoingClass(at: context.date)
-            Menu {
-                if let ongoing {
-                    Button(.rootRecordKorean) { workspace.record(ongoing.session.id, in: ongoing.courseId, locale: Locale(identifier: "ko-KR")) }
-                    Button(.rootRecordEnglish) { workspace.record(ongoing.session.id, in: ongoing.courseId, locale: Locale(identifier: "en-US")) }
-                }
+            Button {
+                if let ongoing { workspace.record(ongoing.session.id, in: ongoing.courseId) }
             } label: {
                 Label(.rootRecord, systemImage: "mic")
             }
-            .menuIndicator(.hidden)
             .disabled(ongoing == nil || workspace.recorder.isActive)
             .help(workspace.recorder.isActive ? String(localized: .rootRecording)
                   : ongoing.flatMap { o in workspace.course(o.courseId).map { String(localized: .rootRecordSession($0.title, $0.file.name(of: o.session))) } }

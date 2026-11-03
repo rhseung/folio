@@ -29,6 +29,9 @@ struct StandardLayoutTests {
         #expect(StandardLayout.isLectureFileName("05-2_Cofactors.pdf"))
         #expect(!StandardLayout.isLectureFileName("Matchings.pdf"))
         #expect(!StandardLayout.isLectureFileName("5_Matchings.pdf"))
+        #expect(StandardLayout.lectureWeek("05-2_Cofactors.pdf") == 5)
+        #expect(StandardLayout.lectureWeek("10_SDT.pdf") == 10)
+        #expect(StandardLayout.lectureWeek("03 Syntax.pdf") == nil)
 
         #expect(StandardLayout.isPastExamFileName("2024 Midterm (소순범).pdf"))
         #expect(StandardLayout.isPastExamFileName("2024 Midterm (소순범) Solution.pdf"))

@@ -32,6 +32,14 @@ extension CourseStore {
         try CoordinatedFile.trash(url)
     }
 
+    /// A copy outside the GIST folder for a long read such as transcription: the coordinated read downloads audio that
+    /// iCloud evicted, and holding coordination for minutes would stall other devices' writes to the file.
+    public func copyAudio(of recording: Recording, to target: URL) throws {
+        try? FileManager.default.removeItem(at: target)
+        try FileManager.default.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try CoordinatedFile.copy(fileURL(recording.file), to: target)
+    }
+
     public func audioSize(of recording: Recording) -> Int64 {
         guard recording.hasAudio else { return 0 }
         return Int64((try? fileURL(recording.file).resourceValues(forKeys: [.fileSizeKey]).fileSize) ?? 0)

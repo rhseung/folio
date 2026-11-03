@@ -13,6 +13,23 @@ struct RecordingTests {
         #expect(r.transcriptFile == "Recordings/3주차-1 2.transcript.json")
     }
 
+    @Test func captionsCutOffByACrashDoNotReachTheEnd() {
+        let t = LectureTranscript(locale: "ko-KR", lines: [.init(start: 0, end: 4, text: "a"), .init(start: 5, end: 600, text: "b")])
+        #expect(t.reaches(600))
+        #expect(t.reaches(660))
+        #expect(!t.reaches(661))
+        #expect(!LectureTranscript(locale: "ko-KR").reaches(0))
+    }
+
+    @Test func anEmptyTranscriptNeverWipesCaptions() {
+        let heard = LectureTranscript(locale: "ko-KR", lines: [.init(start: 0, end: 4, text: "a")])
+        let empty = LectureTranscript(locale: "ko-KR")
+        #expect(!empty.replaces(heard))
+        #expect(empty.replaces(nil))
+        #expect(empty.replaces(empty))
+        #expect(heard.replaces(heard))
+    }
+
     @Test func lineAtTimeIsTheLastStartedLine() {
         let t = LectureTranscript(locale: "ko_KR", lines: [.init(start: 0, end: 4, text: "a"), .init(start: 5, end: 9, text: "b"), .init(start: 12, end: 15, text: "c")])
         #expect(t.lineIndex(at: -1) == nil)

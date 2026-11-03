@@ -224,8 +224,7 @@ struct SuggestedSessionItems: View {
             if today { Button(.sessionsOpenRoughNote) { Self.roughNote(item, workspace, openNote) } } else { Button(.sessionsMakeSession) { Self.make(item, workspace) } }
         }
         if today { Button(.sessionsMakeSessionOnly) { Self.make(item, workspace) } }
-        Button(.sessionsRecordKorean) { record(Locale(identifier: "ko-KR")) }.disabled(workspace.recorder.isActive)
-        Button(.sessionsRecordEnglish) { record(Locale(identifier: "en-US")) }.disabled(workspace.recorder.isActive)
+        Button(.sessionsRecord) { record() }.disabled(workspace.recorder.isActive)
         Divider()
         // An absence known ahead makes the session, like 휴강 does, so it has something to hang on.
         Button(.sessionsMarkAbsent) { mark(.absent) }
@@ -251,8 +250,8 @@ struct SuggestedSessionItems: View {
         if let s = make(item, workspace), let id = workspace.note(.rough, of: s.id, in: item.courseId) { openNote(id) }
     }
 
-    func record(_ locale: Locale) {
-        if let s = Self.make(item, workspace) { workspace.record(s.id, in: item.courseId, locale: locale) }
+    func record() {
+        if let s = Self.make(item, workspace) { workspace.record(s.id, in: item.courseId) }
     }
 }
 
@@ -450,7 +449,7 @@ struct SessionRow: View {
         let file = course.file
         let recordings = model.recordings(of: session, in: file)
         let recorder = model.workspace.recorder
-        let recordingThis = recorder.isActive && recordings.contains { $0.id == recorder.recording?.id }
+        let recordingThis = recordings.contains { $0.id == recorder.current }
         let cancelled = session.isCancelled
         let today = model.isToday(session.date)
         let late = model.lateMark(session, in: file)
@@ -489,7 +488,7 @@ struct SessionRow: View {
                     SessionSlot(model.recordingsLabel(recordings.count), symbol: "waveform", help: String(localized: .sessionsRecordingPlayHelp), fixed: false) { playing = last }
                 } else if today && !recorder.isActive {
                     SessionSlot(String(localized: .sessionsRecordingShort), symbol: "record.circle", help: String(localized: .sessionsRecordHelp), fixed: false) {
-                        model.record(session, locale: Locale(identifier: "ko-KR"))
+                        model.record(session)
                     }
                 }
                 // No empty recording slot: it sits leftmost, so the note slots line up without it and the topic keeps the room.
@@ -536,8 +535,7 @@ struct SessionRow: View {
             }
         }
         Divider()
-        Button(.sessionsRecordKorean) { model.record(session, locale: Locale(identifier: "ko-KR")) }.disabled(recorder.isActive)
-        Button(.sessionsRecordEnglish) { model.record(session, locale: Locale(identifier: "en-US")) }.disabled(recorder.isActive)
+        Button(.sessionsRecord) { model.record(session) }.disabled(recorder.isActive)
         ForEach(Array(recordings.enumerated()), id: \.element.id) { i, r in
             Button(model.playLabel(i, r)) { playing = r }
         }

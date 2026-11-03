@@ -33,11 +33,13 @@ struct RecordingPlayer: View {
             }
             if recording.hasAudio {
                 transport
+                if !model.bookmarks.isEmpty { bookmarkStrip }
             } else {
                 Label(.recordingAudioTrashed, systemImage: "waveform.slash")
                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
             }
             Card {
+                if model.phase != nil { progressRow }
                 if model.hasLines {
                     ScrollViewReader { proxy in
                         ScrollView {
@@ -54,15 +56,28 @@ struct RecordingPlayer: View {
                             withAnimation(.snappy(duration: 0.35)) { proxy.scrollTo(i, anchor: .center) }
                         }
                     }
-                } else {
-                    CardRow(last: true) { EmptyLine(String(localized: .recordingEmpty)) }
+                } else if model.phase == nil {
+                    CardRow(last: true) {
+                        EmptyLine(String(localized: .recordingEmpty))
+                        if recording.hasAudio {
+                            Button(.recordingTranscribe, systemImage: "waveform.badge.magnifyingglass") { model.transcribe() }
+                                .buttonStyle(.pointing(.borderedProminent)).disabled(!model.canTranscribe)
+                        }
+                    }
                 }
             }
             HStack {
                 Button(.recordingCopy, systemImage: "doc.on.doc") { copy(model.transcript?.text ?? "") }.disabled(!model.hasLines)
                     .buttonStyle(.ghost)
+                if model.hasLines && recording.hasAudio {
+                    Button(.recordingRetranscribe, systemImage: "arrow.clockwise") { model.transcribe() }
+                        .buttonStyle(.ghost).disabled(!model.canTranscribe)
+                        .help(Text(.recordingRetranscribeHelp))
+                }
                 Button(.recordingRemove, systemImage: "trash", role: .destructive) { deleting = true }
                     .buttonStyle(.ghost)
+                    .disabled(model.removalRefusal != nil)
+                    .help(model.removalRefusal.map { Text($0) } ?? Text(.recordingRemove))
                     .confirmationDialog(String(localized: .recordingRemoveConfirm), isPresented: $deleting) {
                         Button(.recordingRemoveAction, role: .destructive) {
                             model.remove()
@@ -82,6 +97,40 @@ struct RecordingPlayer: View {
         .font(Theme.Typeface.body)
         .task { model.load() }
         .onDisappear { player.stop() }
+        // A finished job (or a cancelled one, which leaves the old transcript) has written what there is to show.
+        .onChange(of: model.phase == nil) { _, done in if done { model.reloadTranscript() } }
+    }
+
+    var progressRow: some View {
+        CardRow(last: !model.hasLines) {
+            VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                Text(model.phaseLabel).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
+                if let fraction = model.phaseFraction {
+                    ProgressView(value: fraction).progressViewStyle(.linear).tint(accent.color)
+                } else {
+                    ProgressView().progressViewStyle(.linear).tint(accent.color)
+                }
+                Text(.recordingTranscribeClosable).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+            }
+            Button(.commonCancel) { model.cancelTranscription() }.buttonStyle(.ghost)
+        }
+    }
+
+    /// Marks made while recording, as places to jump to: without a transcript the track's ticks were the only sign of them.
+    var bookmarkStrip: some View {
+        HStack(spacing: Theme.Space.s) {
+            Label(.recordingBookmarks, systemImage: "bookmark.fill").labelStyle(.iconOnly).foregroundStyle(Theme.Palette.warning)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: Theme.Space.xs) {
+                    ForEach(model.bookmarks, id: \.self) { mark in
+                        Button(RecordingTime.label(mark)) { player.seek(mark); player.play() }
+                            .monospacedDigit().buttonStyle(.ghost)
+                            .help(Text(.recordingBookmarkJump))
+                    }
+                }
+            }
+        }
+        .font(Theme.Typeface.caption)
     }
 
     var transport: some View {

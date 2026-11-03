@@ -36,6 +36,9 @@ final class LectureRecorder {
     @ObservationIgnored private var lastRestart = Date.distantPast
 
     var isActive: Bool { state != .idle }
+    /// `recording` outlives the recording, so the sidebar card keeps its course and session while it slides away;
+    /// asking it instead once read a finished recording as still under way, and deleting it was refused.
+    var current: UUID? { isActive ? recording?.id : nil }
 
     /// Starts recording into `file`, an uncompressed CAF on this device: unlike AAC, it stays readable up to the last
     /// buffer if the app dies mid-lecture. Transcription is best effort; the audio never waits on it.
@@ -124,15 +127,19 @@ final class LectureRecorder {
         case downloading, unsupported
     }
 
+    /// Captions only; when they can't run, the transcript is made from the audio once the recording stops.
     private static func transcriber(for locale: Locale) async -> Transcription {
-        guard let supported = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else { return .unsupported }
+        guard SpeechTranscriber.isAvailable, let supported = await SpeechTranscriber.supportedLocale(equivalentTo: locale) else { return .unsupported }
         let transcriber = SpeechTranscriber(locale: supported, transcriptionOptions: [], reportingOptions: [.volatileResults],
                                             attributeOptions: [.audioTimeRange])
-        if await AssetInventory.status(forModules: [transcriber]) != .installed {
-            // Downloading can take minutes, which a lecture that is starting doesn't have; it's ready for the next one.
-            guard let request = try? await AssetInventory.assetInstallationRequest(supporting: [transcriber]) else { return .unsupported }
-            Task.detached { try? await request.downloadAndInstall() }
-            return .downloading
+        do {
+            if let request = try await SpeechAssets.request(for: transcriber, locale: supported) {
+                // Downloading can take minutes, which a lecture that is starting doesn't have; it's ready for the next one.
+                Task.detached { try? await request.downloadAndInstall() }
+                return .downloading
+            }
+        } catch {
+            return .unsupported
         }
         guard let format = await SpeechAnalyzer.bestAvailableAudioFormat(compatibleWith: [transcriber]) else { return .unsupported }
         return .ready(transcriber, format, supported)
@@ -232,6 +239,12 @@ final class LectureRecorder {
         } else {
             volatile = text
         }
+    }
+
+    /// Given once recording runs: the slides are read from the course folder, which may first have to download.
+    func use(_ hints: TranscriptionHints, for recording: UUID) async {
+        guard current == recording, let analyzer else { return }
+        try? await analyzer.setContext(SpeechAssets.context(hints))
     }
 
     private func teardown() {

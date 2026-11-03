@@ -4,7 +4,7 @@ import FolioStorage
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case profile = "내 정보", general = "일반", notifications = "알림", backup = "백업", catalog = "평어", notes = "노트", claude = "Claude"
+    case profile = "내 정보", general = "일반", notifications = "알림", backup = "백업", catalog = "평어", notes = "노트", recording = "녹음", claude = "Claude"
     var id: Self { self }
     static let storageKey = "settingsTab"
 
@@ -16,6 +16,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .backup: "externaldrive"
         case .catalog: "graduationcap"
         case .notes: "doc.text"
+        case .recording: "waveform"
         case .claude: "sparkle"
         }
     }
@@ -88,6 +89,7 @@ struct SettingsView: View {
         case .backup: BackupSettingsForm(model: model)
         case .catalog: CatalogEditor()
         case .notes: NoteSettingsForm(settings: $model.settings)
+        case .recording: RecordingSettings()
         case .claude: ClaudeSettings(model: model)
         }
     }
@@ -275,6 +277,42 @@ private struct NoteSettingsForm: View {
         case .examSummary: String(localized: .settingsTemplateExamSummary)
         case .topic: String(localized: .settingsTemplateTopic)
         default: ""
+        }
+    }
+}
+
+/// This device's choices, not settings.json's: the Whisper model is downloaded per device.
+private struct RecordingSettings: View {
+    @AppStorage(TranscriptionEngine.storageKey) private var engine: TranscriptionEngine = .standard
+    private var whisper: WhisperModel { .shared }
+
+    var body: some View {
+        Block(String(localized: .settingsTranscription)) {
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                Card {
+                    FormRow(label: String(localized: .settingsTranscriptionEngine), detail: String(localized: .settingsTranscriptionEngineDetail)) {
+                        ChoiceMenu(selection: $engine, options: [(.apple, String(localized: .settingsTranscriptionApple)),
+                                                                 (.whisper, String(localized: .settingsTranscriptionWhisper))])
+                    }
+                    FormRow(label: String(localized: .settingsWhisperModel), detail: String(localized: .settingsWhisperModelDetail), last: true) {
+                        if let fraction = whisper.downloading {
+                            ProgressView(value: fraction).progressViewStyle(.linear).frame(width: 96)
+                            Text(.settingsWhisperDownloading(Int(fraction * 100))).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
+                        } else if whisper.ready {
+                            Text(.settingsWhisperReady).foregroundStyle(Theme.Palette.textSecondary)
+                            Button(.settingsWhisperDelete, role: .destructive) { whisper.delete() }.buttonStyle(.ghost)
+                                .disabled(whisper.busy)
+                                .help(whisper.busy ? String(localized: .settingsWhisperDeleteBusy) : "")
+                        } else {
+                            if let failure = whisper.failure {
+                                Text(failure).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.danger).lineLimit(2)
+                            }
+                            Button(.settingsWhisperDownload) { whisper.download() }.buttonStyle(.pointing(.bordered))
+                        }
+                    }
+                }
+                Footnote(String(localized: .settingsTranscriptionFootnote))
+            }
         }
     }
 }

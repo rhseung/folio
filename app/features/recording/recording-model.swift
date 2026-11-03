@@ -69,10 +69,41 @@ final class RecordingPlayerModel {
 
     /// A line keeps its index in the whole transcript even when a search hides others: the index is its scroll anchor.
     var shownLines: [(index: Int, line: LectureTranscript.Line, bookmarked: Bool)] {
-        (transcript?.lines ?? []).enumerated()
+        // A mark between two sentences goes on the one before it, as the line playing at that moment; matched by each
+        // line's own span, a mark in a pause showed nowhere.
+        let marked = Set(recording.bookmarks.compactMap { transcript?.lineIndex(at: $0) })
+        return (transcript?.lines ?? []).enumerated()
             .filter { query.isEmpty || $0.element.text.localizedCaseInsensitiveContains(query) }
-            .map { i, line in (i, line, recording.bookmarks.contains { line.start <= $0 && $0 < line.end + 1 }) }
+            .map { i, line in (i, line, marked.contains(i)) }
     }
+
+    var phase: TranscriptionPhase? { workspace.transcriptions.phase(of: recording.id) }
+    /// Still being recorded or moved into the course folder, there is no audio in place to read or delete yet.
+    private var settling: Bool { workspace.recorder.current == recording.id || workspace.finishingRecordings.contains(recording.id) }
+    var canTranscribe: Bool { recording.hasAudio && phase == nil && !settling }
+    var removalRefusal: String? { settling ? String(localized: .recordingRemoveBusy) : nil }
+
+    var phaseLabel: String {
+        switch phase {
+        case .waiting: String(localized: .recordingTranscribeWaiting)
+        case .downloading(let f): String(localized: .recordingTranscribeDownloading(Int(f * 100)))
+        case .preparing: String(localized: .recordingTranscribePreparing)
+        case .transcribing(let f): String(localized: .recordingTranscribeProgress(Int(f * 100)))
+        case nil: ""
+        }
+    }
+    var phaseFraction: Double? {
+        switch phase {
+        case .downloading(let f), .transcribing(let f): f
+        case .waiting, .preparing, nil: nil
+        }
+    }
+
+    var bookmarks: [TimeInterval] { recording.bookmarks.sorted() }
+
+    func transcribe() { workspace.transcribe(recording, course: courseId) }
+    func cancelTranscription() { workspace.transcriptions.cancel(recording.id) }
+    func reloadTranscript() { transcript = store.transcript(of: recording) }
 
     func remove() {
         player.stop()

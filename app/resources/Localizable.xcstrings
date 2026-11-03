@@ -9687,7 +9687,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "받아쓰기 모델을 내려받는 중이라 이번에는 소리만 녹음합니다"
+            "value": "받아쓰기 모델을 내려받는 중입니다. 녹음이 끝나면 받아씁니다"
           }
         }
       }
@@ -9698,7 +9698,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 언어는 받아쓰기를 쓸 수 없어 소리만 녹음합니다"
+            "value": "녹음 중 자막은 쓸 수 없습니다. 녹음이 끝나면 받아씁니다"
           }
         }
       }
@@ -11265,28 +11265,6 @@
         }
       }
     },
-    "root.record-english": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음 시작 (영어)"
-          }
-        }
-      }
-    },
-    "root.record-korean": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음 시작 (한국어)"
-          }
-        }
-      }
-    },
     "root.record-session": {
       "extractionState": "manual",
       "localizations": {
@@ -12783,13 +12761,13 @@
         }
       }
     },
-    "sessions.record-english": {
+    "sessions.record": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "녹음 시작 (영어)"
+            "value": "녹음 시작"
           }
         }
       }
@@ -12801,17 +12779,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 수업을 녹음하고 받아씁니다"
-          }
-        }
-      }
-    },
-    "sessions.record-korean": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음 시작 (한국어)"
           }
         }
       }
@@ -15331,6 +15298,314 @@
           "stringUnit": {
             "state": "translated",
             "value": "해설"
+          }
+        }
+      }
+    },
+    "recording.bookmark-jump": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 지점부터 듣기"
+          }
+        }
+      }
+    },
+    "recording.bookmarks": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "북마크"
+          }
+        }
+      }
+    },
+    "recording.error.transcribe-failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받아쓰지 못했습니다: %@"
+          }
+        }
+      }
+    },
+    "recording.error.unreadable-audio": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 파일을 읽을 수 없습니다."
+          }
+        }
+      }
+    },
+    "recording.remove-busy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음을 과목 폴더로 옮기는 중이라 아직 지울 수 없습니다"
+          }
+        }
+      }
+    },
+    "recording.retranscribe": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 받아쓰기"
+          }
+        }
+      }
+    },
+    "recording.retranscribe-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 파일 전체를 다시 받아써서 지금 받아쓰기를 바꿉니다"
+          }
+        }
+      }
+    },
+    "recording.transcribe": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음에서 받아쓰기"
+          }
+        }
+      }
+    },
+    "recording.transcribe-closable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "창을 닫아도 계속 받아씁니다."
+          }
+        }
+      }
+    },
+    "recording.transcribe-downloading": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받아쓰기 모델을 내려받는 중 %lld%%"
+          }
+        }
+      }
+    },
+    "recording.transcribe-preparing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받아쓰기 모델을 준비하는 중입니다. 이 기기에서 처음에는 몇 분 걸립니다"
+          }
+        }
+      }
+    },
+    "recording.transcribe-progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받아쓰는 중 %lld%%"
+          }
+        }
+      }
+    },
+    "recording.transcribe-waiting": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 녹음을 받아쓰는 중이라 차례를 기다립니다"
+          }
+        }
+      }
+    },
+    "settings.tab.recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음"
+          }
+        }
+      }
+    },
+    "settings.transcription": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받아쓰기"
+          }
+        }
+      }
+    },
+    "settings.transcription-apple": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기 음성 인식"
+          }
+        }
+      }
+    },
+    "settings.transcription-engine": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음이 끝난 뒤 받아쓰기"
+          }
+        }
+      }
+    },
+    "settings.transcription-engine-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 중 자막은 기기 음성 인식이 맡고, 녹음이 끝나면 이 방식으로 파일 전체를 받아씁니다"
+          }
+        }
+      }
+    },
+    "settings.transcription-footnote": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Whisper는 한국어와 영어를 함께 알아듣고 어느 언어로 한 강의인지 스스로 가립니다. 기기 음성 인식은 더 빠르지만 한 언어만 알아들어 영어 용어를 한글 소리로 적곤 합니다. 녹음이 끝난 뒤의 받아쓰기는 모델을 저절로 내려받지 않아서, 모델이 없으면 기기 음성 인식이 맡습니다. 두 방식 모두 그 회차 강의 자료에 나온 용어를 참고합니다."
+          }
+        }
+      }
+    },
+    "settings.transcription-whisper": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Whisper"
+          }
+        }
+      }
+    },
+    "settings.whisper-delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지우기"
+          }
+        }
+      }
+    },
+    "settings.whisper-delete-busy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "받아쓰기가 끝난 뒤 지울 수 있습니다"
+          }
+        }
+      }
+    },
+    "settings.whisper-download": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내려받기"
+          }
+        }
+      }
+    },
+    "settings.whisper-download-failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내려받지 못했습니다: %@"
+          }
+        }
+      }
+    },
+    "settings.whisper-downloading": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld%%"
+          }
+        }
+      }
+    },
+    "settings.whisper-model": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Whisper 모델"
+          }
+        }
+      }
+    },
+    "settings.whisper-model-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 기기에 약 630MB를 내려받습니다"
+          }
+        }
+      }
+    },
+    "settings.whisper-ready": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내려받음"
           }
         }
       }

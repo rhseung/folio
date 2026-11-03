@@ -35,7 +35,8 @@ final class Workspace {
     /// One lecture recording at a time, kept here so it continues while the user moves around the app.
     let recorder = LectureRecorder()
     /// Recordings being compressed into their course folder; each runs once even when a reload asks again.
-    @ObservationIgnored var finishingRecordings = Set<UUID>()
+    var finishingRecordings = Set<UUID>()
+    let transcriptions = TranscriptionQueue()
     @ObservationIgnored private var watcher: GISTWatcher?
     @ObservationIgnored private var lastOwnWrite = Date.distantPast
     @ObservationIgnored private var pendingReload: Task<Void, Never>?
