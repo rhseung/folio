@@ -159,7 +159,9 @@ struct CoursePlanner {
                 let path = "\(base)/\(item.name)"
                 if item.name == StandardLayout.pastExamsFolder {
                     pastExams(item.children, in: path, source: nil)
-                } else if item.isFile || !StandardLayout.isExamFolderName(item.name) {
+                } else if item.isFile {
+                    // Any folder here is an exam's own, named from its title (as the layout check holds); only loose
+                    // files go to an exam. The tree alone can't tell which exam a folder belongs to.
                     moves.append(.init(from: path, to: "\(base)/\(Keywords.defaultExam)/\(item.name)", review: .guessedExam))
                 }
             }

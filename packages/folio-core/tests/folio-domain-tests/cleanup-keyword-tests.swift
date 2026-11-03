@@ -72,6 +72,19 @@ struct CleanupKeywordTests {
         #expect(moves.contains { $0.review == .nameCollision })
     }
 
+    /// An exam names its folder from its title, so a folder under Exams stays; only a loose file goes to an exam.
+    @Test func examFoldersNamedByTitleStay() {
+        let course = FolderTree(name: "EC4207 그래프 이론", content: .folder([
+            FolderTree(name: "Exams", content: .folder([
+                FolderTree(name: "기말고사", content: .folder([FolderTree(name: "Guideline.pdf", content: .file(size: 1))])),
+                FolderTree(name: "Quiz 3", content: .folder([])),
+                FolderTree(name: "Seating.pdf", content: .file(size: 1)),
+            ])),
+        ]))
+        var planner = CoursePlanner(course: course)
+        #expect(planner.plan().map(\.from) == ["Exams/Seating.pdf"])
+    }
+
     /// 2026-2 일반화학실험: experiments counted in schedule order; the leading `2_`/`3_` are not lab numbers.
     @Test func labFilesFollowTheExperimentSchedule() {
         let labs = [
