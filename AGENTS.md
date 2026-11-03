@@ -208,13 +208,14 @@ Me/GIST/
 - 계산 로직에는 손으로 계산한 예시와 함께, 무작위 입력에서도 지켜져야 하는 성질을 `PropertyBased`(`propertyCheck`)로 검사한다(예: `GradePropertyTests`). 예시가 정답을 고정하고, 성질 테스트는 예시가 놓친 경계를 찾는다. 실패하면 출력된 시드를 `.fixedSeed(...)`로 붙여 다시 돌린다.
 - 그래프 이론의 "Quiz 최저 점수 1회 제외"와 선형대수학의 "결석 6회면 최대 B0, 9회 이상이면 F"를 성적 규칙 테스트 사례로 넣는다.
 - 하루 경계 테스트는 새벽 4시 경계를 기준으로 경계 직전과 직후를 모두 검사한다.
+- 테스트, 미리보기, 화면 밖 렌더는 이 Mac의 `Application Support/Folio`(녹음 복구, Whisper 모델)를 쓰지 않는다. 그 폴더는 앱의 `LocalFolders`로만 얻고 패키지는 쓰지 않으며(`mise run check-local-folders`가 `app`, `app-tests`, `packages`를 검사한다), 테스트와 미리보기에서 얻으려 하면 실행이 멈춘다. 화면 모델 테스트는 `fixtureWorkspace()`, 미리보기와 렌더는 `Workspace.scenario`가 임시 폴더를 준다. `FOLIO_GIST`로 가짜 폴더를 연 앱 실행(창 스냅숏 포함)은 녹음 폴더를 그 GIST 폴더마다 따로 임시 폴더에 둔다.
 
 ## 빌드와 실행
 
 도구 버전과 환경 변수는 `mise.toml`이 정한다. Xcode 툴체인은 전역 `xcode-select`를 바꾸지 않고 `DEVELOPER_DIR`로 이 저장소에서만 쓴다. 명령은 항상 `mise run`으로 실행한다. 정의는 `mise.toml`에 있다.
 
 - Xcode 프로젝트 생성: `mise run generate`. 그 뒤 `open Folio.xcodeproj`
-- 패키지 테스트: `mise run test` (모든 패키지와 디자인 토큰 검사)
+- 패키지 테스트: `mise run test` (모든 패키지, 디자인 토큰 검사, Application Support 경로 검사)
 - 화면 모델 테스트: `mise run test-app`. macOS에서 앱을 호스트로 `app-tests/`를 돌린다. 테스트 중에는 앱이 기억해 둔 GIST 폴더를 열지 않고, 창을 띄우거나 포커스를 가져가지 않는다
 - 화면 밖 렌더: `mise run render`. `FolioFixtures`의 상황마다 모든 페이지(오늘, 학기, 과목의 각 탭, 성적, 졸업 요건, 사람, 코드, 설정의 각 탭)와 시트(입력 폼, 검색)를 라이트·다크 PNG로 `FOLIO_RENDER_DIR`(기본 `.build/renders`)의 `<상황>/`에 쓴다. 폭과 높이는 `FOLIO_RENDER_SIZES=1180,720,1440x900`(높이를 빼면 페이지 끝까지), 고르기는 `FOLIO_RENDER_SCREENS=today,course-`(이름 앞부분)와 `FOLIO_RENDER_SCENARIOS=busyDay`. 창이 뜨지 않고 실제 GIST 폴더와 시계를 쓰지 않는다. 리퀴드 글라스, 노트 보기와 `WKWebView`, 뷰 안에서 여는 시트, 창 틀은 그리지 못하니 `FOLIO_SNAPSHOT_DIR` 창 스냅숏(`docs/DESIGN.md` 마지막 절)으로 본다
 - 가짜 GIST 폴더: `mise run fixture -- <폴더> [standard|legacy|<상황>]`. 상황(`busyDay` 등)은 `Scenario`로 회차와 마감이 채워진 폴더다. 이미 있는 폴더에는 쓰지 않는다
@@ -253,6 +254,17 @@ Me/GIST/
 - 상태는 손으로 옮긴다(Project 자동화는 하위 이슈 추가만 켜 있다). 시작하면 In progress, PR 본문에 `Closes #번호`를 적고, 닫히면 Done으로 옮긴다. 닫힌 이슈에 막혀 있던 이슈는 남은 막힘이 없으면 Ready로 옮긴다. 일부만 끝냈으면 닫지 않고 남은 일을 본문에 적는다. 한 이슈가 테스트까지 끝나면 커밋하고 다음으로 넘어간다.
 - PR은 `main` 룰셋의 승인 1개와 검사(test, build)를 모두 채워야 머지된다. 승인은 리뷰 봇이 하고, 문서(`*.md`, `docs/`)만 바뀐 PR은 리뷰 없이 Actions가 한다(`review.yml`). PR을 열면 `gh pr merge --auto --merge`로 자동 머지를 걸어 둔다. 관리자 권한(`--admin`)으로 룰셋을 우회하지 않는다.
 - 사용자가 이슈 없이 시킨 일은 바로 하고, 남은 범위나 새로 정한 동작은 해당 이슈에 적거나 새 이슈로 만든다.
+
+### PR 전 점검
+
+리뷰 봇이 여러 PR에서 거듭 지적한 실수다. PR을 열기 전에 바뀐 코드에 대해 하나씩 확인한다.
+
+- 화면을 바꾼 PR은 눈으로 확인한 증거를 본문에 붙인다. 바뀐 화면을 `mise run render`(`FOLIO_RENDER_SCREENS`로 좁혀서)로 그린 PNG를 붙이고, 렌더가 그리지 못하는 것(리퀴드 글라스, 노트 보기와 `WKWebView`, 뷰 안에서 여는 시트, 창 틀)과 스크롤, 클릭 같은 동작은 `FOLIO_SNAPSHOT_DIR` 창 스냅숏(`docs/DESIGN.md` 마지막 절)이나 실행 화면으로 확인한다. 리뷰 봇은 코드만 읽으므로 화면의 고장은 이 확인으로만 잡힌다.
+- 무엇을 보여 줄지, 언제 막을지, 날짜와 개수를 어떻게 셀지 같은 규칙을 뷰나 모델에 다시 적지 않았는지 본다. 규칙은 `FolioDomain`에 두고 `swift test`로 검사한다.
+- `#if os(macOS)`나 `#if os(iOS)` 안에 넣은 기능에 다른 플랫폼 쪽(`#else`)이 있는지 본다. 없다면 그 플랫폼에 필요 없는 이유가 분명해야 한다. `mise run build-ipad`도 돌린다.
+- 날짜가 공부일(`Settings.studyDay`, 하루 경계 새벽 4시)인지 달력 날짜인지 구분한다. 오늘 할 일, 마감까지 남은 날, 복습 날짜는 공부일로 센다. 경계 직전과 직후를 테스트한다.
+- 테스트와 미리보기가 실제 `Application Support` 폴더나 GIST 폴더를 읽거나 쓰지 않는지 본다.
+- 동작이나 규칙이 바뀌었으면 이 파일, `docs/DESIGN.md`, 해당 이슈 본문을 같은 PR에서 고친다.
 
 ### 새 이슈
 

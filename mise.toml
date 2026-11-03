@@ -11,7 +11,7 @@ description = "Generate Folio.xcodeproj from project.yml"
 run = "xcodegen generate"
 
 [tasks.test]
-description = "Run package tests and the design token check"
+description = "Run package tests, the design token check and the Application Support check"
 # fixtures and expectations are in Korean time, and Apple's date detector reads phrases like 내일 7시 in the
 # machine's zone, not the test calendar's; a UTC machine (CI) would fail them.
 env = { TZ = "Asia/Seoul" }
@@ -22,11 +22,16 @@ run = [
   "swift run -q --package-path packages/folio-core folio actions --check",
   "swift run -q --package-path packages/folio-core folio-gen --check",
   "scripts/check-design.sh",
+  "scripts/check-local-folders.sh",
 ]
 
 [tasks.check-design]
 description = "Fail on type sizes, colors or radii in screens that skip Theme"
 run = "scripts/check-design.sh"
+
+[tasks.check-local-folders]
+description = "Fail on Application Support paths the app takes without LocalFolders"
+run = "scripts/check-local-folders.sh"
 
 [tasks.gen-cli]
 description = "Write the CLI commands of the actions declared with @Action (sources/folio-cli/generated)"
