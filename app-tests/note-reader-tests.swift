@@ -226,12 +226,8 @@ struct NoteReaderTests {
 
     /// A line's height with the gap under it, which a paragraph holding a tall picture keeps as line spacing.
     static func lineHeight(_ view: NSTextView, at offset: Int) -> CGFloat? {
-        guard let manager = view.textLayoutManager,
-              let location = manager.location(manager.documentRange.location, offsetBy: offset),
-              let fragment = manager.textLayoutFragment(for: location) else { return nil }
-        let inFragment = offset - manager.offset(from: manager.documentRange.location, to: fragment.rangeInElement.location)
         let gap = (view.textStorage?.attribute(.paragraphStyle, at: offset, effectiveRange: nil) as? NSParagraphStyle)?.lineSpacing ?? 0
-        return fragment.textLineFragments.first { NSLocationInRange(inFragment, $0.characterRange) }.map { $0.typographicBounds.height + gap }
+        return NoteRender.line(view, at: offset).map { $0.line.typographicBounds.height + gap }
     }
 
     /// A picture far taller than the text gets a line of its own height, wherever it's written in the paragraph, and the
@@ -302,10 +298,8 @@ struct NoteReaderTests {
         let shown = view.string as NSString
         func line(_ word: String) throws -> (NoteFragment, NSTextLineFragment, NSFont) {
             let at = shown.range(of: word).location
-            let location = try #require(manager.location(manager.documentRange.location, offsetBy: at))
-            let fragment = try #require(manager.textLayoutFragment(for: location) as? NoteFragment)
-            let inFragment = at - manager.offset(from: manager.documentRange.location, to: fragment.rangeInElement.location)
-            let l = try #require(fragment.textLineFragments.first { NSLocationInRange(inFragment, $0.characterRange) })
+            let found = try #require(NoteRender.line(view, at: at))
+            let fragment = try #require(found.fragment as? NoteFragment), l = found.line
             let font = try #require(view.textStorage?.attribute(.font, at: at, effectiveRange: nil) as? NSFont)
             return (fragment, l, font)
         }

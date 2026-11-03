@@ -89,7 +89,9 @@ enum NoteLines {
             // middle, where the caret and selection are. TextKit puts the gap over every line but the note's first and
             // none under the last, so half a gap moves from the spacing before the paragraph to the spacing after it
             // (a box's padding is part of both). Where there's less than half a gap before, the rest comes off the
-            // paragraph above, unless that's the end of another box, whose padding it is.
+            // paragraph above, unless that's the end of another box, whose padding it is. The note's first paragraph
+            // stands half a gap high: TextKit ignores spacing before it, and drawing its text lower would leave the
+            // caret and selection above it again.
             let gap = tall.isEmpty ? 0 : style.lineSpacing
             let box = height - gap
             style.lineSpacing = gap
@@ -111,7 +113,7 @@ enum NoteLines {
     private static func trim(_ text: NSMutableAttributedString, above p: NSRange, by amount: CGFloat) {
         let above = (text.string as NSString).paragraphRange(for: NSRange(location: p.location - 1, length: 0))
         let box = text.attribute(.noteBox, at: above.location, effectiveRange: nil) as? NoteBox
-        guard box == nil || box === text.attribute(.noteBox, at: p.location, effectiveRange: nil) as? NoteBox || box?.last == false,
+        guard box?.last != true,
               let style = (text.attribute(.paragraphStyle, at: above.location, effectiveRange: nil) as? NSParagraphStyle)?
                 .mutableCopy() as? NSMutableParagraphStyle else { return }
         style.paragraphSpacing = max(0, style.paragraphSpacing - amount)
