@@ -304,8 +304,11 @@ struct NoteReaderTests {
         let pair = try #require(NoteMath.picture(#"\mathbb{MM}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false))
         #expect(pair.size.width >= 2 * 0.944 * 16 - 1)
         // A body that isn't plain letters stays as written and still draws, in Latin Modern.
-        for tex in [#"\mathbb{R^2}"#, #"\mathbb{R\times S}"#] {
-            #expect(NoteMath.tex(tex, .latex) == tex)
+        // With no room after it, an AMS letter would run into what follows, so the whole formula keeps Latin Modern.
+        for tex in [#"\mathbb{R^2}"#, #"\mathbb{R\times S}"#, #"\mathbb{R} + \mathbb{M^2}"#] {
+            #expect(tex.contains("+") || NoteMath.tex(tex, .latex) == tex)
+            let list = try #require(NoteMath.typeset(NoteMath.tex(tex, .latex), display: false, size: 16, color: .black), "\(tex)")
+            #expect(!fonts(list).contains("KaTeX_AMS-Regular"), "\(tex)")
             #expect(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false) != nil, "\(tex)")
         }
     }

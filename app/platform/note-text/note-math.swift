@@ -99,15 +99,16 @@ final class MathAttachment: NSTextAttachment {}
         #endif
         guard label.error == nil, let list = label.displayList else { return nil }
         // Rebuilding lines walks every glyph, so formulas without the letters skip it.
-        if tex.contains("\\mathbb") { Blackboard.restyle(list) }
+        if Blackboard.reservedEverywhere(tex) { Blackboard.restyle(list) }
         return list
     }
 
     private static func draw(_ list: MTMathListDisplay, size: CGSize, offset: CGPoint) -> PlatformImage {
         #if os(macOS)
         // Drawn once, now, so the cache keeps a bitmap and not SwiftMath's display tree, which a deferred drawing
-        // handler would have to hold and touch off the main actor. At the sharpest attached screen's scale.
-        let scale = NSScreen.screens.map(\.backingScaleFactor).max() ?? 2
+        // handler would have to hold and touch off the main actor. At the sharpest attached screen's scale but never
+        // below Retina's: a cached picture may later show on a Retina screen, and a machine with no display reports 1.
+        let scale = max(2, NSScreen.screens.map(\.backingScaleFactor).max() ?? 2)
         let width = Int((size.width * scale).rounded(.up)), height = Int((size.height * scale).rounded(.up))
         guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
                                       space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
@@ -196,6 +197,15 @@ final class MathAttachment: NSTextAttachment {}
             last = match.range.location + match.range.length
         }
         return out + whole.substring(from: last)
+    }
+
+    private static let split = try! NSRegularExpression(pattern: #"\\mathbb\{[A-Za-z0-9]\}"#)
+
+    /// Whether the TeX has `\mathbb` letters and `reserve` split every one of them. A body it left whole has no room
+    /// after it, so a wider AMS letter there would run into what follows; such a formula stays all Latin Modern.
+    static func reservedEverywhere(_ tex: String) -> Bool {
+        let all = tex.components(separatedBy: "\\mathbb").count - 1
+        return all > 0 && split.numberOfMatches(in: tex, range: NSRange(location: 0, length: (tex as NSString).length)) == all
     }
 
     private static var rooms: [Character: String?] = [:]
