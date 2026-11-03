@@ -118,7 +118,7 @@ struct TodayView: View {
                     // Rows touch the card's edges with no padding around them, so a tinted row ends flush with the card
                     // instead of leaving a white strip above or below it.
                     VStack(spacing: 0) {
-                        ForEach(shown) { deadlineRow($0) }
+                        ForEach(shown) { deadlineRow($0, first: $0.id == shown.first?.id, last: $0.id == shown.last?.id) }
                     }
                     .clipShape(.rect(cornerRadius: Theme.Radius.card))
                 }
@@ -126,7 +126,7 @@ struct TodayView: View {
         }
     }
 
-    func deadlineRow(_ row: TodayModel.DeadlineRow) -> some View {
+    func deadlineRow(_ row: TodayModel.DeadlineRow, first: Bool, last: Bool) -> some View {
         let item = row.item
         let accent = model.workspace.accent(item.courseId)
         let tone: Tone? = switch row.urgency {
@@ -151,7 +151,10 @@ struct TodayView: View {
                 }
             }
             .padding(.horizontal, Theme.Space.l)
-            .padding(.vertical, Theme.Space.s)
+            // The card's own inset at its ends, as wide as at the sides. It goes inside the row, not on the card, so a
+            // tinted end row still fills to the card's edge.
+            .padding(.top, first ? Theme.Space.l : Theme.Space.s)
+            .padding(.bottom, last ? Theme.Space.l : Theme.Space.s)
             .background(tone.map { $0.fill.opacity(Theme.Opacity.toneRow) } ?? .clear)
             .contentShape(.rect)
         }
