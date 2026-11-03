@@ -23,6 +23,10 @@ struct SourceFileEditor {
         }
     }
 
+    /// The binding gets the text only once a syllable is done, so the text isn't swapped in while one is composed:
+    /// that would delete it under the input method, which then types each next jamo over a gap.
+    static func swaps(_ shown: String, for text: String, composing: Bool) -> Bool { shown != text && !composing }
+
     static var font: PlatformFont { NoteLook.font(NoteLook.codeSize, mono: true) }
 
     /// Recolors the whole file. Highlighting only the edited line would miscolor a TeX environment or a block comment
@@ -56,12 +60,15 @@ struct SourceFileEditor {
 
 #if os(macOS)
 extension SourceFileEditor: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSScrollView {
-        let scroll = NSTextView.scrollableTextView()
+    func makeNSView(context: Context) -> NSScrollView { makeView(context.coordinator) }
+
+    @MainActor func makeView(_ coordinator: Coordinator) -> NSScrollView {
+        let scroll = SourceFileTextView.scrollableTextView()
         scroll.drawsBackground = false
         scroll.autohidesScrollers = true
-        guard let view = scroll.documentView as? NSTextView else { return scroll }
-        view.delegate = context.coordinator
+        guard let view = scroll.documentView as? SourceFileTextView else { return scroll }
+        view.delegate = coordinator
+        view.unmarked = { [weak coordinator, weak view] in if let view { coordinator?.settled(view) } }
         view.drawsBackground = false
         view.isRichText = false
         view.importsGraphics = false
@@ -84,7 +91,7 @@ extension SourceFileEditor: NSViewRepresentable {
         scroll.verticalRulerView = gutter
         scroll.hasVerticalRuler = true
         scroll.rulersVisible = true
-        update(view, context.coordinator)
+        update(view, coordinator)
         return scroll
     }
 
@@ -93,11 +100,11 @@ extension SourceFileEditor: NSViewRepresentable {
         update(view, context.coordinator)
     }
 
-    @MainActor private func update(_ view: NSTextView, _ coordinator: Coordinator) {
+    @MainActor func update(_ view: NSTextView, _ coordinator: Coordinator) {
         coordinator.parent = self
         coordinator.updating = true
         defer { coordinator.updating = false }
-        if view.string != text {
+        if Self.swaps(view.string, for: text, composing: view.hasMarkedText()) {
             view.string = text
             if let storage = view.textStorage { Self.color(storage, language: language) }
         }
@@ -113,9 +120,25 @@ extension SourceFileEditor: NSViewRepresentable {
 
 extension SourceFileEditor.Coordinator: NSTextViewDelegate {
     func textDidChange(_ notification: Notification) {
-        guard let view = notification.object as? NSTextView, !view.hasMarkedText(), let storage = view.textStorage else { return }
+        guard let view = notification.object as? NSTextView, !view.hasMarkedText() else { return }
+        settled(view)
+    }
+
+    func settled(_ view: NSTextView) {
+        guard let storage = view.textStorage else { return }
         SourceFileEditor.color(storage, language: parent.language)
         changed(view.string)
+    }
+}
+
+final class SourceFileTextView: NSTextView {
+    var unmarked: () -> Void = {}
+
+    // A syllable ended without a keystroke (a click elsewhere, another app) changes no text, so no `textDidChange`
+    // colors it or hands it to the binding.
+    override func unmarkText() {
+        super.unmarkText()
+        unmarked()
     }
 }
 
@@ -191,8 +214,9 @@ final class LineNumberGutter: NSRulerView {
 #else
 extension SourceFileEditor: UIViewRepresentable {
     func makeUIView(context: Context) -> UITextView {
-        let view = UITextView()
+        let view = SourceFileTextView()
         view.delegate = context.coordinator
+        view.unmarked = { [weak coordinator = context.coordinator, weak view] in if let view { coordinator?.settled(view) } }
         view.backgroundColor = .clear
         view.autocorrectionType = .no
         view.autocapitalizationType = .none
@@ -215,7 +239,7 @@ extension SourceFileEditor: UIViewRepresentable {
         coordinator.parent = self
         coordinator.updating = true
         defer { coordinator.updating = false }
-        if view.text != text {
+        if Self.swaps(view.text, for: text, composing: view.markedTextRange != nil) {
             view.text = text
             Self.color(view.textStorage, language: language)
         }
@@ -232,10 +256,25 @@ extension SourceFileEditor: UIViewRepresentable {
 extension SourceFileEditor.Coordinator: UITextViewDelegate {
     func textViewDidChange(_ view: UITextView) {
         guard view.markedTextRange == nil else { return }
+        settled(view)
+    }
+
+    func settled(_ view: UITextView) {
         let selection = view.selectedRange
         SourceFileEditor.color(view.textStorage, language: parent.language)
         view.selectedRange = selection
         changed(view.text)
+    }
+}
+
+final class SourceFileTextView: UITextView {
+    var unmarked: () -> Void = {}
+
+    // A syllable ended without a keystroke (a tap elsewhere, the app leaving) changes no text, so no
+    // `textViewDidChange` colors it or hands it to the binding.
+    override func unmarkText() {
+        super.unmarkText()
+        unmarked()
     }
 }
 #endif
