@@ -18,12 +18,12 @@ struct RecordingBar: View {
             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     Button { if let id = model.course?.id { open(.course(id), nil) } } label: {
-                        Text(model.courseTitle).font(Theme.Typeface.bodyStrong).foregroundStyle(model.accent.ink).lineLimit(1)
+                        Text(model.courseTitle).font(Theme.Typeface.bodyStrong).foregroundStyle(model.paused ? Theme.Palette.textSecondary : model.accent.ink).lineLimit(1)
                     }
                     .help(Text(.recordingOpenCourse))
                     if let session = model.sessionName, let target = model.sessionTarget {
                         Button { open(.course(target.courseId), target) } label: {
-                            Text(session).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
+                            Text(session).font(Theme.Typeface.caption).foregroundStyle(model.paused ? Theme.Palette.textTertiary : Theme.Palette.textSecondary).lineLimit(1)
                         }
                         .help(Text(target.noteId == nil ? .recordingOpenSessions : .recordingOpenSession))
                     }
@@ -40,7 +40,7 @@ struct RecordingBar: View {
             // sidebar's terms up and down under the pointer.
             Text(model.line)
                 .font(Theme.Typeface.caption)
-                .foregroundStyle(recorder.volatile.isEmpty ? Theme.Palette.text : Theme.Palette.textSecondary)
+                .foregroundStyle(model.paused ? Theme.Palette.textTertiary : recorder.volatile.isEmpty ? Theme.Palette.text : Theme.Palette.textSecondary)
                 .lineLimit(2, reservesSpace: true)
                 .truncationMode(.head)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -82,32 +82,51 @@ struct RecordingBar: View {
             .tint(Theme.Palette.chromeIcon)
         }
         .padding(Theme.Space.m)
-        .background { RecordingCardFace(accent: model.accent, recording: model.recording) }
+        // Paused, the card goes gray and its words fade, like a control switched off; the buttons keep their color, since
+        // resume and stop are what the card is for then.
+        .background { RecordingCardFace(accent: model.paused ? CourseAccent.gray : model.accent, recording: model.recording, level: recorder.level) }
+        .animation(.smooth, value: model.paused)
         .environment(\.onGlass, true)
     }
 }
 
 /// The course's tint and edge, like the 지금 수업 card on 오늘: the course's color without another icon or dot in a
-/// sidebar already full of them. A tint, not a fill, since the sidebar is glass. While it records, a brighter tint and
-/// edge breathe over it, so the card reads as live; paused, it holds still.
+/// sidebar already full of them. A tint, not a fill, since the sidebar is glass.
+///
+/// While it records, a glow swells from the level meter's corner as the lecturer speaks and settles in a pause: a
+/// whole-card fade on a fixed beat read as blinking, not listening.
 private struct RecordingCardFace: View {
     let accent: CourseAccent
     let recording: Bool
+    let level: Float
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: Theme.Radius.floating)
+        let voice = recording ? CGFloat(level) : 0
         ZStack {
             shape.fill(accent.tint)
             shape.strokeBorder(accent.color.opacity(Theme.Opacity.innerFill))
-            ZStack {
-                shape.fill(accent.color.opacity(Theme.Opacity.tint))
-                shape.strokeBorder(accent.color.opacity(Theme.Opacity.ended))
+            GeometryReader { proxy in
+                let reach = max(proxy.size.width, proxy.size.height)
+                // A circle around the corner, not a gradient filling the card: shrunk below the card's height, the card-
+                // sized fill showed its top edge as a line across the glow.
+                Circle()
+                    .fill(RadialGradient(colors: [accent.color.opacity(Theme.Opacity.voiceGlow), accent.color.opacity(0)],
+                                         center: .center, startRadius: 0, endRadius: reach))
+                    .frame(width: reach * 2, height: reach * 2)
+                    .position(x: 0, y: proxy.size.height)
+                    // Scaled from the corner, not the radius changed: SwiftUI eases a scale between level samples, where a
+                    // new gradient radius jumps.
+                    .scaleEffect(reduceMotion ? 1 : 0.5 + 1.1 * voice, anchor: .bottomLeading)
+                    // Square root: the size already grows with the voice, and a linear fade on top of it left a
+                    // speaking voice barely brighter than silence.
+                    .opacity(Double(voice).squareRoot())
             }
-            .phaseAnimator([0.0, 1.0]) { glow, phase in
-                glow.opacity(recording && !reduceMotion ? phase : 0)
-            } animation: { _ in .easeInOut(duration: 1.4) }
+            .clipShape(shape)
         }
+        // Eased, not sprung: the level comes five times a second, and a spring overshot each sample into a flicker.
+        .animation(.smooth(duration: 0.35), value: voice)
     }
 }
 

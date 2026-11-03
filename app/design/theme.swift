@@ -86,6 +86,9 @@ enum Theme {
         /// Today's course wash at the page's top (`TodayWash`). Each accent is already tuned per appearance, so one value
         /// reads in both.
         static let courseWash = 0.24
+        /// The recording card's corner at a lecturer's full voice. Strong, since it lies on the course's own tint: at
+        /// `projected` a speaking voice hardly showed.
+        static let voiceGlow = 0.5
     }
 
     enum Space {
