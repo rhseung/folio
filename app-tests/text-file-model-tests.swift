@@ -65,6 +65,9 @@ struct TextFileModelTests {
         model.saveIfDirty()
         #expect(!model.dirty && model.issues.isEmpty)
         #expect(try course.store.readText("Notes/증명.tex") == "\\documentclass{article}\n")
+        // The link menu on the same screen changes the kind, and with it where the build puts the PDF.
+        workspace.run(NoteLink(course: graphTheory, note: id, kind: .examSummary))
+        #expect(model.pdfPath == "Exercises/증명.pdf")
     }
 
     @Test func onlyThisFilesIssuesJump() throws {

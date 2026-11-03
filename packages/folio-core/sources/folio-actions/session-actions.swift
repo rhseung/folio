@@ -134,7 +134,7 @@ public struct SessionNote {
             return
         }
         let settings = try ctx.settings()
-        let title = kind == .rough ? file.name(of: s) : "\(file.name(of: s)) 정리"
+        let title = file.noteTitle(for: s, kind: kind)
         let body = NoteTemplate.body(for: kind, title: title, sections: settings.noteSections(for: kind))
         let made = try ctx.createNote(course, title: title, meta: NoteMeta(id: id, kind: kind, sessionId: s.id, unitIds: s.unitIds,
                                                                            math: settings.newNoteMath), body: body)

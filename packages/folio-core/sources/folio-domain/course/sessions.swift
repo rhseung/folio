@@ -366,6 +366,12 @@ extension CourseFile {
 extension CourseFile {
     public func name(of session: Session) -> String { session.name(among: sessions) }
 
+    /// A rough note is named after its session, a review note "<session> 정리". The title becomes the file name, so
+    /// `session note` and the new-note sheet must name a session's note the same way.
+    public func noteTitle(for session: Session, kind: NoteKind) -> String {
+        kind == .review ? "\(name(of: session)) 정리" : name(of: session)
+    }
+
     /// A past class still owing its review note: not when the session or the whole course is left out of review.
     public func needsReviewNote(_ session: Session, at now: Date) -> Bool {
         course.reviews != false && session.needsReviewNote(at: now)

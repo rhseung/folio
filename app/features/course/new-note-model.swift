@@ -72,7 +72,7 @@ final class NewNoteModel {
     private func suggestTitle() {
         guard title == suggested else { return }
         let session = link == .session ? course.file.sessions.first { $0.id == sessionId } : nil
-        suggested = session.map { kind == .rough ? course.file.name(of: $0) : "\(course.file.name(of: $0)) 정리" } ?? ""
+        suggested = session.map { course.file.noteTitle(for: $0, kind: kind) } ?? ""
         title = suggested
     }
 
