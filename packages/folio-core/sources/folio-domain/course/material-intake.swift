@@ -31,9 +31,12 @@ public enum MaterialIntake {
 
     /// A new exam's folder: its title made safe for a path, numbered past the folders other exams (and `Past`) hold.
     public static func examFolder(title: String, among exams: [Exam]) -> String {
+        examFolder(title: title, taken: Set(exams.compactMap(\.folder)))
+    }
+
+    public static func examFolder(title: String, taken: Set<String>) -> String {
         var name = title.replacing(/[\/:]/, with: "-").trimmingCharacters(in: .whitespacesAndNewlines)
         if name.hasPrefix(".") { name = String(name.drop { $0 == "." }) }
-        let taken = Set(exams.compactMap(\.folder) + [StandardLayout.pastExamsFolder])
-        return freeName(name.isEmpty ? "Exam" : name, taken: taken)
+        return freeName(name.isEmpty ? "Exam" : name, taken: taken.union([StandardLayout.pastExamsFolder]))
     }
 }

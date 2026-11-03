@@ -40,10 +40,12 @@ extension CourseFile: StoredModel {
     public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [1: dropSessionKind, 2: dropSessionIndex, 3: dropExamKind]
 
     /// v3 exams had a kind (midterm, final, quiz, other) the prep folder was named from. The exam now keeps the folder
-    /// it had, so its files stay put, and an empty title gets the name the kind gave it.
+    /// it had, so its files stay put. An `other` exam had none; it gets one from its title, as a new exam would, after
+    /// the others, so it never takes a name a real folder already holds.
     static func dropExamKind(_ raw: inout JSONValue) throws {
         guard case .array(var exams)? = raw["exams"] else { return }
         var quizzes = 0
+        var unnamed: [Int] = []
         for i in exams.indices {
             let kind = exams[i]["kind"]
             exams[i]["kind"] = nil
@@ -57,9 +59,20 @@ extension CourseFile: StoredModel {
             case .string("quiz"): StandardLayout.quizFolderPrefix + "\(quizzes)"
             default: nil
             }
-            let folder = named ? title : byKind
-            if let folder { exams[i]["folder"] = .string(folder) }
-            if title.isEmpty { exams[i]["title"] = .string(folder ?? "Exam") }
+            if let folder = named ? title : byKind {
+                exams[i]["folder"] = .string(folder)
+                if title.isEmpty { exams[i]["title"] = .string(folder) }
+            } else {
+                unnamed.append(i)
+            }
+        }
+        var taken = Set(exams.compactMap { e in e["folder"].flatMap { if case .string(let f) = $0 { f } else { nil } } })
+        for i in unnamed {
+            let title = exams[i]["title"].flatMap { if case .string(let t) = $0 { t } else { nil } } ?? ""
+            let folder = MaterialIntake.examFolder(title: title, taken: taken)
+            taken.insert(folder)
+            exams[i]["folder"] = .string(folder)
+            if title.isEmpty { exams[i]["title"] = .string(folder) }
         }
         raw["exams"] = .array(exams)
     }
