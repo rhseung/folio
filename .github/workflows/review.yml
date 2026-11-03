@@ -27,7 +27,9 @@ jobs:
           PR: ${{ github.event.pull_request.number }}
         run: |
           files=$(gh pr diff "$PR" -R "$GITHUB_REPOSITORY" --name-only)
-          if [ -n "$files" ] && ! grep -qvE '\.md$|^docs/' <<< "$files"; then
+          # Only prose meant for people: docs/, top-level *.md and .github/**/*.md. Other .md files are inputs, such as
+          # test fixtures (app-tests/fixtures/all-markdown.md) or the generated skill copy, and get a review.
+          if [ -n "$files" ] && ! grep -qvE '^docs/|^[^/]+\.md$|^\.github/.+\.md$' <<< "$files"; then
             echo docs=true >> "$GITHUB_OUTPUT"
           else
             echo docs=false >> "$GITHUB_OUTPUT"
