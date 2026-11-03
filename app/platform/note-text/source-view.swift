@@ -476,7 +476,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         while end > shown.span.location + 1, text.character(at: end - 1) == 0x0A { end -= 1 }
         let line = { (i: Int) in self.convert(window.convertFromScreen(self.firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil) }
         let first = line(shown.span.location), last = line(end - 1)
-        let view = PreviewBubble(image: shown.image, size: shown.size)
+        // A formula wider than the editor is shrunk to fit; the bubble is a glance, and the preview scrolls it whole.
+        let room = visibleRect.width - 2 * PreviewBubble.pad.width - 8
+        let scale = min(1, room / max(1, shown.size.width))
+        let view = PreviewBubble(image: shown.image, size: CGSize(width: (shown.size.width * scale).rounded(), height: (shown.size.height * scale).rounded()))
         let size = view.frame.size
         let x = max(0, min(first.minX - 10, bounds.maxX - size.width - 4))
         // Under the source, or over it when the screen ends first; never pushing the text.
@@ -591,8 +594,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
 /// Rendered math or an image over the text, by its source.
 final class PreviewBubble: NSView {
+    static let pad = CGSize(width: 10, height: 6)
+
     init(image picture: NSImage, size: CGSize) {
-        let pad = CGSize(width: 10, height: 6)
+        let pad = Self.pad
         super.init(frame: NSRect(origin: .zero, size: CGSize(width: size.width + 2 * pad.width, height: size.height + 2 * pad.height)))
         wantsLayer = true
         layer?.cornerRadius = NoteLook.radius
@@ -608,6 +613,9 @@ final class PreviewBubble: NSView {
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    // It covers the lines under the source it shows; a click there is meant for them, and taken here it went nowhere.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     override var wantsUpdateLayer: Bool { true }
 

@@ -250,6 +250,17 @@ struct NoteReaderTests {
         #expect(scroll.frame.minX >= view.textContainerOrigin.x - 1)
     }
 
+    /// The bubble over a math block is shrunk to the editor and lets a click through to the lines under it.
+    @Test func aWideFormulasBubbleFitsAndTakesNoClicks() throws {
+        let (view, window) = NoteSourceTests.editor(Self.wideMath, width: 600)
+        window.makeFirstResponder(view)
+        view.setSelectedRange(NSRange(location: (view.string as NSString).range(of: "pmatrix").location, length: 0))
+        NoteRender.write(view, "source-wide-math")
+        let bubble = try #require(view.subviews.compactMap { $0 as? PreviewBubble }.first)
+        #expect(bubble.frame.width <= view.visibleRect.width)
+        #expect(bubble.hitTest(NSPoint(x: bubble.frame.midX, y: bubble.frame.midY)) == nil)
+    }
+
     @Test func typedMarkupIsEscaped() {
         #expect(ReaderMarkdown.escape("a*b [[c x_y * z") == "a\\*b \\[[c x_y * z")
         #expect(ReaderMarkdown.lines("# 아님\n- 아님\n1. 아님") == "\\# 아님\n\\- 아님\n1\\. 아님")
