@@ -88,8 +88,9 @@ struct ScreenRenders {
         // The course in class at the scenario's moment, so the sessions page shows a class under way; else the busiest.
         let now = workspace.now
         let live = workspace.currentCourses.first { c in
-            c.file.sessions.contains { s in
-                s.date <= now && now < s.expectedEnd(schedule: c.file.course.schedule, classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar)
+            let model = SessionsModel(workspace: workspace, courseId: c.id)
+            return c.file.sessions.contains { s in
+                model.isOngoing(s, end: s.expectedEnd(schedule: c.file.course.schedule, classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar), now: now)
             }
         }
         if let course = live ?? workspace.currentCourses.max(by: { $0.file.sessions.count < $1.file.sessions.count }) {
