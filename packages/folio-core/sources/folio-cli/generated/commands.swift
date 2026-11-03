@@ -16,16 +16,16 @@ enum GeneratedCommands {
     static let recording: [any ParsableCommand.Type] = [RecordingTrim.self]
     static let review: [any ParsableCommand.Type] = [ReviewRecord.self]
     static let score: [any ParsableCommand.Type] = [ScoreAdd.self, ScoreSet.self, ScoreRemove.self]
-    static let semester: [any ParsableCommand.Type] = [SemesterAdd.self, SemesterSet.self]
+    static let semester: [any ParsableCommand.Type] = [SemesterAdd.self, SemesterSet.self, SemesterSource.self]
     static let session: [any ParsableCommand.Type] = [SessionAdd.self, SessionSet.self, SessionNote.self, SessionLinkViewed.self]
-    static let transcript: [any ParsableCommand.Type] = [TranscriptAdd.self, TranscriptSet.self, TranscriptRemove.self]
+    static let transcript: [any ParsableCommand.Type] = [TranscriptAdd.self, TranscriptMove.self]
     static let unit: [any ParsableCommand.Type] = [UnitAdd.self, UnitRemove.self, UnitSet.self, UnitLink.self]
 
     struct SemesterAdd: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "add", abstract: "학기 추가. 학기 폴더를 만든다. 인정학기는 폴더 없이 기록만", discussion: """
+        static let configuration = CommandConfiguration(commandName: "add", abstract: "학기 추가. 학기 폴더를 만든다. 인정학기는 출처 이름으로 _Credited/<출처> 폴더를 만든다", discussion: """
             예시:
               folio semester add 2027 spring --start 2027-03-02 --end 2027-06-18
-              folio semester add 2024 credited --credited-hours 9 --dry-run  군 복무 인정학기
+              folio semester add 2024 credited --source \"군 복무\" --credited-hours 9 --dry-run  인정학기
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
@@ -34,6 +34,7 @@ enum GeneratedCommands {
         @Option(help: ArgumentHelp("개강일. 2027-03-02", valueName: "date")) var start: LocalDate?
         @Option(help: ArgumentHelp("종강일", valueName: "date")) var end: LocalDate?
         @Option(help: "인정학기의 인정 학점") var creditedHours: Double?
+        @Option(help: "인정학기의 출처. 영재고 AP. 폴더 이름이 된다") var source: String?
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -43,7 +44,8 @@ enum GeneratedCommands {
                 term: term,
                 start: start,
                 end: end,
-                creditedHours: creditedHours
+                creditedHours: creditedHours,
+                source: source
             )
             try perform(spec: action, g, ctx: ctx)
         }
@@ -80,20 +82,42 @@ enum GeneratedCommands {
         }
     }
 
-    struct TranscriptAdd: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "add", abstract: "폴더 없는 과목의 성적 기록 추가. 인정학기 과목, 콜로퀴움 등", discussion: """
+    struct SemesterSource: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "source", abstract: "인정학기의 출처 정하기. 폴더가 있으면 _Credited/<출처> 폴더 이름도 바뀌므로 확인을 받는다", discussion: """
+            실행하기 전에 확인을 받는다.
+
             예시:
-              folio transcript add \"2024 credited\" \"군 복무 인정\" --credits 9 --mode pass_fail --dry-run  인정학기 과목
+              folio semester source \"영재고 AP\" \"영재고 AP 과정\" --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("인정학기", valueName: "semester"), completion: Complete.ref("Semester")) var semester: String
+        @Argument(help: "출처. 영재고 AP") var source: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let action = FolioActions.SemesterSource(
+                semester: try r.id("Semester", semester, in: nil),
+                source: source
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct TranscriptAdd: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "add", abstract: "지난 학기나 인정학기 과목의 성적 기록 추가. 과목 폴더와 course.json을 만든다", discussion: """
+            예시:
+              folio transcript add \"영재고 AP\" \"일반물리학 및 연습 II\" --code GS --number 1102 --mode pass_fail --dry-run  인정학기 과목
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
         @Argument(help: ArgumentHelp("학기", valueName: "semester"), completion: Complete.ref("Semester")) var semester: String
         @Argument(help: "과목 이름") var title: String
+        @Option(help: ArgumentHelp("강의 코드. 과목 폴더 이름이 된다", valueName: "code"), completion: Complete.ref("CourseCode")) var code: String
+        @Option(help: "과목 번호. 예: 4207") var number: String
         @Option(help: "학점") var credits: Double = 3
         @Option(help: "평가 방식") var mode: GradingMode = .passFail
         @Option(help: ArgumentHelp("받은 성적", valueName: "grade"), completion: Complete.ref("LetterGrade")) var grade: String?
-        @Option(help: ArgumentHelp("강의 코드", valueName: "code"), completion: Complete.ref("CourseCode")) var code: String?
-        @Option(help: "과목 번호. 예: 4207") var number: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -102,62 +126,28 @@ enum GeneratedCommands {
                 id: id ?? UUID(),
                 semester: try r.id("Semester", semester, in: nil),
                 title: title,
+                code: try r.id("CourseCode", code, in: nil),
+                number: number,
                 credits: credits,
                 mode: mode,
-                grade: try grade.map { try r.id("LetterGrade", $0, in: nil) },
-                code: try code.map { try r.id("CourseCode", $0, in: nil) },
-                number: number
+                grade: try grade.map { try r.id("LetterGrade", $0, in: nil) }
             )
             try perform(spec: action, g, ctx: ctx)
         }
     }
 
-    struct TranscriptSet: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "set", abstract: "폴더 없는 과목의 성적 기록 바꾸기. 준 것만 바꾼다", discussion: """
-            예시:
-              folio transcript set \"군 복무 인정\" --credits 6 --dry-run
-            """)
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String = ""
-        @Option(help: "과목 이름") var title: String?
-        @Option(help: ArgumentHelp("학기", valueName: "semester"), completion: Complete.ref("Semester")) var semester: String?
-        @Option(help: "학점") var credits: Double?
-        @Option(help: "평가 방식") var mode: GradingMode?
-        @Option(help: ArgumentHelp("받은 성적. none이면 지운다", valueName: "grade"), completion: Complete.ref("LetterGrade")) var grade: Clearable<String>?
-
-        func run() throws {
-            guard title != nil || semester != nil || credits != nil || mode != nil || grade != nil else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --title, --semester, --credits, --mode, --grade") }
-            let ctx = try CLI.context(g)
-            let r = Resolver(ctx)
-            let c = try r.course(course)
-            let action = FolioActions.TranscriptSet(
-                course: c.id,
-                title: title.map { Patch.set($0) } ?? .keep,
-                semester: try semester.map { Patch.set(try r.id("Semester", $0, in: c)) } ?? .keep,
-                credits: credits.map { Patch.set($0) } ?? .keep,
-                mode: mode.map { Patch.set($0) } ?? .keep,
-                grade: try grade.map { p in Patch.set(try p.value.map { try r.id("LetterGrade", $0, in: c) }) } ?? .keep
-            )
-            try perform(spec: action, g, ctx: ctx)
-        }
-    }
-
-    struct TranscriptRemove: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "rm", abstract: "폴더 없는 과목의 성적 기록 지우기", discussion: """
+    struct TranscriptMove: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "move", abstract: "폴더 없는 과목을 과목 폴더로 옮기기. 과목마다 같은 ID로 폴더와 course.json을 만들고 transcript.json에서 뺀다", discussion: """
             실행하기 전에 확인을 받는다.
 
             예시:
-              folio transcript rm \"군 복무 인정\" --dry-run
+              folio transcript move --dry-run
             """)
         @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String = ""
 
         func run() throws {
             let ctx = try CLI.context(g)
-            let r = Resolver(ctx)
-            let c = try r.course(course)
-            let action = FolioActions.TranscriptRemove(
-                course: c.id
+            let action = FolioActions.TranscriptMove(
             )
             try perform(spec: action, g, ctx: ctx)
         }

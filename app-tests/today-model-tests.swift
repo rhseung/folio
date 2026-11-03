@@ -126,22 +126,22 @@ struct TodayModelTests {
         #expect(week.filter(\.isToday).map(\.day) == [day])
     }
 
-    @Test func aRecordsClassShowsOnTodayWithoutASession() throws {
+    @Test func aCourseWithOnlyClassTimesShowsOnToday() throws {
         let workspace = try fixtureWorkspace()
         let c = workspace.calendar
         func at(_ hour: Int, _ minute: Int = 0) -> Date { c.date(from: DateComponents(year: 2026, month: 10, day: 29, hour: hour, minute: minute))! }
         workspace.pinnedNow = at(20)  // a Thursday in the fall term, past its midterm week
         let id = UUID()
-        workspace.run(TranscriptAdd(id: id, semester: fallTerm, title: "콜로퀴움", credits: 0))
+        let code = addCode("GS", to: workspace)
+        workspace.run(TranscriptAdd(id: id, semester: fallTerm, title: "콜로퀴움", code: code, number: "9331", credits: 0))
         workspace.run(CourseSet(course: id, [.schedule([ClassTime(weekday: 4, startMinute: 21 * 60, endMinute: 22 * 60, room: "Hall")])]))
         let model = TodayModel(workspace: workspace)
         let day = workspace.settings.studyDay(of: at(20), calendar: c)
 
         let ribbon = model.ribbonClasses(model.summary(now: at(20)), now: at(20)).filter { $0.courseId == id }
-        #expect(ribbon.map(\.start) == [at(21)] && ribbon.first?.sessionId == nil && ribbon.first?.suggested == nil)
+        #expect(ribbon.map(\.start) == [at(21)] && ribbon.first?.sessionId == nil)
         #expect(model.nextClass(after: at(20))?.courseId == id)
         #expect(model.nowCourse(at: at(21, 30)) == id && model.nowCourse(at: at(22)) != id)
-        #expect(model.classTitle(id, "") == "콜로퀴움")
         #expect(model.week(around: day).first { $0.day == day }?.courses.contains(id) == true)
         #expect(model.week(around: day).first { $0.day != day }?.courses.contains(id) == false)
     }

@@ -14,7 +14,7 @@ final class CodesModel {
 
     /// Which courses use each code, so a tile can show them and a used code can't be removed.
     var users: [UUID: [UUID]] {
-        Dictionary(grouping: workspace.allCourseRecords.flatMap { c in c.codes.map { (code: $0, course: c.id) } }, by: \.code)
+        Dictionary(grouping: workspace.allCourses.flatMap { c in c.codes.map { (code: $0, course: c.id) } }, by: \.code)
             .mapValues { $0.map(\.course) }
     }
 
@@ -61,7 +61,7 @@ final class CodesModel {
 
     /// Newest term first, the way the sidebar lists semesters.
     func courses(using ids: [UUID]) -> [Course] {
-        workspace.allCourseRecords.filter { ids.contains($0.id) }
+        workspace.allCourses.filter { ids.contains($0.id) }
             .sorted { (workspace.semester(of: $0)?.order ?? 0, $1.title) > (workspace.semester(of: $1)?.order ?? 0, $0.title) }
     }
 

@@ -15,6 +15,10 @@ public struct MoveRecord: Codable, Sendable, Equatable {
         case removeFolder
         /// `.DS_Store` and Office lock files removed so an emptied folder can go. Not restored by undo.
         case removeJunk
+        /// A course schema v1 kept in transcript.json got its folder's course.json (`to`). Undo puts it back.
+        case fileCourse
+        /// Undo of `fileCourse`: the course.json in `from` went back to transcript.json.
+        case unfileCourse
     }
 
     public var schemaVersion: Int
@@ -34,6 +38,8 @@ public enum MoveJournal {
         case targetExists(String)
         case unknownBatch(UUID)
         case outsideGIST(String)
+        /// The course has sessions, notes or other data since it was filed, which transcript.json can't hold.
+        case courseChanged(String)
     }
 
     static func url(in gist: URL) -> URL {
@@ -71,6 +77,25 @@ public enum MoveJournal {
         return writer.batch
     }
 
+    /// Writes each course into `folder/.folio/course.json` under the same id, making the folders it needs. The caller
+    /// then takes the courses out of transcript.json; `undo` of the batch puts them back.
+    @discardableResult
+    public static func file(_ courses: [(course: Course, folder: String)], in gist: URL, device: DeviceID, now: Date) throws -> UUID {
+        let root = gist.standardizedFileURL.path + "/"
+        for (_, folder) in courses {
+            guard gist.appending(path: folder).standardizedFileURL.path.hasPrefix(root) else { throw Failure.outsideGIST(folder) }
+            guard !FileManager.default.fileExists(atPath: gist.appending(path: folder).path) else { throw Failure.targetExists(folder) }
+        }
+        let writer = Writer(gist: gist, batch: UUID(), undoOf: nil, device: device, now: now)
+        for (course, folder) in courses {
+            let store = CourseStore(url: gist.appending(path: folder))
+            try writer.makeParents(of: writer.relative(store.courseFileURL))
+            try store.save(StoredDocument(new: CourseFile(course: course)))
+            try writer.record(.fileCourse, to: folder)
+        }
+        return writer.batch
+    }
+
     @discardableResult
     public static func undo(batch: UUID, in gist: URL, device: DeviceID, now: Date) throws -> UUID {
         let records = try records(in: gist).filter { $0.batch == batch }
@@ -82,7 +107,8 @@ public enum MoveJournal {
             // Files may have been added to a folder the batch made; those stay, and so does the folder.
             case .makeFolder: try writer.removeFolderIfEmpty(record.to!)
             case .removeFolder: try writer.makeFolder(record.from!)
-            case .removeJunk: break
+            case .removeJunk, .unfileCourse: break
+            case .fileCourse: try writer.unfileCourse(record.to!)
             }
         }
         return writer.batch
@@ -96,6 +122,10 @@ public enum MoveJournal {
         let now: Date
 
         func url(_ path: String) -> URL { gist.appending(path: path) }
+
+        func relative(_ url: URL) -> String {
+            String(url.standardizedFileURL.path.dropFirst(gist.standardizedFileURL.path.count + 1))
+        }
 
         func record(_ op: MoveRecord.Op, from: String? = nil, to: String? = nil) throws {
             let line = MoveRecord(
@@ -137,6 +167,20 @@ public enum MoveJournal {
                 try record(.removeJunk, from: "\(path)/\(junk)")
             }
             try removeFolder(path)
+        }
+
+        func unfileCourse(_ folder: String) throws {
+            let store = CourseStore(url: url(folder))
+            let file = try store.load().model
+            guard file == CourseFile(course: file.course) else { throw Failure.courseChanged(folder) }
+            let gistStore = GISTStore(url: gist)
+            var transcript = try gistStore.loadTranscript()
+            if !transcript.model.unfiledCourses.contains(where: { $0.id == file.course.id }) {
+                transcript.model.unfiledCourses.append(file.course)
+                try gistStore.save(transcript)
+            }
+            try FileManager.default.removeItem(at: store.courseFileURL)
+            try record(.unfileCourse, from: folder)
         }
 
         func removeEmptied(_ folders: Set<String>) throws {

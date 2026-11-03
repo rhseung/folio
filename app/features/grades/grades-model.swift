@@ -38,7 +38,7 @@ final class GradesModel {
     }
 
     var catalog: Catalog { workspace.catalog }
-    var courses: [Course] { workspace.allCourseRecords }
+    var courses: [Course] { workspace.allCourses }
     var semesters: [Semester] { workspace.transcript.semesters.sorted { $0.order < $1.order } }
     var programs: [StudentProgram] { workspace.transcript.graduation.programs }
     var cumulative: GPACalculator.Summary { GPACalculator.cumulative(semesters: semesters, courses: courses, catalog: catalog) }
@@ -108,10 +108,11 @@ final class GradesModel {
         semesters.reversed().map { s in
             let sum = GPACalculator.semester(s, courses: courses, catalog: catalog)
             let members = courses.filter { $0.semesterId == s.id }.sorted { $0.title < $1.title }
-            // A semester in progress has no graded credits yet; show what is being taken instead of 0.
+            // A semester in progress has no graded credits yet; show what is being taken instead of 0. A credited
+            // term's courses were taken elsewhere, so one still waiting for its grade isn't being taken.
             let enrolled = members.map(\.credits).reduce(0, +)
             return SemesterRow(semester: s, summary: sum, members: members, enrolled: enrolled,
-                               inProgress: sum.gpa == nil && sum.totalCredits == 0 && enrolled > 0)
+                               inProgress: s.term != .credited && sum.gpa == nil && sum.totalCredits == 0 && enrolled > 0)
         }
     }
 

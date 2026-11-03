@@ -258,15 +258,30 @@ public final class ActionContext {
     public func editTranscript(_ change: (inout Transcript) throws -> Void) throws {
         var doc = try transcriptDocument()
         let before = doc.model
-        do { try change(&doc.model) } catch let e as ModelError { throw ActionError(e) }
-        guard doc.model != before else { return }
-        let catalog = try catalog()
-        try refuseNewViolation(before, doc.model, World(catalog: catalog))
-        try refuseBreakingCourses(World(catalog: catalog, transcript: before), World(catalog: catalog, transcript: doc.model))
+        guard try checkTranscript(&doc.model, change) else { return }
         transcriptDoc = doc
         changes += diff(before, doc.model, path: relative(gist.transcriptURL))
         needsReload = true
         if !dryRun { try gist.save(doc) }
+    }
+
+    /// Runs `change` and the rules on a copy without saving, so an action can refuse before it moves folders the
+    /// edit names: a refusal after the move would leave transcript.json pointing at a folder that's gone.
+    public func checkTranscript(_ change: (inout Transcript) throws -> Void) throws {
+        var model = try transcript()
+        try checkTranscript(&model, change)
+    }
+
+    /// Whether `change` changed anything.
+    @discardableResult
+    private func checkTranscript(_ model: inout Transcript, _ change: (inout Transcript) throws -> Void) throws -> Bool {
+        let before = model
+        do { try change(&model) } catch let e as ModelError { throw ActionError(e) }
+        guard model != before else { return false }
+        let catalog = try catalog()
+        try refuseNewViolation(before, model, World(catalog: catalog))
+        try refuseBreakingCourses(World(catalog: catalog, transcript: before), World(catalog: catalog, transcript: model))
+        return true
     }
 
     public func editCatalog(_ change: (inout Catalog) throws -> Void) throws {

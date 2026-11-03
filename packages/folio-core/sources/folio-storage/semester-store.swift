@@ -9,8 +9,8 @@ extension GISTStore {
             throw MoveJournal.Failure.targetExists(semester.folder?.name ?? "\(semester.year)")
         }
         doc.model.semesters.append(semester)
-        if let folder = semester.folder {
-            try FileManager.default.createDirectory(at: url.appending(path: folder.name), withIntermediateDirectories: true)
+        if let folder = semester.coursesFolder {
+            try FileManager.default.createDirectory(at: url.appending(path: folder), withIntermediateDirectories: true)
         }
         try save(doc)
     }
@@ -22,12 +22,14 @@ extension GISTStore {
         try save(doc)
     }
 
+    /// Only `.folio/course.json`: the standard subfolders are made when something first goes in them, so a past or
+    /// credited course isn't a stack of empty folders.
     @discardableResult
     public func createCourse(_ course: Course, folderName: String, in semester: Semester) throws -> CourseStore {
-        guard let semesterFolder = semester.folder else { throw MoveJournal.Failure.targetExists(folderName) }
-        let folder = url.appending(path: semesterFolder.name).appending(path: folderName)
+        guard let parent = semester.coursesFolder else { throw MoveJournal.Failure.targetExists(folderName) }
+        let folder = url.appending(path: parent).appending(path: folderName)
         guard !FileManager.default.fileExists(atPath: folder.path) else {
-            throw MoveJournal.Failure.targetExists("\(semesterFolder.name)/\(folderName)")
+            throw MoveJournal.Failure.targetExists("\(parent)/\(folderName)")
         }
         let store = CourseStore(url: folder)
         try store.save(StoredDocument(new: CourseFile(course: course)))

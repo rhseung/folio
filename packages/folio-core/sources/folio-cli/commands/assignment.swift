@@ -18,7 +18,7 @@ struct AssignmentCommand: ParsableCommand {
         func run() throws {
             let r = Resolver(try CLI.context(g))
             let c = try r.course(course)
-            let f = try c.requireFile()
+            let f = c.file
             let items = f.assignments.filter { all || $0.status == .todo || $0.status == .doing }
                 .sorted { ($0.due ?? .distantFuture) < ($1.due ?? .distantFuture) }
             if g.json { return try printJSON(items) }
@@ -50,7 +50,7 @@ struct AssignmentCommand: ParsableCommand {
             let (c, name) = try r.split(assignment)
             let a = try r.assignment(name, in: c)
             if g.json { return try printJSON(a) }
-            let f = try c.requireFile()
+            let f = c.file
             courseHeader(c, catalog: try? r.ctx.catalog())
             say(a.title.styled(.bold))
             if let due = a.due { say(String(localized: .assignmentShowDue(when(due, now: r.ctx.now, time: true)))) }
@@ -87,7 +87,7 @@ struct AssignmentCommand: ParsableCommand {
             let r = Resolver(ctx)
             let (c, name) = try r.split(assignment)
             let a = try r.assignment(name, in: c)
-            let f = try c.requireFile()
+            let f = c.file
             var componentId = a.componentId, componentGroup = a.componentGroup
             if let component { componentId = try component.value.map { try r.component($0, in: c).id }; componentGroup = nil }
             if let group {

@@ -522,10 +522,7 @@ struct RootView: View {
         case .semester(let id): SemesterView(workspace: workspace, semesterID: id) { selection = .course($0) }.id(id)
         case .grades: GradesView(workspace: workspace)
         case .requirements:
-            // A course with a folder opens itself; a record-only one (credited terms) opens its semester.
-            RequirementsView(workspace: workspace) { course in
-                if workspace.course(course.id) != nil { selection = .course(course.id) } else if let id = course.semesterId { selection = .semester(id) }
-            }
+            RequirementsView(workspace: workspace) { selection = .course($0.id) }
         case .people: PeopleView(workspace: workspace) { selection = .course($0) }
         case .codes: CodesView(workspace: workspace)
         case .settings: SettingsView(workspace: workspace)
@@ -543,7 +540,7 @@ extension Semester {
     /// `2026 가을학기`, `인정학기`.
     var title: String {
         switch term {
-        case .credited: String(localized: .semesterTitleCredited)
+        case .credited: source.map { String(localized: .semesterTitleCreditedSource($0)) } ?? String(localized: .semesterTitleCredited)
         case .spring: String(localized: .semesterTitleSpring(String(year)))
         case .summer: String(localized: .semesterTitleSummer(String(year)))
         case .fall: String(localized: .semesterTitleFall(String(year)))

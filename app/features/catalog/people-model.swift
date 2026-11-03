@@ -31,11 +31,11 @@ final class PeopleModel {
     var emptyList: String { String(localized: query.isEmpty ? .peopleEmpty : .peopleNoMatch) }
 
     var taughtCount: [UUID: Int] {
-        Dictionary(workspace.allCourseRecords.flatMap(\.instructorIds).map { ($0, 1) }, uniquingKeysWith: +)
+        Dictionary(workspace.allCourses.flatMap(\.instructorIds).map { ($0, 1) }, uniquingKeysWith: +)
     }
 
     func taught(by id: UUID) -> [(course: Course, semester: Semester?)] {
-        workspace.allCourseRecords.filter { $0.instructorIds.contains(id) }
+        workspace.allCourses.filter { $0.instructorIds.contains(id) }
             .map { (course: $0, semester: workspace.semester(of: $0)) }
             .sorted { ($0.semester?.order ?? 0, $1.course.title) > ($1.semester?.order ?? 0, $0.course.title) }
     }

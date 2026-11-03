@@ -24,7 +24,7 @@ public struct ImportNotion {
             throw ActionError.rule(String(localized: .errorImportExists(ctx.relative(existing))))
         }
         let r = NotionImporter.convert(export, gist: try gist.readTree(), device: ctx.device, now: ctx.now)
-        let courses = r.transcript.courses + r.courseFiles.values.map(\.course)
+        let courses = r.courseFiles.values.map(\.course)
         func gpa(_ name: String, _ s: GPACalculator.Summary) {
             ctx.note(String(localized: .noteImportNotionGpa(name, s.totalCredits.formatted(), s.effectiveCredits.formatted(), GPACalculator.label(s.gpa))))
         }
@@ -45,7 +45,6 @@ public struct ImportNotion {
                 ctx.note(String(localized: .noteImportNotionCourse(folder, file.components.count, file.scores.count, file.exams.count, file.policy.attendanceCap.count)))
             }
         }
-        for course in r.transcript.courses { ctx.note(String(localized: .noteImportNotionNoFolder(course.title))) }
         for w in r.warnings { ctx.note(String(localized: .noteImportCheck(w))) }
         guard !ctx.dryRun else { return }
         _ = try gist.write(r)
@@ -255,13 +254,6 @@ public struct ImportHandbook {
         for id in try courseIDs(ctx).values.sorted(by: { $0.uuidString < $1.uuidString }) {
             guard let ids = byId[id] else { continue }
             try ctx.edit(id) { $0.course.categoryIds = ids }
-        }
-        try ctx.editTranscript { t in
-            for i in t.courses.indices {
-                guard let ids = byId[t.courses[i].id] else { continue }
-                t.courses[i].categoryIds = ids
-                t.courses[i].touch(by: ctx.device, at: ctx.now)
-            }
         }
     }
 }

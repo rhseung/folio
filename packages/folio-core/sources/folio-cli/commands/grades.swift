@@ -6,7 +6,7 @@ import Foundation
 extension Resolver {
     /// A score by its title or id; several scores often share a component, so titles are what tell them apart.
     func score(_ name: String, in c: CourseRef) throws -> ScoreEntry {
-        let f = try c.requireFile()
+        let f = c.file
         // An untitled score shows as its component's name, so it is found by that name too.
         return try pick(name, f.scores, what: "점수", names: { [f.name(of: $0.id) ?? $0.title] }, ref: { "\(c.code)/\($0.title.isEmpty ? $0.id.uuidString : $0.title)" })
     }
@@ -45,7 +45,7 @@ struct ScoreCommand: ParsableCommand {
         func run() throws {
             let r = Resolver(try CLI.context(g))
             let c = try r.course(course)
-            let f = try c.requireFile()
+            let f = c.file
             try GradesLock.require()
             let order = Dictionary(f.components.map { ($0.id, $0.order) }, uniquingKeysWith: { a, _ in a })
             let scores = f.scores.sorted { (order[$0.componentId] ?? 0, $0.date?.description ?? "") < (order[$1.componentId] ?? 0, $1.date?.description ?? "") }
@@ -79,7 +79,7 @@ struct ComponentCommand: ParsableCommand {
         func run() throws {
             let r = Resolver(try CLI.context(g))
             let c = try r.course(course)
-            let f = try c.requireFile()
+            let f = c.file
             let components = f.components.sorted { $0.order < $1.order }
             if g.json { return try printJSON(components) }
             if lines {
@@ -133,7 +133,7 @@ struct ComponentCommand: ParsableCommand {
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let c = try r.course(course)
-            var p = try c.requireFile().policy
+            var p = c.file.policy
             if let minAttendanceRatio { p.minAttendanceRatio = minAttendanceRatio.value }
             if let latePolicy { p.latePolicy = latePolicy.value }
             if let latesPerAbsence { p.latesPerAbsence = latesPerAbsence.value }
@@ -181,7 +181,7 @@ struct GPACommand: ParsableCommand {
         let courses = try ctx.gist.allCourses()
         let semesters = try ctx.transcript().semesters.sorted { $0.order < $1.order }
         let row = { (name: String, s: GPACalculator.Summary) in Row(name: name, totalCredits: s.totalCredits, effectiveCredits: s.effectiveCredits, gpa: s.gpa) }
-        let rows = semesters.map { row($0.folder?.name ?? String(localized: .semesterRecognized), GPACalculator.semester($0, courses: courses, catalog: catalog)) }
+        let rows = semesters.map { row($0.folder?.name ?? $0.source ?? String(localized: .semesterRecognized), GPACalculator.semester($0, courses: courses, catalog: catalog)) }
             + [row(String(localized: .gpaCumulative), GPACalculator.cumulative(semesters: semesters, courses: courses, catalog: catalog)),
                row(String(localized: .gpaMajor), GPACalculator.major(courses: courses, catalog: catalog))]
         if g.json { return try printJSON(rows) }

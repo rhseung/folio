@@ -140,7 +140,7 @@ struct CourseMark: View {
 
 extension CourseMark {
     init(_ workspace: Workspace, _ id: UUID, inline: Bool = false) {
-        self.init(icon: workspace.course(id)?.file.course.icon ?? workspace.record(id)?.icon, color: workspace.accent(id).color, inline: inline)
+        self.init(icon: workspace.course(id)?.file.course.icon, color: workspace.accent(id).color, inline: inline)
     }
 }
 

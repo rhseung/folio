@@ -50,7 +50,7 @@ struct SemesterCommand: ParsableCommand {
             let current = try? r.currentSemester().id
             var t = Table(header: [String(localized: .semesterListHeaderSemester), String(localized: .semesterListHeaderName), String(localized: .semesterListHeaderSpan)])
             for s in semesters {
-                let cells = [s.folder?.name ?? String(localized: .semesterRecognized), "\(s.year) \(s.term.rawValue)", span(s)]
+                let cells = [s.folder?.name ?? s.source ?? String(localized: .semesterRecognized), "\(s.year) \(s.term.rawValue)", span(s)]
                 t.rows.append(s.id == current ? cells.map { $0.styled(.bold) } : cells)
             }
             t.print()
@@ -67,7 +67,7 @@ struct SemesterCommand: ParsableCommand {
             let r = Resolver(try CLI.context(g))
             let s = try r.semester(semester)
             if g.json { return try printJSON(s) }
-            say((s.folder?.name ?? String(localized: .semesterRecognized)).styled(.bold) + "  \(s.year) \(s.term.rawValue)".styled(.dim))
+            say((s.folder?.name ?? s.source ?? String(localized: .semesterRecognized)).styled(.bold) + "  \(s.year) \(s.term.rawValue)".styled(.dim))
             say(String(localized: .semesterShowStart(s.start?.description ?? "-")))
             say(String(localized: .semesterShowEnd(s.end?.description ?? "-")))
             if let w = s.midtermWeek { say(String(localized: .semesterShowMidterm(w))) }

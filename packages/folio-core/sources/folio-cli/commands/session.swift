@@ -18,7 +18,7 @@ struct SessionCommand: ParsableCommand {
         func run() throws {
             let r = Resolver(try CLI.context(g))
             let c = try r.course(course)
-            let f = try c.requireFile()
+            let f = c.file
             let sessions = f.sessions.sorted { $0.date < $1.date }.filter { all || !$0.isCancelled }
             if g.json { return try printJSON(sessions) }
             if lines {
@@ -47,7 +47,7 @@ struct SessionCommand: ParsableCommand {
             let (c, name) = try r.split(session)
             let s = try r.session(name, in: c)
             if g.json { return try printJSON(s) }
-            let f = try c.requireFile()
+            let f = c.file
             courseHeader(c, catalog: try? r.ctx.catalog())
             say(f.name(of: s).styled(.bold))
             say(String(localized: .sessionShowDate(when(s.date, now: r.ctx.now, time: true))))

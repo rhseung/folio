@@ -7,8 +7,8 @@ struct SemesterView: View {
     let openCourse: (UUID) -> Void
     @Environment(\.searchTarget) private var searchTarget
     @State private var addingCourse = false
-    @State private var editingRecord: Course?
     @State private var confirmingTrim = false
+    @State private var confirmingSource = false
 
     init(workspace: Workspace, semesterID: UUID, openCourse: @escaping (UUID) -> Void) {
         _model = State(initialValue: SemesterModel(workspace: workspace, semesterID: semesterID))
@@ -18,7 +18,6 @@ struct SemesterView: View {
     var body: some View {
         if let semester = model.semester {
             let courses = model.courses(in: semester)
-            let records = model.records(in: semester)
             Page {
                 PageHeader(title: semester.title, subtitle: model.subtitle(semester))
 
@@ -28,9 +27,9 @@ struct SemesterView: View {
 
                 Block(title: String(localized: .semesterCourses), note: String(localized: .semesterCoursesNote), trailing: { Button(.semesterCoursesAdd) { addingCourse = true }.buttonStyle(.ghost) }) {
                     Card {
-                        if courses.isEmpty && records.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .semesterCoursesEmpty)) } }
+                        if courses.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .semesterCoursesEmpty)) } }
                         ForEach(Array(courses.enumerated()), id: \.element.id) { i, course in
-                            CardRow(last: i == courses.count - 1 && records.isEmpty) {
+                            CardRow(last: i == courses.count - 1) {
                                 Button { openCourse(course.id) } label: {
                                     courseLabel(mark: CourseMark(icon: course.file.course.icon, color: model.workspace.accent(course.id).color, font: Theme.Glyph.lineTitle, duotone: true),
                                                 title: course.title, detail: model.detail(course))
@@ -40,21 +39,11 @@ struct SemesterView: View {
                             }
                             .contextMenu { courseMenu(course) }
                         }
-                        ForEach(Array(records.enumerated()), id: \.element.id) { i, course in
-                            CardRow(last: i == records.count - 1) {
-                                Button { editingRecord = course } label: {
-                                    courseLabel(mark: CourseMark(icon: course.icon, color: model.workspace.accent(course.id).color, font: Theme.Glyph.lineTitle, duotone: true),
-                                                title: course.title, detail: model.detail(course))
-                                }
-                                .buttonStyle(.pointing(.plain))
-                                gradeMenu(course)
-                            }
-                            .contextMenu { recordMenu(course) }
-                        }
                     }
                 }
 
                 // A credited term is only a record of transferred credits: no dates, classes or exams.
+                if semester.term == .credited { sourceBlock }
                 if semester.term != .credited {
                     Block(String(localized: .semesterTimetable)) {
                         Timetable(model: model, layout: model.timetable(semester), today: model.markedWeekday(semester), open: open) { timetableMenu($0) }
@@ -101,9 +90,11 @@ struct SemesterView: View {
                 }
             }
             .navigationTitle(semester.title)
-            .task(id: semester.id) { await model.refreshAudio() }
+            .task(id: semester.id) {
+                model.loadSource()
+                await model.refreshAudio()
+            }
             .sheet(isPresented: $addingCourse) { AddCourseSheet(workspace: model.workspace, semester: semester) { if let id = $0 { openCourse(id) } } }
-            .sheet(item: $editingRecord) { EditRecordSheet(workspace: model.workspace, course: $0) }
         } else {
             ContentUnavailableView(String(localized: .semesterNotFound), systemImage: "calendar")
         }
@@ -128,16 +119,25 @@ struct SemesterView: View {
         #endif
     }
 
-    func recordMenu(_ course: Course) -> some View {
-        Button(.commonEditEllipsis, systemImage: "pencil") { editingRecord = course }
-    }
+    func open(_ course: Course) { openCourse(course.id) }
 
-    func open(_ course: Course) {
-        if model.folderCourse(course) != nil { openCourse(course.id) } else { editingRecord = course }
+    /// Saving renames `_Credited/<source>` once courses are in it, so it asks first.
+    var sourceBlock: some View {
+        Block(String(localized: .semesterSource), note: String(localized: .semesterSourceNote)) {
+            Card {
+                FormRow(label: String(localized: .semesterSource), detail: model.sourceRefusal ?? model.sourceFolder, last: true) {
+                    InlineField(String(localized: .semesterSourceExample), text: $model.source)
+                    Button(.commonSave) { confirmingSource = true }.buttonStyle(.ghost).disabled(!model.canSaveSource)
+                }
+            }
+        }
+        .confirmationDialog(model.sourceConfirmation(), isPresented: $confirmingSource) {
+            Button(.commonSave) { model.saveSource() }
+        }
     }
 
     @ViewBuilder func timetableMenu(_ course: Course) -> some View {
-        if let loaded = model.folderCourse(course) { courseMenu(loaded) } else { recordMenu(course) }
+        if let loaded = model.folderCourse(course) { courseMenu(loaded) }
     }
 
     /// RootView turns a search target into the course's selection, so this reaches its exams page from here.
@@ -320,39 +320,6 @@ struct Timetable<Menu: View>: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: height)
-    }
-}
-
-/// A course without a folder has no page of its own, so its few properties are edited here.
-struct EditRecordSheet: View {
-    @State private var model: EditRecordModel
-    @Environment(\.dismiss) private var dismiss
-
-    init(workspace: Workspace, course: Course) {
-        _model = State(initialValue: EditRecordModel(workspace: workspace, course: course))
-    }
-
-    var body: some View {
-        SheetForm(title: String(localized: .courseEdit), confirm: String(localized: .commonSave), disabled: !model.canSave,
-                  note: model.note, carded: false, width: 560) {
-            Block(String(localized: .courseEditCourse), note: String(localized: .semesterCoursesRecordOnly)) {
-                Card {
-                    FormRow(label: String(localized: .courseEditName)) { InlineField(String(localized: .courseEditNameExample), text: $model.title) }
-                    FormRow(label: String(localized: .courseEditCredits)) { CreditsField(credits: $model.credits) }
-                    FormRow(label: String(localized: .courseEditGrading)) {
-                        ChoiceMenu(selection: $model.mode, options: [GradingMode.relative, .absolute, .passFail].map { ($0, $0.label) })
-                    }
-                    FormRow(label: String(localized: .courseEditIcon), last: true) {
-                        CourseIconPicker(icon: $model.icon, color: model.workspace.accent(model.course.id).color)
-                    }
-                }
-            }
-            if model.holdsClasses {
-                ClassTimesBlock(schedule: $model.schedule, note: String(localized: .classTimesRecordNote))
-            }
-        } onConfirm: {
-            if model.confirm() { dismiss() }
-        }
     }
 }
 

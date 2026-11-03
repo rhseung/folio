@@ -33,7 +33,7 @@ struct MaterialCommand: ParsableCommand {
         func run() throws {
             let r = Resolver(try CLI.context(g))
             let c = try r.course(course)
-            let f = try c.requireFile()
+            let f = c.file
             let materials = f.materials.sorted { $0.path < $1.path }.filter { all || $0.status != .ignored }
             if g.json { return try printJSON(materials) }
             func sessions(_ m: Material) -> String {
@@ -63,13 +63,12 @@ struct MaterialCommand: ParsableCommand {
             let (c, name) = try r.split(material)
             let m = try r.material(name, in: c)
             if g.json {
-                guard MaterialFormat(path: m.path).isText, let text = try? c.store?.readText(m.path) else { return try printJSON(m) }
+                guard MaterialFormat(path: m.path).isText, let text = try? c.store.readText(m.path) else { return try printJSON(m) }
                 return try printJSON(TextMaterial(material: m, text: text))
             }
-            let f = try c.requireFile()
+            let f = c.file
             courseHeader(c, catalog: try? r.ctx.catalog())
-            let url = c.store.map { $0.url.appending(path: m.path) }
-            say((url.map { m.path.link($0) } ?? m.path).styled(.bold))
+            say(m.path.link(c.store.url.appending(path: m.path)).styled(.bold))
             say(String(localized: .materialShowRole(m.role?.rawValue ?? "-")))
             say(String(localized: .materialShowStatus(m.status.rawValue.toned)))
             let sessions = f.sessionLinks(of: m.id)
@@ -152,7 +151,7 @@ struct MaterialCommand: ParsableCommand {
             let r = Resolver(ctx)
             let (c, name) = try r.split(material)
             let m = try r.material(name, in: c)
-            let path = file.hasPrefix("/") || file.hasPrefix("~") ? absolute(file) : c.store?.url.appending(path: file).path ?? absolute(file)
+            let path = file.hasPrefix("/") || file.hasPrefix("~") ? absolute(file) : c.store.url.appending(path: file).path
             try perform(spec: MaterialRelink(course: c.id, material: m.id, file: path), g, ctx: ctx)
         }
     }
@@ -170,8 +169,8 @@ struct MaterialCommand: ParsableCommand {
             let (c, name) = try r.split(material)
             let m = try r.material(name, in: c)
             var expected: String?
-            if let expect, let store = c.store, MaterialFormat(path: m.path).isText {
-                let current = try store.readText(m.path)
+            if let expect, MaterialFormat(path: m.path).isText {
+                let current = try c.store.readText(m.path)
                 guard contentHash(current) == expect.lowercased() else {
                     throw CLIError(exit: .conflict, message: String(localized: .materialWriteConflict(m.path)),
                                    hints: [String(localized: .materialWriteConflictHint(c.code, m.path))])

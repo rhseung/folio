@@ -9,7 +9,7 @@ extension QuizAttemptEvent.Grader: ExpressibleByArgument {}
 
 extension Resolver {
     func card(_ ref: String, unit: FolioDomain.Unit, in c: CourseRef) throws -> QuizCard {
-        guard let store = c.store else { throw CLIError(exit: .rule, message: String(localized: .quizNoCourseFolder(c.course.title))) }
+        let store = c.store
         return try pick(ref, try store.loadQuiz(unit: unit.id).model.cards, what: "카드", names: { [$0.prompt] }, ref: { $0.id.uuidString })
     }
 }
@@ -29,8 +29,8 @@ struct QuizCommand: ParsableCommand {
         func run() throws {
             let r = Resolver(try CLI.context(g))
             let c = try r.course(course)
-            guard let store = c.store else { throw CLIError(exit: .rule, message: String(localized: .quizNoCourseFolder(c.course.title))) }
-            let units = try unit.map { [try r.unit(c.local($0), in: c)] } ?? (try c.requireFile().units)
+            let store = c.store
+            let units = try unit.map { [try r.unit(c.local($0), in: c)] } ?? c.file.units
             let decks = try units.map { ($0, try store.loadQuiz(unit: $0.id).model.cards) }.filter { !$0.1.isEmpty }
             if g.json { return try printJSON(decks.flatMap(\.1)) }
             if lines {
@@ -115,7 +115,7 @@ struct ProblemSetCommand: ParsableCommand {
         func run() throws {
             let r = Resolver(try CLI.context(g))
             let c = try r.course(course)
-            let sets = try c.requireFile().problemSets
+            let sets = c.file.problemSets
             if g.json { return try printJSON(sets) }
             if lines {
                 for s in sets { line(["\(c.code)/\(s.title)", String(localized: .problemSetListProblems(s.problems.count))]) }

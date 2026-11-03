@@ -5,7 +5,8 @@ import Foundation
 
 public enum Term: String, CaseIterable, Codable, Sendable {
     case spring, summer, fall, winter
-    case credited  // 인정학기: has no folder
+    /// 인정학기: credits earned before or outside GIST. Its courses live under `_Credited/<source>`, not a term folder.
+    case credited
 
     public var folderNumber: Int? {
         switch self {
@@ -16,9 +17,6 @@ public enum Term: String, CaseIterable, Codable, Sendable {
         case .credited: nil
         }
     }
-
-    /// A credited term only records transferred credits, so nothing in it meets in class.
-    public var holdsClasses: Bool { self != .credited }
 }
 
 /// `<year>-<term number>`, e.g. `2026-3`.
@@ -83,6 +81,9 @@ public enum StandardLayout {
     /// Same name at the GIST root and inside each course.
     public static let metadataFolder = CourseFolder.metadata.rawValue
     public static let adminFolder = "_Admin"
+    /// At the GIST root: `_Credited/<source>/<course>` for credited terms, named by where the credits came from
+    /// (`영재고 AP`) because a year says little about them. The `_` keeps it apart from term folders.
+    public static let creditedFolder = "_Credited"
     public static let pastExamsFolder = "Past"
     public static let quizFolderPrefix = "Quiz"
     /// Inside `Notes/`: files the notes embed, and notes exported to PDF.
@@ -117,6 +118,16 @@ public enum StandardLayout {
         var course = noteFolder.standardizedFileURL
         for _ in notes..<parts.count { course.deleteLastPathComponent() }
         return course.appending(path: metadataFolder).appending(path: widgetsFolder).appending(path: id.uuidString + ".html")
+    }
+
+    /// `_Credited/<source>`. Nil when the source can't be a folder name.
+    public static func creditedFolder(source: String) -> String? {
+        isCreditedSourceName(source) ? "\(creditedFolder)/\(source)" : nil
+    }
+
+    /// A single folder name: not empty, no path separators, not hidden.
+    public static func isCreditedSourceName(_ name: String) -> Bool {
+        !name.isEmpty && name == name.trimmingCharacters(in: .whitespaces) && !name.contains("/") && !name.contains(":") && !name.hasPrefix(".")
     }
 
     /// `<code> <title>`, e.g. `EC4207 그래프 이론`.

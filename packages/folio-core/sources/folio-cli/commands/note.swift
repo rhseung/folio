@@ -9,7 +9,7 @@ extension Resolver {
     func notePath(_ ref: String) throws -> (CourseRef, NoteFile, String) {
         let (c, name) = try split(ref)
         let n = try note(name, in: c)
-        return (c, n, c.store?.coursePath(of: n.url) ?? name)
+        return (c, n, c.store.coursePath(of: n.url) ?? name)
     }
 }
 
@@ -50,14 +50,14 @@ struct NoteCommand: ParsableCommand {
         func run() throws {
             let r = Resolver(try CLI.context(g))
             let c = try r.course(course)
-            guard let store = c.store else { throw CLIError(exit: .rule, message: String(localized: .quizNoCourseFolder(c.course.title))) }
+            let store = c.store
             let notes = try store.notes()
             let path = { (n: NoteFile) in store.coursePath(of: n.url) ?? n.url.lastPathComponent }
             if g.json {
                 return try printJSON(notes.map { Item(id: $0.meta.id, path: path($0), kind: $0.meta.kind, sessionId: $0.meta.sessionId, examId: $0.meta.examId, unitIds: $0.meta.unitIds) })
             }
             let f = c.file
-            let session = { (n: NoteFile) in n.meta.sessionId.flatMap { id in f?.sessions.first { $0.id == id } }.map { f!.name(of: $0) } ?? "" }
+            let session = { (n: NoteFile) in n.meta.sessionId.flatMap { id in f.sessions.first { $0.id == id } }.map { f.name(of: $0) } ?? "" }
             if lines {
                 for n in notes { line(["\(c.code)/\(path(n))", n.title, n.meta.kind.rawValue, session(n)]) }
                 return
@@ -86,7 +86,7 @@ struct NoteCommand: ParsableCommand {
         func run() throws {
             let r = Resolver(try CLI.context(g))
             let (c, n, path) = try r.notePath(note)
-            let text = try c.store!.read(n)
+            let text = try c.store.read(n)
             if g.json { return try printJSON(Body(id: n.meta.id, path: path, text: text, hash: contentHash(text))) }
             say(text)
         }
@@ -140,7 +140,7 @@ struct NoteCommand: ParsableCommand {
             let (c, n, path) = try Resolver(ctx).notePath(note)
             var expected: String?
             if let expect {
-                let current = try c.store!.read(n)
+                let current = try c.store.read(n)
                 guard contentHash(current) == expect.lowercased() else {
                     throw CLIError(exit: .conflict, message: String(localized: .noteWriteConflict(path)),
                                    hints: [String(localized: .noteWriteConflictHint(c.code, path))])

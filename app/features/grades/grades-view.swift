@@ -18,6 +18,8 @@ struct GradesView: View {
 
             StatStrip(items: model.stats)
 
+            UnfiledCoursesNotice(workspace: model.workspace)
+
             HStack(alignment: .top, spacing: Theme.Space.l + 2) {
                 Block(String(localized: .gradesTrend)) {
                     Card(padding: Theme.Space.l) {

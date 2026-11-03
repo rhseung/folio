@@ -69,50 +69,29 @@ struct SemesterModelTests {
         #expect(model.exams(of: model.courses(in: fall)).map(\.exam.title) == ["중간", "기말"])
     }
 
-    @Test func aRecordWithClassTimesJoinsTheTimetable() throws {
+    @Test func aCreditedTermsSourceRenamesItsFolder() throws {
         let workspace = try fixtureWorkspace()
-        let model = SemesterModel(workspace: workspace, semesterID: fallTerm)
-        let id = UUID()
-        workspace.run(TranscriptAdd(id: id, semester: fallTerm, title: "콜로퀴움", credits: 0))
-        let fall = try #require(model.semester)
-        let record = try #require(model.records(in: fall).first { $0.id == id })
-        #expect(model.folderCourse(record) == nil)
-        #expect(!model.timetable(fall).slots.contains { $0.course.id == id })
+        let model = SemesterModel(workspace: workspace, semesterID: creditedTerm)
+        model.loadSource()
+        #expect(model.source == "영재고 AP" && !model.canSaveSource)
+        model.source = "  "
+        #expect(!model.canSaveSource)
 
-        let sheet = EditRecordModel(workspace: workspace, course: record)
-        sheet.title = "GIST대학 콜로퀴움"
-        sheet.schedule = [ClassTime(weekday: 3, startMinute: 16 * 60, endMinute: 17 * 60)]
-        #expect(sheet.confirm())
-
-        let saved = try #require(model.records(in: fall).first { $0.id == id })
-        #expect(saved.title == "GIST대학 콜로퀴움" && saved.credits == 0)
-        #expect(model.timetable(fall).slots(on: 3).contains { $0.course.id == id && $0.time.startMinute == 16 * 60 })
+        model.source = "군 복무"
+        #expect(model.sourceFolder == "_Credited/군 복무" && model.canSaveSource)
+        #expect(model.sourceConfirmation().contains("군 복무"))
+        model.saveSource()
+        #expect(model.semester?.source == "군 복무" && model.source == "군 복무")
+        let root = try #require(workspace.gist).url
+        #expect(FileManager.default.fileExists(atPath: root.appending(path: "_Credited/군 복무/GS1101 일반물리학 및 연습 I/.folio/course.json").path))
+        #expect(!FileManager.default.fileExists(atPath: root.appending(path: "_Credited/영재고 AP").path))
+        #expect(model.courses(in: try #require(model.semester)).count == 1)
     }
 
-    @Test func aRecordSheetPassesOnWhatTheRulesRefuse() throws {
-        let workspace = try fixtureWorkspace()
-        let id = UUID()
-        workspace.run(TranscriptAdd(id: id, semester: fallTerm, title: "콜로퀴움", credits: 0))
-        let sheet = EditRecordModel(workspace: workspace, course: try #require(workspace.record(id)))
-        #expect(sheet.canSave && sheet.note == nil && sheet.holdsClasses)
-        sheet.schedule = [ClassTime(weekday: 3, startMinute: 17 * 60, endMinute: 16 * 60)]
-        #expect(!sheet.canSave && sheet.note?.contains("끝은 시작보다 늦어야 합니다") == true)
-        sheet.schedule = []
-        sheet.title = "  "
-        #expect(!sheet.canSave && sheet.note == "과목 이름이 비었습니다")
-        sheet.title = "콜로퀴움"
-        sheet.credits = nil
-        #expect(!sheet.canSave && sheet.note == nil)
-        sheet.credits = -1
-        #expect(!sheet.canSave && sheet.note?.contains("학점이 음수") == true)
-    }
-
-    @Test func aCreditedTermsRecordGetsNoClassTimes() throws {
-        let workspace = try fixtureWorkspace()
-        let term = UUID(), id = UUID()
-        workspace.run(SemesterAdd(id: term, year: 2024, term: .credited, creditedHours: 9))
-        workspace.run(TranscriptAdd(id: id, semester: term, title: "군 복무 인정", credits: 9))
-        #expect(!EditRecordModel(workspace: workspace, course: try #require(workspace.record(id))).holdsClasses)
+    @Test func aSourceWithASlashIsRefused() throws {
+        let model = SemesterModel(workspace: try fixtureWorkspace(), semesterID: creditedTerm)
+        model.source = "영재고/AP"
+        #expect(model.sourceFolder == nil && !model.canSaveSource && model.sourceRefusal != nil)
     }
 
     @Test func aPastTermShowsItsDatesWithoutTheCurrentWeek() throws {

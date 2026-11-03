@@ -18,7 +18,7 @@ struct UnitCommand: ParsableCommand {
         func run() throws {
             let r = Resolver(try CLI.context(g))
             let c = try r.course(course)
-            let f = try c.requireFile()
+            let f = c.file
             let outline = UnitTree.outline(f.units).filter { item in depth.map { item.depth < $0 } ?? true }
             if g.json { return try printJSON(outline.map(\.unit)) }
             if lines {
@@ -43,7 +43,7 @@ struct UnitCommand: ParsableCommand {
             let (c, name) = try r.split(unit)
             let u = try r.unit(name, in: c)
             if g.json { return try printJSON(u) }
-            let f = try c.requireFile()
+            let f = c.file
             courseHeader(c, catalog: try? r.ctx.catalog())
             say(u.title.styled(.bold))
             if let parent = u.parentId.flatMap({ id in f.units.first { $0.id == id } }) { say(String(localized: .unitShowParent(parent.title))) }

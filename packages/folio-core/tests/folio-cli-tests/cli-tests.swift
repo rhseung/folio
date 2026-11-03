@@ -97,8 +97,8 @@ struct SchemaTests {
                 Issue.record("\(a["command"] ?? .null) has no input properties")
                 continue
             }
-            // Backing up takes nothing: the folder and retention come from settings.json.
-            #expect(!props.isEmpty || a["command"] == .string("backup create"), "\(a["command"] ?? .null)")
+            // Backing up takes nothing: the folder and retention come from settings.json. Moving takes every unfiled course.
+            #expect(!props.isEmpty || [.string("backup create"), .string("transcript move")].contains(a["command"]), "\(a["command"] ?? .null)")
         }
     }
 

@@ -19,7 +19,7 @@ final class RequirementsModel {
     typealias GroupCard = (group: String, rows: [CategoryTreeRow])
 
     var catalog: Catalog { workspace.requirementCatalog }
-    var courses: [Course] { workspace.allCourseRecords }
+    var courses: [Course] { workspace.allCourses }
     var rule: GraduationRule { workspace.transcript.graduation }
     var audit: RequirementAudit { RequirementAudit(courses: courses, semesters: workspace.transcript.semesters, catalog: catalog) }
     var credits: [UUID: CategoryCredits] { GPACalculator.categoryCredits(courses: courses, catalog: catalog) }
