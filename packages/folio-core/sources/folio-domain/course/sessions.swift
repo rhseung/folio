@@ -149,8 +149,9 @@ public enum SessionPlanner {
             let day = calendar.date(byAdding: .day, value: offset, to: today)!
             offset += 1
             let local = LocalDate(day, in: calendar)
-            if let start, local < start { continue }
+            // End first: a term saved with its start after its end would otherwise skip days forever.
             if let end, local > end { break }
+            if let start, local < start { continue }
             if let anchor, examWeeks.contains(week(of: day, anchor: anchor, calendar: calendar)) { continue }
             let weekday = calendar.isoWeekday(of: day)
             for slot in schedule.filter({ $0.weekday == weekday }).sorted(by: { $0.startMinute < $1.startMinute }) {

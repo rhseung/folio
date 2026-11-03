@@ -29,8 +29,6 @@ final class SessionsModel {
                 + (unlinked > 0 ? [String(localized: .sessionsMissingUnits(unlinked))] : [])).joined(separator: " · ")
     }
 
-    func suggested(_ course: LoadedCourse) -> Workspace.SuggestedSession? { workspace.suggestedSession(for: course, now: workspace.now) }
-
     struct TimelineRow: Identifiable {
         let item: SessionTimeline.Item
         /// For a planned class, what its menu acts on.
@@ -157,7 +155,8 @@ final class SessionsModel {
         switch days {
         case 0: return String(localized: .sessionsTodayAt(clock))
         case 1: return String(localized: .sessionsTomorrowAt(clock))
-        default: return String(localized: .sessionsDaysLater(days))
+        // The gutter shows only the day, so the start time stays in the line.
+        default: return clock.isEmpty ? String(localized: .sessionsDaysLater(days)) : String(localized: .sessionsDaysLaterAt(days, clock))
         }
     }
 

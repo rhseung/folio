@@ -87,6 +87,10 @@ struct CourseWorkTests {
         #expect(open.map(\.date) == ["2026-11-04 13:00", "2026-11-09 13:00"].map(date))
         #expect(SessionPlanner.suggestion(schedule: monWed, sessions: [made], from: nil, to: nil, now: date("2026-11-03 09:00"), calendar: calendar)?.date
                 == date("2026-11-09 13:00"))
+        // A hand-edited term whose start is after its end plans nothing instead of running on.
+        let flipped = SessionPlanner.planned(schedule: monWed, sessions: [], from: LocalDate("2026-12-01"), to: LocalDate("2026-11-25"),
+                                             now: date("2026-11-03 09:00"), calendar: calendar)
+        #expect(flipped.isEmpty)
     }
 
     @Test func plannedClassesSitInTheirWeeksOnTheTimeline() {

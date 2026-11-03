@@ -12882,6 +12882,17 @@
         }
       }
     },
+    "sessions.days-later-at": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld일 후 %2$@"
+          }
+        }
+      }
+    },
     "sessions.empty": {
       "extractionState": "manual",
       "localizations": {
@@ -13021,17 +13032,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "단원 없음 %lld"
-          }
-        }
-      }
-    },
-    "sessions.next": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다음 강의"
           }
         }
       }

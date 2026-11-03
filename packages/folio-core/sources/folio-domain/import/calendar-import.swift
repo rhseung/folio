@@ -53,7 +53,7 @@ public enum CalendarImporter {
     }
 
     /// Adds a session for each meeting with none that day, preferring one at the meeting's time; existing sessions keep
-    /// their week and index and only gain a missing time, topic or lab unit. Re-running adds nothing.
+    /// their week and only gain a missing time, topic or lab unit. Re-running adds nothing.
     public static func merge(_ meetings: [CalendarMeeting], into file: CourseFile, semesterStart: LocalDate,
                              calendar: Calendar, device: DeviceID, now: Date) -> Result {
         var file = file
@@ -97,7 +97,7 @@ public enum CalendarImporter {
                 cancelled.append(file.sessions[i])
             }
         }
-        file.sessions.sort { $0.date < $1.date }
+        file.sessions.sort(by: Session.inOrder)
         var schedule: [ClassTime] = []
         if file.course.schedule.isEmpty {
             schedule = weeklySlots(meetings, calendar: calendar)

@@ -103,7 +103,8 @@ struct SessionsModelTests {
         let later = { (days: Int) in calendar.date(byAdding: .day, value: days, to: now)! }
         #expect(SessionsModel.ahead(later(0), clock: "13:00", now: now, calendar: calendar) == "오늘 13:00")
         #expect(SessionsModel.ahead(later(1), clock: "13:00", now: now, calendar: calendar) == "내일 13:00")
-        #expect(SessionsModel.ahead(later(5), clock: "13:00", now: now, calendar: calendar) == "5일 후")
+        #expect(SessionsModel.ahead(later(5), clock: "13:00", now: now, calendar: calendar) == "5일 후 13:00")
+        #expect(SessionsModel.ahead(later(5), clock: "", now: now, calendar: calendar) == "5일 후")
     }
 
     @Test func untouchedFutureSessionsAreListedAndRemovedTogether() throws {

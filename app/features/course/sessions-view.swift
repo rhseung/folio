@@ -30,13 +30,6 @@ struct SessionsView: View {
             }
             if file.course.schedule.isEmpty { schedule }
             if !model.untouched.isEmpty { untouchedCard }
-            // shortcut: worked out when the page redraws, not on a timer, so a class ending while the page sits open
-            // keeps its suggestion until the next change; a TimelineView left an empty gap whenever nothing was suggested.
-            if let item = model.suggested(course) {
-                Block(String(localized: .sessionsNext), note: String(localized: .sessionsSuggested)) {
-                    SuggestedSessionRow(item: item, openNote: openNote) { editingTimes = true }
-                }
-            }
             let rows = model.timeline(file)
             if !rows.isEmpty {
                 // One timeline down the page instead of a card per week: a row gets the full width for its title. The rail
