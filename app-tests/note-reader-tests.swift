@@ -303,6 +303,11 @@ struct NoteReaderTests {
         // The AMS M is a third wider than Latin Modern's; SwiftMath makes room for it rather than overlapping the next.
         let pair = try #require(NoteMath.picture(#"\mathbb{MM}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false))
         #expect(pair.size.width >= 2 * 0.944 * 16 - 1)
+        // A body that isn't plain letters stays as written and still draws, in Latin Modern.
+        for tex in [#"\mathbb{R^2}"#, #"\mathbb{R\times S}"#] {
+            #expect(NoteMath.tex(tex, .latex) == tex)
+            #expect(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false) != nil, "\(tex)")
+        }
     }
 
     @Test func textInMathReadsAsText() throws {

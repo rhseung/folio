@@ -98,20 +98,25 @@ final class MathAttachment: NSTextAttachment {}
         label.layoutSubviews()
         #endif
         guard label.error == nil, let list = label.displayList else { return nil }
-        Blackboard.restyle(list)
+        // Rebuilding lines walks every glyph, so formulas without the letters skip it.
+        if tex.contains("\\mathbb") { Blackboard.restyle(list) }
         return list
     }
 
     private static func draw(_ list: MTMathListDisplay, size: CGSize, offset: CGPoint) -> PlatformImage {
         #if os(macOS)
-        // Drawn when shown, at the screen's scale.
-        nonisolated(unsafe) let list = list
-        return NSImage(size: size, flipped: false) { _ in
-            guard let context = NSGraphicsContext.current?.cgContext else { return false }
-            context.translateBy(x: offset.x, y: offset.y)
-            list.draw(context)
-            return true
-        }
+        // Drawn once, now, so the cache keeps a bitmap and not SwiftMath's display tree, which a deferred drawing
+        // handler would have to hold and touch off the main actor. At the sharpest attached screen's scale.
+        let scale = NSScreen.screens.map(\.backingScaleFactor).max() ?? 2
+        let width = Int((size.width * scale).rounded(.up)), height = Int((size.height * scale).rounded(.up))
+        guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return NSImage(size: size) }
+        context.scaleBy(x: scale, y: scale)
+        context.translateBy(x: offset.x, y: offset.y)
+        list.draw(context)
+        guard let image = context.makeImage() else { return NSImage(size: size) }
+        return NSImage(cgImage: image, size: size)
         #else
         return UIGraphicsImageRenderer(size: size).image { renderer in
             renderer.cgContext.translateBy(x: 0, y: size.height)
@@ -171,7 +176,9 @@ final class MathAttachment: NSTextAttachment {}
     private static let ams: CGFont? = Bundle.main.url(forResource: "KaTeX_AMS-Regular.ttf", withExtension: nil)
         .flatMap { CGDataProvider(url: $0 as CFURL) }.flatMap { CGFont($0) }
     private static let capitals = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-    private static let mathbb = try! NSRegularExpression(pattern: #"\\mathbb\s*(?:\{([^{}]*)\}|([A-Za-z0-9]))"#)
+    // Only bodies of plain letters and digits are split; `\mathbb{R^2}` or `\mathbb{R\times S}` split by character
+    // would leave `\mathbb{^}` or `\mathbb{\}`, which SwiftMath can't read, so those stay as written.
+    private static let mathbb = try! NSRegularExpression(pattern: #"\\mathbb\s*(?:\{([A-Za-z0-9\s]*)\}|([A-Za-z0-9]))"#)
 
     /// Each `\mathbb` capital as its own command followed by its room, so it can be one letter wide in either font.
     static func reserve(_ tex: String) -> String {
