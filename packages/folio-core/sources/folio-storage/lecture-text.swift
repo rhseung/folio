@@ -15,3 +15,11 @@ extension CourseStore {
         .joined(separator: "\n")
     }
 }
+
+extension CourseStore {
+    /// The context for transcribing `recording` of `session`, its terms read from the slides. Slow: it reads PDFs.
+    public func transcriptionContext(_ file: CourseFile, session: Session, recording: Recording?) -> TranscriptionContext {
+        let context = file.transcriptionContext(for: session, recording: recording)
+        return context.reading(lectureText(context.slides))
+    }
+}
