@@ -39,7 +39,9 @@ struct MarkdownEditor {
         view.openNote = openNote
         view.onScroll = onScroll
         view.configure(accent: accent, syntax: math, dark: dark)
-        if view.string != text { view.replace(with: text) }
+        // The binding hasn't the syllable being composed yet, so swapping the text in then would delete it under the
+        // input method, which then types each next jamo over a gap.
+        if view.string != text, !view.hasMarkedText() { view.replace(with: text) }
         if let insert {
             view.insertAtCaret(insert)
             DispatchQueue.main.async { self.insert = nil }
@@ -393,6 +395,13 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     }
 
     func textDidChange(_ notification: Notification) { onChange() }
+
+    // A syllable ended without a keystroke (a click elsewhere, another app) changes no text, so nothing else hands it
+    // to the binding.
+    override func unmarkText() {
+        super.unmarkText()
+        onChange()
+    }
 
     func textViewDidChangeSelection(_ notification: Notification) {
         if !hasMarkedText() { matchTyping() }

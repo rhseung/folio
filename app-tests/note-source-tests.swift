@@ -2,6 +2,7 @@ import AppKit
 import FolioDomain
 import FolioMarkdown
 import Foundation
+import SwiftUI
 import Testing
 @testable import Folio
 
@@ -84,6 +85,34 @@ struct NoteSourceTests {
         let (view, _) = Self.typing("## 제목")
         view.setMarkedText("하", selectedRange: NSRange(location: 1, length: 0), replacementRange: NSRange(location: NSNotFound, length: 0))
         #expect(Self.size(view, at: view.markedRange().location) == NoteLook.headingSizes[1])
+    }
+
+    /// The binding gets the text only once a syllable is done, so a SwiftUI update in between sees the editor ahead of it.
+    @Test func aSyllableBeingComposedSurvivesTheEditorUpdating() throws {
+        final class Box {
+            var text = "가"
+            var insert: String?
+        }
+        let box = Box()
+        let editor = MarkdownEditor(text: Binding(get: { box.text }, set: { box.text = $0 }), baseURL: nil, math: .latex,
+                                    insert: Binding(get: { box.insert }, set: { box.insert = $0 }), saveFile: { _, _ in nil }, openNote: { _ in })
+        let coordinator = editor.makeCoordinator()
+        let (view, window) = Self.editor(box.text)
+        view.onChange = { coordinator.changed() }
+        coordinator.view = view
+        let accent = CourseAccent.presets[0].accent
+        window.makeFirstResponder(view)
+        view.setSelectedRange(NSRange(location: 1, length: 0))
+        let none = NSRange(location: NSNotFound, length: 0)
+        view.setMarkedText("ㄴ", selectedRange: NSRange(location: 1, length: 0), replacementRange: none)
+        editor.update(view, coordinator, accent: accent, dark: false)
+        #expect(view.string == "가ㄴ" && view.hasMarkedText())
+        view.setMarkedText("나", selectedRange: NSRange(location: 1, length: 0), replacementRange: none)
+        editor.update(view, coordinator, accent: accent, dark: false)
+        #expect(view.string == "가나")
+        // Leaving the window ends the syllable without a keystroke.
+        view.unmarkText()
+        #expect(box.text == "가나")
     }
 
     /// Enter then Tab under `- 셋` starts a sub-item; CommonMark alone would make `셋` a heading until it has text.
