@@ -3,7 +3,7 @@ public enum Actions {
     public static let all: [any Action.Type] = platform + [
         SemesterAdd.self, SemesterSet.self, TranscriptAdd.self, TranscriptSet.self, TranscriptRemove.self, CourseAdd.self, CourseRename.self, CourseSet.self, GraduationSet.self, CatalogSet.self,
         SettingsSet.self,
-        SessionAdd.self, SessionRemove.self, SessionSet.self, SessionNote.self, AttendanceSet.self,
+        SessionAdd.self, SessionRemove.self, SessionSet.self, SessionNote.self, SessionLinkViewed.self, AttendanceSet.self,
         UnitAdd.self, UnitRemove.self, UnitSet.self, UnitMove.self, UnitLink.self,
         ExamAdd.self, ExamSet.self, ExamRemove.self, ExamScope.self, ExamScopeTaught.self, ExamPlanAdd.self, ExamPlanRemove.self, ExamPlanCheck.self, ExamSummary.self,
         AssignmentAdd.self, AssignmentSave.self, AssignmentStatusSet.self, AssignmentRemove.self,

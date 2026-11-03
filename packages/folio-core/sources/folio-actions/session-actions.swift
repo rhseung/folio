@@ -300,3 +300,22 @@ public struct ExamScope {
         }
     }
 }
+
+/// Called by the app when a recording ends. Only files the session has no link to are linked: a range the user set
+/// stays, and a lecture that returned to an earlier file would otherwise shrink its range to what this class saw.
+@Action("session link-viewed", "녹음 중 본 강의 페이지를 회차에 연결하기. 연결이 없는 자료만 더하고 있는 연결은 그대로 둔다",
+        discussion: "앱 안의 PDF 보기에서 20초 이상 머문 페이지의 처음부터 끝까지가 범위다. 녹음이 끝나면 앱이 부른다.",
+        done: "회차 '{session}'에 녹음 중 본 페이지를 연결했습니다",
+        examples: ["folio session link-viewed EC4207/9주차-1 --dry-run"], phrases: ["녹음 중 본 페이지", "본 페이지 연결", "수업 중 본 슬라이드"])
+public struct SessionLinkViewed {
+    @Arg var course: Course.ID
+    /// 회차
+    @Arg var session: Session.ID
+
+    public func run(_ ctx: ActionContext) throws {
+        try ctx.edit(course) { f in
+            _ = try index(session, in: f.sessions, .valueSession)
+            for recording in f.recordings where recording.sessionId == session { f.linkViewedPages(of: recording) }
+        }
+    }
+}
