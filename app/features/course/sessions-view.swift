@@ -2,8 +2,9 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// Sessions are made as classes happen. The classes the weekly schedule still holds show faint on the timeline, and
-/// doing something to one (a 휴강, an absence) makes it a session; anything off the schedule is added by hand.
+/// Sessions are made as classes happen. Each week lists its classes as cards: a saved session solid, a class only the
+/// timetable knows of an empty dashed slot, and doing something to one (a 휴강, an absence) makes it a session. Anything
+/// off the schedule is added by hand.
 struct SessionsView: View {
     @Environment(\.accent) private var accent
     @State private var model: SessionsModel
@@ -23,19 +24,23 @@ struct SessionsView: View {
         let file = course.file
         Page {
             HStack(alignment: .bottom) {
-                PageHeader(title: String(localized: .sessionsTitle), subtitle: model.subtitle(file))
+                VStack(alignment: .leading, spacing: Theme.Space.s) {
+                    Text(.sessionsTitle).font(Theme.Typeface.pageTitle)
+                    (Text(model.subtitle(file)).foregroundStyle(Theme.Palette.textTertiary)
+                     + (model.nextExam(file).map { Text(" · ").foregroundStyle(Theme.Palette.textTertiary) + Text($0).fontWeight(.semibold).foregroundStyle(Theme.Palette.danger) } ?? Text("")))
+                }
                 Spacer()
-                Button(.sessionsAdd) { adding = true }.buttonStyle(.pointing(.borderedProminent))
+                Button(.sessionsAdd, systemImage: "plus") { adding = true }.buttonStyle(.ghost)
                     .help(Text(.sessionsAddHelp))
             }
             if file.course.schedule.isEmpty { schedule }
             if !model.untouched.isEmpty { untouchedCard }
-            let rows = model.timeline(file)
-            if !rows.isEmpty {
-                // One timeline down the page instead of a card per week: a row gets the full width for its title. The rail
-                // is the course color as far as the term has come and gray beyond, so where now is reads at a glance.
-                VStack(alignment: .leading, spacing: 0) {
-                    ForEach(rows) { row in line(row, file: file) }
+            ForEach(model.weeks(file)) { week in
+                VStack(alignment: .leading, spacing: Theme.Space.s) {
+                    header(week)
+                    VStack(spacing: Theme.Space.xs) {
+                        ForEach(week.rows) { row in self.row(row, file: file) }
+                    }
                 }
             }
         }
@@ -44,43 +49,35 @@ struct SessionsView: View {
         .task(id: file.sessions) { model.loadUntouched(course) }
     }
 
-    @ViewBuilder func line(_ row: SessionsModel.TimelineRow, file: CourseFile) -> some View {
-        let (above, below) = (row.above, row.below)
+    func header(_ week: SessionsModel.Week) -> some View {
+        HStack(spacing: Theme.Space.s) {
+            Text(.sessionsWeek(week.number)).font(Theme.Typeface.sectionTitle)
+                .foregroundStyle(week.thisWeek ? accent.ink : Theme.Palette.textSecondary)
+            if week.thisWeek { Chip(String(localized: .sessionsThisWeek), tone: .accent) }
+            Text(week.range).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
+            if week.examWeek {
+                Text("· " + String(localized: .sessionsExamWeek)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+            }
+        }
+        .frame(minHeight: 24)
+    }
+
+    @ViewBuilder func row(_ row: SessionsModel.TimelineRow, file: CourseFile) -> some View {
         switch row.item {
-        case .week(let sessions, let month):
-            let thisWeek = model.isThisWeek(sessions[0].date)
-            // Quieter than a session's title: it only divides; the dates are in the gutter.
-            TimelineLine(above: above, below: below, month: month) {
-                HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
-                    Text(.sessionsWeek(sessions[0].week)).font(Theme.Typeface.caption.weight(.semibold))
-                        .foregroundStyle(thisWeek ? accent.ink : Theme.Palette.textTertiary)
-                    if thisWeek { Chip(String(localized: .sessionsThisWeek), tone: .accent) }
-                }
-                .padding(.top, row.first ? Theme.Space.s : Theme.Space.l)
-                .padding(.bottom, Theme.Space.xs)
-                .padding(.leading, SessionRow.rowPadding)
-            }
-        case .month(let date):
-            TimelineLine(above: above, below: below, month: date) { Color.clear.frame(height: 18) }
+        case .week, .month:
+            EmptyView()
         case .exam(let exam, let date):
-            TimelineLine(above: above, below: below, marker: true) {
-                HStack(spacing: Theme.Space.s) {
-                    Text(model.examLine(exam, date)).font(Theme.Typeface.label).foregroundStyle(Theme.Palette.danger).lineLimit(1)
-                    if let days = model.examDays(exam, now: model.workspace.now) { DdayChip(days: days) }
-                }
-                .padding(.vertical, Theme.Space.m).padding(.leading, SessionRow.rowPadding)
-            }
+            ExamMarkerRow(model: model, exam: exam, date: date)
         case .session(let session, let exams):
-            let end = model.end(of: session, in: file)
             TimelineView(.periodic(from: .now, by: 30)) { _ in
-                SessionRow(model: model, course: course, session: session, now: model.workspace.now, end: end, openNote: openNote,
-                           exams: exams, above: above, below: below)
+                SessionCard(model: model, course: course, session: session, now: model.workspace.now, openNote: openNote)
+                    .modifier(ClassExamCard(model: model, exams: exams, now: model.workspace.now))
             }
             .fileDrop { model.importFiles($0, into: session) }
         case .planned(_, let exams):
             if let item = row.planned {
-                PlannedSessionRow(model: model, item: item, line: model.plannedLine(item), openNote: openNote, editTimes: { editingTimes = true },
-                                  exams: exams, above: above, below: below)
+                PlannedSessionCard(model: model, item: item, openNote: openNote, editTimes: { editingTimes = true })
+                    .modifier(ClassExamCard(model: model, exams: exams, now: model.workspace.now))
             }
         }
     }
@@ -130,68 +127,136 @@ struct SessionsView: View {
     }
 }
 
-/// A class the schedule still holds, not saved: faint, with a dashed dot. Its menu makes the session first, so a 휴강
-/// or an absence known weeks ahead has something to hang on.
-struct PlannedSessionRow: View {
+/// The parts every class card shares: the date tile, the frame, and the ⋯ button.
+enum ClassCard {
+    static let tile: CGFloat = 44
+    static let menu: CGFloat = 28
+    static let radius = Theme.Radius.card
+
+    struct Tile: View {
+        let month: String
+        let day: String
+        var ink: Color = Theme.Palette.text
+        var monthInk: Color = Theme.Palette.textTertiary
+        var fill: Color = Theme.Palette.page
+        var dashed = false
+
+        var body: some View {
+            VStack(spacing: 0) {
+                Text(month).font(Theme.Typeface.label).foregroundStyle(monthInk)
+                Text(day).font(Theme.Typeface.figureSmall.weight(.bold)).foregroundStyle(ink)
+            }
+            .frame(width: ClassCard.tile, height: ClassCard.tile)
+            .background(fill, in: .rect(cornerRadius: Theme.Radius.control))
+            .overlay {
+                if dashed {
+                    RoundedRectangle(cornerRadius: Theme.Radius.control)
+                        .strokeBorder(Theme.Palette.lineStrong, style: StrokeStyle(lineWidth: 1, dash: [3, 3]))
+                }
+            }
+        }
+    }
+
+    /// A rounded pill button: the review note's state, a recording.
+    struct Pill: View {
+        let title: String
+        var symbol: String?
+        var tone: Tone = .plain
+        var help: String
+        let action: () -> Void
+
+        var body: some View {
+            Button(action: action) {
+                HStack(spacing: Theme.Space.xs) {
+                    if let symbol { Image(systemName: symbol) }
+                    Text(title)
+                }
+                .font(Theme.Typeface.label)
+                .foregroundStyle(tone == .plain ? Theme.Palette.textSecondary : tone.foreground)
+                .padding(.horizontal, Theme.Space.s)
+                .frame(height: 24)
+                .background(tone == .success ? Theme.Palette.success.opacity(Theme.Opacity.tint) : tone.fill, in: .capsule)
+                .contentShape(.capsule)
+            }
+            .buttonStyle(.pointing(.plain))
+            .fixedSize()
+            .help(help)
+        }
+    }
+
+    struct MenuButton<Items: View>: View {
+        let help: String
+        @ViewBuilder var items: Items
+
+        var body: some View {
+            Menu { items } label: {
+                Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary)
+                    .frame(width: ClassCard.menu, height: ClassCard.menu).contentShape(.circle)
+            }
+            .menuStyle(.button)
+            .menuIndicator(.hidden)
+            .buttonStyle(.borderless).pointingHand()
+            .fixedSize()
+            .help(Text(help))
+        }
+    }
+}
+
+/// A class the schedule still holds, not saved: an empty dashed slot. Its menu makes the session first, so a 휴강 or an
+/// absence known weeks ahead has something to hang on; on its day it offers the same one-click start a session does.
+struct PlannedSessionCard: View {
     @Environment(\.accent) private var accent
     @Environment(Workspace.self) private var workspace
     let model: SessionsModel
     let item: Workspace.SuggestedSession
-    let line: String
     let openNote: (UUID) -> Void
     var editTimes: (() -> Void)?
-    var exams: [Exam] = []
-    var above: Bool?
-    var below: Bool?
-    @State private var hovering = false
 
     var body: some View {
         let date = item.suggestion.date
-        let tab = ClassExamCard.height(exams)
-        HStack(alignment: .top, spacing: 0) {
-            VStack(spacing: 0) {
-                Text("\(workspace.calendar.component(.day, from: date))").font(Theme.Typeface.figureMedium.weight(.semibold)).monospacedDigit()
-                Text(date.formatted(.dateTime.weekday())).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
-            }
-            .frame(width: SessionRow.gutter)
-            .padding(.top, SessionRow.rowPadding - 2 + tab)
-            .opacity(0.4)
-            Rail(above: above, below: below, dotY: SessionRow.dotY + tab) {
-                Circle().strokeBorder(Theme.Palette.lineStrong, style: StrokeStyle(lineWidth: 1.5, dash: [2, 2]))
-                    .background(Theme.Palette.page, in: .circle).frame(width: 10, height: 10)
-            }
-            HStack(alignment: .top, spacing: Theme.Space.m) {
-                VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text(.sessionsPlanned).font(Theme.Typeface.bodyStrong).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
-                    Text(line).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit().lineLimit(1)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                // Today's class keeps the one-click start a saved session's row has: its rough note and the meeting.
-                if workspace.isStudyToday(date) {
-                    HStack(spacing: Theme.Space.s) {
-                        if let link = item.suggestion.link.flatMap(OnlineLink.url) { JoinOnlineButton(url: link) }
-                        SessionSlot(String(localized: .sessionsSlotRough), symbol: "plus", tint: accent.ink, help: String(localized: .sessionsSlotRoughMakeHelp)) {
-                            SuggestedSessionItems.roughNote(item, workspace, openNote)
+        let today = workspace.isStudyToday(date)
+        VStack(alignment: .leading, spacing: Theme.Space.m) {
+            HStack(spacing: Theme.Space.l) {
+                ClassCard.Tile(month: model.month(date), day: model.day(date), fill: .clear, dashed: true)
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    Text(.sessionsClass).font(Theme.Typeface.bodyStrong).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
+                    HStack(spacing: Theme.Space.tight) {
+                        Text(model.plannedLine(item)).monospacedDigit().lineLimit(1)
+                        if item.suggestion.link != nil {
+                            Image(systemName: "video").help(Text(.sessionsOnline))
                         }
                     }
+                    .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                 }
-                Menu { SuggestedSessionItems(item: item, primary: true, openNote: openNote, editTimes: editTimes) } label: {
-                    Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary).frame(width: 24, height: 24).contentShape(.rect)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                ClassCard.MenuButton(help: String(localized: .sessionsSuggestionMenuHelp)) {
+                    SuggestedSessionItems(item: item, primary: true, openNote: openNote, editTimes: editTimes)
                 }
-                .menuStyle(.button)
-                .menuIndicator(.hidden)
-                .buttonStyle(.borderless).pointingHand()
-                .fixedSize()
-                .help(Text(.sessionsSuggestionMenuHelp))
             }
-            .padding(SessionRow.rowPadding)
-            .background(hovering ? Theme.Palette.text.opacity(0.04) : .clear, in: .rect(cornerRadius: Theme.Radius.control))
-            .contentShape(.rect)
-            .onHover { hovering = $0 }
-            .contextMenu { SuggestedSessionItems(item: item, primary: true, openNote: openNote, editTimes: editTimes) }
-            .help(Text(.sessionsPlannedHelp))
-            .modifier(ClassExamCard(model: model, exams: exams, now: workspace.now))
+            if today {
+                HStack(spacing: Theme.Space.s) {
+                    if let link = item.suggestion.link.flatMap(OnlineLink.url) { JoinOnlineButton(url: link, prominent: true) }
+                    Button(.sessionsRecord, systemImage: "record.circle") { SuggestedSessionItems.record(item, workspace) }
+                        .buttonStyle(.pointing(.bordered)).disabled(workspace.recorder.isActive)
+                    Button(.sessionsRoughNote, systemImage: "doc.text") { SuggestedSessionItems.roughNote(item, workspace, openNote) }
+                        .buttonStyle(.pointing(.bordered)).help(Text(.sessionsRoughNoteHelp))
+                }
+                .padding(.leading, ClassCard.tile + Theme.Space.l)
+            }
         }
+        .padding(.vertical, Theme.Space.m)
+        .padding(.leading, Theme.Space.l)
+        .padding(.trailing, Theme.Space.m)
+        .frame(minHeight: 60)
+        // Half the card's white over the page, but opaque, so an exam card tucked in behind doesn't show through.
+        .background(Theme.Palette.card.opacity(Theme.Opacity.planned), in: .rect(cornerRadius: ClassCard.radius))
+        .background(Theme.Palette.page, in: .rect(cornerRadius: ClassCard.radius))
+        .overlay {
+            RoundedRectangle(cornerRadius: ClassCard.radius).strokeBorder(Theme.Palette.lineStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
+        }
+        .contentShape(.rect)
+        .contextMenu { SuggestedSessionItems(item: item, primary: true, openNote: openNote, editTimes: editTimes) }
+        .help(Text(.sessionsPlannedHelp))
     }
 }
 
@@ -320,8 +385,10 @@ struct SuggestedSessionItems: View {
         if let s = make(item, workspace), let id = workspace.note(.rough, of: s.id, in: item.courseId) { openNote(id) }
     }
 
-    func record() {
-        if let s = Self.make(item, workspace) { workspace.record(s.id, in: item.courseId) }
+    func record() { Self.record(item, workspace) }
+
+    static func record(_ item: Workspace.SuggestedSession, _ workspace: Workspace) {
+        if let s = make(item, workspace) { workspace.record(s.id, in: item.courseId) }
     }
 }
 
@@ -360,9 +427,16 @@ struct SessionFormSheet: View {
 struct JoinOnlineButton: View {
     @Environment(\.openURL) private var openURL
     let url: URL
+    /// The class card's own start button, rather than a slot among the notes.
+    var prominent = false
 
     var body: some View {
-        SessionSlot(String(localized: .sessionsJoin), symbol: "video", help: url.absoluteString, fixed: false) { Self.join(url, openURL) }
+        if prominent {
+            Button(.sessionsJoin, systemImage: "video") { Self.join(url, openURL) }.buttonStyle(.pointing(.borderedProminent))
+                .help(url.absoluteString)
+        } else {
+            SessionSlot(String(localized: .sessionsJoin), symbol: "video", help: url.absoluteString, fixed: false) { Self.join(url, openURL) }
+        }
     }
 
     static func join(_ url: URL, _ openURL: OpenURLAction) {
@@ -375,10 +449,13 @@ struct JoinOnlineButton: View {
 /// never reaches the unit queue.
 struct SessionUnitsPicker: View {
     @Environment(Workspace.self) private var workspace
+    @Environment(\.accent) private var accent
     let course: LoadedCourse
     let session: Session
     /// The icon alone, when the row's title already names the units.
     var compact = false
+    /// After other text on a line, so it leads with a `·`; a held class with none asks for them in the accent.
+    var separated = false
 
     var body: some View {
         let file = course.file
@@ -390,247 +467,181 @@ struct SessionUnitsPicker: View {
                          isSelected: { id in linked.contains { $0.id == id } },
                          pick: { id in workspace.run(UnitLink(course: course.id, unit: id, sessions: [session.id], linked: !session.unitIds.contains(id))) },
                          multiple: true, prompt: String(localized: .sessionsUnitsSearch), flexible: true) {
-                HStack(spacing: Theme.Space.xs) {
-                    Image(systemName: missing ? "exclamationmark.triangle.fill" : linked.isEmpty ? "plus" : "link")
-                    if !compact {
-                        Text(shown.isEmpty ? String(localized: missing ? .sessionsUnitsNeeded : .sessionsUnitsLink) : shown.map(\.title).joined(separator: " · "))
-                            .lineLimit(1).truncationMode(.tail)
+                if separated {
+                    inline(shown: shown, missing: missing)
+                } else {
+                    HStack(spacing: Theme.Space.xs) {
+                        Image(systemName: missing ? "exclamationmark.triangle.fill" : linked.isEmpty ? "plus" : "link")
+                        if !compact {
+                            Text(shown.isEmpty ? String(localized: missing ? .sessionsUnitsNeeded : .sessionsUnitsLink) : shown.map(\.title).joined(separator: " · "))
+                                .lineLimit(1).truncationMode(.tail)
+                        }
                     }
+                    .font(Theme.Typeface.caption.weight(missing ? .semibold : .regular))
+                    .foregroundStyle(missing ? Theme.Palette.warning : linked.isEmpty ? Theme.Palette.textTertiary : Theme.Palette.textSecondary)
+                    .contentShape(.rect)
                 }
-                .font(Theme.Typeface.caption.weight(missing ? .semibold : .regular))
-                .foregroundStyle(missing ? Theme.Palette.warning : linked.isEmpty ? Theme.Palette.textTertiary : Theme.Palette.textSecondary)
-                .contentShape(.rect)
             }
             // The label truncates on a narrow row, so the tooltip carries every title.
             .help(missing ? String(localized: .sessionsUnitsMissingHelp) : shown.isEmpty ? String(localized: .sessionsUnitsHelp) : shown.map(\.title).joined(separator: "\n"))
         }
     }
+
+    @ViewBuilder func inline(shown: [FolioDomain.Unit], missing: Bool) -> some View {
+        HStack(spacing: Theme.Space.tight) {
+            // The title names the units already, so only the icon is left to click and it needs no separator.
+            if !(compact && !shown.isEmpty) { Text("·") }
+            if !shown.isEmpty {
+                if !compact { Text(shown.map(\.title).joined(separator: " · ")).lineLimit(1).truncationMode(.tail) } else { Image(systemName: "link") }
+            } else if missing {
+                Label(.sessionsUnitsAdd, systemImage: "plus").labelStyle(.titleAndIcon).fontWeight(.semibold).foregroundStyle(accent.ink)
+            } else {
+                Label(.sessionsUnitsAdd, systemImage: "plus").labelStyle(.titleAndIcon)
+            }
+        }
+        .contentShape(.rect)
+    }
 }
 
-struct TimelineLine<Content: View>: View {
-    @Environment(\.accent) private var accent
-    let above: Bool?
-    let below: Bool?
-    var month: Date?
-    var marker = false
-    @ViewBuilder var content: Content
+/// An exam outside class time, at its own date: in red whether taken or not, with how far off while it is ahead.
+/// A score is a grade and stays on the grades page.
+struct ExamMarkerRow: View {
+    let model: SessionsModel
+    let exam: Exam
+    let date: Date
 
     var body: some View {
-        HStack(alignment: .center, spacing: 0) {
-            // Level with the line's text, which sits at the bottom of its padding.
-            Text(month?.formatted(.dateTime.month()) ?? "").font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(Theme.Palette.textSecondary)
-                .fixedSize().frame(width: SessionRow.gutter).frame(maxHeight: .infinity, alignment: .bottom).padding(.bottom, Theme.Space.xs)
-            Rail(above: above, below: below) {
-                if marker { Rectangle().fill(Theme.Palette.danger).frame(width: 8, height: 8).rotationEffect(.degrees(45)) }
+        HStack(spacing: Theme.Space.l) {
+            ClassCard.Tile(month: model.month(date), day: model.day(date), ink: Theme.Palette.danger, monthInk: Theme.Palette.danger,
+                           fill: Theme.Palette.danger.opacity(Theme.Opacity.tint))
+            HStack(spacing: Theme.Space.m) {
+                Image(systemName: "flag").font(Theme.Typeface.caption.weight(.semibold))
+                Text(exam.title).font(Theme.Typeface.bodyLarge.weight(.bold)).lineLimit(1).fixedSize()
+                Text(model.examLine(exam, date)).font(Theme.Typeface.caption).monospacedDigit().lineLimit(1)
+                Capsule().fill(Theme.Palette.danger.opacity(Theme.Opacity.toneEdge)).frame(minWidth: Theme.Space.xl, maxWidth: .infinity).frame(height: 2)
+                if let days = model.examDays(exam, now: model.workspace.now) {
+                    Chip(days == 0 ? "D-day" : "D-\(days)", tone: .danger, solid: true)
+                }
             }
-            .frame(maxHeight: .infinity)
-            content.frame(maxWidth: .infinity, alignment: .leading)
+            .foregroundStyle(Theme.Palette.danger)
         }
-        .fixedSize(horizontal: false, vertical: true)
+        .padding(.vertical, Theme.Space.xs)
+        .padding(.leading, Theme.Space.l)
+        .padding(.trailing, Theme.Space.m)
+        .frame(minHeight: 52)
     }
 }
 
-/// `dotY` puts the dot level with the row's title; nil centers it.
-struct Rail<Dot: View>: View {
-    @Environment(\.accent) private var accent
-    let above: Bool?
-    let below: Bool?
-    var dotY: CGFloat?
-    @ViewBuilder var dot: Dot
-
-    var body: some View {
-        GeometryReader { proxy in
-            let y = dotY ?? proxy.size.height / 2
-            VStack(spacing: 0) {
-                Rectangle().fill(style(above, else: below, fadingUp: true)).frame(width: 2, height: y)
-                Rectangle().fill(style(below, else: above, fadingUp: false)).frame(width: 2)
-            }
-            .frame(maxWidth: .infinity)
-            .overlay(alignment: .top) { dot.frame(height: y * 2) }
-        }
-        .frame(width: SessionRow.railWidth)
-    }
-
-    /// At either end the rail fades out from its neighbor's color instead of stopping square.
-    func style(_ held: Bool?, else neighbor: Bool?, fadingUp: Bool) -> AnyShapeStyle {
-        if let held { return AnyShapeStyle(color(held)) }
-        guard let neighbor else { return AnyShapeStyle(Color.clear) }
-        let c = color(neighbor)
-        return AnyShapeStyle(LinearGradient(colors: [c, c.opacity(0)], startPoint: fadingUp ? .bottom : .top, endPoint: fadingUp ? .top : .bottom))
-    }
-
-    func color(_ held: Bool) -> Color { held ? accent.color.opacity(0.5) : Theme.Palette.line }
-}
-
-/// Exams held in the class's time, as a card tucked behind the class that shows only its top line. The class stays
-/// the row: the exam is something that happens in it. Applied last, so the class covers the card's lower edge.
+/// Exams held in the class's time, as a card tucked in behind the class with only its top line showing. The class
+/// stays the row: the exam is something that happens in it.
 struct ClassExamCard: ViewModifier {
     let model: SessionsModel
     let exams: [Exam]
     let now: Date
-    static let line: CGFloat = 20
-    static let inset: CGFloat = 6
     /// How far the card runs on under the class, so it reads as behind it rather than above it.
     static let tuck: CGFloat = 8
-
-    /// The card's visible part, which the row's gutter and dot drop by to stay level with the class.
-    static func height(_ exams: [Exam]) -> CGFloat {
-        exams.isEmpty ? 0 : CGFloat(exams.count) * line + CGFloat(exams.count - 1) * 2 + inset * 2
-    }
 
     func body(content: Content) -> some View {
         if exams.isEmpty {
             content
         } else {
-            content
-                // On the shape alone, so the row's text casts none.
-                .background { RoundedRectangle(cornerRadius: Theme.Radius.control).fill(Theme.Palette.page).shadow(color: .black.opacity(0.06), radius: 3, y: -2) }
-                .background(alignment: .top) { card.fixedSize(horizontal: false, vertical: true).offset(y: -Self.height(exams)) }
-                .padding(.top, Self.height(exams))
+            VStack(spacing: 0) {
+                card
+                content
+                    // On the class's own shape, so its text casts none.
+                    .background { RoundedRectangle(cornerRadius: ClassCard.radius).fill(.clear).shadow(color: .black.opacity(0.06), radius: 3, y: -2) }
+                    .padding(.top, -Self.tuck)
+            }
+            // Room above, so a tucked-in exam reads as its own class's and not the one before.
+            .padding(.top, Theme.Space.s)
         }
     }
 
     var card: some View {
-        VStack(alignment: .leading, spacing: 2) {
+        VStack(spacing: Theme.Space.xxs) {
             ForEach(exams) { exam in
-                HStack(spacing: Theme.Space.s) {
-                    Image(systemName: "flag.fill").font(Theme.Typeface.caption)
-                    Text(exam.title).font(Theme.Typeface.caption.weight(.semibold)).lineLimit(1)
-                    if let time = model.examTime(exam) { Text(time).font(Theme.Typeface.caption).monospacedDigit().lineLimit(1).fixedSize() }
-                    Spacer(minLength: Theme.Space.s)
-                    if let days = model.examDays(exam, now: now) { DdayChip(days: days) }
+                HStack(spacing: Theme.Space.l) {
+                    Image(systemName: "flag").font(Theme.Typeface.caption.weight(.semibold)).frame(width: ClassCard.tile)
+                    HStack(spacing: Theme.Space.s) {
+                        Text(exam.title).font(Theme.Typeface.bodyStrong.weight(.bold)).lineLimit(1).fixedSize()
+                        if let time = model.examTime(exam) {
+                            Text(time).font(Theme.Typeface.caption).monospacedDigit().lineLimit(1)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    if let days = model.examDays(exam, now: now) { Chip(days == 0 ? "D-day" : "D-\(days)", tone: .danger, solid: true) }
                 }
-                .frame(height: Self.line)
+                .frame(minHeight: 24)
             }
         }
         .foregroundStyle(Theme.Palette.danger)
-        .padding(.horizontal, SessionRow.rowPadding)
-        .padding(.top, Self.inset)
-        .padding(.bottom, Self.inset + Self.tuck)
-        .background(Theme.Palette.dangerFill, in: .rect(topLeadingRadius: Theme.Radius.control, topTrailingRadius: Theme.Radius.control))
+        .padding(.top, Theme.Space.s)
+        .padding(.bottom, Theme.Space.s + Self.tuck)
+        .padding(.leading, Theme.Space.xs)
+        .padding(.trailing, ClassCard.tile)
+        .background(Theme.Palette.dangerFill, in: .rect(topLeadingRadius: ClassCard.radius, topTrailingRadius: ClassCard.radius))
         .overlay {
-            UnevenRoundedRectangle(topLeadingRadius: Theme.Radius.control, topTrailingRadius: Theme.Radius.control)
-                .strokeBorder(Theme.Palette.danger.opacity(0.2), lineWidth: 1)
+            UnevenRoundedRectangle(topLeadingRadius: ClassCard.radius, topTrailingRadius: ClassCard.radius)
+                .strokeBorder(Theme.Palette.danger.opacity(Theme.Opacity.toneEdge), lineWidth: 1)
         }
         // Narrower than the class, as a card further back would be.
         .padding(.horizontal, Theme.Space.m)
     }
 }
 
-/// Date, what the class covered, then only the notes that exist. Creating notes, attendance and cancelling live in one menu,
-/// except today's rough note, which is a single click away.
-struct SessionRow: View {
+/// A saved class: the date tile, what it covered and its attendance, then its recording and review note as pills.
+/// Under way it fills from the left as the class goes; on its day it offers joining, recording and the rough note in
+/// one click. Everything else lives in the ⋯ menu.
+struct SessionCard: View {
     @Environment(\.accent) private var accent
     let model: SessionsModel
     let course: LoadedCourse
     let session: Session
     var now = Date.now
-    /// Its own end, else its class time's; nil for a class with neither, which then never shows as under way.
-    var end: Date?
     let openNote: (UUID) -> Void
-    var exams: [Exam] = []
     @State private var playing: Recording?
     @State private var confirmingDelete = false
     @State private var deleteRefusal: String?
     @State private var editing = false
     @Environment(\.openURL) private var openURL
-    /// The rail above and below this row's dot: nil at the ends, true once held.
-    var above: Bool?
-    var below: Bool?
-    @State private var hovering = false
-    static let rowPadding: CGFloat = 8
-    static let gutter: CGFloat = 26
-    static let railWidth: CGFloat = 22
-    /// Level with the title line's middle.
-    static let dotY: CGFloat = rowPadding + 10
 
     var body: some View {
-        let ongoing = model.isOngoing(session, end: end, now: now)
-        let ahead = session.date > now
-        let tab = ClassExamCard.height(exams)
-        HStack(alignment: .top, spacing: 0) {
-            // The day large, the weekday under it; the month is marked on the timeline where it changes.
-            VStack(spacing: 0) {
-                // The bare number: Korean's day format adds 일.
-                Text("\(model.calendar.component(.day, from: session.date))").font(Theme.Typeface.figureMedium.weight(.semibold)).monospacedDigit()
-                    .foregroundStyle(ongoing ? accent.ink : Theme.Palette.text)
-                Text(session.date.formatted(.dateTime.weekday())).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
-            }
-            .frame(width: Self.gutter)
-            .padding(.top, Self.rowPadding - 2 + tab)
-            .opacity(ahead ? 0.55 : 1)
-            Rail(above: above, below: below, dotY: Self.dotY + tab) {
-                dot(progress: model.progress(session, end: end, now: now), ahead: ahead, cancelled: session.isCancelled)
-            }
-            // One stack, so a right click anywhere on the row opens the ⋯ menu's items.
-            HStack(alignment: .top, spacing: Theme.Space.m) { row }
-                .padding(Self.rowPadding)
-                .background(hovering ? Theme.Palette.text.opacity(0.04) : .clear, in: .rect(cornerRadius: Theme.Radius.control))
-                .contentShape(.rect)
-                .onHover { hovering = $0 }
-                .contextMenu { menuItems }
-                .modifier(ClassExamCard(model: model, exams: exams, now: now))
-        }
-    }
-
-    @ViewBuilder var row: some View {
         let file = course.file
-        let recordings = model.recordings(of: session, in: file)
-        let recorder = model.workspace.recorder
-        let recordingThis = recordings.contains { $0.id == recorder.current }
+        let expected = session.expectedEnd(schedule: file.course.schedule, classMinutes: model.workspace.settings.classMinutes, calendar: model.calendar)
+        let live = model.isOngoing(session, end: expected, now: now)
+        let progress = model.progress(session, end: expected, now: now)
         let cancelled = session.isCancelled
-        let today = model.isToday(session.date)
-        let late = model.lateMark(session, in: file)
-        // Classes still ahead are drawn faint, like the suggested one, so the held ones read as the record.
-        let ahead = session.date > now
-        let link = model.link(of: session, in: file)
-        let left = model.isOngoing(session, end: end, now: now)
-            ? end.map { Text(model.minutesLeft(until: $0, now: now)).fontWeight(.semibold).foregroundStyle(accent.ink) } : nil
-        VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-            HStack(spacing: Theme.Space.s) {
-                Text(model.title(of: session, in: file)).font(Theme.Typeface.bodyStrong).lineLimit(1).help(file.name(of: session))
-                    .strikethrough(cancelled).foregroundStyle(cancelled ? Theme.Palette.textTertiary : Theme.Palette.text)
-                if let late { Text(late.label).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(late.tint).fixedSize() }
+        let starts = !cancelled && model.offersJoin(session, in: file, now: now)
+        VStack(alignment: .leading, spacing: Theme.Space.m) {
+            HStack(spacing: Theme.Space.l) {
+                ClassCard.Tile(month: model.month(session.date), day: model.day(session.date),
+                               ink: live ? accent.ink : Theme.Palette.text, monthInk: live ? accent.ink : Theme.Palette.textTertiary,
+                               fill: live ? accent.tint : Theme.Palette.page)
+                    .opacity(cancelled ? Theme.Opacity.ended : 1)
+                lines(file, live: live).opacity(cancelled ? Theme.Opacity.ended : 1)
+                trailing(file, live: live, expected: expected).opacity(cancelled ? Theme.Opacity.ended : 1)
+                ClassCard.MenuButton(help: String(localized: .sessionsMenuHelp)) { menuItems }
             }
-            HStack(spacing: Theme.Space.s) {
-                if let line = left ?? model.when(session, now: now).map({ Text($0) }) {
-                    line.font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit().lineLimit(1).fixedSize()
+            if starts { actions(file) }
+        }
+        .padding(.vertical, Theme.Space.m)
+        .padding(.leading, Theme.Space.l)
+        .padding(.trailing, Theme.Space.m)
+        .frame(minHeight: 60)
+        .background {
+            // The class's elapsed share fills the card from the left with a hard edge, standing in for a progress bar.
+            GeometryReader { proxy in
+                Theme.Palette.card.overlay(alignment: .leading) {
+                    if let progress { accent.tint.frame(width: proxy.size.width * progress) }
                 }
-                if link != nil && !cancelled {
-                    Image(systemName: "video").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
-                        .help(Text(.sessionsOnline))
-                }
-                if !cancelled { SessionUnitsPicker(course: course, session: session, compact: model.unitsInTitle(session, in: file)) }
             }
+            .clipShape(.rect(cornerRadius: ClassCard.radius))
         }
-        // Takes the room the fixed slots leave, so the topic and units truncate before anything else moves.
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .opacity(ahead ? 0.55 : 1)
-        if !cancelled {
-            HStack(spacing: Theme.Space.s) {
-                if let link, model.offersJoin(session, in: file, now: now) { JoinOnlineButton(url: link) }
-                if recordingThis {
-                    Label(.sessionsRecording, systemImage: "waveform").foregroundStyle(Theme.Palette.danger)
-                        .symbolEffect(.variableColor.iterative, isActive: recorder.state == .recording)
-                } else if let last = recordings.last {
-                    SessionSlot(model.recordingsLabel(recordings.count), symbol: "waveform", help: String(localized: .sessionsRecordingPlayHelp), fixed: false) { playing = last }
-                } else if today && !recorder.isActive {
-                    SessionSlot(String(localized: .sessionsRecordingShort), symbol: "record.circle", help: String(localized: .sessionsRecordHelp), fixed: false) {
-                        model.record(session)
-                    }
-                }
-                // No empty recording slot: it sits leftmost, so the note slots line up without it and the topic keeps the room.
-                SessionNoteSlots(file: file, session: session, offersRough: today, openNote: openNote, create: open)
-            }
+        .overlay {
+            RoundedRectangle(cornerRadius: ClassCard.radius).strokeBorder(live ? accent.color.opacity(Theme.Opacity.liveEdge) : Theme.Palette.line, lineWidth: 1)
         }
-        Menu { menuItems } label: {
-            Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary).frame(width: 24, height: 24).contentShape(.rect)
-        }
-        .menuStyle(.button)
-        .menuIndicator(.hidden)
-        .buttonStyle(.borderless).pointingHand()
-        .fixedSize()
-        .help(Text(.sessionsMenuHelp))
+        .contentShape(.rect)
+        .contextMenu { menuItems }
         .confirmationDialog(model.removeConfirmation(session, in: file), isPresented: $confirmingDelete) {
             Button(.sessionsRemove, role: .destructive) { model.remove(session) }
         } message: {
@@ -643,6 +654,74 @@ struct SessionRow: View {
         }
         .sheet(item: $playing) { RecordingPlayer(workspace: model.workspace, courseId: course.id, store: course.store, recording: $0, title: model.playerTitle(session, in: file)) }
         .sheet(isPresented: $editing) { SessionFormSheet(workspace: model.workspace, course: course, session: session) }
+    }
+
+    func lines(_ file: CourseFile, live: Bool) -> some View {
+        let late = model.lateMark(session, in: file)
+        let cancelled = session.isCancelled
+        return VStack(alignment: .leading, spacing: Theme.Space.xs) {
+            HStack(spacing: Theme.Space.s) {
+                Text(model.title(of: session, in: file)).font(Theme.Typeface.bodyStrong).lineLimit(1).truncationMode(.tail)
+                    .foregroundStyle(model.hasSubject(session, in: file) ? Theme.Palette.text : Theme.Palette.textTertiary)
+                    .help(file.title(of: session, calendar: model.calendar))
+                if live { Chip(String(localized: .sessionsNow), tone: .accent) }
+                if cancelled { Chip(String(localized: .sessionsCancelled)) }
+                if let late { Chip(late.label, tone: late.value == .late ? .warning : late.value == .absent ? .danger : .plain) }
+            }
+            HStack(spacing: Theme.Space.tight) {
+                Text(model.dayLine(session.date, end: model.end(of: session, in: file))).monospacedDigit().lineLimit(1).fixedSize()
+                if model.link(of: session, in: file) != nil && !cancelled {
+                    Image(systemName: "video").help(Text(.sessionsOnline))
+                }
+                if !cancelled { SessionUnitsPicker(course: course, session: session, compact: model.unitsInTitle(session, in: file), separated: true) }
+            }
+            .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+        }
+        // Takes the room the pills leave, so the title and units truncate before anything else moves.
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    @ViewBuilder func trailing(_ file: CourseFile, live: Bool, expected: Date) -> some View {
+        let recordings = model.recordings(of: session, in: file)
+        let recorder = model.workspace.recorder
+        HStack(spacing: Theme.Space.s) {
+            if recordings.contains(where: { $0.id == recorder.current }) {
+                Label(.sessionsRecording, systemImage: "waveform").font(Theme.Typeface.label).foregroundStyle(Theme.Palette.danger)
+                    .symbolEffect(.variableColor.iterative, isActive: recorder.state == .recording)
+            } else if let last = recordings.last {
+                ClassCard.Pill(title: model.recordingsLabel(recordings.count), symbol: "waveform", help: String(localized: .sessionsRecordingPlayHelp)) { playing = last }
+            }
+            switch model.review(of: session, in: file, now: now) {
+            case .done(let id):
+                ClassCard.Pill(title: String(localized: .sessionsReviewDone), tone: .success, help: String(localized: .sessionsOpenReviewNote)) { openNote(id) }
+            case .writing(let id):
+                ClassCard.Pill(title: String(localized: .sessionsReviewWriting), tone: .warning, help: String(localized: .sessionsSlotReviewDraftHelp)) { openNote(id) }
+            // Not owed until the class ends: under way, the card's own buttons start the notes.
+            case .missing where !live:
+                ClassCard.Pill(title: String(localized: .sessionsReviewMissing), tone: .danger, help: String(localized: .sessionsSlotReviewMakeHelp)) { open(.review) }
+            case .missing, nil:
+                EmptyView()
+            }
+            if live {
+                Text(model.minutesLeft(until: expected, now: now)).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink)
+                    .monospacedDigit().fixedSize()
+            }
+        }
+    }
+
+    /// On the class's day: joining, recording and the rough note, a click each.
+    func actions(_ file: CourseFile) -> some View {
+        let recorder = model.workspace.recorder
+        return HStack(spacing: Theme.Space.s) {
+            if let link = model.link(of: session, in: file) { JoinOnlineButton(url: link, prominent: true) }
+            if !recorder.isActive {
+                Button(.sessionsRecord, systemImage: "record.circle") { model.record(session) }.buttonStyle(.pointing(.bordered))
+                    .help(Text(.sessionsRecordHelp))
+            }
+            Button(String(localized: session.roughNoteId == nil ? .sessionsRoughNote : .sessionsOpenRoughNote), systemImage: "doc.text") { open(.rough) }
+                .buttonStyle(.pointing(.bordered))
+        }
+        .padding(.leading, ClassCard.tile + Theme.Space.l)
     }
 
     @ViewBuilder var menuItems: some View {
@@ -674,27 +753,6 @@ struct SessionRow: View {
         Button(.sessionsRemoveSessionEllipsis, role: .destructive) {
             deleteRefusal = model.removalRefusal(session)
             if deleteRefusal == nil { confirmingDelete = true }
-        }
-    }
-
-    /// Filled in the course color once held, hollow while ahead or cancelled, and while under way a ring filling round as
-    /// the class goes. The page-colored fill keeps the rail from showing through.
-    @ViewBuilder func dot(progress: Double?, ahead: Bool, cancelled: Bool) -> some View {
-        if let progress {
-            ZStack {
-                Circle().stroke(accent.color.opacity(0.22), lineWidth: 2.5)
-                Circle().trim(from: 0, to: progress).stroke(accent.color, style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
-                    .rotationEffect(.degrees(-90))
-                Circle().fill(accent.color).frame(width: 6, height: 6)
-            }
-            .frame(width: 16, height: 16)
-            .background(Theme.Palette.page, in: .circle)
-        } else if ahead || cancelled {
-            Circle().strokeBorder(Theme.Palette.lineStrong, lineWidth: 1.5)
-                .background(Theme.Palette.page, in: .circle).frame(width: 10, height: 10)
-        } else {
-            Circle().fill(accent.color).frame(width: 8, height: 8)
-                .padding(Theme.Space.xxs).background(Theme.Palette.page, in: .circle)
         }
     }
 
