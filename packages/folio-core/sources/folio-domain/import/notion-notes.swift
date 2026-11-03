@@ -105,14 +105,18 @@ public enum NotionNotesImporter {
                 let review = row.kind == "복습" || (row.kind == nil && s.review)
                 kind = review ? .review : .rough
                 let key = "\(s.week)주차-\(s.index)"
+                let day = row.date.flatMap(LocalDate.init).flatMap { $0.date(in: calendar) }
+                // A session another Notion number already took is a different class: matching it again by date or
+                // name would fold two classes into one.
+                let claimed = Set(named.filter { $0.key != key }.values)
                 let index: Int
                 if let existing = file.sessions.firstIndex(where: { $0.roughNoteId == row.id || $0.reviewNoteId == row.id })
                     ?? named[key].flatMap({ id in file.sessions.firstIndex { $0.id == id } })
-                    ?? file.sessions.firstIndex(where: { file.name(of: $0) == key }) {
+                    ?? day.flatMap({ d in file.sessions.firstIndex { !claimed.contains($0.id) && $0.week == s.week && calendar.isDate($0.date, inSameDayAs: d) } })
+                    ?? file.sessions.firstIndex(where: { !claimed.contains($0.id) && file.name(of: $0) == key }) {
                     index = existing
                 } else {
-                    let day = row.date.flatMap(LocalDate.init).flatMap { $0.date(in: calendar) } ?? now
-                    file.sessions.append(Session(device: device, at: now, week: s.week, date: day))
+                    file.sessions.append(Session(device: device, at: now, week: s.week, date: day ?? now))
                     result.sessionsAdded += 1
                     index = file.sessions.count - 1
                 }

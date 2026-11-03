@@ -123,6 +123,18 @@ struct NotionNotesImportTests {
         #expect(r.warnings.count == 1)
     }
 
+    /// Notion numbered a week's classes in the order they were added, so `7주차-2` can come before `7주차-1`. Two
+    /// numbers are still two classes, even when the date order names the first one `7주차-1`.
+    @Test func twoNotionNumbersInAWeekStayTwoSessions() {
+        let second = note("7주차-2", nil, "2026-10-13")
+        let first = note("7주차-1", nil, "2026-10-15")
+        let dump = NotionCourseDump(coursePageId: UUID(), title: "그래프 이론", notes: [first, second], scores: [], images: [])
+        let r = NotionNotesImporter.merge(dump, into: CourseFile(course: Course(device: device, at: now, title: "그래프 이론")),
+                                          existingNotes: [], calendar: calendar, device: device, now: now)
+        #expect(r.sessionsAdded == 2 && r.file.sessions.count == 2 && r.warnings.isEmpty)
+        #expect(Set(r.notes.compactMap(\.meta.sessionId)) == Set(r.file.sessions.map(\.id)))
+    }
+
     /// A note imported before and unlinked since stays unlinked; importing again doesn't set the session's side alone.
     @Test func anImportedNoteThatWasUnlinkedStaysSo() {
         let rough = note("7주차-2", nil, "2026-10-14")
