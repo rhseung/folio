@@ -105,30 +105,33 @@ struct TodayView: View {
     }
 
     func deadlinesBlock(_ summary: TodaySummary) -> some View {
-        let groups = model.deadlineGroups(summary.deadlines, studyDay: summary.studyDay)
-        let (shown, more) = model.shownDeadlines(groups)
+        let (shown, more) = model.shownDeadlines(model.deadlineRows(summary.deadlines, studyDay: summary.studyDay))
         return Block(String(localized: .todayDeadlines), note: summary.deadlines.isEmpty ? nil : "\(summary.deadlines.count)") {
             if summary.deadlines.isEmpty {
                 EmptyCard(symbol: "checkmark", tone: .success, title: String(localized: .todayDeadlinesEmpty),
                           detail: String(localized: .todayDeadlinesEmptyDetail))
             } else {
                 Card {
-                    // Packed like a reminders list: a rule under each group's name, none between rows.
-                    ForEach(Array(shown.enumerated()), id: \.element.id) { i, group in
-                        listGroupHeader(first: i == 0) {
-                            Text(model.groupLabel(group.when))
-                                .foregroundStyle(group.when == .today ? Theme.Palette.danger : Theme.Palette.textSecondary)
-                        }
-                        ForEach(group.items, id: \.assignment.id) { deadlineRow($0) }
+                    // Rows touch the card's edges with no padding around them, so a tinted row ends flush with the card
+                    // instead of leaving a white strip above or below it.
+                    VStack(spacing: 0) {
+                        ForEach(shown) { deadlineRow($0) }
+                        if more > 0 { listMore(more) { model.showsAllDeadlines = true } }
                     }
-                    listMore(more) { model.showsAllDeadlines = true }
+                    .clipShape(.rect(cornerRadius: Theme.Radius.card))
                 }
             }
         }
     }
 
-    func deadlineRow(_ item: TodaySummary.DeadlineItem) -> some View {
+    func deadlineRow(_ row: TodayModel.DeadlineRow) -> some View {
+        let item = row.item
         let accent = model.workspace.accent(item.courseId)
+        let tone: Tone? = switch row.urgency {
+        case .urgent: .danger
+        case .soon: .warning
+        case .later: nil
+        }
         return Button { model.edit(item) } label: {
             HStack(spacing: Theme.Space.s) {
                 AssignmentStatusIcon(status: item.assignment.status, tint: accent.color, size: 18)
@@ -137,11 +140,17 @@ struct TodayView: View {
                     Text(model.title(item.courseId)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                 }
                 Spacer(minLength: Theme.Space.s)
-                Text(model.due(item)).font(Theme.Typeface.caption.weight(item.isToday ? .bold : .regular)).monospacedDigit()
-                    .foregroundStyle(item.isToday ? Theme.Palette.danger : Theme.Palette.textSecondary).fixedSize()
+                if let tone {
+                    Chip(row.due, tone: tone, solid: row.urgency == .urgent).monospacedDigit()
+                } else {
+                    // The chip's inset without its fill, so every row is as tall as one with a chip.
+                    Text(row.due).font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(Theme.Palette.textTertiary)
+                        .fixedSize().padding(Theme.Inset.tag)
+                }
             }
             .padding(.horizontal, Theme.Space.l)
-            .padding(.vertical, Theme.Space.tight)
+            .padding(.vertical, Theme.Space.s)
+            .background(tone.map { $0.fill.opacity(Theme.Opacity.toneRow) } ?? .clear)
             .contentShape(.rect)
         }
         .buttonStyle(.pointing(.plain))
