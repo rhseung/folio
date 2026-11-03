@@ -85,7 +85,14 @@ struct ScreenRenders {
         plain.sheets = FormSnapshots.forms(workspace).map { name, view in ("form-\(name)", { view }) }
         var batches = [plain]
 
-        if let course = workspace.currentCourses.max(by: { $0.file.sessions.count < $1.file.sessions.count }) {
+        // The course in class at the scenario's moment, so the sessions page shows a class under way; else the busiest.
+        let now = workspace.now
+        let live = workspace.currentCourses.first { c in
+            c.file.sessions.contains { s in
+                s.date <= now && now < s.expectedEnd(schedule: c.file.course.schedule, classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar)
+            }
+        }
+        if let course = live ?? workspace.currentCourses.max(by: { $0.file.sessions.count < $1.file.sessions.count }) {
             let page = { AnyView(CourseView(workspace: workspace, courseID: course.id)) }
             for section in CourseSection.allCases {
                 batches.append(Batch(setup: { SnapshotDriver.shared.section = section; SnapshotDriver.shared.unitStep = nil },

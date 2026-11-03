@@ -696,9 +696,10 @@ struct SessionCard: View {
                 ClassCard.Pill(title: String(localized: .sessionsReviewDone), tone: .success, help: String(localized: .sessionsOpenReviewNote)) { openNote(id) }
             case .writing(let id):
                 ClassCard.Pill(title: String(localized: .sessionsReviewWriting), tone: .warning, help: String(localized: .sessionsSlotReviewDraftHelp)) { openNote(id) }
-            case .missing:
+            // Not owed until the class ends: under way, the card's own buttons start the notes.
+            case .missing where !live:
                 ClassCard.Pill(title: String(localized: .sessionsReviewMissing), tone: .danger, help: String(localized: .sessionsSlotReviewMakeHelp)) { open(.review) }
-            case nil:
+            case .missing, nil:
                 EmptyView()
             }
             if live {
