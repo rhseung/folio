@@ -290,6 +290,22 @@ struct CourseWorkTests {
         #expect(rules(s).isDisjoint(with: ["Session.time", "Session.link"]))
     }
 
+    /// Whatever writes the entries, a session can't end up with two review notes it doesn't see.
+    @Test func aSessionHasOneNoteOfEachKind() {
+        let s = Session(device: device, at: .now, week: 10, date: date("2026-11-04 21:00"))
+        func entry(_ path: String, _ kind: NoteKind) -> NoteEntry {
+            var meta = NoteMeta(id: nil)
+            meta.kind = kind
+            meta.sessionId = s.id
+            return NoteEntry(id: UUID(), device: device, at: .now, path: path, meta: meta)
+        }
+        var file = CourseFile(course: courses[0], sessions: [s])
+        file.notes = [entry("Notes/a.md", .review), entry("Notes/b.md", .rough)]
+        #expect(!Set(CourseFile.model.violations(in: file).map(\.rule.name)).contains("NoteEntry.session"))
+        file.notes.append(entry("Notes/c.md", .review))
+        #expect(Set(CourseFile.model.violations(in: file).map(\.rule.name)).contains("NoteEntry.session"))
+    }
+
     // MARK: Quick add
 
     let gsCode: CourseCode

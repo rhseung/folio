@@ -52,6 +52,19 @@ extension Fixture {
                 "updatedBy" : "D0000000-0000-4000-8000-000000000001"
               },
               "materials" : [],
+              "notes" : [
+                {
+                  "createdAt" : "2026-08-25T09:00:00.000Z",
+                  "id" : "0B9E7A51-3C2D-4E8F-A6B4-1D5C9F2E7A83",
+                  "kind" : "rough",
+                  "math" : "latex",
+                  "path" : "Notes/1주차-1.md",
+                  "tags" : [],
+                  "unitIds" : [],
+                  "updatedAt" : "2026-08-25T09:00:00.000Z",
+                  "updatedBy" : "D0000000-0000-4000-8000-000000000001"
+                }
+              ],
               "schemaVersion" : 1
             }
 
@@ -64,11 +77,6 @@ extension Fixture {
         ("2026-1/MA2001 선형대수학/Lectures/05-1_Determinants.pdf", nil),
         ("2026-1/MA2001 선형대수학/Lectures/05-2_Cofactors.pdf", nil),
         ("2026-1/MA2001 선형대수학/Notes/1주차-1.md", #"""
-            ---
-            id: 0b9e7a51-3c2d-4e8f-a6b4-1d5c9f2e7a83
-            kind: rough
-            ---
-
             # 1주차-1
 
             """#),
@@ -96,6 +104,19 @@ extension Fixture {
                 "updatedBy" : "D0000000-0000-4000-8000-000000000001"
               },
               "materials" : [],
+              "notes" : [
+                {
+                  "createdAt" : "2026-08-25T09:00:00.000Z",
+                  "id" : "6F1D2C4E-8A3B-4F5E-9C1D-2B7A8E0F3D41",
+                  "kind" : "rough",
+                  "math" : "latex",
+                  "path" : "Notes/2주차-1.md",
+                  "tags" : [],
+                  "unitIds" : [],
+                  "updatedAt" : "2026-08-25T09:00:00.000Z",
+                  "updatedBy" : "D0000000-0000-4000-8000-000000000001"
+                }
+              ],
               "schemaVersion" : 1
             }
 
@@ -112,11 +133,6 @@ extension Fixture {
         ("2026-3/EC4207 그래프 이론/Exercises/Exercise 1.pdf", nil),
         ("2026-3/EC4207 그래프 이론/Lectures/05_Matchings.pdf", nil),
         ("2026-3/EC4207 그래프 이론/Notes/2주차-1.md", #"""
-            ---
-            id: 6f1d2c4e-8a3b-4f5e-9c1d-2b7a8e0f3d41
-            kind: rough
-            ---
-
             # 2주차-1
 
             > [!definition] Matching
@@ -147,6 +163,19 @@ extension Fixture {
                 "updatedBy" : "D0000000-0000-4000-8000-000000000001"
               },
               "materials" : [],
+              "notes" : [
+                {
+                  "createdAt" : "2026-08-25T09:00:00.000Z",
+                  "id" : "9A4C1E7B-5D3F-4B2A-8E6C-7F0D2B9A1C55",
+                  "kind" : "rough",
+                  "math" : "latex",
+                  "path" : "Notes/1주차-1.md",
+                  "tags" : [],
+                  "unitIds" : [],
+                  "updatedAt" : "2026-08-25T09:00:00.000Z",
+                  "updatedBy" : "D0000000-0000-4000-8000-000000000001"
+                }
+              ],
               "schemaVersion" : 1
             }
 
@@ -158,11 +187,6 @@ extension Fixture {
         ("2026-3/EC4321 로봇공학/Exams/Past/2025 Final.pdf", nil),
         ("2026-3/EC4321 로봇공학/Lectures/01_Intro.pdf", nil),
         ("2026-3/EC4321 로봇공학/Notes/1주차-1.md", #"""
-            ---
-            id: 9a4c1e7b-5d3f-4b2a-8e6c-7f0d2b9a1c55
-            kind: rough
-            ---
-
             # 1주차-1
 
             """#),

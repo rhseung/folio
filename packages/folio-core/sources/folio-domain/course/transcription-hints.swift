@@ -22,24 +22,86 @@ public struct TranscriptionHints: Sendable, Equatable {
 }
 
 /// Pages of a lecture file, 1-based; nil bounds are the file's ends.
-public struct LecturePages: Sendable, Equatable {
+public struct LecturePages: Codable, Sendable, Equatable {
     public var path: String
     public var first: Int?
     public var last: Int?
+    /// The path is for showing; this says which file it was, renamed or not. Nil for a file no longer tracked.
+    public var materialId: UUID?
 
-    public init(path: String, first: Int? = nil, last: Int? = nil) {
+    public init(path: String, first: Int? = nil, last: Int? = nil, materialId: UUID? = nil) {
         self.path = path
         self.first = first
         self.last = last
+        self.materialId = materialId
+    }
+}
+
+/// What a transcription was told about the class, kept in its transcript so the player can show it and notice when
+/// the course's links have moved on since.
+public struct TranscriptionContext: Codable, Sendable, Equatable {
+    /// Why these slides: the first rule in `CourseFile.lectureSlides(for:recording:)` that found any.
+    public enum Source: String, Codable, Sendable {
+        /// Pages left on screen while recording.
+        case recording
+        /// Files linked to the session, with their page ranges.
+        case session
+        /// Files tagged with the session or one of its units.
+        case tagged
+        /// `Lectures/` files named for the session's week.
+        case week
+    }
+
+    /// Nil when no slides were found.
+    public var source: Source?
+    public var slides: [LecturePages]
+    /// The session's topic and its units' titles, parents after.
+    public var topics: [String]
+    /// Read from the slides, most telling first.
+    public var terms: [String]
+
+    public init(source: Source?, slides: [LecturePages], topics: [String], terms: [String] = []) {
+        self.source = source
+        self.slides = slides
+        self.topics = topics
+        self.terms = terms
+    }
+
+    // A source a newer version adds reads as unknown rather than failing the whole transcript.
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        source = (try? c.decodeIfPresent(String.self, forKey: .source)).flatMap(Source.init(rawValue:))
+        slides = try c.decodeIfPresent([LecturePages].self, forKey: .slides) ?? []
+        topics = try c.decodeIfPresent([String].self, forKey: .topics) ?? []
+        terms = try c.decodeIfPresent([String].self, forKey: .terms) ?? []
+    }
+
+    /// With the terms read from the slides' text.
+    public func reading(_ slides: String) -> TranscriptionContext {
+        var read = self
+        read.terms = LectureTerms.terms(in: slides)
+        return read
+    }
+
+    /// The topics before the slides' terms, each once.
+    public func hints(course title: String) -> TranscriptionHints {
+        var seen = Set<String>()
+        return TranscriptionHints(title: title, terms: (topics + terms).filter { seen.insert($0.lowercased()).inserted })
+    }
+
+    /// Whether `current`, made from the course as it is now, would have told the recognizer something else. Terms
+    /// are left out: knowing them means reading the PDFs again, and they follow from the slides anyway.
+    public func differs(from current: TranscriptionContext) -> Bool {
+        func key(_ s: LecturePages) -> String { "\(s.materialId?.uuidString ?? s.path) \(s.first ?? 0) \(s.last ?? 0)" }
+        return source != current.source || slides.map(key) != current.slides.map(key) || topics != current.topics
     }
 }
 
 extension CourseFile {
-    /// The course, the class's topic and units, then the terms on its slides.
-    public func transcriptionHints(for session: Session, slides: String) -> TranscriptionHints {
-        var seen = Set<String>()
-        let terms = (transcriptionTopics(for: session) + LectureTerms.terms(in: slides)).filter { seen.insert($0.lowercased()).inserted }
-        return TranscriptionHints(title: course.title, terms: terms)
+    /// Everything but the terms, which need the slides read.
+    public func transcriptionContext(for session: Session, recording: Recording? = nil) -> TranscriptionContext {
+        let slides = lectureSlides(for: session, recording: recording)
+        return TranscriptionContext(source: slides.source, slides: slides.pages, topics: transcriptionTopics(for: session))
     }
 
     /// Unit titles name what the class is about in the lecturer's own words ("NFA to DFA: The Subset Construction"),
@@ -57,20 +119,40 @@ extension CourseFile {
         return (topic.isEmpty ? [] : [topic]) + chain.map(\.title)
     }
 
-    /// The slides a class covered: the PDFs linked to it within their page ranges, else the files linked to it or its
-    /// units, else the week's files under `Lectures/` by their `05_` / `05-1_` prefix.
-    public func lecturePages(for session: Session) -> [LecturePages] {
-        let linked = session.materials.compactMap { link in
-            materials.first { $0.id == link.materialId && $0.isPDF }.map { LecturePages(path: $0.path, first: link.firstPage, last: link.lastPage) }
+    /// The slides a class covered: the pages left on screen while `recording`, else the PDFs linked to the session
+    /// within their page ranges, else the files linked to it or its units, else the week's files under `Lectures/` by
+    /// their `05_` / `05-1_` prefix. What was on screen goes first because it is what the class did, where a link
+    /// may be a whole file or a range set before the class.
+    public func lectureSlides(for session: Session, recording: Recording? = nil) -> (source: TranscriptionContext.Source?, pages: [LecturePages]) {
+        func pages(_ link: SessionMaterial) -> LecturePages? {
+            materials.first { $0.id == link.materialId && $0.isPDF }.map { LecturePages(path: $0.path, first: link.firstPage, last: link.lastPage, materialId: $0.id) }
         }
-        if !linked.isEmpty { return linked }
+        let viewed = (recording?.viewedPages() ?? []).compactMap(pages)
+        if !viewed.isEmpty { return (.recording, viewed) }
+        let linked = session.materials.compactMap(pages)
+        if !linked.isEmpty { return (.session, linked) }
         let unitIds = Set(session.unitIds + units.filter { $0.sessionIds.contains(session.id) }.map(\.id))
         let tagged = materials.filter { $0.isPDF && ($0.sessionIds.contains(session.id) || !unitIds.isDisjoint(with: $0.unitIds)) }
-        if !tagged.isEmpty { return tagged.sorted { $0.path < $1.path }.map { LecturePages(path: $0.path) } }
-        return materials
+        if !tagged.isEmpty { return (.tagged, tagged.sorted { $0.path < $1.path }.map { LecturePages(path: $0.path, materialId: $0.id) }) }
+        let week = materials
             .filter { $0.isPDF && $0.path.hasPrefix(CourseFolder.lectures.rawValue + "/") && StandardLayout.lectureWeek(($0.path as NSString).lastPathComponent) == session.week }
             .sorted { $0.path < $1.path }
-            .map { LecturePages(path: $0.path) }
+            .map { LecturePages(path: $0.path, materialId: $0.id) }
+        return (week.isEmpty ? nil : .week, week)
+    }
+
+    /// Links the pages `recording` left on screen to its session, for files the session has no link to yet: a range
+    /// the user set stays as it is. Returns how many files it linked.
+    @discardableResult
+    public mutating func linkViewedPages(of recording: Recording) -> Int {
+        guard let session = recording.sessionId, let s = sessions.firstIndex(where: { $0.id == session }) else { return 0 }
+        var linked = 0
+        for range in recording.viewedPages() where !sessions[s].materials.contains(where: { $0.materialId == range.materialId }) {
+            guard materials.contains(where: { $0.id == range.materialId }) else { continue }
+            linkMaterial(range.materialId, session: session, firstPage: range.firstPage, lastPage: range.lastPage)
+            linked += 1
+        }
+        return linked
     }
 }
 

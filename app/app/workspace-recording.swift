@@ -26,12 +26,51 @@ extension Workspace {
                                      title: "\(course.file.course.title) · \(course.file.title(of: session, calendar: calendar))", locale: captionLocale(of: course))
             // Listed from the start, so the session shows it is being recorded.
             editRecordings(course.id) { $0.append(recording) }
-            let (store, courseFile, pages) = (course.store, course.file, course.file.lecturePages(for: session))
-            let hints = await Task.detached { courseFile.transcriptionHints(for: session, slides: store.lectureText(pages)) }.value
-            await recorder.use(hints, for: recording.id)
+            await tellCaptions()
         } catch {
             if let started { pending.remove(started) }
             self.error = error.localizedDescription
+        }
+    }
+
+    /// Reads the slides for the recording under way and gives the captions what they say. The PDFs may have to
+    /// download first, so this runs after recording has started, never before.
+    func tellCaptions() async {
+        guard let id = recorder.current, let course = recorder.courseId.flatMap(course), let snapshot = recorder.snapshot,
+              let session = course.file.sessions.first(where: { $0.id == snapshot.sessionId }) else { return }
+        let (store, file, telling) = (course.store, course.file, recorder.telling())
+        let context = await Task.detached { store.transcriptionContext(file, session: session, recording: snapshot) }.value
+        await recorder.use(context, hints: context.hints(course: file.course.title), for: id, telling: telling)
+    }
+
+    /// Again only when the slides or units would now be others: reading the PDFs takes a while.
+    func retellCaptionsIfChanged() {
+        guard let course = recorder.courseId.flatMap(course), let snapshot = recorder.snapshot,
+              let session = course.file.sessions.first(where: { $0.id == snapshot.sessionId }) else { return }
+        let now = course.file.transcriptionContext(for: session, recording: snapshot)
+        guard recorder.context.map({ $0.differs(from: now) }) ?? true else { return }
+        Task { await tellCaptions() }
+    }
+
+    /// A page of a lecture file came on screen in the app (nil: the file closed). Kept with the recording when it is
+    /// of the course being recorded; turning to a page past what the captions were told tells them again.
+    func showing(page: Int?, of material: FolioDomain.Material, course: UUID) {
+        guard recorder.courseId == course, recorder.isActive, material.role == .lecture else { return }
+        recorder.show(material.id, page: page)
+        retellCaptionsIfChanged()
+        if let id = recorder.current, let visit = recorder.pages.last, visit.page != nil { retellAfterDwell(on: visit, recording: id) }
+    }
+
+    /// A page counts once it has stayed `pageDwell`, so at the turn itself the captions can't be told it yet: without
+    /// a second look they would always be a page behind, and a class kept on one page would never reach them. Waits
+    /// on the audio's clock, which stops while paused.
+    private func retellAfterDwell(on visit: PageVisit, recording id: UUID) {
+        Task {
+            while recorder.current == id, recorder.pages.last == visit {
+                let left = visit.at + Recording.pageDwell - recorder.elapsed
+                if left <= 0 { return retellCaptionsIfChanged() }
+                try? await Task.sleep(for: .seconds(left + 0.5))
+            }
         }
     }
 
@@ -45,8 +84,8 @@ extension Workspace {
 
     func stopRecording() async {
         // Stopped first, whatever happens to the course: the microphone must not stay on.
-        guard let id = recorder.courseId, let (recording, transcript) = await recorder.stop() else { return }
-        if let course = course(id) { perform { try course.store.saveTranscript(transcript, of: recording) } }
+        guard let id = recorder.courseId, let (recording, captions) = await recorder.stop() else { return }
+        if let course = course(id) { perform { try course.store.saveTranscript(captions, of: recording) } }
         await finishRecording(PendingRecording(courseId: id, recording: recording))
     }
 
@@ -78,6 +117,11 @@ extension Workspace {
                 if let i = list.firstIndex(where: { $0.id == id }) { list[i] = recording } else { list.append(recording) }
             }
             local.remove(id)
+            await retellFinished(recording, in: course)
+            // The pages the class went through become the session's range, for files it has none for yet.
+            if !recording.pages.isEmpty, let session = recording.sessionId, course.file.sessions.contains(where: { $0.id == session }) {
+                _ = run(SessionLinkViewed(course: course.id, session: session))
+            }
             // Captions missing (the language model was still downloading, or a crash) are made from the audio now;
             // Whisper redoes them all, since it hears Korean and English together where the captions take one language.
             let heard = course.store.transcript(of: recording)?.reaches(recording.duration) == true
@@ -85,6 +129,20 @@ extension Workspace {
         } catch {
             self.error = String(localized: .recordingErrorInstallFailed(error.localizedDescription))
         }
+    }
+
+    /// The captions were told the context at the last page turn, before the page then on screen had stayed long enough
+    /// to count, and a quit or a crash saves that same context. Made again from the whole recording, here where a stop
+    /// and a recovery both pass, it is what the player compares the course with; left as it was, the player would
+    /// say the materials changed when nothing had.
+    private func retellFinished(_ recording: Recording, in course: LoadedCourse) async {
+        guard var transcript = course.store.transcript(of: recording),
+              let session = course.file.sessions.first(where: { $0.id == recording.sessionId }) else { return }
+        let (store, file) = (course.store, course.file)
+        let context = await Task.detached { store.transcriptionContext(file, session: session, recording: recording) }.value
+        guard transcript.context != context else { return }
+        transcript.context = context
+        perform { try store.saveTranscript(transcript, of: recording) }
     }
 
     /// Replaces the transcript with one made from the whole audio. Goes on after the player closes; a recording
@@ -102,6 +160,8 @@ extension Workspace {
         let locale = store.transcript(of: recording).map { Locale(identifier: $0.locale) } ?? captionLocale(of: course)
         let file = course.file
         let session = file.sessions.first { $0.id == recording.sessionId }
+        // The listed one has the pages the recording kept; the caller's copy may be from before it finished.
+        let recording = file.recordings.first { $0.id == recording.id } ?? recording
         let copy = URL.cachesDirectory.appending(path: "Folio/Transcribing/\(recording.id.uuidString).\((recording.file as NSString).pathExtension)")
         transcriptions.run(recording.id, failed: { [weak self] error in
             self?.error = String(localized: .recordingErrorTranscribeFailed(error.localizedDescription))
@@ -109,8 +169,9 @@ extension Workspace {
             // folio:not-an-action a copy in this device's caches, outside the GIST folder
             defer { try? FileManager.default.removeItem(at: copy) }
             try store.copyAudio(of: recording, to: copy)
-            let hints = session.map { file.transcriptionHints(for: $0, slides: store.lectureText(file.lecturePages(for: $0))) }
-            let transcript = try await engine.transcribe(copy, locale: locale, hints: hints, mayDownload: mayDownload, report: report)
+            let context = session.map { store.transcriptionContext(file, session: $0, recording: recording) }
+            var transcript = try await engine.transcribe(copy, locale: locale, hints: context?.hints(course: file.course.title), mayDownload: mayDownload, report: report)
+            transcript.context = context
             // Deleted meanwhile: saving now would leave a transcript with no recording.
             try Task.checkCancellation()
             guard transcript.replaces(store.transcript(of: recording)) else { return }

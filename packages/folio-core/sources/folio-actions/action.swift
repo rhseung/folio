@@ -236,19 +236,23 @@ public final class ActionContext {
         if !dryRun { try store.save(doc) }
     }
 
-    /// Creates a note in the course's Notes folder and returns its id (known before writing, so a dry run has it too).
+    /// Every note file of the course with the properties this action's copy of course.json gives it, so a note made
+    /// or linked earlier in the same action is already seen.
+    public func notes(_ course: UUID) throws -> [NoteFile] {
+        try store(course).notes(in: file(course))
+    }
+
+    /// Creates a note in the course's Notes folder with its entry in course.json, and returns its id (known before
+    /// writing, so a dry run has it too).
     @discardableResult
-    public func createNote(_ course: UUID, title: String, meta: NoteMeta, body: String?) throws -> UUID? {
+    public func createNote(_ course: UUID, title: String, meta: NoteMeta, format: NoteFormat = .markdown, body: String) throws -> UUID {
         let store = try store(course)
-        let planned = relative(store.url.appending(path: CourseFolder.notes.rawValue).appending(path: "\(title).md"))
-        if let id = meta.id, try store.notes().contains(where: { $0.meta.id == id }) { throw ActionError.rule(String(localized: .errorIdTakenNote("\(id)"))) }
-        guard !dryRun else {
-            record(Change(.added, planned))
-            return meta.id
-        }
-        let note = try store.createNote(title: title, meta: meta, body: body)
-        record(Change(.added, relative(note.url)))
-        return note.meta.id
+        let id = meta.id ?? UUID()
+        if try file(course).notes.contains(where: { $0.id == id }) { throw ActionError.rule(String(localized: .errorIdTakenNote("\(id)"))) }
+        let url = store.newNoteURL(title: title, format: format)
+        try io(Change(.added, relative(url))) { try store.createNote(at: url, text: body) }
+        try edit(course) { $0.notes.append(NoteEntry(id: id, device: device, at: now, path: store.notePath(of: url), meta: meta)) }
+        return id
     }
 
     public func editTranscript(_ change: (inout Transcript) throws -> Void) throws {

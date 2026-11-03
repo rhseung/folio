@@ -17,7 +17,12 @@ struct MaterialsView: View {
     var body: some View {
         Group {
             if let m = model.viewed {
-                MaterialViewer(model: model, material: m).id(m.id)  // another file starts over: page, zoom and search belong to the old one
+                // Another file starts over: page, zoom, search and unsaved text belong to the old one.
+                if m.isText {
+                    TextFileView(workspace: model.workspace, course: model.course, material: m.id).id(m.id)
+                } else {
+                    MaterialViewer(model: model, material: m).id(m.id)
+                }
             } else {
                 list
             }
@@ -354,7 +359,8 @@ extension SessionMaterial {
 }
 
 extension FolioDomain.Material {
-    var isPDF: Bool { !isFolder && path.lowercased().hasSuffix(".pdf") }
+    var isPDF: Bool { !isFolder && MaterialFormat(path: path) == .pdf }
+    var isText: Bool { !isFolder && MaterialFormat(path: path).isText }
 }
 
 struct ImportPlaceSheet: View {

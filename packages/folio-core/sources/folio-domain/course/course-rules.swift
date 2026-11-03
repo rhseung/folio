@@ -149,6 +149,18 @@ extension CourseFile: Document {
         Items(\.recordings, noun: String(localized: .modelNounRecording), name: \.file) {
             Ref(\.sessionId, to: Session.self, onDelete: .nullify)
         }
+        Items(\.notes, noun: String(localized: .modelNounNote), name: \.path) {
+            Ref(\.sessionId, to: Session.self, onDelete: .nullify)
+            Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
+            Ref(\.examId, to: Exam.self, onDelete: .nullify)
+            // Notes are found by their file, so two entries on one file would give it two sets of properties.
+            Check("NoteEntry.path", String(localized: .ruleNotePath)) { n, f in f.notes.count { $0.path == n.path } == 1 }
+            // A session points at one rough and one review note, so a second one would sit under it unseen by the session.
+            Check("NoteEntry.session", String(localized: .ruleNoteSession)) { n, f in
+                guard let s = n.sessionId, n.kind == .rough || n.kind == .review else { return true }
+                return f.notes.count { $0.sessionId == s && $0.kind == n.kind } == 1
+            }
+        }
         Pair(\.exams, \.scopeUnitIds, \.units, \.examIds)
         Pair(\.sessions, \.unitIds, \.units, \.sessionIds)
         Pair(\.sessions, \.materialIds, \.materials, \.sessionIds)

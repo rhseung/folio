@@ -51,6 +51,9 @@ public struct Material: Entity {
     public var kind: MaterialKind?
     /// The PDF this `.tex` file is the source of.
     public var sourceOf: UUID?
+    /// For a PDF: its hash when `material build` last wrote it. Any other hash means the PDF came from somewhere else
+    /// (a professor, another TeX), and a build asks before replacing it.
+    public var builtHash: String?
     public var solutionOf: UUID?
     public var sessionIds: [UUID]
     public var unitIds: [UUID]

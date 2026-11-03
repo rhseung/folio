@@ -70,6 +70,44 @@ struct NoteWidgetTests {
         #expect(accent?.hasPrefix("#") == true)
     }
 
+    /// The note's scroll view takes clicks over the note itself; a click on a widget has to reach the widget.
+    @Test func aClickOnTheWidgetReachesIt() async throws {
+        let (view, window, _) = try Self.reader(widget: "<!doctype html><button style='width:100%;height:150px'>b</button>") {
+            Self.block($0) + "\n\n```swift\nlet x = 1\n```\n\n" + Array(repeating: "Text after the widget.", count: 20).joined(separator: "\n\n")
+        }
+        let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
+        _ = try await Self.fitted(web)
+        NoteRender.layout(view)
+        let root = try #require(window.contentView?.superview)
+        let point = web.convert(NSPoint(x: web.bounds.midX, y: web.bounds.midY), to: root)
+        let hit = try #require(root.hitTest(point))
+        #expect(hit === web || hit.isDescendant(of: web), "hit \(type(of: hit))")
+        // A code block's text view would take the keyboard from the note, so the note keeps those clicks.
+        let code = try #require(NoteReaderTests.codes(view.core.storage).first?.view)
+        let onCode = code.convert(NSPoint(x: code.bounds.midX, y: code.bounds.midY), to: root)
+        #expect(root.hitTest(onCode).map { $0 === code || $0.isDescendant(of: code) } == false)
+        let text = view.convert(NSPoint(x: web.frame.midX, y: code.frame.maxY + 120), to: root)
+        #expect(root.hitTest(text).map { $0 === web || $0.isDescendant(of: web) } == false)
+    }
+
+    /// A scroll over a widget goes to the widget, since clicks have to; up and down it moves the note.
+    @Test func aScrollOverTheWidgetMovesTheNote() async throws {
+        let (view, window, _) = try Self.reader(widget: "<!doctype html><div style='height:150px'></div>") {
+            Self.block($0) + "\n\n" + Array(repeating: "Text after the widget.", count: 80).joined(separator: "\n\n")
+        }
+        let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
+        _ = try await Self.fitted(web)
+        NoteRender.layout(view)
+        let root = try #require(window.contentView?.superview)
+        let hit = try #require(root.hitTest(web.convert(NSPoint(x: web.bounds.midX, y: web.bounds.midY), to: root)))
+        #expect(hit === web || hit.isDescendant(of: web), "hit \(type(of: hit))")
+        let clip = try #require(view.enclosingScrollView?.contentView)
+        let before = clip.bounds.origin.y
+        let wheel = try #require(CGEvent(scrollWheelEvent2Source: nil, units: .line, wheelCount: 1, wheel1: -5, wheel2: 0, wheel3: 0))
+        hit.scrollWheel(with: try #require(NSEvent(cgEvent: wheel)))
+        #expect(clip.bounds.origin.y > before)
+    }
+
     /// The block takes the page's height in place, so up-and-down scrolling never stops inside a widget.
     @Test func theBlockFitsItsPage() async throws {
         let html = "<!doctype html><div style='height:500px'></div>"

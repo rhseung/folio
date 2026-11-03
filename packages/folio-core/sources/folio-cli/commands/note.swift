@@ -30,7 +30,7 @@ func readText(_ source: String) throws -> String {
 struct NoteCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "note", abstract: String(localized: .noteAbstract),
-        subcommands: [List.self, Show.self, Add.self, Write.self, Link.self] + GeneratedCommands.note)
+        subcommands: [List.self, Show.self, Add.self, Write.self, Link.self, Migrate.self] + GeneratedCommands.note)
 
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .noteListAbstract), discussion: String(localized: .noteListDiscussion))
@@ -98,13 +98,33 @@ struct NoteCommand: ParsableCommand {
         @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String
         @Argument(help: ArgumentHelp(String(localized: .noteAddHelpTitle), valueName: "title")) var title: String
         @Option(help: ArgumentHelp(String(localized: .commonHelpKind))) var kind: NoteKind = .free
+        @Option(help: ArgumentHelp(String(localized: .noteAddHelpFormat))) var format: NoteFormat = .markdown
         @Option(help: ArgumentHelp(String(localized: .noteAddHelpBody), valueName: "file"), completion: .file()) var body: String?
+        @Option(help: ArgumentHelp(String(localized: .noteLinkHelpSession), valueName: "session"), completion: Complete.sessions) var session: String?
+        @Option(help: ArgumentHelp(String(localized: .noteLinkHelpExam), valueName: "exam"), completion: Complete.exams) var exam: String?
+        @Option(help: ArgumentHelp(String(localized: .noteLinkHelpUnit), valueName: "unit"), completion: Complete.units) var unit: [String] = []
         @Option(help: .hidden) var id: UUID?
 
         func run() throws {
             let ctx = try CLI.context(g)
-            let c = try Resolver(ctx).course(course)
-            try perform(spec: NoteAdd(id: id ?? UUID(), course: c.id, title: title, kind: kind, body: try body.map(readText)), g, ctx: ctx)
+            let r = Resolver(ctx)
+            let c = try r.course(course)
+            try perform(spec: NoteAdd(id: id ?? UUID(), course: c.id, title: title, kind: kind, format: format, body: try body.map(readText),
+                                      session: try session.map { try r.session(c.local($0), in: c).id }, exam: try exam.map { try r.exam(c.local($0), in: c).id },
+                                      units: try unit.map { try r.unit(c.local($0), in: c).id }),
+                        g, ctx: ctx)
+        }
+    }
+
+    struct Migrate: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: String(localized: .noteMigrateAbstract), discussion: String(localized: .noteMigrateDiscussion))
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp(String(localized: .noteMigrateHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String?
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let id = try course.map { try Resolver(ctx).course($0).id }
+            try perform(spec: NoteMigrate(course: id), g, ctx: ctx)
         }
     }
 
@@ -140,13 +160,14 @@ struct NoteCommand: ParsableCommand {
         @Option(help: ArgumentHelp(String(localized: .noteLinkHelpSession), valueName: "session"), completion: Complete.sessions) var session: String?
         @Option(help: ArgumentHelp(String(localized: .noteLinkHelpExam), valueName: "exam"), completion: Complete.exams) var exam: String?
         @Option(help: ArgumentHelp(String(localized: .noteLinkHelpUnit), valueName: "unit"), completion: Complete.units) var unit: [String] = []
+        @Option(help: ArgumentHelp(String(localized: .noteLinkHelpMath))) var math: MathSyntax?
 
         func run() throws {
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let (c, name) = try r.split(note)
             try perform(spec: NoteLink(course: c.id, note: try r.noteID(name, in: c), kind: kind, session: try session.map { try r.session(c.local($0), in: c).id },
-                                 exam: try exam.map { try r.exam(c.local($0), in: c).id }, units: try unit.map { try r.unit(c.local($0), in: c).id }),
+                                 exam: try exam.map { try r.exam(c.local($0), in: c).id }, units: try unit.map { try r.unit(c.local($0), in: c).id }, math: math),
                         g, ctx: ctx)
         }
     }

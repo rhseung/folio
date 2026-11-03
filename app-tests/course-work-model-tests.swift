@@ -167,12 +167,14 @@ struct NotesModelTests {
 
         model.filter = .topic
         #expect(model.emptyLine == "단원 정리 노트가 없습니다")
-        #expect(model.titlePrompt == "새 단원 정리 노트 제목")
-        model.newTitle = "  행렬식  "
-        let id = try #require(model.create())
-        #expect(model.newTitle.isEmpty && !model.adding)
+        let sheet = NewNoteModel(workspace: workspace, course: course, kind: model.filter ?? .free)
+        #expect(sheet.link == .units && !sheet.canAdd)
+        sheet.title = "  행렬식  "
+        sheet.format = .tex
+        let id = try #require(sheet.add())
+        model.reload()
         #expect(model.shown.map(\.title) == ["행렬식"])
-        #expect(model.shown[0].meta.id == id)
+        #expect(model.shown[0].meta.id == id && model.shown[0].format == .tex)
         #expect(model.parts.first?.rows.first?.detail == "단원 없음")
 
         model.filter = nil
@@ -193,8 +195,44 @@ struct NotesModelTests {
         editor.append("끝")
         #expect(editor.dirty && editor.body.hasSuffix("\n\n끝\n"))
         editor.relink(.free)
-        #expect(editor.currentLink == "자유 노트" && !editor.dirty)
+        #expect(editor.currentLink == "자유 노트")
+        #expect(try course.store.note(id: id)?.meta.kind == .free)
         #expect(NoteEditorModel.markdown(for: URL(filePath: "/x/a b.png"), path: "assets/a b.png") == "![a b](assets/a%20b.png)")
+    }
+
+    /// A session's note takes the session's name, as `session note` names it, until the user types their own title.
+    @Test func aNewSessionNoteIsNamedAfterItsSession() throws {
+        let (workspace, course) = try fixtureCourse()
+        let session = try #require(workspace.run(SessionAdd(course: linearAlgebra, date: .now))?.made)
+        let sheet = NewNoteModel(workspace: workspace, course: course, kind: .review)
+        #expect(sheet.link == .session && sheet.sessionOptions.contains { $0.id == session })
+        sheet.sessionId = session
+        let file = try #require(workspace.course(linearAlgebra)).file
+        let name = file.name(of: try #require(file.sessions.first { $0.id == session }))
+        #expect(sheet.title == "\(name) 정리")
+        sheet.kind = .rough
+        #expect(sheet.title == name)
+        sheet.title = "내 제목"
+        sheet.kind = .review
+        #expect(sheet.title == "내 제목")
+        let id = try #require(sheet.add())
+        #expect(workspace.course(linearAlgebra)?.file.sessions.first { $0.id == session }?.reviewNoteId == id)
+        #expect(!sheet.sessionOptions.contains { $0.id == session })
+    }
+
+    /// The picker lists only sessions without this kind's note; a session picked for another kind is dropped rather
+    /// than linked, which would take the session from the note it already has.
+    @Test func changingKindDropsASessionThatAlreadyHasThatNote() throws {
+        let (workspace, course) = try fixtureCourse()
+        let session = try #require(workspace.run(SessionAdd(course: linearAlgebra, date: .now))?.made)
+        let review = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "복습", kind: .review, session: session))?.made)
+        let sheet = NewNoteModel(workspace: workspace, course: course, kind: .rough)
+        sheet.sessionId = session
+        sheet.kind = .review
+        #expect(sheet.sessionId == nil)
+        sheet.title = "다른 복습"
+        _ = try #require(sheet.add())
+        #expect(workspace.course(linearAlgebra)?.file.sessions.first { $0.id == session }?.reviewNoteId == review)
     }
 
     /// A block typed into in the read view lands on the lines the parser marked, counted in the same body the editor

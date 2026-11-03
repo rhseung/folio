@@ -7,6 +7,9 @@ public enum StorageError: Error, Equatable {
     /// The file was written by a newer app version; saving could lose its changes.
     case newerSchema(found: Int, supported: Int, URL)
     case coordination(String)
+    /// A text file in another encoding (a CP949 `.csv`). Read leniently and saved back, it would lose every byte that
+    /// didn't decode, so it isn't read at all.
+    case notUTF8(String)
 }
 
 /// A JSON file format. Bump `schemaVersion` and add a migration (from the old version, on raw JSON) whenever the shape changes.

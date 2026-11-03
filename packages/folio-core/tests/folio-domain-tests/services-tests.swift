@@ -121,3 +121,18 @@ struct NotificationPlanTests {
         #expect(NotificationPlan.build(courses: [file], reviewCount: { _ in 3 }, settings: off, now: now, calendar: calendar).isEmpty)
     }
 }
+
+struct NoteTemplateTests {
+    @Test func aTexNoteHasTheSameSectionsAndEscapesItsTitle() {
+        let tex = NoteTemplate.body(for: .topic, title: "A_1 & 50%", sections: ["요약"], format: .tex)
+        #expect(tex.contains("\\section*{A\\_1 \\& 50\\%}"))
+        #expect(tex.contains("\\subsection*{요약}"))
+        #expect(tex.hasSuffix("\\end{document}\n"))
+    }
+
+    @Test func formatComesFromTheExtension() {
+        #expect(NoteFormat(path: "Notes/a.TEX") == .tex)
+        #expect(NoteFormat(path: "Notes/a.md") == .markdown)
+        #expect(NoteFormat(path: "Notes/a.pdf") == nil)
+    }
+}

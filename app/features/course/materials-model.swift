@@ -155,9 +155,9 @@ final class MaterialsModel {
         workspace.run(MaterialRelink(course: course.id, material: id, file: file.path(percentEncoded: false)))
     }
 
-    /// A PDF opens here, a folder in Finder (by the view), anything else in Quick Look.
+    /// A PDF or a text file opens here, a folder in Finder (by the view), anything else in Quick Look.
     func open(_ m: FolioDomain.Material) {
-        if m.isPDF { viewing = m.id } else { Task { preview = try? await workspace.download(m, course: course.id) } }
+        if m.isPDF || m.isText { viewing = m.id } else { Task { preview = try? await workspace.download(m, course: course.id) } }
     }
 
     func fileURL(_ path: String) -> URL { course.store.fileURL(path) }
@@ -177,6 +177,13 @@ final class MaterialsModel {
         let store = course.store
         // folio:not-an-action page views are activity logs, not data changes
         workspace.perform { try store.log.append(MaterialViewEvent(materialId: m.id, page: page), device: workspace.device, at: .now) }
+    }
+
+    var recording: UUID? { workspace.recorder.current }
+
+    /// `page` is 1-based; nil when the viewer closed.
+    func showing(_ page: Int?, of m: FolioDomain.Material) {
+        workspace.showing(page: page, of: m, course: course.id)
     }
 
     // MARK: Links
