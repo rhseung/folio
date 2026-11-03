@@ -274,6 +274,37 @@ struct NoteReaderTests {
         #expect(NoteMath.picture(#"\notacommand{x}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false) == nil)
     }
 
+    @Test func doubleStruckCapitalsUseTheAMSFont() throws {
+        func fonts(_ display: MTDisplay) -> [String] {
+            if let line = display as? MTCTLineDisplay {
+                return (CTLineGetGlyphRuns(line.line) as? [CTRun] ?? []).map {
+                    let attributes = CTRunGetAttributes($0) as NSDictionary
+                    return CTFontCopyPostScriptName(attributes[kCTFontAttributeName] as! CTFont) as String
+                }
+            }
+            var found: [String] = [], mirror: Mirror? = Mirror(reflecting: display)
+            while let m = mirror {
+                for child in m.children {
+                    if let part = child.value as? MTDisplay { found += fonts(part) }
+                    if let parts = child.value as? [MTDisplay] { found += parts.flatMap(fonts) }
+                }
+                mirror = m.superclassMirror
+            }
+            return found
+        }
+        for tex in [NoteMath.tex("u in F^2, RR", .asciimath), #"\sqrt{\mathbb{Z}}"#, #"\frac{\mathbb{Q}}{2}"#] {
+            let list = try #require(NoteMath.typeset(tex, display: false, size: 16, color: .black), "\(tex)")
+            #expect(fonts(list).contains("KaTeX_AMS-Regular"), "\(tex)")
+        }
+        // Kerned back to Latin Modern's width, so what SwiftMath placed after the letter stays put.
+        let swapped = try #require(NoteMath.typeset(#"\mathbb{R}^2"#, display: false, size: 16, color: .black))
+        let line = try #require(swapped.subDisplays.first as? MTCTLineDisplay)
+        #expect(abs(CTLineGetTypographicBounds(line.line, nil, nil, nil) - line.width) < 0.01)
+        // The AMS M is a third wider than Latin Modern's; SwiftMath makes room for it rather than overlapping the next.
+        let pair = try #require(NoteMath.picture(#"\mathbb{MM}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false))
+        #expect(pair.size.width >= 2 * 0.944 * 16 - 1)
+    }
+
     @Test func textInMathReadsAsText() throws {
         func width(_ tex: String) throws -> CGFloat {
             try #require(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false), "\(tex)").size.width

@@ -51,7 +51,7 @@ final class MathAttachment: NSTextAttachment {}
     private static var failed: Set<String> = []
 
     static func tex(_ source: String, _ syntax: MathSyntax) -> String {
-        TeXGaps.fill(syntax == .asciimath ? NoteScripts.tex(fromAsciiMath: source) : source)
+        Blackboard.reserve(TeXGaps.fill(syntax == .asciimath ? NoteScripts.tex(fromAsciiMath: source) : source))
     }
 
     /// Nil when SwiftMath can't read the TeX; the caller shows the source instead.
@@ -61,10 +61,29 @@ final class MathAttachment: NSTextAttachment {}
         if let hit = cache[key] { return hit }
         if failed.contains(key) { return nil }
         let tex = tex(source, syntax).trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !tex.isEmpty, let list = typeset(tex, display: display, size: size, color: resolved) else {
+            failed.insert(key)
+            return nil
+        }
+        let box = CGSize(width: list.width, height: list.ascent + list.descent)
+        var edges = overflow(list, box: box, size: size)
+        // Whole points, so the picture isn't stretched into its bounds.
+        edges.right += ceil(box.width + edges.left + edges.right) - (box.width + edges.left + edges.right)
+        edges.top += ceil(box.height + edges.top + edges.bottom) - (box.height + edges.top + edges.bottom)
+        let canvas = CGSize(width: round(box.width + edges.left + edges.right), height: round(box.height + edges.top + edges.bottom))
+        let result = Picture(image: draw(list, size: canvas, offset: CGPoint(x: edges.left, y: edges.bottom)), size: canvas, descent: list.descent + edges.bottom)
+        cache[key] = result
+        return result
+    }
+
+    /// The typeset formula, laid out by the label with its box's corner at the origin, or nil when SwiftMath can't read the TeX. Drawn here,
+    /// not by SwiftMath's picture, which typesets again and would lose the double-struck letters swapped in.
+    static func typeset(_ tex: String, display: Bool, size: CGFloat, color: PlatformColor) -> MTMathListDisplay? {
         let label = MTMathUILabel()
         label.labelMode = display ? .display : .text
         label.fontSize = size
-        label.textColor = resolved
+        // Setting the color rebuilds every line from SwiftMath's own text, so it goes before the swap.
+        label.textColor = color
         label.latex = tex
         #if os(macOS)
         let fitted = label.fittingSize
@@ -78,25 +97,29 @@ final class MathAttachment: NSTextAttachment {}
         #else
         label.layoutSubviews()
         #endif
-        guard label.error == nil, !tex.isEmpty, let list = label.displayList else {
-            failed.insert(key)
-            return nil
+        guard label.error == nil, let list = label.displayList else { return nil }
+        Blackboard.restyle(list)
+        return list
+    }
+
+    private static func draw(_ list: MTMathListDisplay, size: CGSize, offset: CGPoint) -> PlatformImage {
+        #if os(macOS)
+        // Drawn when shown, at the screen's scale.
+        nonisolated(unsafe) let list = list
+        return NSImage(size: size, flipped: false) { _ in
+            guard let context = NSGraphicsContext.current?.cgContext else { return false }
+            context.translateBy(x: offset.x, y: offset.y)
+            list.draw(context)
+            return true
         }
-        let box = CGSize(width: list.width, height: list.ascent + list.descent)
-        var edges = overflow(list, box: box, size: size)
-        // Whole points, so the picture isn't stretched into its bounds.
-        edges.right += ceil(box.width + edges.left + edges.right) - (box.width + edges.left + edges.right)
-        edges.top += ceil(box.height + edges.top + edges.bottom) - (box.height + edges.top + edges.bottom)
-        let image = MTMathImage(latex: tex, fontSize: size, textColor: resolved, labelMode: display ? .display : .text)
-        image.contentInsets = edges
-        guard case (nil, let picture?) = image.asImage() else {
-            failed.insert(key)
-            return nil
+        #else
+        return UIGraphicsImageRenderer(size: size).image { renderer in
+            renderer.cgContext.translateBy(x: 0, y: size.height)
+            renderer.cgContext.scaleBy(x: 1, y: -1)
+            renderer.cgContext.translateBy(x: offset.x, y: offset.y)
+            list.draw(renderer.cgContext)
         }
-        let result = Picture(image: picture, size: CGSize(width: round(box.width + edges.left + edges.right), height: round(box.height + edges.top + edges.bottom)),
-                             descent: list.descent + edges.bottom)
-        cache[key] = result
-        return result
+        #endif
     }
 
     /// How far the ink reaches past the typeset box. SwiftMath sizes its picture to the box, which leaves out an italic
@@ -108,7 +131,7 @@ final class MathAttachment: NSTextAttachment {}
                                       space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue),
               let data = context.data else { return MTEdgeInsets() }
         context.scaleBy(x: scale, y: scale)
-        // The label laid the list out at the box's corner, as the picture will with its insets.
+        // The list sits at the box's corner, as it will in the picture after its insets.
         context.translateBy(x: pad, y: pad)
         list.draw(context)
         let alpha = data.bindMemory(to: UInt8.self, capacity: width * height * 4)
@@ -135,6 +158,167 @@ final class MathAttachment: NSTextAttachment {}
         #else
         return color.resolvedColor(with: UITraitCollection(userInterfaceStyle: dark ? .dark : .light))
         #endif
+    }
+}
+
+/// `\mathbb` capitals in the AMS blackboard font that LaTeX and KaTeX use. Latin Modern Math, SwiftMath's font, draws
+/// them as thin open outlines (ℝ, 𝔽) that read as another alphabet next to every other place the note is shown.
+/// SwiftMath sets one font per line and loads fonts only from its own bundle, so after typesetting each line holding
+/// such a letter is rebuilt from its glyphs with the letter in the AMS font. The AMS letters are mostly wider (M by a
+/// third), so before typesetting each one is followed by a space of the difference: SwiftMath then places what comes
+/// next, scripts included, past the AMS letter, and the rebuilt line is kerned back to the width SwiftMath measured.
+@MainActor enum Blackboard {
+    private static let ams: CGFont? = Bundle.main.url(forResource: "KaTeX_AMS-Regular.ttf", withExtension: nil)
+        .flatMap { CGDataProvider(url: $0 as CFURL) }.flatMap { CGFont($0) }
+    private static let capitals = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+    private static let mathbb = try! NSRegularExpression(pattern: #"\\mathbb\s*(?:\{([^{}]*)\}|([A-Za-z0-9]))"#)
+
+    /// Each `\mathbb` capital as its own command followed by its room, so it can be one letter wide in either font.
+    static func reserve(_ tex: String) -> String {
+        guard ams != nil, tex.contains("\\mathbb") else { return tex }
+        let whole = tex as NSString
+        var out = "", last = 0
+        for match in mathbb.matches(in: tex, range: NSRange(location: 0, length: whole.length)) {
+            out += whole.substring(with: NSRange(location: last, length: match.range.location - last))
+            let body = match.range(at: 1).location != NSNotFound ? whole.substring(with: match.range(at: 1)) : whole.substring(with: match.range(at: 2))
+            // Lowercase letters and digits have no AMS form; they stay Latin Modern's.
+            out += body.filter { !$0.isWhitespace }.map { letter in
+                guard let room = room(letter) else { return "\\mathbb{\(letter)}" }
+                return "\\mathbb{\(letter)}\\\(room) "
+            }.joined()
+            last = match.range.location + match.range.length
+        }
+        return out + whole.substring(from: last)
+    }
+
+    private static var rooms: [Character: String?] = [:]
+
+    /// A registered space command as wide as the AMS letter is wider than Latin Modern's, which may be less than none.
+    private static func room(_ letter: Character) -> String? {
+        if let name = rooms[letter] { return name }
+        var name: String?
+        if let ams, let scalar = doubleStruck(letter),
+           let space = MTMathAtomFactory.atom(forLatexSymbol: "quad") as? MTMathSpace {
+            let size: CGFloat = 1000
+            func advance(_ font: CTFont, _ text: String) -> CGFloat? {
+                var units = Array(text.utf16), glyphs = [CGGlyph](repeating: 0, count: units.count)
+                guard CTFontGetGlyphsForCharacters(font, &units, &glyphs, units.count) else { return nil }
+                return CTFontGetAdvancesForGlyphs(font, .horizontal, &glyphs, nil, 1)
+            }
+            if let wide = advance(CTFontCreateWithGraphicsFont(ams, size, nil, nil), String(letter)),
+               let narrow = advance(MathFont.latinModernFont.ctFont(withSize: size), String(scalar)) {
+                // A quad, 18mu, is the font size.
+                space.space = (wide - narrow) / size * 18
+                name = "foliobbroom" + String(letter).lowercased()
+                MTMathAtomFactory.add(latexSymbol: name!, value: space)
+            }
+        }
+        rooms[letter] = .some(name)
+        return name
+    }
+    /// Per font: each glyph's text, read back from the font's character map.
+    private static var characters: [String: [CGGlyph: String]] = [:]
+    /// Per font: its double-struck capitals' glyphs and the letters they are.
+    private static var letters: [String: [CGGlyph: UniChar]] = [:]
+
+    static func restyle(_ display: MTDisplay) {
+        if let line = display as? MTCTLineDisplay {
+            if let rebuilt = swapped(line.line) { line.line = rebuilt }
+            return
+        }
+        // Fractions, radicals, accents and limits keep their parts in properties SwiftMath doesn't all make public.
+        var mirror: Mirror? = Mirror(reflecting: display)
+        while let m = mirror {
+            for child in m.children {
+                if let part = child.value as? MTDisplay { restyle(part) }
+                if let parts = child.value as? [MTDisplay] { parts.forEach(restyle) }
+            }
+            mirror = m.superclassMirror
+        }
+    }
+
+    /// The line again with its double-struck capitals in the AMS font, or nil when it has none or can't be read back.
+    private static func swapped(_ line: CTLine) -> CTLine? {
+        guard let ams else { return nil }
+        let runs = CTLineGetGlyphRuns(line) as? [CTRun] ?? []
+        let length = CTLineGetStringRange(line).length
+        var units = [UniChar](repeating: 0x20, count: length)
+        var spans: [(NSRange, [NSAttributedString.Key: Any])] = []
+        var swaps: [(at: Int, length: Int, letter: UniChar, font: CTFont, glyph: CGGlyph)] = []
+        for run in runs {
+            let attributes = CTRunGetAttributes(run) as? [NSAttributedString.Key: Any] ?? [:]
+            guard let value = attributes[NSAttributedString.Key(kCTFontAttributeName as String)] else { return nil }
+            let font = value as! CTFont
+            let count = CTRunGetGlyphCount(run), range = CTRunGetStringRange(run)
+            var glyphs = [CGGlyph](repeating: 0, count: count), indices = [CFIndex](repeating: 0, count: count)
+            CTRunGetGlyphs(run, CFRange(), &glyphs)
+            CTRunGetStringIndices(run, CFRange(), &indices)
+            let text = characterMap(font), doubled = letterMap(font)
+            for i in 0..<count {
+                let end = i + 1 < count ? indices[i + 1] : range.location + range.length
+                // A glyph standing for other than its one character (a ligature, a mark) can't be rebuilt.
+                guard let character = text[glyphs[i]], character.utf16.count == end - indices[i], end <= length else { return nil }
+                units.replaceSubrange(indices[i]..<end, with: character.utf16)
+                if let letter = doubled[glyphs[i]] { swaps.append((indices[i], end - indices[i], letter, font, glyphs[i])) }
+            }
+            spans.append((NSRange(location: range.location, length: range.length), attributes))
+        }
+        guard !swaps.isEmpty else { return nil }
+        let string = NSMutableAttributedString(string: String(utf16CodeUnits: units, count: length))
+        for (range, attributes) in spans { string.setAttributes(attributes, range: range) }
+        let kern = NSAttributedString.Key(kCTKernAttributeName as String)
+        // From the end, since a letter is shorter than the surrogate pair it replaces.
+        for swap in swaps.reversed() {
+            let range = NSRange(location: swap.at, length: swap.length)
+            var attributes = string.attributes(at: swap.at, effectiveRange: nil)
+            let size = CTFontGetSize(swap.font)
+            let font = CTFontCreateWithGraphicsFont(ams, size, nil, nil)
+            var letter = swap.letter, glyph: CGGlyph = 0, old = swap.glyph
+            guard CTFontGetGlyphsForCharacters(font, &letter, &glyph, 1) else { continue }
+            let width = CTFontGetAdvancesForGlyphs(font, .horizontal, &glyph, nil, 1)
+            let was = CTFontGetAdvancesForGlyphs(swap.font, .horizontal, &old, nil, 1)
+            attributes[NSAttributedString.Key(kCTFontAttributeName as String)] = font
+            attributes[kern] = ((attributes[kern] as? NSNumber)?.doubleValue ?? 0) + was - width
+            string.replaceCharacters(in: range, with: NSAttributedString(string: String(utf16CodeUnits: [letter], count: 1), attributes: attributes))
+        }
+        return CTLineCreateWithAttributedString(string)
+    }
+
+    private static func characterMap(_ font: CTFont) -> [CGGlyph: String] {
+        let name = CTFontCopyPostScriptName(font) as String
+        if let map = characters[name] { return map }
+        var map: [CGGlyph: String] = [:]
+        let set = CTFontCopyCharacterSet(font)
+        // The math alphabets are past the first plane.
+        for value in UInt32(0x20)..<0x20000 where CFCharacterSetIsLongCharacterMember(set, value) {
+            guard let scalar = Unicode.Scalar(value) else { continue }
+            let units = Array(String(scalar).utf16)
+            var glyphs = [CGGlyph](repeating: 0, count: units.count)
+            if CTFontGetGlyphsForCharacters(font, units, &glyphs, units.count), map[glyphs[0]] == nil { map[glyphs[0]] = String(scalar) }
+        }
+        characters[name] = map
+        return map
+    }
+
+    /// Where SwiftMath finds the letter's double-struck form: in Letterlike Symbols for the ones Unicode had first.
+    private static func doubleStruck(_ letter: Character) -> Unicode.Scalar? {
+        let older: [Character: UInt32] = ["C": 0x2102, "H": 0x210D, "N": 0x2115, "P": 0x2119, "Q": 0x211A, "R": 0x211D, "Z": 0x2124]
+        guard let offset = capitals.firstIndex(of: letter).map({ capitals.distance(from: capitals.startIndex, to: $0) }) else { return nil }
+        return Unicode.Scalar(older[letter] ?? 0x1D538 + UInt32(offset))
+    }
+
+    private static func letterMap(_ font: CTFont) -> [CGGlyph: UniChar] {
+        let name = CTFontCopyPostScriptName(font) as String
+        if let map = letters[name] { return map }
+        var map: [CGGlyph: UniChar] = [:]
+        for letter in capitals {
+            guard let scalar = doubleStruck(letter) else { continue }
+            let units = Array(String(scalar).utf16)
+            var glyphs = [CGGlyph](repeating: 0, count: units.count)
+            if CTFontGetGlyphsForCharacters(font, units, &glyphs, units.count) { map[glyphs[0]] = letter.utf16.first }
+        }
+        letters[name] = map
+        return map
     }
 }
 
