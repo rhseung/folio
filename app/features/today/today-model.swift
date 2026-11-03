@@ -186,31 +186,27 @@ final class TodayModel {
         editing = EditingAssignment(course: course, assignment: item.assignment)
     }
 
-    enum DeadlineUrgency { case urgent, soon, later }
-
     struct DeadlineRow: Identifiable {
         var item: TodaySummary.DeadlineItem
-        var urgency: DeadlineUrgency
+        var urgency: DueUrgency
         var due: String
         var id: UUID { item.assignment.id }
     }
 
-    /// Today and tomorrow are urgent and the rest of the week soon, each said as a span from now; past a week a date reads
-    /// quicker than a count of days.
+    /// Near deadlines say how soon, each as a span from now; past a week a date reads quicker than a count of days.
     func deadlineRows(_ items: [TodaySummary.DeadlineItem], studyDay: LocalDate) -> [DeadlineRow] {
         let calendar = workspace.calendar
         return items.compactMap { item in
             guard let due = item.assignment.due else { return nil }
-            // Counted in study days, not calendar days: with a 04:00 boundary, 02:00 the night after next is still
-            // tomorrow's work, and counting it as two days off would drop it out of the urgent rows.
             let days = studyDay.days(until: workspace.settings.studyDay(of: due, calendar: calendar))
             let time = due.formatted(date: .omitted, time: .shortened)
-            return switch days {
-            case 0: DeadlineRow(item: item, urgency: .urgent, due: String(localized: .todayDeadlinesTodayAt(time)))
-            case 1: DeadlineRow(item: item, urgency: .urgent, due: String(localized: .todayDeadlinesTomorrowAt(time)))
-            case ..<7: DeadlineRow(item: item, urgency: .soon, due: String(localized: .todayDeadlinesInDays(days)))
-            default: DeadlineRow(item: item, urgency: .later, due: due.formatted(.dateTime.month().day().weekday()))
+            let urgency = DueUrgency(studyDays: days)
+            let text = switch urgency {
+            case .urgent: String(localized: days == 0 ? .todayDeadlinesTodayAt(time) : .todayDeadlinesTomorrowAt(time))
+            case .soon: String(localized: .todayDeadlinesInDays(days))
+            case .later: due.formatted(.dateTime.month().day().weekday())
             }
+            return DeadlineRow(item: item, urgency: urgency, due: text)
         }
     }
 

@@ -396,4 +396,21 @@ struct AssignmentFilesTests {
         #expect(DueState(due: now.addingTimeInterval(5 * 3600 + 60), now: now, calendar: cal) == .hours(6))
         if case .days(let d) = DueState(due: now.addingTimeInterval(3 * 86400), now: now, calendar: cal) { #expect(d == 3) } else { Issue.record("expected days") }
     }
+
+    @Test func dueUrgencyCountsStudyDaysAcrossTheBoundary() {
+        let settings = Settings()
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        #expect(settings.dayBoundaryMinutes == 4 * 60)
+        func at(_ day: Int, _ hour: Int) -> Date { calendar.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour))! }
+        func urgency(_ due: Date) -> DueUrgency { DueUrgency(due: due, now: at(29, 2), settings: settings, calendar: calendar) }
+        // At 02:00 on the 29th the study day is still the 28th.
+        #expect(settings.studyDays(from: at(29, 2), until: at(29, 3), calendar: calendar) == 0)
+        #expect(settings.studyDays(from: at(29, 2), until: at(29, 5), calendar: calendar) == 1)
+        #expect(urgency(at(29, 3)) == .urgent)
+        #expect(urgency(at(30, 2)) == .urgent)
+        #expect(urgency(at(30, 5)) == .soon)
+        #expect(urgency(at(35, 3)) == .soon)
+        #expect(urgency(at(35, 5)) == .later)
+    }
 }
