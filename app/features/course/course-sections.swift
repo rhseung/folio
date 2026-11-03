@@ -314,10 +314,9 @@ struct CourseColorSwatches: View {
 /// The weekly class times, one row each. The next lecture is suggested from these.
 struct ClassTimesBlock: View {
     @Binding var schedule: [ClassTime]
-    var note = String(localized: .classTimesNote)
 
     var body: some View {
-        Block(title: String(localized: .classTimesTitle), note: note, trailing: {
+        Block(title: String(localized: .classTimesTitle), note: String(localized: .classTimesNote), trailing: {
             Button(.classTimesAdd, systemImage: "plus") { schedule.append(ClassTime(weekday: 1, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45)) }
                 .buttonStyle(.ghost)
         }) {

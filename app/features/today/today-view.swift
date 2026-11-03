@@ -31,6 +31,7 @@ struct TodayView: View {
             DayRibbonCard(model: model, summary: summary, classes: classes, go: go, openNote: openNote)
             QuickAddField(workspace: model.workspace)
             AttendanceWarnings(model: model)
+            UnfiledCoursesNotice(workspace: model.workspace)
             agenda(summary)
             ExamPlanTodayBlock(courses: model.current)
             reviewBlock(reviews, notes: summary.missingReviewNotes, today: summary.studyDay)

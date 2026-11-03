@@ -46,7 +46,9 @@ struct GradesModelTests {
         let model = GradesModel(workspace: try workspace())
         let rows = model.semesterRows
         #expect(rows.map(\.semester.id) == model.semesters.reversed().map(\.id))
-        #expect(rows.allSatisfy { $0.inProgress == ($0.enrolled > 0) })
+        #expect(rows.filter(\.inProgress).allSatisfy { $0.enrolled > 0 })
+        // A credited term is never in progress, though its course has no grade yet.
+        #expect(rows.contains { $0.semester.id == creditedTerm && $0.enrolled == 3 && !$0.inProgress })
     }
 
     @Test func aPickedUndecidedGradeStaysAPick() throws {
