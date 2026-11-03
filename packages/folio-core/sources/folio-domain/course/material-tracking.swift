@@ -129,14 +129,25 @@ public enum MaterialTracking {
         return result
     }
 
-    /// A `.tex` next to a same-named PDF is that PDF's source.
+    /// A `.tex` next to a same-named PDF is that PDF's source. Names are compared ignoring case, as the file system does.
+    /// The link is worked out again every time: a move keeps both ids, so a link kept from before would point a moved
+    /// `.tex` at the PDF in its old folder.
     static func linkTexSources(_ materials: inout [Material]) {
         let pdfs = Dictionary(
-            materials.filter { $0.path.hasSuffix(".pdf") }.map { ($0.path.dropLast(4), $0.id) },
+            materials.filter { MaterialFormat(path: $0.path) == .pdf }.map { ($0.path.lowercased(), $0.id) },
             uniquingKeysWith: { a, _ in a }
         )
-        for i in materials.indices where materials[i].path.hasSuffix(".tex") && materials[i].sourceOf == nil {
-            materials[i].sourceOf = pdfs[materials[i].path.dropLast(4)]
+        for i in materials.indices {
+            guard let pdf = MaterialFormat.builtPDF(of: materials[i].path) else { continue }
+            materials[i].sourceOf = pdfs[pdf.lowercased()]
         }
+    }
+}
+
+extension [Material] {
+    /// Found by name rather than `sourceOf`, which is only refreshed by tracking and lags behind a `material mv`.
+    public func builtPDF(of source: Material) -> Material? {
+        guard let pdf = MaterialFormat.builtPDF(of: source.path)?.lowercased() else { return nil }
+        return first { $0.path.lowercased() == pdf }
     }
 }

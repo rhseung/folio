@@ -110,12 +110,21 @@ public enum NotionNotesImporter {
                     result.sessionsAdded += 1
                     index = file.sessions.count - 1
                 }
-                if review {
-                    if file.sessions[index].reviewNoteId == nil { file.sessions[index].reviewNoteId = row.id }
-                } else if file.sessions[index].roughNoteId == nil {
-                    file.sessions[index].roughNoteId = row.id
+                // A note already in course.json keeps the links its entry has: linking it here would set only the
+                // session's side, and would bring back a link the user removed.
+                if !existingNotes.contains(row.id) {
+                    // A session holds one note of each kind. One that has another keeps it, and this note comes in
+                    // without the session rather than as a second note the model refuses.
+                    let s = file.sessions[index]
+                    let taken = s.note(of: kind).map { $0 != row.id } ?? false || file.notes.contains { $0.sessionId == s.id && $0.kind == kind }
+                    if taken {
+                        let name = file.name(of: s)
+                        result.warnings.append(String(localized: review ? .importNotesSessionHasReview(row.title, name) : .importNotesSessionHasRough(row.title, name)))
+                    } else {
+                        if review { file.sessions[index].reviewNoteId = row.id } else { file.sessions[index].roughNoteId = row.id }
+                        sessionId = s.id
+                    }
                 }
-                sessionId = file.sessions[index].id
             }
             if !existingNotes.contains(row.id) {
                 result.notes.append(NotionNotePlan(id: row.id, title: row.title, meta: NoteMeta(id: row.id, kind: kind, sessionId: sessionId), sourceFile: source))

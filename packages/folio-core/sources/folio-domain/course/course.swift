@@ -14,10 +14,11 @@ public struct CourseFile: Codable, Sendable, Equatable {
     public var attendance: [Attendance]
     public var problemSets: [ProblemSet]
     public var recordings: [Recording]
+    public var notes: [NoteEntry]
 
     public init(course: Course, materials: [Material] = [], units: [Unit] = [], sessions: [Session] = [], exams: [Exam] = [], assignments: [Assignment] = [],
                 components: [GradeComponent] = [], scores: [ScoreEntry] = [], policy: GradePolicy = .init(), attendance: [Attendance] = [], problemSets: [ProblemSet] = [],
-                recordings: [Recording] = []) {
+                recordings: [Recording] = [], notes: [NoteEntry] = []) {
         self.course = course
         self.materials = materials
         self.units = units
@@ -30,6 +31,7 @@ public struct CourseFile: Codable, Sendable, Equatable {
         self.attendance = attendance
         self.problemSets = problemSets
         self.recordings = recordings
+        self.notes = notes
     }
 
     // A missing section means empty, so adding a section never needs a schema migration.
@@ -47,6 +49,7 @@ public struct CourseFile: Codable, Sendable, Equatable {
         attendance = try c.decodeIfPresent([Attendance].self, forKey: .attendance) ?? []
         problemSets = try c.decodeIfPresent([ProblemSet].self, forKey: .problemSets) ?? []
         recordings = try c.decodeIfPresent([Recording].self, forKey: .recordings) ?? []
+        notes = try c.decodeIfPresent([NoteEntry].self, forKey: .notes) ?? []
     }
 }
 

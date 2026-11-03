@@ -4011,7 +4011,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notes 폴더에 노트 만들기. 본문을 주지 않으면 종류의 템플릿"
+            "value": "Notes 폴더에 마크다운이나 LaTeX 노트 만들기. 본문을 주지 않으면 종류의 템플릿"
           }
         }
       }
@@ -4022,7 +4022,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "예시:\n  folio note add EC4207 \"매칭 정리\" --kind topic\n  echo \"# 메모\" | folio note add EC4207 \"시험 메모\" --body -"
+            "value": "예시:\n  folio note add EC4207 \"매칭 정리\" --kind topic --unit 매칭\n  folio note add EC4207 \"매칭 정리\" --format tex\n  echo \"# 메모\" | folio note add EC4207 \"시험 메모\" --body -"
           }
         }
       }
@@ -7268,6 +7268,116 @@
           "stringUnit": {
             "state": "translated",
             "value": "종류"
+          }
+        }
+      }
+    },
+    "material.write.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트 자료(.tex, 코드, .txt 등) 파일 전체를 바꾸기"
+          }
+        }
+      }
+    },
+    "material.write.conflict": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료가 읽은 뒤에 바뀌었습니다: %@"
+          }
+        }
+      }
+    },
+    "material.write.conflict-hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "folio material show %@/%@ --json으로 다시 읽고 고쳐서 쓰기"
+          }
+        }
+      }
+    },
+    "material.write.discussion": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "--expect에 `folio material show --json`의 contentHash(지금 파일의 해시)를 주면, 그 뒤에 앱이나 다른 기기에서 파일이 바뀌었을 때 쓰지 않고 종료 코드 6으로 끝난다.\n에이전트는 읽고 고쳐 쓸 때 항상 --expect를 준다. PDF처럼 텍스트가 아닌 파일은 쓰지 않는다.\n\n예시:\n  folio material write EC4207/Assignments/HW01/hw.tex --file hw.tex\n  folio material write EC4207/Assignments/HW01/hw.tex --file hw.tex --expect 9f2c…"
+          }
+        }
+      }
+    },
+    "material.write.help.expect": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "읽을 때의 contentHash(material show --json). 다르면 쓰지 않는다"
+          }
+        }
+      }
+    },
+    "note.add.help.format": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 형식. markdown(.md) 또는 tex(.tex)"
+          }
+        }
+      }
+    },
+    "note.migrate.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 frontmatter의 프로퍼티를 course.json으로 옮기고 파일에서 지우기. 예전 노트를 한 번 정리한다"
+          }
+        }
+      }
+    },
+    "note.migrate.discussion": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folio가 쓴 키(id, kind, sessionId, unitIds, examId, tags, math)만 옮기고, 다른 키는 파일에 남긴다. 실제 폴더에서는 백업한 뒤 --dry-run으로 먼저 본다.\n\n예시:\n  folio note migrate --dry-run\n  folio note migrate EC4207"
+          }
+        }
+      }
+    },
+    "note.migrate.help.course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목. 빼면 모든 과목"
+          }
+        }
+      }
+    },
+    "note.link.help.math": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수식 문법(latex, asciimath). 빼면 그대로"
           }
         }
       }

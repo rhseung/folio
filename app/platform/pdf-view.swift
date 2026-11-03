@@ -1,3 +1,4 @@
+import CoreImage
 import Observation
 import PDFKit
 import SwiftUI
@@ -40,6 +41,22 @@ final class PDFController {
         let target = page
         DispatchQueue.main.async { [self] in go(to: target) }
     }
+
+    #if os(macOS)
+    /// Shows the pages light-on-dark without touching the file: inverting turns white paper black, and turning the
+    /// hue back halfway keeps a red still red.
+    func darken(_ on: Bool) {
+        guard on != !view.contentFilters.isEmpty else { return }
+        view.wantsLayer = true
+        view.layerUsesCoreImageFilters = true
+        guard on, let invert = CIFilter(name: "CIColorInvert"), let hue = CIFilter(name: "CIHueAdjust") else {
+            view.contentFilters = []
+            return
+        }
+        hue.setValue(Double.pi, forKey: kCIInputAngleKey)
+        view.contentFilters = [invert, hue]
+    }
+    #endif
 
     func zoomIn() { view.zoomIn(nil) }
     func zoomOut() { view.zoomOut(nil) }

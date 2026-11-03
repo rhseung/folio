@@ -155,9 +155,9 @@ final class MaterialsModel {
         workspace.run(MaterialRelink(course: course.id, material: id, file: file.path(percentEncoded: false)))
     }
 
-    /// A PDF opens here, a folder in Finder (by the view), anything else in Quick Look.
+    /// A PDF or a text file opens here, a folder in Finder (by the view), anything else in Quick Look.
     func open(_ m: FolioDomain.Material) {
-        if m.isPDF { viewing = m.id } else { Task { preview = try? await workspace.download(m, course: course.id) } }
+        if m.isPDF || m.isText { viewing = m.id } else { Task { preview = try? await workspace.download(m, course: course.id) } }
     }
 
     func fileURL(_ path: String) -> URL { course.store.fileURL(path) }

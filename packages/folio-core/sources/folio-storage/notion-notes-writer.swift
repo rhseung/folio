@@ -3,20 +3,21 @@ import FolioMarkdown
 import Foundation
 
 extension CourseStore {
-    /// Notes whose ID already exists and existing assets are left alone.
-    public func writeNotionNotes(_ plans: [NotionNotePlan], dump: NotionCourseDump, folder: URL, links: [String: String]) throws {
-        guard !plans.isEmpty else { return }
+    /// Writes each plan that has a place in `urls`; existing assets are left alone. The caller picks the places, so a
+    /// dry run reports the same paths, and adds the entries to course.json.
+    public func writeNotionNotes(_ plans: [NotionNotePlan], dump: NotionCourseDump, folder: URL, links: [String: String], at urls: [UUID: URL]) throws {
+        guard plans.contains(where: { urls[$0.id] != nil }) else { return }
         var images: [String: String] = [:]
         for image in dump.images {
             guard let file = image.file else { continue }
             let source = folder.appending(path: file)
             if FileManager.default.fileExists(atPath: source.path) { images[image.source] = try addNoteAsset(source) }
         }
-        let existing = Set(try notes().compactMap(\.meta.id))
-        for plan in plans where !existing.contains(plan.id) {
+        for plan in plans {
+            guard let url = urls[plan.id] else { continue }
             let raw = String(decoding: try Data(contentsOf: folder.appending(path: plan.sourceFile)), as: UTF8.self)
             let body = "# \(plan.title)\n\n" + NotionMarkdown.convert(raw, links: links, images: images) + "\n"
-            _ = try createNote(title: plan.title, meta: plan.meta, body: body)
+            try createNote(at: url, text: body)
         }
     }
 

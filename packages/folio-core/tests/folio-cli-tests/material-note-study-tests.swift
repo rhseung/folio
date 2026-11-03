@@ -87,6 +87,45 @@ struct MaterialNoteStudyTests {
         }
     }
 
+    @Test func writeText() throws {
+        let text = "\\documentclass{article}\n"
+        let file = try scratch("Problems.tex", text)
+        try h.expectSame(["material", "write", "EC4207/Problems.tex", "--file", file], setup: [Self.track]) { gist in
+            MaterialWrite(course: course, material: try material(gist, "Problems.tex"), text: text)
+        }
+    }
+
+    @Test func writeRefusesAStaleHash() throws {
+        let gist = try Harness.fixtureCopy()
+        _ = h.cli(Self.track, gist: gist)
+        let file = try scratch("Problems.tex", "x")
+        #expect(h.cli(["material", "write", "EC4207/Problems.tex", "--file", file, "--expect", "00"], gist: gist).code == Exit.conflict.rawValue)
+    }
+
+    /// The file changes on another device after tracking; `material show --json` reads it again, so its hash still
+    /// opens the write.
+    @Test func writeTakesTheHashShowReadsNow() throws {
+        let gist = try Harness.fixtureCopy()
+        _ = h.cli(Self.track, gist: gist)
+        let tex = gist.appending(path: "2026-3/EC4207 그래프 이론/Exams/Midterm/Problems.tex")
+        try "% 다른 기기에서 고침\n".write(to: tex, atomically: true, encoding: .utf8)
+        let shown = try #require(try JSONSerialization.jsonObject(with: Data(h.cli(["material", "show", "EC4207/Problems.tex", "--json"], gist: gist).out.utf8)) as? [String: Any])
+        #expect(shown["text"] as? String == "% 다른 기기에서 고침\n" && shown["path"] as? String == "Exams/Midterm/Problems.tex")
+        let hash = try #require(shown["contentHash"] as? String)
+        let file = try scratch("Problems.tex", "x")
+        #expect(h.cli(["material", "write", "EC4207/Problems.tex", "--file", file, "--expect", hash], gist: gist).code == 0)
+        #expect(try String(contentsOf: tex, encoding: .utf8) == "x")
+    }
+
+    @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
+    func buildTex() throws {
+        let write = ["material", "write", "EC4207/Problems.tex", "--file",
+                     try scratch("Problems.tex", "\\documentclass{article}\n\\begin{document}\nHi\n\\end{document}\n")]
+        try h.expectSame(["material", "build", "EC4207/Problems.tex", "--overwrite"], setup: [Self.track, write]) { gist in
+            MaterialBuild(course: course, material: try material(gist, "Problems.tex"), overwrite: true)
+        }
+    }
+
     @Test func untrack() throws {
         try h.expectSame(["material", "untrack", "EC4207/Seating.pdf"], setup: [Self.track]) { gist in
             MaterialUntrack(course: course, material: try material(gist, "Seating.pdf"))
@@ -156,16 +195,41 @@ struct MaterialNoteStudyTests {
     }
 
     @Test func noteWrite() throws {
-        let text = "---\nid: \(Self.noteID.uuidString.lowercased())\nkind: rough\n---\n\n# 2주차-1\n\n고쳐 씀\n"
+        let text = "# 2주차-1\n\n고쳐 씀\n"
         try h.expectSame(["note", "write", "EC4207/2주차-1", "--file", try scratch("note.md", text)]) { _ in
             NoteWrite(course: course, note: "Notes/2주차-1.md", text: text)
         }
     }
 
+    /// Writes a note file straight into Notes/, as another editor would, so it has no entry in course.json.
+    func drop(_ gist: URL, _ name: String, _ text: String) throws {
+        let store = try ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now).store(course)
+        try text.write(to: store.url.appending(path: "Notes/\(name)"), atomically: true, encoding: .utf8)
+    }
+
     @Test func noteAdopt() throws {
-        let plain = try scratch("plain.md", "# 바깥에서 만든 노트\n")
-        try h.expectSame(["note", "adopt", "EC4207/2주차-1"], setup: [["note", "write", "EC4207/2주차-1", "--file", plain]]) { _ in
-            NoteAdopt(course: course, note: "Notes/2주차-1.md")
+        try h.expectSame(["note", "adopt", "EC4207/바깥"], prepare: { try drop($0, "바깥.md", "# 바깥에서 만든 노트\n") }) { _ in
+            NoteAdopt(course: course, note: "Notes/바깥.md")
+        }
+    }
+
+    @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
+    func noteBuild() throws {
+        let tex = "\\documentclass{article}\n\\begin{document}\nHi\n\\end{document}\n"
+        let id = UUID()
+        let prepare = { (gist: URL) in
+            try NoteAdd(id: id, course: course, title: "증명", format: .tex).run(ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now))
+            try drop(gist, "증명.tex", tex)
+        }
+        try h.expectSame(["note", "build", "EC4207/증명"], prepare: prepare) { _ in
+            NoteBuild(course: course, note: "Notes/증명.tex")
+        }
+    }
+
+    @Test func noteMigrate() throws {
+        let text = "---\nid: 0a1b2c3d-0000-4000-8000-000000000001\nkind: review\ntags: [그래프]\nauthor: 나\n---\n\n# 예전\n"
+        try h.expectSame(["note", "migrate", "EC4207"], prepare: { try drop($0, "예전.md", text) }) { _ in
+            NoteMigrate(course: course)
         }
     }
 

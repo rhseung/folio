@@ -53,7 +53,7 @@ public struct SessionRemove {
     @Arg var sessions: [Session.ID]
 
     public func run(_ ctx: ActionContext) throws {
-        let noted = Set(try ctx.store(course).notes().compactMap(\.meta.sessionId))
+        let noted = Set(try ctx.notes(course).compactMap(\.meta.sessionId))
         try ctx.edit(course) { f in
             for id in sessions {
                 let s = f.sessions[try index(id, in: f.sessions, .valueSession)]
@@ -129,15 +129,15 @@ public struct SessionNote {
         guard kind == .rough || kind == .review else { throw ActionError.rule(String(localized: .errorSessionNoteKind)) }
         let file = try ctx.file(course)
         let s = file.sessions[try index(session, in: file.sessions, .valueSession)]
-        if let id = kind == .rough ? s.roughNoteId : s.reviewNoteId {
+        if let id = s.note(of: kind) {
             ctx.made(id)
             return
         }
         let settings = try ctx.settings()
-        let title = kind == .rough ? file.name(of: s) : "\(file.name(of: s)) 정리"
+        let title = file.noteTitle(for: s, kind: kind)
         let body = NoteTemplate.body(for: kind, title: title, sections: settings.noteSections(for: kind))
         let made = try ctx.createNote(course, title: title, meta: NoteMeta(id: id, kind: kind, sessionId: s.id, unitIds: s.unitIds,
-                                                                           math: settings.newNoteMath), body: body) ?? id
+                                                                           math: settings.newNoteMath), body: body)
         try ctx.edit(course) { f in
             let i = try index(session, in: f.sessions, .valueSession)
             if kind == .rough {

@@ -6777,28 +6777,6 @@
         }
       }
     },
-    "notes.new-kind-title": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 %@ 노트 제목"
-          }
-        }
-      }
-    },
-    "notes.new-title": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 노트 제목"
-          }
-        }
-      }
-    },
     "notes.no-exam": {
       "extractionState": "manual",
       "localizations": {
@@ -16387,6 +16365,248 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$lld개 · 마감 %2$lld개"
+          }
+        }
+      }
+    },
+    "text-file.line": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld번째 줄"
+          }
+        }
+      }
+    },
+    "text-file.build": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF 만들기"
+          }
+        }
+      }
+    },
+    "text-file.build-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tectonic으로 PDF를 만들어 같은 폴더에 같은 이름으로 둡니다 (⌘B)"
+          }
+        }
+      }
+    },
+    "text-file.error-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오류 %lld개"
+          }
+        }
+      }
+    },
+    "text-file.install-hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tectonic이 없어 PDF를 만들 수 없습니다. 터미널에서 brew install tectonic으로 설치하세요"
+          }
+        }
+      }
+    },
+    "text-file.conflict": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 곳에서 바뀐 파일입니다"
+          }
+        }
+      }
+    },
+    "text-file.conflict-message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 기기나 프로그램이 이 파일을 고쳤습니다. 다시 읽으면 여기서 고친 내용은 사라집니다."
+          }
+        }
+      }
+    },
+    "text-file.replace": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘%@’을(를) 바꿀까요?"
+          }
+        }
+      }
+    },
+    "text-file.replace-confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "바꾸기"
+          }
+        }
+      }
+    },
+    "text-file.replace-message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 이름의 PDF가 이미 있는데 Folio가 만든 것이 아닙니다. 받은 파일일 수 있습니다. 바꾸면 원래 파일은 휴지통으로 옮깁니다."
+          }
+        }
+      }
+    },
+    "text-file.unreadable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 내려받지 않았거나, 없어졌거나, UTF-8 텍스트가 아니라서 여기서 열지 않습니다."
+          }
+        }
+      }
+    },
+    "notes.new-sheet": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 노트"
+          }
+        }
+      }
+    },
+    "notes.field.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제목"
+          }
+        }
+      }
+    },
+    "notes.field.title-example": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예: 매칭 정리"
+          }
+        }
+      }
+    },
+    "notes.field.format": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "형식"
+          }
+        }
+      }
+    },
+    "notes.field.format-tex": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘B로 PDF를 만들어 Notes/Exports에 둡니다"
+          }
+        }
+      }
+    },
+    "notes.field.kind": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "종류"
+          }
+        }
+      }
+    },
+    "notes.field.session": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차"
+          }
+        }
+      }
+    },
+    "notes.field.session-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 노트가 아직 없는 회차"
+          }
+        }
+      }
+    },
+    "notes.field.exam": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험"
+          }
+        }
+      }
+    },
+    "notes.field.units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원"
+          }
+        }
+      }
+    },
+    "notes.format.markdown": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마크다운"
           }
         }
       }

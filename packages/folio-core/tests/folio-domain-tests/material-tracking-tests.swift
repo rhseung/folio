@@ -86,4 +86,25 @@ struct MaterialTrackingTests {
         let pdf = try #require(result.first { $0.path.hasSuffix(".pdf") })
         #expect(result.first { $0.path.hasSuffix(".tex") }?.sourceOf == pdf.id)
     }
+
+    @Test func aMovedTexLinksToThePDFBesideItNow() throws {
+        let scanned: [ScannedEntry] = [.init(path: "Exams/Midterm/Problems.pdf"), .init(path: "Exams/Midterm/Problems.tex")]
+        var linked = try MaterialTracking.reconcile([], with: scanned, io: io(), device: device, now: t1)
+        let i = try #require(linked.firstIndex { $0.path.hasSuffix(".tex") })
+        linked[i].path = "HW/hw.tex"
+        let moved = try MaterialTracking.reconcile(
+            linked, with: [.init(path: "Exams/Midterm/Problems.pdf"), .init(path: "HW/hw.tex"), .init(path: "HW/hw.pdf")],
+            io: io(), device: device, now: t1
+        )
+        let pdf = try #require(moved.first { $0.path == "HW/hw.pdf" })
+        #expect(moved.first { $0.path == "HW/hw.tex" }?.sourceOf == pdf.id)
+        #expect(moved.builtPDF(of: moved[i])?.id == pdf.id)
+    }
+
+    @Test func linksTexToItsPDFIgnoringCase() throws {
+        let scanned: [ScannedEntry] = [.init(path: "HW/hw.PDF"), .init(path: "HW/hw.TEX")]
+        let result = try MaterialTracking.reconcile([], with: scanned, io: io(), device: device, now: t1)
+        let pdf = try #require(result.first { $0.path.hasSuffix(".PDF") })
+        #expect(result.first { $0.path.hasSuffix(".TEX") }?.sourceOf == pdf.id)
+    }
 }
