@@ -86,6 +86,13 @@ extension CourseFile {
         sessions.filter { needsReviewNote($0, at: now) }.count
     }
 
+    /// Classes still to meet: saved ones ahead that are not 휴강 (an absence marked ahead still meets) and the
+    /// timetable's planned ones not saved yet. The planner leaves out any slot a session already fills, so the two
+    /// never count the same class.
+    public func remainingClasses(after now: Date, planned: [Session]) -> Int {
+        sessions.filter { $0.date > now && !$0.isCancelled }.count + planned.filter { $0.date > now && !$0.isCancelled }.count
+    }
+
     /// Held classes no unit covers, newest first. None while the course has no units: there is nothing to link yet.
     public func sessionsNeedingUnits(at now: Date) -> [Session] {
         units.isEmpty ? [] : sessions.filter { needsUnits($0, at: now) }.sorted { $0.date > $1.date }

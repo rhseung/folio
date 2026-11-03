@@ -131,7 +131,7 @@ struct SessionsView: View {
 enum ClassCard {
     static let tile: CGFloat = 44
     static let menu: CGFloat = 28
-    static let radius: CGFloat = 12
+    static let radius = Theme.Radius.card
 
     struct Tile: View {
         let month: String
@@ -249,7 +249,7 @@ struct PlannedSessionCard: View {
         .padding(.trailing, Theme.Space.m)
         .frame(minHeight: 60)
         // Half the card's white over the page, but opaque, so an exam card tucked in behind doesn't show through.
-        .background(Theme.Palette.card.opacity(0.5), in: .rect(cornerRadius: ClassCard.radius))
+        .background(Theme.Palette.card.opacity(Theme.Opacity.planned), in: .rect(cornerRadius: ClassCard.radius))
         .background(Theme.Palette.page, in: .rect(cornerRadius: ClassCard.radius))
         .overlay {
             RoundedRectangle(cornerRadius: ClassCard.radius).strokeBorder(Theme.Palette.lineStrong, style: StrokeStyle(lineWidth: 1, dash: [4, 4]))
@@ -518,8 +518,7 @@ struct ExamMarkerRow: View {
                 Image(systemName: "flag").font(Theme.Typeface.caption.weight(.semibold))
                 Text(exam.title).font(Theme.Typeface.bodyLarge.weight(.bold)).lineLimit(1).fixedSize()
                 Text(model.examLine(exam, date)).font(Theme.Typeface.caption).monospacedDigit().lineLimit(1)
-                    .opacity(0.8)
-                Capsule().fill(Theme.Palette.danger.opacity(0.25)).frame(minWidth: Theme.Space.xl, maxWidth: .infinity).frame(height: 2)
+                Capsule().fill(Theme.Palette.danger.opacity(Theme.Opacity.toneEdge)).frame(minWidth: Theme.Space.xl, maxWidth: .infinity).frame(height: 2)
                 if let days = model.examDays(exam, now: model.workspace.now) {
                     Chip(days == 0 ? "D-day" : "D-\(days)", tone: .danger, solid: true)
                 }
@@ -566,7 +565,7 @@ struct ClassExamCard: ViewModifier {
                     HStack(spacing: Theme.Space.s) {
                         Text(exam.title).font(Theme.Typeface.bodyStrong.weight(.bold)).lineLimit(1).fixedSize()
                         if let time = model.examTime(exam) {
-                            Text(time).font(Theme.Typeface.caption).monospacedDigit().lineLimit(1).opacity(0.8)
+                            Text(time).font(Theme.Typeface.caption).monospacedDigit().lineLimit(1)
                         }
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -583,7 +582,7 @@ struct ClassExamCard: ViewModifier {
         .background(Theme.Palette.dangerFill, in: .rect(topLeadingRadius: ClassCard.radius, topTrailingRadius: ClassCard.radius))
         .overlay {
             UnevenRoundedRectangle(topLeadingRadius: ClassCard.radius, topTrailingRadius: ClassCard.radius)
-                .strokeBorder(Theme.Palette.danger.opacity(0.25), lineWidth: 1)
+                .strokeBorder(Theme.Palette.danger.opacity(Theme.Opacity.toneEdge), lineWidth: 1)
         }
         // Narrower than the class, as a card further back would be.
         .padding(.horizontal, Theme.Space.m)
@@ -618,9 +617,9 @@ struct SessionCard: View {
                 ClassCard.Tile(month: model.month(session.date), day: model.day(session.date),
                                ink: live ? accent.ink : Theme.Palette.text, monthInk: live ? accent.ink : Theme.Palette.textTertiary,
                                fill: live ? accent.tint : Theme.Palette.page)
-                    .opacity(cancelled ? 0.4 : 1)
-                lines(file, live: live).opacity(cancelled ? 0.4 : 1)
-                trailing(file, live: live, expected: expected).opacity(cancelled ? 0.4 : 1)
+                    .opacity(cancelled ? Theme.Opacity.ended : 1)
+                lines(file, live: live).opacity(cancelled ? Theme.Opacity.ended : 1)
+                trailing(file, live: live, expected: expected).opacity(cancelled ? Theme.Opacity.ended : 1)
                 ClassCard.MenuButton(help: String(localized: .sessionsMenuHelp)) { menuItems }
             }
             if starts { actions(file) }
@@ -639,7 +638,7 @@ struct SessionCard: View {
             .clipShape(.rect(cornerRadius: ClassCard.radius))
         }
         .overlay {
-            RoundedRectangle(cornerRadius: ClassCard.radius).strokeBorder(live ? accent.color.opacity(0.55) : Theme.Palette.line, lineWidth: 1)
+            RoundedRectangle(cornerRadius: ClassCard.radius).strokeBorder(live ? accent.color.opacity(Theme.Opacity.liveEdge) : Theme.Palette.line, lineWidth: 1)
         }
         .contentShape(.rect)
         .contextMenu { menuItems }

@@ -97,4 +97,19 @@ struct SessionTimelineTests {
         file.course.reviews = false
         #expect(file.missingReviewNotes(at: now) == 0)
     }
+
+    /// A saved class still meets unless it is 휴강; one marked absent ahead (which saves it) still counts.
+    @Test func remainingClassesCountSavedAndPlannedButNotCancelled() {
+        let now = date("2026-10-28 12:00")
+        let past = session(9, "2026-10-26 13:00")
+        let absent = session(9, "2026-10-28 13:00")
+        var cancelled = session(10, "2026-11-02 13:00")
+        cancelled.isCancelled = true
+        let makeup = session(10, "2026-11-03 18:00")
+        let file = CourseFile(course: Course(device: device, at: .now, title: ""), sessions: [past, absent, cancelled, makeup])
+        let planned = [session(10, "2026-11-04 13:00"), session(11, "2026-11-09 13:00")]
+        #expect(file.remainingClasses(after: now, planned: planned) == 4)
+        #expect(file.remainingClasses(after: now, planned: []) == 2)
+    }
+
 }

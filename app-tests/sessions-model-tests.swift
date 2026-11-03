@@ -14,13 +14,13 @@ struct SessionsModelTests {
 
     @Test func subtitleCountsSessionsAndMissingReviewNotes() throws {
         let workspace = try fixtureWorkspace()
-        // No timetable, so nothing is planned and the count of classes left stays out.
+        // No timetable, so nothing is planned: the class left is the saved one ahead.
         workspace.run(CourseSet(course: graphTheory, [.schedule([])]))
         let model = SessionsModel(workspace: workspace, courseId: graphTheory)
         #expect(model.subtitle(try #require(workspace.course(graphTheory)).file) == "회차가 아직 없습니다")
         _ = try session(workspace, daysFromNow: -2)
         _ = try session(workspace, daysFromNow: 3)
-        #expect(model.subtitle(try #require(workspace.course(graphTheory)).file) == "회차 2개 · 복습 노트 없음 1")
+        #expect(model.subtitle(try #require(workspace.course(graphTheory)).file) == "회차 2개 · 남은 수업 1개 · 복습 노트 없음 1")
     }
 
     @Test func aClassWithNoEndOffersJoinUntilTheEndTheFormShows() throws {

@@ -23,7 +23,7 @@ final class SessionsModel {
         let now = now ?? workspace.now
         guard !file.sessions.isEmpty else { return String(localized: .sessionsEmpty) }
         let missing = file.missingReviewNotes(at: now)
-        let remaining = plan(now: now).count
+        let remaining = file.remainingClasses(after: now, planned: plan(now: now).map(\.draft))
         return ([String(localized: .sessionsCount(file.sessions.count))]
                 + (remaining > 0 ? [String(localized: .sessionsRemaining(remaining))] : [])
                 + (missing > 0 ? [String(localized: .sessionsMissingNotes(missing))] : [])).joined(separator: " · ")

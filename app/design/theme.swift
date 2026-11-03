@@ -92,6 +92,12 @@ enum Theme {
         /// The recording card's corner at a lecturer's full voice. Strong, since it lies on the course's own tint: at
         /// `projected` a speaking voice hardly showed.
         static let voiceGlow = 0.5
+        /// A tone's own line around or through its fill: the class card's tucked-in exam, the exam marker's rule.
+        static let toneEdge = 0.25
+        /// The accent line around a class under way: strong enough to mark it, under the full accent of its buttons.
+        static let liveEdge = 0.55
+        /// A class the timetable holds but not saved: half a card laid over the page.
+        static let planned = 0.5
     }
 
     enum Space {
