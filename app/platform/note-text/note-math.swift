@@ -51,7 +51,8 @@ final class MathAttachment: NSTextAttachment {}
     private static var failed: Set<String> = []
 
     static func tex(_ source: String, _ syntax: MathSyntax) -> String {
-        Blackboard.reserve(TeXGaps.fill(syntax == .asciimath ? NoteScripts.tex(fromAsciiMath: source) : source))
+        // Room first: filling hides a ℝ typed in `\text{…}` inside a command, where `reserve` could no longer see it.
+        TeXGaps.fill(Blackboard.reserve(syntax == .asciimath ? NoteScripts.tex(fromAsciiMath: source) : source))
     }
 
     /// Nil when SwiftMath can't read the TeX; the caller shows the source instead.
@@ -184,7 +185,9 @@ final class MathAttachment: NSTextAttachment {}
     nonisolated private static let capitals = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
     // Only bodies of plain letters and digits are split; `\mathbb{R^2}` or `\mathbb{R\times S}` split by character
     // would leave `\mathbb{^}` or `\mathbb{\}`, which SwiftMath can't read, so those stay as written.
-    private static let mathbb = try! NSRegularExpression(pattern: #"\\mathbb\s*(?:\{([A-Za-z0-9\s]*)\}|([A-Za-z0-9]))"#)
+    private static let mathbb = try! NSRegularExpression(pattern: #"\\mathbb(?![A-Za-z])\s*(?:\{([A-Za-z0-9\s]*)\}|([A-Za-z0-9]))"#)
+    // Not the start of a longer command (`\mathbbm`), which SwiftMath doesn't know and shows as source.
+    private static let command = try! NSRegularExpression(pattern: #"\\mathbb(?![A-Za-z])"#)
 
     /// Each `\mathbb` capital as its own command followed by its room, so it can be one letter wide in either font.
     /// All or nothing: a body it can't split (`\mathbb{R^2}`) or a double-struck capital typed as itself (ℝ) would get
@@ -194,7 +197,7 @@ final class MathAttachment: NSTextAttachment {}
               !tex.unicodeScalars.contains(where: { typed.contains($0) }) else { return tex }
         let whole = tex as NSString
         let matches = mathbb.matches(in: tex, range: NSRange(location: 0, length: whole.length))
-        guard matches.count == tex.components(separatedBy: "\\mathbb").count - 1 else { return tex }
+        guard matches.count == command.numberOfMatches(in: tex, range: NSRange(location: 0, length: whole.length)) else { return tex }
         var out = "", last = 0
         for match in matches {
             out += whole.substring(with: NSRange(location: last, length: match.range.location - last))
