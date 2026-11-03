@@ -337,6 +337,24 @@ struct NoteReaderTests {
         }
     }
 
+    /// The note's scroll view takes the pointer over the note, so code and a wide formula never got a sideways scroll.
+    /// Their own scroll views get the pointer now, never the keyboard, and hand a click on to the note. (A synthetic
+    /// wheel event doesn't scroll an `NSScrollView` here, and an overlay scroller only takes clicks once shown, so
+    /// both are left to AppKit.)
+    @Test func aSidewaysBlockTakesThePointerButNotTheKeyboard() throws {
+        let code = "```swift\nlet x = \"a very long line of code that goes on and on and on past the edge of any column at all\"\n```"
+        let (view, window) = Self.reader("앞\n\n" + Self.wideMath + "\n\n" + code + "\n\n뒤", width: 600)
+        let root = try #require(window.contentView?.superview)
+        let sides = view.subviews.compactMap { $0 as? SideScrollView }
+        #expect(sides.count == 2)
+        for side in sides {
+            let hit = try #require(root.hitTest(side.convert(NSPoint(x: side.bounds.midX, y: side.bounds.midY), to: root)))
+            #expect(hit === side, "\(type(of: hit))")
+            #expect(!hit.acceptsFirstResponder)
+            #expect(hit.nextResponder === view)
+        }
+    }
+
     @Test func typedMarkupIsEscaped() {
         #expect(ReaderMarkdown.escape("a*b [[c x_y * z") == "a\\*b \\[[c x_y * z")
         #expect(ReaderMarkdown.lines("# 아님\n- 아님\n1. 아님") == "\\# 아님\n\\- 아님\n1\\. 아님")

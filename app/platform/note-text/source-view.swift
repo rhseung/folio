@@ -120,15 +120,20 @@ final class NoteScrollView: NSScrollView {
     required init?(coder: NSCoder) { fatalError() }
 
     // The scroll view takes a click over its document itself and hands it to the document view, so a widget over the
-    // text never got one; a widget under the point gets it. Only widgets: a code block's text view would take the
-    // keyboard, and with it the note's shortcuts and find bar.
+    // text never got one; a widget under the point gets it. Code and wide pictures scroll sideways, so the trackpad and
+    // the scroller have to reach their scroll view; a click on what it shows goes to the scroll view itself, which
+    // hands it on to the note. A code block's text view would take the keyboard, and with it the note's shortcuts and
+    // find bar.
     override func hitTest(_ point: NSPoint) -> NSView? {
         let hit = super.hitTest(point)
         guard hit === self || hit === contentView, let document = documentView else { return hit }
         let inClip = contentView.convert(point, from: superview)
-        guard let under = document.hitTest(inClip), under !== document,
-              sequence(first: under, next: \.superview).contains(where: { $0 is WidgetWebView }) else { return hit }
-        return under
+        guard let under = document.hitTest(inClip), under !== document else { return hit }
+        let chain = sequence(first: under, next: \.superview)
+        if chain.contains(where: { $0 is WidgetWebView }) { return under }
+        guard let side = chain.lazy.compactMap({ $0 as? SideScrollView }).first else { return hit }
+        if let bar = side.horizontalScroller, under === bar || under.isDescendant(of: bar) { return under }
+        return side
     }
 
     // The room past the note's end is a content inset, and AppKit insets the scrollers by it too: the track stopped

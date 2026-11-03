@@ -129,8 +129,8 @@ final class WidePictureAttachment: NSTextAttachment, ViewAttachment {
 
 #if os(macOS)
 /// Sideways only, with up-and-down scrolling handed to the note, so the pointer resting on code or a picture doesn't
-/// stop the page.
-private final class SideScrollView: NSScrollView, AttachedView {
+/// stop the page. A click on it falls through to the note under it (`NoteScrollView.hitTest`).
+final class SideScrollView: NSScrollView, AttachedView {
     override init(frame: NSRect) {
         super.init(frame: frame)
         drawsBackground = false
@@ -143,6 +143,10 @@ private final class SideScrollView: NSScrollView, AttachedView {
     }
 
     required init?(coder: NSCoder) { nil }
+
+    // A scroll view answers for its document, and code's is a text view, so a click on the code made the window
+    // hand this view the keyboard, and the note lost its typing, shortcuts and find bar.
+    override var acceptsFirstResponder: Bool { false }
 
     override func scrollWheel(with event: NSEvent) {
         if abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) { nextResponder?.scrollWheel(with: event) } else { super.scrollWheel(with: event) }
