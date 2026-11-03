@@ -34,9 +34,8 @@ public struct GISTStore: Sendable {
         try settings.write(to: settingsURL)
     }
 
-    /// Every course with a grade record: folderless ones from transcript.json plus each course.json.
     public func allCourses() throws -> [Course] {
-        try loadTranscript().model.courses + courseStores().map { try $0.load().model.course }
+        try courseStores().map { try $0.load().model.course }
     }
 
     /// Writes a Notion import. Never overwrites: transcript.json and catalog.json must not exist yet,
@@ -84,16 +83,17 @@ public struct GISTStore: Sendable {
         try transcript.write(to: transcriptURL)
     }
 
-    /// Lists two levels only; reading the whole tree (thousands of files) would make every app launch slow.
+    /// Lists the folders that hold course folders, and those, only; reading the whole tree (thousands of files) would
+    /// make every app launch slow.
     public func courseStores() throws -> [CourseStore] {
         let fm = FileManager.default
-        return try fm.contentsOfDirectory(atPath: url.path)
-            .filter { SemesterFolder(name: $0) != nil }
-            .sorted()
-            .flatMap { semester in
-                try fm.contentsOfDirectory(atPath: url.appending(path: semester).path).sorted()
-                    .map { CourseStore(url: url.appending(path: semester).appending(path: $0)) }
-            }
+        func folders(_ path: String) -> [String] {
+            ((try? fm.contentsOfDirectory(atPath: url.appending(path: path).path)) ?? []).filter { !$0.hasPrefix(".") }.sorted().map { "\(path)/\($0)" }
+        }
+        let terms = try fm.contentsOfDirectory(atPath: url.path).filter { SemesterFolder(name: $0) != nil }.sorted()
+        return (terms + folders(StandardLayout.creditedFolder))
+            .flatMap(folders)
+            .map { CourseStore(url: url.appending(path: $0)) }
             .filter { fm.fileExists(atPath: $0.courseFileURL.path) }
     }
 }

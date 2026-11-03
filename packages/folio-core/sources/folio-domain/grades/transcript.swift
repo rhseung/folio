@@ -1,26 +1,39 @@
 import Foundation
 
 /// `GIST/.folio/transcript.json`.
+/// Every course lives in its own folder's course.json; this file holds the terms and degree-wide rules.
 public struct Transcript: Codable, Sendable, Equatable {
     public var semesters: [Semester]
-    /// Grade records of courses without a folder (credited terms, colloquia, ...). Courses with a folder live in their course.json.
-    public var courses: [Course]
+    /// Courses schema v1 kept here without a folder. Nothing adds to it: `transcript move` gives each its folder and
+    /// empties it, and until then they count nowhere.
+    public var unfiledCourses: [Course]
     public var targetGPA: Double?
     public var graduation: GraduationRule
 
-    public init(semesters: [Semester] = [], courses: [Course] = [], targetGPA: Double? = nil, graduation: GraduationRule = .init()) {
+    public init(semesters: [Semester] = [], targetGPA: Double? = nil, graduation: GraduationRule = .init()) {
         self.semesters = semesters
-        self.courses = courses
+        self.unfiledCourses = []
         self.targetGPA = targetGPA
         self.graduation = graduation
     }
 
+    enum CodingKeys: String, CodingKey { case semesters, unfiledCourses, targetGPA, graduation }
+
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         semesters = try c.decodeIfPresent([Semester].self, forKey: .semesters) ?? []
-        courses = try c.decodeIfPresent([Course].self, forKey: .courses) ?? []
+        unfiledCourses = try c.decodeIfPresent([Course].self, forKey: .unfiledCourses) ?? []
         targetGPA = try c.decodeIfPresent(Double.self, forKey: .targetGPA)
         graduation = try c.decodeIfPresent(GraduationRule.self, forKey: .graduation) ?? .init()
+    }
+
+    // The key leaves the file once the courses are moved, so a moved transcript.json shows no trace of them.
+    public func encode(to encoder: any Encoder) throws {
+        var c = encoder.container(keyedBy: CodingKeys.self)
+        try c.encode(semesters, forKey: .semesters)
+        if !unfiledCourses.isEmpty { try c.encode(unfiledCourses, forKey: .unfiledCourses) }
+        try c.encodeIfPresent(targetGPA, forKey: .targetGPA)
+        try c.encode(graduation, forKey: .graduation)
     }
 }
 
@@ -83,6 +96,8 @@ public struct Semester: Entity {
     public var order: Int { year * 10 + (term.folderNumber ?? 0) }
     /// Only for `credited` terms; regular terms sum their courses.
     public var creditedHours: Double?
+    /// Only for `credited` terms: where the credits came from (`영재고 AP`), which names the term's folder.
+    public var source: String?
     public var memo: String
     /// The weeks whose classes give way to midterms and to finals, counted as sessions count them. Nil takes the
     /// term's default.
@@ -92,7 +107,7 @@ public struct Semester: Entity {
     public init(
         id: UUID = UUID(), device: DeviceID, at date: Date,
         year: Int, term: Term, start: LocalDate? = nil, end: LocalDate? = nil,
-        creditedHours: Double? = nil, memo: String = ""
+        creditedHours: Double? = nil, source: String? = nil, memo: String = ""
     ) {
         self.id = id
         self.createdAt = date
@@ -103,6 +118,7 @@ public struct Semester: Entity {
         self.start = start
         self.end = end
         self.creditedHours = creditedHours
+        self.source = source
         self.memo = memo
     }
 
@@ -118,5 +134,11 @@ public struct Semester: Entity {
     /// Derived from year and term rather than stored, so the two can't disagree. Nil for credited terms.
     public var folder: SemesterFolder? {
         SemesterFolder(year: year, term: term)
+    }
+
+    /// Where the term's course folders go, relative to the GIST root: `2026-3`, or `_Credited/<source>`. Nil for a
+    /// credited term without a source yet.
+    public var coursesFolder: String? {
+        folder?.name ?? source.flatMap(StandardLayout.creditedFolder(source:))
     }
 }

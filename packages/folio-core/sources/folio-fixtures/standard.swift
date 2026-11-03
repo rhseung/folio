@@ -2,8 +2,19 @@ extension Fixture {
     static let standardFiles: [(path: String, content: String?)] = [
         (".folio/transcript.json", #"""
             {
-              "schemaVersion" : 1,
+              "schemaVersion" : 2,
               "semesters" : [
+                {
+                  "createdAt" : "2026-02-20T09:00:00.000Z",
+                  "creditedHours" : 3,
+                  "id" : "5E4F1A00-0000-4000-8000-0000000000C1",
+                  "memo" : "",
+                  "source" : "영재고 AP",
+                  "term" : "credited",
+                  "updatedAt" : "2026-02-20T09:00:00.000Z",
+                  "updatedBy" : "D0000000-0000-4000-8000-000000000001",
+                  "year" : 2025
+                },
                 {
                   "createdAt" : "2026-02-20T09:00:00.000Z",
                   "end" : "2026-06-19",
@@ -27,6 +38,32 @@ extension Fixture {
                   "year" : 2026
                 }
               ]
+            }
+
+            """#),
+        ("_Credited/영재고 AP/GS1101 일반물리학 및 연습 I/.folio/course.json", #"""
+            {
+              "course" : {
+                "categoryIds" : [],
+                "codes" : [],
+                "color" : "",
+                "createdAt" : "2026-02-20T09:00:00.000Z",
+                "credits" : 3,
+                "folderRoles" : {},
+                "gradingMode" : "pass_fail",
+                "id" : "C0000000-0000-4000-8000-0000000000C1",
+                "instructorIds" : [],
+                "memo" : "",
+                "number" : "1101",
+                "schedule" : [],
+                "semesterId" : "5E4F1A00-0000-4000-8000-0000000000C1",
+                "title" : "일반물리학 및 연습 I",
+                "titleEn" : "",
+                "updatedAt" : "2026-02-20T09:00:00.000Z",
+                "updatedBy" : "D0000000-0000-4000-8000-000000000001"
+              },
+              "materials" : [],
+              "schemaVersion" : 2
             }
 
             """#),

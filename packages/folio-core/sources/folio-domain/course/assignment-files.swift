@@ -48,3 +48,27 @@ public enum DueState: Equatable, Sendable {
         }
     }
 }
+
+/// How near an open deadline is, the one rule every screen that colors a deadline reads (Today's list, a course's
+/// assignments). Today and tomorrow are urgent and the rest of the coming week soon, counted in study days: with a 04:00
+/// boundary, 02:00 the night after next is still tomorrow's work.
+public enum DueUrgency: Int, Comparable, Sendable {
+    case urgent, soon, later
+
+    public init(studyDays days: Int) {
+        self = days <= 1 ? .urgent : days < 7 ? .soon : .later
+    }
+
+    public init(due: Date, now: Date, settings: Settings, calendar: Calendar) {
+        self.init(studyDays: settings.studyDays(from: now, until: due, calendar: calendar))
+    }
+
+    public static func < (a: Self, b: Self) -> Bool { a.rawValue < b.rawValue }
+}
+
+extension Settings {
+    /// Study days from `now` to `date`: 0 on the same study day, negative once it has passed.
+    public func studyDays(from now: Date, until date: Date, calendar: Calendar) -> Int {
+        studyDay(of: now, calendar: calendar).days(until: studyDay(of: date, calendar: calendar))
+    }
+}

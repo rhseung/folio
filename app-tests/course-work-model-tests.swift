@@ -89,7 +89,7 @@ struct AssignmentsModelTests {
         let late = groups[0].items[0]
         #expect(model.dueChip(late, now: now)?.text == "방금 지남")
         let chip = try #require(model.dueChip(groups[1].items[0], now: now))
-        #expect(chip.text == "D-5" && chip.tone == .plain)
+        #expect(chip.text == "D-5" && chip.tone == .warning)
         #expect(model.due(groups[1].items[1]).date == "마감 없음")
         model.setStatus(late, .submitted)
         #expect(model.groups(now: now).map(\.group) == [.open, .submitted])

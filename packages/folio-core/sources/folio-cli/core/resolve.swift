@@ -3,11 +3,11 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-/// A course as the CLI sees it: one with a folder has a file, a record-only one (credited terms) lives in transcript.json.
+/// A course as the CLI sees it: its folder and the course.json in it.
 struct CourseRef: Identifiable {
     var course: Course
-    var store: CourseStore?
-    var file: CourseFile?
+    var store: CourseStore
+    var file: CourseFile
     /// `EC4207`: the folder's code, or the catalog's prefix and number.
     var code: String
     /// The color token the app shows this course in: its own, or the preset for its place in the semester.
@@ -15,11 +15,6 @@ struct CourseRef: Identifiable {
 
     var id: UUID { course.id }
     var tag: String { code.course(color) }
-
-    func requireFile() throws -> CourseFile {
-        guard let file else { throw CLIError(exit: .rule, message: String(localized: .resolveNoCourseFolder(course.title))) }
-        return file
-    }
 }
 
 final class Resolver {
@@ -28,8 +23,8 @@ final class Resolver {
 
     lazy var courses: [CourseRef] = {
         let catalog = (try? ctx.catalog()) ?? Catalog()
-        func code(_ c: Course, folder: String?) -> String {
-            if let folder, let token = folder.split(separator: " ").first, StandardLayout.isCourseFolderName(folder) { return String(token) }
+        func code(_ c: Course, folder: String) -> String {
+            if let token = folder.split(separator: " ").first, StandardLayout.isCourseFolderName(folder) { return String(token) }
             let prefix = c.codes.first.flatMap { id in catalog.codes.first { $0.id == id }?.prefix } ?? ""
             return prefix + (c.number.split(separator: "-").first.map(String.init) ?? "")
         }
@@ -37,10 +32,6 @@ final class Resolver {
         var refs = stores.compactMap { s -> CourseRef? in
             guard let f = try? s.load().model else { return nil }
             return CourseRef(course: f.course, store: s, file: f, code: code(f.course, folder: s.url.lastPathComponent))
-        }
-        let known = Set(refs.map(\.id))
-        for c in ((try? ctx.transcript().courses) ?? []) where !known.contains(c.id) {
-            refs.append(CourseRef(course: c, code: code(c, folder: nil)))
         }
         // Same order the app counts in (Workspace.courses(in:)), so a course without a color gets the same preset.
         for i in refs.indices {
@@ -62,11 +53,12 @@ final class Resolver {
 
     func semester(_ ref: String?) throws -> Semester {
         guard let ref else { return try currentSemester() }
-        return try pick(ref, semesters, what: "학기", names: { [$0.folder?.name ?? "", "\($0.year) \($0.term.rawValue)"] }, ref: { $0.folder?.name ?? $0.id.uuidString })
+        return try pick(ref, semesters, what: "학기", names: { [$0.folder?.name ?? "", $0.source ?? "", "\($0.year) \($0.term.rawValue)"] },
+                 ref: { $0.folder?.name ?? $0.source ?? $0.id.uuidString })
     }
 
     func course(_ ref: String) throws -> CourseRef {
-        try pick(ref, courses, what: "과목", names: { [$0.code, $0.course.title, $0.store?.url.lastPathComponent ?? ""] }, ref: \.code)
+        try pick(ref, courses, what: "과목", names: { [$0.code, $0.course.title, $0.store.url.lastPathComponent] }, ref: \.code)
     }
 
     /// `EC4207/9주차-1`, or the item alone when `course` is given separately. An empty ref, or a course alone, leaves
@@ -83,7 +75,7 @@ final class Resolver {
     /// By name (`10주차-1`), by day (`11/3`, `11-03`, `2026-11-03`), or by what it covered. Two classes on one day
     /// match the day together, so the error lists their names.
     func session(_ name: String, in c: CourseRef) throws -> Session {
-        let f = try c.requireFile()
+        let f = c.file
         let cal = ctx.calendar
         func days(_ s: Session) -> [String] {
             let d = cal.dateComponents([.year, .month, .day], from: s.date)
@@ -94,31 +86,31 @@ final class Resolver {
     }
 
     func exam(_ name: String, in c: CourseRef) throws -> Exam {
-        try pick(name, try c.requireFile().exams, what: "시험", names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
+        try pick(name, c.file.exams, what: "시험", names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
     }
 
     func unit(_ name: String, in c: CourseRef) throws -> FolioDomain.Unit {
-        try pick(name, try c.requireFile().units, what: "단원", names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
+        try pick(name, c.file.units, what: "단원", names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
     }
 
     func assignment(_ name: String, in c: CourseRef) throws -> Assignment {
-        try pick(name, try c.requireFile().assignments, what: "과제", names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
+        try pick(name, c.file.assignments, what: "과제", names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
     }
 
     func component(_ name: String, in c: CourseRef) throws -> GradeComponent {
-        try pick(name, try c.requireFile().components, what: "성적 항목", names: { [$0.name] }, ref: { "\(c.code)/\($0.name)" })
+        try pick(name, c.file.components, what: "성적 항목", names: { [$0.name] }, ref: { "\(c.code)/\($0.name)" })
     }
 
     func material(_ name: String, in c: CourseRef) throws -> Material {
-        try pick(name, try c.requireFile().materials, what: "자료", names: { [$0.path, ($0.path as NSString).lastPathComponent] }, ref: { "\(c.code)/\($0.path)" })
+        try pick(name, c.file.materials, what: "자료", names: { [$0.path, ($0.path as NSString).lastPathComponent] }, ref: { "\(c.code)/\($0.path)" })
     }
 
     func problemSet(_ name: String, in c: CourseRef) throws -> ProblemSet {
-        try pick(name, try c.requireFile().problemSets, what: "문제 묶음", names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
+        try pick(name, c.file.problemSets, what: "문제 묶음", names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
     }
 
     func note(_ name: String, in c: CourseRef) throws -> NoteFile {
-        guard let store = c.store else { throw CLIError(exit: .rule, message: String(localized: .resolveNoCourseFolder(c.course.title))) }
+        let store = c.store
         let notes = try store.notes()
         let path = { (n: NoteFile) in store.coursePath(of: n.url) ?? n.url.lastPathComponent }
         return try pick(name, notes, what: "노트", id: { $0.meta.id }, names: { [path($0), $0.title] }, ref: { "\(c.code)/\(path($0))" })

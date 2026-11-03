@@ -23,7 +23,16 @@ extension StoredModel {
 }
 
 extension Transcript: StoredModel {
-    public static let schemaVersion = 1
+    public static let schemaVersion = 2
+    public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [1: unfileCourses]
+
+    /// v1 kept courses without a folder under `courses`. Every course now has a folder, so they wait under
+    /// `unfiledCourses` for `transcript move`. The version stops an older app from adding new ones beside them.
+    static func unfileCourses(_ raw: inout JSONValue) throws {
+        let courses = raw["courses"]
+        raw["courses"] = nil
+        if case .array(let items)? = courses, !items.isEmpty { raw["unfiledCourses"] = .array(items) }
+    }
 }
 
 extension CourseFile: StoredModel {

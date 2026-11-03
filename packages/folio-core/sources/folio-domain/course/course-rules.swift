@@ -192,8 +192,17 @@ extension Transcript: Document {
                 return [s.midtermWeek, s.finalWeek].compactMap { $0 }.allSatisfy { (1...last).contains($0) }
             }
             Check("Semester.creditedHours", String(localized: .ruleSemesterCreditedHours)) { s, _ in (s.creditedHours ?? 0) >= 0 }
+            Check("Semester.source", String(localized: .ruleSemesterSource)) { s, _ in
+                s.source.map { s.term == .credited && StandardLayout.isCreditedSourceName($0) } ?? true
+            }
         }
-        Items(\.courses, noun: String(localized: .modelNounCourse), name: \.title) { Course.members() }
+        Items(\.unfiledCourses, noun: String(localized: .modelNounCourse), name: \.title) { Course.members() }
+        // Two credited terms with one source would share `_Credited/<source>`, and neither would own its courses.
+        Rule("Transcript.creditedSources") { t, _ in
+            let credited = t.semesters.filter { $0.term == .credited && $0.source != nil }
+            return credited.filter { s in credited.contains { $0.id != s.id && $0.source == s.source } }
+                .map { ($0.id, String(localized: .ruleTranscriptCreditedSources($0.source ?? ""))) }
+        }
         Rule("Transcript.targetGPA", String(localized: .ruleTranscriptTargetGpa)) { t, w in
             t.targetGPA.map { $0 >= 0 && $0 <= (w.catalog?.maxPoints ?? 4.5) } ?? true
         }

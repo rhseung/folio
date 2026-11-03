@@ -22,25 +22,6 @@ final class TodayModel {
 
     var current: [LoadedCourse] { workspace.currentCourses }
 
-    var currentRecords: [Course] {
-        guard let semester = workspace.currentSemester, semester.term.holdsClasses else { return [] }
-        return workspace.records(in: semester)
-    }
-
-    struct RecordClass {
-        var course: Course
-        var meeting: SessionPlanner.Suggestion
-    }
-
-    /// A record keeps no sessions, so its classes come straight from its weekly times.
-    func recordClasses(on day: LocalDate) -> [RecordClass] {
-        guard let semester = workspace.currentSemester else { return [] }
-        return currentRecords.flatMap { c in
-            SessionPlanner.meetings(schedule: c.schedule, on: day, from: semester.start, to: semester.end, examWeeks: semester.examWeeks,
-                                    calendar: workspace.calendar).map { RecordClass(course: c, meeting: $0) }
-        }
-    }
-
     var nextDayStart: Date {
         let calendar = workspace.calendar
         let start = workspace.today.date(in: calendar).flatMap { calendar.date(byAdding: .minute, value: workspace.settings.dayBoundaryMinutes, to: $0) }
@@ -96,12 +77,10 @@ final class TodayModel {
         return classes.sorted { $0.0 < $1.0 }.map(\.1).filter { seen.insert($0).inserted }
     }
 
-    /// The course whose class is under way: one already made, the timetable's suggestion not made yet, or a record's slot.
+    /// The course whose class is under way: one already made, or the timetable's suggestion not made yet.
     func nowCourse(at now: Date) -> UUID? {
         if let item = workspace.ongoingClass(at: now) { return item.courseId }
-        if let item = workspace.suggestedSessions(now: now).first(where: { $0.suggestion.date <= now }) { return item.courseId }
-        let day = workspace.settings.studyDay(of: now, calendar: workspace.calendar)
-        return recordClasses(on: day).first { $0.meeting.date <= now && now < $0.meeting.end }?.course.id
+        return workspace.suggestedSessions(now: now).first(where: { $0.suggestion.date <= now })?.courseId
     }
 
     /// The newest `limit` sessions missing a review note, newest first, and how many older ones are left out.
@@ -153,12 +132,7 @@ final class TodayModel {
     // MARK: Labels
 
     func title(_ id: UUID) -> String {
-        workspace.course(id)?.title ?? workspace.record(id)?.title ?? ""
-    }
-
-    /// `그래프 이론 · 9주차-2`, or the course alone for a record's class, which has no session name.
-    func classTitle(_ id: UUID, _ name: String) -> String {
-        name.isEmpty ? title(id) : "\(title(id)) · \(name)"
+        workspace.course(id)?.title ?? ""
     }
 
     /// `11/3(화): 습관`: a review note owed may be days old, so the day says which class.
@@ -174,11 +148,6 @@ final class TodayModel {
         item.exam.start?.formatted(.dateTime.month().day().weekday().hour().minute()) ?? ""
     }
 
-    func due(_ item: TodaySummary.DeadlineItem) -> String {
-        guard let due = item.assignment.due else { return "" }
-        return item.isToday ? due.formatted(date: .omitted, time: .shortened) : due.formatted(.dateTime.month().day().weekday())
-    }
-
     struct EditingAssignment: Identifiable {
         var course: LoadedCourse
         var assignment: Assignment
@@ -192,55 +161,38 @@ final class TodayModel {
         editing = EditingAssignment(course: course, assignment: item.assignment)
     }
 
-    enum DeadlineWhen: Int, CaseIterable {
-        case today, thisWeek, nextWeek, later
+    struct DeadlineRow: Identifiable {
+        var item: TodaySummary.DeadlineItem
+        var urgency: DueUrgency
+        var due: String
+        var id: UUID { item.assignment.id }
     }
 
-    struct DeadlineGroup: Identifiable {
-        var when: DeadlineWhen
-        var items: [TodaySummary.DeadlineItem]
-        var id: DeadlineWhen { when }
-    }
-
-    /// Weeks run Monday to Sunday, the way the timetable repeats, so "다음 주" is the next run of the same classes.
-    func deadlineGroups(_ items: [TodaySummary.DeadlineItem], studyDay: LocalDate) -> [DeadlineGroup] {
+    /// Near deadlines say how soon, each as a span from now; past a week a date reads quicker than a count of days.
+    func deadlineRows(_ items: [TodaySummary.DeadlineItem], studyDay: LocalDate) -> [DeadlineRow] {
         let calendar = workspace.calendar
-        let weekday = studyDay.date(in: calendar).map { calendar.isoWeekday(of: $0) } ?? 1
-        let nextMonday = studyDay.adding(days: 8 - weekday)
-        func when(_ item: TodaySummary.DeadlineItem) -> DeadlineWhen {
-            if item.isToday { return .today }
-            guard let due = item.assignment.due else { return .later }
-            let day = LocalDate(due, in: calendar)
-            return day < nextMonday ? .thisWeek : day < nextMonday.adding(days: 7) ? .nextWeek : .later
+        return items.compactMap { item in
+            guard let due = item.assignment.due else { return nil }
+            let days = studyDay.days(until: workspace.settings.studyDay(of: due, calendar: calendar))
+            let time = due.formatted(date: .omitted, time: .shortened)
+            let urgency = DueUrgency(studyDays: days)
+            let text = switch urgency {
+            case .urgent: String(localized: days == 0 ? .todayDeadlinesTodayAt(time) : .todayDeadlinesTomorrowAt(time))
+            case .soon: String(localized: .todayDeadlinesInDays(days))
+            case .later: due.formatted(.dateTime.month().day().weekday())
+            }
+            return DeadlineRow(item: item, urgency: urgency, due: text)
         }
-        let grouped = Dictionary(grouping: items, by: when)
-        return DeadlineWhen.allCases.compactMap { w in grouped[w].map { DeadlineGroup(when: w, items: $0) } }
     }
 
     /// Past this many deadlines the rest fold behind a button: a term's worth of reports would push the reviews off the page.
     static let deadlineLimit = 6
     var showsAllDeadlines = false
 
-    /// The groups cut to `deadlineLimit` items unless unfolded, and how many were left out.
-    func shownDeadlines(_ groups: [DeadlineGroup]) -> (groups: [DeadlineGroup], more: Int) {
-        let total = groups.map(\.items.count).reduce(0, +)
-        guard !showsAllDeadlines, total > Self.deadlineLimit else { return (groups, 0) }
-        var left = Self.deadlineLimit
-        let cut = groups.compactMap { g -> DeadlineGroup? in
-            guard left > 0 else { return nil }
-            defer { left -= min(left, g.items.count) }
-            return DeadlineGroup(when: g.when, items: Array(g.items.prefix(left)))
-        }
-        return (cut, total - Self.deadlineLimit)
-    }
-
-    func groupLabel(_ when: DeadlineWhen) -> String {
-        switch when {
-        case .today: String(localized: .todayDeadlinesToday)
-        case .thisWeek: String(localized: .todayDeadlinesThisWeek)
-        case .nextWeek: String(localized: .todayDeadlinesNextWeek)
-        case .later: String(localized: .todayDeadlinesLater)
-        }
+    /// The rows cut to `deadlineLimit` unless unfolded, and how many were left out.
+    func shownDeadlines(_ rows: [DeadlineRow]) -> (rows: [DeadlineRow], more: Int) {
+        guard !showsAllDeadlines, rows.count > Self.deadlineLimit else { return (rows, 0) }
+        return (Array(rows.prefix(Self.deadlineLimit)), rows.count - Self.deadlineLimit)
     }
 
     // MARK: Day ribbon
@@ -267,10 +219,7 @@ final class TodayModel {
         let planned = suggested(now: now, on: summary.studyDay).map {
             RibbonClass(courseId: $0.courseId, start: $0.suggestion.date, end: $0.suggestion.end, name: "", suggested: $0)
         }
-        let records = recordClasses(on: summary.studyDay).map {
-            RibbonClass(courseId: $0.course.id, start: $0.meeting.date, end: $0.meeting.end, name: "")
-        }
-        return (made + planned + records).sorted { $0.start < $1.start }
+        return (made + planned).sorted { $0.start < $1.start }
     }
 
     func ribbon(_ classes: [RibbonClass], on day: LocalDate) -> DayRibbon {
@@ -281,11 +230,7 @@ final class TodayModel {
     func nextClass(after now: Date) -> (courseId: UUID, date: Date)? {
         let made = current.flatMap { c in c.file.sessions.filter { !$0.isCancelled && $0.date > now }.map { (courseId: c.id, date: $0.date) } }
         let planned = workspace.suggestedSessions(now: now).filter { $0.suggestion.date > now }.map { (courseId: $0.courseId, date: $0.suggestion.date) }
-        // A week and a day reaches the same weekday's class even after today's has passed.
-        let today = workspace.settings.studyDay(of: now, calendar: workspace.calendar)
-        let records = (0..<8).flatMap { recordClasses(on: today.adding(days: $0)) }.filter { $0.meeting.date > now }
-            .map { (courseId: $0.course.id, date: $0.meeting.date) }
-        return (made + planned + records).min { $0.date < $1.date }
+        return (made + planned).min { $0.date < $1.date }
     }
 
     /// `월요일 오전 9:00`, the line an empty day's ribbon gives for the next class; the date too once it's over a week out.
@@ -316,7 +261,7 @@ final class TodayModel {
         return (1...7).map { iso in
             let day = studyDay.adding(days: iso - weekday)
             let inTerm = (semester?.start.map { $0 <= day } ?? true) && (semester?.end.map { day <= $0 } ?? true)
-            let slots = inTerm ? (current.map(\.file.course) + currentRecords).flatMap { c in c.schedule.filter { $0.weekday == iso }.map { ($0.startMinute, c.id) } } : []
+            let slots = inTerm ? current.map(\.file.course).flatMap { c in c.schedule.filter { $0.weekday == iso }.map { ($0.startMinute, c.id) } } : []
             var seen = Set<UUID>()
             let courses = slots.sorted { $0.0 < $1.0 }.map(\.1).filter { seen.insert($0).inserted }
             return WeekDay(day: day, weekday: ClassTime.weekdayNames[iso - 1], isToday: day == studyDay, courses: courses)

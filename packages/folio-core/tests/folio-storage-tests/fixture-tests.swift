@@ -8,7 +8,7 @@ struct FixtureTests {
     @Test func standardHasNoLayoutIssues() throws {
         let gist = GISTStore(url: try Fixture.standard.copyToTemp())
         #expect(try gist.layoutIssues() == [])
-        #expect(try gist.courseStores().count == 3)
+        #expect(try gist.courseStores().count == 4)
     }
 
     @Test func legacyIssuesAreAllReported() throws {

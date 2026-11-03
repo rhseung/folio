@@ -40,6 +40,11 @@ final class NoteBox: NSObject, @unchecked Sendable {
         self.joinsAbove = joinsAbove
         self.joinsBelow = joinsBelow
     }
+
+    func with(outerBottom: CGFloat) -> NoteBox {
+        NoteBox(fill: fill, spine: spine, first: first, last: last, outerTop: outerTop, outerBottom: outerBottom,
+                rounded: rounded, joinsAbove: joinsAbove, joinsBelow: joinsBelow)
+    }
 }
 
 /// Gives every paragraph a fixed line height with its text centered, as Xcode does. With `lineSpacing` alone TextKit 2
@@ -52,32 +57,77 @@ enum NoteLines {
         while at < ns.length {
             let p = ns.paragraphRange(for: NSRange(location: at, length: 0))
             at = NSMaxRange(p)
-            // The tallest font or picture on the paragraph's lines sets them all, so a code span doesn't shift its line.
+            // The tallest font on the paragraph's lines sets them all, so a code span doesn't shift its line.
             var ascent: CGFloat = 0, descent: CGFloat = 0
-            text.enumerateAttributes(in: p) { attributes, _, _ in
+            var pictures: [CGRect] = []
+            var words = false
+            text.enumerateAttributes(in: p) { attributes, r, _ in
                 if let font = attributes[.font] as? PlatformFont {
                     ascent = max(ascent, font.ascender)
                     descent = max(descent, -font.descender)
                 }
                 if let bounds = (attributes[.attachment] as? NSTextAttachment)?.bounds {
-                    ascent = max(ascent, bounds.maxY)
-                    descent = max(descent, -bounds.minY)
+                    pictures.append(bounds)
+                } else if !words, ns.substring(with: r).contains(where: { !$0.isWhitespace && $0 != "\u{FFFC}" }) {
+                    words = true
                 }
+            }
+            // A picture far taller than the text around it, on its lines or written above or below them, gets a line
+            // as tall as itself and leaves the others the text's: fixed to the tallest, every line of the text, or a
+            // smaller picture written under it, stood as tall as the picture. Math and pictures about the text's size
+            // still set every line, so they don't shift it. A picture alone in its paragraph has no shorter line to
+            // spare and keeps the fixed height, which pads it above and below as any other line.
+            let line = ascent + descent
+            let big = line > 0 ? pictures.filter { $0.height > 2 * line } : []
+            let uneven = big.count < pictures.count || Set(big.map(\.height)).count > 1
+            let tall = words || uneven ? big : []
+            for bounds in pictures where !tall.contains(bounds) {
+                ascent = max(ascent, bounds.maxY)
+                descent = max(descent, -bounds.minY)
             }
             guard ascent > 0, let style = (text.attribute(.paragraphStyle, at: p.location, effectiveRange: nil) as? NSParagraphStyle)?
                 .mutableCopy() as? NSMutableParagraphStyle else { continue }
             let natural = ascent + descent
             let height = ((natural + style.lineSpacing) / 2).rounded() * 2
-            style.lineSpacing = 0
-            style.minimumLineHeight = height
-            style.maximumLineHeight = height
+            // Unbounded, a line takes its own height and nothing for the gap, so a picture's line keeps the gap as line
+            // spacing, and the text's lines are that much shorter to come out the same height, with their text in the
+            // middle, where the caret and selection are. TextKit puts the gap over every line but the note's first and
+            // none under the last, so half a gap moves from the spacing before the paragraph to the spacing after it
+            // (a box's padding is part of both). Where there's less than half a gap before, the rest comes off the
+            // paragraph above; at the end of another box, only off the gap outside it. The note's first paragraph
+            // stands half a gap high: TextKit ignores spacing before it, and drawing its text lower would leave the
+            // caret and selection above it again.
+            let gap = tall.isEmpty ? 0 : style.lineSpacing
+            let box = height - gap
+            style.lineSpacing = gap
+            style.paragraphSpacing += gap / 2
+            let short = max(0, gap / 2 - style.paragraphSpacingBefore)
+            style.paragraphSpacingBefore = max(0, style.paragraphSpacingBefore - gap / 2)
+            if short > 0, p.location > 0 { trim(text, above: p, by: short) }
+            style.minimumLineHeight = box
+            style.maximumLineHeight = tall.isEmpty ? height : 0
             text.addAttribute(.paragraphStyle, value: style, range: p)
             // TextKit 2 sits the baseline on the line's bottom, and `baselineOffset` doesn't move it there: a positive
             // one shortens the line, a negative one moves the reported glyph origin but not the drawn text.
-            let raise = (height - descent).rounded() - (height + ascent - descent) / 2
+            let raise = (box - descent).rounded() - (box + ascent - descent) / 2
             text.addAttribute(.noteRaise, value: (raise * 2).rounded() / 2, range: p)
             text.addAttribute(.noteCaret, value: natural.rounded(), range: p)
         }
+    }
+
+    private static func trim(_ text: NSMutableAttributedString, above p: NSRange, by amount: CGFloat) {
+        let above = (text.string as NSString).paragraphRange(for: NSRange(location: p.location - 1, length: 0))
+        guard let style = (text.attribute(.paragraphStyle, at: above.location, effectiveRange: nil) as? NSParagraphStyle)?
+                .mutableCopy() as? NSMutableParagraphStyle else { return }
+        var cut = min(amount, style.paragraphSpacing)
+        // A box's bottom is drawn `outerBottom` above the end of its spacing, so both shrink together or the cut comes
+        // out of its padding.
+        if let box = text.attribute(.noteBox, at: above.location, effectiveRange: nil) as? NoteBox, box.last {
+            cut = min(cut, box.outerBottom)
+            text.addAttribute(.noteBox, value: box.with(outerBottom: box.outerBottom - cut), range: above)
+        }
+        style.paragraphSpacing -= cut
+        text.addAttribute(.paragraphStyle, value: style, range: above)
     }
 
     /// The text view's caret is the whole line once its height is fixed, a gap taller than the text it stands in.

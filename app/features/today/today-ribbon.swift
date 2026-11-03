@@ -190,7 +190,7 @@ struct DayRibbonCard: View {
         // Unfaded paper under a faded block, so the track line behind it does not show through.
         .background(Theme.Palette.card, in: shape)
         .contentShape(shape)
-        .help("\(model.classTitle(item.courseId, item.name)) · \(model.time(item.start)) – \(model.time(item.end))")
+        .help("\(model.title(item.courseId)) · \(item.name) · \(model.time(item.start)) – \(model.time(item.end))")
         if let suggested = item.suggested {
             // Not made yet: what starting it needs sits in a popover, as on the class's own row elsewhere.
             Button { opened = item.id } label: { label }
@@ -205,9 +205,6 @@ struct DayRibbonCard: View {
             Button { go(item.courseId, .sessions) } label: { label }
                 .buttonStyle(.pointing(.plain))
                 .contextMenu { SessionMenu(courseId: item.courseId, sessionId: sessionId, openNote: openNote(item.courseId)) { go(item.courseId, .sessions) } }
-        } else {
-            // A record's class: no page or session to open, only the time it holds.
-            label
         }
     }
 

@@ -13,6 +13,8 @@ final class RecordingBarModel {
     var recording: Bool { recorder.state == .recording }
     var preparing: Bool { recorder.state == .preparing }
     var paused: Bool { recorder.state == .paused }
+    /// Pause and stop wait while the recorder starts or finishes.
+    var settling: Bool { preparing || recorder.state == .stopping }
     var recentLines: [LectureTranscript.Line] { Array(recorder.lines.suffix(40)) }
     var course: LoadedCourse? { recorder.courseId.flatMap { workspace.course($0) } }
     var accent: CourseAccent { recorder.courseId.map { workspace.accent($0) } ?? CourseAccent.gray }

@@ -82,10 +82,10 @@ struct NoteWidgetTests {
         let point = web.convert(NSPoint(x: web.bounds.midX, y: web.bounds.midY), to: root)
         let hit = try #require(root.hitTest(point))
         #expect(hit === web || hit.isDescendant(of: web), "hit \(type(of: hit))")
-        // A code block's text view would take the keyboard from the note, so the note keeps those clicks.
+        // A code block's text view would take the keyboard from the note; its scroll view takes the click and hands it on.
         let code = try #require(NoteReaderTests.codes(view.core.storage).first?.view)
         let onCode = code.convert(NSPoint(x: code.bounds.midX, y: code.bounds.midY), to: root)
-        #expect(root.hitTest(onCode).map { $0 === code || $0.isDescendant(of: code) } == false)
+        #expect(root.hitTest(onCode) === code)
         let text = view.convert(NSPoint(x: web.frame.midX, y: code.frame.maxY + 120), to: root)
         #expect(root.hitTest(text).map { $0 === web || $0.isDescendant(of: web) } == false)
     }

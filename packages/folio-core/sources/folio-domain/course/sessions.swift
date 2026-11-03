@@ -168,19 +168,6 @@ public enum SessionPlanner {
         return result
     }
 
-    /// Every class the weekly schedule puts on `day`, in order, for a course that keeps no sessions (a colloquium kept
-    /// only in transcript.json). Days outside the term and exam weeks hold none, as for `suggestion`.
-    public static func meetings(schedule: [ClassTime], on day: LocalDate, from start: LocalDate?, to end: LocalDate?,
-                                examWeeks: Set<Int> = [], calendar: Calendar) -> [Suggestion] {
-        guard let date = day.date(in: calendar), start.map({ $0 <= day }) ?? true, end.map({ day <= $0 }) ?? true else { return [] }
-        if let anchor = start?.date(in: calendar), examWeeks.contains(week(of: date, anchor: anchor, calendar: calendar)) { return [] }
-        let weekday = calendar.isoWeekday(of: date)
-        return schedule.filter { $0.weekday == weekday }.sorted { $0.startMinute < $1.startMinute }.map { slot in
-            Suggestion(date: calendar.date(byAdding: .minute, value: slot.startMinute, to: date)!,
-                       end: calendar.date(byAdding: .minute, value: slot.endMinute, to: date)!, room: slot.room, link: slot.link)
-        }
-    }
-
     /// A new session at `date`. Its week counts Monday-based weeks from the term's start (or, without one, from the
     /// earliest session).
     public static func session(at date: Date, sessions: [Session], termStart: LocalDate?,

@@ -31,9 +31,9 @@ enum FormSnapshots {
             ("import-place", AnyView(ImportPlaceSheet(workspace: workspace, course: course, files: [URL(filePath: "/tmp/slides.pdf")],
                                                       places: MaterialIntake.places(assignmentFolders: ["HW01", "HW02", "SP01"]) + ["Exams/Midterm", "Exams/Final"]))),
         ]
-        let users = workspace.allCourseRecords.flatMap(\.codes)
+        let users = workspace.allCourses.flatMap(\.codes)
         if let code = workspace.catalog.codes.max(by: { a, b in users.filter { $0 == a.id }.count < users.filter { $0 == b.id }.count }) {
-            let courses = workspace.allCourseRecords.filter { $0.codes.contains(code.id) }.map(\.id)
+            let courses = workspace.allCourses.filter { $0.codes.contains(code.id) }.map(\.id)
             forms.append(("code", AnyView(CodeEditor(model: CodesModel(workspace: workspace), code: .constant(code), programs: [code.program], courses: courses) {})))
         }
         if let session = file.sessions.first { forms.append(("session-edit", AnyView(SessionFormSheet(workspace: workspace, course: course, session: session)))) }

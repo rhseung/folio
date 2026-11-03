@@ -23,7 +23,7 @@ struct TranscriptCommand: ParsableCommand {
         let catalog = try r.ctx.catalog()
         return semesters.flatMap { s in
             r.courses.filter { $0.course.semesterId == s.id }.sorted { $0.code < $1.code }.map { c in
-                Row(semester: s.folder?.name ?? String(localized: .semesterRecognized), code: c.code, courseId: c.id, title: c.course.title, credits: c.course.credits,
+                Row(semester: s.folder?.name ?? s.source ?? String(localized: .semesterRecognized), code: c.code, courseId: c.id, title: c.course.title, credits: c.course.credits,
                     gradingMode: c.course.gradingMode, grade: catalog.grade(c.course.finalGrade)?.symbol)
             }
         }
@@ -64,7 +64,7 @@ struct TranscriptCommand: ParsableCommand {
             let summary = GPACalculator.semester(s, courses: try r.ctx.gist.allCourses(), catalog: try r.ctx.catalog())
             struct Out: Encodable { var courses: [Row]; var totalCredits: Double; var effectiveCredits: Double; var gpa: Double? }
             if g.json { return try printJSON(Out(courses: rows, totalCredits: summary.totalCredits, effectiveCredits: summary.effectiveCredits, gpa: summary.gpa)) }
-            say((s.folder?.name ?? String(localized: .semesterRecognized)).styled(.bold) + "  " + String(localized: .transcriptShowSummary(summary.totalCredits.formatted(), summary.effectiveCredits.formatted(), GPACalculator.label(summary.gpa))).styled(.dim))
+            say((s.folder?.name ?? s.source ?? String(localized: .semesterRecognized)).styled(.bold) + "  " + String(localized: .transcriptShowSummary(summary.totalCredits.formatted(), summary.effectiveCredits.formatted(), GPACalculator.label(summary.gpa))).styled(.dim))
             TranscriptCommand.print(rows, semester: false)
         }
     }

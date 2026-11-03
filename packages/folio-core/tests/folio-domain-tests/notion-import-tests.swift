@@ -46,8 +46,10 @@ struct NotionImportTests {
 
     @Test func matchesFoldersBySemesterAndCode() throws {
         let result = NotionImporter.convert(export, gist: gist, device: device, now: now)
-        #expect(Set(result.courseFiles.keys) == ["2026-3/EC4207 그래프 이론", "2026-3/GS2004 선형대수학"])
-        #expect(Set(result.transcript.courses.map(\.title)) == ["콜로퀴움", "일반물리학 및 연습 I", "SW 기초와 코딩"])
+        // A course no folder matches gets a new one: credited ones under the term's source, named after the Notion row.
+        #expect(Set(result.courseFiles.keys) == ["2026-3/EC4207 그래프 이론", "2026-3/GS2004 선형대수학", "2026-3/GS9331 콜로퀴움",
+                                                 "_Credited/인정학기/GS1101 일반물리학 및 연습 I", "_Credited/인정학기/GS1499 SW 기초와 코딩"])
+        #expect(result.transcript.unfiledCourses.isEmpty)
 
         let graph = try #require(result.courseFiles["2026-3/EC4207 그래프 이론"])
         #expect(graph.components.first?.aggregation == .dropLowest(1))
@@ -62,7 +64,7 @@ struct NotionImportTests {
     @Test func creditedTermAndCatalog() throws {
         let result = NotionImporter.convert(export, gist: gist, device: device, now: now)
         let term = try #require(result.transcript.semesters.first { $0.id == credited })
-        #expect(term.term == .credited && term.creditedHours == 5 && term.year == 2026)
+        #expect(term.term == .credited && term.creditedHours == 5 && term.year == 2026 && term.source == "인정학기")
         #expect(result.catalog.categories.first?.isMajor == true)
         #expect(result.catalog.grade(s)?.countsInGpa == false)
         #expect(result.catalog.grade(aPlus)?.countsInGpa == true)

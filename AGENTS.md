@@ -150,7 +150,7 @@ PageHeader(title: String(localized: .sessionsAdd))   // String을 받는 API
 ```text
 Me/GIST/
   .folio/
-    transcript.json            # 학기별 이수 기록, 인정학기, 학점 규칙, 목표
+    transcript.json            # 학기 목록(인정학기와 그 출처 포함), 학점 규칙, 목표. 과목은 모두 과목 폴더에 있다
     catalog.json               # 강의 코드, 세부 분류, 평어, 교수 정보
     settings.json              # 하루 경계, 복습 간격, 사이드바 과목 순서 등 전역 설정
   2026-3/
@@ -178,10 +178,13 @@ Me/GIST/
         widgets/<위젯 ID>.html
         moves.jsonl            # 앱이 수행한 이동과 이름 변경 기록
         logs/<기기 ID>.jsonl  # 복습, 퀴즈, 공부 시간 기록 (기기별 추가 전용)
+  _Credited/
+    영재고 AP/                 # 인정학기의 출처. 그 학기의 과목 폴더가 여기 들어간다
+      GS1101 일반물리학 및 연습 I/
 ```
 
-- GIST 폴더 최상위에는 학기 폴더와 `.folio`만 둔다. 학기 폴더는 `<연도>-<번호>`이고 번호 1은 봄, 2는 여름, 3은 가을, 4는 겨울학기다. 학기 폴더 안에는 `_Admin`과 과목 폴더만 둔다.
-- 과목 폴더는 `<대표 과목코드> <과목명>`이다. 원본은 `course.json`이고, 과목 편집에서 바꾸면 앱이 폴더 이름을 맞춘다(저장 전 새 이름을 보여 주는 것이 승인이며 `moves.jsonl`에 남긴다). 과목 폴더 최상위에는 파일을 두지 않는다. 과목을 만들 때 `Syllabus`, `Lectures`, `Assignments`, `Exams`, `Notes`를 만들고, 나머지는 처음 필요할 때 만든다.
+- GIST 폴더 최상위에는 학기 폴더, `_Credited`, `.folio`만 둔다. 학기 폴더는 `<연도>-<번호>`이고 번호 1은 봄, 2는 여름, 3은 가을, 4는 겨울학기다. 학기 폴더 안에는 `_Admin`과 과목 폴더만 둔다. 인정학기는 학기 폴더가 없고, 과목 폴더를 `_Credited/<출처>`에 둔다. 출처는 `transcript.json`의 학기에 적고(`semester source`), 출처가 없는 인정학기에는 과목을 만들 수 없다.
+- 과목 폴더는 `<대표 과목코드> <과목명>`이다. 원본은 `course.json`이고, 과목 편집에서 바꾸면 앱이 폴더 이름을 맞춘다(저장 전 새 이름을 보여 주는 것이 승인이며 `moves.jsonl`에 남긴다). 과목 폴더 최상위에는 파일을 두지 않는다. 모든 과목은 과목 폴더와 `course.json`을 가진다. 과목을 만들 때는 `.folio`만 만들고, 하위 폴더는 처음 필요할 때 만든다.
 - `Lectures`의 파일은 `<주차 두 자리>_<제목>`이고, 한 주에 여러 개면 `05-1_`, `05-2_`로 나눈다.
 - `Assignments/<과제>`는 종류 접두어와 두 자리 번호다(`HW`, `Lab`, `Report`, `Project`, `SP`, `Reading`, 평가 항목에 맞춰 추가). 안의 파일 이름은 바꾸지 않는다. 제출본은 교수가 정한 형식을 따라야 하기 때문이다. 문제, 제출본, 해설 같은 역할은 `course.json`에 기록한다. 코드 과제는 프로젝트를 이 폴더에 그대로 두고, `.git`이 있는 폴더는 이름도 바꾸지 않는다.
 - `Exams/Past`의 족보는 `<연도> <Midterm|Final|Quiz> (<출처>)`이고 해설은 같은 이름에 ` Solution`을 붙인다. 시험별 폴더는 Exam과 1:1이다. 새 시험은 제목으로 폴더를 만들고(`Exams/중간고사`), 폴더 이름은 `course.json`에 남겨 제목을 바꿔도 그대로 둔다. 예전 시험의 `Midterm`, `Final`, `Quiz1`도 그대로 쓴다.
@@ -234,6 +237,7 @@ Me/GIST/
 - 단원: `import units <units.json>...`. 과목마다 `{"course": <과목 폴더 이름>, "units": [{"title", "sessions": ["3주차-1"], "children"}]}`. 제목으로 맞춰 없는 단원만 더하고 회차 연결은 더하기만 한다
 - 시험 범위: `exam scope <과목>/<시험> --taught`. 그 시험 전에 지난 회차에 연결된 단원(과 상위 단원)을 범위에 더한다. 빼지는 않는다
 - 졸업 요건과 학생 정보: `import requirements <requirements.json>`. 학사편람 분류 표: `import handbook <handbook.json> [--accept]`. 두 파일 모두 실제 학업 데이터라 저장소에 넣지 않는다
+- 폴더 없는 과목 옮기기: `transcript move`. 스키마 1의 `transcript.json`에 있던 과목을 같은 ID로 과목 폴더에 옮긴다. 인정학기 과목이 있으면 먼저 `semester source <학기> <출처>`로 출처를 정한다. `cleanup undo`로 되돌린다
 - 학기별 학점과 GPA: `gpa`
 
 작업을 끝냈다고 보고하기 전에 관련 테스트와 빌드가 통과하는지 확인한다.

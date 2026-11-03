@@ -162,7 +162,9 @@ public enum NotionImporter {
                 semesters.append(Semester(id: row.id, device: device, at: now, year: year, term: term, start: row.start, end: row.end))
             } else if row.title == creditedTitle {
                 let hours = export.courses.filter { $0.semesterId == row.id }.reduce(0) { $0 + $1.credits }
-                semesters.append(Semester(id: row.id, device: device, at: now, year: regularYears.min() ?? 0, term: .credited, creditedHours: hours))
+                // Notion has no source for it; the row's title keeps its courses together until the user names one.
+                semesters.append(Semester(id: row.id, device: device, at: now, year: regularYears.min() ?? 0, term: .credited, creditedHours: hours,
+                                          source: row.title))
             } else {
                 warnings.append(String(localized: .importNotionUnknownTerm(row.title)))
             }
@@ -170,7 +172,6 @@ public enum NotionImporter {
 
         let gradeBySymbol = Dictionary(catalog.letterGrades.map { ($0.symbol, $0.id) }, uniquingKeysWith: { a, _ in a })
         let prefixes = Dictionary(keepingFirst: catalog.codes.map { ($0.id, $0.prefix) })
-        var transcriptCourses: [Course] = []
         var courseFiles: [String: CourseFile] = [:]
 
         for row in export.courses {
@@ -186,8 +187,9 @@ public enum NotionImporter {
             course.finalGrade = row.gradeId
             course.absoluteScore = row.absoluteScore
 
-            guard let folder = courseFolder(for: row, in: semester, prefixes: prefixes, gist: gist) else {
-                transcriptCourses.append(course)
+            guard let folder = courseFolder(for: row, in: semester, prefixes: prefixes, gist: gist)
+                    ?? newCourseFolder(for: row, in: semester, prefixes: prefixes) else {
+                warnings.append(String(localized: .importNotionNoFolderName(row.title)))
                 continue
             }
 
@@ -218,9 +220,16 @@ public enum NotionImporter {
         }
 
         return NotionImportResult(
-            transcript: Transcript(semesters: semesters, courses: transcriptCourses),
+            transcript: Transcript(semesters: semesters),
             catalog: catalog, courseFiles: courseFiles, warnings: warnings
         )
+    }
+
+    /// A folder for a course nothing on disk matches yet: every course has one, even with no files to put in it.
+    static func newCourseFolder(for row: NotionExport.CourseRow, in semester: Semester, prefixes: [UUID: String]) -> String? {
+        guard let parent = semester.coursesFolder, let prefix = row.codeIds.first.flatMap({ prefixes[$0] }),
+              let name = StandardLayout.courseFolderName(prefix: prefix, number: row.number, title: row.title) else { return nil }
+        return "\(parent)/\(name)"
     }
 
     /// `<semester folder>/<code><number> ...`, trying every cross-listed code.

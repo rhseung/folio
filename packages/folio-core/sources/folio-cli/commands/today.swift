@@ -37,16 +37,16 @@ struct TodayCommand: ParsableCommand {
         let ctx = r.ctx
         let settings = try ctx.settings()
         let semester = try r.currentSemester()
-        let courses = r.courses.filter { $0.course.semesterId == semester.id && $0.file != nil }
+        let courses = r.courses.filter { $0.course.semesterId == semester.id }
         let files = courses.compactMap(\.file)
-        let logs = Dictionary(courses.map { c in (c.id, (try? c.store?.log.readAll()) ?? []) }) { a, _ in a }
+        let logs = Dictionary(courses.map { c in (c.id, (try? c.store.log.readAll()) ?? []) }) { a, _ in a }
         let code = Dictionary(courses.map { ($0.id, $0.code) }) { a, _ in a }
         let tag = Dictionary(courses.map { ($0.id, $0.tag) }) { a, _ in a }
-        let file = Dictionary(courses.map { ($0.id, $0.file!) }) { a, _ in a }
+        let file = Dictionary(courses.map { ($0.id, $0.file) }) { a, _ in a }
         let now = ctx.now, calendar = ctx.calendar
 
         let summary = TodaySummary.build(courses: files, now: now, settings: settings, calendar: calendar)
-        let queue = ReviewScheduler.queue(courses: courses.map { ($0.file!, logs[$0.id]!.events(ReviewEvent.self)) },
+        let queue = ReviewScheduler.queue(courses: courses.map { ($0.file, logs[$0.id]!.events(ReviewEvent.self)) },
                                           settings: settings, calendar: calendar, now: now)
         let done = ExamPlan.done(logs.values.flatMap { $0 }.events(PlanCheckEvent.self))
         let first = summary.studyDay.adding(days: -13)
@@ -70,7 +70,7 @@ struct TodayCommand: ParsableCommand {
             deadlines: summary.deadlines.map { item($0.courseId, $0.assignment.id, $0.assignment.title, at: $0.assignment.due) },
             plan: ExamPlan.items(on: summary.studyDay, courses: files).map { item($0.courseId, $0.item.id, $0.item.title, $0.exam.title + (done.contains($0.item.id) ? String(localized: .todayPlanDone) : "")) },
             attendance: courses.compactMap { c in
-                c.file!.capOneAway(at: now).map { w in
+                c.file.capOneAway(at: now).map { w in
                     item(c.id, c.id, c.course.title, String(localized: .todayAttendanceWarning(w.absences, (try? ctx.catalog())?.grade(w.cap.maxGrade)?.symbol ?? String(localized: .todayAttendanceCap))))
                 }
             },

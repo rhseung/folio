@@ -37,7 +37,7 @@ extension Resolver {
     func noteID(_ ref: String, in c: CourseRef) throws -> UUID {
         let n = try note(ref, in: c)
         guard let id = n.meta.id else {
-            let path = c.store?.coursePath(of: n.url) ?? ref
+            let path = c.store.coursePath(of: n.url) ?? ref
             throw CLIError(exit: .rule, message: String(localized: .resolveNoteNoId(path)), hints: ["folio note adopt \(c.code)/\(path)"])
         }
         return id
@@ -47,7 +47,7 @@ extension Resolver {
         guard let course else { throw CLIError(exit: .usage, message: String(localized: .resolveNeedCourse(ref))) }
         guard kind == "NotePath" else { throw CLIError(exit: .usage, message: String(localized: .resolveKindNoPath(kind))) }
         let n = try note(course.local(ref), in: course)
-        return course.store?.coursePath(of: n.url) ?? ref
+        return course.store.coursePath(of: n.url) ?? ref
     }
 }
 

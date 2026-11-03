@@ -224,6 +224,279 @@ struct NoteReaderTests {
         #expect(edits.all.first.map { [String($0.from), String($0.to), $0.old, $0.new] } == ["5", "5", "둘째 문단", "둘째 문단 더\n새 줄"])
     }
 
+    /// A line's height with the gap under it, which a paragraph holding a tall picture keeps as line spacing.
+    static func lineHeight(_ view: NSTextView, at offset: Int) -> CGFloat? {
+        let gap = (view.textStorage?.attribute(.paragraphStyle, at: offset, effectiveRange: nil) as? NSParagraphStyle)?.lineSpacing ?? 0
+        return NoteRender.line(view, at: offset).map { $0.line.typographicBounds.height + gap }
+    }
+
+    /// A picture far taller than the text gets a line of its own height, wherever it's written in the paragraph, and the
+    /// text's lines keep theirs.
+    @Test(arguments: [
+        ("![그림](assets/sample.png)\n첫 줄\n둘째 줄", ["첫 줄", "둘째 줄"]),
+        ("첫 줄\n둘째 줄\n![그림](assets/sample.png)", ["첫 줄", "둘째 줄"]),
+        ("앞 글 ![그림|2000](assets/sample.png)", ["앞 글"]),
+        ("[![그림](assets/sample.png)](https://example.com)\n설명", ["설명"]),
+        ("*![그림](assets/sample.png)*\n설명", ["설명"]),
+    ])
+    func textByAPictureKeepsItsOwnLineHeight(source: String, words: [String]) throws {
+        let (view, _) = Self.reader(source + "\n\n보통 문단", edits: Edits())
+        let shown = view.string as NSString
+        let plain = try #require(Self.lineHeight(view, at: shown.range(of: "보통 문단").location))
+        for word in words {
+            #expect(Self.lineHeight(view, at: shown.range(of: word).location) == plain, "\(word) in \(source.debugDescription)")
+        }
+        let picture = shown.range(of: "\u{FFFC}").location
+        #expect(try #require(Self.lineHeight(view, at: picture)) > 2 * plain)
+    }
+
+    /// Unbounded, a picture's line took no gap, so the text under it sat closer than any two lines of text; and a
+    /// paragraph of pictures alone fixed every line to the tallest, so a small picture under a big one stood as tall.
+    /// Both sizes of the second picture: shorter than the text's double, and taller but still short of the first.
+    @Test(arguments: [40, 200])
+    func aPicturesLineKeepsTheGapAndAShortPictureItsHeight(small: Int) throws {
+        let (view, _) = Self.reader("![큰 그림](assets/sample.png)\n첫 줄\n\n![큰 그림](assets/sample.png)\n![작은 그림|\(small)](assets/sample.png)")
+        let manager = try #require(view.textLayoutManager)
+        var fragments: [NSTextLayoutFragment] = []
+        manager.enumerateTextLayoutFragments(from: manager.documentRange.location, options: []) { fragments.append($0); return true }
+        let gap = try #require((view.textStorage?.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle)?.lineSpacing)
+        #expect(gap > 0)
+        let text = fragments[0].textLineFragments
+        #expect(text.count == 2 && text[1].typographicBounds.minY - text[0].typographicBounds.maxY == gap)
+        let pictures = fragments[1].textLineFragments
+        // Fixed to the tallest, both lines were the same height.
+        #expect(pictures.count == 2 && pictures[1].typographicBounds.height < pictures[0].typographicBounds.height, "\(small)")
+    }
+
+    /// A picture, formula or table alone in its paragraph has no shorter line to keep; freed like one beside text, its
+    /// line lost the room above it and the block sat high, unlike a smaller one.
+    @Test(arguments: ["![그림](assets/sample.png)", "$$\\begin{pmatrix} 1 \\\\ 2 \\\\ 3 \\\\ 4 \\end{pmatrix}$$", "| 가 |\n| --- |\n| 나 |\n| 다 |\n| 라 |"])
+    func aBlockAloneKeepsItsFixedLine(source: String) throws {
+        let (view, _) = Self.reader("앞\n\n" + source + "\n\n뒤")
+        let storage = try #require(view.textStorage)
+        let at = (storage.string as NSString).range(of: "\u{FFFC}").location
+        #expect(at != NSNotFound)
+        let style = try #require(storage.attribute(.paragraphStyle, at: at, effectiveRange: nil) as? NSParagraphStyle)
+        #expect(style.maximumLineHeight == style.minimumLineHeight && style.lineSpacing == 0, "\(source)")
+    }
+
+    /// By a tall picture a line is shorter by the gap kept under it. Centered on the full height, its text sat half the
+    /// gap under the middle of the line, and the caret and selection, which follow the line, stood above the text.
+    @Test func textByAPictureStandsInTheMiddleOfItsLine() throws {
+        let (view, _) = Self.reader("앞\n\n첫 줄\n![그림](assets/sample.png)\n끝 줄\n\n뒤")
+        let shown = view.string as NSString
+        for word in ["첫 줄", "끝 줄"] {
+            let at = shown.range(of: word).location
+            let gaps = try #require(NoteRender.gaps(view, at: at))
+            #expect(abs(gaps.above - gaps.below) <= 1, "\(word): \(gaps)")
+        }
+    }
+
+    static func boxPadding(_ view: NSTextView, top: String, bottom: String) throws -> (top: CGFloat, bottom: CGFloat) {
+        let manager = try #require(view.textLayoutManager)
+        manager.ensureLayout(for: manager.documentRange)
+        let shown = view.string as NSString
+        func line(_ word: String) throws -> (NoteFragment, NSTextLineFragment, NSFont) {
+            let at = shown.range(of: word).location
+            let found = try #require(NoteRender.line(view, at: at))
+            let fragment = try #require(found.fragment as? NoteFragment), l = found.line
+            let font = try #require(view.textStorage?.attribute(.font, at: at, effectiveRange: nil) as? NSFont)
+            return (fragment, l, font)
+        }
+        func baseline(_ f: NoteFragment, _ l: NSTextLineFragment) -> CGFloat { f.layoutFragmentFrame.minY + l.typographicBounds.minY + l.glyphOrigin.y - f.raise }
+        let (tf, tl, tfont) = try line(top), (bf, bl, bfont) = try line(bottom)
+        let boxTop = tf.layoutFragmentFrame.minY + (try #require(tf.boxRect)).minY
+        let boxBottom = bf.layoutFragmentFrame.minY + (try #require(bf.boxRect)).maxY
+        return (baseline(tf, tl) - tfont.ascender - boxTop, boxBottom - (baseline(bf, bl) - bfont.descender))
+    }
+
+    /// The gap a picture's paragraph keeps as line spacing falls over each line but the note's first and under none,
+    /// so left alone it moved the paragraph's text half a gap down and its last line half a gap closer to what follows,
+    /// a box's padding included. Next to a picture, the text keeps its place and a box its padding.
+    @Test(arguments: [
+        ("> [!note] 제목\n> 설명\n> 끝", "> [!note] 제목\n> 설명\n> ![그림](assets/sample.png)\n> 끝"),
+        ("> 설명\n> 끝", "> 설명\n> ![그림](assets/sample.png)\n> 끝"),
+        ("설명\n끝", "설명\n![그림](assets/sample.png)\n끝"),
+    ])
+    func textByAPictureKeepsItsPlaceAndItsBoxsPadding(plain: String, pictured: String) throws {
+        func measure(_ source: String) throws -> [CGFloat] {
+            let (view, _) = Self.reader("앞\n\n" + source + "\n\n뒤")
+            NoteRender.write(view, "reader-padding-\(source.hasPrefix("> [!") ? "callout" : source.hasPrefix(">") ? "quote" : "text")-\(source.contains("![") ? "picture" : "plain")")
+            let above = try #require(NoteRender.drawnBaseline(view, of: "앞")), first = try #require(NoteRender.drawnBaseline(view, of: "설명"))
+            let last = try #require(NoteRender.drawnBaseline(view, of: "끝")), below = try #require(NoteRender.drawnBaseline(view, of: "뒤"))
+            guard source.hasPrefix(">") else { return [first - above, below - last] }
+            // The box's top is over its first paragraph, a callout's title.
+            let pad = try Self.boxPadding(view, top: source.hasPrefix("> [!") ? "제목" : "설명", bottom: "끝")
+            return [first - above, below - last, pad.top, pad.bottom]
+        }
+        let a = try measure(plain), b = try measure(pictured)
+        #expect(zip(a, b).allSatisfy { abs($0 - $1) <= 0.5 }, "\(a) vs \(b)")
+    }
+
+    /// The half gap a picture's paragraph takes from the one above comes out of the gap outside a box that ends there,
+    /// not out of its padding, and not left over as extra room.
+    @Test(arguments: ["> [!note] 제목\n> 끝", "> 끝", "```\ncode\n```"])
+    func aPictureAfterABoxKeepsTheGapAndThePadding(box: String) throws {
+        func measure(_ tail: String) throws -> [CGFloat] {
+            let (view, _) = Self.reader(box + "\n\n첫 줄\n" + tail)
+            NoteRender.write(view, "reader-after-box-\(box.prefix(3) == "```" ? "code" : box.hasPrefix("> [!") ? "callout" : "quote")-\(tail.contains("![") ? "picture" : "plain")")
+            let at = (view.string as NSString).range(of: "첫 줄").location
+            let end = try #require(NoteRender.line(view, at: at - 1)?.fragment as? NoteFragment)
+            let boxBottom = end.layoutFragmentFrame.minY + (try #require(end.boxRect)).maxY
+            var out = [try #require(NoteRender.drawnBaseline(view, of: "첫 줄")) - boxBottom]
+            if box.hasPrefix(">") { out.append(try Self.boxPadding(view, top: box.hasPrefix("> [!") ? "제목" : "끝", bottom: "끝").bottom) }
+            return out
+        }
+        let a = try measure("둘째"), b = try measure("![그림](assets/sample.png)")
+        #expect(zip(a, b).allSatisfy { abs($0 - $1) <= 0.5 }, "\(a) vs \(b)")
+    }
+
+    @Test func aParagraphWithAPictureStillWritesBack() throws {
+        let edits = Edits()
+        let source = "![그림](assets/sample.png)\n첫 줄\n둘째 줄"
+        let (view, window) = Self.reader(source + "\n\n보통 문단", edits: edits)
+        NoteRender.write(view, "reader-picture-text")
+        #expect(view.blocks.map(\.editable) == [true, true])
+        window.makeFirstResponder(view)
+        let storage = try #require(view.textStorage)
+        let end = try #require(ReaderBuilder.range(of: 0, in: storage))
+        view.setSelectedRange(NSRange(location: NSMaxRange(end), length: 0))
+        view.insertText(" 끝", replacementRange: view.selectedRange())
+        window.makeFirstResponder(nil)
+        #expect(edits.all.first?.new == source + " 끝")
+    }
+
+    static let wideMath = """
+    where $\\tilde{A}_{1j}$: the $(n-1) \\times (n-1)$ matrix obtained from A by deleting the 1st row and the jth column of it.
+
+    Ex. Let
+
+    $$A = \\begin{pmatrix} 2 & 0 & 0 & 1 \\\\ 0 & 1 & 0 & 0 \\\\ 1 & 0 & -1 & 0 \\\\ 1 & 1 & 1 & 1 \\end{pmatrix} \\det(A) = (-1)^{1+1} \\cdot 2 \\cdot \\det\\begin{pmatrix} 1 & 0 & 0 \\\\ 0 & -1 & 0 \\\\ 1 & 1 & 1 \\end{pmatrix} + (-1)^{1+2} \\cdot 0 \\cdot \\det\\begin{pmatrix} 0 & 0 & 0 \\\\ 1 & -1 & 0 \\\\ 1 & 1 & 1 \\end{pmatrix} + (-1)^{1+3} \\cdot 0 \\cdot 0$$
+
+    Then the last line.
+    """
+
+    /// Wider than the column, a formula scrolls on its own; left in the text, TextKit moved the whole page over to show
+    /// it and cut off the end of every other line.
+    @Test func aWideFormulaScrollsInsteadOfMovingThePage() throws {
+        let (view, _) = Self.reader(Self.wideMath, width: 600)
+        NoteRender.write(view, "reader-wide-math")
+        let shown = view.string as NSString
+        let first = try #require(NoteRender.caret(view, at: shown.range(of: "where").location))
+        let last = try #require(NoteRender.caret(view, at: shown.range(of: "Then").location))
+        let padding = try #require(view.textContainer).lineFragmentPadding
+        #expect(first.minX == padding && last.minX == padding, "\(first) \(last)")
+        let scroll = try #require(view.subviews.compactMap { $0 as? NSScrollView }.first)
+        #expect(scroll.frame.width == view.lineWidth)
+        #expect(try #require(scroll.documentView).frame.width > view.lineWidth)
+        #expect(scroll.frame.minX >= view.textContainerOrigin.x - 1)
+    }
+
+    /// The bubble over a math block is shrunk to the editor and lets a click through to the lines under it.
+    @Test func aWideFormulasBubbleFitsAndTakesNoClicks() throws {
+        let (view, window) = NoteSourceTests.editor(Self.wideMath, width: 600)
+        window.makeFirstResponder(view)
+        view.setSelectedRange(NSRange(location: (view.string as NSString).range(of: "pmatrix").location, length: 0))
+        NoteRender.write(view, "source-wide-math")
+        let bubble = try #require(view.subviews.compactMap { $0 as? PreviewBubble }.first)
+        #expect(bubble.frame.width <= view.visibleRect.width)
+        #expect(bubble.hitTest(NSPoint(x: bubble.frame.midX, y: bubble.frame.midY)) == nil)
+    }
+
+    /// Everything that can be wider than the column, at the top and inside lists, quotes and callouts.
+    static let wideThings = """
+    # 제목 $\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i t_i u_i$
+
+    인라인 $\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i t_i u_i v_i w_i x_i$ 끝
+
+    ![넓은|2000](assets/sample.png)
+
+    https://example.com/a/very/long/link/that/has/no/spaces/anywhere/in/it/and/keeps/going/and/going/until/it/is/wider/than/any/column
+
+    | 하나 | 둘 | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 | 열하나 | 열둘 |
+    | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+    | 아주 긴 칸의 글 | $\\int_0^1 x^2 \\, dx = \\frac{1}{3}$ | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 | 열하나 | 열둘 |
+
+    - 목록 ![넓은|2000](assets/sample.png)
+        - 하위 $\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i$
+        - 표 아래
+
+          | 하나 | 둘 | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 |
+          | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+          | 아주 긴 칸의 글 | 둘 | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 |
+
+          $$\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i t_i u_i v_i w_i x_i y_i z_i$$
+
+    > 인용 ![넓은|2000](assets/sample.png)
+    > > 안쪽 인용 ![넓은|2000](assets/sample.png)
+    > > $$\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i t_i u_i v_i w_i x_i$$
+
+    > [!note] 콜아웃
+    > ![넓은|2000](assets/sample.png)
+    >
+    > | 하나 | 둘 | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 | 열하나 | 열둘 |
+    > | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+    > | 아주 긴 칸의 글 | 둘 | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 | 열하나 | 열둘 |
+    >
+    > ```swift
+    > let x = "a very long line of code that goes on and on and on past the edge of any column at all"
+    > ```
+    """
+
+    /// Each picture that reaches past the room its paragraph gives it, between the paragraph's indents. A line's own
+    /// bounds stay inside the column even when a picture on it doesn't, so pictures are measured one by one. Past the
+    /// column, TextKit moves the whole page over to show one; past an indent, it runs out of its quote or callout box.
+    static func overflowing(_ view: NSTextView) -> [String] {
+        guard let manager = view.textLayoutManager, let container = view.textContainer, let storage = view.textStorage else { return ["no layout"] }
+        manager.ensureLayout(for: manager.documentRange)
+        var out: [String] = []
+        storage.enumerateAttribute(.attachment, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+            guard let attachment = value as? NSTextAttachment,
+                  let location = manager.location(manager.documentRange.location, offsetBy: range.location),
+                  let fragment = manager.textLayoutFragment(for: location) else { return }
+            let start = manager.offset(from: manager.documentRange.location, to: fragment.rangeInElement.location)
+            guard let line = fragment.textLineFragments.first(where: { NSLocationInRange(range.location - start, $0.characterRange) }) else { return }
+            let x = fragment.layoutFragmentFrame.minX + line.typographicBounds.minX + line.locationForCharacter(at: range.location - start).x
+            let style = storage.attribute(.paragraphStyle, at: range.location, effectiveRange: nil) as? NSParagraphStyle
+            let tail = style.map { $0.tailIndent < 0 ? -$0.tailIndent : 0 } ?? 0
+            let right = container.size.width - container.lineFragmentPadding - tail
+            guard x < -0.5 || x + attachment.bounds.width > right + 0.5 else { return }
+            let text = storage.string as NSString
+            let paragraph = text.paragraphRange(for: range)
+            let what = text.substring(with: NSRange(location: paragraph.location, length: min(paragraph.length, 20)))
+            out.append("\(String(describing: type(of: attachment))) \(Int(x))...\(Int(x + attachment.bounds.width)) of \(Int(right)): \(what.debugDescription)")
+        }
+        return out
+    }
+
+    @Test(arguments: [320, 600, 900] as [CGFloat])
+    func noLineReachesPastTheColumn(width: CGFloat) {
+        for (name, text) in [("wide", Self.wideThings), ("sample", NoteSourceTests.sample)] {
+            let (view, _) = Self.reader(text, width: width)
+            NoteRender.write(view, "overflow-\(name)-\(Int(width))")
+            let over = Self.overflowing(view)
+            #expect(over.isEmpty, "\(name) at \(width): \(over)")
+        }
+    }
+
+    /// The note's scroll view takes the pointer over the note, so code and a wide formula never got a sideways scroll.
+    /// Their own scroll views get the pointer now, never the keyboard, and hand a click on to the note. (A synthetic
+    /// wheel event doesn't scroll an `NSScrollView` here, and an overlay scroller only takes clicks once shown, so
+    /// both are left to AppKit.)
+    @Test func aSidewaysBlockTakesThePointerButNotTheKeyboard() throws {
+        let code = "```swift\nlet x = \"a very long line of code that goes on and on and on past the edge of any column at all\"\n```"
+        let (view, window) = Self.reader("앞\n\n" + Self.wideMath + "\n\n" + code + "\n\n뒤", width: 600)
+        let root = try #require(window.contentView?.superview)
+        let sides = view.subviews.compactMap { $0 as? SideScrollView }
+        #expect(sides.count == 2)
+        for side in sides {
+            let hit = try #require(root.hitTest(side.convert(NSPoint(x: side.bounds.midX, y: side.bounds.midY), to: root)))
+            #expect(hit === side, "\(type(of: hit))")
+            #expect(!hit.acceptsFirstResponder)
+            #expect(hit.nextResponder === view)
+        }
+    }
+
     @Test func typedMarkupIsEscaped() {
         #expect(ReaderMarkdown.escape("a*b [[c x_y * z") == "a\\*b \\[[c x_y * z")
         #expect(ReaderMarkdown.lines("# 아님\n- 아님\n1. 아님") == "\\# 아님\n\\- 아님\n1\\. 아님")
@@ -274,6 +547,52 @@ struct NoteReaderTests {
         #expect(NoteMath.picture(#"\notacommand{x}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false) == nil)
     }
 
+    @Test func doubleStruckCapitalsUseTheAMSFont() throws {
+        func fonts(_ display: MTDisplay) -> [String] {
+            if let line = display as? MTCTLineDisplay {
+                return (CTLineGetGlyphRuns(line.line) as? [CTRun] ?? []).map {
+                    let attributes = CTRunGetAttributes($0) as NSDictionary
+                    return CTFontCopyPostScriptName(attributes[kCTFontAttributeName] as! CTFont) as String
+                }
+            }
+            var found: [String] = [], mirror: Mirror? = Mirror(reflecting: display)
+            while let m = mirror {
+                for child in m.children {
+                    if let part = child.value as? MTDisplay { found += fonts(part) }
+                    if let parts = child.value as? [MTDisplay] { found += parts.flatMap(fonts) }
+                }
+                mirror = m.superclassMirror
+            }
+            return found
+        }
+        for tex in [NoteMath.tex("u in F^2, RR", .asciimath), NoteMath.tex(#"\sqrt{\mathbb{Z}}"#, .latex), NoteMath.tex(#"\frac{\mathbb{Q}}{2}"#, .latex)] {
+            let list = try #require(NoteMath.typeset(tex, display: false, size: 16, color: .black), "\(tex)")
+            #expect(fonts(list).contains("KaTeX_AMS-Regular"), "\(tex)")
+        }
+        // Kerned back to Latin Modern's width, so what SwiftMath placed after the letter stays put.
+        let swapped = try #require(NoteMath.typeset(NoteMath.tex(#"\mathbb{R}^2"#, .latex), display: false, size: 16, color: .black))
+        #expect(fonts(swapped).contains("KaTeX_AMS-Regular"))
+        let line = try #require(swapped.subDisplays.first as? MTCTLineDisplay)
+        #expect(abs(CTLineGetTypographicBounds(line.line, nil, nil, nil) - line.width) < 0.01)
+        // The AMS M is a third wider than Latin Modern's; SwiftMath makes room for it rather than overlapping the next.
+        let pair = try #require(NoteMath.picture(#"\mathbb{MM}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false))
+        #expect(pair.size.width >= 2 * 0.944 * 16 - 1)
+        // With no room after it, an AMS letter would run into what follows, so a formula with a body that can't be
+        // split, or a double-struck capital typed as itself, stays as written and all Latin Modern, with no room added.
+        for tex in [#"\mathbb{R^2}"#, #"\mathbb{R\times S}"#, #"\mathbb{M} + \mathbb{R^2}"#, #"ℝ + \mathbb{M}"#] {
+            #expect(NoteMath.tex(tex, .latex) == tex)
+            let list = try #require(NoteMath.typeset(NoteMath.tex(tex, .latex), display: false, size: 16, color: .black), "\(tex)")
+            #expect(!fonts(list).contains("KaTeX_AMS-Regular"), "\(tex)")
+            #expect(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false) != nil, "\(tex)")
+        }
+        // A ℝ typed in text is hidden in a command once text is filled, so it must be seen before.
+        let typed = try #require(NoteMath.typeset(NoteMath.tex(#"\text{ℝ} = \mathbb{R}"#, .latex), display: false, size: 16, color: .black))
+        #expect(!fonts(typed).contains("KaTeX_AMS-Regular"))
+        // A longer command that starts the same is left alone, so it still shows as source rather than as 𝕞1.
+        #expect(NoteMath.tex(#"\mathbbm{1}"#, .latex) == #"\mathbbm{1}"#)
+        #expect(NoteMath.picture(#"\mathbbm{1}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false) == nil)
+    }
+
     @Test func textInMathReadsAsText() throws {
         func width(_ tex: String) throws -> CGFloat {
             try #require(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false), "\(tex)").size.width
@@ -303,11 +622,9 @@ struct NoteReaderTests {
         #expect(fitted.reduce(0, +) <= 400)
         #expect(fitted[0] < 200 && fitted[2] < 296)
         #expect(ReaderTable.fit([100, 100], floors: [48, 48], page: 400) == [100, 100])
-        // Floors alone wider than the page: they give way too, so no column falls off the picture's edge.
-        #expect(ReaderTable.fit([300, 300], floors: [250, 250], page: 400) == [200, 200])
-        #expect(ReaderTable.fit([600, 100], floors: [600, 100], page: 400).reduce(0, +) <= 400)
-        // Short columns keep room for a word; the wide floor gives up the rest.
-        #expect(ReaderTable.fit([600, 48, 48], floors: [600, 48, 48], page: 400) == [304, 48, 48])
+        // Floors alone wider than the page: they hold, and the table scrolls sideways instead of cutting formulas.
+        #expect(ReaderTable.fit([300, 300], floors: [250, 250], page: 400) == [250, 250])
+        #expect(ReaderTable.fit([600, 48, 48], floors: [600, 48, 48], page: 400) == [600, 48, 48])
         // Math in a cell over two columns raises both, so their sum holds it.
         var floors: [CGFloat] = [48, 48, 48]
         ReaderTable.spread(&floors, from: 1, count: 2, to: 224)
@@ -318,6 +635,21 @@ struct NoteReaderTests {
     }
 
     /// An image in a cell was sized to the note column, so it shrinks to its own column; math can't, so it doesn't.
+    /// A table cell is drawn into the table's picture, where a scroll view has nowhere to stand, so a wide formula
+    /// there stays a picture and widens its column instead of leaving an empty cell.
+    @Test func aWideFormulaInACellStaysAPicture() throws {
+        var builder = ReaderBuilder(accent: CourseAccent.presets[0].accent, syntax: .latex, baseURL: nil, dark: false, width: 300, widgets: ReaderWidgets())
+        let wide = "$$\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i t_i u_i v_i w_i$$"
+        let cell = builder.cell(markdown: wide, weight: .regular)
+        var attachments: [NSTextAttachment] = []
+        cell.enumerateAttribute(.attachment, in: NSRange(location: 0, length: cell.length)) { value, _, _ in
+            if let a = value as? NSTextAttachment { attachments.append(a) }
+        }
+        #expect(attachments.count == 1)
+        #expect(attachments.first is MathAttachment, "\(attachments.map { type(of: $0) })")
+        #expect((attachments.first?.bounds.width ?? 0) > 300)
+    }
+
     @Test func cellImagesShrinkToTheirColumnButMathDoesNot() throws {
         func piece(_ source: String, width: CGFloat) -> NSAttributedString {
             let a = source.hasPrefix("$") ? MathAttachment() : NSTextAttachment()

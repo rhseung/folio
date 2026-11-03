@@ -67,6 +67,28 @@
         }
       }
     },
+    "error.credited.needs-source": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인정학기 '%@'의 출처(예: 영재고 AP)를 먼저 정하세요. 과목 폴더가 _Credited/<출처>에 들어갑니다"
+          }
+        }
+      }
+    },
+    "error.credited.source-taken": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출처가 '%@'인 인정학기가 이미 있습니다"
+          }
+        }
+      }
+    },
     "error.exam.no-start": {
       "extractionState": "manual",
       "localizations": {
@@ -661,24 +683,24 @@
         }
       }
     },
-    "error.transcript.has-folder-rm": {
+    "error.transcript.move-no-semester": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "과목 폴더가 있는 과목의 기록은 폴더와 함께 있습니다"
+            "value": "과목 '%@'의 학기를 찾지 못했습니다"
           }
         }
       }
     },
-    "error.transcript.has-folder-set": {
+    "error.transcript.move-nothing": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "과목 폴더가 있는 과목은 folio course set으로 바꿉니다"
+            "value": "폴더 없는 과목이 없습니다"
           }
         }
       }
@@ -921,17 +943,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@: 총 %2$@학점, 유효 %3$@학점, GPA %4$@"
-          }
-        }
-      }
-    },
-    "note.import.notion.no-folder": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "폴더 없는 과목(transcript.json): %@"
           }
         }
       }

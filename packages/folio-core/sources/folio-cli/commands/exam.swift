@@ -17,7 +17,7 @@ struct ExamCommand: ParsableCommand {
         func run() throws {
             let r = Resolver(try CLI.context(g))
             let c = try r.course(course)
-            let file = try c.requireFile()
+            let file = c.file
             let exams = file.exams.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }
             func component(_ e: Exam) -> String { e.componentId.flatMap { id in file.components.first { $0.id == id }?.name } ?? "" }
             if g.json { return try printJSON(exams) }
@@ -47,7 +47,7 @@ struct ExamCommand: ParsableCommand {
             let (c, name) = try r.split(exam)
             let e = try r.exam(name, in: c)
             if g.json { return try printJSON(e) }
-            let f = try c.requireFile()
+            let f = c.file
             courseHeader(c, catalog: try? r.ctx.catalog())
             say(e.title.styled(.bold))
             if let start = e.start { say(String(localized: .examShowTime(when(start, now: r.ctx.now, time: true))) + (e.end.map { " – \($0.formatted(date: .omitted, time: .shortened))" } ?? "")) }
@@ -85,7 +85,7 @@ struct ExamCommand: ParsableCommand {
                 try perform(spec: ExamScopeTaught(course: c.id, exam: e.id), g, ctx: ctx)
                 return
             }
-            let ids = try r.many(units, from: try c.requireFile().units.map(\.title), what: "단원").map { try r.unit($0, in: c).id }
+            let ids = try r.many(units, from: c.file.units.map(\.title), what: "단원").map { try r.unit($0, in: c).id }
             try performAll(ids.map { ExamScope(course: c.id, exam: e.id, unit: $0, included: !off) }, g, ctx: ctx,
                            done: off ? String(localized: .examScopeRemoved(ids.count)) : String(localized: .examScopeAdded(ids.count)))
         }

@@ -51,34 +51,57 @@ struct TodayModelTests {
         #expect(progress.streak == 1)
     }
 
-    @Test func deadlinesGroupIntoTodayThisWeekNextWeekAndLater() throws {
+    @Test func nearDeadlinesSayHowSoonAndFarOnesTheirDate() throws {
         let workspace = try fixtureWorkspace()
         let model = TodayModel(workspace: workspace)
         let c = workspace.calendar
         func at(_ day: Int, _ hour: Int) -> Date { c.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour))! }
-        let now = at(28, 12)  // a Wednesday
-        // Weeks run Monday to Sunday: the 1st is this week's Sunday, the 2nd next week's Monday.
-        let dues = [("A", at(28, 20)), ("B", at(30, 12)), ("C", at(32, 23)), ("D", at(33, 9)), ("E", at(39, 12)), ("F", at(40, 9))]
+        let now = at(28, 12)
+        // C is six days out, the last one still "soon"; D, a week out, is the first given as a date.
+        let dues = [("A", at(28, 20)), ("B", at(29, 23)), ("C", at(34, 9)), ("D", at(35, 9)), ("E", at(39, 12)), ("F", at(40, 9))]
         for (title, due) in dues { workspace.run(AssignmentAdd(course: graphTheory, title: title, due: due)) }
         let summary = model.summary(now: now)
         let mine = summary.deadlines.filter { dues.map(\.0).contains($0.assignment.title) }
-        let groups = model.deadlineGroups(mine, studyDay: summary.studyDay)
-        #expect(groups.map(\.when) == [.today, .thisWeek, .nextWeek, .later])
-        #expect(groups.map { $0.items.map(\.assignment.title) } == [["A"], ["B", "C"], ["D", "E"], ["F"]])
+        let rows = model.deadlineRows(mine, studyDay: summary.studyDay)
+        #expect(rows.map(\.item.assignment.title) == ["A", "B", "C", "D", "E", "F"])
+        #expect(rows.map(\.urgency) == [.urgent, .urgent, .soon, .later, .later, .later])
+        #expect(rows[0].due.hasPrefix("오늘 "))
+        #expect(rows[1].due.hasPrefix("내일 "))
+        #expect(rows[2].due == "6일 후")
+        #expect(rows[3].due == at(35, 9).formatted(.dateTime.month().day().weekday()))
 
         // Six fit; a seventh folds behind the button until it is pressed.
-        #expect(model.shownDeadlines(groups).more == 0)
+        #expect(model.shownDeadlines(rows).more == 0)
         workspace.run(AssignmentAdd(course: graphTheory, title: "G", due: at(41, 9)))
-        let seven = model.deadlineGroups(model.summary(now: now).deadlines.filter { "ABCDEFG".contains($0.assignment.title) }, studyDay: summary.studyDay)
+        let seven = model.deadlineRows(model.summary(now: now).deadlines.filter { "ABCDEFG".contains($0.assignment.title) }, studyDay: summary.studyDay)
         let (shown, more) = model.shownDeadlines(seven)
         #expect(more == 1)
-        #expect(shown.flatMap(\.items).map(\.assignment.title) == ["A", "B", "C", "D", "E", "F"])
+        #expect(shown.map(\.item.assignment.title) == ["A", "B", "C", "D", "E", "F"])
         model.showsAllDeadlines = true
         #expect(model.shownDeadlines(seven).more == 0)
 
-        model.edit(groups[0].items[0])
+        model.edit(rows[0].item)
         #expect(model.editing?.assignment.title == "A")
         #expect(model.editing?.course.id == graphTheory)
+    }
+
+    @Test func deadlineDaysFollowTheDayBoundary() throws {
+        let workspace = try fixtureWorkspace()
+        let model = TodayModel(workspace: workspace)
+        let c = workspace.calendar
+        func at(_ day: Int, _ hour: Int) -> Date { c.date(from: DateComponents(year: 2026, month: 10, day: day, hour: hour))! }
+        #expect(workspace.settings.dayBoundaryMinutes == 4 * 60)
+        // At 02:00 on the 29th the study day is still the 28th: 03:00 falls before the boundary, 05:00 after it.
+        let dues = [("before", at(29, 3)), ("after", at(29, 5)), ("nextNight", at(30, 2)), ("third", at(30, 5))]
+        for (title, due) in dues { workspace.run(AssignmentAdd(course: graphTheory, title: title, due: due)) }
+        let summary = model.summary(now: at(29, 2))
+        let rows = model.deadlineRows(summary.deadlines.filter { dues.map(\.0).contains($0.assignment.title) }, studyDay: summary.studyDay)
+        #expect(rows.map(\.item.assignment.title) == ["before", "after", "nextNight", "third"])
+        #expect(rows[0].due.hasPrefix("오늘 "))
+        #expect(rows[1].due.hasPrefix("내일 "))
+        #expect(rows[2].due.hasPrefix("내일 "))
+        #expect(rows[3].due == "2일 후")
+        #expect(rows.map(\.urgency) == [.urgent, .urgent, .urgent, .soon])
     }
 
     @Test func unitGroupsKeepQueueOrderAndEachUnitsPlaceInIt() throws {
@@ -103,22 +126,22 @@ struct TodayModelTests {
         #expect(week.filter(\.isToday).map(\.day) == [day])
     }
 
-    @Test func aRecordsClassShowsOnTodayWithoutASession() throws {
+    @Test func aCourseWithOnlyClassTimesShowsOnToday() throws {
         let workspace = try fixtureWorkspace()
         let c = workspace.calendar
         func at(_ hour: Int, _ minute: Int = 0) -> Date { c.date(from: DateComponents(year: 2026, month: 10, day: 29, hour: hour, minute: minute))! }
         workspace.pinnedNow = at(20)  // a Thursday in the fall term, past its midterm week
         let id = UUID()
-        workspace.run(TranscriptAdd(id: id, semester: fallTerm, title: "콜로퀴움", credits: 0))
+        let code = addCode("GS", to: workspace)
+        workspace.run(TranscriptAdd(id: id, semester: fallTerm, title: "콜로퀴움", code: code, number: "9331", credits: 0))
         workspace.run(CourseSet(course: id, [.schedule([ClassTime(weekday: 4, startMinute: 21 * 60, endMinute: 22 * 60, room: "Hall")])]))
         let model = TodayModel(workspace: workspace)
         let day = workspace.settings.studyDay(of: at(20), calendar: c)
 
         let ribbon = model.ribbonClasses(model.summary(now: at(20)), now: at(20)).filter { $0.courseId == id }
-        #expect(ribbon.map(\.start) == [at(21)] && ribbon.first?.sessionId == nil && ribbon.first?.suggested == nil)
+        #expect(ribbon.map(\.start) == [at(21)] && ribbon.first?.sessionId == nil)
         #expect(model.nextClass(after: at(20))?.courseId == id)
         #expect(model.nowCourse(at: at(21, 30)) == id && model.nowCourse(at: at(22)) != id)
-        #expect(model.classTitle(id, "") == "콜로퀴움")
         #expect(model.week(around: day).first { $0.day == day }?.courses.contains(id) == true)
         #expect(model.week(around: day).first { $0.day != day }?.courses.contains(id) == false)
     }

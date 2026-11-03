@@ -78,21 +78,24 @@ struct Chip: View {
     @Environment(\.accent) private var accent
     let text: String
     var tone: Tone = .plain
+    var solid = false
 
-    init(_ text: String, tone: Tone = .plain) {
+    init(_ text: String, tone: Tone = .plain, solid: Bool = false) {
         self.text = text
         self.tone = tone
+        self.solid = solid
     }
 
     var body: some View {
         Text(text)
-            .font(Theme.Typeface.caption.weight(tone == .plain ? .regular : .semibold))
-            .foregroundStyle(tone == .accent ? accent.ink : tone == .plain ? Theme.Palette.textSecondary : tone.foreground)
+            .font(Theme.Typeface.caption.weight(tone == .plain && !solid ? .regular : .semibold))
+            // On a solid chip the card color, not `onFill`: the dark tones are light, and white on them fell under 3:1.
+            .foregroundStyle(solid ? Theme.Palette.card : tone == .accent ? accent.ink : tone == .plain ? Theme.Palette.textSecondary : tone.foreground)
             // A squeezed row wrapped the label a letter per line; the text beside the chip gives way instead.
             .lineLimit(1)
             .fixedSize()
             .padding(Theme.Inset.tag)
-            .background(tone == .accent ? accent.tint : tone.fill, in: .capsule)
+            .background(solid ? tone.foreground : tone == .accent ? accent.tint : tone.fill, in: .capsule)
     }
 }
 
@@ -137,7 +140,7 @@ struct CourseMark: View {
 
 extension CourseMark {
     init(_ workspace: Workspace, _ id: UUID, inline: Bool = false) {
-        self.init(icon: workspace.course(id)?.file.course.icon ?? workspace.record(id)?.icon, color: workspace.accent(id).color, inline: inline)
+        self.init(icon: workspace.course(id)?.file.course.icon, color: workspace.accent(id).color, inline: inline)
     }
 }
 

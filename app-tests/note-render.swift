@@ -42,14 +42,28 @@ import FolioDomain
         return rect.map { NoteLines.caret($0, at: offset, in: storage) }
     }
 
+    /// The laid-out line holding `offset`, not the paragraph's first: a paragraph wraps into several.
+    static func line(_ view: NSTextView, at offset: Int) -> (fragment: NSTextLayoutFragment, line: NSTextLineFragment)? {
+        guard let manager = view.textLayoutManager,
+              let location = manager.location(manager.documentRange.location, offsetBy: offset),
+              let fragment = manager.textLayoutFragment(for: location) else { return nil }
+        let inFragment = offset - manager.offset(from: manager.documentRange.location, to: fragment.rangeInElement.location)
+        return fragment.textLineFragments.first { NSLocationInRange(inFragment, $0.characterRange) }.map { (fragment, $0) }
+    }
+
     /// Space above the font's ascender and below its descender on the line holding `offset`.
     static func gaps(_ view: NSTextView, at offset: Int) -> (above: CGFloat, below: CGFloat)? {
-        guard let manager = view.textLayoutManager, let storage = view.textStorage,
-              let location = manager.location(manager.documentRange.location, offsetBy: offset),
-              let fragment = manager.textLayoutFragment(for: location), let line = fragment.textLineFragments.first,
-              let font = storage.attribute(.font, at: offset, effectiveRange: nil) as? NSFont else { return nil }
+        guard let (fragment, line) = Self.line(view, at: offset),
+              let font = view.textStorage?.attribute(.font, at: offset, effectiveRange: nil) as? NSFont else { return nil }
         let baseline = line.glyphOrigin.y - ((fragment as? NoteFragment)?.raise ?? 0)
         return (baseline - font.ascender, line.typographicBounds.height - baseline + font.descender)
+    }
+
+    /// Where the text holding `word` is drawn, in the view: TextKit's baseline less the fragment's raise.
+    static func drawnBaseline(_ view: NSTextView, of word: String) -> CGFloat? {
+        let at = (view.string as NSString).range(of: word).location
+        guard at != NSNotFound, let (fragment, line) = Self.line(view, at: at) else { return nil }
+        return fragment.layoutFragmentFrame.minY + line.typographicBounds.minY + line.glyphOrigin.y - ((fragment as? NoteFragment)?.raise ?? 0)
     }
 
     static func write(_ view: NSView, _ name: String) {

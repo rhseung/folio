@@ -36,6 +36,9 @@ final class Workspace {
     let recorder = LectureRecorder()
     /// Recordings being compressed into their course folder; each runs once even when a reload asks again.
     var finishingRecordings = Set<UUID>()
+    @ObservationIgnored var recoveryTried = Set<UUID>()
+    /// Tests, previews and renders point it at a folder of their own, away from this Mac's unfinished recordings.
+    @ObservationIgnored var pendingRecordings = PendingRecordings(url: URL.applicationSupportDirectory.appending(path: "Folio/Recording", directoryHint: .isDirectory))
     let transcriptions = TranscriptionQueue()
     @ObservationIgnored private var watcher: GISTWatcher?
     @ObservationIgnored private var lastOwnWrite = Date.distantPast
@@ -171,18 +174,7 @@ final class Workspace {
         courses.first { $0.id == id }
     }
 
-    var allCourseRecords: [Course] {
-        transcript.courses + courses.map(\.file.course)
-    }
-
-    /// A course kept only in transcript.json (a colloquium, a credited course).
-    func record(_ id: UUID) -> Course? {
-        transcript.courses.first { $0.id == id }
-    }
-
-    func records(in semester: Semester) -> [Course] {
-        transcript.courses.filter { $0.semesterId == semester.id }
-    }
+    var allCourses: [Course] { courses.map(\.file.course) }
 
     typealias ReviewEntry = FolioDomain.ReviewEntry
 

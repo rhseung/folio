@@ -67,6 +67,9 @@ enum Theme {
     enum Opacity {
         /// A tone or accent laid behind text of the same color: `Chip`, `DdayChip`, a picked toggle, `CourseAccent.tint`.
         static let tint = 0.12
+        /// A row laid on its tone's fill (Today's near deadlines): at half strength, so the chip on the row, which uses the
+        /// full fill, still stands apart from it.
+        static let toneRow = 0.5
         /// The projected part of a bar, lighter than what is already earned.
         static let projected = 0.28
         /// The text color washed over the window frame for a field or a track (`toolbarField()`, compact `Segmented`):
@@ -289,7 +292,6 @@ private extension UIColor {
 extension Workspace {
     /// `token` previews a color before it is saved; nil uses the stored one.
     func accent(_ id: UUID, token: String? = nil) -> CourseAccent {
-        // A course without a folder (a colloquium) stays gray: it reads as "no color" beside the term's own courses.
         guard let course = course(id) else { return .gray }
         let siblings = semester(of: course.file.course).map { courses(in: $0).map(\.id) } ?? []
         return CourseAccent.resolve(token: token ?? course.file.course.color, position: siblings.firstIndex(of: id) ?? 0)

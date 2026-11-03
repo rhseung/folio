@@ -738,17 +738,6 @@
         }
       }
     },
-    "class-times.record-note": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "학기 시간표에 표시합니다"
-          }
-        }
-      }
-    },
     "class-times.room": {
       "extractionState": "manual",
       "localizations": {
@@ -12255,17 +12244,6 @@
         }
       }
     },
-    "semester.courses.record-only": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "폴더 없이 성적만 기록"
-          }
-        }
-      }
-    },
     "semester.credited": {
       "extractionState": "manual",
       "localizations": {
@@ -12442,6 +12420,39 @@
         }
       }
     },
+    "semester.source": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출처"
+          }
+        }
+      }
+    },
+    "semester.source-example": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "영재고 AP"
+          }
+        }
+      }
+    },
+    "semester.source-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인정 학점을 받은 곳입니다. 이 학기의 과목 폴더가 _Credited/<출처>에 들어갑니다"
+          }
+        }
+      }
+    },
     "semester.start": {
       "extractionState": "manual",
       "localizations": {
@@ -12614,6 +12625,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "인정학기"
+          }
+        }
+      }
+    },
+    "semester.title-credited-source": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 인정학기"
           }
         }
       }
@@ -14444,17 +14466,6 @@
         }
       }
     },
-    "today.deadlines.today": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘"
-          }
-        }
-      }
-    },
     "today.note.create-help": {
       "extractionState": "manual",
       "localizations": {
@@ -14792,6 +14803,61 @@
           "stringUnit": {
             "state": "translated",
             "value": "오늘"
+          }
+        }
+      }
+    },
+    "unfiled.confirm-message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목마다 같은 ID로 폴더와 course.json을 만들고 transcript.json에서 뺍니다. cleanup undo로 되돌릴 수 있습니다"
+          }
+        }
+      }
+    },
+    "unfiled.detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이제 모든 과목이 폴더를 가집니다. 옮기기 전까지 이 과목들은 성적과 졸업 요건에서 빠집니다"
+          }
+        }
+      }
+    },
+    "unfiled.move": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "옮기기"
+          }
+        }
+      }
+    },
+    "unfiled.move-ellipsis": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더로 옮기기…"
+          }
+        }
+      }
+    },
+    "unfiled.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더 없는 과목 %lld개"
           }
         }
       }
@@ -15885,39 +15951,6 @@
         }
       }
     },
-    "today.deadlines.this-week": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이번 주"
-          }
-        }
-      }
-    },
-    "today.deadlines.next-week": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다음 주"
-          }
-        }
-      }
-    },
-    "today.deadlines.later": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "나중에"
-          }
-        }
-      }
-    },
     "today.more": {
       "extractionState": "manual",
       "localizations": {
@@ -16761,6 +16794,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "분"
+          }
+        }
+      }
+    },
+    "today.deadlines.today-at": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 %@"
+          }
+        }
+      }
+    },
+    "today.deadlines.tomorrow-at": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내일 %@"
+          }
+        }
+      }
+    },
+    "today.deadlines.in-days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld일 후"
           }
         }
       }

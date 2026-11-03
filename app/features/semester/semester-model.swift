@@ -22,6 +22,34 @@ final class SemesterModel {
 
     var semester: Semester? { workspace.transcript.semesters.first { $0.id == semesterID } }
 
+    // MARK: Credited source
+
+    /// The draft of a credited term's source, which names its `_Credited/<source>` folder.
+    var source = ""
+
+    func loadSource() { source = semester?.source ?? "" }
+
+    private var sourceChange: SemesterSource? {
+        let name = source.trimmingCharacters(in: .whitespaces)
+        return name.isEmpty || name == semester?.source ? nil : SemesterSource(semester: semesterID, source: name)
+    }
+
+    var sourceFolder: String? {
+        StandardLayout.creditedFolder(source: source.trimmingCharacters(in: .whitespaces))
+    }
+
+    var sourceRefusal: String? { sourceChange.flatMap { workspace.refusal($0) } }
+
+    var canSaveSource: Bool { sourceChange != nil && sourceRefusal == nil }
+
+    func sourceConfirmation() -> String { sourceChange.flatMap { workspace.confirmation($0) } ?? "" }
+
+    func saveSource() {
+        guard let sourceChange else { return }
+        workspace.run(sourceChange)
+        loadSource()
+    }
+
     // MARK: Recording audio
 
     /// A finished semester's recordings whose audio can go (`RecordingRetention`), by course.
@@ -71,14 +99,10 @@ final class SemesterModel {
 
     func courses(in semester: Semester) -> [LoadedCourse] { workspace.courses(in: semester) }
 
-    /// Courses of a semester that live only in transcript.json (no folder).
-    func records(in semester: Semester) -> [Course] { workspace.records(in: semester) }
-
     func timetable(_ s: Semester) -> TimetableLayout {
-        TimetableLayout(courses: courses(in: s).map(\.file.course) + records(in: s))
+        TimetableLayout(courses: courses(in: s).map(\.file.course))
     }
 
-    /// Nil for a record: it has no page to open, so the timetable opens its sheet instead.
     func folderCourse(_ course: Course) -> LoadedCourse? { workspace.course(course.id) }
 
     func isCurrent(_ s: Semester) -> Bool { s.isRunning(on: workspace.today) }
@@ -98,11 +122,11 @@ final class SemesterModel {
     }
 
     func stats(_ s: Semester) -> [StatStrip.Item] {
-        let courses = courses(in: s), records = records(in: s)
-        let summary = GPACalculator.semester(s, courses: workspace.allCourseRecords, catalog: workspace.catalog)
-        let credits = (courses.map(\.file.course.credits) + records.map(\.credits)).reduce(0, +)
+        let courses = courses(in: s)
+        let summary = GPACalculator.semester(s, courses: workspace.allCourses, catalog: workspace.catalog)
+        let credits = courses.map(\.file.course.credits).reduce(0, +)
         return [
-            .init(title: String(localized: .semesterStatCourses), value: String(localized: .semesterStatCourseCount(courses.count + records.count))),
+            .init(title: String(localized: .semesterStatCourses), value: String(localized: .semesterStatCourseCount(courses.count))),
             .init(title: String(localized: .semesterCreditsLabel), value: credits.formatted()),
             .init(title: String(localized: .semesterStatGraded), value: String(localized: .semesterCredits(summary.totalCredits.formatted())),
                   detail: String(localized: .semesterStatGradedDetail)),
@@ -114,11 +138,6 @@ final class SemesterModel {
 
     func detail(_ course: LoadedCourse) -> String {
         ([course.codeLine(workspace)] + course.factChips(workspace)).filter { !$0.isEmpty }.joined(separator: " · ")
-    }
-
-    func detail(_ record: Course) -> String {
-        [String(localized: .semesterCredits(record.credits.formatted())), record.gradingMode.label, String(localized: .semesterCoursesRecordOnly)]
-            .joined(separator: " · ")
     }
 
     /// Every dated exam of the term, soonest first.

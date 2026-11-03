@@ -93,11 +93,11 @@ final class ReaderTextView: NoteTextView, NSTextViewDelegate {
 
     func configure(accent: CourseAccent, syntax: MathSyntax, dark: Bool) {
         accentColors(accent)
-        core.configure(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark, width: columnWidth)
+        core.configure(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark, width: lineWidth)
     }
 
     override func columnChanged() {
-        core.builder?.width = columnWidth
+        core.builder?.width = lineWidth
         core.rerender()
     }
 
@@ -268,11 +268,11 @@ final class ReaderTextView: NoteTextView, UITextViewDelegate, UIGestureRecognize
 
     func configure(accent: CourseAccent, syntax: MathSyntax, dark: Bool) {
         accentColors(accent)
-        core.configure(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark, width: columnWidth)
+        core.configure(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark, width: lineWidth)
     }
 
     override func columnChanged() {
-        core.builder?.width = columnWidth
+        core.builder?.width = lineWidth
         core.rerender()
     }
 

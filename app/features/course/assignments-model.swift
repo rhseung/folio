@@ -69,12 +69,17 @@ final class AssignmentsModel {
     }
 
     func dueChip(_ a: Assignment, now: Date) -> (text: String, tone: Tone)? {
-        guard a.status.isOpen else { return nil }
-        switch DueState(due: a.due, now: now, calendar: workspace.calendar) {
+        guard a.status.isOpen, let due = a.due else { return nil }
+        let tone: Tone = switch DueUrgency(due: due, now: now, settings: workspace.settings, calendar: workspace.calendar) {
+        case .urgent: .danger
+        case .soon: .warning
+        case .later: .plain
+        }
+        switch DueState(due: due, now: now, calendar: workspace.calendar) {
         case .none: return nil
         case .overdue(let d): return (String(localized: d == 0 ? .assignmentsJustOverdue : .assignmentsOverdueDays(d)), .danger)
-        case .hours(let h): return (String(localized: .assignmentsHoursLeft(h)), .danger)
-        case .days(let d): return ("D-\(d)", d <= 3 ? .warning : .plain)
+        case .hours(let h): return (String(localized: .assignmentsHoursLeft(h)), tone)
+        case .days(let d): return ("D-\(d)", tone)
         }
     }
 }

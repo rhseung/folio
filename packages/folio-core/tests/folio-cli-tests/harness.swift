@@ -18,6 +18,14 @@ struct Harness {
         try Fixture.standard.copyToTemp()
     }
 
+    /// A course left in transcript.json the way schema v1 kept it, which no command makes any more.
+    static func unfile(_ course: Course, gist: URL) throws {
+        let store = GISTStore(url: gist)
+        var doc = try store.loadTranscript()
+        doc.model.unfiledCourses.append(course)
+        try store.save(doc)
+    }
+
     struct Result {
         var code: Int32
         var out: String
