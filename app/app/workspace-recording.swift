@@ -4,10 +4,6 @@ import FolioStorage
 import Foundation
 
 extension Workspace {
-    var pendingRecordings: PendingRecordings {
-        PendingRecordings(url: URL.applicationSupportDirectory.appending(path: "Folio/Recording", directoryHint: .isDirectory))
-    }
-
     func startRecording(_ session: Session, in course: LoadedCourse) async {
         guard !recorder.isActive else { return }
         let pending = pendingRecordings
@@ -50,9 +46,12 @@ extension Workspace {
         await finishRecording(PendingRecording(courseId: id, recording: recording))
     }
 
-    /// Recordings left on this device by a quit or a crash. The one being recorded is not among them.
+    /// Recordings left on this device by a quit or a crash. The one being recorded is not among them. Each is tried
+    /// once per launch: every reload asks (a course can arrive by sync later), and a failure would show its dialog again
+    /// on every file change.
     func recoverRecordings() {
-        for pending in pendingRecordings.all() where pending.recording.id != recorder.current {
+        for pending in pendingRecordings.all() where pending.recording.id != recorder.current && course(pending.courseId) != nil {
+            guard recoveryTried.insert(pending.recording.id).inserted else { continue }
             Task { await finishRecording(pending) }
         }
     }

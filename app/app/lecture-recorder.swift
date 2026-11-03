@@ -34,17 +34,28 @@ final class LectureRecorder {
     /// Keeps the bookmarks beside the audio, so a crash doesn't lose them.
     @ObservationIgnored var saveProgress: (Recording) -> Void = { _ in }
     @ObservationIgnored private var lastRestart = Date.distantPast
+    @ObservationIgnored private var starting: UUID?
 
     var isActive: Bool { state != .idle }
     /// `recording` outlives the recording, so the sidebar card keeps its course and session while it slides away;
     /// asking it instead once read a finished recording as still under way, and deleting it was refused.
-    var current: UUID? { isActive ? recording?.id : nil }
+    /// While starting, `recording` is still the previous one: recovery took the new one's empty file for a crash's
+    /// leftover and moved it into the course folder, and the lecture went on into a deleted file.
+    var current: UUID? {
+        switch state {
+        case .idle: nil
+        case .preparing: starting
+        case .recording, .paused: recording?.id
+        }
+    }
 
     /// Starts recording into `file`, an uncompressed CAF on this device: unlike AAC, it stays readable up to the last
     /// buffer if the app dies mid-lecture. Transcription is best effort; the audio never waits on it.
     func start(_ recording: Recording, at file: URL, course: UUID, title: String, locale: Locale) async throws {
         guard state == .idle else { return }
         state = .preparing
+        starting = recording.id
+        defer { starting = nil }
         do {
             guard await AVAudioApplication.requestRecordPermission() else { throw RecorderError.microphoneDenied }
             #if os(iOS)
@@ -77,6 +88,8 @@ final class LectureRecorder {
             guard let sink = AudioSink(file: audioFile, input: input, fileFormat: fileFormat, analyzerFormat: transcription?.1, analyzer: analyzerInput) else {
                 throw RecorderError.noMicrophone
             }
+            // A second tap on the bus raises an Objective-C exception, which ends the app.
+            engine.inputNode.removeTap(onBus: 0)
             sink.install(on: engine.inputNode, format: input)
             engine.prepare()
             try engine.start()
@@ -105,7 +118,7 @@ final class LectureRecorder {
             clockTask = Task { [weak self] in
                 while !Task.isCancelled {
                     try? await Task.sleep(for: .milliseconds(200))
-                    guard let self, let sink = self.sink else { return }
+                    guard !Task.isCancelled, let self, let sink = self.sink else { return }
                     self.elapsed = sink.seconds
                     self.level = self.state == .recording ? LectureLoudness.level(sink.takeDecibels()) : 0
                     // A changed microphone (AirPods, a dock), an interruption or sleep stops the engine without telling
@@ -178,8 +191,7 @@ final class LectureRecorder {
 
     func stop() async -> (Recording, LectureTranscript)? {
         guard isActive, var recording else { return nil }
-        engine.inputNode.removeTap(onBus: 0)
-        engine.stop()
+        stopEngine()
         let seconds = sink?.seconds ?? elapsed
         sink?.close()
         try? await analyzer?.finalizeAndFinishThroughEndOfInput()
@@ -196,8 +208,7 @@ final class LectureRecorder {
     /// For quitting: the audio stays where it is and moves into the course folder at the next launch.
     func stopNow() {
         guard isActive else { return }
-        engine.inputNode.removeTap(onBus: 0)
-        engine.stop()
+        stopEngine()
         sink?.close()
         if let recording, !lines.isEmpty || !volatile.isEmpty {
             let heard = volatile.isEmpty ? lines : lines + [.init(start: lines.last?.end ?? 0, end: elapsed, text: volatile)]
@@ -247,11 +258,19 @@ final class LectureRecorder {
         try? await analyzer.setContext(SpeechAssets.context(hints))
     }
 
-    private func teardown() {
-        resultsTask?.cancel()
+    /// The clock stops first. It restarts an engine it finds stopped, and stopping awaits the transcriber for seconds:
+    /// it put the microphone back on with a fresh tap, and the next recording's tap on the same bus crashed the app.
+    private func stopEngine() {
         clockTask?.cancel()
-        resultsTask = nil
         clockTask = nil
+        engine.inputNode.removeTap(onBus: 0)
+        engine.stop()
+    }
+
+    private func teardown() {
+        stopEngine()
+        resultsTask?.cancel()
+        resultsTask = nil
         sink = nil
         analyzer = nil
         level = 0

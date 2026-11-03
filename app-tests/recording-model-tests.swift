@@ -1,5 +1,6 @@
 import FolioActions
 import FolioDomain
+import FolioStorage
 import Foundation
 import Testing
 @testable import Folio
@@ -68,6 +69,45 @@ struct RecordingPlayerModelTests {
         #expect(model.removalRefusal != nil && !model.canTranscribe)
         model.remove()
         #expect(workspace.course(linearAlgebra)?.file.recordings.count == 1)
+    }
+
+    /// The pending folder is read on every reload. A leftover that fails to move in must not put its error up again
+    /// with each file change.
+    @Test func aLeftoverRecordingIsTriedOncePerLaunch() async throws {
+        let workspace = try fixtureWorkspace()
+        let folder = URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        workspace.pendingRecordings = PendingRecordings(url: folder)
+        let recording = Recording(device: workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a")
+        try workspace.pendingRecordings.save(PendingRecording(courseId: linearAlgebra, recording: recording))
+        try Data("not audio".utf8).write(to: workspace.pendingRecordings.audioURL(of: recording.id))
+
+        workspace.recoverRecordings()
+        try await waitFor { workspace.error != nil }
+        workspace.error = nil
+        workspace.reload()
+        // Nothing to wait for if it was skipped; long enough for a retry to fail like the first try.
+        try await Task.sleep(for: .milliseconds(300))
+        #expect(workspace.error == nil)
+        // Kept on this device for the next launch.
+        #expect(workspace.pendingRecordings.all().map(\.recording.id) == [recording.id])
+    }
+
+    @Test func aLeftoverOfAnotherFolderIsLeftAlone() async throws {
+        let workspace = try fixtureWorkspace()
+        let folder = URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
+        defer { try? FileManager.default.removeItem(at: folder) }
+        workspace.pendingRecordings = PendingRecordings(url: folder)
+        let recording = Recording(device: workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a")
+        try workspace.pendingRecordings.save(PendingRecording(courseId: UUID(), recording: recording))
+        try Data("not audio".utf8).write(to: workspace.pendingRecordings.audioURL(of: recording.id))
+        workspace.recoverRecordings()
+        #expect(workspace.recoveryTried.isEmpty)
+    }
+
+    private func waitFor(_ condition: () -> Bool) async throws {
+        for _ in 0..<250 where !condition() { try await Task.sleep(for: .milliseconds(20)) }
+        #expect(condition())
     }
 
     /// Needs a spoken file and this Mac's speech model, so it runs only when given one:
