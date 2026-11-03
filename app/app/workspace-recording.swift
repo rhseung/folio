@@ -100,6 +100,8 @@ extension Workspace {
     private func finishRecording(_ pending: PendingRecording) async {
         let id = pending.recording.id
         guard let course = course(pending.courseId), finishingRecordings.insert(id).inserted else { return }
+        // Here rather than only in recovery, so one that failed right after stopping isn't tried again on a reload.
+        recoveryTried.insert(id)
         defer { finishingRecordings.remove(id) }
         let local = pendingRecordings
         var recording = pending.recording
