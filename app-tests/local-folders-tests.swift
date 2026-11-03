@@ -19,6 +19,8 @@ struct LocalFoldersTests {
         #expect(throws: LocalFolders.RealFolderInIsolatedRun.self) { try LocalFolders.url("Recording", environment: ["XCODE_RUNNING_FOR_PREVIEWS": "1"]) }
         let app = try LocalFolders.url("Recording", environment: [:])
         #expect(app.standardizedFileURL.path.hasPrefix(Self.real))
+        // The app's own recordings stay out of tmp, which the system may empty before they reach their course.
+        #expect(try LocalFolders.url("Recording", perGIST: true, environment: [:]).standardizedFileURL.path.hasPrefix(Self.real))
     }
 
     /// The window snapshots and `FOLIO_GIST` runs are the app itself, so they record, but never into this Mac's folder.
