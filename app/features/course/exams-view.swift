@@ -82,7 +82,7 @@ struct ExamsView: View {
                 if let folder = model.folder(of: exam) {
                     CardRow(last: true) {
                         Label(folder, systemImage: "folder").foregroundStyle(Theme.Palette.textSecondary)
-                        Text(model.folderDetail(folder))
+                        Text(model.folderDetail(exam))
                             .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
                         Spacer(minLength: 0)
                     }

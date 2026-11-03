@@ -10,7 +10,7 @@ enum GeneratedCommands {
     static let component: [any ParsableCommand.Type] = [ComponentAdd.self, ComponentSet.self, ComponentRemove.self]
     static let exam: [any ParsableCommand.Type] = [ExamAdd.self, ExamSet.self, ExamRemove.self, ExamSummary.self]
     static let examPlan: [any ParsableCommand.Type] = [ExamPlanAdd.self]
-    static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialUntrack.self, MaterialTrash.self, MaterialBuild.self]
+    static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialLinkExam.self, MaterialUntrack.self, MaterialTrash.self, MaterialBuild.self]
     static let note: [any ParsableCommand.Type] = [NoteAdopt.self, NoteRemove.self, NoteBuild.self]
     static let problemSet: [any ParsableCommand.Type] = [ProblemSetRemove.self, ProblemLinkUnit.self]
     static let recording: [any ParsableCommand.Type] = [RecordingTrim.self]
@@ -388,7 +388,7 @@ enum GeneratedCommands {
     }
 
     struct ExamAdd: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "add", abstract: "시험 추가. 시험 폴더(Exams/<제목>)도 만든다", discussion: """
+        static let configuration = CommandConfiguration(commandName: "add", abstract: "시험 추가. 시험 폴더(Exams/<제목>)는 첫 파일과 함께 생긴다", discussion: """
             예시:
               folio exam add EC4207 중간고사 --start \"2026-10-21 10:00\" --end \"2026-10-21 12:00\" --location B101
               folio exam add EC4207 Quiz1 --start 2026-09-30 --dry-run
@@ -831,6 +831,31 @@ enum GeneratedCommands {
         }
     }
 
+    struct MaterialLinkExam: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "link-exam", abstract: "자료를 시험에 연결하거나 떼기. 시험 폴더 밖의 자료(Study, Inherited)를 그 시험에 모은다", discussion: """
+            예시:
+              folio material link-exam EC4207/Study/Problems.pdf 중간고사
+              folio material link-exam EC4207/Study/Problems.pdf 중간고사 --off
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<자료>", valueName: "material"), completion: Complete.ref("Material")) var material: String
+        @Argument(help: ArgumentHelp("같은 과목의 시험", valueName: "exam"), completion: Complete.ref("Exam")) var exam: String = ""
+        @Flag(name: .customLong("off"), help: "연결 떼기") var off = false
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, materialName) = try r.split(material)
+            let action = FolioActions.MaterialLinkExam(
+                course: c.id,
+                material: try r.id("Material", materialName, in: c),
+                exam: try r.id("Exam", exam, in: c),
+                linked: !off
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
     struct MaterialUntrack: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "untrack", abstract: "자료 추적 그만두기. 파일과 연결은 그대로 둔다", discussion: """
             예시:
@@ -963,7 +988,7 @@ enum GeneratedCommands {
     }
 
     struct NoteBuild: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "build", abstract: "LaTeX 노트(.tex)를 Tectonic으로 PDF로 만들어 Notes/Exports(시험 정리는 Exercises)에 둔다", discussion: """
+        static let configuration = CommandConfiguration(commandName: "build", abstract: "LaTeX 노트(.tex)를 Tectonic으로 PDF로 만들어 Study에 둔다", discussion: """
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<.tex 노트>", valueName: "note"), completion: Complete.ref("NotePath")) var note: String = ""

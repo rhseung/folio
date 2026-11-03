@@ -94,12 +94,13 @@ struct ActionTests {
         #expect(try file().course.schedule.map(\.link) == [nil, "https://zoom.us/j/1"])
     }
 
-    @Test func aNewExamGetsItsFolder() throws {
-        let exam = ExamAdd(course: Self.graphTheory, title: "Quiz1", start: now)
-        let ctx = try run(exam)
-        let folder = try #require(ctx.changes.first { $0.path.hasSuffix("/") }).path
-        #expect(FileManager.default.fileExists(atPath: gist.url.appending(path: folder).path))
-        #expect(try file().exams.contains { $0.id == ctx.made })
+    /// The folder is named now but made by the first file, so an exam with no files leaves no empty folder behind.
+    @Test func aNewExamNamesItsFolderWithoutMakingIt() throws {
+        let ctx = try run(ExamAdd(course: Self.graphTheory, title: "Quiz1", start: now))
+        #expect(!ctx.changes.contains { $0.path.hasSuffix("/") })
+        let exam = try #require(try file().exams.first { $0.id == ctx.made })
+        #expect(exam.folder == "Quiz1")
+        #expect(!FileManager.default.fileExists(atPath: try ActionContext(gist: gist, device: device).store(Self.graphTheory).fileURL("Exams/Quiz1").path))
     }
 
     @Test func aNoteChangedElsewhereIsNotOverwritten() throws {

@@ -4,7 +4,7 @@ import Foundation
 
 // MARK: Exams
 
-@Action("exam add", "시험 추가. 시험 폴더(Exams/<제목>)도 만든다", effect: .creates, done: "시험 '{title}'을(를) 추가했습니다",
+@Action("exam add", "시험 추가. 시험 폴더(Exams/<제목>)는 첫 파일과 함께 생긴다", effect: .creates, done: "시험 '{title}'을(를) 추가했습니다",
         examples: [#"folio exam add EC4207 중간고사 --start "2026-10-21 10:00" --end "2026-10-21 12:00" --location B101"#,
                    "folio exam add EC4207 Quiz1 --start 2026-09-30 --dry-run"],
         phrases: ["기말고사 추가", "중간고사 등록", "시험 추가", "중간고사 추가", "기말 등록", "퀴즈 일정"])
@@ -39,12 +39,6 @@ public struct ExamAdd {
             exam.folder = MaterialIntake.examFolder(title: title, among: f.exams)
             f.exams.append(exam)
             f.setScope(scope, exam: id)
-        }
-        if let path = MaterialIntake.folder(of: exam) {
-            let store = try ctx.store(course)
-            if !FileManager.default.fileExists(atPath: store.fileURL(path).path) {
-                try ctx.io(Change(.added, ctx.relative(store.fileURL(path)) + "/")) { try store.ensureFolder(exam: exam) }
-            }
         }
         ctx.made(id)
     }

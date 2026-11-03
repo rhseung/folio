@@ -25,7 +25,8 @@ struct CourseStoreTests {
         let materials = try refreshed(store).model.materials
         #expect(materials.count == 13)
         #expect(materials.allSatisfy { $0.status == .classified && $0.hash != nil })
-        #expect(materials.contains { $0.path == "Exams/Past/2024 Midterm (소순범).pdf" && $0.role == .pastExam })
+        #expect(materials.contains { $0.path == "Inherited/소순범/2024 Midterm.pdf" && $0.role == .inherited })
+        #expect(materials.contains { $0.path == "Study/Problems.tex" && $0.role == .study })
         #expect(!materials.contains { $0.path.hasPrefix("Notes/") })
 
         #expect(try refreshed(store).model.materials == materials)

@@ -111,11 +111,10 @@ public struct MaterialBuild {
     }
 }
 
-/// A note's PDF goes to `Notes/Exports/<title>.pdf` (an exam summary's to Exercises), not beside it: Notes/ holds only
-/// notes. The place is chosen by title, so two notes can share it and another tool's export may already be there; as
+/// A note's PDF goes to `Study/<title>.pdf`, not beside it: Notes/ holds only notes. The place is chosen by title, so two notes can share it and another tool's export may already be there; as
 /// with `material build`, only a PDF this action wrote is replaced without `overwrite`, and a replaced one goes to the
 /// Trash. No examples, for the same reason as `material build`.
-@Action("note build", "LaTeX 노트(.tex)를 Tectonic으로 PDF로 만들어 Notes/Exports(시험 정리는 Exercises)에 둔다", done: "노트 '{note}'을(를) PDF로 만들었습니다",
+@Action("note build", "LaTeX 노트(.tex)를 Tectonic으로 PDF로 만들어 Study에 둔다", done: "노트 '{note}'을(를) PDF로 만들었습니다",
         phrases: ["tex 노트 컴파일", "노트 PDF 만들기"])
 public struct NoteBuild {
     /// 과목
@@ -156,7 +155,7 @@ public struct NoteBuild {
         let hash = try store.hash(target)
         try ctx.edit(course) { f in
             if let i = f.notes.firstIndex(where: { $0.id == entry.id }) { f.notes[i].builtHash = hash }
-            // An exam summary's PDF lands in Exercises, a material folder, so it is tracked right away as material build does.
+            // Study is a material folder, so the PDF is tracked right away as material build does.
             try store.refreshMaterials(in: &f, device: ctx.device, now: ctx.now)
             if let i = f.materials.firstIndex(where: { $0.path == target }) { try store.rehash(f.materials[i].id, in: &f, device: ctx.device, now: ctx.now) }
         }

@@ -29,7 +29,7 @@ struct TextFileActionTests {
         try #require(try ActionContext(gist: gist, device: device).file(Self.course).materials.first { $0.path == path })
     }
 
-    static let tex = "Exams/Midterm/Problems.tex"
+    static let tex = "Study/Problems.tex"
 
     @Test func writeReplacesTheFileAndItsHash() throws {
         let before = try material(Self.tex)
@@ -66,8 +66,8 @@ struct TextFileActionTests {
     }
 
     @Test func aPDFIsNotText() throws {
-        let m = try material("Exams/Midterm/Problems.pdf")
-        #expect(throws: ActionError.rule("텍스트 파일이 아니라서 쓸 수 없습니다: Exams/Midterm/Problems.pdf")) {
+        let m = try material("Study/Problems.pdf")
+        #expect(throws: ActionError.rule("텍스트 파일이 아니라서 쓸 수 없습니다: Study/Problems.pdf")) {
             try run(MaterialWrite(course: Self.course, material: m.id, text: "x"))
         }
     }
@@ -93,20 +93,20 @@ struct TextFileActionTests {
     /// until something else replaces it.
     @Test func buildReplacesOnlyItsOwnPDFWithoutAsking() throws {
         let tex = try material(Self.tex)
-        let given = try store.readText("Exams/Midterm/Problems.pdf")
+        let given = try store.readText("Study/Problems.pdf")
         #expect(throws: ActionError.self) { try run(MaterialBuild(course: Self.course, material: tex.id, pdf: try builtPDF("%PDF-1.7 built").path)) }
-        #expect(try store.readText("Exams/Midterm/Problems.pdf") == given)
+        #expect(try store.readText("Study/Problems.pdf") == given)
 
         let ctx = try run(MaterialBuild(course: Self.course, material: tex.id, pdf: try builtPDF("%PDF-1.7 built").path, overwrite: true))
-        #expect(ctx.changes.first == Change(.changed, "2026-3/EC4207 그래프 이론/Exams/Midterm/Problems.pdf"))
-        #expect(try store.readText("Exams/Midterm/Problems.pdf") == "%PDF-1.7 built")
-        let pdf = try material("Exams/Midterm/Problems.pdf")
+        #expect(ctx.changes.first == Change(.changed, "2026-3/EC4207 그래프 이론/Study/Problems.pdf"))
+        #expect(try store.readText("Study/Problems.pdf") == "%PDF-1.7 built")
+        let pdf = try material("Study/Problems.pdf")
         #expect(try material(Self.tex).sourceOf == pdf.id && pdf.builtHash == pdf.hash)
 
         try run(MaterialBuild(course: Self.course, material: tex.id, pdf: try builtPDF("%PDF-1.7 again").path))
-        #expect(try store.readText("Exams/Midterm/Problems.pdf") == "%PDF-1.7 again")
+        #expect(try store.readText("Study/Problems.pdf") == "%PDF-1.7 again")
 
-        try store.writeText("Exams/Midterm/Problems.pdf", text: "%PDF from elsewhere")
+        try store.writeText("Study/Problems.pdf", text: "%PDF from elsewhere")
         #expect(throws: ActionError.self) { try run(MaterialBuild(course: Self.course, material: tex.id, pdf: try builtPDF("%PDF").path)) }
     }
 
@@ -125,14 +125,14 @@ struct TextFileActionTests {
         try run(MaterialMove(course: Self.course, material: tex.id, to: "Assignments/HW03/hw.tex"))
         try run(MaterialBuild(course: Self.course, material: tex.id, pdf: try builtPDF("%PDF moved", of: "Assignments/HW03/hw.tex").path))
         #expect(try store.readText("Assignments/HW03/hw.pdf") == "%PDF moved")
-        #expect(try store.readText("Exams/Midterm/Problems.pdf") != "%PDF moved")
+        #expect(try store.readText("Study/Problems.pdf") != "%PDF moved")
         #expect(try material("Assignments/HW03/hw.tex").sourceOf == material("Assignments/HW03/hw.pdf").id)
     }
 
     /// Any other file would take the course PDF's place and be marked as built, so the next build wouldn't ask.
     @Test func aPDFFromOutsideTheBuildFolderIsRefused() throws {
         let tex = try material(Self.tex)
-        let given = try store.readText("Exams/Midterm/Problems.pdf")
+        let given = try store.readText("Study/Problems.pdf")
         let elsewhere = FileManager.default.temporaryDirectory.appending(path: "folio-\(UUID().uuidString).pdf")
         try Data("%PDF other".utf8).write(to: elsewhere)
         for path in [elsewhere.path, TexEngine.outputFolder(for: store.fileURL(Self.tex)).path + "/../x.pdf"] {
@@ -140,12 +140,12 @@ struct TextFileActionTests {
                 try run(MaterialBuild(course: Self.course, material: tex.id, pdf: path, overwrite: true))
             }
         }
-        #expect(try store.readText("Exams/Midterm/Problems.pdf") == given)
+        #expect(try store.readText("Study/Problems.pdf") == given)
     }
 
     @Test func buildTakesOnlyTex() throws {
-        let m = try material("Exams/Midterm/Problems.pdf")
-        #expect(throws: ActionError.rule("LaTeX 파일(.tex)만 PDF로 만듭니다: Exams/Midterm/Problems.pdf")) {
+        let m = try material("Study/Problems.pdf")
+        #expect(throws: ActionError.rule("LaTeX 파일(.tex)만 PDF로 만듭니다: Study/Problems.pdf")) {
             try run(MaterialBuild(course: Self.course, material: m.id))
         }
     }

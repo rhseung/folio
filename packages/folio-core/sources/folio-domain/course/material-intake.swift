@@ -20,16 +20,16 @@ public enum MaterialIntake {
     /// Standard folders a file can be put in by hand, course-relative. `Lectures` is left to session rows,
     /// which know the week its name needs.
     public static func places(assignmentFolders: [String]) -> [String] {
-        [CourseFolder.syllabus, .exercises, .textbooks, .archive].map(\.rawValue)
-            + ["\(CourseFolder.exams.rawValue)/\(StandardLayout.pastExamsFolder)"]
+        [CourseFolder.syllabus, .exercises, .textbooks, .inherited, .study, .archive].map(\.rawValue)
             + assignmentFolders.map { "\(CourseFolder.assignments.rawValue)/\($0)" }
     }
 
+    /// An exam's own folder. It is made by the first file put in it, so an exam without files leaves no empty folder.
     public static func folder(of exam: Exam) -> String? {
         exam.folder.map { "\(CourseFolder.exams.rawValue)/\($0)" }
     }
 
-    /// A new exam's folder: its title made safe for a path, numbered past the folders other exams (and `Past`) hold.
+    /// A new exam's folder: its title made safe for a path, numbered past the folders other exams (and a legacy `Past`) hold.
     public static func examFolder(title: String, among exams: [Exam]) -> String {
         examFolder(title: title, taken: Set(exams.compactMap(\.folder)))
     }
@@ -37,6 +37,6 @@ public enum MaterialIntake {
     public static func examFolder(title: String, taken: Set<String>) -> String {
         var name = title.replacing(/[\/:]/, with: "-").trimmingCharacters(in: .whitespacesAndNewlines)
         if name.hasPrefix(".") { name = String(name.drop { $0 == "." }) }
-        return freeName(name.isEmpty ? "Exam" : name, taken: taken.union([StandardLayout.pastExamsFolder]))
+        return freeName(name.isEmpty ? "Exam" : name, taken: taken.union([StandardLayout.legacyPastExamsFolder]))
     }
 }

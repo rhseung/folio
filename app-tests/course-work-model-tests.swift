@@ -52,7 +52,7 @@ struct ExamsModelTests {
         let start = Date(timeIntervalSince1970: 1_790_000_000)
         let editor = ExamEditorModel(workspace: workspace, course: course,
                                      exam: Exam(device: workspace.device, at: start, title: "중간고사", start: start, end: start + 7200))
-        #expect(editor.note == "시험 폴더 Exams/중간고사도 만듭니다")
+        #expect(editor.note == "파일을 넣으면 시험 폴더 Exams/중간고사에 둡니다")
         editor.setStart(start + 86_400)
         #expect(editor.draft.end == start + 86_400 + 7200)
         editor.draft.end = start

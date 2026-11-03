@@ -36,7 +36,7 @@ extension NoteMeta {
 extension CourseStore {
     var notesURL: URL { url.appending(path: CourseFolder.notes.rawValue) }
 
-    static let nonNoteFolders: Set<String> = [StandardLayout.noteAssetsFolder, StandardLayout.noteExportsFolder]
+    static let nonNoteFolders: Set<String> = [StandardLayout.noteAssetsFolder, StandardLayout.legacyNoteExportsFolder]
 
     /// The path a note entry stores. Note URLs are always built from the course folder, so the fallback is never
     /// taken in practice; it only spares callers an optional.
@@ -115,11 +115,10 @@ extension CourseStore {
         return notesURL.appending(path: "\(name).\(format.fileExtension)")
     }
 
-    /// Where a note's PDF goes, by title, wherever in Notes/ the note sits. An exam summary's goes to Exercises with
-    /// the rest of what was made to prepare for an exam.
+    /// Where a note's PDF goes, by title, wherever in Notes/ the note sits: Study, with everything else self-made.
+    /// Notes/ keeps only notes, and a PDF there would be listed as neither a note nor a material.
     public func exportPath(of note: NoteFile) -> String {
-        guard note.meta.kind != .examSummary else { return "\(CourseFolder.exercises.rawValue)/\(note.title).pdf" }
-        return "\(CourseFolder.notes.rawValue)/\(StandardLayout.noteExportsFolder)/\(note.title).pdf"
+        "\(CourseFolder.study.rawValue)/\(note.title).pdf"
     }
 
     /// Creates the file only; the caller adds its entry to course.json.

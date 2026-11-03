@@ -40,6 +40,8 @@ struct FixtureTests {
             .init(.unknownCourseSubfolder, "\(robot)/Manuals"),
             .init(.unknownCourseSubfolder, "\(robot)/Reports"),
             .init(.fileInCourseFolder, "\(robot)/실험 스케줄.pdf"),
+            .init(.legacyFolder, "\(ec)/Notes/Exports"),
+            .init(.legacyFolder, "2026-3/GS1211 일반화학실험/Exams/Past"),
         ]
         let issues = try gist.layoutIssues()
         #expect(Set(issues) == expected)

@@ -14,11 +14,15 @@ public enum Fixture: String, CaseIterable, Sendable {
     }
 
     /// A file without content gets a line naming its own path, so every placeholder (the `.pdf`s too, which are not
-    /// valid PDFs) has a distinct hash.
+    /// valid PDFs) has a distinct hash. A path ending in `/` is an empty folder.
     public func write(to folder: URL) throws {
         let fm = FileManager.default
         for (path, content) in files {
             let url = folder.appending(path: path)
+            if path.hasSuffix("/") {
+                try fm.createDirectory(at: url, withIntermediateDirectories: true)
+                continue
+            }
             try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try Data((content ?? "fixture placeholder: \(rawValue)/\(path)\n").utf8).write(to: url)
         }
