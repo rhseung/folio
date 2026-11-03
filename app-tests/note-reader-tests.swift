@@ -270,6 +270,18 @@ struct NoteReaderTests {
         #expect(pictures.count == 2 && pictures[1].typographicBounds.height < pictures[0].typographicBounds.height / 2)
     }
 
+    /// By a tall picture a line is shorter by the gap kept under it. Centered on the full height, its text sat half the
+    /// gap under the middle of the line, and the caret and selection, which follow the line, stood above the text.
+    @Test func textByAPictureStandsInTheMiddleOfItsLine() throws {
+        let (view, _) = Self.reader("앞\n\n첫 줄\n![그림](assets/sample.png)\n끝 줄\n\n뒤")
+        let shown = view.string as NSString
+        for word in ["첫 줄", "끝 줄"] {
+            let at = shown.range(of: word).location
+            let gaps = try #require(NoteRender.gaps(view, at: at))
+            #expect(abs(gaps.above - gaps.below) <= 1, "\(word): \(gaps)")
+        }
+    }
+
     @Test func aParagraphWithAPictureStillWritesBack() throws {
         let edits = Edits()
         let source = "![그림](assets/sample.png)\n첫 줄\n둘째 줄"

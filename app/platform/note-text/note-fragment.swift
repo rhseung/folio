@@ -77,16 +77,20 @@ enum NoteLines {
             let natural = ascent + descent
             let height = ((natural + style.lineSpacing) / 2).rounded() * 2
             // Unbounded, a line takes its own height and nothing for the gap, so a picture's line keeps the gap as
-            // spacing under every line, and the text's lines are that much shorter to come out the same height.
+            // spacing under every line, and the text's lines are that much shorter to come out the same height. The
+            // text stands in the middle of that shorter line, where the caret and selection are, so the paragraph's
+            // last line has half a gap more under it than other text, which comes off the paragraph's spacing. Moving
+            // the other half over the paragraph can't be done: any spacing before it brings a whole gap with it.
             let gap = tall.isEmpty ? 0 : style.lineSpacing
+            let box = height - gap
             style.lineSpacing = gap
-            style.minimumLineHeight = height - gap
+            style.paragraphSpacing = max(0, style.paragraphSpacing - gap / 2)
+            style.minimumLineHeight = box
             style.maximumLineHeight = tall.isEmpty ? height : 0
             text.addAttribute(.paragraphStyle, value: style, range: p)
             // TextKit 2 sits the baseline on the line's bottom, and `baselineOffset` doesn't move it there: a positive
-            // one shortens the line, a negative one moves the reported glyph origin but not the drawn text. The gap
-            // under a line moves its text up by as much, so it comes down half of it to stand in the middle again.
-            let raise = (height - gap - descent).rounded() - (height + ascent - descent) / 2
+            // one shortens the line, a negative one moves the reported glyph origin but not the drawn text.
+            let raise = (box - descent).rounded() - (box + ascent - descent) / 2
             text.addAttribute(.noteRaise, value: (raise * 2).rounded() / 2, range: p)
             text.addAttribute(.noteCaret, value: natural.rounded(), range: p)
         }
