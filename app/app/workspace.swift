@@ -39,7 +39,7 @@ final class Workspace {
     @ObservationIgnored var recoveryTried = Set<UUID>()
     /// Lazy so tests, previews and renders can give a folder of their own before the first use; one that forgets
     /// stops there (`LocalFolders`) instead of recovering this Mac's unfinished recordings into a fixture.
-    @ObservationIgnored lazy var pendingRecordings = PendingRecordings(url: LocalFolders.applicationSupport("Recording"))
+    @ObservationIgnored lazy var pendingRecordings = PendingRecordings(url: LocalFolders.applicationSupport("Recording", perGIST: true))
     let transcriptions = TranscriptionQueue()
     @ObservationIgnored private var watcher: GISTWatcher?
     @ObservationIgnored private var lastOwnWrite = Date.distantPast
@@ -57,7 +57,7 @@ final class Workspace {
     /// The folder as a plain path for the folio command, which can't resolve this app's bookmark without a sandbox warning.
     static let pathKey = "folio.gistPath"
     /// Lets a development run point at a fixture copy instead of the real folder.
-    static let environmentKey = "FOLIO_GIST"
+    nonisolated static let environmentKey = "FOLIO_GIST"
 
     init() {
         // The test host and Xcode previews must never open the saved folder: that is the real GIST folder.

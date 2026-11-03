@@ -1,3 +1,4 @@
+import CryptoKit
 import Foundation
 
 /// This device's own folders under Application Support/Folio, the only way the app reaches them.
@@ -18,12 +19,20 @@ enum LocalFolders {
         environment["XCTestConfigurationFilePath"] != nil || environment["XCODE_RUNNING_FOR_PREVIEWS"] == "1"
     }
 
-    static func url(_ name: String, environment: [String: String] = ProcessInfo.processInfo.environment) throws -> URL {
+    /// `perGIST` folders hold data about the courses of one GIST folder. An app run on a fixture (`FOLIO_GIST`, the
+    /// window snapshots included) gets them in a temporary folder of its own: fixture course IDs are fixed, so with
+    /// the real folder a fixture run's leftovers would stay there forever, and the next fixture run would recover a
+    /// real lecture into a throwaway folder and delete it here.
+    static func url(_ name: String, perGIST: Bool = false, environment: [String: String] = ProcessInfo.processInfo.environment) throws -> URL {
         guard !isIsolated(environment) else { throw RealFolderInIsolatedRun(name: name) }
+        if perGIST, let gist = environment[Workspace.environmentKey] {
+            let digest = SHA256.hash(data: Data(gist.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
+            return URL.temporaryDirectory.appending(path: "Folio-\(digest)/\(name)", directoryHint: .isDirectory)
+        }
         return URL.applicationSupportDirectory.appending(path: "Folio/\(name)", directoryHint: .isDirectory)
     }
 
-    static func applicationSupport(_ name: String) -> URL {
-        do { return try url(name) } catch { fatalError("\(error)") }
+    static func applicationSupport(_ name: String, perGIST: Bool = false) -> URL {
+        do { return try url(name, perGIST: perGIST) } catch { fatalError("\(error)") }
     }
 }
