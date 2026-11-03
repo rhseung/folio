@@ -179,7 +179,7 @@ final class MaterialsModel {
         workspace.perform { try store.log.append(MaterialViewEvent(materialId: m.id, page: page), device: workspace.device, at: .now) }
     }
 
-    var recording: UUID? { workspace.recorder.current }
+    var recording: UUID? { workspace.recorder.capturing }
 
     /// `page` is 1-based; nil when the viewer closed.
     func showing(_ page: Int?, of m: FolioDomain.Material) {

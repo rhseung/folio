@@ -33,7 +33,7 @@ struct RecordingBar: View {
                 Text(RecordingTime.label(recorder.elapsed))
                     .font(Theme.Typeface.figureSmall)
                     // Red while it records, gray while paused: the card's color is the course's, so the state needs its own.
-                    .foregroundStyle(model.recording ? Theme.Palette.danger : Theme.Palette.textSecondary)
+                    .foregroundStyle(model.paused ? Theme.Palette.textSecondary : Theme.Palette.danger)
                     .contentTransition(.numericText())
             }
             // Two lines kept whether one or two are heard: a card changing height with every sentence moved the
@@ -61,14 +61,16 @@ struct RecordingBar: View {
                     }
                 }
                 .help(Text(.recordingBookmarkHelp(recorder.bookmarks.count)))
+                .disabled(model.settling)
                 Button { model.toggle() } label: {
-                    Image(systemName: model.recording ? "pause.fill" : "record.circle").contentTransition(.symbolEffect(.replace))
+                    // Only a pause offers to resume; starting and stopping keep the pause glyph, switched off.
+                    Image(systemName: model.paused ? "record.circle" : "pause.fill").contentTransition(.symbolEffect(.replace))
                 }
-                .help(Text(model.recording ? .recordingPause : .recordingResume))
-                .disabled(model.preparing)
+                .help(Text(model.paused ? .recordingResume : .recordingPause))
+                .disabled(model.settling)
                 Button { Task { await model.stop() } } label: { Image(systemName: "stop.fill") }
                 .help(Text(.recordingStop))
-                .disabled(model.preparing)
+                .disabled(model.settling)
                 Button { showingTranscript.toggle() } label: { Image(systemName: "text.quote") }
                     .help(Text(showingTranscript ? .recordingCollapse : .recordingExpand))
                     // Beside the sidebar, not inside it: the transcript wants a reading width the sidebar doesn't have.
