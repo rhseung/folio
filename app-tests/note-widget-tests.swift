@@ -216,6 +216,9 @@ struct NoteWidgetTests {
             return "```cb-table\n\(json)\n```"
         }
         #expect(view.core.widgets.views.isEmpty)
+        var builder = ReaderBuilder(accent: CourseAccent.presets[0].accent, syntax: .latex, baseURL: nil, dark: false, width: 600, widgets: ReaderWidgets())
+        let cell = builder.cell(markdown: "```cb-widget\n{\"id\": \"\(UUID())\"}\n```", weight: .regular)
+        #expect(cell.string.hasPrefix("{\"id\": "))
     }
 
     @Test func aBlockThatDoesNotDecodeShowsItsText() throws {

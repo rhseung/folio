@@ -76,7 +76,6 @@ struct ReaderBlock {
     let widgets: ReaderWidgets
 
     private var out = NSMutableAttributedString()
-    /// A table cell has no view of its own to put a widget over, so a widget there would run unseen.
     private var inCell = false
     private var calloutCount = 0
     private var counters: [String: Int] = [:]
@@ -409,8 +408,15 @@ struct ReaderBlock {
                 return
             }
         case CBWidget.language:
-            // A block that doesn't decode shows as the code it is, so the mistake can be seen; so does one in a table cell.
-            guard !inCell, let widget = try? JSONDecoder().decode(CBWidget.self, from: Data(text.utf8)) else { break }
+            // A cell has no view to run a widget over, and a code block draws nothing there, so the block's text goes in.
+            if inCell {
+                let style = Self.paragraph(ctx, after: 4, lineSpacing: 4)
+                out.append(NSAttributedString(string: text, attributes: attributes(ctx, style, font: NoteLook.font(NoteLook.codeSize, mono: true))))
+                newline(attributes(ctx, style))
+                return
+            }
+            // A block that doesn't decode shows as the code it is, so the mistake can be seen.
+            guard let widget = try? JSONDecoder().decode(CBWidget.self, from: Data(text.utf8)) else { break }
             let file = baseURL.flatMap { StandardLayout.widgetFile(widget.id, noteFolder: $0) }
             let view = widgets.view(widget.id, file: file, accent: accent)
             let size = CGSize(width: width - ctx.indent * 2, height: view.pageHeight ?? widget.height ?? 320)
