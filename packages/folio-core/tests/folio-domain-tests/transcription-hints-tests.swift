@@ -16,12 +16,16 @@ struct TranscriptionHintsTests {
     @Test func aLinkedLectureIsReadWithinItsPages() {
         var file = course(["Lectures/05_Parsing.pdf", "Lectures/06_LR.pdf"])
         file.sessions[0].materials = [SessionMaterial(materialId: file.materials[1].id, firstPage: 3, lastPage: 9)]
-        #expect(file.lecturePages(for: file.sessions[0]) == [LecturePages(path: "Lectures/06_LR.pdf", first: 3, last: 9, materialId: file.materials[1].id)])
+        let slides = file.lectureSlides(for: file.sessions[0])
+        #expect(slides.source == .session)
+        #expect(slides.pages == [LecturePages(path: "Lectures/06_LR.pdf", first: 3, last: 9, materialId: file.materials[1].id)])
     }
 
     @Test func anUnlinkedClassReadsItsWeeksLectures() {
         let file = course(["Lectures/05-2_LR.pdf", "Lectures/05-1_Parsing.pdf", "Lectures/15_Review.pdf", "Lectures/05_notes.txt", "Syllabus/05_Plan.pdf"])
-        #expect(file.lecturePages(for: file.sessions[0]).map(\.path) == ["Lectures/05-1_Parsing.pdf", "Lectures/05-2_LR.pdf"])
+        let slides = file.lectureSlides(for: file.sessions[0])
+        #expect(slides.source == .week)
+        #expect(slides.pages.map(\.path) == ["Lectures/05-1_Parsing.pdf", "Lectures/05-2_LR.pdf"])
     }
 
     @Test func aClassTaggedWithAUnitReadsTheUnitsSlides() {
@@ -30,7 +34,9 @@ struct TranscriptionHintsTests {
         file.units = [unit]
         file.sessions[0].unitIds = [unit.id]
         file.materials[0].unitIds = [unit.id]
-        #expect(file.lecturePages(for: file.sessions[0]).map(\.path) == ["Lectures/03 Syntax-analysis.pdf"])
+        let slides = file.lectureSlides(for: file.sessions[0])
+        #expect(slides.source == .tagged)
+        #expect(slides.pages.map(\.path) == ["Lectures/03 Syntax-analysis.pdf"])
     }
 
     @Test func topicsAndUnitsComeBeforeTheSlides() {
@@ -40,7 +46,7 @@ struct TranscriptionHintsTests {
         child.sessionIds = [file.sessions[0].id]
         file.units = [parent, child]
         file.sessions[0].topic = "SLR과 LALR"
-        let hints = file.transcriptionHints(for: file.sessions[0], slides: "lookahead, lookahead, syntax analysis, syntax analysis, LALR")
+        let hints = file.transcriptionContext(for: file.sessions[0]).reading("lookahead, lookahead, syntax analysis, syntax analysis, LALR").hints(course: file.course.title)
         #expect(hints.title == "컴파일러")
         // A slide term the units already said, in another case, is not said twice.
         #expect(hints.terms == ["SLR과 LALR", "LR Parsing", "Syntax Analysis", "lookahead", "syntax", "analysis", "LALR"])

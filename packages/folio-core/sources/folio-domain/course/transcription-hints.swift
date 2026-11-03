@@ -98,11 +98,6 @@ public struct TranscriptionContext: Codable, Sendable, Equatable {
 }
 
 extension CourseFile {
-    /// The course, the class's topic and units, then the terms on its slides.
-    public func transcriptionHints(for session: Session, slides: String) -> TranscriptionHints {
-        transcriptionContext(for: session).reading(slides).hints(course: course.title)
-    }
-
     /// Everything but the terms, which need the slides read.
     public func transcriptionContext(for session: Session, recording: Recording? = nil) -> TranscriptionContext {
         let slides = lectureSlides(for: session, recording: recording)
@@ -123,8 +118,6 @@ extension CourseFile {
         let topic = session.topic.trimmingCharacters(in: .whitespacesAndNewlines)
         return (topic.isEmpty ? [] : [topic]) + chain.map(\.title)
     }
-
-    public func lecturePages(for session: Session) -> [LecturePages] { lectureSlides(for: session).pages }
 
     /// The slides a class covered: the pages left on screen while `recording`, else the PDFs linked to the session
     /// within their page ranges, else the files linked to it or its units, else the week's files under `Lectures/` by
