@@ -224,6 +224,29 @@ struct NoteReaderTests {
         #expect(edits.all.first.map { [String($0.from), String($0.to), $0.old, $0.new] } == ["5", "5", "둘째 문단", "둘째 문단 더\n새 줄"])
     }
 
+    @Test func textUnderAPictureKeepsItsOwnLineHeight() throws {
+        let edits = Edits()
+        let source = "![그림](assets/sample.png)\n첫 줄\n둘째 줄"
+        let (view, window) = Self.reader(source + "\n\n보통 문단", edits: edits)
+        let storage = try #require(view.textStorage)
+        let shown = storage.string as NSString
+        func lineHeight(_ word: String) -> CGFloat? {
+            (storage.attribute(.paragraphStyle, at: shown.range(of: word).location, effectiveRange: nil) as? NSParagraphStyle)?.maximumLineHeight
+        }
+        #expect(storage.attribute(.attachment, at: 0, effectiveRange: nil) is NSTextAttachment)
+        #expect(lineHeight("첫 줄") == lineHeight("보통 문단"))
+        #expect(lineHeight("둘째 줄") == lineHeight("보통 문단"))
+        #expect(view.blocks.map(\.editable) == [true, true])
+        NoteRender.write(view, "reader-picture-text")
+
+        window.makeFirstResponder(view)
+        let end = try #require(ReaderBuilder.range(of: 0, in: storage))
+        view.setSelectedRange(NSRange(location: NSMaxRange(end), length: 0))
+        view.insertText(" 끝", replacementRange: view.selectedRange())
+        window.makeFirstResponder(nil)
+        #expect(edits.all.first?.new == source + " 끝")
+    }
+
     @Test func typedMarkupIsEscaped() {
         #expect(ReaderMarkdown.escape("a*b [[c x_y * z") == "a\\*b \\[[c x_y * z")
         #expect(ReaderMarkdown.lines("# 아님\n- 아님\n1. 아님") == "\\# 아님\n\\- 아님\n1\\. 아님")
