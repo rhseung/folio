@@ -224,6 +224,148 @@ struct NoteReaderTests {
         #expect(edits.all.first.map { [String($0.from), String($0.to), $0.old, $0.new] } == ["5", "5", "둘째 문단", "둘째 문단 더\n새 줄"])
     }
 
+    /// A line's height with the gap under it, which a paragraph holding a tall picture keeps as line spacing.
+    static func lineHeight(_ view: NSTextView, at offset: Int) -> CGFloat? {
+        let gap = (view.textStorage?.attribute(.paragraphStyle, at: offset, effectiveRange: nil) as? NSParagraphStyle)?.lineSpacing ?? 0
+        return NoteRender.line(view, at: offset).map { $0.line.typographicBounds.height + gap }
+    }
+
+    /// A picture far taller than the text gets a line of its own height, wherever it's written in the paragraph, and the
+    /// text's lines keep theirs.
+    @Test(arguments: [
+        ("![그림](assets/sample.png)\n첫 줄\n둘째 줄", ["첫 줄", "둘째 줄"]),
+        ("첫 줄\n둘째 줄\n![그림](assets/sample.png)", ["첫 줄", "둘째 줄"]),
+        ("앞 글 ![그림|2000](assets/sample.png)", ["앞 글"]),
+        ("[![그림](assets/sample.png)](https://example.com)\n설명", ["설명"]),
+        ("*![그림](assets/sample.png)*\n설명", ["설명"]),
+    ])
+    func textByAPictureKeepsItsOwnLineHeight(source: String, words: [String]) throws {
+        let (view, _) = Self.reader(source + "\n\n보통 문단", edits: Edits())
+        let shown = view.string as NSString
+        let plain = try #require(Self.lineHeight(view, at: shown.range(of: "보통 문단").location))
+        for word in words {
+            #expect(Self.lineHeight(view, at: shown.range(of: word).location) == plain, "\(word) in \(source.debugDescription)")
+        }
+        let picture = shown.range(of: "\u{FFFC}").location
+        #expect(try #require(Self.lineHeight(view, at: picture)) > 2 * plain)
+    }
+
+    /// Unbounded, a picture's line took no gap, so the text under it sat closer than any two lines of text; and a
+    /// paragraph of pictures alone fixed every line to the tallest, so a small picture under a big one stood as tall.
+    /// Both sizes of the second picture: shorter than the text's double, and taller but still short of the first.
+    @Test(arguments: [40, 200])
+    func aPicturesLineKeepsTheGapAndAShortPictureItsHeight(small: Int) throws {
+        let (view, _) = Self.reader("![큰 그림](assets/sample.png)\n첫 줄\n\n![큰 그림](assets/sample.png)\n![작은 그림|\(small)](assets/sample.png)")
+        let manager = try #require(view.textLayoutManager)
+        var fragments: [NSTextLayoutFragment] = []
+        manager.enumerateTextLayoutFragments(from: manager.documentRange.location, options: []) { fragments.append($0); return true }
+        let gap = try #require((view.textStorage?.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle)?.lineSpacing)
+        #expect(gap > 0)
+        let text = fragments[0].textLineFragments
+        #expect(text.count == 2 && text[1].typographicBounds.minY - text[0].typographicBounds.maxY == gap)
+        let pictures = fragments[1].textLineFragments
+        // Fixed to the tallest, both lines were the same height.
+        #expect(pictures.count == 2 && pictures[1].typographicBounds.height < pictures[0].typographicBounds.height, "\(small)")
+    }
+
+    /// A picture, formula or table alone in its paragraph has no shorter line to keep; freed like one beside text, its
+    /// line lost the room above it and the block sat high, unlike a smaller one.
+    @Test(arguments: ["![그림](assets/sample.png)", "$$\\begin{pmatrix} 1 \\\\ 2 \\\\ 3 \\\\ 4 \\end{pmatrix}$$", "| 가 |\n| --- |\n| 나 |\n| 다 |\n| 라 |"])
+    func aBlockAloneKeepsItsFixedLine(source: String) throws {
+        let (view, _) = Self.reader("앞\n\n" + source + "\n\n뒤")
+        let storage = try #require(view.textStorage)
+        let at = (storage.string as NSString).range(of: "\u{FFFC}").location
+        #expect(at != NSNotFound)
+        let style = try #require(storage.attribute(.paragraphStyle, at: at, effectiveRange: nil) as? NSParagraphStyle)
+        #expect(style.maximumLineHeight == style.minimumLineHeight && style.lineSpacing == 0, "\(source)")
+    }
+
+    /// By a tall picture a line is shorter by the gap kept under it. Centered on the full height, its text sat half the
+    /// gap under the middle of the line, and the caret and selection, which follow the line, stood above the text.
+    @Test func textByAPictureStandsInTheMiddleOfItsLine() throws {
+        let (view, _) = Self.reader("앞\n\n첫 줄\n![그림](assets/sample.png)\n끝 줄\n\n뒤")
+        let shown = view.string as NSString
+        for word in ["첫 줄", "끝 줄"] {
+            let at = shown.range(of: word).location
+            let gaps = try #require(NoteRender.gaps(view, at: at))
+            #expect(abs(gaps.above - gaps.below) <= 1, "\(word): \(gaps)")
+        }
+    }
+
+    static func boxPadding(_ view: NSTextView, top: String, bottom: String) throws -> (top: CGFloat, bottom: CGFloat) {
+        let manager = try #require(view.textLayoutManager)
+        manager.ensureLayout(for: manager.documentRange)
+        let shown = view.string as NSString
+        func line(_ word: String) throws -> (NoteFragment, NSTextLineFragment, NSFont) {
+            let at = shown.range(of: word).location
+            let found = try #require(NoteRender.line(view, at: at))
+            let fragment = try #require(found.fragment as? NoteFragment), l = found.line
+            let font = try #require(view.textStorage?.attribute(.font, at: at, effectiveRange: nil) as? NSFont)
+            return (fragment, l, font)
+        }
+        func baseline(_ f: NoteFragment, _ l: NSTextLineFragment) -> CGFloat { f.layoutFragmentFrame.minY + l.typographicBounds.minY + l.glyphOrigin.y - f.raise }
+        let (tf, tl, tfont) = try line(top), (bf, bl, bfont) = try line(bottom)
+        let boxTop = tf.layoutFragmentFrame.minY + (try #require(tf.boxRect)).minY
+        let boxBottom = bf.layoutFragmentFrame.minY + (try #require(bf.boxRect)).maxY
+        return (baseline(tf, tl) - tfont.ascender - boxTop, boxBottom - (baseline(bf, bl) - bfont.descender))
+    }
+
+    /// The gap a picture's paragraph keeps as line spacing falls over each line but the note's first and under none,
+    /// so left alone it moved the paragraph's text half a gap down and its last line half a gap closer to what follows,
+    /// a box's padding included. Next to a picture, the text keeps its place and a box its padding.
+    @Test(arguments: [
+        ("> [!note] 제목\n> 설명\n> 끝", "> [!note] 제목\n> 설명\n> ![그림](assets/sample.png)\n> 끝"),
+        ("> 설명\n> 끝", "> 설명\n> ![그림](assets/sample.png)\n> 끝"),
+        ("설명\n끝", "설명\n![그림](assets/sample.png)\n끝"),
+    ])
+    func textByAPictureKeepsItsPlaceAndItsBoxsPadding(plain: String, pictured: String) throws {
+        func measure(_ source: String) throws -> [CGFloat] {
+            let (view, _) = Self.reader("앞\n\n" + source + "\n\n뒤")
+            NoteRender.write(view, "reader-padding-\(source.hasPrefix("> [!") ? "callout" : source.hasPrefix(">") ? "quote" : "text")-\(source.contains("![") ? "picture" : "plain")")
+            let above = try #require(NoteRender.drawnBaseline(view, of: "앞")), first = try #require(NoteRender.drawnBaseline(view, of: "설명"))
+            let last = try #require(NoteRender.drawnBaseline(view, of: "끝")), below = try #require(NoteRender.drawnBaseline(view, of: "뒤"))
+            guard source.hasPrefix(">") else { return [first - above, below - last] }
+            // The box's top is over its first paragraph, a callout's title.
+            let pad = try Self.boxPadding(view, top: source.hasPrefix("> [!") ? "제목" : "설명", bottom: "끝")
+            return [first - above, below - last, pad.top, pad.bottom]
+        }
+        let a = try measure(plain), b = try measure(pictured)
+        #expect(zip(a, b).allSatisfy { abs($0 - $1) <= 0.5 }, "\(a) vs \(b)")
+    }
+
+    /// The half gap a picture's paragraph takes from the one above comes out of the gap outside a box that ends there,
+    /// not out of its padding, and not left over as extra room.
+    @Test(arguments: ["> [!note] 제목\n> 끝", "> 끝", "```\ncode\n```"])
+    func aPictureAfterABoxKeepsTheGapAndThePadding(box: String) throws {
+        func measure(_ tail: String) throws -> [CGFloat] {
+            let (view, _) = Self.reader(box + "\n\n첫 줄\n" + tail)
+            NoteRender.write(view, "reader-after-box-\(box.prefix(3) == "```" ? "code" : box.hasPrefix("> [!") ? "callout" : "quote")-\(tail.contains("![") ? "picture" : "plain")")
+            let at = (view.string as NSString).range(of: "첫 줄").location
+            let end = try #require(NoteRender.line(view, at: at - 1)?.fragment as? NoteFragment)
+            let boxBottom = end.layoutFragmentFrame.minY + (try #require(end.boxRect)).maxY
+            var out = [try #require(NoteRender.drawnBaseline(view, of: "첫 줄")) - boxBottom]
+            if box.hasPrefix(">") { out.append(try Self.boxPadding(view, top: box.hasPrefix("> [!") ? "제목" : "끝", bottom: "끝").bottom) }
+            return out
+        }
+        let a = try measure("둘째"), b = try measure("![그림](assets/sample.png)")
+        #expect(zip(a, b).allSatisfy { abs($0 - $1) <= 0.5 }, "\(a) vs \(b)")
+    }
+
+    @Test func aParagraphWithAPictureStillWritesBack() throws {
+        let edits = Edits()
+        let source = "![그림](assets/sample.png)\n첫 줄\n둘째 줄"
+        let (view, window) = Self.reader(source + "\n\n보통 문단", edits: edits)
+        NoteRender.write(view, "reader-picture-text")
+        #expect(view.blocks.map(\.editable) == [true, true])
+        window.makeFirstResponder(view)
+        let storage = try #require(view.textStorage)
+        let end = try #require(ReaderBuilder.range(of: 0, in: storage))
+        view.setSelectedRange(NSRange(location: NSMaxRange(end), length: 0))
+        view.insertText(" 끝", replacementRange: view.selectedRange())
+        window.makeFirstResponder(nil)
+        #expect(edits.all.first?.new == source + " 끝")
+    }
+
     static let wideMath = """
     where $\\tilde{A}_{1j}$: the $(n-1) \\times (n-1)$ matrix obtained from A by deleting the 1st row and the jth column of it.
 
