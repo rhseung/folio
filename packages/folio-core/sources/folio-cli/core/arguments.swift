@@ -7,6 +7,8 @@ extension UUID: @retroactive ExpressibleByArgument {
 }
 
 extension NoteKind: ExpressibleByArgument {}
+extension NoteFormat: ExpressibleByArgument {}
+extension MathSyntax: ExpressibleByArgument {}
 extension AttendanceState: ExpressibleByArgument {}
 extension ExamKind: ExpressibleByArgument {}
 extension AssignmentStatus: ExpressibleByArgument {}

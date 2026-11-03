@@ -2,15 +2,25 @@ import FolioDomain
 import FolioMarkdown
 import Foundation
 
-/// The file name is the title; the frontmatter `id` is the identity.
+/// The file name is the title; the course file's note entry at the same path holds the rest.
 public struct NoteFile: Equatable, Sendable {
     public var url: URL
     public var meta: NoteMeta
     public var title: String { url.deletingPathExtension().lastPathComponent }
+    public var format: NoteFormat { NoteFormat(path: url.path) ?? .markdown }
+
+    public init(url: URL, meta: NoteMeta) {
+        self.url = url
+        self.meta = meta
+    }
 }
 
 extension NoteMeta {
-    init(_ fm: Frontmatter) {
+    /// Folio's keys in a note's frontmatter, from before the properties moved to course.json. Only the one-time
+    /// `note migrate` reads them.
+    static let frontmatterKeys = ["id", "kind", "sessionId", "unitIds", "examId", "tags", "math"]
+
+    init(frontmatter fm: Frontmatter) {
         self.init(
             id: fm["id"].flatMap(UUID.init(uuidString:)),
             kind: fm["kind"].flatMap(NoteKind.init(rawValue:)) ?? .free,
@@ -21,17 +31,6 @@ extension NoteMeta {
             math: fm["math"].flatMap(MathSyntax.init(rawValue:)) ?? .latex
         )
     }
-
-    /// Writes these fields into `fm`, leaving every other key as it was.
-    public func apply(to fm: inout Frontmatter) {
-        fm["id"] = id?.uuidString
-        fm["kind"] = kind.rawValue
-        fm["sessionId"] = sessionId?.uuidString
-        fm.setList("unitIds", unitIds.map(\.uuidString))
-        fm["examId"] = examId?.uuidString
-        fm.setList("tags", tags)
-        fm["math"] = math == .latex ? nil : math.rawValue
-    }
 }
 
 extension CourseStore {
@@ -39,71 +38,93 @@ extension CourseStore {
 
     static let nonNoteFolders: Set<String> = [StandardLayout.noteAssetsFolder, StandardLayout.noteExportsFolder]
 
+    /// The path a note entry stores. Note URLs are always built from the course folder, so the fallback is never
+    /// taken in practice; it only spares callers an optional.
+    public func notePath(of file: URL) -> String {
+        coursePath(of: file) ?? "\(CourseFolder.notes.rawValue)/\(file.lastPathComponent)"
+    }
+
     public func notes() throws -> [NoteFile] {
+        notes(in: try load().model)
+    }
+
+    /// Every note file under Notes/, with the properties `file` has for it. A file without an entry (made outside
+    /// Folio) has no id until it is adopted.
+    public func notes(in file: CourseFile) -> [NoteFile] {
+        let entries = Dictionary(file.notes.map { ($0.path, $0) }, uniquingKeysWith: { a, _ in a })
+        return noteURLs().map { NoteFile(url: $0, meta: entries[notePath(of: $0)]?.meta ?? NoteMeta(id: nil)) }.sorted { $0.title < $1.title }
+    }
+
+    func noteURLs() -> [URL] {
         guard let enumerator = FileManager.default.enumerator(at: notesURL, includingPropertiesForKeys: [.isDirectoryKey]) else { return [] }
-        var result: [NoteFile] = []
+        var result: [URL] = []
         for case let url as URL in enumerator {
             if Self.nonNoteFolders.contains(url.lastPathComponent) {
                 enumerator.skipDescendants()
-            } else if url.pathExtension == "md" {
-                // One unreadable note (still downloading, permissions) shouldn't empty the whole list.
-                guard let data = try? CoordinatedFile.read(url) else { continue }
-                let text = String(decoding: data, as: UTF8.self)
-                result.append(NoteFile(url: url, meta: NoteMeta(Frontmatter.split(text).frontmatter)))
+            } else if NoteFormat(path: url.path) != nil {
+                result.append(url)
             }
         }
-        return result.sorted { $0.title < $1.title }
+        return result
     }
 
     public func note(id: UUID) throws -> NoteFile? {
         try notes().first { $0.meta.id == id }
     }
 
+    public func note(id: UUID, in file: CourseFile) -> NoteFile? {
+        notes(in: file).first { $0.meta.id == id }
+    }
+
     public func note(at path: String) throws -> NoteFile? {
+        note(at: path, in: try load().model)
+    }
+
+    public func note(at path: String, in file: CourseFile) -> NoteFile? {
         let url = url.appending(path: path)
-        guard url.pathExtension == "md", FileManager.default.fileExists(atPath: url.path) else { return nil }
-        let text = String(decoding: try CoordinatedFile.read(url), as: UTF8.self)
-        return NoteFile(url: url, meta: NoteMeta(Frontmatter.split(text).frontmatter))
+        guard NoteFormat(path: path) != nil, FileManager.default.fileExists(atPath: url.path) else { return nil }
+        return NoteFile(url: url, meta: file.notes.first { $0.path == notePath(of: url) }?.meta ?? NoteMeta(id: nil))
     }
 
     public func read(_ note: NoteFile) throws -> String {
         String(decoding: try CoordinatedFile.read(note.url), as: UTF8.self)
     }
 
-    /// Saves the full text; the frontmatter is rewritten from `note.meta`, keeping keys Folio doesn't know.
-    public func save(_ note: NoteFile, text: String) throws {
-        var (fm, body) = Frontmatter.split(text)
-        note.meta.apply(to: &fm)
-        try CoordinatedFile.write(Data(fm.render(body: body).utf8), to: note.url)
-    }
-
-    /// Writes `text` as it is, frontmatter included.
+    /// Writes `text` as it is. The note's properties live in course.json, so nothing is added to the file.
     public func write(_ note: NoteFile, text: String) throws {
         try CoordinatedFile.write(Data(text.utf8), to: note.url)
     }
 
-    /// The note's id, written into its frontmatter first if it has none (notes made outside Folio).
-    public func ensureID(_ note: NoteFile) throws -> UUID {
-        if let id = note.meta.id { return id }
-        let id = UUID()
-        var file = note
-        file.meta.id = id
-        try save(file, text: try read(note))
-        return id
-    }
-
-    /// Creates `Notes/<title>.md` with `body`, or the template for its kind. A taken name gets ` 2`, ` 3`, ...
-    public func createNote(title: String, meta: NoteMeta, body: String? = nil) throws -> NoteFile {
+    /// Where a new note titled `title` goes: `Notes/<title>.<ext>`, or ` 2`, ` 3`, ... when the name is taken.
+    /// A name is taken in any format, since the title is the file name: `증명.md` beside `증명.tex` would be two notes
+    /// that links and the list can't tell apart. `taken` holds names chosen for notes not written yet.
+    public func newNoteURL(title: String, format: NoteFormat, avoiding taken: Set<String> = []) -> URL {
+        let taken = Set(taken.map { $0.lowercased() })
+        let isFree = { (name: String) in
+            !taken.contains(name.lowercased()) && NoteFormat.allCases.allSatisfy {
+                !FileManager.default.fileExists(atPath: self.notesURL.appending(path: "\(name).\($0.fileExtension)").path)
+            }
+        }
         let base = Self.fileName(for: title)
         var name = base
         var n = 2
-        while FileManager.default.fileExists(atPath: notesURL.appending(path: "\(name).md").path) {
+        while !isFree(name) {
             name = "\(base) \(n)"
             n += 1
         }
-        let note = NoteFile(url: notesURL.appending(path: "\(name).md"), meta: meta)
-        try save(note, text: body ?? NoteTemplate.body(for: meta.kind, title: title))
-        return note
+        return notesURL.appending(path: "\(name).\(format.fileExtension)")
+    }
+
+    /// Where a note's PDF goes, by title, wherever in Notes/ the note sits. An exam summary's goes to Exercises with
+    /// the rest of what was made to prepare for an exam.
+    public func exportPath(of note: NoteFile) -> String {
+        guard note.meta.kind != .examSummary else { return "\(CourseFolder.exercises.rawValue)/\(note.title).pdf" }
+        return "\(CourseFolder.notes.rawValue)/\(StandardLayout.noteExportsFolder)/\(note.title).pdf"
+    }
+
+    /// Creates the file only; the caller adds its entry to course.json.
+    public func createNote(at url: URL, text: String) throws {
+        try CoordinatedFile.write(Data(text.utf8), to: url)
     }
 
     /// To the Trash, not deleted: a note is the user's own writing. Its images stay in `assets/`, which other notes may share.

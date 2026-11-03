@@ -1,0 +1,70 @@
+import Foundation
+
+/// One error or warning from a TeX build, located in a file when the engine said where.
+public struct TexIssue: Equatable, Sendable, Codable {
+    public enum Severity: String, Equatable, Sendable, Codable { case error, warning }
+
+    public var severity: Severity
+    public var file: String?
+    public var line: Int?
+    public var message: String
+
+    public init(_ severity: Severity, file: String? = nil, line: Int? = nil, message: String) {
+        self.severity = severity
+        self.file = file
+        self.line = line
+        self.message = message
+    }
+
+    public var description: String {
+        guard let file else { return message }
+        return line.map { "\(file):\($0): \(message)" } ?? "\(file): \(message)"
+    }
+}
+
+public enum TexLog {
+    /// Reads Tectonic's console output, which names each problem as `error: hw.tex:5: Undefined control sequence`.
+    /// The TeX log itself is not read: its `l.5` lines don't say which `\input` file they belong to.
+    /// An unlocated error is kept only when no located one came, because Tectonic follows every real error
+    /// with generic ones ("the XeTeX engine had an unrecoverable error").
+    public static func issues(_ output: String) -> [TexIssue] {
+        var located: [TexIssue] = []
+        var general: [TexIssue] = []
+        for raw in output.split(whereSeparator: \.isNewline) {
+            let line = String(raw)
+            let severity: TexIssue.Severity
+            let rest: Substring
+            if line.hasPrefix("error: ") {
+                severity = .error
+                rest = line.dropFirst(7)
+            } else if line.hasPrefix("warning: ") {
+                severity = .warning
+                rest = line.dropFirst(9)
+            } else {
+                continue
+            }
+            if let issue = parseLocated(severity, rest) {
+                located.append(issue)
+            } else if severity == .error {
+                general.append(TexIssue(.error, message: String(rest)))
+            }
+        }
+        let errors = located.filter { $0.severity == .error }
+        return errors.isEmpty ? general.prefix(1) + located : located
+    }
+
+    /// `file:line: message`. A file name may hold colons, so the line number is the first all-digit field.
+    private static func parseLocated(_ severity: TexIssue.Severity, _ rest: Substring) -> TexIssue? {
+        let parts = rest.split(separator: ":", omittingEmptySubsequences: false)
+        guard parts.count >= 3 else { return nil }
+        for i in 1..<(parts.count - 1) {
+            if let n = Int(parts[i]), n > 0 {
+                let file = parts[..<i].joined(separator: ":")
+                let message = parts[(i + 1)...].joined(separator: ":").trimmingCharacters(in: .whitespaces)
+                guard !file.isEmpty, !message.isEmpty else { return nil }
+                return TexIssue(severity, file: file, line: n, message: message)
+            }
+        }
+        return nil
+    }
+}

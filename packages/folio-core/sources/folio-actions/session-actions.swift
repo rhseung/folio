@@ -53,7 +53,7 @@ public struct SessionRemove {
     @Arg var sessions: [Session.ID]
 
     public func run(_ ctx: ActionContext) throws {
-        let noted = Set(try ctx.store(course).notes().compactMap(\.meta.sessionId))
+        let noted = Set(try ctx.notes(course).compactMap(\.meta.sessionId))
         try ctx.edit(course) { f in
             for id in sessions {
                 let s = f.sessions[try index(id, in: f.sessions, .valueSession)]
@@ -129,15 +129,15 @@ public struct SessionNote {
         guard kind == .rough || kind == .review else { throw ActionError.rule(String(localized: .errorSessionNoteKind)) }
         let file = try ctx.file(course)
         let s = file.sessions[try index(session, in: file.sessions, .valueSession)]
-        if let id = kind == .rough ? s.roughNoteId : s.reviewNoteId {
+        if let id = s.note(of: kind) {
             ctx.made(id)
             return
         }
         let settings = try ctx.settings()
-        let title = kind == .rough ? file.name(of: s) : "\(file.name(of: s)) 정리"
+        let title = file.noteTitle(for: s, kind: kind)
         let body = NoteTemplate.body(for: kind, title: title, sections: settings.noteSections(for: kind))
         let made = try ctx.createNote(course, title: title, meta: NoteMeta(id: id, kind: kind, sessionId: s.id, unitIds: s.unitIds,
-                                                                           math: settings.newNoteMath), body: body) ?? id
+                                                                           math: settings.newNoteMath), body: body)
         try ctx.edit(course) { f in
             let i = try index(session, in: f.sessions, .valueSession)
             if kind == .rough {
@@ -297,6 +297,25 @@ public struct ExamScope {
             let e = try index(exam, in: f.exams, .valueExam)
             _ = try index(unit, in: f.units, .valueUnit)
             if f.exams[e].scopeUnitIds.contains(unit) != included { f.toggle(exam: exam, unit: unit) }
+        }
+    }
+}
+
+/// Called by the app when a recording ends. Only files the session has no link to are linked: a range the user set
+/// stays, and a lecture that returned to an earlier file would otherwise shrink its range to what this class saw.
+@Action("session link-viewed", "녹음 중 본 강의 페이지를 회차에 연결하기. 연결이 없는 자료만 더하고 있는 연결은 그대로 둔다",
+        discussion: "앱 안의 PDF 보기에서 20초 이상 머문 페이지의 처음부터 끝까지가 범위다. 녹음이 끝나면 앱이 부른다.",
+        done: "회차 '{session}'에 녹음 중 본 페이지를 연결했습니다",
+        examples: ["folio session link-viewed EC4207/9주차-1 --dry-run"], phrases: ["녹음 중 본 페이지", "본 페이지 연결", "수업 중 본 슬라이드"])
+public struct SessionLinkViewed {
+    @Arg var course: Course.ID
+    /// 회차
+    @Arg var session: Session.ID
+
+    public func run(_ ctx: ActionContext) throws {
+        try ctx.edit(course) { f in
+            _ = try index(session, in: f.sessions, .valueSession)
+            for recording in f.recordings where recording.sessionId == session { f.linkViewedPages(of: recording) }
         }
     }
 }

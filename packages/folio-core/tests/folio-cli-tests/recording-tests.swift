@@ -52,3 +52,40 @@ struct RecordingTrimTests {
         #expect(try h.file(GISTStore(url: gist)).recordings.allSatisfy(\.hasAudio))
     }
 }
+
+struct SessionLinkViewedTests {
+    let h = Harness()
+
+    /// A recording of the added session that stayed on pages 4 to 9 of the matchings slides. The recorder writes
+    /// recordings, not an action, so it is written here.
+    func record(_ url: URL) throws {
+        #expect(h.cli(MaterialNoteStudyTests.track, gist: url).code == 0)
+        #expect(h.cli(SessionCommandTests.add, gist: url).code == 0)
+        let ctx = ActionContext(gist: GISTStore(url: url), device: h.device, now: h.now)
+        let slides = try #require(try ctx.file(Harness.graphTheory).materials.first { $0.path == "Lectures/05_Matchings.pdf" }).id
+        let r = Recording(device: h.device, at: h.now, sessionId: SessionCommandTests.id, file: "Recordings/9주차-1.m4a", duration: 300,
+                          pages: [PageVisit(at: 0, materialId: slides, page: 4), PageVisit(at: 2, materialId: slides, page: 6), PageVisit(at: 100, materialId: slides, page: 9)])
+        try ctx.edit(Harness.graphTheory) { $0.recordings = [r] }
+    }
+
+    @Test func linkViewedMatchesTheAction() throws {
+        try h.expectSame(["session", "link-viewed", "EC4207/9주차-1"], prepare: record) { _ in
+            SessionLinkViewed(course: Harness.graphTheory, session: SessionCommandTests.id)
+        }
+    }
+
+    @Test func linkViewedAddsTheRangeAndKeepsALinkTheUserSet() throws {
+        let gist = try Harness.fixtureCopy()
+        try record(gist)
+        #expect(h.cli(["session", "link-viewed", "EC4207/9주차-1"], gist: gist).code == 0)
+        var file = try h.file(GISTStore(url: gist))
+        let session = try #require(file.sessions.first { $0.id == SessionCommandTests.id })
+        // Page 4 was passed in two seconds.
+        #expect(session.materials.map { [$0.firstPage, $0.lastPage] } == [[6, 9]])
+
+        _ = h.cli(["material", "link", "EC4207/05_Matchings.pdf", "9주차-1", "--pages", "1-3"], gist: gist)
+        #expect(h.cli(["session", "link-viewed", "EC4207/9주차-1"], gist: gist).code == 0)
+        file = try h.file(GISTStore(url: gist))
+        #expect(file.sessions.first { $0.id == SessionCommandTests.id }?.materials.map { [$0.firstPage, $0.lastPage] } == [[1, 3]])
+    }
+}

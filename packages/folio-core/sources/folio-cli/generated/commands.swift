@@ -10,14 +10,14 @@ enum GeneratedCommands {
     static let component: [any ParsableCommand.Type] = [ComponentAdd.self, ComponentSet.self, ComponentRemove.self]
     static let exam: [any ParsableCommand.Type] = [ExamAdd.self, ExamSet.self, ExamRemove.self, ExamSummary.self]
     static let examPlan: [any ParsableCommand.Type] = [ExamPlanAdd.self]
-    static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialUntrack.self, MaterialTrash.self]
-    static let note: [any ParsableCommand.Type] = [NoteAdopt.self, NoteRemove.self]
+    static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialUntrack.self, MaterialTrash.self, MaterialBuild.self]
+    static let note: [any ParsableCommand.Type] = [NoteAdopt.self, NoteRemove.self, NoteBuild.self]
     static let problemSet: [any ParsableCommand.Type] = [ProblemSetRemove.self, ProblemLinkUnit.self]
     static let recording: [any ParsableCommand.Type] = [RecordingTrim.self]
     static let review: [any ParsableCommand.Type] = [ReviewRecord.self]
     static let score: [any ParsableCommand.Type] = [ScoreAdd.self, ScoreSet.self, ScoreRemove.self]
     static let semester: [any ParsableCommand.Type] = [SemesterAdd.self, SemesterSet.self]
-    static let session: [any ParsableCommand.Type] = [SessionAdd.self, SessionSet.self, SessionNote.self]
+    static let session: [any ParsableCommand.Type] = [SessionAdd.self, SessionSet.self, SessionNote.self, SessionLinkViewed.self]
     static let transcript: [any ParsableCommand.Type] = [TranscriptAdd.self, TranscriptSet.self, TranscriptRemove.self]
     static let unit: [any ParsableCommand.Type] = [UnitAdd.self, UnitRemove.self, UnitSet.self, UnitLink.self]
 
@@ -253,6 +253,28 @@ enum GeneratedCommands {
                 course: c.id,
                 session: try r.id("Session", sessionName, in: c),
                 kind: kind
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct SessionLinkViewed: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "link-viewed", abstract: "녹음 중 본 강의 페이지를 회차에 연결하기. 연결이 없는 자료만 더하고 있는 연결은 그대로 둔다", discussion: """
+            앱 안의 PDF 보기에서 20초 이상 머문 페이지의 처음부터 끝까지가 범위다. 녹음이 끝나면 앱이 부른다.
+
+            예시:
+              folio session link-viewed EC4207/9주차-1 --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref("Session")) var session: String = ""
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, sessionName) = try r.split(session)
+            let action = FolioActions.SessionLinkViewed(
+                course: c.id,
+                session: try r.id("Session", sessionName, in: c)
             )
             try perform(spec: action, g, ctx: ctx)
         }
@@ -867,6 +889,27 @@ enum GeneratedCommands {
         }
     }
 
+    struct MaterialBuild: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "build", abstract: "LaTeX 자료(.tex)를 Tectonic으로 PDF로 만들어 옆에 같은 이름으로 둔다", discussion: """
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<.tex 자료>", valueName: "material"), completion: Complete.ref("Material")) var material: String = ""
+        @Flag(help: "같은 이름의 PDF가 Folio가 만든 것이 아니어도 바꾼다") var overwrite = false
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, materialName) = try r.split(material)
+            let action = FolioActions.MaterialBuild(
+                course: c.id,
+                material: try r.id("Material", materialName, in: c),
+                pdf: nil,
+                overwrite: overwrite
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
     struct RecordingTrim: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "trim", abstract: "지난 학기 녹음의 오디오를 휴지통으로 옮기고 받아쓰기는 남기기", discussion: """
             받아쓰기가 없는 녹음은 오디오를 남긴다. 휴지통에서 되살릴 수 있다.
@@ -928,6 +971,27 @@ enum GeneratedCommands {
             let action = FolioActions.NoteRemove(
                 course: c.id,
                 note: try r.path("NotePath", noteName, in: c)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct NoteBuild: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "build", abstract: "LaTeX 노트(.tex)를 Tectonic으로 PDF로 만들어 Notes/Exports(시험 정리는 Exercises)에 둔다", discussion: """
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<.tex 노트>", valueName: "note"), completion: Complete.ref("NotePath")) var note: String = ""
+        @Flag(help: "그 자리의 PDF가 이 노트를 빌드한 것이 아니어도 바꾼다") var overwrite = false
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, noteName) = try r.split(note)
+            let action = FolioActions.NoteBuild(
+                course: c.id,
+                note: try r.path("NotePath", noteName, in: c),
+                pdf: nil,
+                overwrite: overwrite
             )
             try perform(spec: action, g, ctx: ctx)
         }

@@ -33,7 +33,7 @@ struct RecordingBar: View {
                 Text(RecordingTime.label(recorder.elapsed))
                     .font(Theme.Typeface.figureSmall)
                     // Red while it records, gray while paused: the card's color is the course's, so the state needs its own.
-                    .foregroundStyle(model.recording ? Theme.Palette.danger : Theme.Palette.textSecondary)
+                    .foregroundStyle(model.paused ? Theme.Palette.textSecondary : Theme.Palette.danger)
                     .contentTransition(.numericText())
             }
             // Two lines kept whether one or two are heard: a card changing height with every sentence moved the
@@ -61,19 +61,25 @@ struct RecordingBar: View {
                     }
                 }
                 .help(Text(.recordingBookmarkHelp(recorder.bookmarks.count)))
+                .disabled(model.settling)
                 Button { model.toggle() } label: {
-                    Image(systemName: model.recording ? "pause.fill" : "record.circle").contentTransition(.symbolEffect(.replace))
+                    // Only a pause offers to resume; starting and stopping keep the pause glyph, switched off.
+                    Image(systemName: model.paused ? "record.circle" : "pause.fill").contentTransition(.symbolEffect(.replace))
                 }
-                .help(Text(model.recording ? .recordingPause : .recordingResume))
-                .disabled(model.preparing)
+                .help(Text(model.paused ? .recordingResume : .recordingPause))
+                .disabled(model.settling)
                 Button { Task { await model.stop() } } label: { Image(systemName: "stop.fill") }
                 .help(Text(.recordingStop))
-                .disabled(model.preparing)
+                .disabled(model.settling)
                 Button { showingTranscript.toggle() } label: { Image(systemName: "text.quote") }
                     .help(Text(showingTranscript ? .recordingCollapse : .recordingExpand))
                     // Beside the sidebar, not inside it: the transcript wants a reading width the sidebar doesn't have.
                     .popover(isPresented: $showingTranscript, arrowEdge: .trailing) {
-                        TranscriptFeed(model: model).frame(width: Theme.Size.claudePanel, height: 320)
+                        TranscriptFeed(model: model) { target in
+                            showingTranscript = false
+                            open(.course(target.courseId), target)
+                        }
+                        .frame(width: Theme.Size.claudePanel, height: 320)
                     }
             }
             .buttonStyle(.ghost)
@@ -132,10 +138,50 @@ private struct RecordingCardFace: View {
 
 private struct TranscriptFeed: View {
     let model: RecordingBarModel
+    let open: (SearchTarget) -> Void
+    @State private var showingContext = false
 
     var body: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            context
+            Theme.Palette.lineSoft.frame(height: 1)
+            feed
+        }
+        // Links made since the captions were told (from this popover's own link, say) reach them now.
+        .onAppear { model.retellCaptionsIfChanged() }
+    }
+
+    /// One line above the captions, so the card itself stays as it is: what the captions were told, opened on a click.
+    @ViewBuilder var context: some View {
+        Button { withAnimation(.snappy(duration: 0.25)) { showingContext.toggle() } } label: {
+            HStack(spacing: Theme.Space.s) {
+                Image(systemName: "doc.text").foregroundStyle(Theme.Palette.textTertiary)
+                Text(model.contextSummary).lineLimit(1).truncationMode(.middle).foregroundStyle(Theme.Palette.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: showingContext ? "chevron.up" : "chevron.down").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+            }
+            .font(Theme.Typeface.caption)
+            .padding(.horizontal, Theme.Space.l)
+            .padding(.vertical, Theme.Space.s)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.pointing(.plain))
+        .help(Text(.recordingContextTitle))
+        if showingContext, let context = model.context {
+            ScrollView {
+                Card {
+                    TranscriptionContextRows(context: context, link: model.materialsTarget.map { target in { open(target) } })
+                }
+                .padding([.horizontal, .bottom], Theme.Space.m)
+            }
+            .frame(maxHeight: 200)
+            .transition(.opacity)
+        }
+    }
+
+    var feed: some View {
         let recorder = model.recorder
-        ScrollViewReader { proxy in
+        return ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Space.s) {
                     ForEach(Array(model.recentLines.enumerated()), id: \.offset) { _, line in

@@ -63,22 +63,8 @@ final class CodeAttachment: NSTextAttachment, ViewAttachment {
         let size = CGSize(width: width + inset * 2, height: used.height.rounded(.up))
         text.frame = CGRect(origin: .zero, size: CGSize(width: max(size.width, used.width.rounded(.up) + inset * 2), height: size.height))
         let scroll = SideScrollView(frame: CGRect(x: 0, y: 0, width: size.width, height: size.height + below))
-        scroll.drawsBackground = false
-        scroll.hasHorizontalScroller = true
-        scroll.autohidesScrollers = true
-        scroll.scrollerStyle = .overlay
-        // The regular scroller is a point taller than the box's padding.
-        scroll.horizontalScroller?.controlSize = .small
-        scroll.verticalScrollElasticity = .none
         scroll.documentView = text
         return (scroll, size)
-    }
-
-    /// Hands up-and-down scrolling to the note, so the pointer resting on code doesn't stop the page.
-    private final class SideScrollView: NSScrollView, AttachedView {
-        override func scrollWheel(with event: NSEvent) {
-            if abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) { nextResponder?.scrollWheel(with: event) } else { super.scrollWheel(with: event) }
-        }
     }
     #else
     private static func make(_ code: NSAttributedString, width: CGFloat, inset: CGFloat, below: CGFloat) -> (view: UIView, size: CGSize) {
@@ -95,10 +81,84 @@ final class CodeAttachment: NSTextAttachment, ViewAttachment {
         scroll.addSubview(label)
         return (scroll, size)
     }
-
-    private final class SideScrollView: UIScrollView, AttachedView {}
     #endif
 }
+
+/// A formula, table or diagram wider than its room, in a view that scrolls sideways as code does. Left in the text, a
+/// line wider than the column has TextKit move the whole page over to keep the line's ends on screen, which cuts off
+/// the end of every other line.
+final class WidePictureAttachment: NSTextAttachment, ViewAttachment {
+    let view: PlatformView
+    let inset: CGFloat = 0
+    /// Past the picture, so the scroller sits under it instead of over its bottom.
+    let below: CGFloat
+
+    init(image: PlatformImage, size: CGSize, descent: CGFloat, width: CGFloat, below: CGFloat) {
+        self.below = below
+        #if os(macOS)
+        // Flipped, so the picture stands at the top of the view and the room for the scroller is under it.
+        let document = FlippedView(frame: CGRect(x: 0, y: 0, width: size.width, height: size.height + below))
+        let picture = NSImageView(frame: CGRect(origin: .zero, size: size))
+        picture.image = image
+        picture.imageScaling = .scaleNone
+        document.addSubview(picture)
+        let scroll = SideScrollView(frame: CGRect(x: 0, y: 0, width: width, height: size.height + below))
+        scroll.documentView = document
+        view = scroll
+        #else
+        let picture = UIImageView(image: image)
+        picture.frame = CGRect(origin: .zero, size: size)
+        let scroll = SideScrollView(frame: CGRect(x: 0, y: 0, width: width, height: size.height + below))
+        scroll.contentSize = size
+        scroll.alwaysBounceVertical = false
+        scroll.showsVerticalScrollIndicator = false
+        scroll.addSubview(picture)
+        view = scroll
+        #endif
+        super.init(data: nil, ofType: nil)
+        bounds = CGRect(x: 0, y: -descent, width: width, height: size.height)
+        #if os(macOS)
+        self.image = NSImage(size: bounds.size, flipped: false) { _ in true }
+        #else
+        self.image = UIImage()
+        #endif
+    }
+
+    required init?(coder: NSCoder) { nil }
+}
+
+#if os(macOS)
+/// Sideways only, with up-and-down scrolling handed to the note, so the pointer resting on code or a picture doesn't
+/// stop the page. A click on it falls through to the note under it (`NoteScrollView.hitTest`).
+final class SideScrollView: NSScrollView, AttachedView {
+    override init(frame: NSRect) {
+        super.init(frame: frame)
+        drawsBackground = false
+        hasHorizontalScroller = true
+        autohidesScrollers = true
+        scrollerStyle = .overlay
+        // The regular scroller is a point taller than a code box's padding.
+        horizontalScroller?.controlSize = .small
+        verticalScrollElasticity = .none
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    // A scroll view answers for its document, and code's is a text view, so a click on the code made the window
+    // hand this view the keyboard, and the note lost its typing, shortcuts and find bar.
+    override var acceptsFirstResponder: Bool { false }
+
+    override func scrollWheel(with event: NSEvent) {
+        if abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) { nextResponder?.scrollWheel(with: event) } else { super.scrollWheel(with: event) }
+    }
+}
+
+private final class FlippedView: NSView {
+    override var isFlipped: Bool { true }
+}
+#else
+private final class SideScrollView: UIScrollView, AttachedView {}
+#endif
 
 /// Puts each attachment's view over it. The text view lays the note out lazily, so a view whose line isn't laid out yet
 /// hides until it is. TextKit 2 is meant to do this through `NSTextAttachmentViewProvider`, but `NSTextView` never asks

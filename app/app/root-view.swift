@@ -351,7 +351,8 @@ struct RootView: View {
     /// The trailing buttons and the gaps around the search field, measured at their widest (a course, timer shown),
     /// less the Claude button that moved to the page.
     static let trailingTools: CGFloat = 288
-    /// Fixed, so the row doesn't shift as the minutes tick, and wide enough for a class past an hour ("1:15:00").
+    /// The time's widest, a class past an hour ("1:15:00"), for the trail's room. The button itself hugs the time:
+    /// held at this width, a short "9:48" sat in a wide gap and crowded the toolbar.
     static let recordingTimeWidth: CGFloat = 96
 
     @ViewBuilder var recordButton: some View {
@@ -396,7 +397,8 @@ struct RootView: View {
             Image(systemName: "record.circle").foregroundStyle(Theme.Palette.danger)
         }
         .labelStyle(.titleAndIcon)
-        .frame(width: Self.recordingTimeWidth)
+        // Even digits keep it from shifting each second; it widens only at "10:00" and "1:00:00".
+        .fixedSize()
     }
 
     var recordMenu: some View {

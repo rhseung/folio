@@ -34,6 +34,28 @@
         }
       }
     },
+    "error.build.output-elsewhere": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 자료를 빌드한 결과가 아니라서 쓰지 않습니다: %@"
+          }
+        }
+      }
+    },
+    "error.build.would-replace": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 이름의 PDF가 이미 있고 Folio가 만든 것이 아니라서 바꾸지 않았습니다: %@. 바꾸려면 --overwrite를 줍니다"
+          }
+        }
+      }
+    },
     "error.course.folder-name": {
       "extractionState": "manual",
       "localizations": {
@@ -210,6 +232,17 @@
         }
       }
     },
+    "error.material.changed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료가 다른 곳에서 바뀌었습니다: %@"
+          }
+        }
+      }
+    },
     "error.material.import-outside": {
       "extractionState": "manual",
       "localizations": {
@@ -228,6 +261,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "과목 폴더 밖으로는 옮길 수 없습니다: %@"
+          }
+        }
+      }
+    },
+    "error.material.not-tex": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LaTeX 파일(.tex)만 PDF로 만듭니다: %@"
+          }
+        }
+      }
+    },
+    "error.material.not-text": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "텍스트 파일이 아니라서 쓸 수 없습니다: %@"
+          }
+        }
+      }
+    },
+    "error.material.not-utf8": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "UTF-8 텍스트가 아니라서 Folio에서 고치지 않습니다: %@"
           }
         }
       }
@@ -441,6 +507,17 @@
         }
       }
     },
+    "error.note-build.no-entry": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "course.json에 항목이 없는 노트라서 빌드하지 않습니다: %@. 먼저 folio note adopt로 들입니다"
+          }
+        }
+      }
+    },
     "error.note.cancelled-session": {
       "extractionState": "manual",
       "localizations": {
@@ -459,6 +536,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "노트가 다른 곳에서 바뀌었습니다: %@"
+          }
+        }
+      }
+    },
+    "error.note.session-has-review": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차 %@에는 이미 복습 노트가 있습니다"
+          }
+        }
+      }
+    },
+    "error.note.session-has-rough": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차 %@에는 이미 러프 노트가 있습니다"
           }
         }
       }
@@ -525,6 +624,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "회차 노트는 러프나 복습 노트입니다"
+          }
+        }
+      }
+    },
+    "error.tex.failed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF를 만들지 못했습니다.\n%@"
+          }
+        }
+      }
+    },
+    "error.tex.mac-only": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LaTeX 빌드는 Mac에서만 합니다"
+          }
+        }
+      }
+    },
+    "error.tex.not-installed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tectonic이 설치되어 있지 않습니다. 터미널에서 brew install tectonic으로 설치하세요"
           }
         }
       }

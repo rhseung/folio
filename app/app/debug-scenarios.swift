@@ -1,5 +1,6 @@
 #if DEBUG
 import FolioFixtures
+import FolioStorage
 import Foundation
 
 extension Workspace {
@@ -11,6 +12,9 @@ extension Workspace {
         let workspace = Workspace()
         workspace.pinnedNow = scenario.now
         workspace.calendar = Scenario.calendar
+        // Before opening, whose reload recovers leftovers: one left by a run on a fixture shares these course IDs,
+        // and recovery would move a real lecture into this throwaway folder and delete it here.
+        workspace.pendingRecordings = PendingRecordings(url: URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory))
         workspace.open(url, remember: false)
         return workspace
     }

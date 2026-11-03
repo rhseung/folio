@@ -9,7 +9,8 @@ import UIKit
 /// both the audio file and the transcriber, so transcript times line up with the file even across pauses.
 @MainActor @Observable
 final class LectureRecorder {
-    enum State { case idle, preparing, recording, paused }
+    /// `stopping` lasts the seconds the transcriber takes to finish; a second stop then appended the last words twice.
+    enum State { case idle, preparing, recording, paused, stopping }
 
     private(set) var state = State.idle
     private(set) var courseId: UUID?
@@ -21,6 +22,10 @@ final class LectureRecorder {
     /// Words heard but not settled yet; they settle into `lines`.
     private(set) var volatile = ""
     private(set) var bookmarks: [TimeInterval] = []
+    /// Lecture pages on screen in the app while recording.
+    private(set) var pages: [PageVisit] = []
+    /// What the captions were last told; also what the sidebar card's transcript shows.
+    private(set) var context: TranscriptionContext?
     private(set) var locale = Locale(identifier: "ko-KR")
     private(set) var transcriptionNote: String?
 
@@ -38,13 +43,33 @@ final class LectureRecorder {
     var isActive: Bool { state != .idle }
     /// `recording` outlives the recording, so the sidebar card keeps its course and session while it slides away;
     /// asking it instead once read a finished recording as still under way, and deleting it was refused.
+    /// It names the new recording from the moment it starts preparing: recovery took the new one's empty file for a
+    /// crash's leftover and moved it into the course folder, and the lecture went on into a deleted file.
     var current: UUID? { isActive ? recording?.id : nil }
+
+    /// Progress is saved only once the microphone runs: while preparing there is nothing to keep, and a start that
+    /// fails leaves no recording to save into.
+    private var running: Bool { state == .recording || state == .paused }
+    /// The recording that pages and bookmarks go to. Unlike `current` it comes on only once the course is set, so a
+    /// page already open when recording starts is told when it can be kept.
+    var capturing: UUID? { running ? recording?.id : nil }
 
     /// Starts recording into `file`, an uncompressed CAF on this device: unlike AAC, it stays readable up to the last
     /// buffer if the app dies mid-lecture. Transcription is best effort; the audio never waits on it.
     func start(_ recording: Recording, at file: URL, course: UUID, title: String, locale: Locale) async throws {
         guard state == .idle else { return }
         state = .preparing
+        // Set before the first wait, which can take seconds: the card would otherwise show the last lecture's time,
+        // bookmarks and captions while it prepares.
+        self.recording = recording
+        courseId = course
+        self.title = title
+        lines = []
+        volatile = ""
+        bookmarks = []
+        pages = []
+        context = nil
+        elapsed = 0
         do {
             guard await AVAudioApplication.requestRecordPermission() else { throw RecorderError.microphoneDenied }
             #if os(iOS)
@@ -77,19 +102,14 @@ final class LectureRecorder {
             guard let sink = AudioSink(file: audioFile, input: input, fileFormat: fileFormat, analyzerFormat: transcription?.1, analyzer: analyzerInput) else {
                 throw RecorderError.noMicrophone
             }
+            // A second tap on the bus raises an Objective-C exception, which ends the app.
+            engine.inputNode.removeTap(onBus: 0)
             sink.install(on: engine.inputNode, format: input)
             engine.prepare()
             try engine.start()
 
             self.sink = sink
-            self.recording = recording
-            self.courseId = course
-            self.title = title
             self.locale = transcription?.2 ?? locale
-            lines = []
-            volatile = ""
-            bookmarks = []
-            elapsed = 0
             state = .recording
             #if os(iOS)
             // A lecture is long; an auto-locked iPad stops the microphone.
@@ -105,7 +125,7 @@ final class LectureRecorder {
             clockTask = Task { [weak self] in
                 while !Task.isCancelled {
                     try? await Task.sleep(for: .milliseconds(200))
-                    guard let self, let sink = self.sink else { return }
+                    guard !Task.isCancelled, let self, let sink = self.sink else { return }
                     self.elapsed = sink.seconds
                     self.level = self.state == .recording ? LectureLoudness.level(sink.takeDecibels()) : 0
                     // A changed microphone (AirPods, a dock), an interruption or sleep stops the engine without telling
@@ -169,17 +189,33 @@ final class LectureRecorder {
         state = .recording
     }
 
-    func bookmark() {
-        guard isActive, var recording else { return }
-        bookmarks.append(elapsed)
+    /// The recording as it stands, for saving progress: `recording` holds only what it started with. Its length is the
+    /// audio so far, which is where the page on screen now stops counting; left at 0 it never would.
+    var snapshot: Recording? {
+        guard running, var recording else { return nil }
+        recording.duration = elapsed
         recording.bookmarks = bookmarks
-        saveProgress(recording)
+        recording.pages = pages
+        return recording
+    }
+
+    func bookmark() {
+        guard running else { return }
+        bookmarks.append(elapsed)
+        if let snapshot { saveProgress(snapshot) }
+    }
+
+    /// `page` (1-based) of a lecture file came on screen, or with nil the file closed.
+    func show(_ material: UUID, page: Int?) {
+        guard let snapshot, let visit = snapshot.visit(material, page: page, at: elapsed) else { return }
+        pages.append(visit)
+        if let latest = self.snapshot { saveProgress(latest) }
     }
 
     func stop() async -> (Recording, LectureTranscript)? {
-        guard isActive, var recording else { return nil }
-        engine.inputNode.removeTap(onBus: 0)
-        engine.stop()
+        guard running, var recording else { return nil }
+        state = .stopping
+        stopEngine()
         let seconds = sink?.seconds ?? elapsed
         sink?.close()
         try? await analyzer?.finalizeAndFinishThroughEndOfInput()
@@ -187,7 +223,8 @@ final class LectureRecorder {
         if !volatile.isEmpty { lines.append(.init(start: lines.last?.end ?? 0, end: seconds, text: volatile)) }
         recording.duration = seconds
         recording.bookmarks = bookmarks
-        let transcript = LectureTranscript(locale: locale.identifier, lines: lines)
+        recording.pages = pages
+        let transcript = LectureTranscript(locale: locale.identifier, lines: lines, context: context)
         teardown()
         state = .idle
         return (recording, transcript)
@@ -196,12 +233,11 @@ final class LectureRecorder {
     /// For quitting: the audio stays where it is and moves into the course folder at the next launch.
     func stopNow() {
         guard isActive else { return }
-        engine.inputNode.removeTap(onBus: 0)
-        engine.stop()
+        stopEngine()
         sink?.close()
         if let recording, !lines.isEmpty || !volatile.isEmpty {
             let heard = volatile.isEmpty ? lines : lines + [.init(start: lines.last?.end ?? 0, end: elapsed, text: volatile)]
-            saveTranscript(recording, LectureTranscript(locale: locale.identifier, lines: heard))
+            saveTranscript(recording, LectureTranscript(locale: locale.identifier, lines: heard, context: context))
         }
         teardown()
         state = .idle
@@ -234,28 +270,50 @@ final class LectureRecorder {
             // Saved as lines settle (at most every few seconds), so a crash keeps what was said.
             if let recording, Date.now.timeIntervalSince(lastTranscriptSave) > 5 {
                 lastTranscriptSave = .now
-                saveTranscript(recording, LectureTranscript(locale: locale.identifier, lines: lines))
+                saveTranscript(recording, LectureTranscript(locale: locale.identifier, lines: lines, context: context))
             }
         } else {
             volatile = text
         }
     }
 
-    /// Given once recording runs: the slides are read from the course folder, which may first have to download.
-    func use(_ hints: TranscriptionHints, for recording: UUID) async {
-        guard current == recording, let analyzer else { return }
+    /// Given once recording runs, and again when the pages on screen change: the slides are read from the course
+    /// folder, which may first have to download. Kept without captions too, to show what the transcript will hear.
+    func use(_ context: TranscriptionContext, hints: TranscriptionHints, for recording: UUID, telling: Int) async {
+        guard current == recording, telling == tellings else { return }
+        self.context = context
+        guard let analyzer else { return }
         try? await analyzer.setContext(SpeechAssets.context(hints))
     }
 
-    private func teardown() {
-        resultsTask?.cancel()
+    /// Numbers each reading of the slides. A download can make an earlier reading finish after a later one, and its
+    /// narrower pages would then overwrite what the captions were told.
+    func telling() -> Int {
+        tellings += 1
+        return tellings
+    }
+
+    @ObservationIgnored private var tellings = 0
+
+    /// The clock stops first. It restarts an engine it finds stopped, and stopping awaits the transcriber for seconds:
+    /// it put the microphone back on with a fresh tap, and the next recording's tap on the same bus crashed the app.
+    /// The clock also brought the level down, so it goes to zero here, or the card would glow on through those seconds.
+    private func stopEngine() {
         clockTask?.cancel()
-        resultsTask = nil
         clockTask = nil
+        level = 0
+        engine.inputNode.removeTap(onBus: 0)
+        engine.stop()
+    }
+
+    private func teardown() {
+        stopEngine()
+        resultsTask?.cancel()
+        resultsTask = nil
         sink = nil
         analyzer = nil
-        level = 0
         transcriptionNote = nil
+        context = nil
         #if os(iOS)
         UIApplication.shared.isIdleTimerDisabled = false
         try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)

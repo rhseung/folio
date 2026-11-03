@@ -366,6 +366,12 @@ extension CourseFile {
 extension CourseFile {
     public func name(of session: Session) -> String { session.name(among: sessions) }
 
+    /// A rough note is named after its session, a review note "<session> 정리". The title becomes the file name, so
+    /// `session note` and the new-note sheet must name a session's note the same way.
+    public func noteTitle(for session: Session, kind: NoteKind) -> String {
+        kind == .review ? "\(name(of: session)) 정리" : name(of: session)
+    }
+
     /// A past class still owing its review note: not when the session or the whole course is left out of review.
     public func needsReviewNote(_ session: Session, at now: Date) -> Bool {
         course.reviews != false && session.needsReviewNote(at: now)
@@ -401,14 +407,29 @@ extension CourseFile {
     }
 
     /// Makes the note `session`'s rough or review note, in place of the one it had; the note leaves any session it
-    /// was linked to before. Other kinds aren't a session's note, so they only unlink.
+    /// was linked to before. Other kinds aren't a session's note, so they only unlink. A review note linked again to
+    /// the same session keeps its unfinished mark: changing only its math syntax is not writing it.
     public mutating func linkNote(_ id: UUID, to session: UUID?, as kind: NoteKind) {
+        let unfinished = sessions.first { $0.id == session && $0.reviewNoteId == id }?.reviewNoteUnfinished ?? false
         forgetNote(id)
         guard let session, let i = sessions.firstIndex(where: { $0.id == session }) else { return }
         switch kind {
         case .rough: sessions[i].roughNoteId = id
-        case .review: sessions[i].reviewNoteId = id
+        case .review:
+            sessions[i].reviewNoteId = id
+            sessions[i].reviewNoteUnfinished = unfinished
         default: break
+        }
+    }
+}
+
+extension Session {
+    /// The session's rough or review note. A session holds one of each, so another note of that kind can't take it.
+    public func note(of kind: NoteKind) -> UUID? {
+        switch kind {
+        case .rough: roughNoteId
+        case .review: reviewNoteId
+        default: nil
         }
     }
 }

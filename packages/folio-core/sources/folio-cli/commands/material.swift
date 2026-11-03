@@ -20,7 +20,7 @@ func absolute(_ path: String) -> String {
 struct MaterialCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "material", abstract: String(localized: .materialAbstract),
-        subcommands: [List.self, Show.self, Link.self, Status.self, Kind.self, Relink.self, Track.self, Import.self, Move.self]
+        subcommands: [List.self, Show.self, Link.self, Status.self, Kind.self, Relink.self, Track.self, Import.self, Move.self, Write.self]
             + GeneratedCommands.material)
 
     struct List: ParsableCommand {
@@ -62,7 +62,10 @@ struct MaterialCommand: ParsableCommand {
             let r = Resolver(try CLI.context(g))
             let (c, name) = try r.split(material)
             let m = try r.material(name, in: c)
-            if g.json { return try printJSON(m) }
+            if g.json {
+                guard MaterialFormat(path: m.path).isText, let text = try? c.store?.readText(m.path) else { return try printJSON(m) }
+                return try printJSON(TextMaterial(material: m, text: text))
+            }
             let f = try c.requireFile()
             courseHeader(c, catalog: try? r.ctx.catalog())
             let url = c.store.map { $0.url.appending(path: m.path) }
@@ -154,6 +157,32 @@ struct MaterialCommand: ParsableCommand {
         }
     }
 
+    struct Write: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: String(localized: .materialWriteAbstract), discussion: String(localized: .materialWriteDiscussion))
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpMaterial), valueName: "material"), completion: Complete.materials) var material: String
+        @Option(help: ArgumentHelp(String(localized: .noteWriteHelpFile), valueName: "file"), completion: .file()) var file: String
+        @Option(help: ArgumentHelp(String(localized: .materialWriteHelpExpect), valueName: "hash")) var expect: String?
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, name) = try r.split(material)
+            let m = try r.material(name, in: c)
+            var expected: String?
+            if let expect, let store = c.store, MaterialFormat(path: m.path).isText {
+                let current = try store.readText(m.path)
+                guard contentHash(current) == expect.lowercased() else {
+                    throw CLIError(exit: .conflict, message: String(localized: .materialWriteConflict(m.path)),
+                                   hints: [String(localized: .materialWriteConflictHint(c.code, m.path))])
+                }
+                // The action checks again right before writing, so a change between here and there is caught too.
+                expected = current
+            }
+            try perform(spec: MaterialWrite(course: c.id, material: m.id, text: try readText(file), expected: expected), g, ctx: ctx)
+        }
+    }
+
     struct Track: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .materialTrackAbstract), discussion: String(localized: .materialTrackDiscussion))
         @OptionGroup var g: GlobalOptions
@@ -198,5 +227,21 @@ struct MaterialCommand: ParsableCommand {
             let result = try perform(spec: MaterialMove(course: c.id, material: m.id, to: to), g, ctx: ctx)
             if !g.json, let batch = result.made { say(String(localized: .materialMvUndo(batch.uuidString)).styled(.dim)) }
         }
+    }
+}
+
+/// A text material's JSON also carries the file as it is now and the hash `material write --expect` compares. The
+/// material's own `hash` is from the last tracking, so after a change from another device it would never match.
+struct TextMaterial: Encodable {
+    var material: Material
+    var text: String
+
+    private enum Keys: String, CodingKey { case text, contentHash }
+
+    func encode(to encoder: Encoder) throws {
+        try material.encode(to: encoder)
+        var c = encoder.container(keyedBy: Keys.self)
+        try c.encode(text, forKey: .text)
+        try c.encode(contentHash(text), forKey: .contentHash)
     }
 }
