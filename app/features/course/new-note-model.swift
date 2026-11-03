@@ -51,11 +51,9 @@ final class NewNoteModel {
     var kindOptions: [(NoteKind, String)] { NoteKind.allCases.map { ($0, $0.label) } }
     var formatOptions: [(NoteFormat, String)] { NoteFormat.allCases.map { ($0, $0.label) } }
 
-    /// Sessions that don't have this kind's note yet, newest first: a session holds one rough and one review note, and
-    /// taking one that has it would leave the other note without its session.
+    /// Sessions that don't have this kind's note yet, newest first; `note add` refuses the others.
     var sessionOptions: [PickOption<UUID?>] {
-        let taken: (Session) -> Bool = { [kind] in (kind == .rough ? $0.roughNoteId : $0.reviewNoteId) != nil }
-        let sessions = course.file.sessions.filter { !$0.isCancelled && !taken($0) }.sorted { $0.date > $1.date }
+        let sessions = course.file.sessions.filter { [kind] in !$0.isCancelled && $0.note(of: kind) == nil }.sorted { $0.date > $1.date }
         return [PickOption(id: nil, title: String(localized: .commonNone))]
             + sessions.map { PickOption(id: $0.id, title: course.file.name(of: $0), detail: $0.topic.isEmpty ? nil : $0.topic) }
     }

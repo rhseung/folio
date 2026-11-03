@@ -47,6 +47,31 @@ struct NoteActionTests {
         #expect(entry.sessionId == session && entry.examId == nil)
     }
 
+    /// A session holds one review note; another can't take it from the app, the CLI or MCP alike.
+    @Test func aSessionsReviewNoteIsNotTaken() throws {
+        let session = UUID(), first = UUID(), second = UUID()
+        try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
+        try run(NoteAdd(id: first, course: Self.graphTheory, title: "복습", kind: .review, session: session))
+        let name = try file().name(of: try #require(try file().sessions.first { $0.id == session }))
+        #expect(throws: ActionError.rule("회차 \(name)에는 이미 복습 노트가 있습니다")) {
+            try run(NoteAdd(id: second, course: Self.graphTheory, title: "복습 2", kind: .review, session: session))
+        }
+        try run(NoteAdd(id: second, course: Self.graphTheory, title: "복습 2"))
+        #expect(throws: ActionError.self) { try run(NoteLink(course: Self.graphTheory, note: second, kind: .review, session: session)) }
+        #expect(try file().sessions.first { $0.id == session }?.reviewNoteId == first)
+    }
+
+    /// The editor saves a math change through `note link`; it isn't writing the note, so it stays unfinished.
+    @Test func relinkingAReviewNoteKeepsItUnfinished() throws {
+        let session = UUID(), id = UUID()
+        try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
+        try run(NoteAdd(id: id, course: Self.graphTheory, title: "복습", kind: .review, session: session))
+        try run(NoteLink(course: Self.graphTheory, note: id, kind: .review, session: session, math: .asciimath))
+        let s = try #require(try file().sessions.first { $0.id == session })
+        #expect(s.reviewNoteId == id && s.reviewNoteUnfinished)
+        #expect(try file().notes.first { $0.id == id }?.math == .asciimath)
+    }
+
     @Test func aSecondNoteOfTheSameTitleGetsANumber() throws {
         try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "2주차-1"))
         #expect(try file().notes.map(\.path).contains("Notes/2주차-1 2.md"))

@@ -129,7 +129,7 @@ public struct SessionNote {
         guard kind == .rough || kind == .review else { throw ActionError.rule(String(localized: .errorSessionNoteKind)) }
         let file = try ctx.file(course)
         let s = file.sessions[try index(session, in: file.sessions, .valueSession)]
-        if let id = kind == .rough ? s.roughNoteId : s.reviewNoteId {
+        if let id = s.note(of: kind) {
             ctx.made(id)
             return
         }

@@ -61,6 +61,11 @@ struct NoteLinks {
         if kind == .rough || kind == .review, let session {
             guard let s = course.sessions.first(where: { $0.id == session }) else { throw ActionError.notFound(String(localized: .errorNotFoundSession)) }
             if s.isCancelled { throw ActionError.rule(String(localized: .errorNoteCancelledSession)) }
+            // Taking it would leave the other note pointing at a session that no longer points back.
+            if let other = s.note(of: kind), other != meta.id {
+                let name = course.name(of: s)
+                throw ActionError.rule(String(localized: kind == .rough ? .errorNoteSessionHasRough(name) : .errorNoteSessionHasReview(name)))
+            }
         }
         if kind == .examSummary, let exam, !course.exams.contains(where: { $0.id == exam }) { throw ActionError.notFound(String(localized: .errorNotFoundExam)) }
         if kind == .topic, let u = units.first(where: { u in !course.units.contains { $0.id == u } }) { throw ActionError.notFound(String(localized: .errorNotFoundUnitId("\(u)"))) }

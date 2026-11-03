@@ -540,6 +540,28 @@
         }
       }
     },
+    "error.note.session-has-review": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차 %@에는 이미 복습 노트가 있습니다"
+          }
+        }
+      }
+    },
+    "error.note.session-has-rough": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차 %@에는 이미 러프 노트가 있습니다"
+          }
+        }
+      }
+    },
     "error.note.title-empty": {
       "extractionState": "manual",
       "localizations": {
