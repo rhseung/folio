@@ -71,6 +71,23 @@ struct NoteWidgetTests {
     }
 
     /// The block takes the page's height in place, so up-and-down scrolling never stops inside a widget.
+    /// The text view's own layers sit over its subviews; a click on a widget has to reach the widget.
+    @Test func aClickOnTheWidgetReachesIt() async throws {
+        let (view, window, _) = try Self.reader(widget: "<!doctype html><button style='width:100%;height:150px'>b</button>") {
+            Self.block($0) + "\n\n" + Array(repeating: "Text after the widget.", count: 20).joined(separator: "\n\n")
+        }
+        let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
+        _ = try await Self.fitted(web)
+        NoteRender.layout(view)
+        let root = try #require(window.contentView?.superview)
+        let point = web.convert(NSPoint(x: web.bounds.midX, y: web.bounds.midY), to: root)
+        let hit = try #require(root.hitTest(point))
+        #expect(hit === web || hit.isDescendant(of: web), "hit \(type(of: hit))")
+        // Below the widget, the text keeps its clicks.
+        let text = view.convert(NSPoint(x: web.frame.midX, y: web.frame.maxY + 120), to: root)
+        #expect(root.hitTest(text).map { $0 === web || $0.isDescendant(of: web) } == false)
+    }
+
     @Test func theBlockFitsItsPage() async throws {
         let html = "<!doctype html><div style='height:500px'></div>"
         let (view, _, _) = try Self.reader(widget: html) { "Before\n\n" + Self.block($0, height: 200) + "\n\nAfter" }
