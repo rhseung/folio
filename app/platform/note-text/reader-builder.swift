@@ -73,14 +73,17 @@ struct ReaderBlock {
     var width: CGFloat
     /// Callouts folded or unfolded by a click, against how the note starts them.
     var toggled: Set<Int> = []
+    let widgets: ReaderWidgets
 
     private var out = NSMutableAttributedString()
+    private var inCell = false
     private var calloutCount = 0
     private var counters: [String: Int] = [:]
     /// The block ID taken off the last paragraph.
     private var lastID: String?
 
-    init(accent: CourseAccent, syntax: MathSyntax, baseURL: URL?, dark: Bool, width: CGFloat, toggled: Set<Int> = []) {
+    init(accent: CourseAccent, syntax: MathSyntax, baseURL: URL?, dark: Bool, width: CGFloat, toggled: Set<Int> = [], widgets: ReaderWidgets) {
+        self.widgets = widgets
         self.accent = accent
         self.syntax = syntax
         self.baseURL = baseURL
@@ -101,6 +104,8 @@ struct ReaderBlock {
         out = NSMutableAttributedString()
         calloutCount = 0
         counters = [:]
+        widgets.begin()
+        defer { widgets.end() }
         var blocks: [ReaderBlock] = []
         let children = Array(note.document.children)
         var previousCallout: String?
@@ -403,8 +408,22 @@ struct ReaderBlock {
                 return
             }
         case CBWidget.language:
-            let height = (try? JSONDecoder().decode(CBWidget.self, from: Data(text.utf8)))?.height ?? 120
-            picture(ReaderPictures.placeholder(CGSize(width: width - ctx.indent * 2, height: height)), ctx)
+            // A cell has no view to run a widget over, and a code block draws nothing there, so the block's text goes in.
+            if inCell {
+                let style = Self.paragraph(ctx, after: 4, lineSpacing: 4)
+                out.append(NSAttributedString(string: text, attributes: attributes(ctx, style, font: NoteLook.font(NoteLook.codeSize, mono: true))))
+                newline(attributes(ctx, style))
+                return
+            }
+            // A block that doesn't decode shows as the code it is, so the mistake can be seen.
+            guard let widget = try? JSONDecoder().decode(CBWidget.self, from: Data(text.utf8)) else { break }
+            let file = baseURL.flatMap { StandardLayout.widgetFile(widget.id, noteFolder: $0) }
+            let view = widgets.view(widget.id, file: file, accent: accent)
+            // A block with no height would hide its view, and a hidden page never says how tall it is.
+            let size = CGSize(width: width - ctx.indent * 2, height: view.pageHeight ?? max(widget.height ?? 320, 16))
+            let style = Self.paragraph(ctx, before: 6, after: NoteLook.blockGap)
+            out.append(NSAttributedString(attachment: WidgetAttachment(view: view, size: size), attributes: attributes(ctx, style)))
+            newline(attributes(ctx, style))
             return
         default:
             break
@@ -687,7 +706,8 @@ struct ReaderBlock {
     mutating func cell(markdown: String, weight: PlatformFont.Weight) -> NSAttributedString {
         let saved = out
         out = NSMutableAttributedString()
-        defer { out = saved }
+        inCell = true
+        defer { out = saved; inCell = false }
         for node in ParsedNote(markdown).document.children {
             if let p = node as? Paragraph {
                 paragraph(Array(p.inlineChildren), Context(), style: Self.paragraph(Context(), after: 4, lineSpacing: 4))

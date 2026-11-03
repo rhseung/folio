@@ -80,6 +80,7 @@ final class ReaderTextView: NoteTextView, NSTextViewDelegate {
         delegate = self
         core = ReaderCore(storage: textStorage!)
         core.rendered = { [weak self] in self?.rendered() }
+        core.resized = { [weak self] in self?.needsLayout = true }
         core.replacing = { [weak self] swap in
             guard let self, let at = self.clicked ?? self.firstVisible, let y = self.screenY(of: at) else { return swap() }
             swap()
@@ -106,21 +107,21 @@ final class ReaderTextView: NoteTextView, NSTextViewDelegate {
 
     override func layout() {
         super.layout()
-        placeCode()
+        placeViews()
     }
 
     override func prepareContent(in rect: NSRect) {
         super.prepareContent(in: rect)
-        placeCode()
+        placeViews()
     }
 
-    private func placeCode() {
+    private func placeViews() {
         guard let manager = textLayoutManager else { return }
-        CodeAttachment.place(in: self, storage: core.storage, manager: manager, origin: textContainerOrigin)
+        AttachedViews.place(in: self, storage: core.storage, manager: manager, origin: textContainerOrigin)
     }
 
     private func rendered() {
-        placeCode()
+        placeViews()
         undoManager?.removeAllActions(withTarget: self)
         setSelectedRange(NSRange(location: min(selectedRange().location, core.storage.length), length: 0))
         // Beside the editor the page follows it, except right after a click here, which leaves the editor still.
@@ -257,6 +258,7 @@ final class ReaderTextView: NoteTextView, UITextViewDelegate, UIGestureRecognize
         delegate = self
         core = ReaderCore(storage: textStorage)
         core.rendered = { [weak self] in self?.rendered() }
+        core.resized = { [weak self] in self?.setNeedsLayout() }
         let tap = UITapGestureRecognizer(target: self, action: #selector(tapped))
         tap.delegate = self
         addGestureRecognizer(tap)
@@ -280,16 +282,16 @@ final class ReaderTextView: NoteTextView, UITextViewDelegate, UIGestureRecognize
 
     override func layoutSubviews() {
         super.layoutSubviews()
-        placeCode()
+        placeViews()
     }
 
-    private func placeCode() {
+    private func placeViews() {
         guard let manager = textLayoutManager else { return }
-        CodeAttachment.place(in: self, storage: core.storage, manager: manager, origin: CGPoint(x: textContainerInset.left, y: textContainerInset.top))
+        AttachedViews.place(in: self, storage: core.storage, manager: manager, origin: CGPoint(x: textContainerInset.left, y: textContainerInset.top))
     }
 
     private func rendered() {
-        placeCode()
+        placeViews()
         undoManager?.removeAllActions()
         link?.refollow()
     }

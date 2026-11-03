@@ -28,16 +28,38 @@ import UIKit
     var dirty: Int?
     private var timer: Timer?
     let storage: NSTextStorage
+    let widgets = ReaderWidgets()
     /// Called after the text is swapped for a new rendering.
     var rendered: () -> Void = {}
     /// Wraps swapping the text, so the view can keep its place on screen.
     var replacing: (() -> Void) -> Void = { $0() }
+    /// Called after a block changed size in place.
+    var resized: () -> Void = {}
 
-    init(storage: NSTextStorage) { self.storage = storage }
+    init(storage: NSTextStorage) {
+        self.storage = storage
+        widgets.resized = { [weak self] in self?.fit($0) }
+    }
+
+    /// The widget's block takes its page's new height in place: rendering the note again would drop a caret being
+    /// typed with.
+    private func fit(_ view: WidgetWebView) {
+        guard let height = view.pageHeight else { return }
+        var changed = false
+        storage.enumerateAttribute(.attachment, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+            guard let widget = value as? WidgetAttachment, widget.view === view, widget.bounds.height != height else { return }
+            widget.bounds.size.height = height
+            storage.beginEditing()
+            storage.edited(.editedAttributes, range: range, changeInLength: 0)
+            storage.endEditing()
+            changed = true
+        }
+        if changed { resized() }
+    }
 
     func configure(accent: CourseAccent, syntax: MathSyntax, baseURL: URL?, dark: Bool, width: CGFloat) {
         let changed = builder.map { $0.accent != accent || $0.syntax != syntax || $0.dark != dark || $0.baseURL != baseURL || $0.width != width } ?? true
-        builder = ReaderBuilder(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark, width: width)
+        builder = ReaderBuilder(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark, width: width, widgets: widgets)
         if changed { rerender() }
     }
 

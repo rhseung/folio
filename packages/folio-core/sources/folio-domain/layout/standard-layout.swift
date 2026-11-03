@@ -1,6 +1,8 @@
 // Single source of truth for folder and file names (AGENTS.md "폴더 구조와 이름 규칙").
 // Other layers derive names from these types; never spell the strings elsewhere.
 
+import Foundation
+
 public enum Term: String, CaseIterable, Codable, Sendable {
     case spring, summer, fall, winter
     case credited  // 인정학기: has no folder
@@ -105,6 +107,16 @@ public enum StandardLayout {
         let cleaned = title.map { "/\\:".contains($0) ? "-" : $0 }
         let name = "\(prefix)\(digits) \(String(cleaned).trimmingCharacters(in: .whitespaces))"
         return isCourseFolderName(name) ? name : nil
+    }
+
+    /// `<course>/.folio/widgets/<id>.html` for a note in `<course>/Notes`, at any depth below it.
+    public static func widgetFile(_ id: UUID, noteFolder: URL) -> URL? {
+        let parts = noteFolder.standardizedFileURL.pathComponents
+        guard let notes = parts.indices.first(where: { $0 > 0 && parts[$0] == CourseFolder.notes.rawValue && isCourseFolderName(parts[$0 - 1]) })
+        else { return nil }
+        var course = noteFolder.standardizedFileURL
+        for _ in notes..<parts.count { course.deleteLastPathComponent() }
+        return course.appending(path: metadataFolder).appending(path: widgetsFolder).appending(path: id.uuidString + ".html")
     }
 
     /// `<code> <title>`, e.g. `EC4207 그래프 이론`.

@@ -4,17 +4,22 @@ import AppKit
 import UIKit
 #endif
 
-protocol CodeView: AnyObject {}
+/// A view the read view put over an attachment, so `AttachedViews.place` knows which subviews are its own.
+protocol AttachedView: AnyObject {}
+
+/// An attachment that draws nothing and has a view of its own stand where it is.
+protocol ViewAttachment: NSTextAttachment {
+    var view: PlatformView { get }
+    /// How far the view reaches past the attachment on both sides, and below it.
+    var inset: CGFloat { get }
+    var below: CGFloat { get }
+}
 
 /// A code block's lines in a view of their own that scrolls sideways: wrapped, a long line would restart at the
 /// box's edge and lose the indent that gives code its shape.
-final class CodeAttachment: NSTextAttachment {
+final class CodeAttachment: NSTextAttachment, ViewAttachment {
     let code: NSAttributedString
-    #if os(macOS)
-    let view: NSView
-    #else
-    let view: UIView
-    #endif
+    let view: PlatformView
 
     /// Its view reaches `inset` past the text on both sides, out to the box's edges, so scrolled code runs under them,
     /// and `below` past its last line, so the scroller sits in the box's padding instead of over that line.
@@ -70,7 +75,7 @@ final class CodeAttachment: NSTextAttachment {
     }
 
     /// Hands up-and-down scrolling to the note, so the pointer resting on code doesn't stop the page.
-    private final class SideScrollView: NSScrollView, CodeView {
+    private final class SideScrollView: NSScrollView, AttachedView {
         override func scrollWheel(with event: NSEvent) {
             if abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) { nextResponder?.scrollWheel(with: event) } else { super.scrollWheel(with: event) }
         }
@@ -91,47 +96,34 @@ final class CodeAttachment: NSTextAttachment {
         return (scroll, size)
     }
 
-    private final class SideScrollView: UIScrollView, CodeView {}
+    private final class SideScrollView: UIScrollView, AttachedView {}
     #endif
 }
 
-extension CodeAttachment {
-    /// Puts each code block's view over its attachment. The text view lays the note out lazily, so a view whose line
-    /// isn't laid out yet hides until it is. TextKit 2 is meant to do this through `NSTextAttachmentViewProvider`, but
-    /// `NSTextView` never asks for one.
-    #if os(macOS)
-    static func place(in host: NSView, storage: NSAttributedString, manager: NSTextLayoutManager, origin: CGPoint) {
+/// Puts each attachment's view over it. The text view lays the note out lazily, so a view whose line isn't laid out yet
+/// hides until it is. TextKit 2 is meant to do this through `NSTextAttachmentViewProvider`, but `NSTextView` never asks
+/// for one.
+@MainActor enum AttachedViews {
+    static func place(in host: PlatformView, storage: NSAttributedString, manager: NSTextLayoutManager, origin: CGPoint) {
         var live = Set<ObjectIdentifier>()
         storage.enumerateAttribute(.attachment, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
-            guard let code = value as? CodeAttachment else { return }
-            live.insert(ObjectIdentifier(code.view))
-            if code.view.superview !== host { host.addSubview(code.view) }
-            code.view.frame = frame(of: code, at: range.location, manager: manager, origin: origin) ?? .zero
-            code.view.isHidden = code.view.frame.isEmpty
+            guard let attachment = value as? any ViewAttachment else { return }
+            let view = attachment.view
+            live.insert(ObjectIdentifier(view))
+            if view.superview !== host { host.addSubview(view) }
+            view.frame = frame(of: attachment, at: range.location, manager: manager, origin: origin) ?? .zero
+            view.isHidden = view.frame.isEmpty
         }
-        for view in host.subviews where view is CodeView && !live.contains(ObjectIdentifier(view)) { view.removeFromSuperview() }
+        for view in host.subviews where view is AttachedView && !live.contains(ObjectIdentifier(view)) { view.removeFromSuperview() }
     }
-    #else
-    static func place(in host: UIView, storage: NSAttributedString, manager: NSTextLayoutManager, origin: CGPoint) {
-        var live = Set<ObjectIdentifier>()
-        storage.enumerateAttribute(.attachment, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
-            guard let code = value as? CodeAttachment else { return }
-            live.insert(ObjectIdentifier(code.view))
-            if code.view.superview !== host { host.addSubview(code.view) }
-            code.view.frame = frame(of: code, at: range.location, manager: manager, origin: origin) ?? .zero
-            code.view.isHidden = code.view.frame.isEmpty
-        }
-        for view in host.subviews where view is CodeView && !live.contains(ObjectIdentifier(view)) { view.removeFromSuperview() }
-    }
-    #endif
 
-    private static func frame(of code: CodeAttachment, at index: Int, manager: NSTextLayoutManager, origin: CGPoint) -> CGRect? {
+    private static func frame(of attachment: any ViewAttachment, at index: Int, manager: NSTextLayoutManager, origin: CGPoint) -> CGRect? {
         guard let location = manager.location(manager.documentRange.location, offsetBy: index),
               let fragment = manager.textLayoutFragment(for: location), fragment.state == .layoutAvailable,
               let line = fragment.textLineFragments.first else { return nil }
         let frame = fragment.layoutFragmentFrame, bounds = line.typographicBounds
-        let x = origin.x + frame.minX + bounds.minX + line.locationForCharacter(at: line.characterRange.location).x - code.inset
-        let y = origin.y + frame.minY + bounds.midY - code.bounds.height / 2
-        return CGRect(x: x, y: y, width: code.bounds.width + code.inset * 2, height: code.bounds.height + code.below)
+        let x = origin.x + frame.minX + bounds.minX + line.locationForCharacter(at: line.characterRange.location).x - attachment.inset
+        let y = origin.y + frame.minY + bounds.midY - attachment.bounds.height / 2
+        return CGRect(x: x, y: y, width: attachment.bounds.width + attachment.inset * 2, height: attachment.bounds.height + attachment.below)
     }
 }
