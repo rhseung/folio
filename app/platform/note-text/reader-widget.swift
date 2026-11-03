@@ -137,14 +137,14 @@ final class WidgetWebView: WKWebView, AttachedView, WKNavigationDelegate {
             defer { last = (page, shown) }
             let start = start ?? shown
             self.start = start
-            // A page sized by its view (`100vh`, `50vh`) changes by the same share of every change of the view, so
-            // following it would grow or shrink it without end; it takes the block's height. Content that grows again
-            // while the block follows it (a font, an image, a chart drawn a frame later) changes by amounts of its
-            // own, so one change of both isn't enough to tell.
+            // A page sized by its view (`100vh`, `50vh`, `calc(600px - 100vh)`) changes by the same share of every
+            // change of the view, so following it would never settle; it takes the block's height. Content that grows
+            // again while the block follows it (a font, an image, a chart drawn a frame later) changes by amounts of
+            // its own, so one change of both isn't enough to tell.
             if let last, abs(shown - last.view) >= 0.5 {
                 if abs(page - last.page) >= 0.5 {
                     let share = (page - last.page) / (shown - last.view)
-                    if let previous = self.share, share > 0, abs(share - previous) < 0.01 {
+                    if let previous = self.share, abs(share - previous) < 0.01 {
                         followsView = true
                         fit(view, start)
                         return

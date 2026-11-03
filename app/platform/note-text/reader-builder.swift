@@ -419,7 +419,8 @@ struct ReaderBlock {
             guard let widget = try? JSONDecoder().decode(CBWidget.self, from: Data(text.utf8)) else { break }
             let file = baseURL.flatMap { StandardLayout.widgetFile(widget.id, noteFolder: $0) }
             let view = widgets.view(widget.id, file: file, accent: accent)
-            let size = CGSize(width: width - ctx.indent * 2, height: view.pageHeight ?? widget.height ?? 320)
+            // A block with no height would hide its view, and a hidden page never says how tall it is.
+            let size = CGSize(width: width - ctx.indent * 2, height: view.pageHeight ?? max(widget.height ?? 320, 16))
             let style = Self.paragraph(ctx, before: 6, after: NoteLook.blockGap)
             out.append(NSAttributedString(attachment: WidgetAttachment(view: view, size: size), attributes: attributes(ctx, style)))
             newline(attributes(ctx, style))

@@ -130,7 +130,10 @@ struct NoteWidgetTests {
     }
 
     /// A page sized by its view, taller or shorter than it, takes the block's height instead of chasing the view.
-    @Test(arguments: ["<div style='height:100vh'></div><div style='height:16px'></div>", "<div style='height:50vh'></div>"])
+    @Test(arguments: [
+        "<div style='height:100vh'></div><div style='height:16px'></div>", "<div style='height:50vh'></div>",
+        "<div style='height:calc(600px - 100vh)'></div>",
+    ])
     func aPageSizedByItsViewTakesTheBlocksHeight(body: String) async throws {
         let (view, _, _) = try Self.reader(widget: "<!doctype html>" + body) { Self.block($0, height: 200) }
         let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
@@ -153,6 +156,16 @@ struct NoteWidgetTests {
         for _ in 0..<10 { NoteRender.layout(view); try await Task.sleep(for: .milliseconds(50)) }
         #expect(web.pageHeight == 420)
         #expect(web.frame.height == 420)
+    }
+
+    /// A block written with no height still shows, so its page can say how tall it is.
+    @Test(arguments: [0, -40])
+    func aBlockWithNoHeightStillShows(height: Int) async throws {
+        let (view, _, _) = try Self.reader(widget: "<!doctype html><div style='height:100px'></div>") { Self.block($0, height: height) }
+        let web = try #require(Self.widgets(view).first?.view as? WidgetWebView)
+        #expect(try await Self.fitted(web) == 100)
+        NoteRender.layout(view)
+        #expect(!web.isHidden && web.frame.height == 100)
     }
 
     @Test func aLongPageGetsAllOfItsHeight() async throws {
