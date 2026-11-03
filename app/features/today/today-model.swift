@@ -173,11 +173,6 @@ final class TodayModel {
         item.exam.start?.formatted(.dateTime.month().day().weekday().hour().minute()) ?? ""
     }
 
-    func due(_ item: TodaySummary.DeadlineItem) -> String {
-        guard let due = item.assignment.due else { return "" }
-        return item.isToday ? due.formatted(date: .omitted, time: .shortened) : due.formatted(.dateTime.month().day().weekday())
-    }
-
     struct EditingAssignment: Identifiable {
         var course: LoadedCourse
         var assignment: Assignment
@@ -191,55 +186,41 @@ final class TodayModel {
         editing = EditingAssignment(course: course, assignment: item.assignment)
     }
 
-    enum DeadlineWhen: Int, CaseIterable {
-        case today, thisWeek, nextWeek, later
+    enum DeadlineUrgency { case urgent, soon, later }
+
+    struct DeadlineRow: Identifiable {
+        var item: TodaySummary.DeadlineItem
+        var urgency: DeadlineUrgency
+        var due: String
+        var id: UUID { item.assignment.id }
     }
 
-    struct DeadlineGroup: Identifiable {
-        var when: DeadlineWhen
-        var items: [TodaySummary.DeadlineItem]
-        var id: DeadlineWhen { when }
-    }
-
-    /// Weeks run Monday to Sunday, the way the timetable repeats, so "다음 주" is the next run of the same classes.
-    func deadlineGroups(_ items: [TodaySummary.DeadlineItem], studyDay: LocalDate) -> [DeadlineGroup] {
+    /// Today and tomorrow are urgent and the rest of the week soon, each said as a span from now; past a week a date reads
+    /// quicker than a count of days.
+    func deadlineRows(_ items: [TodaySummary.DeadlineItem], studyDay: LocalDate) -> [DeadlineRow] {
         let calendar = workspace.calendar
-        let weekday = studyDay.date(in: calendar).map { calendar.isoWeekday(of: $0) } ?? 1
-        let nextMonday = studyDay.adding(days: 8 - weekday)
-        func when(_ item: TodaySummary.DeadlineItem) -> DeadlineWhen {
-            if item.isToday { return .today }
-            guard let due = item.assignment.due else { return .later }
-            let day = LocalDate(due, in: calendar)
-            return day < nextMonday ? .thisWeek : day < nextMonday.adding(days: 7) ? .nextWeek : .later
+        return items.compactMap { item in
+            guard let due = item.assignment.due else { return nil }
+            // `isToday` follows the day boundary: 01:00 tonight is today though its calendar day is tomorrow.
+            let days = item.isToday ? 0 : max(1, studyDay.days(until: LocalDate(due, in: calendar)))
+            let time = due.formatted(date: .omitted, time: .shortened)
+            return switch days {
+            case 0: DeadlineRow(item: item, urgency: .urgent, due: String(localized: .todayDeadlinesTodayAt(time)))
+            case 1: DeadlineRow(item: item, urgency: .urgent, due: String(localized: .todayDeadlinesTomorrowAt(time)))
+            case ..<7: DeadlineRow(item: item, urgency: .soon, due: String(localized: .todayDeadlinesInDays(days)))
+            default: DeadlineRow(item: item, urgency: .later, due: due.formatted(.dateTime.month().day().weekday()))
+            }
         }
-        let grouped = Dictionary(grouping: items, by: when)
-        return DeadlineWhen.allCases.compactMap { w in grouped[w].map { DeadlineGroup(when: w, items: $0) } }
     }
 
     /// Past this many deadlines the rest fold behind a button: a term's worth of reports would push the reviews off the page.
     static let deadlineLimit = 6
     var showsAllDeadlines = false
 
-    /// The groups cut to `deadlineLimit` items unless unfolded, and how many were left out.
-    func shownDeadlines(_ groups: [DeadlineGroup]) -> (groups: [DeadlineGroup], more: Int) {
-        let total = groups.map(\.items.count).reduce(0, +)
-        guard !showsAllDeadlines, total > Self.deadlineLimit else { return (groups, 0) }
-        var left = Self.deadlineLimit
-        let cut = groups.compactMap { g -> DeadlineGroup? in
-            guard left > 0 else { return nil }
-            defer { left -= min(left, g.items.count) }
-            return DeadlineGroup(when: g.when, items: Array(g.items.prefix(left)))
-        }
-        return (cut, total - Self.deadlineLimit)
-    }
-
-    func groupLabel(_ when: DeadlineWhen) -> String {
-        switch when {
-        case .today: String(localized: .todayDeadlinesToday)
-        case .thisWeek: String(localized: .todayDeadlinesThisWeek)
-        case .nextWeek: String(localized: .todayDeadlinesNextWeek)
-        case .later: String(localized: .todayDeadlinesLater)
-        }
+    /// The rows cut to `deadlineLimit` unless unfolded, and how many were left out.
+    func shownDeadlines(_ rows: [DeadlineRow]) -> (rows: [DeadlineRow], more: Int) {
+        guard !showsAllDeadlines, rows.count > Self.deadlineLimit else { return (rows, 0) }
+        return (Array(rows.prefix(Self.deadlineLimit)), rows.count - Self.deadlineLimit)
     }
 
     // MARK: Day ribbon

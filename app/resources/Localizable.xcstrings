@@ -14477,17 +14477,6 @@
         }
       }
     },
-    "today.deadlines.today": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘"
-          }
-        }
-      }
-    },
     "today.note.create-help": {
       "extractionState": "manual",
       "localizations": {
@@ -15918,39 +15907,6 @@
         }
       }
     },
-    "today.deadlines.this-week": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이번 주"
-          }
-        }
-      }
-    },
-    "today.deadlines.next-week": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다음 주"
-          }
-        }
-      }
-    },
-    "today.deadlines.later": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "나중에"
-          }
-        }
-      }
-    },
     "today.more": {
       "extractionState": "manual",
       "localizations": {
@@ -16794,6 +16750,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "분"
+          }
+        }
+      }
+    },
+    "today.deadlines.today-at": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 %@"
+          }
+        }
+      }
+    },
+    "today.deadlines.tomorrow-at": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내일 %@"
+          }
+        }
+      }
+    },
+    "today.deadlines.in-days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld일 후"
           }
         }
       }
