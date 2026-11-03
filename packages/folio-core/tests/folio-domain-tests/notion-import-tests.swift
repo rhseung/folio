@@ -103,6 +103,25 @@ struct NotionNotesImportTests {
         #expect(again.sessionsAdded == 0 && again.notes.isEmpty && again.file.sessions.count == 1)
     }
 
+    /// A session that already has a rough note keeps it; the Notion one comes in unlinked, with a warning.
+    @Test func aSessionsNoteIsNotTakenByAnImportedOne() {
+        let ours = UUID()
+        var file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"))
+        var session = Session(device: device, at: now, week: 7, index: 2, date: now)
+        session.roughNoteId = ours
+        file.sessions = [session]
+        var meta = NoteMeta(id: ours)
+        meta.kind = .rough
+        meta.sessionId = session.id
+        file.notes = [NoteEntry(id: ours, device: device, at: now, path: "Notes/7주차-2.md", meta: meta)]
+        let rough = note("7주차-2", nil, "2026-10-14")
+        let dump = NotionCourseDump(coursePageId: UUID(), title: "그래프 이론", notes: [rough], scores: [], images: [])
+        let r = NotionNotesImporter.merge(dump, into: file, existingNotes: [ours], calendar: calendar, device: device, now: now)
+        #expect(r.file.sessions[0].roughNoteId == ours)
+        #expect(r.notes.first { $0.id == rough.id }?.meta.sessionId == nil)
+        #expect(r.warnings.count == 1)
+    }
+
     @Test func scoresGoUnderTheirTopLevelComponent() {
         let quiz = NotionCourseDump.ScoreRow(id: UUID(), name: "Quiz", weight: 10, score: nil, max: nil, parentId: nil)
         let q1 = NotionCourseDump.ScoreRow(id: UUID(), name: "Quiz 1", weight: nil, score: 35, max: 50, parentId: quiz.id)

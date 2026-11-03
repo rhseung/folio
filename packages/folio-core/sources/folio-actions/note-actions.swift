@@ -171,11 +171,12 @@ public struct NoteMigrate {
                     // A note copied in Finder carries the original's id; the copy gets its own.
                     let id = meta.id.flatMap { id in f.notes.contains { $0.id == id } ? nil : id } ?? UUID()
                     // Before #206 taking a session's note left the old one's frontmatter pointing at it. The note the
-                    // session points back to keeps the link; any other of that kind loses it.
+                    // session points back to keeps the link; any other of that kind loses it. The one that keeps it is
+                    // linked from the session too, or the session would still ask for that note.
                     if meta.kind == .rough || meta.kind == .review, let s = f.sessions.first(where: { $0.id == meta.sessionId }) {
                         let pointed = s.note(of: meta.kind)
                         let taken = pointed.map { $0 != id } ?? false || f.notes.contains { $0.sessionId == s.id && $0.kind == meta.kind }
-                        if taken { meta.sessionId = nil }
+                        if taken { meta.sessionId = nil } else { f.linkNote(id, to: s.id, as: meta.kind) }
                     }
                     f.notes.append(NoteEntry(id: id, device: ctx.device, at: ctx.now, path: store.notePath(of: n.url), meta: meta))
                 }

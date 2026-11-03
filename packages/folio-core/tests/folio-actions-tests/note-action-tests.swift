@@ -178,5 +178,8 @@ struct NoteActionTests {
         try run(NoteMigrate(course: Self.graphTheory))
         let claims = try file().notes.filter { $0.path.hasPrefix("Notes/정리") }
         #expect(claims.count == 2 && claims.count { $0.sessionId == session } == 1)
+        // The session points back at the one that kept it, so it no longer asks for a review note.
+        let kept = try #require(claims.first { $0.sessionId == session })
+        #expect(try file().sessions.first { $0.id == session }?.reviewNoteId == kept.id)
     }
 }

@@ -34,6 +34,28 @@
         }
       }
     },
+    "import.notes.session-has-review": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: 회차 %2$@에 이미 복습 노트가 있어 회차에 연결하지 않음"
+          }
+        }
+      }
+    },
+    "import.notes.session-has-rough": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: 회차 %2$@에 이미 러프 노트가 있어 회차에 연결하지 않음"
+          }
+        }
+      }
+    },
     "import.notes.weights-scaled": {
       "extractionState": "manual",
       "localizations": {
