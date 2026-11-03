@@ -19,7 +19,7 @@ struct TodayBackupTests {
             ["session", "add", "EC4207", "--date", "2026-10-26 10:30"],
             ["session", "add", "EC4207", "--date", "2026-10-28 13:00"],
             ["assignment", "add", "EC4207", "HW3", "--due", "2026-10-30 23:59"],
-            ["exam", "add", "EC4207", "기말고사", "--kind", "final", "--start", "2026-11-02 10:00"],
+            ["exam", "add", "EC4207", "기말고사", "--start", "2026-11-02 10:00"],
         ] { #expect(h.cli(line, gist: gist).code == 0, "\(line)") }
         let out = try json(h.cli(["today", "--json"], gist: gist))
         let titles = { (key: String) in (out[key] as? [[String: Any]] ?? []).compactMap { $0["title"] as? String } }

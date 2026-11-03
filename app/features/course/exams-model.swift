@@ -51,12 +51,12 @@ final class ExamsModel {
     func add() {
         let c = workspace.calendar
         let start = c.date(byAdding: .hour, value: 24 + 9, to: c.startOfDay(for: workspace.now)) ?? workspace.now
-        editing = Exam(device: workspace.device, at: .now, kind: .midterm, title: "", start: start)
+        editing = Exam(device: workspace.device, at: .now, title: "", start: start)
     }
 
     func remove(_ exam: Exam) { workspace.run(ExamRemove(course: course.id, exam: exam.id)) }
 
-    func folder(of exam: Exam) -> String? { MaterialIntake.folder(of: exam, among: course.file.exams) }
+    func folder(of exam: Exam) -> String? { MaterialIntake.folder(of: exam) }
 
     func drop(_ urls: [URL], on exam: Exam) {
         if let folder = folder(of: exam) { workspace.importFiles(urls, into: folder, course: course.id) }
@@ -108,11 +108,16 @@ final class ExamsModel {
 
     var canPickScope: Bool { !course.file.units.isEmpty }
 
+    /// The grade component the exam counts toward, which is what tells a midterm from a quiz now.
+    func component(of exam: Exam) -> String? {
+        exam.componentId.flatMap { id in course.file.components.first { $0.id == id }?.name }
+    }
+
     func pastFacts(_ exam: Exam) -> String {
         let scoped = exam.scopeUnitIds.count
         let checked = exam.plan.filter { done.contains($0.id) }.count
         let files = folder(of: exam).map { fileCount($0) } ?? 0
-        let facts = [exam.kind.label]
+        let facts = (component(of: exam).map { [$0] } ?? [])
             + (scoped > 0 ? [String(localized: .examsScopeUnits(scoped))] : exam.scopeText.isEmpty ? [] : [exam.scopeText])
             + (exam.location.isEmpty ? [] : [exam.location])
             + (files > 0 ? [String(localized: .examsFileCount(files))] : [])
@@ -202,12 +207,6 @@ final class ExamEditorModel {
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
     var isNew: Bool { !course.file.exams.contains { $0.id == draft.id } }
 
-    /// `Midterm`, `Quiz2`: the folder name, so the record and its folder read the same.
-    var defaultTitle: String {
-        let number = draft.kind == .quiz ? course.file.exams.filter { $0.kind == .quiz }.count + 1 : nil
-        return draft.kind.folderName(number: number) ?? draft.kind.label
-    }
-
     var endsBeforeStart: Bool {
         guard let start = draft.start, let end = draft.end else { return false }
         return end <= start
@@ -215,9 +214,13 @@ final class ExamEditorModel {
 
     var title: String { isNew ? String(localized: .examsAdd) : String(localized: .commonEditNamed(draft.title)) }
     var confirm: String { String(localized: isNew ? .commonAdd : .commonSave) }
-    var disabled: Bool { (!isNew && draft.title.isEmpty) || endsBeforeStart }
-    var note: String? { isNew ? draft.kind.folderName().map { _ in String(localized: .examsEditorFolderNote(defaultTitle)) } : nil }
-    var namePrompt: String { isNew ? defaultTitle : String(localized: .examsEditorName) }
+    var disabled: Bool { draft.title.trimmingCharacters(in: .whitespaces).isEmpty || endsBeforeStart }
+    /// Shown once there is a title to name the folder after; ExamAdd picks the same name.
+    var note: String? {
+        guard isNew, !draft.title.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        return String(localized: .examsEditorFolderNote(MaterialIntake.examFolder(title: draft.title, among: course.file.exams)))
+    }
+    var namePrompt: String { String(localized: .examsEditorName) }
     var units: [(unit: FolioDomain.Unit, depth: Int)] { UnitTree.outline(course.file.units) }
     var components: [(UUID?, String)] {
         [(nil, String(localized: .examsEditorNoComponent))] + course.file.components.sorted { $0.order < $1.order }.map { ($0.id, $0.name) }
@@ -249,12 +252,12 @@ final class ExamEditorModel {
     func addEnd() { setEnd(min((startMinute ?? 9 * 60) + 120, 23 * 60 + 59)) }
 
     func apply() -> Bool {
-        if draft.title.isEmpty { draft.title = defaultTitle }
+        draft.title = draft.title.trimmingCharacters(in: .whitespaces)
         let d = draft
         let saved = isNew
-            ? workspace.run(ExamAdd(id: d.id, course: course.id, title: d.title, kind: d.kind, start: d.start, end: d.end, location: d.location,
+            ? workspace.run(ExamAdd(id: d.id, course: course.id, title: d.title, start: d.start, end: d.end, location: d.location,
                                     component: d.componentId, scope: d.scopeUnitIds, scopeText: d.scopeText, allowed: d.allowed, memo: d.memo))
-            : workspace.run(ExamSet(course: course.id, exam: d.id, title: .set(d.title), kind: .set(d.kind), start: .set(d.start), end: .set(d.end),
+            : workspace.run(ExamSet(course: course.id, exam: d.id, title: .set(d.title), start: .set(d.start), end: .set(d.end),
                                     location: .set(d.location), component: .set(d.componentId), scope: .set(d.scopeUnitIds),
                                     scopeText: .set(d.scopeText), allowed: .set(d.allowed), memo: .set(d.memo)))
         return saved != nil

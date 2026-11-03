@@ -155,7 +155,7 @@ struct TodayTests {
     @Test func collectsTodayAcrossCourses() {
         let now = at(23, 2, 0)  // 02:00 Friday → study day is Thursday the 22nd
         var file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"))
-        file.exams = [Exam(device: device, at: now, kind: .midterm, title: "Midterm", start: at(27, 19))]
+        file.exams = [Exam(device: device, at: now, title: "Midterm", start: at(27, 19))]
         var late = Assignment(device: device, at: now, title: "HW5", due: at(23, 3, 0))     // still "today" in study time
         late.status = .todo
         let nextWeek = Assignment(device: device, at: now, title: "HW6", due: at(28, 23, 59))
@@ -208,7 +208,7 @@ struct TodayTests {
         func hint(_ at: Date = now) -> TodaySummary.CourseHint? {
             TodaySummary.build(courses: [file], now: at, settings: Settings(), calendar: calendar).hint(for: id, now: at)
         }
-        file.exams = [Exam(device: device, at: now, kind: .midterm, title: "Midterm", start: at(31, 19))]
+        file.exams = [Exam(device: device, at: now, title: "Midterm", start: at(31, 19))]
         #expect(hint() == nil)  // eight days out
         file.exams[0].start = at(30, 19)
         #expect(hint() == .exam(days: 7))

@@ -12,7 +12,7 @@ struct RuleTests {
     static let component = GradeComponent(device: device, at: now, name: "과제", weight: 30)
 
     static var course: CourseFile {
-        var exam = Exam(device: device, at: now, kind: .midterm, title: "중간고사", start: now, end: now.addingTimeInterval(3600))
+        var exam = Exam(device: device, at: now, title: "중간고사", start: now, end: now.addingTimeInterval(3600))
         exam.plan = [ExamPlanItem(day: LocalDate(year: 2026, month: 10, day: 20)!, title: "트리 복습")]
         return CourseFile(course: Course(device: device, at: now, title: "그래프 이론"), units: [unit], sessions: [session], exams: [exam],
                           assignments: [Assignment(device: device, at: now, title: "HW1")], components: [component],

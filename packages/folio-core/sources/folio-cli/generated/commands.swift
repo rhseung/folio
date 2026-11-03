@@ -398,16 +398,15 @@ enum GeneratedCommands {
     }
 
     struct ExamAdd: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "add", abstract: "시험 추가. 시험 폴더(Exams/<이름>)도 만든다", discussion: """
+        static let configuration = CommandConfiguration(commandName: "add", abstract: "시험 추가. 시험 폴더(Exams/<제목>)도 만든다", discussion: """
             예시:
-              folio exam add EC4207 중간고사 --kind midterm --start \"2026-10-21 10:00\" --end \"2026-10-21 12:00\" --location B101
-              folio exam add EC4207 Quiz1 --kind quiz --start 2026-09-30 --dry-run
+              folio exam add EC4207 중간고사 --start \"2026-10-21 10:00\" --end \"2026-10-21 12:00\" --location B101
+              folio exam add EC4207 Quiz1 --start 2026-09-30 --dry-run
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
         @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
         @Argument(help: "시험 제목") var title: String
-        @Option(help: "종류") var kind: ExamKind = .other
         @Option(help: ArgumentHelp("시작 일시", valueName: "date")) var start: DateArg?
         @Option(help: ArgumentHelp("끝 일시", valueName: "date")) var end: DateArg?
         @Option(help: "장소") var location: String = ""
@@ -425,7 +424,6 @@ enum GeneratedCommands {
                 id: id ?? UUID(),
                 course: c.id,
                 title: title,
-                kind: kind,
                 start: start.map { $0.date },
                 end: end.map { $0.date },
                 location: location,
@@ -440,7 +438,7 @@ enum GeneratedCommands {
     }
 
     struct ExamSet: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "set", abstract: "시험의 제목, 종류, 일시, 장소, 성적 항목, 범위 바꾸기. 준 것만 바뀐다", discussion: """
+        static let configuration = CommandConfiguration(commandName: "set", abstract: "시험의 제목, 일시, 장소, 성적 항목, 범위 바꾸기. 준 것만 바뀐다. 제목을 바꿔도 시험 폴더는 그대로다", discussion: """
             예시:
               folio exam set EC4207/중간고사 --start \"2026-10-22 10:00\" --end \"2026-10-22 12:00\"
               folio exam set EC4207/Quiz1 --location B203
@@ -449,7 +447,6 @@ enum GeneratedCommands {
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.ref("Exam")) var exam: String = ""
         @Option(help: "새 제목") var title: String?
-        @Option(help: "종류") var kind: ExamKind?
         @Option(help: ArgumentHelp("시작 일시. none이면 지운다", valueName: "date")) var start: Clearable<DateArg>?
         @Option(help: ArgumentHelp("끝 일시. none이면 지운다", valueName: "date")) var end: Clearable<DateArg>?
         @Option(help: "장소") var location: String?
@@ -460,7 +457,7 @@ enum GeneratedCommands {
         @Option(help: "메모") var memo: String?
 
         func run() throws {
-            guard title != nil || kind != nil || start != nil || end != nil || location != nil || component != nil || !scope.isEmpty || scopeText != nil || allowed != nil || memo != nil else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --title, --kind, --start, --end, --location, --component, --scope, --scope-text, --allowed, --memo") }
+            guard title != nil || start != nil || end != nil || location != nil || component != nil || !scope.isEmpty || scopeText != nil || allowed != nil || memo != nil else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --title, --start, --end, --location, --component, --scope, --scope-text, --allowed, --memo") }
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let (c, examName) = try r.split(exam)
@@ -468,7 +465,6 @@ enum GeneratedCommands {
                 course: c.id,
                 exam: try r.id("Exam", examName, in: c),
                 title: title.map { Patch.set($0) } ?? .keep,
-                kind: kind.map { Patch.set($0) } ?? .keep,
                 start: start.map { p in Patch.set(p.value.map { $0.date }) } ?? .keep,
                 end: end.map { p in Patch.set(p.value.map { $0.date }) } ?? .keep,
                 location: location.map { Patch.set($0) } ?? .keep,

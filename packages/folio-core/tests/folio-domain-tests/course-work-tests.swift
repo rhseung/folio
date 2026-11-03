@@ -39,17 +39,16 @@ struct CourseWorkTests {
     }
 
     /// 2026 fall starts Monday 8/31, so 10/19 opens week 8, the default midterm week.
-    @Test func examWeeksAndExamTimesHoldNoLectures() {
+    @Test func examWeeksHoldNoLectures() {
         let fall = Semester(device: device, at: .now, year: 2026, term: .fall, start: LocalDate("2026-08-31"), end: LocalDate("2026-12-18"))
         #expect(fall.examWeeks == [8, 16])
         let skipped = SessionPlanner.suggestion(schedule: monWed, sessions: [], from: fall.start, to: fall.end, examWeeks: fall.examWeeks,
                                                 now: date("2026-10-19 09:00"), calendar: calendar)
         #expect(skipped?.date == date("2026-10-26 13:00"))
-        // A midterm in Monday's class time outside the exam week takes that class; Wednesday's still comes.
-        let exam = DateInterval(start: date("2026-10-26 13:00"), end: date("2026-10-26 15:00"))
-        let moved = SessionPlanner.suggestion(schedule: monWed, sessions: [], from: fall.start, to: fall.end, examWeeks: fall.examWeeks,
-                                              exams: [exam], now: date("2026-10-26 09:00"), calendar: calendar)
-        #expect(moved?.date == date("2026-10-28 13:00"))
+        // An exam held in class time is part of that class, so the class still comes.
+        let held = SessionPlanner.suggestion(schedule: monWed, sessions: [], from: fall.start, to: fall.end, examWeeks: fall.examWeeks,
+                                             now: date("2026-10-26 09:00"), calendar: calendar)
+        #expect(held?.date == date("2026-10-26 13:00"))
         #expect(Semester(device: device, at: .now, year: 2026, term: .summer).examWeeks.isEmpty)
     }
 
@@ -78,10 +77,9 @@ struct CourseWorkTests {
         var cancelled = Session(device: device, at: .now, week: 11, date: date("2026-11-09 13:00"))
         cancelled.isCancelled = true
         let made = Session(device: device, at: .now, week: 10, date: date("2026-11-04 13:00"))
-        let midterm = DateInterval(start: date("2026-11-16 13:00"), duration: 3600)
         let plan = SessionPlanner.planned(schedule: monWed, sessions: [cancelled, made], from: LocalDate("2026-09-02"), to: LocalDate("2026-11-25"),
-                                          exams: [midterm], now: date("2026-11-03 09:00"), calendar: calendar)
-        #expect(plan.map(\.date) == ["2026-11-11 13:00", "2026-11-18 13:00", "2026-11-23 13:00", "2026-11-25 13:00"].map(date))
+                                          now: date("2026-11-03 09:00"), calendar: calendar)
+        #expect(plan.map(\.date) == ["2026-11-11 13:00", "2026-11-16 13:00", "2026-11-18 13:00", "2026-11-23 13:00", "2026-11-25 13:00"].map(date))
         // Without an end, the coming week only, as the suggestion always did.
         let open = SessionPlanner.planned(schedule: monWed, sessions: [], from: nil, to: nil, now: date("2026-11-03 09:00"), calendar: calendar)
         #expect(open.map(\.date) == ["2026-11-04 13:00", "2026-11-09 13:00"].map(date))
@@ -96,7 +94,7 @@ struct CourseWorkTests {
     @Test func plannedClassesSitInTheirWeeksOnTheTimeline() {
         let made = Session(device: device, at: .now, week: 10, date: date("2026-11-04 13:00"))
         let planned = Session(device: device, at: .now, week: 10, date: date("2026-11-02 13:00"))
-        let items = SessionTimeline.items(CourseFile(course: courses[0], sessions: [made]), planned: [planned], calendar: calendar)
+        let items = SessionTimeline.items(CourseFile(course: courses[0], sessions: [made]), planned: [planned], classMinutes: 75, calendar: calendar)
         #expect(items.map(\.id) == ["week-10", "planned-\(planned.date.timeIntervalSinceReferenceDate)", made.id.uuidString])
     }
 
@@ -419,7 +417,6 @@ struct CourseWorkTests {
         #expect(AssignmentKind.parse(title: "HW5")?.kind.folderName(5) == "HW05")
         #expect(AssignmentKind.parse(title: "lab 3 report") .map { $0.kind.folderName($0.number) } == "Lab03")
         #expect(AssignmentKind.parse(title: "Slow Problem 2") == nil)
-        #expect(ExamKind.quiz.folderName(number: 2) == "Quiz2")
         #expect(StandardLayout.isExamFolderName("Quiz2") && !StandardLayout.isExamFolderName("Quiz0") && !StandardLayout.isExamFolderName("Quiz"))
     }
 }

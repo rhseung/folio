@@ -78,7 +78,7 @@ struct SessionKindMigrationTests {
     @Test func savedFileDropsKindAndKeepsUnknownFields() throws {
         try StoredDocument<CourseFile>.read(from: url).write(to: url)
         let raw = try JSONFormat.decoder.decode(JSONValue.self, from: Data(contentsOf: url))
-        #expect(raw["schemaVersion"] == .number(3))
+        #expect(raw["schemaVersion"] == .number(4))
         guard case .array(let sessions)? = raw["sessions"] else { Issue.record("no sessions"); return }
         #expect(sessions.allSatisfy { $0["kind"] == nil && $0["lab"] == nil && $0["index"] == nil })
         #expect(sessions[0]["cancelled"] == .bool(true) && sessions[1]["cancelled"] == nil)

@@ -15,7 +15,7 @@ struct UnitExamAssignmentTests {
     static let addSession = ["session", "add", "EC4207", "--date", "2026-10-28 10:30", "--id", session.uuidString]
     static let addTree = ["unit", "add", "EC4207", "트리", "--id", tree.uuidString]
     static let addMatching = ["unit", "add", "EC4207", "매칭", "--id", matching.uuidString]
-    static let addExam = ["exam", "add", "EC4207", "중간고사", "--kind", "midterm", "--start", "2026-10-29 10:00", "--id", exam.uuidString]
+    static let addExam = ["exam", "add", "EC4207", "중간고사", "--start", "2026-10-29 10:00", "--id", exam.uuidString]
     static let addItem = ["exam", "plan", "add", "EC4207/중간고사", "트리 복습", "--day", "2026-10-27", "--id", item.uuidString]
     static let addHW = ["assignment", "add", "EC4207", "HW 3", "--due", "2026-11-04 23:59", "--id", hw.uuidString]
 
@@ -51,7 +51,7 @@ struct UnitExamAssignmentTests {
 
     @Test func examAdd() throws {
         try h.expectSame(Self.addExam) { _ in
-            ExamAdd(id: Self.exam, course: course, title: "중간고사", kind: .midterm, start: date("2026-10-29 10:00"))
+            ExamAdd(id: Self.exam, course: course, title: "중간고사", start: date("2026-10-29 10:00"))
         }
     }
 

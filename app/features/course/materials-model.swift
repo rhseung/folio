@@ -90,7 +90,7 @@ final class MaterialsModel {
 
     /// Standard folders by hand, with each exam's prep folder; `Lectures` is offered with a session where it is needed.
     var places: [String] {
-        let exams = course.file.exams.compactMap { MaterialIntake.folder(of: $0, among: course.file.exams) }
+        let exams = course.file.exams.compactMap { MaterialIntake.folder(of: $0) }
         return Array((MaterialIntake.places(assignmentFolders: assignmentFolders) + exams).uniqued())
     }
 

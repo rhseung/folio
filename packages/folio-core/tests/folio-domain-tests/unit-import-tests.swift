@@ -46,7 +46,7 @@ struct ExamScopeTests {
         skipped.sessionIds = [cancelled.id]
         var later = Unit(device: device, at: now, title: "Ch2", order: 1)
         later.sessionIds = [after.id]
-        let exam = Exam(device: device, at: now, kind: .midterm, title: "Midterm", start: now)
+        let exam = Exam(device: device, at: now, title: "Midterm", start: now)
         var file = CourseFile(course: Course(device: device, at: now, title: ""), units: [later, section, chapter, skipped], sessions: [before, cancelled, after], exams: [exam])
 
         let taught = file.unitsTaught(before: exam.start!)

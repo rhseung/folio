@@ -194,14 +194,14 @@ private struct Builder {
             if status != .todo { try run(AssignmentStatusSet(course: course, assignment: id, status: status), at: at(11, 3, 20)) }
         }
 
-        let quiz = try run(ExamAdd(course: prob, title: "Quiz 3", kind: .quiz, start: at(11, 6, 14, 30), end: at(11, 6, 15), location: "A203"), at: setup)
-        try run(ExamAdd(course: physics, title: "2차 시험", kind: .other, start: at(11, 13, 19), end: at(11, 13, 21), location: "Physics 101"), at: setup)
-        try run(ExamAdd(course: os, title: "기말고사", kind: .final, start: at(12, 2, 13), end: at(12, 2, 15), location: "B115"), at: setup)
-        try run(ExamAdd(course: graph, title: "기말고사", kind: .final, start: at(12, 14, 9), end: at(12, 14, 11), location: "A101"), at: setup)
+        let quiz = try run(ExamAdd(course: prob, title: "Quiz 3", start: at(11, 6, 14, 30), end: at(11, 6, 15), location: "A203"), at: setup)
+        try run(ExamAdd(course: physics, title: "2차 시험", start: at(11, 13, 19), end: at(11, 13, 21), location: "Physics 101"), at: setup)
+        try run(ExamAdd(course: os, title: "기말고사", start: at(12, 2, 13), end: at(12, 2, 15), location: "B115"), at: setup)
+        try run(ExamAdd(course: graph, title: "기말고사", start: at(12, 14, 9), end: at(12, 14, 11), location: "A101"), at: setup)
         if extraExams {
-            try run(ExamAdd(course: writing, title: "에세이 발표", kind: .other, start: at(11, 11, 19), end: at(11, 11, 21), location: "N210"), at: setup)
-            try run(ExamAdd(course: robotics, title: "중간 발표", kind: .midterm, start: at(11, 18, 10, 30), end: at(11, 18, 12), location: "C204"), at: setup)
-            try run(ExamAdd(course: graph, title: "Quiz 4", kind: .quiz, start: at(11, 25, 9), end: at(11, 25, 9, 30), location: "A101"), at: setup)
+            try run(ExamAdd(course: writing, title: "에세이 발표", start: at(11, 11, 19), end: at(11, 11, 21), location: "N210"), at: setup)
+            try run(ExamAdd(course: robotics, title: "중간 발표", start: at(11, 18, 10, 30), end: at(11, 18, 12), location: "C204"), at: setup)
+            try run(ExamAdd(course: graph, title: "Quiz 4", start: at(11, 25, 9), end: at(11, 25, 9, 30), location: "A101"), at: setup)
         }
         try run(ExamPlanAdd(course: prob, exam: quiz, title: "조건부 확률 연습문제 풀기", day: LocalDate(at(11, 4), in: Scenario.calendar), unit: conditional), at: at(11, 1, 10))
     }
@@ -233,6 +233,6 @@ private struct Builder {
         _ = try unit(graph, "매칭", [monday, wednesday], at: at(11, 4, 11))
         try run(AssignmentAdd(course: graph, title: "HW5", due: at(11, 9, 23, 59)), at: at(11, 2, 12))
         try run(AssignmentAdd(course: robotics, title: "Lab5 보고서", due: at(11, 12, 23, 59)), at: at(11, 3, 12))
-        try run(ExamAdd(course: graph, title: "기말고사", kind: .final, start: at(12, 1, 9), end: at(12, 1, 11), location: "A101"), at: setup)
+        try run(ExamAdd(course: graph, title: "기말고사", start: at(12, 1, 9), end: at(12, 1, 11), location: "A101"), at: setup)
     }
 }

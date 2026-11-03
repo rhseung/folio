@@ -58,7 +58,7 @@ folio session add EC4207 --date "2026-11-02 10:30" --dry-run
 folio attendance set EC4207/2주차-1 absent --dry-run
 
 # 시험
-folio exam add EC4207 기말고사 --kind final --start "2026-12-14 10:00" --end "2026-12-14 12:00" --dry-run
+folio exam add EC4207 기말고사 --start "2026-12-14 10:00" --end "2026-12-14 12:00" --dry-run
 folio exam scope EC4207/중간고사 --unit 트리 --unit 매칭 --dry-run
 folio exam plan add EC4207/중간고사 --day 2026-10-19 "매칭 문제 풀기" --dry-run
 

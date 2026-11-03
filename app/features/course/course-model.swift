@@ -154,7 +154,7 @@ final class CourseModel {
         }
         if let (exam, start) = nextExam {
             let d = days(to: start)
-            items.append(.init(title: String(localized: .courseNextExam), value: "\(exam.title.isEmpty ? exam.kind.label : exam.title) \(d == 0 ? "D-day" : "D-\(d)")",
+            items.append(.init(title: String(localized: .courseNextExam), value: "\(exam.title) \(d == 0 ? "D-day" : "D-\(d)")",
                                detail: start.formatted(.dateTime.month().day().weekday()), tone: d <= 7 ? .danger : .plain))
         } else {
             items.append(.init(title: String(localized: .courseNextExam), value: "-"))

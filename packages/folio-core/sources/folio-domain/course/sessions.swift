@@ -124,10 +124,11 @@ public enum SessionPlanner {
 
     /// The lecture under way or next on the schedule, within the coming week, that no session stands for yet. A session
     /// starting at that time (or a date-only one that day) stands for it even when cancelled, so a 휴강 moves on to the next.
-    /// Exam weeks (counted from `start`) hold no lectures, nor does a class time an exam overlaps.
+    /// Exam weeks (counted from `start`) hold no lectures. An exam in a class's time is part of that class, so it
+    /// doesn't take the class away.
     public static func suggestion(schedule: [ClassTime], sessions: [Session], from start: LocalDate?, to end: LocalDate?,
-                                  examWeeks: Set<Int> = [], exams: [DateInterval] = [], now: Date, calendar: Calendar) -> Suggestion? {
-        planned(schedule: schedule, sessions: sessions, from: start, to: end, examWeeks: examWeeks, exams: exams,
+                                  examWeeks: Set<Int> = [], now: Date, calendar: Calendar) -> Suggestion? {
+        planned(schedule: schedule, sessions: sessions, from: start, to: end, examWeeks: examWeeks,
                 days: 8, now: now, calendar: calendar).first
     }
 
@@ -136,7 +137,7 @@ public enum SessionPlanner {
     /// it, so a change to the class times or the term moves the plan with it. Without an end, the coming week only;
     /// `days` caps it sooner.
     public static func planned(schedule: [ClassTime], sessions: [Session], from start: LocalDate?, to end: LocalDate?,
-                               examWeeks: Set<Int> = [], exams: [DateInterval] = [], days: Int? = nil,
+                               examWeeks: Set<Int> = [], days: Int? = nil,
                                now: Date, calendar: Calendar) -> [Suggestion] {
         guard !schedule.isEmpty else { return [] }
         let today = calendar.startOfDay(for: now)
@@ -157,7 +158,7 @@ public enum SessionPlanner {
             for slot in schedule.filter({ $0.weekday == weekday }).sorted(by: { $0.startMinute < $1.startMinute }) {
                 let begin = calendar.date(byAdding: .minute, value: slot.startMinute, to: day)!
                 let finish = calendar.date(byAdding: .minute, value: slot.endMinute, to: day)!
-                guard finish > now, !exams.contains(where: { $0.start < finish && $0.end > begin }) else { continue }
+                guard finish > now else { continue }
                 // A session at that time, or a date-only one that day, stands for it even when cancelled.
                 if !taken.contains(begin) && !taken.contains(day) {
                     result.append(Suggestion(date: begin, end: finish, room: slot.room, link: slot.link))

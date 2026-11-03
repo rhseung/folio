@@ -85,6 +85,9 @@ public enum StandardLayout {
     public static let adminFolder = "_Admin"
     public static let pastExamsFolder = "Past"
     public static let quizFolderPrefix = "Quiz"
+    /// What exam folders were called before an exam kept its own folder name; cleanup still sorts legacy material into them.
+    public static let midtermFolder = "Midterm"
+    public static let finalFolder = "Final"
     /// Inside `Notes/`: files the notes embed, and notes exported to PDF.
     public static let noteAssetsFolder = "assets"
     public static let noteExportsFolder = "Exports"
@@ -140,7 +143,7 @@ public enum StandardLayout {
 
     /// `Midterm`, `Final`, `Quiz1`, ... (one folder per Exam), plus `Past`.
     public static func isExamFolderName(_ name: String) -> Bool {
-        if name == pastExamsFolder || name == ExamKind.midterm.folderName() || name == ExamKind.final.folderName() { return true }
+        if name == pastExamsFolder || name == midtermFolder || name == finalFolder { return true }
         return name.hasPrefix(quizFolderPrefix) && Int(name.dropFirst(quizFolderPrefix.count)).map { $0 > 0 } == true
     }
 

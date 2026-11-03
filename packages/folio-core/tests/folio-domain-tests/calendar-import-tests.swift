@@ -71,14 +71,14 @@ struct CalendarImportTests {
 
     /// 선형대수학 had a Notion midterm without an end; graph theory had none. A final on another day stays a conflict.
     @Test func examsFillTheSameDayAndAddMissingOnes() {
-        var midterm = Exam(device: device, at: now, kind: .midterm, title: "Midterm", start: at(20, 20, month: 10), location: "C104")
+        var midterm = Exam(device: device, at: now, title: "Midterm", start: at(20, 20, month: 10), location: "C104")
         midterm.memo = ""
-        let final = Exam(device: device, at: now, kind: .final, title: "Final", start: at(14, 9, month: 12))
+        let final = Exam(device: device, at: now, title: "Final", start: at(14, 9, month: 12))
         let file = CourseFile(course: Course(device: device, at: now, title: "선형대수학"), exams: [midterm, final])
         let exams = [
-            CalendarExam(course: "", kind: .midterm, start: at(20, 20, month: 10), end: at(20, 22, 45, month: 10), location: "C 104", memo: "자리배치표대로 앉기"),
-            CalendarExam(course: "", kind: .final, start: at(16, 9, month: 12), end: at(16, 11, month: 12)),
-            CalendarExam(course: "", kind: .quiz, start: at(1, 9, month: 10), end: at(1, 10, month: 10)),
+            CalendarExam(course: "", title: "Midterm", start: at(20, 20, month: 10), end: at(20, 22, 45, month: 10), location: "C 104", memo: "자리배치표대로 앉기"),
+            CalendarExam(course: "", title: "Final", start: at(16, 9, month: 12), end: at(16, 11, month: 12)),
+            CalendarExam(course: "", title: "Quiz1", start: at(1, 9, month: 10), end: at(1, 10, month: 10)),
         ]
         let r = CalendarImporter.mergeExams(exams, into: file, calendar: calendar, device: device, now: now)
         let m = r.file.exams.first { $0.id == midterm.id }!

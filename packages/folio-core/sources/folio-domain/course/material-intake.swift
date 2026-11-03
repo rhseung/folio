@@ -25,11 +25,15 @@ public enum MaterialIntake {
             + assignmentFolders.map { "\(CourseFolder.assignments.rawValue)/\($0)" }
     }
 
-    /// The exam's prep folder: its title when that is a standard name (`Quiz2`), else the kind's (`Midterm`). A quiz
-    /// with another title is numbered by its place among the course's quizzes, as adding it made the folder.
-    public static func folder(of exam: Exam, among exams: [Exam]) -> String? {
-        let named = StandardLayout.isExamFolderName(exam.title) && exam.title != StandardLayout.pastExamsFolder
-        let number = exams.filter { $0.kind == .quiz }.firstIndex { $0.id == exam.id }.map { $0 + 1 }
-        return (named ? exam.title : exam.kind.folderName(number: number)).map { "\(CourseFolder.exams.rawValue)/\($0)" }
+    public static func folder(of exam: Exam) -> String? {
+        exam.folder.map { "\(CourseFolder.exams.rawValue)/\($0)" }
+    }
+
+    /// A new exam's folder: its title made safe for a path, numbered past the folders other exams (and `Past`) hold.
+    public static func examFolder(title: String, among exams: [Exam]) -> String {
+        var name = title.replacing(/[\/:]/, with: "-").trimmingCharacters(in: .whitespacesAndNewlines)
+        if name.hasPrefix(".") { name = String(name.drop { $0 == "." }) }
+        let taken = Set(exams.compactMap(\.folder) + [StandardLayout.pastExamsFolder])
+        return freeName(name.isEmpty ? "Exam" : name, taken: taken)
     }
 }

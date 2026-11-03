@@ -287,7 +287,7 @@ struct UnitDetail: View {
                             ForEach(model.examsByDate(file)) { exam in
                                 let on = exam.scopeUnitIds.contains(unit.id)
                                 Button { model.toggleScope(exam, unit: unit) } label: {
-                                    Label(exam.title.isEmpty ? exam.kind.label : exam.title, systemImage: on ? "checkmark" : "plus")
+                                    Label(exam.title, systemImage: on ? "checkmark" : "plus")
                                         .font(Theme.Typeface.caption.weight(on ? .semibold : .regular))
                                         .foregroundStyle(on ? accent.ink : Theme.Palette.textSecondary)
                                         .padding(Theme.Inset.toggle)

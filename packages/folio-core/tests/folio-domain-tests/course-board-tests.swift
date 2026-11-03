@@ -13,7 +13,7 @@ struct CourseBoardTests {
 
     @Test func examIsOverWhenItEndsNotWhenTheDayTurns() {
         let today = LocalDate(now, in: calendar)
-        var exam = Exam(device: device, at: now, kind: .midterm, title: "", start: now - 7200, end: now - 60)
+        var exam = Exam(device: device, at: now, title: "", start: now - 7200, end: now - 60)
         #expect(exam.isOver(now: now, today: today, calendar: calendar))
         exam.end = now + 60
         #expect(!exam.isOver(now: now, today: today, calendar: calendar))

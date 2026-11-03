@@ -24,12 +24,8 @@ extension Workspace {
     private func plan(for course: LoadedCourse, now: Date, days: Int?) -> [SuggestedSession] {
         let file = course.file
         let semester = semester(of: file.course)
-        // A quiz is usually given in class, so only the larger exams take the class time away.
-        let exams = file.exams.filter { $0.kind != .quiz }.compactMap { e in
-            e.start.map { DateInterval(start: $0, end: max(e.end ?? $0, $0.addingTimeInterval(60))) }
-        }
         return SessionPlanner.planned(schedule: file.course.schedule, sessions: file.sessions, from: semester?.start, to: semester?.end,
-                                      examWeeks: semester?.examWeeks ?? [], exams: exams, days: days, now: now, calendar: calendar).map { s in
+                                      examWeeks: semester?.examWeeks ?? [], days: days, now: now, calendar: calendar).map { s in
             let draft = SessionPlanner.session(at: s.date, sessions: file.sessions, termStart: semester?.start, calendar: calendar, device: device, now: now)
             return SuggestedSession(courseId: course.id, suggestion: s, draft: draft)
         }

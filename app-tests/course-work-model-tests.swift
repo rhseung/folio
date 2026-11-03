@@ -24,31 +24,35 @@ struct ExamsModelTests {
         #expect(model.subtitle(coming: 1, past: 0) == "예정 1개")
     }
 
-    @Test func editorNamesQuizzesByFolderAndSplitsComingFromPast() throws {
+    @Test func editorNeedsATitleAndSplitsComingFromPast() throws {
         let (workspace, course) = try fixtureCourse()
         let now = Date.now
-        for days in [-20, -10, 10] {
+        for (days, title) in [(-20, "퀴즈 1"), (-10, "퀴즈 2"), (10, "퀴즈 3")] {
             let editor = ExamEditorModel(workspace: workspace, course: course,
-                                         exam: Exam(device: workspace.device, at: now, kind: .quiz, title: "", start: now + Double(days) * 86_400))
+                                         exam: Exam(device: workspace.device, at: now, title: "", start: now + Double(days) * 86_400))
             #expect(editor.isNew && editor.title == "시험 추가" && editor.confirm == "추가")
+            #expect(editor.disabled && editor.note == nil)
+            editor.draft.title = title + " "
+            #expect(!editor.disabled)
             #expect(editor.apply())
-            #expect(!editor.isNew && editor.title == "\(editor.draft.title) 편집")
+            #expect(!editor.isNew && editor.title == "\(title) 편집")
         }
         let model = ExamsModel(workspace: workspace, course: course)
         let (coming, past) = model.exams(now: now)
-        #expect(coming.map(\.title) == ["Quiz3"])
+        #expect(coming.map(\.title) == ["퀴즈 3"])
         // Past exams read from the latest back.
-        #expect(past.map(\.title) == ["Quiz2", "Quiz1"])
-        // No scope, place, files or plan: only the kind is left to say.
-        #expect(model.pastFacts(past[0]) == ExamKind.quiz.label)
+        #expect(past.map(\.title) == ["퀴즈 2", "퀴즈 1"])
+        #expect(past.map { model.folder(of: $0) } == ["Exams/퀴즈 2", "Exams/퀴즈 1"])
+        // No component, scope, place, files or plan: nothing is left to say.
+        #expect(model.pastFacts(past[0]).isEmpty)
     }
 
     @Test func movingTheStartCarriesTheEnd() throws {
         let (workspace, course) = try fixtureCourse()
         let start = Date(timeIntervalSince1970: 1_790_000_000)
         let editor = ExamEditorModel(workspace: workspace, course: course,
-                                     exam: Exam(device: workspace.device, at: start, kind: .midterm, title: "", start: start, end: start + 7200))
-        #expect(editor.note == "시험 폴더 Exams/Midterm도 만듭니다")
+                                     exam: Exam(device: workspace.device, at: start, title: "중간고사", start: start, end: start + 7200))
+        #expect(editor.note == "시험 폴더 Exams/중간고사도 만듭니다")
         editor.setStart(start + 86_400)
         #expect(editor.draft.end == start + 86_400 + 7200)
         editor.draft.end = start
@@ -58,7 +62,7 @@ struct ExamsModelTests {
     @Test func scopeLineNamesUnitsOrText() throws {
         let (workspace, course) = try fixtureCourse()
         let model = ExamsModel(workspace: workspace, course: course)
-        var exam = Exam(device: workspace.device, at: .now, kind: .midterm, title: "Midterm")
+        var exam = Exam(device: workspace.device, at: .now, title: "Midterm")
         #expect(model.scopeLine(exam, units: 0) == "범위 단원을 고르지 않았습니다")
         exam.scopeText = "3장까지"
         #expect(model.scopeLine(exam, units: 0) == "3장까지")

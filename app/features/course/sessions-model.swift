@@ -44,10 +44,10 @@ final class SessionsModel {
         let now = now ?? workspace.now
         let plan = workspace.course(courseId).map { workspace.plannedSessions(for: $0, now: now) } ?? []
         let byDate = Dictionary(plan.map { ($0.draft.date, $0) }, uniquingKeysWith: { a, _ in a })
-        let items = SessionTimeline.items(file, planned: plan.map(\.draft), calendar: calendar)
+        let items = SessionTimeline.items(file, planned: plan.map(\.draft), classMinutes: workspace.settings.classMinutes, calendar: calendar)
         return items.indices.map { i in
             var planned: Workspace.SuggestedSession?
-            if case .planned(let s) = items[i] { planned = byDate[s.date] }
+            if case .planned(let s, _) = items[i] { planned = byDate[s.date] }
             return TimelineRow(item: items[i], planned: planned, first: i == 0, above: i == 0 ? nil : items[i].held(at: now),
                                below: i == items.count - 1 ? nil : items[i + 1].held(at: now))
         }
@@ -63,7 +63,19 @@ final class SessionsModel {
     func isThisWeek(_ date: Date) -> Bool { calendar.startOfWeek(containing: date) == calendar.startOfWeek(containing: workspace.now) }
 
     func examLine(_ exam: Exam, _ date: Date) -> String {
-        (exam.title.isEmpty ? exam.kind.label : exam.title) + " · " + date.formatted(.dateTime.month().day().weekday())
+        ([exam.title, date.formatted(.dateTime.month().day().weekday())] + (examTime(exam).map { [$0] } ?? [])).joined(separator: " · ")
+    }
+
+    func examTime(_ exam: Exam) -> String? {
+        guard let start = exam.start else { return nil }
+        let minute = { (d: Date) in self.calendar.component(.hour, from: d) * 60 + self.calendar.component(.minute, from: d) }
+        return exam.end.map { TimeMenu.range(minute(start), minute($0)) } ?? TimeMenu.label(minute(start))
+    }
+
+    /// Days left only while the exam is ahead. A past one keeps its red but says nothing more: its score is a grade
+    /// and stays on the grades page.
+    func examDays(_ exam: Exam, now: Date) -> Int? {
+        exam.start.flatMap { $0 > now ? max(workspace.days(to: $0), 0) : nil }
     }
 
     func end(of session: Session, in file: CourseFile) -> Date? { session.end(schedule: file.course.schedule, calendar: calendar) }

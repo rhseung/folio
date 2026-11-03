@@ -27,8 +27,33 @@ extension Transcript: StoredModel {
 }
 
 extension CourseFile: StoredModel {
-    public static let schemaVersion = 3
-    public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [1: dropSessionKind, 2: dropSessionIndex]
+    public static let schemaVersion = 4
+    public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [1: dropSessionKind, 2: dropSessionIndex, 3: dropExamKind]
+
+    /// v3 exams had a kind (midterm, final, quiz, other) the prep folder was named from. The exam now keeps the folder
+    /// it had, so its files stay put, and an empty title gets the name the kind gave it.
+    static func dropExamKind(_ raw: inout JSONValue) throws {
+        guard case .array(var exams)? = raw["exams"] else { return }
+        var quizzes = 0
+        for i in exams.indices {
+            let kind = exams[i]["kind"]
+            exams[i]["kind"] = nil
+            if kind == .string("quiz") { quizzes += 1 }
+            let title = exams[i]["title"].flatMap { if case .string(let t) = $0 { t } else { nil } } ?? ""
+            // The v3 rule: a title that is a standard folder name names the folder, else the kind does.
+            let named = StandardLayout.isExamFolderName(title) && title != StandardLayout.pastExamsFolder
+            let byKind: String? = switch kind {
+            case .string("midterm"): StandardLayout.midtermFolder
+            case .string("final"): StandardLayout.finalFolder
+            case .string("quiz"): StandardLayout.quizFolderPrefix + "\(quizzes)"
+            default: nil
+            }
+            let folder = named ? title : byKind
+            if let folder { exams[i]["folder"] = .string(folder) }
+            if title.isEmpty { exams[i]["title"] = .string(folder ?? "Exam") }
+        }
+        raw["exams"] = .array(exams)
+    }
 
     /// v2 stored each session's place in its week, given as "last + 1" when it was made, so a makeup added first took
     /// 10주차-2 and the class before it 10주차-3. The place now follows the dates in the week.

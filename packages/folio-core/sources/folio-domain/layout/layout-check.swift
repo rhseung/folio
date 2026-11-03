@@ -69,7 +69,8 @@ public enum LayoutCheck {
             case .exams:
                 for item in entry.children {
                     let itemPath = "\(path)/\(item.name)"
-                    guard !item.isFile, StandardLayout.isExamFolderName(item.name) else {
+                    // An exam names its own folder, so any folder here is one; only loose files are out of place.
+                    guard !item.isFile else {
                         issues.append(.init(.invalidExamFolder, itemPath))
                         continue
                     }

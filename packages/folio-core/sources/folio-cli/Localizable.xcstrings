@@ -2245,6 +2245,17 @@
         }
       }
     },
+    "exam.list.header.component": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "성적 항목"
+          }
+        }
+      }
+    },
     "exam.list.header.exam": {
       "extractionState": "manual",
       "localizations": {
@@ -2252,17 +2263,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "시험"
-          }
-        }
-      }
-    },
-    "exam.list.header.kind": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "종류"
           }
         }
       }
@@ -2538,17 +2538,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "<과목>/<시험>. 예: EC4207/Quiz1"
-          }
-        }
-      }
-    },
-    "exam.show.kind": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "  종류  %@"
           }
         }
       }

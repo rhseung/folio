@@ -202,17 +202,6 @@ private struct HalfDisc: Shape {
     }
 }
 
-extension ExamKind {
-    var label: String {
-        switch self {
-        case .midterm: String(localized: .examKindMidterm)
-        case .final: String(localized: .examKindFinal)
-        case .quiz: String(localized: .examKindQuiz)
-        case .other: String(localized: .examKindOther)
-        }
-    }
-}
-
 /// Edits course.json. The folder name follows the title, main code and number, so saving a change to those renames it.
 struct EditCourseSheet: View {
     @Environment(\.dismiss) private var dismiss

@@ -3994,50 +3994,6 @@
         }
       }
     },
-    "exam-kind.final": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기말고사"
-          }
-        }
-      }
-    },
-    "exam-kind.midterm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "중간고사"
-          }
-        }
-      }
-    },
-    "exam-kind.other": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기타"
-          }
-        }
-      }
-    },
-    "exam-kind.quiz": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "퀴즈"
-          }
-        }
-      }
-    },
     "exams.add": {
       "extractionState": "manual",
       "localizations": {
@@ -4144,17 +4100,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "시험 폴더 Exams/%@도 만듭니다"
-          }
-        }
-      }
-    },
-    "exams.editor.kind": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "종류"
           }
         }
       }

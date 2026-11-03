@@ -56,7 +56,7 @@ struct NotionImportTests {
         let linear = try #require(result.courseFiles["2026-3/GS2004 선형대수학"])
         #expect(linear.policy.attendanceCap == [AttendanceCap(absences: 6, maxGrade: b0)])
         #expect(linear.policy.notes == "원문")
-        #expect(linear.exams.first.map { ($0.kind, $0.location) }! == (.midterm, "C104"))
+        #expect(linear.exams.first.map { ($0.title, $0.folder, $0.location) }! == ("Midterm", "Midterm", "C104"))
     }
 
     @Test func creditedTermAndCatalog() throws {

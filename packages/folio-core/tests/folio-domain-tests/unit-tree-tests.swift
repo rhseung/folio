@@ -60,7 +60,7 @@ struct UnitTreeTests {
         let removed = unit("R", 1, parent: parent)
         let child = unit("K", 1, parent: removed)
         var session = Session(device: device, at: now, week: 1, date: now)
-        var exam = Exam(device: device, at: now, kind: .midterm, title: "중간고사")
+        var exam = Exam(device: device, at: now, title: "중간고사")
         session.unitIds = [removed.id]
         exam.scopeUnitIds = [removed.id, parent.id]
         var file = CourseFile(course: Course(device: device, at: now, title: "T"), units: [parent, removed, child], sessions: [session], exams: [exam])
@@ -73,7 +73,7 @@ struct UnitTreeTests {
     @Test func togglesKeepBothSidesInStep() {
         let u = unit("U", 1)
         let s = Session(device: device, at: now, week: 1, date: now)
-        let e = Exam(device: device, at: now, kind: .final, title: "기말고사")
+        let e = Exam(device: device, at: now, title: "기말고사")
         var file = CourseFile(course: Course(device: device, at: now, title: "T"), units: [u], sessions: [s], exams: [e])
         file.toggle(session: s.id, unit: u.id)
         file.toggle(exam: e.id, unit: u.id)
@@ -88,7 +88,7 @@ struct UnitTreeTests {
     @Test func anExamOnAChapterTakesItsSections() {
         let chapter = unit("2장", 2), other = unit("1장", 1)
         let a = unit("2.1", 1, parent: chapter), b = unit("2.2", 2, parent: chapter)
-        let e = Exam(device: device, at: now, kind: .quiz, title: "Quiz1")
+        let e = Exam(device: device, at: now, title: "Quiz1")
         var file = CourseFile(course: Course(device: device, at: now, title: "T"), units: [b, chapter, other, a], exams: [e])
         file.toggle(exam: e.id, unit: chapter.id)
         #expect(file.exams[0].scopeUnitIds == [chapter.id, a.id, b.id])
