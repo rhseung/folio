@@ -245,8 +245,8 @@ struct NoteReaderTests {
         let padding = try #require(view.textContainer).lineFragmentPadding
         #expect(first.minX == padding && last.minX == padding, "\(first) \(last)")
         let scroll = try #require(view.subviews.compactMap { $0 as? NSScrollView }.first)
-        #expect(scroll.frame.width == view.columnWidth)
-        #expect(try #require(scroll.documentView).frame.width > view.columnWidth)
+        #expect(scroll.frame.width == view.lineWidth)
+        #expect(try #require(scroll.documentView).frame.width > view.lineWidth)
         #expect(scroll.frame.minX >= view.textContainerOrigin.x - 1)
     }
 
@@ -259,6 +259,82 @@ struct NoteReaderTests {
         let bubble = try #require(view.subviews.compactMap { $0 as? PreviewBubble }.first)
         #expect(bubble.frame.width <= view.visibleRect.width)
         #expect(bubble.hitTest(NSPoint(x: bubble.frame.midX, y: bubble.frame.midY)) == nil)
+    }
+
+    /// Everything that can be wider than the column, at the top and inside lists, quotes and callouts.
+    static let wideThings = """
+    # 제목 $\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i t_i u_i$
+
+    인라인 $\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i t_i u_i v_i w_i x_i$ 끝
+
+    ![넓은|2000](assets/sample.png)
+
+    https://example.com/a/very/long/link/that/has/no/spaces/anywhere/in/it/and/keeps/going/and/going/until/it/is/wider/than/any/column
+
+    | 하나 | 둘 | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 | 열하나 | 열둘 |
+    | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+    | 아주 긴 칸의 글 | $\\int_0^1 x^2 \\, dx = \\frac{1}{3}$ | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 | 열하나 | 열둘 |
+
+    - 목록 ![넓은|2000](assets/sample.png)
+        - 하위 $\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i$
+        - 표 아래
+
+          | 하나 | 둘 | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 |
+          | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+          | 아주 긴 칸의 글 | 둘 | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 |
+
+          $$\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i t_i u_i v_i w_i x_i y_i z_i$$
+
+    > 인용 ![넓은|2000](assets/sample.png)
+    > > 안쪽 인용 ![넓은|2000](assets/sample.png)
+    > > $$\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i t_i u_i v_i w_i x_i$$
+
+    > [!note] 콜아웃
+    > ![넓은|2000](assets/sample.png)
+    >
+    > | 하나 | 둘 | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 | 열하나 | 열둘 |
+    > | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+    > | 아주 긴 칸의 글 | 둘 | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 | 열하나 | 열둘 |
+    >
+    > ```swift
+    > let x = "a very long line of code that goes on and on and on past the edge of any column at all"
+    > ```
+    """
+
+    /// Each picture that reaches past the room its paragraph gives it, between the paragraph's indents. A line's own
+    /// bounds stay inside the column even when a picture on it doesn't, so pictures are measured one by one. Past the
+    /// column, TextKit moves the whole page over to show one; past an indent, it runs out of its quote or callout box.
+    static func overflowing(_ view: NSTextView) -> [String] {
+        guard let manager = view.textLayoutManager, let container = view.textContainer, let storage = view.textStorage else { return ["no layout"] }
+        manager.ensureLayout(for: manager.documentRange)
+        var out: [String] = []
+        storage.enumerateAttribute(.attachment, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+            guard let attachment = value as? NSTextAttachment,
+                  let location = manager.location(manager.documentRange.location, offsetBy: range.location),
+                  let fragment = manager.textLayoutFragment(for: location) else { return }
+            let start = manager.offset(from: manager.documentRange.location, to: fragment.rangeInElement.location)
+            guard let line = fragment.textLineFragments.first(where: { NSLocationInRange(range.location - start, $0.characterRange) }) else { return }
+            let x = fragment.layoutFragmentFrame.minX + line.typographicBounds.minX + line.locationForCharacter(at: range.location - start).x
+            let style = storage.attribute(.paragraphStyle, at: range.location, effectiveRange: nil) as? NSParagraphStyle
+            let tail = style.map { $0.tailIndent < 0 ? -$0.tailIndent : 0 } ?? 0
+            let right = container.size.width - container.lineFragmentPadding - tail
+            guard x < -0.5 || x + attachment.bounds.width > right + 0.5 else { return }
+            let text = storage.string as NSString
+            let paragraph = text.paragraphRange(for: range)
+            let what = text.substring(with: NSRange(location: paragraph.location, length: min(paragraph.length, 20)))
+            out.append("\(String(describing: type(of: attachment))) \(Int(x))...\(Int(x + attachment.bounds.width)) of \(Int(right)): \(what.debugDescription)")
+        }
+        return out
+    }
+
+    @Test(arguments: [320, 600, 900] as [CGFloat])
+    func noLineReachesPastTheColumn(width: CGFloat) {
+        for (name, text) in [("wide", Self.wideThings), ("sample", NoteSourceTests.sample)] {
+            let (view, _) = Self.reader(text, width: width)
+            NoteRender.write(view, "overflow-\(name)-\(Int(width))")
+            let over = Self.overflowing(view)
+            #expect(over.isEmpty, "\(name) at \(width): \(over)")
+        }
     }
 
     @Test func typedMarkupIsEscaped() {
@@ -340,11 +416,9 @@ struct NoteReaderTests {
         #expect(fitted.reduce(0, +) <= 400)
         #expect(fitted[0] < 200 && fitted[2] < 296)
         #expect(ReaderTable.fit([100, 100], floors: [48, 48], page: 400) == [100, 100])
-        // Floors alone wider than the page: they give way too, so no column falls off the picture's edge.
-        #expect(ReaderTable.fit([300, 300], floors: [250, 250], page: 400) == [200, 200])
-        #expect(ReaderTable.fit([600, 100], floors: [600, 100], page: 400).reduce(0, +) <= 400)
-        // Short columns keep room for a word; the wide floor gives up the rest.
-        #expect(ReaderTable.fit([600, 48, 48], floors: [600, 48, 48], page: 400) == [304, 48, 48])
+        // Floors alone wider than the page: they hold, and the table scrolls sideways instead of cutting formulas.
+        #expect(ReaderTable.fit([300, 300], floors: [250, 250], page: 400) == [250, 250])
+        #expect(ReaderTable.fit([600, 48, 48], floors: [600, 48, 48], page: 400) == [600, 48, 48])
         // Math in a cell over two columns raises both, so their sum holds it.
         var floors: [CGFloat] = [48, 48, 48]
         ReaderTable.spread(&floors, from: 1, count: 2, to: 224)

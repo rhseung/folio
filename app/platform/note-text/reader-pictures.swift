@@ -46,7 +46,7 @@ import UIKit
 
     static let padding = CGSize(width: 12, height: 8)
 
-    static func render(_ table: Markdown.Table, builder: ReaderBuilder) -> (image: PlatformImage, size: CGSize)? {
+    static func render(_ table: Markdown.Table, builder: ReaderBuilder, page: CGFloat) -> (image: PlatformImage, size: CGSize)? {
         var b = builder
         let alignments = table.columnAlignments
         var cells: [Cell] = []
@@ -57,10 +57,10 @@ import UIKit
                 cells.append(Cell(row: r, column: c, text: aligned(text, c < alignments.count ? alignments[c] : nil), header: r == 0))
             }
         }
-        return draw(cells, widths: [], width: builder.width)
+        return draw(cells, widths: [], width: page)
     }
 
-    static func render(json: String, builder: ReaderBuilder) -> (image: PlatformImage, size: CGSize)? {
+    static func render(json: String, builder: ReaderBuilder, page: CGFloat) -> (image: PlatformImage, size: CGSize)? {
         guard let table = try? JSONDecoder().decode(CBTable.self, from: Data(json.utf8)) else { return nil }
         var b = builder
         let columns = table.columns ?? []
@@ -84,7 +84,7 @@ import UIKit
                 c += span.columns
             }
         }
-        return draw(cells, widths: columns.map { $0.width.map { CGFloat($0) } }, width: builder.width)
+        return draw(cells, widths: columns.map { $0.width.map { CGFloat($0) } }, width: page)
     }
 
     private static func aligned(_ text: NSAttributedString, _ alignment: Markdown.Table.ColumnAlignment?) -> NSAttributedString {
@@ -103,23 +103,20 @@ import UIKit
     }
 
     static let minimum: CGFloat = 48
+    /// The narrowest a column of text gets: a few syllables a line. Narrower, a cell wraps after every letter and reads
+    /// down instead of across; the table scrolls sideways before it gets there.
+    static let readable: CGFloat = 64
 
-    /// Shrinks the columns together to the page, but none below its floor: math and pictures don't wrap, so a column
-    /// narrower than its widest one cut it off (`min{m,` for `\min\{m,n\}`). Only the room above the floors shrinks.
-    /// When the floors alone are wider than the page they shrink together too, though none below `minimum`: the table
-    /// is one picture in the note column, and a picture wider than the column is cut at its edge, losing whole columns
-    /// instead of a formula's end.
+    /// Shrinks the columns together to the page, but none below its floor: math doesn't wrap, so a column narrower
+    /// than its widest formula cuts it off (`min{m,` for `\min\{m,n\}`), and text wraps letter by letter below
+    /// `readable`. Only the room above the floors shrinks. When
+    /// the floors alone are wider than the page the table keeps them and is wider than the page: the note scrolls it
+    /// sideways, as it does a wide formula.
     static func fit(_ widths: [CGFloat], floors: [CGFloat], page: CGFloat) -> [CGFloat] {
         let wanted = zip(widths, floors).map { max($0, $1) }
         let total = wanted.reduce(0, +), base = floors.reduce(0, +)
         guard total > page else { return wanted }
-        guard base < page else {
-            // The floors give way above the narrowest a column can be and still hold a word, so the wide ones pay.
-            let least = min(minimum, floor(page / CGFloat(floors.count)))
-            let room = page - least * CGFloat(floors.count), over = base - least * CGFloat(floors.count)
-            guard over > 0 else { return floors.map { _ in least } }
-            return floors.map { least + floor(($0 - least) * room / over) }
-        }
+        guard base < page else { return floors }
         let keep = (page - base) / (total - base)
         return zip(wanted, floors).map { w, f in f + floor((w - f) * keep) }
     }
@@ -132,9 +129,9 @@ import UIKit
         for c in column..<(column + count) { floors[c] += share }
     }
 
-    /// Only math holds a column open. Images and code blocks in a cell were sized to the whole note column, not the
-    /// cell's, so as floors one would take nearly all of the table; an image shrinks to its column instead (`shrunk`),
-    /// and a code block draws nothing in a cell.
+    /// Of the pictures, only math holds a column open. Images and code blocks in a cell were sized to the whole note
+    /// column, not the cell's, so as floors one would take nearly all of the table; an image shrinks to its column
+    /// instead (`shrunk`), and a code block draws nothing in a cell.
     private static func widestMath(_ text: NSAttributedString) -> CGFloat {
         var widest: CGFloat = 0
         text.enumerateAttribute(.attachment, in: NSRange(location: 0, length: text.length)) { value, _, _ in
@@ -164,9 +161,9 @@ import UIKit
         var widths = (0..<columnCount).map { c in c < fixed.count ? fixed[c] ?? 0 : 0 }
         var floors = Array(repeating: minimum, count: columnCount)
         for cell in cells where cell.columns == 1 {
-            floors[cell.column] = max(floors[cell.column], widestMath(cell.text) + padding.width * 2)
-            guard cell.column >= fixed.count || fixed[cell.column] == nil else { continue }
             let natural = ceil(cell.text.boundingRect(with: CGSize(width: 10_000, height: 10_000), options: [.usesLineFragmentOrigin], context: nil).width)
+            floors[cell.column] = max(floors[cell.column], widestMath(cell.text) + padding.width * 2, min(natural, readable) + padding.width * 2)
+            guard cell.column >= fixed.count || fixed[cell.column] == nil else { continue }
             widths[cell.column] = max(widths[cell.column], min(natural, 360) + padding.width * 2)
         }
         // A merged cell's math is spread over the columns it spans, after their own cells have set them.

@@ -188,6 +188,10 @@ class NoteTextView: NSTextView {
     /// The text column's width, which pictures fit.
     var columnWidth: CGFloat { max(120, min(NoteLook.measure, bounds.width) - 2 * NoteLook.margin) }
 
+    /// What a line can hold: the column less TextKit's padding at each end of a line. A picture sized to the column
+    /// reached past it by that padding.
+    var lineWidth: CGFloat { columnWidth - 2 * (textContainer?.lineFragmentPadding ?? 0) }
+
     func accentColors(_ accent: CourseAccent) {
         layout.accent = accent.native
         insertionPointColor = accent.native
@@ -683,6 +687,9 @@ class NoteTextView: UITextView {
     func hasMarkedText() -> Bool { markedTextRange != nil }
 
     var columnWidth: CGFloat { max(120, min(NoteLook.measure, bounds.width) - 2 * NoteLook.margin) }
+
+    /// What a line can hold: the column less TextKit's padding at each end of a line.
+    var lineWidth: CGFloat { columnWidth - 2 * textContainer.lineFragmentPadding }
 
     func accentColors(_ accent: CourseAccent) {
         layout.accent = accent.native

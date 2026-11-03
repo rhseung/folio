@@ -84,43 +84,43 @@ final class CodeAttachment: NSTextAttachment, ViewAttachment {
     #endif
 }
 
-/// Display math wider than the column, in a view that scrolls sideways as code does. Left in the text, a line wider
-/// than the column has TextKit move the whole page over to keep the line's ends on screen, which cuts off the end of
-/// every other line.
-final class WideMathAttachment: NSTextAttachment, ViewAttachment {
+/// A formula, table or diagram wider than its room, in a view that scrolls sideways as code does. Left in the text, a
+/// line wider than the column has TextKit move the whole page over to keep the line's ends on screen, which cuts off
+/// the end of every other line.
+final class WidePictureAttachment: NSTextAttachment, ViewAttachment {
     let view: PlatformView
     let inset: CGFloat = 0
-    /// Past the formula, so the scroller sits under it instead of over its bottom.
+    /// Past the picture, so the scroller sits under it instead of over its bottom.
     let below: CGFloat
 
-    init(picture: NoteMath.Picture, width: CGFloat, below: CGFloat) {
+    init(image: PlatformImage, size: CGSize, descent: CGFloat, width: CGFloat, below: CGFloat) {
         self.below = below
         #if os(macOS)
-        // Flipped, so the formula stands at the top of the view and the room for the scroller is under it.
-        let document = FlippedView(frame: CGRect(x: 0, y: 0, width: picture.size.width, height: picture.size.height + below))
-        let formula = NSImageView(frame: CGRect(origin: .zero, size: picture.size))
-        formula.image = picture.image
-        formula.imageScaling = .scaleNone
-        document.addSubview(formula)
-        let scroll = SideScrollView(frame: CGRect(x: 0, y: 0, width: width, height: picture.size.height + below))
+        // Flipped, so the picture stands at the top of the view and the room for the scroller is under it.
+        let document = FlippedView(frame: CGRect(x: 0, y: 0, width: size.width, height: size.height + below))
+        let picture = NSImageView(frame: CGRect(origin: .zero, size: size))
+        picture.image = image
+        picture.imageScaling = .scaleNone
+        document.addSubview(picture)
+        let scroll = SideScrollView(frame: CGRect(x: 0, y: 0, width: width, height: size.height + below))
         scroll.documentView = document
         view = scroll
         #else
-        let formula = UIImageView(image: picture.image)
-        formula.frame = CGRect(origin: .zero, size: picture.size)
-        let scroll = SideScrollView(frame: CGRect(x: 0, y: 0, width: width, height: picture.size.height + below))
-        scroll.contentSize = picture.size
+        let picture = UIImageView(image: image)
+        picture.frame = CGRect(origin: .zero, size: size)
+        let scroll = SideScrollView(frame: CGRect(x: 0, y: 0, width: width, height: size.height + below))
+        scroll.contentSize = size
         scroll.alwaysBounceVertical = false
         scroll.showsVerticalScrollIndicator = false
-        scroll.addSubview(formula)
+        scroll.addSubview(picture)
         view = scroll
         #endif
         super.init(data: nil, ofType: nil)
-        bounds = CGRect(x: 0, y: -picture.descent, width: width, height: picture.size.height)
+        bounds = CGRect(x: 0, y: -descent, width: width, height: size.height)
         #if os(macOS)
-        image = NSImage(size: bounds.size, flipped: false) { _ in true }
+        self.image = NSImage(size: bounds.size, flipped: false) { _ in true }
         #else
-        image = UIImage()
+        self.image = UIImage()
         #endif
     }
 
@@ -128,7 +128,7 @@ final class WideMathAttachment: NSTextAttachment, ViewAttachment {
 }
 
 #if os(macOS)
-/// Sideways only, with up-and-down scrolling handed to the note, so the pointer resting on code or a formula doesn't
+/// Sideways only, with up-and-down scrolling handed to the note, so the pointer resting on code or a picture doesn't
 /// stop the page.
 private final class SideScrollView: NSScrollView, AttachedView {
     override init(frame: NSRect) {
