@@ -113,7 +113,7 @@ final class LectureRecorder {
                     try? await Task.sleep(for: .milliseconds(200))
                     guard let self, let sink = self.sink else { return }
                     self.elapsed = sink.seconds
-                    self.level = self.state == .recording ? sink.level : 0
+                    self.level = self.state == .recording ? LectureLoudness.level(sink.takeDecibels()) : 0
                     // A changed microphone (AirPods, a dock), an interruption or sleep stops the engine without telling
                     // the recording; restart it on the new input.
                     if self.state == .recording, !self.engine.isRunning, Date.now.timeIntervalSince(self.lastRestart) > 1 {
@@ -232,13 +232,13 @@ final class LectureRecorder {
 
     #if DEBUG
     /// For window snapshots (`FOLIO_SNAPSHOT_RECORDING`): the card as it looks mid-lecture, with no microphone or file.
-    func stage(_ recording: Recording, course: UUID, title: String) {
+    func stage(_ recording: Recording, course: UUID, title: String, paused: Bool = false, level: Float = 0.6) {
         courseId = course
         self.recording = recording
         self.title = title
-        state = .recording
+        state = paused ? .paused : .recording
         elapsed = 2951
-        level = 0.6
+        self.level = paused ? 0 : level
         bookmarks = [612]
         lines = [
             .init(start: 2890, end: 2912, text: "그래서 이 문법은 모호하지 않다는 걸 보이려면 유도 트리가 하나뿐이라는 걸 보여야 하고요"),
@@ -335,7 +335,8 @@ private final class AudioSink: @unchecked Sendable {
     private let analyzerFormat: AVAudioFormat?
     private let analyzer: AsyncStream<AnalyzerInput>.Continuation?
     private var frames: AVAudioFramePosition = 0
-    private var lastLevel: Float = 0
+    private var energy: Float = 0
+    private var energyFrames = 0
 
     init?(file: AVAudioFile, input: AVAudioFormat, fileFormat: AVAudioFormat, analyzerFormat: AVAudioFormat?,
           analyzer: AsyncStream<AnalyzerInput>.Continuation?) {
@@ -359,7 +360,14 @@ private final class AudioSink: @unchecked Sendable {
     }
 
     var seconds: TimeInterval { lock.withLock { Double(frames) / fileFormat.sampleRate } }
-    var level: Float { lock.withLock { lastLevel } }
+    /// The mean loudness since the last call, in dB: the clock asks every 200 ms, and the last 85 ms buffer alone swung
+    /// with each syllable.
+    func takeDecibels() -> Float {
+        lock.withLock {
+            defer { energy = 0; energyFrames = 0 }
+            return energyFrames == 0 ? -120 : 10 * log10(max(energy / Float(energyFrames), 1e-12))
+        }
+    }
 
     func install(on node: AVAudioInputNode, format: AVAudioFormat) {
         node.installTap(onBus: 0, bufferSize: 4096, format: format) { [self] buffer, _ in consume(buffer) }
@@ -371,7 +379,8 @@ private final class AudioSink: @unchecked Sendable {
             if let mono = Self.convert(buffer, with: toFile, to: fileFormat) {
                 try? file.write(from: mono)
                 frames += AVAudioFramePosition(mono.frameLength)
-                lastLevel = Self.rms(mono)
+                energy += Self.sumOfSquares(mono)
+                energyFrames += Int(mono.frameLength)
             }
             if let toAnalyzer, let analyzerFormat, let converted = Self.convert(buffer, with: toAnalyzer, to: analyzerFormat) {
                 analyzer?.yield(AnalyzerInput(buffer: converted))
@@ -401,12 +410,23 @@ private final class AudioSink: @unchecked Sendable {
         return error == nil && out.frameLength > 0 ? out : nil
     }
 
-    /// Loudness for the level meter, 0...1 on a rough dB scale.
-    static func rms(_ buffer: AVAudioPCMBuffer) -> Float {
-        guard let data = buffer.floatChannelData?[0], buffer.frameLength > 0 else { return 0 }
+    static func sumOfSquares(_ buffer: AVAudioPCMBuffer) -> Float {
+        guard let data = buffer.floatChannelData?[0] else { return 0 }
         var sum: Float = 0
         for i in 0..<Int(buffer.frameLength) { sum += data[i] * data[i] }
-        let db = 20 * log10(max(sqrt(sum / Float(buffer.frameLength)), 1e-6))
-        return max(0, min(1, (db + 55) / 50))
+        return sum
+    }
+}
+
+/// Loudness as the recording card shows it, 0...1. The range is a class as a laptop on the desk hears it, measured on a
+/// recorded lecture over one-second windows: -57 dB is the room between sentences (10th percentile), -42 dB the lecturer
+/// speaking up (95th). The old -55...-5 dB range kept a whole class under a third of the scale, so the meter and the
+/// card's glow hardly moved; a voice close to the microphone now just fills it.
+enum LectureLoudness {
+    static let quiet: Float = -57
+    static let loud: Float = -42
+
+    static func level(_ decibels: Float) -> Float {
+        max(0, min(1, (decibels - quiet) / (loud - quiet)))
     }
 }
