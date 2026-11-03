@@ -225,12 +225,14 @@ struct NoteReaderTests {
     }
 
     /// The height a line is laid out with, for the line holding `offset`.
+    /// A line's height with the gap under it, which a paragraph holding a tall picture keeps as line spacing.
     static func lineHeight(_ view: NSTextView, at offset: Int) -> CGFloat? {
         guard let manager = view.textLayoutManager,
               let location = manager.location(manager.documentRange.location, offsetBy: offset),
               let fragment = manager.textLayoutFragment(for: location) else { return nil }
         let inFragment = offset - manager.offset(from: manager.documentRange.location, to: fragment.rangeInElement.location)
-        return fragment.textLineFragments.first { NSLocationInRange(inFragment, $0.characterRange) }?.typographicBounds.height
+        let gap = (view.textStorage?.attribute(.paragraphStyle, at: offset, effectiveRange: nil) as? NSParagraphStyle)?.lineSpacing ?? 0
+        return fragment.textLineFragments.first { NSLocationInRange(inFragment, $0.characterRange) }.map { $0.typographicBounds.height + gap }
     }
 
     /// A picture far taller than the text gets a line of its own height, wherever it's written in the paragraph, and the
@@ -251,6 +253,21 @@ struct NoteReaderTests {
         }
         let picture = shown.range(of: "\u{FFFC}").location
         #expect(try #require(Self.lineHeight(view, at: picture)) > 2 * plain)
+    }
+
+    /// Unbounded, a picture's line took no gap, so the text under it sat closer than any two lines of text; and a
+    /// paragraph of pictures alone fixed every line to the tallest, so a small picture under a big one stood as tall.
+    @Test func aPicturesLineKeepsTheGapAndAShortPictureItsHeight() throws {
+        let (view, _) = Self.reader("![큰 그림](assets/sample.png)\n첫 줄\n\n![큰 그림](assets/sample.png)\n![작은 그림|40](assets/sample.png)")
+        let manager = try #require(view.textLayoutManager)
+        var fragments: [NSTextLayoutFragment] = []
+        manager.enumerateTextLayoutFragments(from: manager.documentRange.location, options: []) { fragments.append($0); return true }
+        let gap = try #require((view.textStorage?.attribute(.paragraphStyle, at: 0, effectiveRange: nil) as? NSParagraphStyle)?.lineSpacing)
+        #expect(gap > 0)
+        let text = fragments[0].textLineFragments
+        #expect(text.count == 2 && text[1].typographicBounds.minY - text[0].typographicBounds.maxY == gap)
+        let pictures = fragments[1].textLineFragments
+        #expect(pictures.count == 2 && pictures[1].typographicBounds.height < pictures[0].typographicBounds.height / 2)
     }
 
     @Test func aParagraphWithAPictureStillWritesBack() throws {
