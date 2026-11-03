@@ -164,3 +164,13 @@ struct TranscriptionQueueTests {
         #expect(await overlap.runs == 1)
     }
 }
+
+struct LectureLoudnessTests {
+    @Test func aClassFillsTheScale() {
+        #expect(LectureLoudness.level(-80) == 0)
+        #expect(LectureLoudness.level(-57) == 0)
+        #expect(LectureLoudness.level(-49.5) == 0.5)
+        #expect(LectureLoudness.level(-42) == 1)
+        #expect(LectureLoudness.level(-10) == 1)
+    }
+}
