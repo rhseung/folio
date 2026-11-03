@@ -180,6 +180,8 @@ final class MaterialsModel {
     }
 
     /// `page` is 1-based; nil when the viewer closed.
+    var recording: UUID? { workspace.recorder.current }
+
     func showing(_ page: Int?, of m: FolioDomain.Material) {
         workspace.showing(page: page, of: m, course: course.id)
     }

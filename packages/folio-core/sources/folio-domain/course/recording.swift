@@ -84,12 +84,12 @@ extension Recording {
     public static let pageDwell: TimeInterval = 20
 
     /// The pages of each file the class went through, in the order first opened: from the first to the last page
-    /// that stayed on screen for `pageDwell`. `end` is where the last visit stops, the audio's end once it is done.
-    public func viewedPages(until end: TimeInterval? = nil) -> [SessionMaterial] {
+    /// that stayed on screen for `pageDwell`. The last visit stops at `duration`: the audio so far while recording.
+    public func viewedPages() -> [SessionMaterial] {
         var ranges: [SessionMaterial] = []
         for (i, visit) in pages.enumerated() {
             guard let page = visit.page else { continue }
-            let leftAt = i + 1 < pages.count ? pages[i + 1].at : (end ?? duration)
+            let leftAt = i + 1 < pages.count ? pages[i + 1].at : duration
             guard leftAt - visit.at >= Self.pageDwell else { continue }
             if let j = ranges.firstIndex(where: { $0.materialId == visit.materialId }) {
                 ranges[j].firstPage = min(ranges[j].firstPage ?? page, page)

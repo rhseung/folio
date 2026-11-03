@@ -58,6 +58,20 @@ extension Workspace {
         guard recorder.courseId == course, recorder.isActive, material.role == .lecture else { return }
         recorder.show(material.id, page: page)
         retellCaptionsIfChanged()
+        if let id = recorder.current, let visit = recorder.pages.last, visit.page != nil { retellAfterDwell(on: visit, recording: id) }
+    }
+
+    /// A page counts once it has stayed `pageDwell`, so at the turn itself the captions can't be told it yet: without
+    /// a second look they would always be a page behind, and a class kept on one page would never reach them. Waits
+    /// on the audio's clock, which stops while paused.
+    private func retellAfterDwell(on visit: PageVisit, recording id: UUID) {
+        Task {
+            while recorder.current == id, recorder.pages.last == visit {
+                let left = visit.at + Recording.pageDwell - recorder.elapsed
+                if left <= 0 { return retellCaptionsIfChanged() }
+                try? await Task.sleep(for: .seconds(left + 0.5))
+            }
+        }
     }
 
     /// The entry goes first: a file left behind by a failed delete is harmless, an entry pointing at nothing is not.
@@ -71,17 +85,7 @@ extension Workspace {
     func stopRecording() async {
         // Stopped first, whatever happens to the course: the microphone must not stay on.
         guard let id = recorder.courseId, let (recording, captions) = await recorder.stop() else { return }
-        if let course = course(id) {
-            var transcript = captions
-            // Told while recording, the captions missed the page still on screen at the end. Made again from the whole
-            // recording it is what the player compares the course with later; left as it was, every recording would
-            // read as told something other than its links.
-            if let session = course.file.sessions.first(where: { $0.id == recording.sessionId }) {
-                let (store, file) = (course.store, course.file)
-                transcript.context = await Task.detached { store.transcriptionContext(file, session: session, recording: recording) }.value
-            }
-            perform { try course.store.saveTranscript(transcript, of: recording) }
-        }
+        if let course = course(id) { perform { try course.store.saveTranscript(captions, of: recording) } }
         await finishRecording(PendingRecording(courseId: id, recording: recording))
     }
 
@@ -113,6 +117,7 @@ extension Workspace {
                 if let i = list.firstIndex(where: { $0.id == id }) { list[i] = recording } else { list.append(recording) }
             }
             local.remove(id)
+            await retellFinished(recording, in: course)
             // The pages the class went through become the session's range, for files it has none for yet.
             if !recording.pages.isEmpty, let session = recording.sessionId, course.file.sessions.contains(where: { $0.id == session }) {
                 _ = run(SessionLinkViewed(course: course.id, session: session))
@@ -124,6 +129,20 @@ extension Workspace {
         } catch {
             self.error = String(localized: .recordingErrorInstallFailed(error.localizedDescription))
         }
+    }
+
+    /// The captions were told the context at the last page turn, before the page then on screen had stayed long enough
+    /// to count, and a quit or a crash saves that same context. Made again from the whole recording, here where a stop
+    /// and a recovery both pass, it is what the player compares the course with; left as it was, the player would
+    /// say the materials changed when nothing had.
+    private func retellFinished(_ recording: Recording, in course: LoadedCourse) async {
+        guard var transcript = course.store.transcript(of: recording),
+              let session = course.file.sessions.first(where: { $0.id == recording.sessionId }) else { return }
+        let (store, file) = (course.store, course.file)
+        let context = await Task.detached { store.transcriptionContext(file, session: session, recording: recording) }.value
+        guard transcript.context != context else { return }
+        transcript.context = context
+        perform { try store.saveTranscript(transcript, of: recording) }
     }
 
     /// Replaces the transcript with one made from the whole audio. Goes on after the player closes; a recording

@@ -29,10 +29,9 @@ struct RecordedPagesTests {
         #expect(recording([PageVisit(at: 0, materialId: slides, page: 2), PageVisit(at: 10, materialId: slides, page: nil)]).viewedPages().isEmpty)
     }
 
-    @Test func theLastPageRunsToTheGivenEnd() {
-        let r = recording([PageVisit(at: 0, materialId: slides, page: 7)], duration: 0)
-        #expect(r.viewedPages().isEmpty)
-        #expect(r.viewedPages(until: 30) == [SessionMaterial(materialId: slides, firstPage: 7, lastPage: 7)])
+    @Test func theLastPageRunsToTheAudiosEnd() {
+        #expect(recording([PageVisit(at: 0, materialId: slides, page: 7)], duration: 19).viewedPages().isEmpty)
+        #expect(recording([PageVisit(at: 0, materialId: slides, page: 7)], duration: 30).viewedPages() == [SessionMaterial(materialId: slides, firstPage: 7, lastPage: 7)])
     }
 
     @Test func filesKeepTheOrderTheyWereOpenedIn() {
