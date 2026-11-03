@@ -130,8 +130,7 @@ struct NotesView: View {
 }
 
 struct NoteEditor: View {
-    enum Mode: Hashable { case read, write }
-    /// From here the note panel holds the source and the preview side by side.
+    /// From here the note panel can hold the source and the preview side by side.
     nonisolated static let sideBySide: CGFloat = 880
 
     @State private var model: NoteEditorModel
@@ -139,7 +138,7 @@ struct NoteEditor: View {
     @Environment(\.scenePhase) private var scenePhase
     var insert: Binding<String?> = .constant(nil)
     let openNote: (String) -> Void
-    @State private var mode = Mode.write
+    @State private var panes = NotePanes()
     @State private var wide = false
     @State private var preview = PreviewLink()
     @State private var showsAssets = false
@@ -153,8 +152,15 @@ struct NoteEditor: View {
     var body: some View {
         VStack(spacing: 0) {
             PageBar {
-                if !wide {
-                    Segmented(selection: $mode, options: [(.read, String(localized: .notesModeRead)), (.write, String(localized: .notesModeWrite))],
+                if wide {
+                    Segmented(selection: Binding { panes.mode } set: { panes.choose($0) },
+                              options: [(.read, String(localized: .notesModeRead)), (.split, String(localized: .notesModeSplit)),
+                                        (.write, String(localized: .notesModeWrite))],
+                              compact: true)
+                    .help(Text(.notesModeToggle))
+                } else {
+                    Segmented(selection: Binding { shown } set: { panes.chooseNarrow($0) },
+                              options: [(.read, String(localized: .notesModeRead)), (.write, String(localized: .notesModeWrite))],
                               compact: true)
                     .help(Text(.notesModeToggle))
                 }
@@ -188,17 +194,14 @@ struct NoteEditor: View {
                     .transition(.move(edge: .top).combined(with: .opacity))
                 Theme.Palette.lineSoft.frame(height: 1)
             }
-            if wide {
-                HStack(spacing: 0) {
-                    editor
-                    Theme.Palette.lineSoft.frame(width: 1)
-                    NoteReader(text: model.body, baseURL: model.baseURL, math: model.meta.math, openNote: openNote, edit: model.replaceLines, link: preview)
+            // One row whose columns come and go, so switching keeps the editor's caret and the preview's scroll.
+            HStack(spacing: 0) {
+                if shown != .read { editor }
+                if shown == .split { Theme.Palette.lineSoft.frame(width: 1) }
+                if shown != .write {
+                    NoteReader(text: model.body, baseURL: model.baseURL, math: model.meta.math, openNote: openNote, edit: model.replaceLines,
+                               link: shown == .split ? preview : nil, toggleMode: toggleMode)
                 }
-            } else if mode == .read {
-                NoteReader(text: model.body, baseURL: model.baseURL, math: model.meta.math, openNote: openNote, edit: model.replaceLines,
-                           toggleMode: toggleMode)
-            } else {
-                editor
             }
         }
         .onGeometryChange(for: Bool.self) { $0.size.width >= Self.sideBySide } action: { wide = $0 }
@@ -207,7 +210,7 @@ struct NoteEditor: View {
         // Edits save on their own; ⌘S is kept only for the habit, with no button of its own.
         .background { Button("") { model.saveNow(force: false) }.keyboardShortcut("s").opacity(0).allowsHitTesting(false).accessibilityHidden(true) }
         .background {
-            Button("", action: toggleMode).keyboardShortcut("e").disabled(wide)
+            Button("", action: toggleMode).keyboardShortcut("e")
                 .opacity(0).allowsHitTesting(false).accessibilityHidden(true)
         }
         .onAppear(perform: model.load)
@@ -238,9 +241,10 @@ struct NoteEditor: View {
         }
     }
 
-    var writing: Bool { wide || mode == .write }
+    var shown: NotePanes.Mode { panes.shown(wide: wide) }
+    var writing: Bool { shown != .read }
 
-    func toggleMode() { mode = mode == .read ? .write : .read }
+    func toggleMode() { panes.toggle() }
 
     var editor: some View {
         MarkdownEditor(text: $model.body, baseURL: model.baseURL, math: model.meta.math, insert: $model.pendingInsert,

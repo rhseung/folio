@@ -6656,6 +6656,17 @@
         }
       }
     },
+    "notes.mode.split": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나란히"
+          }
+        }
+      }
+    },
     "notes.mode.toggle": {
       "extractionState": "manual",
       "localizations": {
