@@ -179,6 +179,11 @@ final class MaterialsModel {
         workspace.perform { try store.log.append(MaterialViewEvent(materialId: m.id, page: page), device: workspace.device, at: .now) }
     }
 
+    /// `page` is 1-based; nil when the viewer closed.
+    func showing(_ page: Int?, of m: FolioDomain.Material) {
+        workspace.showing(page: page, of: m, course: course.id)
+    }
+
     // MARK: Links
 
     var sessions: [Session] { course.file.sessions.sorted { ($0.week, $0.index) < ($1.week, $1.index) } }

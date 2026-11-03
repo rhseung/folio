@@ -34,8 +34,11 @@ struct MaterialViewer: View {
         .background(Theme.Palette.card)
         .crumb((material.path as NSString).lastPathComponent, level: 2, symbol: "doc")
         .task(id: material.id) { await load() }
+        // While a class is being recorded, the pages it goes through are kept with the recording.
+        .onChange(of: controller?.page) { _, page in if let page { model.showing(page + 1, of: material) } }
         .onDisappear {
             if let controller, controller.page != openedAt { model.recordPage(controller.page, of: material) }
+            model.showing(nil, of: material)
         }
     }
 

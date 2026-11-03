@@ -30,6 +30,14 @@ final class RecordingBarModel {
         recorder.volatile.isEmpty ? (recorder.lines.last?.text ?? recorder.transcriptionNote ?? String(localized: .recordingListening)) : recorder.volatile
     }
 
+    var context: TranscriptionContext? { recorder.context }
+    var contextSummary: String {
+        context.map(TranscriptionContextText.summary) ?? String(localized: .recordingContextReading)
+    }
+    /// Where lecture files are linked to sessions: the course's files.
+    var materialsTarget: SearchTarget? { course.map { SearchTarget(courseId: $0.id, section: .materials) } }
+    func retellCaptionsIfChanged() { workspace.retellCaptionsIfChanged() }
+
     func toggle() {
         if recording { recorder.pause() } else { workspace.perform { try recorder.resume() } }
     }
@@ -100,6 +108,44 @@ final class RecordingPlayerModel {
     }
 
     var bookmarks: [TimeInterval] { recording.bookmarks.sorted() }
+
+    // MARK: Transcription context
+
+    /// Made from the course as it is, terms read from the slides; only for a transcript that kept no context.
+    private(set) var readContext: TranscriptionContext?
+    private var courseFile: CourseFile? { workspace.course(courseId)?.file }
+    /// The listed one has the pages kept while recording; the copy this player opened with may predate them.
+    private var listed: Recording { courseFile?.recordings.first { $0.id == recording.id } ?? recording }
+    private var session: Session? { courseFile?.sessions.first { $0.id == recording.sessionId } }
+    /// The course's links now, terms left out: what a transcription started now would be told.
+    private var linkedContext: TranscriptionContext? {
+        guard let file = courseFile, let session else { return nil }
+        return file.transcriptionContext(for: session, recording: listed)
+    }
+
+    /// Only a recording of a session has slides and units to be told about.
+    var showsContext: Bool { session != nil }
+    var usedContext: TranscriptionContext? { transcript?.context }
+    var shownContext: TranscriptionContext? { usedContext ?? readContext ?? linkedContext }
+    var contextTermsRead: Bool { usedContext != nil || readContext != nil }
+    var contextSummary: String { shownContext.map(TranscriptionContextText.summary) ?? "" }
+    /// Said when what is shown is not what the transcript was told.
+    var contextNote: String? {
+        guard usedContext == nil else { return nil }
+        return String(localized: hasLines ? .recordingContextUnrecorded : .recordingContextUpcoming)
+    }
+    /// The slides or units linked since would tell a new transcription something else.
+    var contextChanged: Bool {
+        guard hasLines, let used = usedContext, let now = linkedContext else { return false }
+        return used.differs(from: now)
+    }
+    var materialsTarget: SearchTarget { SearchTarget(courseId: courseId, section: .materials) }
+
+    func loadContext() async {
+        guard usedContext == nil, let file = courseFile, let session else { return }
+        let (store, recording) = (store, listed)
+        readContext = await Task.detached { store.transcriptionContext(file, session: session, recording: recording) }.value
+    }
 
     func transcribe() { workspace.transcribe(recording, course: courseId) }
     func cancelTranscription() { workspace.transcriptions.cancel(recording.id) }
