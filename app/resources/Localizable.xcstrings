@@ -12783,6 +12783,28 @@
         }
       }
     },
+    "sessions.planned": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예정된 수업"
+          }
+        }
+      }
+    },
+    "sessions.planned-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시간표로 계산한 수업입니다. 메뉴에서 휴강이나 결석을 고르면 회차로 저장합니다."
+          }
+        }
+      }
+    },
     "sessions.play-recording": {
       "extractionState": "manual",
       "localizations": {

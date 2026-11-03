@@ -33,6 +33,8 @@ final class SessionsModel {
 
     struct TimelineRow: Identifiable {
         let item: SessionTimeline.Item
+        /// For a planned class, what its menu acts on.
+        var planned: Workspace.SuggestedSession?
         let first: Bool
         /// The rail above and below the line's dot: nil at the ends, true once held.
         let above: Bool?
@@ -42,11 +44,22 @@ final class SessionsModel {
 
     func timeline(_ file: CourseFile, now: Date? = nil) -> [TimelineRow] {
         let now = now ?? workspace.now
-        let items = SessionTimeline.items(file, calendar: calendar)
+        let plan = workspace.course(courseId).map { workspace.plannedSessions(for: $0, now: now) } ?? []
+        let byDate = Dictionary(plan.map { ($0.draft.date, $0) }, uniquingKeysWith: { a, _ in a })
+        let items = SessionTimeline.items(file, planned: plan.map(\.draft), calendar: calendar)
         return items.indices.map { i in
-            TimelineRow(item: items[i], first: i == 0, above: i == 0 ? nil : items[i].held(at: now),
-                        below: i == items.count - 1 ? nil : items[i + 1].held(at: now))
+            var planned: Workspace.SuggestedSession?
+            if case .planned(let s) = items[i] { planned = byDate[s.date] }
+            return TimelineRow(item: items[i], planned: planned, first: i == 0, above: i == 0 ? nil : items[i].held(at: now),
+                               below: i == items.count - 1 ? nil : items[i + 1].held(at: now))
         }
+    }
+
+    /// `14일 후 오전 10:30 · 203`: the day is in the gutter.
+    func plannedLine(_ item: Workspace.SuggestedSession, now: Date? = nil) -> String {
+        let date = item.suggestion.date
+        let clock = TimeMenu.label(calendar.component(.hour, from: date) * 60 + calendar.component(.minute, from: date))
+        return Self.ahead(date, clock: clock, now: now ?? workspace.now, calendar: calendar) + (item.suggestion.room.isEmpty ? "" : " · \(item.suggestion.room)")
     }
 
     func isThisWeek(_ date: Date) -> Bool { calendar.startOfWeek(containing: date) == calendar.startOfWeek(containing: workspace.now) }

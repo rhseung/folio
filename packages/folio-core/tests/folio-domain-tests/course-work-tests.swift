@@ -73,6 +73,29 @@ struct CourseWorkTests {
         #expect(before?.date == date("2026-10-28 13:00"))
     }
 
+    /// A 휴강 two weeks off needs a class to mark: the plan runs to the term's end, past the classes already made.
+    @Test func plannedClassesRunToTheTermsEnd() {
+        var cancelled = Session(device: device, at: .now, week: 11, date: date("2026-11-09 13:00"))
+        cancelled.isCancelled = true
+        let made = Session(device: device, at: .now, week: 10, date: date("2026-11-04 13:00"))
+        let midterm = DateInterval(start: date("2026-11-16 13:00"), duration: 3600)
+        let plan = SessionPlanner.planned(schedule: monWed, sessions: [cancelled, made], from: LocalDate("2026-09-02"), to: LocalDate("2026-11-25"),
+                                          exams: [midterm], now: date("2026-11-03 09:00"), calendar: calendar)
+        #expect(plan.map(\.date) == ["2026-11-11 13:00", "2026-11-18 13:00", "2026-11-23 13:00", "2026-11-25 13:00"].map(date))
+        // Without an end, the coming week only, as the suggestion always did.
+        let open = SessionPlanner.planned(schedule: monWed, sessions: [], from: nil, to: nil, now: date("2026-11-03 09:00"), calendar: calendar)
+        #expect(open.map(\.date) == ["2026-11-04 13:00", "2026-11-09 13:00"].map(date))
+        #expect(SessionPlanner.suggestion(schedule: monWed, sessions: [made], from: nil, to: nil, now: date("2026-11-03 09:00"), calendar: calendar)?.date
+                == date("2026-11-09 13:00"))
+    }
+
+    @Test func plannedClassesSitInTheirWeeksOnTheTimeline() {
+        let made = Session(device: device, at: .now, week: 10, date: date("2026-11-04 13:00"))
+        let planned = Session(device: device, at: .now, week: 10, date: date("2026-11-02 13:00"))
+        let items = SessionTimeline.items(CourseFile(course: courses[0], sessions: [made]), planned: [planned], calendar: calendar)
+        #expect(items.map(\.id) == ["week-10", "planned-\(planned.date.timeIntervalSinceReferenceDate)", made.id.uuidString])
+    }
+
     @Test func newSessionsCountWeeksFromTheTermStart() {
         // Term starts Wednesday 2026-09-02: that week is 1, so 2026-10-26 is 9주차.
         let first = SessionPlanner.session(at: date("2026-10-26 13:00"), sessions: [], termStart: LocalDate("2026-09-02"),

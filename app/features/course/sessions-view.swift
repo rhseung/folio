@@ -2,7 +2,8 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// Sessions are made as classes happen: the weekly schedule only suggests the next lecture, and the rest are added by hand.
+/// Sessions are made as classes happen. The classes the weekly schedule still holds show faint on the timeline, and
+/// doing something to one (a 휴강, an absence) makes it a session; anything off the schedule is added by hand.
 struct SessionsView: View {
     @Environment(\.accent) private var accent
     @State private var model: SessionsModel
@@ -80,6 +81,10 @@ struct SessionsView: View {
                 SessionRow(model: model, course: course, session: session, now: model.workspace.now, end: end, openNote: openNote, above: above, below: below)
             }
             .fileDrop { model.importFiles($0, into: session) }
+        case .planned:
+            if let item = row.planned {
+                PlannedSessionRow(item: item, line: model.plannedLine(item), openNote: openNote, editTimes: { editingTimes = true }, above: above, below: below)
+            }
         }
     }
 
@@ -128,6 +133,57 @@ struct SessionsView: View {
     }
 }
 
+/// A class the schedule still holds, not saved: faint, with a dashed dot. Its menu makes the session first, so a 휴강
+/// or an absence known weeks ahead has something to hang on.
+struct PlannedSessionRow: View {
+    @Environment(Workspace.self) private var workspace
+    let item: Workspace.SuggestedSession
+    let line: String
+    let openNote: (UUID) -> Void
+    var editTimes: (() -> Void)?
+    var above: Bool?
+    var below: Bool?
+    @State private var hovering = false
+
+    var body: some View {
+        let date = item.suggestion.date
+        HStack(alignment: .top, spacing: 0) {
+            VStack(spacing: 0) {
+                Text("\(workspace.calendar.component(.day, from: date))").font(Theme.Typeface.figureMedium.weight(.semibold)).monospacedDigit()
+                Text(date.formatted(.dateTime.weekday())).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+            }
+            .frame(width: SessionRow.gutter)
+            .padding(.top, SessionRow.rowPadding - 2)
+            .opacity(0.4)
+            Rail(above: above, below: below, dotY: SessionRow.dotY) {
+                Circle().strokeBorder(Theme.Palette.lineStrong, style: StrokeStyle(lineWidth: 1.5, dash: [2, 2]))
+                    .background(Theme.Palette.page, in: .circle).frame(width: 10, height: 10)
+            }
+            HStack(alignment: .top, spacing: Theme.Space.m) {
+                VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+                    Text(.sessionsPlanned).font(Theme.Typeface.bodyStrong).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                    Text(line).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit().lineLimit(1)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Menu { SuggestedSessionItems(item: item, primary: true, openNote: openNote, editTimes: editTimes) } label: {
+                    Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary).frame(width: 24, height: 24).contentShape(.rect)
+                }
+                .menuStyle(.button)
+                .menuIndicator(.hidden)
+                .buttonStyle(.borderless).pointingHand()
+                .fixedSize()
+                .help(Text(.sessionsSuggestionMenuHelp))
+            }
+            .padding(SessionRow.rowPadding)
+            .background(hovering ? Theme.Palette.text.opacity(0.04) : .clear, in: .rect(cornerRadius: Theme.Radius.control))
+            .contentShape(.rect)
+            .onHover { hovering = $0 }
+            .contextMenu { SuggestedSessionItems(item: item, primary: true, openNote: openNote, editTimes: editTimes) }
+            .help(Text(.sessionsPlannedHelp))
+        }
+    }
+}
+
 /// The lecture the schedule says is under way or next, not made yet: a dashed row. Starting its rough note or a
 /// recording makes the session first; 휴강 saves it cancelled, so the suggestion moves to the next lecture.
 struct SuggestedSessionRow: View {
@@ -145,7 +201,8 @@ struct SuggestedSessionRow: View {
             if showsCourse {
                 Text(date.formatted(date: .omitted, time: .shortened)).timeColumn().font(Theme.Typeface.caption).monospacedDigit().fixedSize()
                 CourseMark(workspace, item.courseId)
-                Text("\(workspace.course(item.courseId)?.title ?? "") · \(item.name)").lineLimit(1)
+                // Today's own list: the day goes without saying.
+                Text(workspace.course(item.courseId)?.title ?? "").lineLimit(1)
                     .help(Text(.sessionsSuggested))
             } else {
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
@@ -155,8 +212,10 @@ struct SuggestedSessionRow: View {
                 .frame(width: 96, alignment: .leading)
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                     Text(.sessionsLecture).font(Theme.Typeface.bodyStrong)
-                    Text(item.name + (item.suggestion.room.isEmpty ? "" : " · \(item.suggestion.room)"))
-                        .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                    // The day is beside it already.
+                    if !item.suggestion.room.isEmpty {
+                        Text(item.suggestion.room).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                    }
                 }
             }
             Spacer(minLength: Theme.Space.m)

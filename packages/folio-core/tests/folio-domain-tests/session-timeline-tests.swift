@@ -29,6 +29,7 @@ struct SessionTimelineTests {
             case .month: "month"
             case .exam(let e, _): e.title
             case .session(let s): "s" + file.name(of: s).replacing("주차", with: "")
+            case .planned(let s): "p\(s.week)"
             }
         }
     }

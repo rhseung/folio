@@ -1,7 +1,8 @@
 import Foundation
 
 /// The course's sessions read down one timeline: each week, its sessions in date order, the midterm and final where
-/// they fall, and a month marker wherever the month turns (the timeline shows only the day).
+/// they fall, and a month marker wherever the month turns (the timeline shows only the day). Classes the schedule
+/// still holds come in as `planned`, unsaved sessions placed in their weeks like any other.
 public enum SessionTimeline {
     public enum Item: Identifiable, Sendable {
         /// With the month when the week opens one.
@@ -10,6 +11,7 @@ public enum SessionTimeline {
         case month(Date)
         case exam(Exam, Date)
         case session(Session)
+        case planned(Session)
 
         public var id: String {
             switch self {
@@ -17,6 +19,7 @@ public enum SessionTimeline {
             case .month(let d): "month-\(d.timeIntervalSinceReferenceDate)"
             case .exam(let e, _): "exam-\(e.id)"
             case .session(let s): s.id.uuidString
+            case .planned(let s): "planned-\(s.date.timeIntervalSinceReferenceDate)"
             }
         }
 
@@ -24,15 +27,16 @@ public enum SessionTimeline {
             switch self {
             case .week(let s, _): s[0].date
             case .month(let d), .exam(_, let d): d
-            case .session(let s): s.date
+            case .session(let s), .planned(let s): s.date
             }
         }
 
         public func held(at now: Date) -> Bool { date <= now }
     }
 
-    public static func items(_ file: CourseFile, calendar: Calendar) -> [Item] {
-        let weeks = Dictionary(grouping: file.sessions, by: \.week).sorted { $0.key < $1.key }.map { $0.value.sorted { $0.date < $1.date } }
+    public static func items(_ file: CourseFile, planned: [Session] = [], calendar: Calendar) -> [Item] {
+        let plannedIds = Set(planned.map(\.id))
+        let weeks = Dictionary(grouping: file.sessions + planned, by: \.week).sorted { $0.key < $1.key }.map { $0.value.sorted(by: Session.inOrder) }
         // Quizzes and the rest are many and small; only the two big exams mark the term.
         let exams = file.exams.filter { $0.kind == .midterm || $0.kind == .final }
             .compactMap { e in e.start.map { (exam: e, date: $0) } }.sorted { $0.date < $1.date }
@@ -49,7 +53,7 @@ public enum SessionTimeline {
             items.append(.week(sessions, month: opens(sessions[0].date) ? sessions[0].date : nil))
             for (i, s) in sessions.enumerated() {
                 if i > 0 && opens(s.date) { items.append(.month(s.date)) }
-                items.append(.session(s))
+                items.append(plannedIds.contains(s.id) ? .planned(s) : .session(s))
             }
             after = sessions.last!.date
         }

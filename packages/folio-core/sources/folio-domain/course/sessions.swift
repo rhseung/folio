@@ -127,24 +127,43 @@ public enum SessionPlanner {
     /// Exam weeks (counted from `start`) hold no lectures, nor does a class time an exam overlaps.
     public static func suggestion(schedule: [ClassTime], sessions: [Session], from start: LocalDate?, to end: LocalDate?,
                                   examWeeks: Set<Int> = [], exams: [DateInterval] = [], now: Date, calendar: Calendar) -> Suggestion? {
+        planned(schedule: schedule, sessions: sessions, from: start, to: end, examWeeks: examWeeks, exams: exams,
+                days: 8, now: now, calendar: calendar).first
+    }
+
+    /// Every class the schedule still holds, from the one under way to the term's end, that no session stands for,
+    /// by the same rules as `suggestion`. Nothing is stored: a class is made a session only when something is done to
+    /// it, so a change to the class times or the term moves the plan with it. Without an end, the coming week only;
+    /// `days` caps it sooner.
+    public static func planned(schedule: [ClassTime], sessions: [Session], from start: LocalDate?, to end: LocalDate?,
+                               examWeeks: Set<Int> = [], exams: [DateInterval] = [], days: Int? = nil,
+                               now: Date, calendar: Calendar) -> [Suggestion] {
+        guard !schedule.isEmpty else { return [] }
         let today = calendar.startOfDay(for: now)
         let anchor = start?.date(in: calendar)
-        for offset in 0..<8 {
+        let limit = days ?? (end == nil ? 8 : Int.max)
+        let taken = Set(sessions.map(\.date))
+        var result: [Suggestion] = []
+        var offset = 0
+        while offset < limit {
             let day = calendar.date(byAdding: .day, value: offset, to: today)!
+            offset += 1
             let local = LocalDate(day, in: calendar)
             if let start, local < start { continue }
-            if let end, local > end { return nil }
+            if let end, local > end { break }
             if let anchor, examWeeks.contains(week(of: day, anchor: anchor, calendar: calendar)) { continue }
             let weekday = calendar.isoWeekday(of: day)
             for slot in schedule.filter({ $0.weekday == weekday }).sorted(by: { $0.startMinute < $1.startMinute }) {
                 let begin = calendar.date(byAdding: .minute, value: slot.startMinute, to: day)!
                 let finish = calendar.date(byAdding: .minute, value: slot.endMinute, to: day)!
                 guard finish > now, !exams.contains(where: { $0.start < finish && $0.end > begin }) else { continue }
-                let taken = sessions.contains { $0.date == begin || $0.date == day }
-                if !taken { return Suggestion(date: begin, end: finish, room: slot.room, link: slot.link) }
+                // A session at that time, or a date-only one that day, stands for it even when cancelled.
+                if !taken.contains(begin) && !taken.contains(day) {
+                    result.append(Suggestion(date: begin, end: finish, room: slot.room, link: slot.link))
+                }
             }
         }
-        return nil
+        return result
     }
 
     /// Every class the weekly schedule puts on `day`, in order, for a course that keeps no sessions (a colloquium kept

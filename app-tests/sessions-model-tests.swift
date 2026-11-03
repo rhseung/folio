@@ -60,6 +60,29 @@ struct SessionsModelTests {
         #expect(sessions.map(\.above) == [true, false])
     }
 
+    /// A 휴강 weeks ahead: the class shows on the timeline before it is a session, and marking it saves one.
+    @Test func plannedClassesRunToTheTermsEndAndCancellingOneSavesIt() throws {
+        let workspace = try fixtureWorkspace()
+        workspace.run(CourseSet(course: graphTheory, [.schedule([ClassTime(weekday: 2, startMinute: 10 * 60 + 30, endMinute: 11 * 60 + 45)])]))
+        let model = SessionsModel(workspace: workspace, courseId: graphTheory)
+        let course = try #require(workspace.course(graphTheory))
+        let semester = try #require(workspace.semester(of: course.file.course))
+        let end = try #require(semester.end?.date(in: workspace.calendar))
+        // Mid-term, on the semester's own dates rather than the clock, so the plan has weeks left to show.
+        let now = try #require(semester.start?.date(in: workspace.calendar)).addingTimeInterval(7 * 7 * 86_400)
+        func planned() throws -> [Workspace.SuggestedSession] { model.timeline(try #require(workspace.course(graphTheory)).file, now: now).compactMap(\.planned) }
+
+        let plan = try planned()
+        #expect(plan.count >= 2 && plan.allSatisfy { $0.suggestion.date > now && $0.suggestion.date <= end })
+        #expect(plan.allSatisfy { workspace.calendar.isoWeekday(of: $0.suggestion.date) == 2 })
+
+        let second = plan[1]
+        SuggestedSessionItems.make(second, workspace, cancelled: true)
+        let saved = try #require(workspace.course(graphTheory)?.file.sessions.first { $0.date == second.suggestion.date })
+        #expect(saved.isCancelled && saved.week == second.draft.week)
+        #expect(try planned().map(\.suggestion.date) == plan.map(\.suggestion.date).filter { $0 != second.suggestion.date })
+    }
+
     @Test func titleFallsBackFromTopicToUnitsToName() throws {
         let workspace = try fixtureWorkspace()
         let model = SessionsModel(workspace: workspace, courseId: graphTheory)
