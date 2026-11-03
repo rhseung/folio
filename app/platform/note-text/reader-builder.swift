@@ -528,7 +528,7 @@ struct ReaderBlock {
     private mutating func displayMath(_ tex: String, _ ctx: Context) {
         let style = Self.paragraph(ctx, before: 10, after: NoteLook.blockGap, alignment: .center)
         let picture = NoteMath.picture(tex, syntax: syntax, display: true, size: NoteLook.body * 1.1, color: NoteLook.text, dark: dark)
-        if let picture, picture.size.width > room(ctx) {
+        if let picture, scrolls(picture.size, ctx) {
             let wide = WidePictureAttachment(image: picture.image, size: picture.size, descent: picture.descent, width: room(ctx), below: 12)
             out.append(NSAttributedString(attachment: wide, attributes: attributes(ctx, style)))
         } else if let picture {
@@ -546,7 +546,7 @@ struct ReaderBlock {
     private mutating func picture(_ image: (image: PlatformImage, size: CGSize)?, _ ctx: Context) {
         guard let image else { return }
         let style = Self.paragraph(ctx, before: 6, after: NoteLook.blockGap)
-        if image.size.width > room(ctx) {
+        if scrolls(image.size, ctx) {
             let wide = WidePictureAttachment(image: image.image, size: image.size, descent: 0, width: room(ctx), below: 12)
             out.append(NSAttributedString(attachment: wide, attributes: attributes(ctx, style)))
         } else {
@@ -560,6 +560,10 @@ struct ReaderBlock {
 
     /// What a block at this depth can hold: the line, less a quote's, callout's or list's indent on both sides.
     private func room(_ ctx: Context) -> CGFloat { width - ctx.indent * 2 }
+
+    /// A table cell is drawn into the table's picture, where a scroll view has nowhere to stand: the picture stays,
+    /// and the table's column widens to hold it and scrolls as a whole.
+    private func scrolls(_ size: CGSize, _ ctx: Context) -> Bool { !inCell && size.width > room(ctx) }
 
     /// Shrinks each picture wider than the room between its paragraph's indents. Past the line, TextKit moves the whole
     /// page over to show it, cutting off every other line; past an indent, it runs out of its quote or callout. Blocks

@@ -447,6 +447,21 @@ struct NoteReaderTests {
     }
 
     /// An image in a cell was sized to the note column, so it shrinks to its own column; math can't, so it doesn't.
+    /// A table cell is drawn into the table's picture, where a scroll view has nowhere to stand, so a wide formula
+    /// there stays a picture and widens its column instead of leaving an empty cell.
+    @Test func aWideFormulaInACellStaysAPicture() throws {
+        var builder = ReaderBuilder(accent: CourseAccent.presets[0].accent, syntax: .latex, baseURL: nil, dark: false, width: 300, widgets: ReaderWidgets())
+        let wide = "$$\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i t_i u_i v_i w_i$$"
+        let cell = builder.cell(markdown: wide, weight: .regular)
+        var attachments: [NSTextAttachment] = []
+        cell.enumerateAttribute(.attachment, in: NSRange(location: 0, length: cell.length)) { value, _, _ in
+            if let a = value as? NSTextAttachment { attachments.append(a) }
+        }
+        #expect(attachments.count == 1)
+        #expect(attachments.first is MathAttachment, "\(attachments.map { type(of: $0) })")
+        #expect((attachments.first?.bounds.width ?? 0) > 300)
+    }
+
     @Test func cellImagesShrinkToTheirColumnButMathDoesNot() throws {
         func piece(_ source: String, width: CGFloat) -> NSAttributedString {
             let a = source.hasPrefix("$") ? MathAttachment() : NSTextAttachment()
