@@ -224,22 +224,43 @@ struct NoteReaderTests {
         #expect(edits.all.first.map { [String($0.from), String($0.to), $0.old, $0.new] } == ["5", "5", "둘째 문단", "둘째 문단 더\n새 줄"])
     }
 
-    @Test func textUnderAPictureKeepsItsOwnLineHeight() throws {
+    /// The height a line is laid out with, for the line holding `offset`.
+    static func lineHeight(_ view: NSTextView, at offset: Int) -> CGFloat? {
+        guard let manager = view.textLayoutManager,
+              let location = manager.location(manager.documentRange.location, offsetBy: offset),
+              let fragment = manager.textLayoutFragment(for: location) else { return nil }
+        let inFragment = offset - manager.offset(from: manager.documentRange.location, to: fragment.rangeInElement.location)
+        return fragment.textLineFragments.first { NSLocationInRange(inFragment, $0.characterRange) }?.typographicBounds.height
+    }
+
+    /// A picture far taller than the text gets a line of its own height, wherever it's written in the paragraph, and the
+    /// text's lines keep theirs.
+    @Test(arguments: [
+        ("![그림](assets/sample.png)\n첫 줄\n둘째 줄", ["첫 줄", "둘째 줄"]),
+        ("첫 줄\n둘째 줄\n![그림](assets/sample.png)", ["첫 줄", "둘째 줄"]),
+        ("앞 글 ![그림|2000](assets/sample.png)", ["앞 글"]),
+        ("[![그림](assets/sample.png)](https://example.com)\n설명", ["설명"]),
+        ("*![그림](assets/sample.png)*\n설명", ["설명"]),
+    ])
+    func textByAPictureKeepsItsOwnLineHeight(source: String, words: [String]) throws {
+        let (view, _) = Self.reader(source + "\n\n보통 문단", edits: Edits())
+        let shown = view.string as NSString
+        let plain = try #require(Self.lineHeight(view, at: shown.range(of: "보통 문단").location))
+        for word in words {
+            #expect(Self.lineHeight(view, at: shown.range(of: word).location) == plain, "\(word) in \(source.debugDescription)")
+        }
+        let picture = shown.range(of: "\u{FFFC}").location
+        #expect(try #require(Self.lineHeight(view, at: picture)) > 2 * plain)
+    }
+
+    @Test func aParagraphWithAPictureStillWritesBack() throws {
         let edits = Edits()
         let source = "![그림](assets/sample.png)\n첫 줄\n둘째 줄"
         let (view, window) = Self.reader(source + "\n\n보통 문단", edits: edits)
-        let storage = try #require(view.textStorage)
-        let shown = storage.string as NSString
-        func lineHeight(_ word: String) -> CGFloat? {
-            (storage.attribute(.paragraphStyle, at: shown.range(of: word).location, effectiveRange: nil) as? NSParagraphStyle)?.maximumLineHeight
-        }
-        #expect(storage.attribute(.attachment, at: 0, effectiveRange: nil) is NSTextAttachment)
-        #expect(lineHeight("첫 줄") == lineHeight("보통 문단"))
-        #expect(lineHeight("둘째 줄") == lineHeight("보통 문단"))
-        #expect(view.blocks.map(\.editable) == [true, true])
         NoteRender.write(view, "reader-picture-text")
-
+        #expect(view.blocks.map(\.editable) == [true, true])
         window.makeFirstResponder(view)
+        let storage = try #require(view.textStorage)
         let end = try #require(ReaderBuilder.range(of: 0, in: storage))
         view.setSelectedRange(NSRange(location: NSMaxRange(end), length: 0))
         view.insertText(" 끝", replacementRange: view.selectedRange())

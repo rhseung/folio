@@ -278,45 +278,9 @@ struct ReaderBlock {
             return
         }
         let at = out.length
-        let parts = Self.pictureLines(inlineNodes)
-        for (i, part) in parts.enumerated() {
-            let last = i == parts.count - 1
-            let p = style.mutableCopy() as! NSMutableParagraphStyle
-            if i > 0 { p.paragraphSpacingBefore = 8 }
-            if !last { p.paragraphSpacing = 0 }
-            if part.count == 1, part[0] is Markdown.Image { p.alignment = .center }
-            inlines(part, Inline(color: ctx.color), style: p)
-            if last { lastID = stripBlockID(from: at) }
-            newline(attributes(ctx, p))
-        }
-    }
-
-    /// The paragraph cut around its lines that hold a picture, each taking a paragraph of its own. `NoteLines` gives
-    /// every line of a paragraph the height of its tallest, so a picture written straight above or below text would
-    /// otherwise set each line of the text as tall as itself. The line breaks between the parts go, as `\n` stands for
-    /// them; the write-back reads it as the same line break.
-    static func pictureLines(_ nodes: [Markup]) -> [[Markup]] {
-        var lines: [[Markup]] = [[]]
-        var breaks: [Markup] = []
-        for node in nodes {
-            if node is SoftBreak || node is LineBreak {
-                breaks.append(node)
-                lines.append([])
-            } else {
-                lines[lines.count - 1].append(node)
-            }
-        }
-        let pictured = { (line: [Markup]) in line.contains { $0 is Markdown.Image } }
-        guard lines.contains(where: pictured) else { return [nodes] }
-        var parts: [[Markup]] = []
-        for (i, line) in lines.enumerated() {
-            if i > 0, !pictured(line), !pictured(lines[i - 1]) {
-                parts[parts.count - 1] += [breaks[i - 1]] + line
-            } else {
-                parts.append(line)
-            }
-        }
-        return parts
+        inlines(inlineNodes, Inline(color: ctx.color), style: style)
+        lastID = stripBlockID(from: at)
+        newline(attributes(ctx, style))
     }
 
     private mutating func listItems(_ items: [ListItem], ordered: Bool, start: Int, _ ctx: Context) {

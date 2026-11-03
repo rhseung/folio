@@ -52,17 +52,29 @@ enum NoteLines {
         while at < ns.length {
             let p = ns.paragraphRange(for: NSRange(location: at, length: 0))
             at = NSMaxRange(p)
-            // The tallest font or picture on the paragraph's lines sets them all, so a code span doesn't shift its line.
+            // The tallest font on the paragraph's lines sets them all, so a code span doesn't shift its line.
             var ascent: CGFloat = 0, descent: CGFloat = 0
-            text.enumerateAttributes(in: p) { attributes, _, _ in
+            var pictures: [CGRect] = []
+            var words = false
+            text.enumerateAttributes(in: p) { attributes, r, _ in
                 if let font = attributes[.font] as? PlatformFont {
                     ascent = max(ascent, font.ascender)
                     descent = max(descent, -font.descender)
                 }
                 if let bounds = (attributes[.attachment] as? NSTextAttachment)?.bounds {
-                    ascent = max(ascent, bounds.maxY)
-                    descent = max(descent, -bounds.minY)
+                    pictures.append(bounds)
+                } else if !words, ns.substring(with: r).contains(where: { !$0.isWhitespace }) {
+                    words = true
                 }
+            }
+            // A picture far taller than the text around it, on its lines or written above or below them, gets a line
+            // as tall as itself and leaves the others the text's: fixed to the tallest, every line of the text stood as
+            // tall as the picture. Math and pictures about the text's size still set every line, so they don't shift it.
+            let line = ascent + descent
+            let tall = words && line > 0 ? pictures.filter { $0.height > 2 * line } : []
+            for bounds in pictures where !tall.contains(bounds) {
+                ascent = max(ascent, bounds.maxY)
+                descent = max(descent, -bounds.minY)
             }
             guard ascent > 0, let style = (text.attribute(.paragraphStyle, at: p.location, effectiveRange: nil) as? NSParagraphStyle)?
                 .mutableCopy() as? NSMutableParagraphStyle else { continue }
@@ -70,7 +82,7 @@ enum NoteLines {
             let height = ((natural + style.lineSpacing) / 2).rounded() * 2
             style.lineSpacing = 0
             style.minimumLineHeight = height
-            style.maximumLineHeight = height
+            style.maximumLineHeight = tall.isEmpty ? height : 0
             text.addAttribute(.paragraphStyle, value: style, range: p)
             // TextKit 2 sits the baseline on the line's bottom, and `baselineOffset` doesn't move it there: a positive
             // one shortens the line, a negative one moves the reported glyph origin but not the drawn text.
