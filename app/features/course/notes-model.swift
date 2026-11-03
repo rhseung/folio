@@ -214,7 +214,12 @@ final class NoteEditorModel {
 
     // MARK: Links
 
-    var linkSessions: [Session] { course.file.sessions.filter { !$0.isCancelled && $0.date <= workspace.now }.sorted { $0.date > $1.date } }
+    /// A session whose note of this kind is another note can't take this one (`NoteLink` refuses it), so it isn't offered.
+    func linkSessions(_ kind: NoteKind) -> [Session] {
+        course.file.sessions.filter { s in
+            !s.isCancelled && s.date <= workspace.now && s.note(of: kind).map { $0 == meta.id } ?? true
+        }.sorted { $0.date > $1.date }
+    }
     var linkExams: [Exam] { course.file.exams.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) } }
     /// Outline order: `order` counts among siblings only, so sorting by it alone interleaves chapters and their units.
     var outline: [(unit: FolioDomain.Unit, depth: Int)] { UnitTree.outline(course.file.units) }
@@ -252,7 +257,9 @@ final class NoteEditorModel {
 
     private func saveLinks() {
         guard let id = meta.id else { return }
-        workspace.run(NoteLink(course: course.id, note: id, kind: meta.kind, session: meta.sessionId, exam: meta.examId, units: meta.unitIds, math: meta.math))
+        let ran = workspace.run(NoteLink(course: course.id, note: id, kind: meta.kind, session: meta.sessionId, exam: meta.examId, units: meta.unitIds, math: meta.math))
+        // A refused link leaves the file as it was; the label would otherwise show a kind the note doesn't have.
+        if ran == nil, let saved = store.note(at: store.notePath(of: note.url), in: course.file) { meta = saved.meta }
         workspace.notesRevision += 1
     }
 

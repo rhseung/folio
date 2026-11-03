@@ -147,8 +147,8 @@ public struct NoteLink {
 
 /// Moves Folio's properties out of the notes' frontmatter into course.json, once, for notes from before #206. The
 /// entries are saved before any file is touched, and a note that already has one is only cleaned, so a run that stops
-/// halfway is finished by running it again. A link to a session, unit or exam that is gone is dropped: the model would
-/// refuse the whole file for it. The course may be left out, which generated commands can't take, so the command is
+/// halfway is finished by running it again. A link to a session, unit or exam that is gone is dropped, as is a second
+/// note of one kind on a session: the model would refuse the whole file for either. The course may be left out, which generated commands can't take, so the command is
 /// written by hand.
 @Action("note migrate", "노트 frontmatter의 프로퍼티를 course.json으로 옮기고 파일에서 지우기. 예전 노트를 한 번 정리한다",
         done: "노트 프로퍼티를 course.json으로 옮겼습니다", phrases: ["노트 프로퍼티 옮기기", "frontmatter 정리"], cli: .manual)
@@ -170,6 +170,13 @@ public struct NoteMigrate {
                     meta.unitIds = meta.unitIds.filter { id in f.units.contains { $0.id == id } }
                     // A note copied in Finder carries the original's id; the copy gets its own.
                     let id = meta.id.flatMap { id in f.notes.contains { $0.id == id } ? nil : id } ?? UUID()
+                    // Before #206 taking a session's note left the old one's frontmatter pointing at it. The note the
+                    // session points back to keeps the link; any other of that kind loses it.
+                    if meta.kind == .rough || meta.kind == .review, let s = f.sessions.first(where: { $0.id == meta.sessionId }) {
+                        let pointed = s.note(of: meta.kind)
+                        let taken = pointed.map { $0 != id } ?? false || f.notes.contains { $0.sessionId == s.id && $0.kind == meta.kind }
+                        if taken { meta.sessionId = nil }
+                    }
                     f.notes.append(NoteEntry(id: id, device: ctx.device, at: ctx.now, path: store.notePath(of: n.url), meta: meta))
                 }
             }

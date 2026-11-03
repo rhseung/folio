@@ -837,6 +837,17 @@
         }
       }
     },
+    "rule.note.session": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 회차에 같은 종류의 노트는 하나만 연결할 수 있습니다"
+          }
+        }
+      }
+    },
     "rule.person.name.empty": {
       "extractionState": "manual",
       "localizations": {

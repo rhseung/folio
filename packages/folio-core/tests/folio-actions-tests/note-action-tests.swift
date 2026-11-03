@@ -165,4 +165,18 @@ struct NoteActionTests {
         try run(NoteMigrate(course: Self.graphTheory))
         #expect(try file().notes == after.notes)
     }
+
+    /// Before #206 a note that lost its session kept it in its frontmatter, so two notes may claim one session.
+    @Test func migrationKeepsOneReviewNotePerSession() throws {
+        let session = UUID()
+        try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
+        let notes = try store().url.appending(path: "Notes")
+        for name in ["정리", "정리 2"] {
+            try "---\nid: \(UUID().uuidString)\nkind: review\nsessionId: \(session.uuidString)\n---\n\n# \(name)\n"
+                .write(to: notes.appending(path: "\(name).md"), atomically: true, encoding: .utf8)
+        }
+        try run(NoteMigrate(course: Self.graphTheory))
+        let claims = try file().notes.filter { $0.path.hasPrefix("Notes/정리") }
+        #expect(claims.count == 2 && claims.count { $0.sessionId == session } == 1)
+    }
 }

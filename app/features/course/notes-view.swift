@@ -262,7 +262,7 @@ struct NoteLinkMenu: View {
         return Menu {
             ForEach([NoteKind.rough, .review], id: \.self) { kind in
                 Menu(String(localized: .notesLinkAsKind(kind.label))) {
-                    ForEach(model.linkSessions) { s in
+                    ForEach(model.linkSessions(kind)) { s in
                         item(model.sessionName(s), on: meta.kind == kind && session?.id == s.id) { model.relink(kind, session: s.id) }
                     }
                 }
