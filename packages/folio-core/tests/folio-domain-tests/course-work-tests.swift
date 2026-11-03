@@ -242,6 +242,15 @@ struct CourseWorkTests {
         #expect(file.name(of: makeup) == "10주차-1")
     }
 
+    @Test func linkListsLeaveOutCancelledClassesUnlessLinked() {
+        let held = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
+        var cancelled = Session(device: device, at: .now, week: 10, date: date("2026-11-05 10:30"))
+        cancelled.isCancelled = true
+        let file = CourseFile(course: courses[0], sessions: [cancelled, held])
+        #expect(file.linkableSessions { _ in false }.map(\.id) == [held.id])
+        #expect(file.linkableSessions { $0.id == cancelled.id }.map(\.id) == [held.id, cancelled.id])
+    }
+
     @Test func titleIsTheDayAndWhatTheClassCovered() {
         var s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
         var file = CourseFile(course: courses[0], sessions: [s])

@@ -188,7 +188,9 @@ final class MaterialsModel {
 
     // MARK: Links
 
-    var sessions: [Session] { course.file.sessions.sorted(by: Session.inOrder) }
+    func sessions(linking material: UUID) -> [Session] {
+        course.file.linkableSessions { $0.materials.contains { $0.materialId == material } }
+    }
     /// Outline order: `order` counts among siblings only, so sorting by it alone interleaves chapters and their units.
     var units: [(unit: FolioDomain.Unit, depth: Int)] { UnitTree.outline(course.file.units) }
 

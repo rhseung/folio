@@ -297,7 +297,7 @@ struct MaterialLinksEditor: View {
 
     var body: some View {
         let unitIds = model.unitIds(of: materialId)
-        let sessions = model.sessions
+        let sessions = model.sessions(linking: materialId)
         let units = model.units
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Space.l) {

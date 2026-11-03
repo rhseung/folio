@@ -177,6 +177,12 @@ final class UnitsModel {
         workspace.run(UnitMove(course: courseId, unit: unit.id, target: .parent(parent)))
     }
 
+    func linkMenu(_ unit: FolioDomain.Unit, in file: CourseFile) -> [(id: UUID, label: String, on: Bool)] {
+        file.linkableSessions { unit.sessionIds.contains($0.id) }.reversed().map {
+            (id: $0.id, label: file.title(of: $0, calendar: workspace.calendar), on: unit.sessionIds.contains($0.id))
+        }
+    }
+
     func toggle(session: UUID, in unit: FolioDomain.Unit) {
         workspace.run(UnitLink(course: courseId, unit: unit.id, sessions: [session], linked: !unit.sessionIds.contains(session)))
     }

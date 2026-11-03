@@ -384,6 +384,11 @@ extension CourseFile {
 extension CourseFile {
     public func name(of session: Session) -> String { session.name(among: sessions) }
 
+    /// Nothing was taught at a cancelled class, so a link list leaves it out; one linked already stays so it can be unlinked.
+    public func linkableSessions(keeping linked: (Session) -> Bool) -> [Session] {
+        sessions.filter { !$0.isCancelled || linked($0) }.sorted(by: Session.inOrder)
+    }
+
     /// What the class covered: its topic, else the deepest units linked to it. Nil when neither says.
     public func subject(of session: Session) -> String? {
         if !session.topic.isEmpty { return session.topic }

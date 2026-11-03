@@ -218,9 +218,7 @@ struct UnitDetail: View {
             StatStrip(items: model.stats(unit, state: state, reviews: history.count))
 
             Block(title: String(localized: .unitsSessionsBlock), note: sessions.isEmpty ? nil : String(localized: .unitsTimes(sessions.count))) {
-                ToggleMenu(title: String(localized: .unitsLinkSessions), items: file.sessions.sorted(by: Session.inOrder).reversed().map {
-                    (id: $0.id, label: file.title(of: $0, calendar: model.workspace.calendar), on: unit.sessionIds.contains($0.id))
-                }) { id in model.toggle(session: id, in: unit) }
+                ToggleMenu(title: String(localized: .unitsLinkSessions), items: model.linkMenu(unit, in: file)) { id in model.toggle(session: id, in: unit) }
             } content: {
                 Card {
                     if sessions.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .unitsSessionsEmpty)) } }
