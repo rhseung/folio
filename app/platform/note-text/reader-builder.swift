@@ -139,6 +139,7 @@ struct ReaderBlock {
             blocks.append(ReaderBlock(kind: kind, lines: lines, source: note.source(lines), id: kind == .paragraph ? lastID : nil))
         }
         if out.string.hasSuffix("\n") { out.deleteCharacters(in: NSRange(location: out.length - 1, length: 1)) }
+        fitPictures()
         NoteLines.fix(out)
         for i in blocks.indices where blocks[i].kind != .other {
             guard let range = Self.range(of: i, in: out) else { continue }
@@ -249,7 +250,7 @@ struct ReaderBlock {
         case let list as OrderedList:
             listItems(Array(list.listItems), ordered: true, start: Int(list.startIndex), ctx)
         case let table as Markdown.Table:
-            let image = ReaderTable.render(table, builder: self)
+            let image = ReaderTable.render(table, builder: self, page: room(ctx))
             picture(image, ctx)
         case is ThematicBreak:
             let style = Self.paragraph(ctx, before: 16, after: 28, alignment: .center)
@@ -399,11 +400,11 @@ struct ReaderBlock {
             displayMath(text, ctx)
             return
         case CBTable.language:
-            let image = ReaderTable.render(json: text, builder: self)
+            let image = ReaderTable.render(json: text, builder: self, page: room(ctx))
             picture(image, ctx)
             return
         case NoteMermaid.language:
-            if let image = NoteMermaid.picture(text, accent: accent.native, dark: dark, width: width - ctx.indent * 2) {
+            if let image = NoteMermaid.picture(text, accent: accent.native, dark: dark, width: room(ctx)) {
                 picture(image, ctx)
                 return
             }
@@ -526,7 +527,11 @@ struct ReaderBlock {
 
     private mutating func displayMath(_ tex: String, _ ctx: Context) {
         let style = Self.paragraph(ctx, before: 10, after: NoteLook.blockGap, alignment: .center)
-        if let picture = NoteMath.picture(tex, syntax: syntax, display: true, size: NoteLook.body * 1.1, color: NoteLook.text, dark: dark) {
+        let picture = NoteMath.picture(tex, syntax: syntax, display: true, size: NoteLook.body * 1.1, color: NoteLook.text, dark: dark)
+        if let picture, scrolls(picture.size, ctx) {
+            let wide = WidePictureAttachment(image: picture.image, size: picture.size, descent: picture.descent, width: room(ctx), below: 12)
+            out.append(NSAttributedString(attachment: wide, attributes: attributes(ctx, style)))
+        } else if let picture {
             let attachment = MathAttachment()
             attachment.image = picture.image
             attachment.bounds = CGRect(x: 0, y: -picture.descent, width: picture.size.width, height: picture.size.height)
@@ -537,14 +542,42 @@ struct ReaderBlock {
         newline(attributes(ctx, style))
     }
 
+    /// A table or diagram. One wider than the room scrolls sideways: shrunk to fit, its text would be too small to read.
     private mutating func picture(_ image: (image: PlatformImage, size: CGSize)?, _ ctx: Context) {
         guard let image else { return }
         let style = Self.paragraph(ctx, before: 6, after: NoteLook.blockGap)
-        let attachment = NSTextAttachment()
-        attachment.image = image.image
-        attachment.bounds = CGRect(origin: .zero, size: image.size)
-        out.append(NSAttributedString(attachment: attachment, attributes: attributes(ctx, style)))
+        if scrolls(image.size, ctx) {
+            let wide = WidePictureAttachment(image: image.image, size: image.size, descent: 0, width: room(ctx), below: 12)
+            out.append(NSAttributedString(attachment: wide, attributes: attributes(ctx, style)))
+        } else {
+            let attachment = NSTextAttachment()
+            attachment.image = image.image
+            attachment.bounds = CGRect(origin: .zero, size: image.size)
+            out.append(NSAttributedString(attachment: attachment, attributes: attributes(ctx, style)))
+        }
         newline(attributes(ctx, style))
+    }
+
+    /// What a block at this depth can hold: the line, less a quote's, callout's or list's indent on both sides.
+    private func room(_ ctx: Context) -> CGFloat { width - ctx.indent * 2 }
+
+    /// A table cell is drawn into the table's picture, where a scroll view has nowhere to stand: the picture stays,
+    /// and the table's column widens to hold it and scrolls as a whole.
+    private func scrolls(_ size: CGSize, _ ctx: Context) -> Bool { !inCell && size.width > room(ctx) }
+
+    /// Shrinks each picture wider than the room between its paragraph's indents. Past the line, TextKit moves the whole
+    /// page over to show it, cutting off every other line; past an indent, it runs out of its quote or callout. Blocks
+    /// that would be too small to read shrunk (display math, tables, code) scroll sideways instead and aren't here.
+    private func fitPictures() {
+        out.enumerateAttribute(.attachment, in: NSRange(location: 0, length: out.length)) { value, range, _ in
+            guard let attachment = value as? NSTextAttachment, !(attachment is any ViewAttachment),
+                  let style = out.attribute(.paragraphStyle, at: range.location, effectiveRange: nil) as? NSParagraphStyle else { return }
+            let room = width - max(style.firstLineHeadIndent, style.headIndent) - max(0, -style.tailIndent)
+            let bounds = attachment.bounds
+            guard bounds.width > room, room > 0 else { return }
+            let scale = room / bounds.width
+            attachment.bounds = CGRect(x: bounds.minX, y: bounds.minY * scale, width: room, height: bounds.height * scale)
+        }
     }
 
     private func mathError(_ source: String, _ attributes: [NSAttributedString.Key: Any]) -> NSAttributedString {

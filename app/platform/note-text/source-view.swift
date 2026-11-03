@@ -120,15 +120,20 @@ final class NoteScrollView: NSScrollView {
     required init?(coder: NSCoder) { fatalError() }
 
     // The scroll view takes a click over its document itself and hands it to the document view, so a widget over the
-    // text never got one; a widget under the point gets it. Only widgets: a code block's text view would take the
-    // keyboard, and with it the note's shortcuts and find bar.
+    // text never got one; a widget under the point gets it. Code and wide pictures scroll sideways, so the trackpad and
+    // the scroller have to reach their scroll view; a click on what it shows goes to the scroll view itself, which
+    // hands it on to the note. A code block's text view would take the keyboard, and with it the note's shortcuts and
+    // find bar.
     override func hitTest(_ point: NSPoint) -> NSView? {
         let hit = super.hitTest(point)
         guard hit === self || hit === contentView, let document = documentView else { return hit }
         let inClip = contentView.convert(point, from: superview)
-        guard let under = document.hitTest(inClip), under !== document,
-              sequence(first: under, next: \.superview).contains(where: { $0 is WidgetWebView }) else { return hit }
-        return under
+        guard let under = document.hitTest(inClip), under !== document else { return hit }
+        let chain = sequence(first: under, next: \.superview)
+        if chain.contains(where: { $0 is WidgetWebView }) { return under }
+        guard let side = chain.lazy.compactMap({ $0 as? SideScrollView }).first else { return hit }
+        if let bar = side.horizontalScroller, under === bar || under.isDescendant(of: bar) { return under }
+        return side
     }
 
     // The room past the note's end is a content inset, and AppKit insets the scrollers by it too: the track stopped
@@ -187,6 +192,10 @@ class NoteTextView: NSTextView {
 
     /// The text column's width, which pictures fit.
     var columnWidth: CGFloat { max(120, min(NoteLook.measure, bounds.width) - 2 * NoteLook.margin) }
+
+    /// What a line can hold: the column less TextKit's padding at each end of a line. A picture sized to the column
+    /// reached past it by that padding.
+    var lineWidth: CGFloat { columnWidth - 2 * (textContainer?.lineFragmentPadding ?? 0) }
 
     func accentColors(_ accent: CourseAccent) {
         layout.accent = accent.native
@@ -476,7 +485,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         while end > shown.span.location + 1, text.character(at: end - 1) == 0x0A { end -= 1 }
         let line = { (i: Int) in self.convert(window.convertFromScreen(self.firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil) }
         let first = line(shown.span.location), last = line(end - 1)
-        let view = PreviewBubble(image: shown.image, size: shown.size)
+        // A formula wider than the editor is shrunk to fit; the bubble is a glance, and the preview scrolls it whole.
+        let room = visibleRect.width - 2 * PreviewBubble.pad.width - 8
+        let scale = min(1, room / max(1, shown.size.width))
+        let view = PreviewBubble(image: shown.image, size: CGSize(width: (shown.size.width * scale).rounded(), height: (shown.size.height * scale).rounded()))
         let size = view.frame.size
         let x = max(0, min(first.minX - 10, bounds.maxX - size.width - 4))
         // Under the source, or over it when the screen ends first; never pushing the text.
@@ -591,8 +603,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
 /// Rendered math or an image over the text, by its source.
 final class PreviewBubble: NSView {
+    static let pad = CGSize(width: 10, height: 6)
+
     init(image picture: NSImage, size: CGSize) {
-        let pad = CGSize(width: 10, height: 6)
+        let pad = Self.pad
         super.init(frame: NSRect(origin: .zero, size: CGSize(width: size.width + 2 * pad.width, height: size.height + 2 * pad.height)))
         wantsLayer = true
         layer?.cornerRadius = NoteLook.radius
@@ -608,6 +622,9 @@ final class PreviewBubble: NSView {
     }
 
     required init?(coder: NSCoder) { fatalError() }
+
+    // It covers the lines under the source it shows; a click there is meant for them, and taken here it went nowhere.
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 
     override var wantsUpdateLayer: Bool { true }
 
@@ -675,6 +692,9 @@ class NoteTextView: UITextView {
     func hasMarkedText() -> Bool { markedTextRange != nil }
 
     var columnWidth: CGFloat { max(120, min(NoteLook.measure, bounds.width) - 2 * NoteLook.margin) }
+
+    /// What a line can hold: the column less TextKit's padding at each end of a line.
+    var lineWidth: CGFloat { columnWidth - 2 * textContainer.lineFragmentPadding }
 
     func accentColors(_ accent: CourseAccent) {
         layout.accent = accent.native

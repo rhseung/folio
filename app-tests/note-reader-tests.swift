@@ -224,6 +224,137 @@ struct NoteReaderTests {
         #expect(edits.all.first.map { [String($0.from), String($0.to), $0.old, $0.new] } == ["5", "5", "둘째 문단", "둘째 문단 더\n새 줄"])
     }
 
+    static let wideMath = """
+    where $\\tilde{A}_{1j}$: the $(n-1) \\times (n-1)$ matrix obtained from A by deleting the 1st row and the jth column of it.
+
+    Ex. Let
+
+    $$A = \\begin{pmatrix} 2 & 0 & 0 & 1 \\\\ 0 & 1 & 0 & 0 \\\\ 1 & 0 & -1 & 0 \\\\ 1 & 1 & 1 & 1 \\end{pmatrix} \\det(A) = (-1)^{1+1} \\cdot 2 \\cdot \\det\\begin{pmatrix} 1 & 0 & 0 \\\\ 0 & -1 & 0 \\\\ 1 & 1 & 1 \\end{pmatrix} + (-1)^{1+2} \\cdot 0 \\cdot \\det\\begin{pmatrix} 0 & 0 & 0 \\\\ 1 & -1 & 0 \\\\ 1 & 1 & 1 \\end{pmatrix} + (-1)^{1+3} \\cdot 0 \\cdot 0$$
+
+    Then the last line.
+    """
+
+    /// Wider than the column, a formula scrolls on its own; left in the text, TextKit moved the whole page over to show
+    /// it and cut off the end of every other line.
+    @Test func aWideFormulaScrollsInsteadOfMovingThePage() throws {
+        let (view, _) = Self.reader(Self.wideMath, width: 600)
+        NoteRender.write(view, "reader-wide-math")
+        let shown = view.string as NSString
+        let first = try #require(NoteRender.caret(view, at: shown.range(of: "where").location))
+        let last = try #require(NoteRender.caret(view, at: shown.range(of: "Then").location))
+        let padding = try #require(view.textContainer).lineFragmentPadding
+        #expect(first.minX == padding && last.minX == padding, "\(first) \(last)")
+        let scroll = try #require(view.subviews.compactMap { $0 as? NSScrollView }.first)
+        #expect(scroll.frame.width == view.lineWidth)
+        #expect(try #require(scroll.documentView).frame.width > view.lineWidth)
+        #expect(scroll.frame.minX >= view.textContainerOrigin.x - 1)
+    }
+
+    /// The bubble over a math block is shrunk to the editor and lets a click through to the lines under it.
+    @Test func aWideFormulasBubbleFitsAndTakesNoClicks() throws {
+        let (view, window) = NoteSourceTests.editor(Self.wideMath, width: 600)
+        window.makeFirstResponder(view)
+        view.setSelectedRange(NSRange(location: (view.string as NSString).range(of: "pmatrix").location, length: 0))
+        NoteRender.write(view, "source-wide-math")
+        let bubble = try #require(view.subviews.compactMap { $0 as? PreviewBubble }.first)
+        #expect(bubble.frame.width <= view.visibleRect.width)
+        #expect(bubble.hitTest(NSPoint(x: bubble.frame.midX, y: bubble.frame.midY)) == nil)
+    }
+
+    /// Everything that can be wider than the column, at the top and inside lists, quotes and callouts.
+    static let wideThings = """
+    # 제목 $\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i t_i u_i$
+
+    인라인 $\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i t_i u_i v_i w_i x_i$ 끝
+
+    ![넓은|2000](assets/sample.png)
+
+    https://example.com/a/very/long/link/that/has/no/spaces/anywhere/in/it/and/keeps/going/and/going/until/it/is/wider/than/any/column
+
+    | 하나 | 둘 | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 | 열하나 | 열둘 |
+    | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+    | 아주 긴 칸의 글 | $\\int_0^1 x^2 \\, dx = \\frac{1}{3}$ | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 | 열하나 | 열둘 |
+
+    - 목록 ![넓은|2000](assets/sample.png)
+        - 하위 $\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i$
+        - 표 아래
+
+          | 하나 | 둘 | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 |
+          | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+          | 아주 긴 칸의 글 | 둘 | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 |
+
+          $$\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i t_i u_i v_i w_i x_i y_i z_i$$
+
+    > 인용 ![넓은|2000](assets/sample.png)
+    > > 안쪽 인용 ![넓은|2000](assets/sample.png)
+    > > $$\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i t_i u_i v_i w_i x_i$$
+
+    > [!note] 콜아웃
+    > ![넓은|2000](assets/sample.png)
+    >
+    > | 하나 | 둘 | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 | 열하나 | 열둘 |
+    > | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+    > | 아주 긴 칸의 글 | 둘 | 셋 | 넷 | 다섯 | 여섯 | 일곱 | 여덟 | 아홉 | 열 | 열하나 | 열둘 |
+    >
+    > ```swift
+    > let x = "a very long line of code that goes on and on and on past the edge of any column at all"
+    > ```
+    """
+
+    /// Each picture that reaches past the room its paragraph gives it, between the paragraph's indents. A line's own
+    /// bounds stay inside the column even when a picture on it doesn't, so pictures are measured one by one. Past the
+    /// column, TextKit moves the whole page over to show one; past an indent, it runs out of its quote or callout box.
+    static func overflowing(_ view: NSTextView) -> [String] {
+        guard let manager = view.textLayoutManager, let container = view.textContainer, let storage = view.textStorage else { return ["no layout"] }
+        manager.ensureLayout(for: manager.documentRange)
+        var out: [String] = []
+        storage.enumerateAttribute(.attachment, in: NSRange(location: 0, length: storage.length)) { value, range, _ in
+            guard let attachment = value as? NSTextAttachment,
+                  let location = manager.location(manager.documentRange.location, offsetBy: range.location),
+                  let fragment = manager.textLayoutFragment(for: location) else { return }
+            let start = manager.offset(from: manager.documentRange.location, to: fragment.rangeInElement.location)
+            guard let line = fragment.textLineFragments.first(where: { NSLocationInRange(range.location - start, $0.characterRange) }) else { return }
+            let x = fragment.layoutFragmentFrame.minX + line.typographicBounds.minX + line.locationForCharacter(at: range.location - start).x
+            let style = storage.attribute(.paragraphStyle, at: range.location, effectiveRange: nil) as? NSParagraphStyle
+            let tail = style.map { $0.tailIndent < 0 ? -$0.tailIndent : 0 } ?? 0
+            let right = container.size.width - container.lineFragmentPadding - tail
+            guard x < -0.5 || x + attachment.bounds.width > right + 0.5 else { return }
+            let text = storage.string as NSString
+            let paragraph = text.paragraphRange(for: range)
+            let what = text.substring(with: NSRange(location: paragraph.location, length: min(paragraph.length, 20)))
+            out.append("\(String(describing: type(of: attachment))) \(Int(x))...\(Int(x + attachment.bounds.width)) of \(Int(right)): \(what.debugDescription)")
+        }
+        return out
+    }
+
+    @Test(arguments: [320, 600, 900] as [CGFloat])
+    func noLineReachesPastTheColumn(width: CGFloat) {
+        for (name, text) in [("wide", Self.wideThings), ("sample", NoteSourceTests.sample)] {
+            let (view, _) = Self.reader(text, width: width)
+            NoteRender.write(view, "overflow-\(name)-\(Int(width))")
+            let over = Self.overflowing(view)
+            #expect(over.isEmpty, "\(name) at \(width): \(over)")
+        }
+    }
+
+    /// The note's scroll view takes the pointer over the note, so code and a wide formula never got a sideways scroll.
+    /// Their own scroll views get the pointer now, never the keyboard, and hand a click on to the note. (A synthetic
+    /// wheel event doesn't scroll an `NSScrollView` here, and an overlay scroller only takes clicks once shown, so
+    /// both are left to AppKit.)
+    @Test func aSidewaysBlockTakesThePointerButNotTheKeyboard() throws {
+        let code = "```swift\nlet x = \"a very long line of code that goes on and on and on past the edge of any column at all\"\n```"
+        let (view, window) = Self.reader("앞\n\n" + Self.wideMath + "\n\n" + code + "\n\n뒤", width: 600)
+        let root = try #require(window.contentView?.superview)
+        let sides = view.subviews.compactMap { $0 as? SideScrollView }
+        #expect(sides.count == 2)
+        for side in sides {
+            let hit = try #require(root.hitTest(side.convert(NSPoint(x: side.bounds.midX, y: side.bounds.midY), to: root)))
+            #expect(hit === side, "\(type(of: hit))")
+            #expect(!hit.acceptsFirstResponder)
+            #expect(hit.nextResponder === view)
+        }
+    }
+
     @Test func typedMarkupIsEscaped() {
         #expect(ReaderMarkdown.escape("a*b [[c x_y * z") == "a\\*b \\[[c x_y * z")
         #expect(ReaderMarkdown.lines("# 아님\n- 아님\n1. 아님") == "\\# 아님\n\\- 아님\n1\\. 아님")
@@ -303,11 +434,9 @@ struct NoteReaderTests {
         #expect(fitted.reduce(0, +) <= 400)
         #expect(fitted[0] < 200 && fitted[2] < 296)
         #expect(ReaderTable.fit([100, 100], floors: [48, 48], page: 400) == [100, 100])
-        // Floors alone wider than the page: they give way too, so no column falls off the picture's edge.
-        #expect(ReaderTable.fit([300, 300], floors: [250, 250], page: 400) == [200, 200])
-        #expect(ReaderTable.fit([600, 100], floors: [600, 100], page: 400).reduce(0, +) <= 400)
-        // Short columns keep room for a word; the wide floor gives up the rest.
-        #expect(ReaderTable.fit([600, 48, 48], floors: [600, 48, 48], page: 400) == [304, 48, 48])
+        // Floors alone wider than the page: they hold, and the table scrolls sideways instead of cutting formulas.
+        #expect(ReaderTable.fit([300, 300], floors: [250, 250], page: 400) == [250, 250])
+        #expect(ReaderTable.fit([600, 48, 48], floors: [600, 48, 48], page: 400) == [600, 48, 48])
         // Math in a cell over two columns raises both, so their sum holds it.
         var floors: [CGFloat] = [48, 48, 48]
         ReaderTable.spread(&floors, from: 1, count: 2, to: 224)
@@ -318,6 +447,21 @@ struct NoteReaderTests {
     }
 
     /// An image in a cell was sized to the note column, so it shrinks to its own column; math can't, so it doesn't.
+    /// A table cell is drawn into the table's picture, where a scroll view has nowhere to stand, so a wide formula
+    /// there stays a picture and widens its column instead of leaving an empty cell.
+    @Test func aWideFormulaInACellStaysAPicture() throws {
+        var builder = ReaderBuilder(accent: CourseAccent.presets[0].accent, syntax: .latex, baseURL: nil, dark: false, width: 300, widgets: ReaderWidgets())
+        let wide = "$$\\sum_{i=1}^{n} a_i b_i c_i d_i e_i f_i g_i h_i i_i j_i k_i l_i m_i n_i o_i p_i q_i r_i s_i t_i u_i v_i w_i$$"
+        let cell = builder.cell(markdown: wide, weight: .regular)
+        var attachments: [NSTextAttachment] = []
+        cell.enumerateAttribute(.attachment, in: NSRange(location: 0, length: cell.length)) { value, _, _ in
+            if let a = value as? NSTextAttachment { attachments.append(a) }
+        }
+        #expect(attachments.count == 1)
+        #expect(attachments.first is MathAttachment, "\(attachments.map { type(of: $0) })")
+        #expect((attachments.first?.bounds.width ?? 0) > 300)
+    }
+
     @Test func cellImagesShrinkToTheirColumnButMathDoesNot() throws {
         func piece(_ source: String, width: CGFloat) -> NSAttributedString {
             let a = source.hasPrefix("$") ? MathAttachment() : NSTextAttachment()
