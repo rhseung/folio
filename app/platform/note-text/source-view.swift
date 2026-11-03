@@ -802,6 +802,14 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
         onChange()
     }
 
+    // A syllable ended without a keystroke (a tap elsewhere, the app leaving) changes no text, so no
+    // `textViewDidChange` styles it or hands it to the binding.
+    override func unmarkText() {
+        super.unmarkText()
+        restyle()
+        onChange()
+    }
+
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let top = topLine(lineStarts: lineStarts)
         onScroll(top.line, top.frac)
