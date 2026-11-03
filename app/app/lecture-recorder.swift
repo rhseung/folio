@@ -266,12 +266,21 @@ final class LectureRecorder {
 
     /// Given once recording runs, and again when the pages on screen change: the slides are read from the course
     /// folder, which may first have to download. Kept without captions too, to show what the transcript will hear.
-    func use(_ context: TranscriptionContext, hints: TranscriptionHints, for recording: UUID) async {
-        guard current == recording else { return }
+    func use(_ context: TranscriptionContext, hints: TranscriptionHints, for recording: UUID, telling: Int) async {
+        guard current == recording, telling == tellings else { return }
         self.context = context
         guard let analyzer else { return }
         try? await analyzer.setContext(SpeechAssets.context(hints))
     }
+
+    /// Numbers each reading of the slides. A download can make an earlier reading finish after a later one, and its
+    /// narrower pages would then overwrite what the captions were told.
+    func telling() -> Int {
+        tellings += 1
+        return tellings
+    }
+
+    @ObservationIgnored private var tellings = 0
 
     private func teardown() {
         resultsTask?.cancel()

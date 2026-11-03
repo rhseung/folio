@@ -38,9 +38,9 @@ extension Workspace {
     func tellCaptions() async {
         guard let id = recorder.current, let course = recorder.courseId.flatMap(course), let snapshot = recorder.snapshot,
               let session = course.file.sessions.first(where: { $0.id == snapshot.sessionId }) else { return }
-        let (store, file) = (course.store, course.file)
+        let (store, file, telling) = (course.store, course.file, recorder.telling())
         let context = await Task.detached { store.transcriptionContext(file, session: session, recording: snapshot) }.value
-        await recorder.use(context, hints: context.hints(course: file.course.title), for: id)
+        await recorder.use(context, hints: context.hints(course: file.course.title), for: id, telling: telling)
     }
 
     /// Again only when the slides or units would now be others: reading the PDFs takes a while.
