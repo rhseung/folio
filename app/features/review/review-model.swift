@@ -131,8 +131,13 @@ final class ReviewModel {
             .flatMap { ReviewScheduler.state(of: $0, settings: workspace.settings.review, today: today).due }
     }
 
+    /// A skip goes through the same action as the lists' skip; the time the unit was open still counts as study.
     func record(_ result: ReviewResult) {
-        workspace.run(ReviewRecord(course: courseId, unit: unitId, result: result, start: started, end: .now))
+        if result == .skip {
+            workspace.run(ReviewSkip(units: [.init(course: courseId, unit: unitId)], start: started, end: .now))
+        } else {
+            workspace.run(ReviewRecord(course: courseId, unit: unitId, result: result, start: started, end: .now))
+        }
     }
 
     func advance() {

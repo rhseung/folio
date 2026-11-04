@@ -5578,6 +5578,28 @@
         }
       }
     },
+    "review.skip.help.start": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원을 연 시각. --end와 함께, 단원 하나에만 준다. 그 시간을 공부 시간으로 남긴다"
+          }
+        }
+      }
+    },
+    "review.skip.help.end": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "건너뛴 시각"
+          }
+        }
+      }
+    },
     "run.abstract": {
       "extractionState": "manual",
       "localizations": {

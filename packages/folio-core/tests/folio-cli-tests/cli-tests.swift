@@ -20,6 +20,10 @@ struct SessionCommandTests {
         try h.expectSame(Self.add + ["--cancelled"]) { _ in SessionAdd(id: Self.id, course: Harness.graphTheory, date: date, cancelled: true) }
     }
 
+    @Test func addAbsent() throws {
+        try h.expectSame(Self.add + ["--attendance", "absent"]) { _ in SessionAdd(id: Self.id, course: Harness.graphTheory, date: date, attendance: .absent) }
+    }
+
     @Test func set() throws {
         try h.expectSame(["session", "set", "EC4207/9주차-1", "--cancelled", "true"], setup: [Self.add]) { _ in
             SessionSet(course: Harness.graphTheory, session: Self.id, cancelled: .set(true))

@@ -70,6 +70,12 @@ struct MaterialNoteStudyTests {
         }
     }
 
+    @Test func newFile() throws {
+        try h.expectSame(["material", "new", "EC4207", "Assignments/HW03", "hw3.tex"], setup: [Self.track]) { _ in
+            MaterialNew(course: course, folder: "Assignments/HW03", name: "hw3.tex")
+        }
+    }
+
     @Test func statusOfSeveralNeedsConfirmation() throws {
         let gist = try Harness.fixtureCopy()
         _ = h.cli(Self.track, gist: gist)
@@ -345,6 +351,12 @@ struct MaterialNoteStudyTests {
     @Test func reviewSkip() throws {
         try h.expectSame(["review", "skip", "EC4207/매칭"], setup: [Self.addUnit]) { _ in
             ReviewSkip(units: [.init(course: course, unit: Self.unit)])
+        }
+    }
+
+    @Test func reviewSkipWithTheTimeOpen() throws {
+        try h.expectSame(["review", "skip", "EC4207/매칭", "--start", "2026-10-28 20:00", "--end", "2026-10-28 20:05"], setup: [Self.addUnit]) { _ in
+            ReviewSkip(units: [.init(course: course, unit: Self.unit)], start: DateArg(argument: "2026-10-28 20:00")!.date, end: DateArg(argument: "2026-10-28 20:05")!.date)
         }
     }
 }

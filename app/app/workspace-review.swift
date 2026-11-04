@@ -34,7 +34,7 @@ extension Workspace {
             }
     }
 
-    /// Marks units as not needing review, one `skip` event each, with no study time.
+    /// Marks units as not needing review from a list, where none was open: no study time.
     func skipReviews(_ units: [(courseId: UUID, unitId: UUID)]) {
         run(ReviewSkip(units: units.map { ReviewSkip.Target(course: $0.courseId, unit: $0.unitId) }))
     }

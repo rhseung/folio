@@ -10,7 +10,7 @@ enum GeneratedCommands {
     static let component: [any ParsableCommand.Type] = [ComponentAdd.self, ComponentSet.self, ComponentRemove.self]
     static let exam: [any ParsableCommand.Type] = [ExamAdd.self, ExamSet.self, ExamRemove.self, ExamSummary.self]
     static let examPlan: [any ParsableCommand.Type] = [ExamPlanAdd.self]
-    static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialLinkExam.self, MaterialUntrack.self, MaterialTrash.self, MaterialBuild.self]
+    static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialLinkExam.self, MaterialUntrack.self, MaterialTrash.self, MaterialNew.self, MaterialBuild.self]
     static let note: [any ParsableCommand.Type] = [NoteAdopt.self, NoteRemove.self, NoteBuild.self]
     static let problemSet: [any ParsableCommand.Type] = [ProblemSetRemove.self, ProblemLinkUnit.self]
     static let recording: [any ParsableCommand.Type] = [RecordingTrim.self]
@@ -159,6 +159,7 @@ enum GeneratedCommands {
               folio session add EC4207 --date \"2026-10-28 10:30\"
               folio session add EC4207 --date 2026-10-30 --cancelled --dry-run
               folio session add EC4207 --date \"2026-11-04 21:00\" --end \"2026-11-04 22:15\" --topic 보강 --link https://zoom.us/j/123 --dry-run
+              folio session add EC4207 --date \"2026-11-11 10:30\" --attendance absent --dry-run
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
@@ -168,6 +169,7 @@ enum GeneratedCommands {
         @Option(help: "주제. 회차 목록에서 제목으로 보인다") var topic: String = ""
         @Option(help: "온라인 수업 링크(Zoom 등)") var link: String?
         @Flag(help: "수업이 없던 날의 휴강으로") var cancelled = false
+        @Option(help: "출결. 결석이나 공결을 미리 알 때. 휴강과 함께 줄 수 없다") var attendance: AttendanceState?
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -180,7 +182,8 @@ enum GeneratedCommands {
                 end: end.map { $0.date },
                 topic: topic,
                 link: link,
-                cancelled: cancelled
+                cancelled: cancelled,
+                attendance: attendance
             )
             try perform(spec: action, g, ctx: ctx)
         }
@@ -895,6 +898,30 @@ enum GeneratedCommands {
             let action = FolioActions.MaterialTrash(
                 course: c.id,
                 material: try r.id("Material", materialName, in: c)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct MaterialNew: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "new", abstract: "과제·시험 폴더나 Study, Archive에 새 텍스트 파일(.tex, 코드, .txt 등) 만들기. .tex는 바로 빌드되는 문서 틀로 시작한다", discussion: """
+            예시:
+              folio material new EC4207 Assignments/HW03 hw3.tex
+              folio material new EC4207 Study 풀이.py --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
+        @Argument(help: "과목 폴더 기준 폴더. 예: Assignments/HW04, Exams/중간고사, Study") var folder: String
+        @Argument(help: "확장자까지 쓴 파일 이름. 예: hw4.tex") var name: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let c = try r.course(course)
+            let action = FolioActions.MaterialNew(
+                course: c.id,
+                folder: folder,
+                name: name
             )
             try perform(spec: action, g, ctx: ctx)
         }

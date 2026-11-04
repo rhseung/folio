@@ -57,8 +57,7 @@ struct NoteList: View {
         } message: {
             Text(.notesDeleteMessage)
         }
-        // Notes made elsewhere (the Claude panel) and links changed in the editor show up here too.
-        .onChange(of: selection) { _, id in model.reloadIfMissing(id) }
+        // Notes made elsewhere (the Claude panel, a session's rough note) and links changed in the editor show up here too.
         .onChange(of: model.workspace.notesRevision) { model.reload() }
         .task(id: model.course.id) {
             model.reload()

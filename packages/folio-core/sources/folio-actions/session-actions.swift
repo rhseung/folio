@@ -9,7 +9,8 @@ func index<E: Identifiable>(_ id: E.ID, in items: [E], _ what: LocalizedStringRe
 
 @Action("session add", "회차 추가. 주차와 순번은 학기 시작일에서 정한다", effect: .creates, done: "회차를 추가했습니다",
         examples: [#"folio session add EC4207 --date "2026-10-28 10:30""#, "folio session add EC4207 --date 2026-10-30 --cancelled --dry-run",
-                   #"folio session add EC4207 --date "2026-11-04 21:00" --end "2026-11-04 22:15" --topic 보강 --link https://zoom.us/j/123 --dry-run"#],
+                   #"folio session add EC4207 --date "2026-11-04 21:00" --end "2026-11-04 22:15" --topic 보강 --link https://zoom.us/j/123 --dry-run"#,
+                   #"folio session add EC4207 --date "2026-11-11 10:30" --attendance absent --dry-run"#],
         phrases: ["보충", "보충수업", "잡혔", "수업 추가", "보강", "추가 수업", "회차 만들기", "줌 수업", "온라인 수업", "비대면 수업"])
 public struct SessionAdd {
     @New var id: Session.ID
@@ -25,6 +26,8 @@ public struct SessionAdd {
     var link: String?
     /// 수업이 없던 날의 휴강으로
     var cancelled = false
+    /// 출결. 결석이나 공결을 미리 알 때. 휴강과 함께 줄 수 없다
+    var attendance: AttendanceState?
 
     public func run(_ ctx: ActionContext) throws {
         let start = try ctx.semester(of: ctx.file(course).course)?.start
@@ -38,6 +41,10 @@ public struct SessionAdd {
             s.link = OnlineLink.stored(link)
             s.setEnd(end, schedule: f.course.schedule, calendar: ctx.calendar)
             f.sessions.append(s)
+            // In the same edit as the session, so a refused attendance (on a 휴강) leaves no session behind.
+            if let attendance, attendance != .present {
+                f.attendance.append(Attendance(device: ctx.device, at: ctx.now, sessionId: id, state: attendance))
+            }
         }
         ctx.made(id)
     }

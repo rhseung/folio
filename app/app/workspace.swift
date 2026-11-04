@@ -27,8 +27,10 @@ final class Workspace {
     /// Bumped when the Claude connection setting or the API key changes. Neither lives in observed state (UserDefaults,
     /// the keychain), so views reading `claudeReady` would otherwise keep a stale answer.
     var claudeRevision = 0
-    /// Bumped when a note's kind or links change from its editor, so the note list re-reads the frontmatter it shows.
-    var notesRevision = 0
+    /// Bumped whenever a write touches a note or a card file, from any screen, the Claude panel or outside the app.
+    /// Note and card lists read their files from disk, which observing `courses` alone would not catch.
+    private(set) var notesRevision = 0
+    private(set) var quizRevision = 0
     /// Grades stay hidden until the device owner unlocks them; never saved, so every launch starts locked.
     var gradesUnlocked = false
     @ObservationIgnored var gradeRelock: Task<Void, Never>?
@@ -129,6 +131,9 @@ final class Workspace {
         })
         // Never cleared here: callers reload right after a failed save, whose message must stay up.
         if !problems.isEmpty { error = String(localized: .workspaceUnreadableFiles) + "\n" + problems.joined(separator: "\n") }
+        // A reload follows writes the app can't see into (an iCloud sync, the folio command), so every list re-reads.
+        notesRevision += 1
+        quizRevision += 1
         recoverRecordings()
     }
 
@@ -254,6 +259,8 @@ final class Workspace {
 
     func show(_ ctx: ActionContext) {
         lastOwnWrite = .now
+        if ctx.changes.contains(where: \.touchesNotes) { notesRevision += 1 }
+        if ctx.changes.contains(where: \.touchesQuizzes) { quizRevision += 1 }
         if ctx.needsReload {
             reload()
             return

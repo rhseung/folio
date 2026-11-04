@@ -204,7 +204,7 @@ struct DayRibbonCard: View {
         } else if let sessionId = item.sessionId {
             Button { go(item.courseId, .sessions) } label: { label }
                 .buttonStyle(.pointing(.plain))
-                .contextMenu { SessionMenu(courseId: item.courseId, sessionId: sessionId, openNote: openNote(item.courseId)) { go(item.courseId, .sessions) } }
+                .contextMenu { SessionMenu(courseId: item.courseId, sessionId: sessionId, openNote: openNote(item.courseId), showSessions: { go(item.courseId, .sessions) }) }
         }
     }
 
