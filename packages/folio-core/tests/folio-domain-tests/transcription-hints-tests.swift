@@ -39,6 +39,22 @@ struct TranscriptionHintsTests {
         #expect(slides.pages.map(\.path) == ["Lectures/03 Syntax-analysis.pdf"])
     }
 
+    @Test func aSessionsOwnLinkDoesNotHideItsUnitsSlides() {
+        var file = course(["Lectures/05_Handout.pdf", "Lectures/03 Syntax-analysis.pdf", "Lectures/04 Other.pdf"])
+        let chapter = Unit(device: device, at: now, title: "Syntax Analysis", order: 0)
+        let section = Unit(device: device, at: now, title: "LR Parsing", order: 0, parentId: chapter.id)
+        file.units = [chapter, section]
+        file.toggle(session: file.sessions[0].id, unit: section.id)
+        file.linkMaterial(file.materials[0].id, session: file.sessions[0].id, firstPage: 2, lastPage: 4)
+        #expect(file.lectureSlides(for: file.sessions[0]).source == .session)
+        // A parent unit's slides count: the chapter covers the class.
+        file.setMaterial(file.materials[1].id, unit: chapter.id, linked: true)
+        let slides = file.lectureSlides(for: file.sessions[0])
+        #expect(slides.source == .tagged)
+        #expect(slides.pages == [LecturePages(path: "Lectures/05_Handout.pdf", first: 2, last: 4, materialId: file.materials[0].id),
+                                 LecturePages(path: "Lectures/03 Syntax-analysis.pdf", materialId: file.materials[1].id)])
+    }
+
     @Test func topicsAndUnitsComeBeforeTheSlides() {
         var file = course([])
         let parent = Unit(device: device, at: now, title: "Syntax Analysis", order: 0)

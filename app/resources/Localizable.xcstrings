@@ -1717,6 +1717,17 @@
         }
       }
     },
+    "common.via-sessions": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차로"
+          }
+        }
+      }
+    },
     "component-sheet.add": {
       "extractionState": "manual",
       "localizations": {
@@ -4280,6 +4291,28 @@
         }
       }
     },
+    "exams.link-materials": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료 연결"
+          }
+        }
+      }
+    },
+    "exams.linked-materials": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결한 자료"
+          }
+        }
+      }
+    },
     "exams.menu-help": {
       "extractionState": "manual",
       "localizations": {
@@ -4672,6 +4705,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "오늘"
+          }
+        }
+      }
+    },
+    "exams.unlink-material": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 시험에서 연결 해제"
           }
         }
       }
@@ -5798,6 +5842,28 @@
         }
       }
     },
+    "materials.link-units-via-sessions": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차로 단원: %@"
+          }
+        }
+      }
+    },
+    "materials.links.exams": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험"
+          }
+        }
+      }
+    },
     "materials.links.first-page": {
       "extractionState": "manual",
       "localizations": {
@@ -5809,6 +5875,17 @@
         }
       }
     },
+    "materials.links.in-folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 폴더에 있음"
+          }
+        }
+      }
+    },
     "materials.links.last-page": {
       "extractionState": "manual",
       "localizations": {
@@ -5816,6 +5893,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "끝"
+          }
+        }
+      }
+    },
+    "materials.links.no-exams": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험이 없습니다"
           }
         }
       }
@@ -15225,6 +15313,17 @@
         }
       }
     },
+    "units.link-materials": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료 연결"
+          }
+        }
+      }
+    },
     "units.link-sessions": {
       "extractionState": "manual",
       "localizations": {
@@ -15253,7 +15352,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "자료 화면에서 파일의 연결로 이 단원이나 회차를 고르면 여기 모입니다"
+            "value": "자료 연결로 파일을 걸면 여기 모입니다. 이 단원의 회차에 건 파일도 함께 보입니다"
           }
         }
       }
@@ -15264,7 +15363,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 단원이나 그 회차에 연결한 파일"
+            "value": "이 단원에 건 파일과 그 회차에 건 파일"
           }
         }
       }
@@ -15555,6 +15654,17 @@
         }
       }
     },
+    "units.unlink-material": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 단원에서 연결 해제"
+          }
+        }
+      }
+    },
     "units.unlink-session": {
       "extractionState": "manual",
       "localizations": {
@@ -15595,6 +15705,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "단원이 없는 지난 회차 %lld개"
+          }
+        }
+      }
+    },
+    "units.via-sessions-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 단원의 회차에 건 파일입니다. 단원에도 걸려면 자료 연결에서 고르세요"
           }
         }
       }

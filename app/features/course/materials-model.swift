@@ -102,8 +102,12 @@ final class MaterialsModel {
     func linkLine(_ m: FolioDomain.Material) -> String {
         let file = course.file
         let sessions = file.sessionLinks(of: m.id).map { s, link in file.day(of: s, calendar: workspace.calendar) + link.pageLabel }
-        let units = file.units.filter { m.unitIds.contains($0.id) }.map(\.title)
-        return (sessions + (units.isEmpty ? [] : [String(localized: .materialsLinkUnits(units.joined(separator: ", ")))])).joined(separator: " · ")
+        let units = file.units(of: m)
+        let direct = units.filter { $0.routes.contains(.direct) }.map(\.unit.title)
+        let via = units.filter { !$0.routes.contains(.direct) }.map(\.unit.title)
+        return (sessions
+                + (direct.isEmpty ? [] : [String(localized: .materialsLinkUnits(direct.joined(separator: ", ")))])
+                + (via.isEmpty ? [] : [String(localized: .materialsLinkUnitsViaSessions(via.joined(separator: ", ")))])).joined(separator: " · ")
     }
 
     // MARK: Actions
@@ -196,6 +200,18 @@ final class MaterialsModel {
 
     func unitIds(of material: UUID) -> [UUID] { materials.first { $0.id == material }?.unitIds ?? [] }
 
+    /// Units the file reaches only through one of their classes: shown as such, not as a link to undo.
+    func unitsViaSessions(of material: UUID) -> Set<UUID> {
+        guard let m = materials.first(where: { $0.id == material }) else { return [] }
+        return Set(course.file.units(of: m).filter { !$0.routes.contains(.direct) }.map(\.unit.id))
+    }
+
+    var exams: [Exam] { course.file.exams.sorted { ($0.start ?? .distantFuture, $0.title) < ($1.start ?? .distantFuture, $1.title) } }
+
+    func routes(of material: UUID, to exam: Exam) -> [MaterialRoute] {
+        materials.first { $0.id == material }.map { course.file.routes(of: $0, to: .exam(exam.id)) } ?? []
+    }
+
     func sessionTitle(_ s: Session) -> String { course.file.title(of: s, calendar: workspace.calendar) }
 
     func link(_ material: UUID, session: UUID, linked: Bool) {
@@ -208,6 +224,10 @@ final class MaterialsModel {
 
     func link(_ material: UUID, unit: UUID, linked: Bool) {
         workspace.run(MaterialLinkUnit(course: course.id, material: material, unit: unit, linked: linked))
+    }
+
+    func link(_ material: UUID, exam: UUID, linked: Bool) {
+        workspace.run(MaterialLinkExam(course: course.id, material: material, exam: exam, linked: linked))
     }
 
     // MARK: Unclassified inbox
