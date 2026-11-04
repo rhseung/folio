@@ -170,3 +170,71 @@ struct TextFileActionTests {
         #expect(!FileManager.default.fileExists(atPath: store.fileURL("Assignments/HW03/hw.pdf").path))
     }
 }
+
+struct MaterialNewTests {
+    static let course = ActionTests.graphTheory
+    let device = UUID()
+    let now = Date(timeIntervalSince1970: 1_790_000_000)
+    let gist: GISTStore
+    let store: CourseStore
+
+    init() throws {
+        gist = GISTStore(url: try Fixture.standard.copyToTemp())
+        store = try ActionContext(gist: gist, device: device).store(Self.course)
+        try run(MaterialTrack(course: Self.course))
+    }
+
+    @discardableResult
+    func run(_ action: some Action, dryRun: Bool = false) throws -> ActionContext {
+        let ctx = ActionContext(gist: gist, device: device, now: now, dryRun: dryRun)
+        try action.run(ctx)
+        return ctx
+    }
+
+    func file() throws -> CourseFile { try ActionContext(gist: gist, device: device).file(Self.course) }
+
+    @Test func makesATrackedTexInTheAssignmentFolder() throws {
+        let ctx = try run(MaterialNew(course: Self.course, folder: "Assignments/HW03", name: "hw3.tex"))
+        #expect(try store.readText("Assignments/HW03/hw3.tex") == NewMaterialFile.text(for: "hw3.tex"))
+        let m = try #require(try file().materials.first { $0.path == "Assignments/HW03/hw3.tex" })
+        #expect(ctx.made == m.id)
+        #expect(m.status == .classified && m.hash != nil)
+        let hw = try #require(try file().assignments.first { $0.title == "HW03" })
+        #expect(AssignmentFiles.materials(of: hw, in: try file().materials).contains { $0.id == m.id })
+    }
+
+    /// An exam's folder is made by its first file.
+    @Test func makesTheFolderOfAnExamWithoutFiles() throws {
+        try run(ExamAdd(course: Self.course, title: "기말고사"))
+        try run(MaterialNew(course: Self.course, folder: "Exams/기말고사", name: "풀이.py"))
+        #expect(try store.readText("Exams/기말고사/풀이.py") == "")
+        #expect(try file().materials.contains { $0.path == "Exams/기말고사/풀이.py" })
+    }
+
+    @Test func aTakenNameIsRefusedAndLeftAsItIs() throws {
+        try store.writeText("Study/a.txt", text: "원래")
+        #expect(throws: ActionError.conflict("같은 이름의 파일이 이미 있습니다: Study/a.txt")) {
+            try run(MaterialNew(course: Self.course, folder: "Study", name: "a.txt"))
+        }
+        #expect(try store.readText("Study/a.txt") == "원래")
+        #expect(!FileManager.default.fileExists(atPath: store.fileURL("Study/a 2.txt").path))
+    }
+
+    @Test func receivedFoldersAndOtherFormatsAreRefused() throws {
+        #expect(throws: ActionError.rule("새 파일은 과제·시험 폴더나 Study, Archive에만 만듭니다: Lectures")) {
+            try run(MaterialNew(course: Self.course, folder: "Lectures", name: "a.tex"))
+        }
+        #expect(throws: ActionError.rule("Folio에서 편집하는 형식(.tex, 코드, .txt 등)만 만듭니다: a.pdf")) {
+            try run(MaterialNew(course: Self.course, folder: "Study", name: "a.pdf"))
+        }
+        #expect(throws: ActionError.rule("파일 이름으로 쓸 수 없습니다: ../a.tex")) {
+            try run(MaterialNew(course: Self.course, folder: "Study", name: "../a.tex"))
+        }
+    }
+
+    @Test func aDryRunWritesNothing() throws {
+        let ctx = try run(MaterialNew(course: Self.course, folder: "Study", name: "b.tex"), dryRun: true)
+        #expect(ctx.changes.contains { $0.kind == .added && $0.path.hasSuffix("Study/b.tex") })
+        #expect(!FileManager.default.fileExists(atPath: store.fileURL("Study/b.tex").path))
+    }
+}

@@ -114,11 +114,9 @@ public enum NoteTemplate {
         case .markdown:
             return (["# \(title)"] + sections.map { "\n## \($0)\n" }).joined(separator: "\n") + "\n"
         case .tex:
-            // kotex because notes are Korean; the AMS packages because most notes are math.
-            let preamble = ["\\documentclass[11pt]{article}", "\\usepackage{kotex}", "\\usepackage{amsmath, amssymb, amsthm}", "", "\\begin{document}", ""]
-            let heading = ["\\section*{\(texEscaped(title))}", ""]
+            let heading = ["", "\\section*{\(texEscaped(title))}", ""]
             let parts = sections.flatMap { ["\\subsection*{\(texEscaped($0))}", "", ""] }
-            return (preamble + heading + parts + ["\\end{document}"]).joined(separator: "\n") + "\n"
+            return TexDocument.wrap(heading + parts)
         }
     }
 

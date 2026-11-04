@@ -70,6 +70,12 @@ struct MaterialNoteStudyTests {
         }
     }
 
+    @Test func newFile() throws {
+        try h.expectSame(["material", "new", "EC4207", "Assignments/HW03", "hw3.tex"], setup: [Self.track]) { _ in
+            MaterialNew(course: course, folder: "Assignments/HW03", name: "hw3.tex")
+        }
+    }
+
     @Test func statusOfSeveralNeedsConfirmation() throws {
         let gist = try Harness.fixtureCopy()
         _ = h.cli(Self.track, gist: gist)

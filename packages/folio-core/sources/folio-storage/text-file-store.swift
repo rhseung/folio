@@ -11,6 +11,11 @@ extension CourseStore {
         try CoordinatedFile.write(Data(text.utf8), to: fileURL(coursePath))
     }
 
+    /// Fails when the name is taken, by a file or a folder.
+    public func createText(_ coursePath: String, text: String) throws {
+        try CoordinatedFile.create(Data(text.utf8), at: fileURL(coursePath))
+    }
+
     /// Replaces a file the app made itself, such as a build's PDF. Never used for files the user brought in.
     /// `keepOld` sends the file there to the Trash first, where the user can still take it back.
     public func replaceFile(_ coursePath: String, with source: URL, keepOld: Bool = false) throws {

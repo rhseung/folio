@@ -22,6 +22,25 @@ enum CoordinatedFile {
         try finish(result, error)
     }
 
+    /// Never overwrites: fails if `url` exists. Written beside it first and moved in, so it is never half-written;
+    /// `write` replaces, so checking first would leave a moment for another device's file to be overwritten.
+    static func create(_ data: Data, at url: URL) throws {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        var error: NSError?
+        var result: Result<Void, any Error>?
+        NSFileCoordinator().coordinate(writingItemAt: url, options: [], error: &error) { url in
+            result = Result {
+                let temp = url.deletingLastPathComponent().appending(path: ".\(UUID().uuidString).tmp")
+                try data.write(to: temp)
+                do { try FileManager.default.moveItem(at: temp, to: url) } catch {
+                    try? FileManager.default.removeItem(at: temp)
+                    throw error
+                }
+            }
+        }
+        try finish(result, error)
+    }
+
     /// Appends without rewriting existing bytes; used only for append-only logs.
     static func append(_ data: Data, to url: URL) throws {
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
