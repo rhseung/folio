@@ -16896,6 +16896,72 @@
           }
         }
       }
+    },
+    "score-sheet.source": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결"
+          }
+        }
+      }
+    },
+    "score-sheet.source.detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제나 시험에서 받은 점수면 고릅니다. 과제는 채점됨이 됩니다"
+          }
+        }
+      }
+    },
+    "score-sheet.source.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "없음"
+          }
+        }
+      }
+    },
+    "score-sheet.source.assignments": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제"
+          }
+        }
+      }
+    },
+    "score-sheet.source.exams": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험"
+          }
+        }
+      }
+    },
+    "score-sheet.source.taken": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 항목에 점수가 이미 있음"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

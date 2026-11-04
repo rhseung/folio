@@ -116,6 +116,75 @@ struct AssignmentsModelTests {
     }
 }
 
+/// Both pages that take scores save them with the same meaning.
+@MainActor
+struct ScoreSourceModelTests {
+    func setUp() throws -> (Workspace, homework: UUID, lab: UUID, assignment: UUID, exam: UUID) {
+        let (workspace, _) = try fixtureCourse()
+        let homework = try #require(workspace.run(ComponentAdd(course: linearAlgebra, name: "숙제", weight: 20))?.made)
+        let lab = try #require(workspace.run(ComponentAdd(course: linearAlgebra, name: "실험", weight: 20))?.made)
+        let assignment = try #require(workspace.run(AssignmentAdd(course: linearAlgebra, title: "HW 3"))?.made)
+        workspace.run(AssignmentStatusSet(course: linearAlgebra, assignment: assignment, status: .submitted))
+        let exam = try #require(workspace.run(ExamAdd(course: linearAlgebra, title: "쪽지시험", component: lab))?.made)
+        return (workspace, homework, lab, assignment, exam)
+    }
+
+    func sheet(_ workspace: Workspace, _ assignment: UUID) throws -> AssignmentSheetModel {
+        let course = try #require(workspace.course(linearAlgebra))
+        let model = AssignmentSheetModel(workspace: workspace, course: course, assignment: try #require(course.file.assignments.first { $0.id == assignment }))
+        model.load()
+        return model
+    }
+
+    @Test func aScoreFromTheGradesPageGoesToItsAssignment() throws {
+        let (workspace, homework, _, assignment, exam) = try setUp()
+        let course = try #require(workspace.course(linearAlgebra))
+        let model = ScoreEntryModel(workspace: workspace, course: course,
+                                    entry: ScoreEntry(device: workspace.device, at: .now, componentId: homework, title: "", score: 0, max: 10))
+        let options = model.sourceOptions
+        #expect(options.map(\.title) == ["없음", "HW 3", "쪽지시험"])
+        #expect(options.map(\.section) == [nil, "과제", "시험"])
+        model.pick(.assignment(assignment))
+        #expect(model.title == "HW 3")
+        model.score = "9"
+        #expect(model.confirm())
+
+        let file = try #require(workspace.course(linearAlgebra)).file
+        #expect(file.scores.first { $0.componentId == homework }?.assignmentId == assignment)
+        #expect(file.assignments.first { $0.id == assignment }?.status == .graded)
+        // The assignment sheet now shows that score.
+        let assignmentSheet = try sheet(workspace, assignment)
+        #expect(assignmentSheet.scores[homework] == "9")
+
+        // A second score for HW 3 in 숙제 can't pick it.
+        let next = ScoreEntryModel(workspace: workspace, course: try #require(workspace.course(linearAlgebra)),
+                                   entry: ScoreEntry(device: workspace.device, at: .now, componentId: homework, title: "", score: 0, max: 10))
+        #expect(next.sourceOptions.first { $0.id == .assignment(assignment) }?.disabled == true)
+        #expect(next.sourceOptions.first { $0.id == .exam(exam) }?.disabled == false)
+    }
+
+    @Test func savingTheSheetKeepsWhatTheGradesPageChanged() throws {
+        let (workspace, homework, lab, assignment, _) = try setUp()
+        workspace.run(AssignmentSave(course: linearAlgebra, assignment: assignment, title: "HW 3", due: nil, status: .submitted, repeats: nil,
+                                     componentId: homework, componentGroup: nil, memo: "", components: [homework],
+                                     scores: [.init(component: homework, score: 9, max: 10)]))
+        let entry = try #require(workspace.course(linearAlgebra)?.file.scores.first { $0.assignmentId == assignment })
+
+        // On the grades page: renamed, and moved to 실험.
+        let edit = ScoreEntryModel(workspace: workspace, course: try #require(workspace.course(linearAlgebra)), entry: entry)
+        edit.componentId = lab
+        edit.title = "HW 3 재채점"
+        #expect(edit.confirm())
+
+        // In the assignment sheet: only the due date changes.
+        let model = try sheet(workspace, assignment)
+        model.hasDue = true
+        #expect(model.apply())
+        let kept = try #require(workspace.course(linearAlgebra)?.file.scores.first { $0.id == entry.id })
+        #expect(kept.componentId == lab && kept.title == "HW 3 재채점" && kept.score == 9 && kept.assignmentId == assignment)
+    }
+}
+
 @MainActor
 struct MaterialsModelTests {
     @Test func importPlacesGroupByKindAndPickTheNewest() throws {
