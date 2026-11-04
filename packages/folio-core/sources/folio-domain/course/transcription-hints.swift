@@ -46,7 +46,7 @@ public struct TranscriptionContext: Codable, Sendable, Equatable {
         case recording
         /// Files linked to the session, with their page ranges.
         case session
-        /// Files tagged with the session or one of its units.
+        /// The session's files and its units' (parents included).
         case tagged
         /// `Lectures/` files named for the session's week.
         case week
@@ -107,22 +107,16 @@ extension CourseFile {
     /// Unit titles name what the class is about in the lecturer's own words ("NFA to DFA: The Subset Construction"),
     /// and most classes have units where few have slides linked. Parents follow their children: they are broader.
     func transcriptionTopics(for session: Session) -> [String] {
-        let direct = units.filter { session.unitIds.contains($0.id) || $0.sessionIds.contains(session.id) }.sorted { $0.order < $1.order }
-        var ids = Set(direct.map(\.id)), chain = direct
-        var next = direct.compactMap(\.parentId)
-        while let id = next.popLast() {
-            guard ids.insert(id).inserted, let unit = units.first(where: { $0.id == id }) else { continue }
-            chain.append(unit)
-            if let parent = unit.parentId { next.append(parent) }
-        }
+        let chain = unitsCovering(session: session.id).compactMap { id in units.first { $0.id == id } }
         let topic = session.topic.trimmingCharacters(in: .whitespacesAndNewlines)
         return (topic.isEmpty ? [] : [topic]) + chain.map(\.title)
     }
 
-    /// The slides a class covered: the pages left on screen while `recording`, else the PDFs linked to the session
-    /// within their page ranges, else the files linked to it or its units, else the week's files under `Lectures/` by
-    /// their `05_` / `05-1_` prefix. What was on screen goes first because it is what the class did, where a link
-    /// may be a whole file or a range set before the class.
+    /// The slides a class covered: the pages left on screen while `recording`, else the PDFs that belong with the
+    /// session (`routes(of:to:)`), its own within their page ranges and then its units', else the week's files under
+    /// `Lectures/` by their `05_` / `05-1_` prefix. What was on screen goes first because it is what the class did,
+    /// where a link may be a whole file or a range set before the class. The session's and its units' files are
+    /// merged rather than one shadowing the other: one handout linked to the class must not hide the chapter's slides.
     public func lectureSlides(for session: Session, recording: Recording? = nil) -> (source: TranscriptionContext.Source?, pages: [LecturePages]) {
         func pages(_ link: SessionMaterial) -> LecturePages? {
             materials.first { $0.id == link.materialId && $0.isPDF }.map { LecturePages(path: $0.path, first: link.firstPage, last: link.lastPage, materialId: $0.id) }
@@ -130,10 +124,11 @@ extension CourseFile {
         let viewed = (recording?.viewedPages() ?? []).compactMap(pages)
         if !viewed.isEmpty { return (.recording, viewed) }
         let linked = session.materials.compactMap(pages)
-        if !linked.isEmpty { return (.session, linked) }
-        let unitIds = Set(session.unitIds + units.filter { $0.sessionIds.contains(session.id) }.map(\.id))
-        let tagged = materials.filter { $0.isPDF && ($0.sessionIds.contains(session.id) || !unitIds.isDisjoint(with: $0.unitIds)) }
-        if !tagged.isEmpty { return (.tagged, tagged.sorted { $0.path < $1.path }.map { LecturePages(path: $0.path, materialId: $0.id) }) }
+        let rest = materials(of: .session(session.id))
+            .filter { item in item.material.isPDF && !linked.contains { $0.materialId == item.material.id } }
+        let unitOnly = rest.filter { !$0.routes.contains(.direct) }
+        let whole = rest.map(\.material).sorted { $0.path < $1.path }.map { LecturePages(path: $0.path, materialId: $0.id) }
+        if !linked.isEmpty || !whole.isEmpty { return (unitOnly.isEmpty ? .session : .tagged, linked + whole) }
         let week = materials
             .filter { $0.isPDF && $0.path.hasPrefix(CourseFolder.lectures.rawValue + "/") && StandardLayout.lectureWeek(($0.path as NSString).lastPathComponent) == session.week }
             .sorted { $0.path < $1.path }

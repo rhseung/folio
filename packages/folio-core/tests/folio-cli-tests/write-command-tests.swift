@@ -81,6 +81,22 @@ struct WriteCommandTests {
         #expect(h.cli(["assignment", "set", "EC4207/HW 3", "--group", "없는 묶음"], gist: gist).code == 3)
     }
 
+    /// Retargeting drops the old target's score, as the sheet does; a score moved elsewhere on the grades page stays.
+    @Test func assignmentRetargetDropsTheOldTargetsScore() throws {
+        let lab = ["component", "add", "EC4207", "실험", "--weight", "10", "--id", G.quiz.uuidString]
+        let extra = UUID(uuidString: "B0000000-0000-4000-8000-0000000000EE")!
+        let other = ["component", "add", "EC4207", "보너스", "--weight", "5", "--id", extra.uuidString]
+        let gist = try Harness.fixtureCopy()
+        for line in [G.addComponent, lab, other, U.addHW, ["assignment", "set", "EC4207/HW 3", "--component", "과제", "--score", "9/10"]] {
+            #expect(h.cli(line, gist: gist).code == 0)
+        }
+        let moved = ["score", "add", "EC4207", "--component", "보너스", "--score", "1", "--max", "2", "--assignment", "EC4207/HW 3"]
+        #expect(h.cli(moved, gist: gist).code == 0)
+        #expect(h.cli(["assignment", "set", "EC4207/HW 3", "--component", "실험", "--score", "7/10"], gist: gist).code == 0)
+        let scores = try ActionContext(gist: GISTStore(url: gist), device: h.device).file(gt).scores.filter { $0.assignmentId == U.hw }
+        #expect(Set(scores.map(\.componentId)) == [G.quiz, extra])
+    }
+
     @Test func examClearsTheStart() throws {
         try h.expectSame(["exam", "set", "EC4207/중간고사", "--start", "none"], setup: [U.addExam]) { _ in
             ExamSet(course: gt, exam: U.exam, start: .set(nil))

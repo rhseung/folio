@@ -17,6 +17,7 @@ final class ScoreEntryModel {
     var mean: String
     var stdDev: String
     var excused: Bool
+    private(set) var source: ScoreSource
 
     init(workspace: Workspace, course: LoadedCourse, entry: ScoreEntry) {
         self.workspace = workspace
@@ -30,6 +31,33 @@ final class ScoreEntryModel {
         mean = entry.mean?.formatted(.number.grouping(.never)) ?? ""
         stdDev = entry.stdDev?.formatted(.number.grouping(.never)) ?? ""
         excused = entry.excused
+        source = entry.source
+    }
+
+    // One already scored in this component can't be picked: the assignment sheet shows one score per component.
+    var sourceOptions: [PickOption<ScoreSource>] {
+        let file = course.file
+        let assignments = String(localized: .scoreSheetSourceAssignments), exams = String(localized: .scoreSheetSourceExams)
+        return [PickOption(id: ScoreSource.none, title: String(localized: .scoreSheetSourceNone))] + file.scoreSources(for: componentId).map { s in
+            let taken = file.hasScore(s, in: componentId, other: entry.id)
+            let section: String = if case .exam = s { exams } else { assignments }
+            return PickOption(id: s, title: file.title(of: s) ?? "", detail: taken ? String(localized: .scoreSheetSourceTaken) : nil,
+                              section: section, disabled: taken)
+        }
+    }
+
+    /// An untitled score takes the name of what it was given for.
+    func pick(_ s: ScoreSource) {
+        source = s
+        if title.trimmingCharacters(in: .whitespaces).isEmpty, let name = course.file.title(of: s) { title = name }
+    }
+
+    private var links: (exam: UUID?, assignment: UUID?) {
+        switch source {
+        case .none: (nil, nil)
+        case .assignment(let a): (nil, a)
+        case .exam(let e): (e, nil)
+        }
     }
 
     var sheetTitle: String { String(localized: isNew ? .scoreSheetAdd : .scoreSheetEdit) }
@@ -56,10 +84,11 @@ final class ScoreEntryModel {
         guard let s = Double(score), let m = Double(max) else { return false }
         let saved = isNew
             ? workspace.run(ScoreAdd(id: entry.id, course: course.id, component: componentId, title: title, score: s, max: m,
-                                     mean: Double(mean), stdDev: Double(stdDev), date: entry.date, exam: entry.examId, assignment: entry.assignmentId,
+                                     mean: Double(mean), stdDev: Double(stdDev), date: entry.date, exam: links.exam, assignment: links.assignment,
                                      excused: excused))
             : workspace.run(ScoreSet(course: course.id, score: entry.id, component: .set(componentId), title: .set(title), value: .set(s), max: .set(m),
-                                     mean: .set(Double(mean)), stdDev: .set(Double(stdDev)), excused: .set(excused)))
+                                     mean: .set(Double(mean)), stdDev: .set(Double(stdDev)), exam: .set(links.exam), assignment: .set(links.assignment),
+                                     excused: .set(excused)))
         return saved != nil
     }
 

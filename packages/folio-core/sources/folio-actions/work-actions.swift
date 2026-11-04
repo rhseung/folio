@@ -101,9 +101,7 @@ public struct ExamRemove {
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
             _ = try index(exam, in: f.exams, .valueExam)
-            f.exams.removeAll { $0.id == exam }
-            for i in f.units.indices { f.units[i].examIds.removeAll { $0 == exam } }
-            for i in f.scores.indices where f.scores[i].examId == exam { f.scores[i].examId = nil }
+            try f.remove(Exam.self, exam)
         }
     }
 }
@@ -255,18 +253,25 @@ public struct AssignmentSave {
     var componentId: GradeComponent.ID?
     var componentGroup: String?
     var memo: String
-    /// Every component the target covers; one left out loses its score.
+    /// The components the sheet showed fields for. A score of the assignment in one of them that `scores` leaves out
+    /// is removed; scores in other components, such as one moved on the grades page, are left as they are.
     var components: [GradeComponent.ID]
     var scores: [Score]
+
+    // A weekly series shares one title, so each score is told apart by its date.
+    static func scoreTitle(_ title: String, repeats: AssignmentRepeat?, due: Date?) -> String {
+        repeats == .weekly ? due.map { "\(title) \($0.formatted(.dateTime.month(.defaultDigits).day()))" } ?? title : title
+    }
 
     public func run(_ ctx: ActionContext) throws {
         guard !title.isEmpty else { throw ActionError.rule(String(localized: .errorAssignmentTitleEmpty)) }
         guard scores.allSatisfy({ $0.max > 0 }) else { throw ActionError.rule(String(localized: .errorAssignmentMaxScore)) }
         let end = try repeatEnd(ctx, course: course)
-        // A weekly series shares one title, so each score is told apart by its date.
-        let entryTitle = repeats == .weekly ? due.map { "\(title) \($0.formatted(.dateTime.month(.defaultDigits).day()))" } ?? title : title
+        let entryTitle = Self.scoreTitle(title, repeats: repeats, due: due)
         try ctx.edit(course) { f in
             let i = try index(assignment, in: f.assignments, .valueAssignment)
+            let old = f.assignments[i]
+            let oldTitle = Self.scoreTitle(old.title, repeats: old.repeats, due: old.due)
             f.assignments[i].title = title
             f.assignments[i].due = due
             f.assignments[i].repeats = repeats
@@ -278,9 +283,10 @@ public struct AssignmentSave {
             for s in scores where components.contains(s.component) {
                 kept.insert(s.component)
                 if let j = f.scores.firstIndex(where: { $0.assignmentId == assignment && $0.componentId == s.component }) {
-                    f.scores[j].title = entryTitle
-                    f.scores[j].score = s.score
-                    f.scores[j].max = s.max
+                    // The title follows the assignment until it is named on the grades page.
+                    let named = f.scores[j].title == oldTitle || f.scores[j].title.isEmpty ? entryTitle : f.scores[j].title
+                    guard (f.scores[j].title, f.scores[j].score, f.scores[j].max) != (named, s.score, s.max) else { continue }
+                    (f.scores[j].title, f.scores[j].score, f.scores[j].max) = (named, s.score, s.max)
                     f.scores[j].touch(by: ctx.device, at: ctx.now)
                 } else {
                     var entry = ScoreEntry(device: ctx.device, at: ctx.now, componentId: s.component, title: entryTitle, score: s.score, max: s.max)
@@ -288,9 +294,9 @@ public struct AssignmentSave {
                     f.scores.append(entry)
                 }
             }
-            f.scores.removeAll { $0.assignmentId == assignment && !kept.contains($0.componentId) }
-            // A score means it was graded, whatever the menu said.
-            f.assignments[i].status = kept.isEmpty ? status : .graded
+            f.scores.removeAll { $0.assignmentId == assignment && components.contains($0.componentId) && !kept.contains($0.componentId) }
+            f.assignments[i].status = status
+            f.markGraded(assignment, device: ctx.device, now: ctx.now)
             f.continueRepeating(assignment, until: end, calendar: ctx.calendar, device: ctx.device, now: ctx.now)
         }
     }
@@ -330,8 +336,7 @@ public struct AssignmentRemove {
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
             _ = try index(assignment, in: f.assignments, .valueAssignment)
-            f.assignments.removeAll { $0.id == assignment }
-            f.scores.removeAll { $0.assignmentId == assignment }
+            try f.remove(Assignment.self, assignment)
         }
     }
 }
@@ -371,11 +376,21 @@ public struct ScoreAdd {
         var entry = ScoreEntry(id: id, device: ctx.device, at: ctx.now, componentId: component, title: title, score: score, max: max, mean: mean, stdDev: stdDev,
                                excused: excused)
         (entry.date, entry.examId, entry.assignmentId) = (date, exam, assignment)
+        let end = try repeatEnd(ctx, course: course)
         try ctx.edit(course) { f in
             guard !f.scores.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenScore("\(id)"))) }
             f.scores.append(entry)
+            if let assignment { f.scoredAssignment(assignment, until: end, ctx) }
         }
         ctx.made(id)
+    }
+}
+
+extension CourseFile {
+    /// A weekly assignment graded by its score moves the series on, as handing it in does.
+    mutating func scoredAssignment(_ id: UUID, until end: Date?, _ ctx: ActionContext) {
+        markGraded(id, device: ctx.device, now: ctx.now)
+        continueRepeating(id, until: end, calendar: ctx.calendar, device: ctx.device, now: ctx.now)
     }
 }
 
@@ -409,7 +424,9 @@ public struct ScoreSet {
     var excused: Patch<Bool>
 
     public func run(_ ctx: ActionContext) throws {
+        let end = try repeatEnd(ctx, course: course)
         try ctx.edit(course) { f in
+            let linked = f.scores.first { $0.id == score }?.assignmentId
             try f.update(\.scores, score) { e in
                 component.apply(&e.componentId)
                 title.apply(&e.title)
@@ -423,6 +440,8 @@ public struct ScoreSet {
                 excused.apply(&e.excused)
                 e.touch(by: ctx.device, at: ctx.now)
             }
+            // Only a newly made link grades the assignment, so editing its score keeps a status set by hand.
+            if case .set(let a?) = assignment, a != linked { f.scoredAssignment(a, until: end, ctx) }
         }
     }
 }
@@ -516,10 +535,7 @@ public struct ComponentRemove {
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
             _ = try index(component, in: f.components, .valueComponent)
-            f.components.removeAll { $0.id == component }
-            f.scores.removeAll { $0.componentId == component }
-            for i in f.assignments.indices where f.assignments[i].componentId == component { f.assignments[i].componentId = nil }
-            for i in f.exams.indices where f.exams[i].componentId == component { f.exams[i].componentId = nil }
+            try f.remove(GradeComponent.self, component)
         }
     }
 }

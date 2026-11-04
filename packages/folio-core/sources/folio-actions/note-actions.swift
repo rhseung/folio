@@ -301,7 +301,7 @@ public struct ProblemSetRemove {
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
             _ = try index(set, in: f.problemSets, .valueProblemSet)
-            f.problemSets.removeAll { $0.id == set }
+            try f.remove(ProblemSet.self, set)
         }
     }
 }
