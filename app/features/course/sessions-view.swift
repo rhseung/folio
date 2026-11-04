@@ -184,7 +184,7 @@ enum ClassCard {
 
         private var fill: Color {
             switch tone {
-            case .accent: accent.tint
+            case .accent: accent.color.opacity(Theme.Opacity.onTint)
             case .success: Theme.Palette.success.opacity(Theme.Opacity.tint)
             default: tone.fill
             }

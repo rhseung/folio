@@ -67,6 +67,10 @@ enum Theme {
     enum Opacity {
         /// A tone or accent laid behind text of the same color: `Chip`, `DdayChip`, a picked toggle, `CourseAccent.tint`.
         static let tint = 0.12
+        /// An accent capsule that can lie on the course's own tint (a class card's trailing row, under the live card's
+        /// elapsed fill). At `tint` it blended into that fill once the class was nearly over; at twice it stands apart
+        /// both on the card and on the fill.
+        static let onTint = 0.24
         /// A row laid on its tone's fill (Today's near deadlines): at half strength, so the chip on the row, which uses the
         /// full fill, still stands apart from it.
         static let toneRow = 0.5
