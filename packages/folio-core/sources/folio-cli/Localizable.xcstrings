@@ -4836,7 +4836,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "과목을 빼면 requirement check가 보여 주는 학사편람 제안을 모두 받아들인다. 분류는 학사편람에서 정하므로 직접 고르지 않는다.\n여러 과목이면 실행하기 전에 확인을 받는다. 제안이 없는 과목이 하나라도 있으면 아무것도 바꾸지 않는다.\n\n예시:\n  folio requirement accept EC4207\n  folio requirement accept --dry-run"
+            "value": "과목을 빼면 requirement check가 보여 주는 학사편람 제안을 모두 받아들인다. 분류는 학사편람에서 정하므로 직접 고르지 않는다.\n여러 과목이면 실행하기 전에 확인을 받는다. 제안이 없는 과목이 하나라도 있으면 아무것도 바꾸지 않는다.\n\n예시:\n  folio requirement accept <과목>...\n  folio requirement accept --dry-run"
           }
         }
       }
