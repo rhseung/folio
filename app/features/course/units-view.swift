@@ -240,7 +240,11 @@ struct UnitDetail: View {
                 }
             }
 
-            Block(String(localized: .unitsMaterials), note: String(localized: .unitsMaterialsNote)) {
+            Block(title: String(localized: .unitsMaterials), note: String(localized: .unitsMaterialsNote)) {
+                ToggleMenu(title: String(localized: .unitsLinkMaterials), items: model.materialMenu(unit, in: file)) { id in
+                    model.toggle(material: id, in: unit, file: file)
+                }
+            } content: {
                 Card {
                     if materials.isEmpty {
                         CardRow(last: true) { EmptyLine(String(localized: .unitsMaterialsEmpty)) }
@@ -256,6 +260,9 @@ struct UnitDetail: View {
                                 Text(item.detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                             }
                             Spacer(minLength: Theme.Space.m)
+                            if !item.direct {
+                                Chip(String(localized: .commonViaSessions)).help(Text(.unitsViaSessionsHelp))
+                            }
                             if missing { Chip(String(localized: .unitsFileMissing), tone: .danger) }
                         }
                         .opens(missing ? nil : { openMaterial(m) })
@@ -264,6 +271,10 @@ struct UnitDetail: View {
                             #if os(macOS)
                             if !missing { Button(.unitsShowInFinder) { NSWorkspace.shared.activateFileViewerSelecting([course.store.fileURL(m.path)]) } }
                             #endif
+                            if item.direct {
+                                Divider()
+                                Button(.unitsUnlinkMaterial) { model.toggle(material: m.id, in: unit, file: file) }
+                            }
                         }
                     }
                 }

@@ -115,6 +115,8 @@ final class NoteScrollView: NSScrollView {
         documentView = document
         contentView.postsBoundsChangedNotifications = true
         automaticallyAdjustsContentInsets = false
+        // The text view sets the I-beam only over itself, and the room past the note's end lies outside it.
+        documentCursor = .iBeam
     }
 
     required init?(coder: NSCoder) { fatalError() }
@@ -123,11 +125,13 @@ final class NoteScrollView: NSScrollView {
     // text never got one; a widget under the point gets it. Code and wide pictures scroll sideways, so the trackpad and
     // the scroller have to reach their scroll view; a click on what it shows goes to the scroll view itself, which
     // hands it on to the note. A code block's text view would take the keyboard, and with it the note's shortcuts and
-    // find bar.
+    // find bar. The room past the note's end is a content inset, under no part of the note; a click there went
+    // nowhere, so the note takes it and puts the caret at its end.
     override func hitTest(_ point: NSPoint) -> NSView? {
         let hit = super.hitTest(point)
         guard hit === self || hit === contentView, let document = documentView else { return hit }
         let inClip = contentView.convert(point, from: superview)
+        if document.convert(inClip, from: contentView).y >= document.bounds.maxY { return document }
         guard let under = document.hitTest(inClip), under !== document else { return hit }
         let chain = sequence(first: under, next: \.superview)
         if chain.contains(where: { $0 is WidgetWebView }) { return under }

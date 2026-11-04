@@ -123,8 +123,8 @@ public struct MaterialRelink {
     }
 }
 
-/// Stops tracking the file. Links to it from sessions, units, quizzes and notes stay.
-@Action("material untrack", "자료 추적 그만두기. 파일과 연결은 그대로 둔다", done: "자료 '{material}'의 추적을 그만뒀습니다",
+/// Stops tracking the file. The file stays; sessions, problem sets and assignments let go of it.
+@Action("material untrack", "자료 추적 그만두기. 파일은 그대로 두고 회차, 문제 묶음, 과제의 연결은 푼다", done: "자료 '{material}'의 추적을 그만뒀습니다",
         examples: ["folio material untrack EC4207/Seating.pdf"], phrases: ["추적 그만", "자료 목록에서 빼기"])
 public struct MaterialUntrack {
     /// 과목
@@ -135,7 +135,7 @@ public struct MaterialUntrack {
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
             _ = try index(material, in: f.materials, .valueMaterial)
-            f.materials.removeAll { $0.id == material }
+            try f.remove(Material.self, material)
         }
     }
 }
@@ -245,7 +245,7 @@ public struct MaterialTrash {
         let m = file.materials[try index(material, in: file.materials, .valueMaterial)]
         ctx.record(Change(.removed, try ctx.relative(course, m.path)))
         try ctx.edit(course) { f in
-            if ctx.dryRun { f.materials.removeAll { $0.id == material } } else { try store.trash(material, in: &f) }
+            if ctx.dryRun { try f.remove(Material.self, material) } else { try store.trash(material, in: &f) }
         }
     }
 }

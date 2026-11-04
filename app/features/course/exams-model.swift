@@ -67,6 +67,28 @@ final class ExamsModel {
         course.file.materials(for: exam).filter { $0.status != .ignored }.count
     }
 
+    /// Files linked to the exam from elsewhere; the folder's own files are counted, not listed.
+    func linkedMaterials(_ exam: Exam) -> [FolioDomain.Material] {
+        course.file.materials(of: .exam(exam.id))
+            .filter { $0.routes.contains(.direct) && !$0.routes.contains(.folder) && $0.material.status != .ignored }
+            .map(\.material)
+            .sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
+    }
+
+    /// Files outside the exam's folder, which already belongs to it.
+    func materialMenu(_ exam: Exam) -> [(id: UUID, label: String, on: Bool)] {
+        let file = course.file
+        return file.materials
+            .filter { $0.status != .ignored && $0.status != .missing && !file.routes(of: $0, to: .exam(exam.id)).contains(.folder) }
+            .sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
+            .map { (id: $0.id, label: $0.path, on: $0.examIds.contains(exam.id)) }
+    }
+
+    func toggle(material: UUID, in exam: Exam) {
+        let linked = course.file.materials.first { $0.id == material }?.examIds.contains(exam.id) ?? false
+        workspace.run(MaterialLinkExam(course: course.id, material: material, exam: exam.id, linked: !linked))
+    }
+
     func folderDetail(_ exam: Exam) -> String {
         let count = fileCount(exam)
         return String(localized: count == 0 ? .examsFolderDropHint : .examsFileCount(count))

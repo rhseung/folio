@@ -5,6 +5,7 @@ import SwiftUI
 struct ExamsView: View {
     @State private var model: ExamsModel
     @Environment(\.accent) private var accent
+    @Environment(\.searchTarget) private var searchTarget
     let openNote: (UUID) -> Void
 
     static let dateColumn: CGFloat = 104
@@ -74,12 +75,31 @@ struct ExamsView: View {
                     menu(exam)
                 }
                 scope(exam, states: states)
-                if let folder = model.folder(of: exam) {
-                    CardRow(last: true) {
+                let linked = model.linkedMaterials(exam)
+                CardRow(last: linked.isEmpty) {
+                    if let folder = model.folder(of: exam) {
                         Label(folder, systemImage: "folder").foregroundStyle(Theme.Palette.textSecondary)
                         Text(model.folderDetail(exam))
                             .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
+                    } else if !linked.isEmpty {
+                        Text(.examsLinkedMaterials).font(Theme.Typeface.bodyStrong)
+                    }
+                    Spacer(minLength: 0)
+                    ToggleMenu(title: String(localized: .examsLinkMaterials), items: model.materialMenu(exam)) { id in model.toggle(material: id, in: exam) }
+                }
+                ForEach(Array(linked.enumerated()), id: \.element.id) { i, m in
+                    CardRow(last: i == linked.count - 1) {
+                        Image(systemName: m.isFolder ? "folder" : m.isPDF ? "doc.richtext" : "doc").foregroundStyle(Theme.Palette.textTertiary)
+                        Text((m.path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle).help(m.path)
+                        Text((m.path as NSString).deletingLastPathComponent)
+                            .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                         Spacer(minLength: 0)
+                    }
+                    .opens(m.status == .missing ? nil : { openMaterial(m) })
+                    .contextMenu {
+                        if m.status != .missing { Button(.commonOpen) { openMaterial(m) } }
+                        Divider()
+                        Button(.examsUnlinkMaterial) { model.toggle(material: m.id, in: exam) }
                     }
                 }
             }
@@ -163,6 +183,10 @@ struct ExamsView: View {
         Button(model.summaryTitle(exam)) { openSummary(exam) }
         .buttonStyle(.pointing(.bordered))
         .help(model.summaryHelp(exam))
+    }
+
+    func openMaterial(_ m: FolioDomain.Material) {
+        searchTarget.wrappedValue = SearchTarget(courseId: model.course.id, section: .materials, materialId: m.id)
     }
 
     func openSummary(_ exam: Exam) {

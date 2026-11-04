@@ -139,22 +139,43 @@ final class UnitsModel {
         return titles.isEmpty ? nil : titles.joined(separator: " › ")
     }
 
-    /// Files linked to the unit itself or to one of its classes, by role as on the materials page.
-    func materials(_ unit: FolioDomain.Unit, in file: CourseFile) -> [(material: FolioDomain.Material, detail: String)] {
-        let ids = Set(sessions(of: unit, in: file).map(\.id))
+    struct MaterialRow {
+        var material: FolioDomain.Material
+        var detail: String
+        /// Linked to the unit itself, so it can be unlinked here; otherwise it only comes through a class.
+        var direct: Bool
+    }
+
+    /// The files that belong with the unit (`CourseFile.routes(of:to:)`), by role as on the materials page.
+    func materials(_ unit: FolioDomain.Unit, in file: CourseFile) -> [MaterialRow] {
         let roles = MaterialRole.allCases
-        return file.materials
-            .filter { $0.status != .ignored }
-            .compactMap { m -> (material: FolioDomain.Material, detail: String)? in
-                let links = file.sessionLinks(of: m.id).filter { ids.contains($0.session.id) }
-                guard m.unitIds.contains(unit.id) || !links.isEmpty else { return nil }
+        return file.materials(of: .unit(unit.id))
+            .filter { $0.material.status != .ignored }
+            .map { m, routes in
+                let via = Set(routes.compactMap { route -> UUID? in if case .session(let id) = route { id } else { nil } })
+                let links = file.sessionLinks(of: m.id).filter { via.contains($0.session.id) }
                 let role = m.status == .unclassified ? String(localized: .unitsUnclassified) : (m.role ?? .other).label
-                return (m, ([role] + links.map { file.day(of: $0.session, calendar: workspace.calendar) + $0.link.pageLabel }).joined(separator: " · "))
+                let direct = routes.contains(.direct)
+                let detail = [role] + links.map { file.day(of: $0.session, calendar: workspace.calendar) + $0.link.pageLabel }
+                return MaterialRow(material: m, detail: detail.joined(separator: " · "), direct: direct)
             }
             .sorted { a, b in
                 let (x, y) = (roles.firstIndex { $0 == a.material.role } ?? roles.count, roles.firstIndex { $0 == b.material.role } ?? roles.count)
                 return x != y ? x < y : a.material.path.localizedStandardCompare(b.material.path) == .orderedAscending
             }
+    }
+
+    /// Every tracked file, the linked ones marked, for the 자료 연결 picker.
+    func materialMenu(_ unit: FolioDomain.Unit, in file: CourseFile) -> [(id: UUID, label: String, on: Bool)] {
+        file.materials
+            .filter { $0.status != .ignored && $0.status != .missing }
+            .sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
+            .map { (id: $0.id, label: $0.path, on: $0.unitIds.contains(unit.id)) }
+    }
+
+    func toggle(material: UUID, in unit: FolioDomain.Unit, file: CourseFile) {
+        let linked = file.materials.first { $0.id == material }?.unitIds.contains(unit.id) ?? false
+        workspace.run(MaterialLinkUnit(course: courseId, material: material, unit: unit.id, linked: !linked))
     }
 
     func examsByDate(_ file: CourseFile) -> [Exam] { file.exams.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) } }

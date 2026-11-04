@@ -292,8 +292,10 @@ struct MaterialLinksEditor: View {
 
     var body: some View {
         let unitIds = model.unitIds(of: materialId)
+        let viaSessions = model.unitsViaSessions(of: materialId)
         let sessions = model.sessions(linking: materialId)
         let units = model.units
+        let exams = model.exams
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Space.l) {
                 Block(String(localized: .materialsLinksSessions), note: String(localized: .materialsLinksSessionsNote)) {
@@ -325,6 +327,26 @@ struct MaterialLinksEditor: View {
                                     .padding(.leading, CGFloat(row.depth) * Theme.Space.l)
                                 Text(u.title).lineLimit(1)
                                 Spacer()
+                                if !linked && viaSessions.contains(u.id) {
+                                    Text(.commonViaSessions).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                                }
+                            }
+                        }
+                    }
+                }
+                Block(String(localized: .materialsLinksExams)) {
+                    Card {
+                        if exams.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .materialsLinksNoExams)) } }
+                        ForEach(Array(exams.enumerated()), id: \.element.id) { i, exam in
+                            let routes = model.routes(of: materialId, to: exam)
+                            let linked = routes.contains(.direct)
+                            CardRow(last: i == exams.count - 1) {
+                                CheckCircle(on: linked) { model.link(materialId, exam: exam.id, linked: !linked) }
+                                Text(exam.title).lineLimit(1)
+                                Spacer()
+                                if routes.contains(.folder) {
+                                    Text(.materialsLinksInFolder).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                                }
                             }
                         }
                     }

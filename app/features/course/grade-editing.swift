@@ -18,6 +18,9 @@ struct ScoreEntrySheet: View {
                     ChoiceMenu(selection: $model.componentId, options: model.componentOptions)
                 }
             }
+            FormRow(label: String(localized: .scoreSheetSource), detail: String(localized: .scoreSheetSourceDetail)) {
+                SearchSelect(selection: Binding(get: { model.source }, set: { model.pick($0) }), options: model.sourceOptions)
+            }
             if model.hasTitle { FormRow(label: String(localized: .scoreSheetTitle)) { InlineField(String(localized: .scoreSheetTitleExample), text: $model.title) } }
             FormRow(label: String(localized: .scoreSheetScore)) {
                 HStack(spacing: Theme.Space.s) {

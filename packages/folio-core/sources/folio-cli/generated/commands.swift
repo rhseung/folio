@@ -319,7 +319,7 @@ enum GeneratedCommands {
     }
 
     struct UnitRemove: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "rm", abstract: "단원 지우기. 하위 단원은 한 단계 올라간다. 회차와 시험 범위의 연결은 풀리고, 노트와 퀴즈 파일은 남는다", discussion: """
+        static let configuration = CommandConfiguration(commandName: "rm", abstract: "단원 지우기. 하위 단원은 한 단계 올라간다. 회차, 시험 범위, 자료, 노트, 문제의 연결은 풀리고, 노트와 퀴즈 파일은 남는다", discussion: """
             실행하기 전에 확인을 받는다.
 
             예시:
@@ -857,7 +857,7 @@ enum GeneratedCommands {
     }
 
     struct MaterialUntrack: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "untrack", abstract: "자료 추적 그만두기. 파일과 연결은 그대로 둔다", discussion: """
+        static let configuration = CommandConfiguration(commandName: "untrack", abstract: "자료 추적 그만두기. 파일은 그대로 두고 회차, 문제 묶음, 과제의 연결은 푼다", discussion: """
             예시:
               folio material untrack EC4207/Seating.pdf
             """)
