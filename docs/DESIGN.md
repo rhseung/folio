@@ -43,6 +43,7 @@ Folio가 아닌 앱에서 같은 느낌을 만들 때도 이 문서를 쓴다. "
 | --- | --- | --- | --- |
 | 간격 눈금 | `Space` | 2, 4, 6, 8, 12, 16, 24, 28, 32 | 2와 6은 붙어 있어야 하는 것(제목과 설명, 아이콘과 낱말)에만 쓴다. 나머지는 4의 배수다 |
 | 창의 열 | `Size.sidebar`, `courseColumn` | 224, 256 | 왼쪽 사이드바, 화면 자신의 목록 열. 본문이 남은 폭을 모두 갖는다. 오른쪽에는 열을 두지 않는다 |
+| 창 | `Size.windowMin`, `windowIdeal`, `windowShare` | 최소 1120×640, 새 창은 화면의 보이는 영역의 0.9배(최대 1440×900) | Mac 창의 첫 크기는 그 화면의 보이는 영역(메뉴 막대와 Dock 제외)으로 정한다(`WindowSize`). 고정 기본 크기는 노트북 화면보다 넓으면 창이 화면 끝까지 늘어난다. 저장된 창이 지금 화면보다 크면 AppKit이 화면에 맞춰 줄인다. 저장 이름은 `WindowGroup(id:)`로 고정해 빌드가 바뀌어도 창 크기를 기억한다 |
 | 떠 있는 패널 | `Size.claudePanel`, `Size.fab` | 폭 380(끌어서 300~640), 높이 최대 720, 버튼 44 | 본문 오른쪽 아래에서 `Space.l` 안쪽. 본문이 좁으면 패널도 좁아진다 |
 | 본문 폭 | `Size.pageMaxWidth` | 900 | 넓은 창에서도 본문은 이 폭 안에서 가운데에 놓인다. 읽기 폭을 넘는 표와 차트도 이 폭에 맞춘다 |
 | 페이지 여백 | `Page` | 좌우 32, 위 24, 아래 64 | 블록 사이는 `section`(28) |
@@ -70,7 +71,7 @@ Folio가 아닌 앱에서 같은 느낌을 만들 때도 이 문서를 쓴다. "
 | `Theme.Inset` | 반복되는 모양의 안쪽 여백 | `row`(CardRow), `listRow`(카드 없는 목록 열의 행), `toggle`(켜면 강조색이 되는 작은 선택지, Segmented), `tag`(Chip), `control`(캡슐 컨트롤), `stat`(StatStrip 칸), `panel`(행이 아닌 하나짜리 카드) |
 | `Theme.Opacity` | 투명도 | `tint`(같은 색 글자 뒤의 옅은 배경, 유리 위 고른 칸), `toneRow`(상태색 `fill`로 칠한 행. 그 위의 칩이 묻히지 않게 반 세기), `projected`(막대의 예상 부분), `wash`(유리 위 칸과 트랙의 바탕), `edge`(그 테두리), `hover`·`pressed`(틀 위 버튼의 원), `innerFill`·`duotone`(고른 아이콘과 사이드바 아이콘의 속채움), `ended`(끝난 수업, 지난 학기, 휴강한 회차), `toneEdge`(상태색 바탕을 두르거나 가로지르는 같은 색 선), `liveEdge`(진행 중인 수업 카드의 과목색 테두리), `planned`(저장하지 않은 예정 수업 카드의 바탕) |
 | `Theme.Radius` | 모서리 | `mark`(범례 견본) < `small`(키캡, 썸네일) < `tile` < `control` < `card` < `floating` |
-| `Theme.Size` | 고정 치수 | 본문 최대 폭, 과목 열 폭, 행 최소 높이, 점과 타일 크기. 창 구조: `sidebar`(왼쪽 사이드바), `claudePanel`(떠 있는 Claude 패널의 기본 폭), `fab`(그 패널을 여는 둥근 버튼), `panelInset`(본문 패널과 틀 사이), `toolbarButton`(툴바 줄의 높이 단위), `searchField` |
+| `Theme.Size` | 고정 치수 | 본문 최대 폭, 과목 열 폭, 행 최소 높이, 점과 타일 크기. 창 구조: `sidebar`(왼쪽 사이드바), `claudePanel`(떠 있는 Claude 패널의 기본 폭), `fab`(그 패널을 여는 둥근 버튼), `panelInset`(본문 패널과 틀 사이), `toolbarButton`(툴바 줄의 높이 단위), `searchField`, `windowMin`·`windowIdeal`·`windowShare`(Mac 창의 최소 크기와 첫 크기) |
 | `Theme.Typeface` | 글자 | 제목 3단(`pageTitle`, `columnTitle`, `sectionTitle`), 수치 4단(`figure` 화면의 주인공 수치, `figureCompact` 타일 수치, `figureMedium` 행 앞 날짜·성적 글자, `figureSmall` 표 안 수치), 본문(`bodyLarge`, `body`, `bodyStrong`, `caption`, `label`, `mono`) |
 | `Theme.Glyph` | 홀로 쓰는 SF Symbol 크기 | `tiny`, `small`, `regular`, `check`, `large`, `toolbar`(틀 위 버튼), `line`(`LineIcon`), `lineTitle`(열 제목 옆의 `LineIcon`, 칸은 그대로), `fab`(떠 있는 버튼). 글자 옆 아이콘은 글자의 글꼴을 따른다 |
 | `Swatch` | 노트 CSS와 함께 쓰는 색 | `NoteStyle`이 CSS 변수로 넘긴다. 노트 CSS에 색을 직접 적지 않는다 |
