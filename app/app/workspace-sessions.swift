@@ -35,12 +35,6 @@ extension Workspace {
         currentCourses.compactMap { suggestedSession(for: $0, now: now) }
     }
 
-    @discardableResult
-    func createSession(at date: Date, cancelled: Bool = false, in courseId: UUID) -> Session? {
-        guard let id = run(SessionAdd(course: courseId, date: date, cancelled: cancelled))?.made else { return nil }
-        return course(courseId)?.file.sessions.first { $0.id == id }
-    }
-
     /// The session's rough or review note, created from its template the first time.
     func note(_ kind: NoteKind, of sessionId: UUID, in courseId: UUID) -> UUID? {
         run(SessionNote(course: courseId, session: sessionId, kind: kind))?.made
