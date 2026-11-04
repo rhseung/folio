@@ -23,6 +23,9 @@ struct QuizView: View {
         }
         .background(Theme.Palette.page)
         .task(id: course.id) { model.load(course) }
+        // Cards saved from the Claude panel or a proposal land while this page is open. The course is read fresh:
+        // the view's copy is a render behind the write that bumped the revision.
+        .onChange(of: model.workspace.quizRevision) { model.load(model.workspace.course(course.id) ?? course) }
         .onChange(of: section) { _, new in if new != .quizSolve { model.request = nil } }
         .sheet(item: $model.generating) { unit in
             GenerateCardsSheet(workspace: model.workspace, course: course, unit: unit) { model.load(course) }

@@ -78,7 +78,8 @@ struct CourseView: View {
     }
 
     func claude(_ course: LoadedCourse) -> some View {
-        ClaudePanel(workspace: model.workspace, course: course, openNote: model.section == .notes ? model.openNote : nil, insertIntoNote: { model.noteInsert = $0 }) {
+        ClaudePanel(workspace: model.workspace, course: course, openNote: model.section == .notes ? model.openNote : nil,
+                    openUnit: model.section == .units ? model.openUnit : nil, insertIntoNote: { model.noteInsert = $0 }) {
             model.show(note: $0)
         }
     }
@@ -143,7 +144,7 @@ struct CourseView: View {
                     switch model.section {
                     case .overview: CourseOverview(model: model, course: course)
                     case .sessions: SessionsView(workspace: workspace, course: course) { model.show(note: $0) }
-                    case .units: UnitsView(workspace: workspace, course: course)
+                    case .units: UnitsView(workspace: workspace, course: course) { model.openUnit = $0 }
                     case .notes: NotesView(workspace: workspace, course: course, selection: model.openNote, insert: $model.noteInsert) { model.openNote = $0 }
                     // One branch for every quiz page, so the quiz model and a pending solve request survive switching pages.
                     case .quizSolve, .quizCards, .quizStats, .quizProblems: QuizView(workspace: model.workspace, course: course, section: $model.section)
@@ -256,7 +257,7 @@ struct CourseColumn: View {
                                 .contentShape(.rect)
                             }
                             .buttonStyle(.pointing(.plain))
-                            .contextMenu { SessionMenu(courseId: course.id, sessionId: session.id, openNote: model.show(note:)) { model.section = .sessions } }
+                            .contextMenu { SessionMenu(courseId: course.id, sessionId: session.id, openNote: model.show(note:), showSessions: { model.section = .sessions }) }
                         }
                     }
                 }
@@ -353,7 +354,7 @@ struct CourseOverview: View {
                             }
                             Spacer(minLength: 0)
                         }
-                        .contextMenu { SessionMenu(courseId: course.id, sessionId: s.id, openNote: model.show(note:)) { model.section = .sessions } }
+                        .contextMenu { SessionMenu(courseId: course.id, sessionId: s.id, openNote: model.show(note:), showSessions: { model.section = .sessions }) }
                     }
                 }
                 .opens { model.section = .sessions }
@@ -446,33 +447,6 @@ struct CourseOverview: View {
             }
             .opens { model.section = .grades }
         }
-    }
-}
-
-struct SessionMenu: View {
-    @Environment(Workspace.self) private var workspace
-    let courseId: UUID
-    let sessionId: UUID
-    let openNote: (UUID) -> Void
-    let showSessions: () -> Void
-    @Environment(\.openURL) private var openURL
-
-    var body: some View {
-        if let file = workspace.course(courseId)?.file, let session = file.sessions.first(where: { $0.id == sessionId }), !session.isCancelled,
-           let link = session.link(schedule: file.course.schedule, calendar: workspace.calendar) {
-            Button(.sessionsJoinOnline, systemImage: "video") { JoinOnlineButton.join(link, openURL) }
-            Divider()
-        }
-        Button(.sessionsOpenRoughNote, systemImage: "pencil.line") { if let id = workspace.note(.rough, of: sessionId, in: courseId) { openNote(id) } }
-        Button(.sessionsOpenReviewNote, systemImage: "square.and.pencil") { if let id = workspace.note(.review, of: sessionId, in: courseId) { openNote(id) } }
-        if let session = workspace.course(courseId)?.file.sessions.first(where: { $0.id == sessionId }), session.reviewNoteId != nil {
-            if session.reviewNoteUnfinished {
-                Button(.courseReviewNoteFinish, systemImage: "checkmark.circle") { workspace.setReviewNoteUnfinished(false, of: sessionId, in: courseId) }
-            } else {
-                Button(.courseReviewNoteReopen, systemImage: "arrow.uturn.backward") { workspace.setReviewNoteUnfinished(true, of: sessionId, in: courseId) }
-            }
-        }
-        Button(.courseShowSessions, systemImage: "calendar", action: showSessions)
     }
 }
 

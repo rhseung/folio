@@ -97,3 +97,35 @@ struct UnitTreeTests {
         #expect(file.exams[0].scopeUnitIds.isEmpty && file.units.allSatisfy(\.examIds.isEmpty))
     }
 }
+
+struct NoteUnitTests {
+    let device = UUID()
+    let now = Date(timeIntervalSince1970: 0)
+
+    @Test func aNoteBelongsToItsLinkedUnitThenItsSessionsThenItsExams() {
+        // `later` comes first in the array but second in the outline, so a fallback by array order would pick it.
+        let later = Unit(device: device, at: now, title: "B", order: 2), first = Unit(device: device, at: now, title: "A", order: 1)
+        var bySession = Unit(device: device, at: now, title: "C", order: 3)
+        var session = Session(device: device, at: now, week: 2, date: now)
+        bySession.sessionIds = [session.id]
+        let rough = UUID()
+        session.roughNoteId = rough
+        var exam = Exam(device: device, at: now, title: "Midterm", start: now)
+        exam.scopeUnitIds = [UUID(), later.id]
+        var file = CourseFile(course: Course(device: device, at: now, title: ""), units: [later, first, bySession], sessions: [session], exams: [exam])
+        let topic = UUID(), examNote = UUID(), free = UUID()
+        file.notes = [NoteEntry(id: topic, device: device, at: now, path: "Notes/t.md", meta: NoteMeta(id: topic, kind: .topic, unitIds: [UUID(), first.id])),
+                      NoteEntry(id: examNote, device: device, at: now, path: "Notes/e.md", meta: NoteMeta(id: examNote, kind: .examSummary, examId: exam.id)),
+                      NoteEntry(id: free, device: device, at: now, path: "Notes/f.md", meta: NoteMeta(id: free))]
+
+        #expect(file.unit(ofNote: topic) == first.id)
+        #expect(file.unit(ofNote: rough) == bySession.id)
+        #expect(file.unit(ofNote: examNote) == later.id)
+        #expect(file.unit(ofNote: free) == nil)
+
+        #expect(file.unitForNewCard(viewing: later.id, note: topic) == later.id)
+        #expect(file.unitForNewCard(viewing: UUID(), note: rough) == bySession.id)
+        #expect(file.unitForNewCard(viewing: nil, note: free) == first.id)
+        #expect(file.unitForNewCard(viewing: nil, note: nil) == first.id)
+    }
+}

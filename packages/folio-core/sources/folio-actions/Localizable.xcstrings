@@ -628,6 +628,28 @@
         }
       }
     },
+    "error.review.record-skip": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "건너뛰기는 review skip으로 기록합니다"
+          }
+        }
+      }
+    },
+    "error.review.skip-times": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시작과 끝 시각은 함께, 단원 하나에만 줍니다"
+          }
+        }
+      }
+    },
     "error.semester.exists": {
       "extractionState": "manual",
       "localizations": {

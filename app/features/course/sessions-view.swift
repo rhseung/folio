@@ -231,9 +231,9 @@ struct PlannedSessionCard: View {
             if today {
                 HStack(spacing: Theme.Space.s) {
                     if let link = item.suggestion.link.flatMap(OnlineLink.url) { JoinOnlineButton(url: link, prominent: true) }
-                    Button(.sessionsRecord, systemImage: "record.circle") { SuggestedSessionItems.record(item, workspace) }
-                        .buttonStyle(.pointing(.bordered)).disabled(workspace.recorder.isActive)
-                    Button(.sessionsRoughNote, systemImage: "doc.text") { SuggestedSessionItems.roughNote(item, workspace, openNote) }
+                    Button(.sessionsRecord, systemImage: "record.circle") { model.menu.record(item) }
+                        .buttonStyle(.pointing(.bordered)).disabled(model.menu.isRecording)
+                    Button(.sessionsRoughNote, systemImage: "doc.text") { if let id = model.menu.roughNote(item) { openNote(id) } }
                         .buttonStyle(.pointing(.bordered)).help(Text(.sessionsRoughNoteHelp))
                 }
                 .padding(.leading, ClassCard.tile + Theme.Space.l)
@@ -312,16 +312,16 @@ struct SuggestedSessionActions: View {
     var editTimes: (() -> Void)?
 
     var body: some View {
-        let today = workspace.isStudyToday(item.suggestion.date)
+        let model = SessionMenuModel(workspace: workspace, courseId: item.courseId)
         HStack(spacing: Theme.Space.s) {
-            if today {
-                Button { SuggestedSessionItems.roughNote(item, workspace, openNote) } label: {
+            if model.isToday(item) {
+                Button { if let id = model.roughNote(item) { openNote(id) } } label: {
                     if compact { Image(systemName: "square.and.pencil").accessibilityLabel(Text(.sessionsRoughNote)) } else { Text(.sessionsRoughNote) }
                 }
                 .buttonStyle(.pointing(.borderedProminent))
                 .help(Text(.sessionsRoughNoteHelp))
             } else {
-                Button(.sessionsMake) { SuggestedSessionItems.make(item, workspace) }.buttonStyle(.pointing(.bordered))
+                Button(.sessionsMake) { model.make(item) }.buttonStyle(.pointing(.bordered))
             }
             Menu { SuggestedSessionItems(item: item, primary: false, openNote: openNote, editTimes: editTimes) } label: {
                 Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary).frame(width: 24, height: 24).contentShape(.rect)
@@ -332,58 +332,6 @@ struct SuggestedSessionActions: View {
             .fixedSize()
             .help(Text(.sessionsSuggestionMenuHelp))
         }
-    }
-}
-
-/// The suggestion's ⋯ menu items; with `primary`, led by the row's own button, for the row's context menu.
-struct SuggestedSessionItems: View {
-    @Environment(Workspace.self) private var workspace
-    let item: Workspace.SuggestedSession
-    let primary: Bool
-    let openNote: (UUID) -> Void
-    var editTimes: (() -> Void)?
-    @Environment(\.openURL) private var openURL
-
-    var body: some View {
-        let today = workspace.isStudyToday(item.suggestion.date)
-        if let link = item.suggestion.link.flatMap(OnlineLink.url) {
-            Button(.sessionsJoinOnline, systemImage: "video") { JoinOnlineButton.join(link, openURL) }
-            Divider()
-        }
-        if primary {
-            if today { Button(.sessionsOpenRoughNote) { Self.roughNote(item, workspace, openNote) } } else { Button(.sessionsMakeSession) { Self.make(item, workspace) } }
-        }
-        if today { Button(.sessionsMakeSessionOnly) { Self.make(item, workspace) } }
-        Button(.sessionsRecord) { record() }.disabled(workspace.recorder.isActive)
-        Divider()
-        // An absence known ahead makes the session, like 휴강 does, so it has something to hang on.
-        Button(.sessionsMarkAbsent) { mark(.absent) }
-        Button(.sessionsMarkExcused) { mark(.excused) }
-        Divider()
-        Button(.sessionsCancelled) { Self.make(item, workspace, cancelled: true) }
-        if let editTimes {
-            Divider()
-            Button(.sessionsClassTimesChangeEllipsis, action: editTimes)
-        }
-    }
-
-    func mark(_ state: AttendanceState) {
-        if let s = Self.make(item, workspace) { workspace.run(AttendanceSet(course: item.courseId, session: s.id, state: state)) }
-    }
-
-    @discardableResult
-    static func make(_ item: Workspace.SuggestedSession, _ workspace: Workspace, cancelled: Bool = false) -> Session? {
-        workspace.createSession(at: item.suggestion.date, cancelled: cancelled, in: item.courseId)
-    }
-
-    static func roughNote(_ item: Workspace.SuggestedSession, _ workspace: Workspace, _ openNote: (UUID) -> Void) {
-        if let s = make(item, workspace), let id = workspace.note(.rough, of: s.id, in: item.courseId) { openNote(id) }
-    }
-
-    func record() { Self.record(item, workspace) }
-
-    static func record(_ item: Workspace.SuggestedSession, _ workspace: Workspace) {
-        if let s = make(item, workspace) { workspace.record(s.id, in: item.courseId) }
     }
 }
 
@@ -460,7 +408,7 @@ struct SessionUnitsPicker: View {
         if !file.units.isEmpty && (!linked.isEmpty || !session.skipsReview) {
             SearchPicker(options: UnitTree.outline(file.units).map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) },
                          isSelected: { id in linked.contains { $0.id == id } },
-                         pick: { id in workspace.run(UnitLink(course: course.id, unit: id, sessions: [session.id], linked: !session.unitIds.contains(id))) },
+                         pick: { id in SessionMenuModel(workspace: workspace, courseId: course.id).toggleUnit(id, of: session) },
                          multiple: true, prompt: String(localized: .sessionsUnitsSearch), flexible: true) {
                 if separated {
                     inline(shown: shown, missing: missing)
@@ -596,7 +544,6 @@ struct SessionCard: View {
     let openNote: (UUID) -> Void
     @State private var playing: Recording?
     @State private var editing = false
-    @Environment(\.openURL) private var openURL
 
     var body: some View {
         let file = course.file
@@ -665,7 +612,7 @@ struct SessionCard: View {
     }
 
     @ViewBuilder func trailing(_ file: CourseFile, live: Bool, expected: Date) -> some View {
-        let recordings = model.recordings(of: session, in: file)
+        let recordings = model.menu.recordings(of: session)
         let recorder = model.workspace.recorder
         HStack(spacing: Theme.Space.s) {
             if recordings.contains(where: { $0.id == recorder.current }) {
@@ -698,7 +645,7 @@ struct SessionCard: View {
         return HStack(spacing: Theme.Space.s) {
             if let link = model.link(of: session, in: file) { JoinOnlineButton(url: link, prominent: true) }
             if !recorder.isActive {
-                Button(.sessionsRecord, systemImage: "record.circle") { model.record(session) }.buttonStyle(.pointing(.bordered))
+                Button(.sessionsRecord, systemImage: "record.circle") { model.menu.record(session) }.buttonStyle(.pointing(.bordered))
                     .help(Text(.sessionsRecordHelp))
             }
             Button(String(localized: session.roughNoteId == nil ? .sessionsRoughNote : .sessionsOpenRoughNote), systemImage: "doc.text") { open(.rough) }
@@ -707,37 +654,14 @@ struct SessionCard: View {
         .padding(.leading, ClassCard.tile + Theme.Space.l)
     }
 
-    @ViewBuilder var menuItems: some View {
-        let recordings = model.recordings(of: session, in: course.file)
-        let recorder = model.workspace.recorder
-        let attendance = model.attendance(of: session, in: course.file)
-        if let link = model.link(of: session, in: course.file), !session.isCancelled {
-            Button(.sessionsJoinOnline, systemImage: "video") { JoinOnlineButton.join(link, openURL) }
-            Divider()
+    var menuItems: some View {
+        SessionMenu(courseId: course.id, sessionId: session.id, openNote: openNote, play: { playing = $0 }, edit: { editing = true }) {
+            model.remove(session)
         }
-        Button(String(localized: session.roughNoteId == nil ? .sessionsMakeRoughNote : .sessionsOpenRoughNote)) { open(.rough) }
-        Button(String(localized: session.reviewNoteId == nil ? .sessionsMakeReviewNote : .sessionsOpenReviewNote)) { open(.review) }
-        Toggle(String(localized: .sessionsSkipsReview), isOn: Binding(get: { session.skipsReview }, set: { model.setSkipsReview($0, of: session) }))
-        // Also ahead of the class, for an absence known in advance; it counts toward the caps once the class starts.
-        if model.takesAttendance(session) {
-            Picker(String(localized: .sessionsAttendance), selection: Binding(get: { attendance }, set: { model.setAttendance($0, of: session) })) {
-                ForEach(AttendanceState.steps, id: \.value) { Text($0.label).tag($0.value) }
-            }
-        }
-        Divider()
-        Button(.sessionsRecord) { model.record(session) }.disabled(recorder.isActive)
-        ForEach(Array(recordings.enumerated()), id: \.element.id) { i, r in
-            Button(model.playLabel(i, r)) { playing = r }
-        }
-        Divider()
-        Button(.commonEditEllipsis) { editing = true }
-        Toggle(String(localized: .sessionsCancelled), isOn: Binding(get: { session.isCancelled }, set: { model.setCancelled($0, of: session) }))
-        Divider()
-        Button(.sessionsRemoveSessionEllipsis, role: .destructive) { model.remove(session) }
     }
 
     func open(_ kind: NoteKind) {
-        if let id = model.note(kind, of: session) { openNote(id) }
+        if let id = model.menu.note(kind, of: session) { openNote(id) }
     }
 }
 

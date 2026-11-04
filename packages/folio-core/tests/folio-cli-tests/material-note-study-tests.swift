@@ -347,4 +347,10 @@ struct MaterialNoteStudyTests {
             ReviewSkip(units: [.init(course: course, unit: Self.unit)])
         }
     }
+
+    @Test func reviewSkipWithTheTimeOpen() throws {
+        try h.expectSame(["review", "skip", "EC4207/매칭", "--start", "2026-10-28 20:00", "--end", "2026-10-28 20:05"], setup: [Self.addUnit]) { _ in
+            ReviewSkip(units: [.init(course: course, unit: Self.unit)], start: DateArg(argument: "2026-10-28 20:00")!.date, end: DateArg(argument: "2026-10-28 20:05")!.date)
+        }
+    }
 }

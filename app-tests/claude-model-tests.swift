@@ -88,4 +88,52 @@ struct ClaudeModelTests {
         model.apply(message: answer.id, index: 1, course: course, confirmed: true)
         #expect(workspace.course(graphTheory)?.file.exams.isEmpty == true)
     }
+
+    /// The note list and a unit's notes re-read on the revision, so an answer saved as a note must bump it like the new-note sheet does.
+    @Test func anAnswerSavedAsANoteOrAnAppliedNoteProposalShowsInTheNoteLists() throws {
+        let workspace = try fixtureWorkspace()
+        let model = ClaudeModel(workspace: workspace)
+        let course = try #require(workspace.course(graphTheory))
+        model.load(course)
+        var revision = workspace.notesRevision
+        #expect(model.createNote(title: "답변", body: "본문", course: course) != nil)
+        #expect(workspace.notesRevision > revision)
+
+        revision = workspace.notesRevision
+        let add = ActionProposal(command: NoteAdd.command, input: try JSONValue(NoteAdd(course: graphTheory, title: "제안 노트")))
+        var chat = Chat(device: workspace.device, at: .now)
+        let answer = ChatMessage(role: .assistant, text: "제안했습니다", at: .now, proposals: [add])
+        chat.messages = [answer]
+        model.replace(StoredDocument(new: chat))
+        model.select(chat.id)
+        model.apply(message: answer.id, index: 0, course: course, confirmed: false)
+        #expect(workspace.notesRevision > revision)
+    }
+
+    /// The card goes to the unit on screen, then the open note's unit, and only without either to the first unit.
+    @Test func aCardFromAnAnswerGoesToTheUnitInView() throws {
+        let workspace = try fixtureWorkspace()
+        let model = ClaudeModel(workspace: workspace)
+        let (first, second) = (UUID(), UUID())
+        workspace.run(UnitAdd(id: first, course: graphTheory, title: "그래프"))
+        workspace.run(UnitAdd(id: second, course: graphTheory, title: "매칭"))
+        let note = try #require(workspace.run(NoteAdd(course: graphTheory, title: "매칭 정리", kind: .topic, units: [second]))?.made)
+        let course = try #require(workspace.course(graphTheory))
+        model.load(course)
+        var chat = Chat(device: workspace.device, at: .now)
+        let answer = ChatMessage(role: .assistant, text: "답", at: .now)
+        chat.messages = [ChatMessage(role: .user, text: "매칭이란?", at: .now), answer]
+        model.replace(StoredDocument(new: chat))
+        model.select(chat.id)
+        let url = try #require(URL(string: "folio://action/card/\(answer.id)"))
+        func draftUnit(note: UUID?, unit: UUID?) -> UUID? {
+            model.cardDraft = nil
+            model.handle(url, course: course, openNote: note, openUnit: unit, insertIntoNote: { _ in }, showNote: { _ in })
+            return model.cardDraft?.unitId
+        }
+        #expect(draftUnit(note: nil, unit: second) == second)
+        #expect(draftUnit(note: note, unit: nil) == second)
+        #expect(draftUnit(note: nil, unit: nil) == first)
+        #expect(model.cardDraft?.prompt == "매칭이란?")
+    }
 }

@@ -189,15 +189,9 @@ final class SessionsModel {
         String(localized: .sessionsMinutesLeft(Int(end.timeIntervalSince(now) / 60) + 1))
     }
 
-    func recordings(of session: Session, in file: CourseFile) -> [Recording] { file.recordings.filter { $0.sessionId == session.id } }
-
-    func attendance(of session: Session, in file: CourseFile) -> AttendanceState {
-        file.attendance.first { $0.sessionId == session.id }?.state ?? .present
-    }
-
     /// Only a class missed or late: present is the rule and says nothing.
     func lateMark(_ session: Session, in file: CourseFile) -> StepToggle<AttendanceState>.Option? {
-        let attendance = attendance(of: session, in: file)
+        let attendance = menu.attendance(of: session)
         return session.isCancelled || attendance == .present ? nil : AttendanceState.steps.first { $0.value == attendance }
     }
 
@@ -232,31 +226,12 @@ final class SessionsModel {
         String(localized: count > 1 ? .sessionsRecordingCount(count) : .sessionsRecordingShort)
     }
 
-    func playLabel(_ index: Int, _ recording: Recording) -> String {
-        String(localized: .sessionsPlayRecording(index + 1, RecordingTime.label(recording.duration)))
-    }
-
     func playerTitle(_ session: Session, in file: CourseFile) -> String { "\(file.course.title) · \(file.title(of: session, calendar: calendar))" }
 
     // MARK: A session's actions
 
-    func takesAttendance(_ session: Session) -> Bool {
-        workspace.can(AttendanceSet(course: courseId, session: session.id, state: .absent))
-    }
-
-    func setAttendance(_ state: AttendanceState, of session: Session) {
-        workspace.run(AttendanceSet(course: courseId, session: session.id, state: state))
-    }
-
-    func setCancelled(_ cancelled: Bool, of session: Session) {
-        workspace.run(SessionSet(course: courseId, session: session.id, cancelled: .set(cancelled)))
-    }
-
-    func setSkipsReview(_ skips: Bool, of session: Session) { workspace.setSkipsReview(skips, of: session.id, in: courseId) }
-
-    func record(_ session: Session) { workspace.record(session.id, in: courseId) }
-
-    func note(_ kind: NoteKind, of session: Session) -> UUID? { workspace.note(kind, of: session.id, in: courseId) }
+    /// The menu every screen shows for a class; the page adds playing, editing and deleting to it.
+    var menu: SessionMenuModel { SessionMenuModel(workspace: workspace, courseId: courseId) }
 
     func remove(_ session: Session) {
         pending = workspace.ask(SessionRemove(course: courseId, sessions: [session.id]), button: .sessionsRemove)
