@@ -86,6 +86,44 @@ struct ActionTests {
         #expect(throws: ActionError.self) { try run(SessionSet(course: Self.graphTheory, session: id, end: .set(now))) }
     }
 
+    /// An absence known ahead makes its session in the same write, so a refused one leaves no session behind.
+    @Test func anAbsenceAheadMakesItsSessionOrNothing() throws {
+        let id = UUID()
+        try run(SessionAdd(id: id, course: Self.graphTheory, date: now, attendance: .absent))
+        #expect(try file().attendance.first { $0.sessionId == id }?.state == .absent)
+
+        let before = try file().sessions.count
+        #expect(throws: ActionError.self) {
+            try run(SessionAdd(course: Self.graphTheory, date: now.addingTimeInterval(86_400), cancelled: true, attendance: .absent))
+        }
+        #expect(try file().sessions.count == before)
+
+        // Present is the default and stored as nothing.
+        let present = UUID()
+        try run(SessionAdd(id: present, course: Self.graphTheory, date: now.addingTimeInterval(2 * 86_400), attendance: .present))
+        #expect(try !file().attendance.contains { $0.sessionId == present })
+    }
+
+    /// One way to skip: from a list nothing was open, so no time; from the review screen the time it was open is study.
+    @Test func aSkipCountsOnlyTheTimeTheUnitWasOpen() throws {
+        let a = UUID(), b = UUID()
+        let log = try ActionContext(gist: gist, device: device).store(Self.graphTheory).log
+        try run(ReviewSkip(units: [.init(course: Self.graphTheory, unit: a)]))
+        try run(ReviewSkip(units: [.init(course: Self.graphTheory, unit: b)], start: now.addingTimeInterval(-90), end: now))
+        let reviews = try log.readAll().events(ReviewEvent.self).map(\.event)
+        #expect(reviews.allSatisfy { $0.result == .skip })
+        #expect(Dictionary(uniqueKeysWithValues: reviews.map { ($0.unitId, $0.seconds) }) == [a: 0, b: 90])
+        #expect(try log.readAll().events(StudySessionEvent.self).map(\.event)
+            == [StudySessionEvent(courseId: Self.graphTheory, start: now.addingTimeInterval(-90), end: now, screen: "review")])
+
+        let both = [ReviewSkip.Target(course: Self.graphTheory, unit: a), .init(course: Self.graphTheory, unit: b)]
+        #expect(throws: ActionError.self) { try run(ReviewSkip(units: both, start: now, end: now)) }
+        #expect(throws: ActionError.self) { try run(ReviewSkip(units: [both[0]], start: now)) }
+        #expect(throws: ActionError.self) { try run(ReviewSkip(units: [both[0]], start: now, end: now.addingTimeInterval(-1))) }
+        #expect(throws: ActionError.self) { try run(ReviewRecord(course: Self.graphTheory, unit: a, result: .skip, start: now, end: now)) }
+        #expect(try log.readAll().events(ReviewEvent.self).count == 2)
+    }
+
     @Test func aClassTimeLinkIsTrimmedAndABlankOneIsNone() throws {
         try run(CourseSet(course: Self.graphTheory, [.schedule([
             ClassTime(weekday: 1, startMinute: 600, endMinute: 675, link: " "),

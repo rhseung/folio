@@ -159,6 +159,7 @@ enum GeneratedCommands {
               folio session add EC4207 --date \"2026-10-28 10:30\"
               folio session add EC4207 --date 2026-10-30 --cancelled --dry-run
               folio session add EC4207 --date \"2026-11-04 21:00\" --end \"2026-11-04 22:15\" --topic 보강 --link https://zoom.us/j/123 --dry-run
+              folio session add EC4207 --date \"2026-11-11 10:30\" --attendance absent --dry-run
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
@@ -168,6 +169,7 @@ enum GeneratedCommands {
         @Option(help: "주제. 회차 목록에서 제목으로 보인다") var topic: String = ""
         @Option(help: "온라인 수업 링크(Zoom 등)") var link: String?
         @Flag(help: "수업이 없던 날의 휴강으로") var cancelled = false
+        @Option(help: "출결. 결석이나 공결을 미리 알 때. 휴강과 함께 줄 수 없다") var attendance: AttendanceState?
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -180,7 +182,8 @@ enum GeneratedCommands {
                 end: end.map { $0.date },
                 topic: topic,
                 link: link,
-                cancelled: cancelled
+                cancelled: cancelled,
+                attendance: attendance
             )
             try perform(spec: action, g, ctx: ctx)
         }
