@@ -62,18 +62,35 @@ final class ReviewModel {
 
     func load(course: LoadedCourse, unit: FolioDomain.Unit) {
         notes = workspace.notes(for: unit, in: courseId)
-        let links = course.file.sessions.filter { unit.sessionIds.contains($0.id) }.sorted { $0.date < $1.date }
-            .flatMap(\.materials).uniqued(on: \.materialId)
-        let lectures = links.compactMap { link in
-            course.file.materials.first { $0.id == link.materialId && $0.path.lowercased().hasSuffix(".pdf") }.map { m in
-                Source(id: .lecture(m.id), title: (m.path as NSString).lastPathComponent, symbol: "doc.richtext", beside: true, page: link.firstPage)
-            }
+        let lectures = Self.lectures(of: unit, in: course.file).map { m, page in
+            Source(id: .lecture(m.id), title: (m.path as NSString).lastPathComponent, symbol: "doc.richtext", beside: true, page: page)
         }
         sources = notes.map { n in
             Source(id: .note(n.url), title: "\(n.meta.kind.label) · \(n.title)", symbol: n.meta.kind == .rough ? "pencil.line" : "doc.text", beside: n.meta.kind == .rough)
         } + lectures
         main = (sources.first { !$0.beside } ?? sources.first)?.id
         side = nil
+    }
+
+    /// The unit's PDFs as the units page lists them: its classes' files in class order, opening at the first class's
+    /// page range, then the files linked to the unit alone.
+    static func lectures(of unit: FolioDomain.Unit, in file: CourseFile) -> [(material: FolioDomain.Material, page: Int?)] {
+        let sessions = file.sessions
+        let items = file.materials(of: .unit(unit.id)).filter { $0.material.isPDF && $0.material.status != .ignored }.map { item in
+            let via = item.routes.compactMap { route -> Session? in
+                guard case .session(let id) = route else { return nil }
+                return sessions.first { $0.id == id }
+            }.first
+            return (material: item.material, session: via, page: via?.materials.first { $0.materialId == item.material.id }?.firstPage)
+        }
+        return items.sorted { a, b in
+            switch (a.session, b.session) {
+            case let (x?, y?) where x.id != y.id: Session.inOrder(x, y)
+            case (_?, nil): true
+            case (nil, _?): false
+            default: a.material.path.localizedStandardCompare(b.material.path) == .orderedAscending
+            }
+        }.map { ($0.material, $0.page) }
     }
 
     func isShown(_ source: Source) -> Bool { source.id == main || source.id == side }
