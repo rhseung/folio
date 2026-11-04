@@ -20,7 +20,9 @@ struct UnitsModelTests {
         model.openUnit = unit.id
         model.remove(unit)
         let pending = try #require(model.pending)
-        #expect(pending.question == "단원 '매칭'을(를) 지우고 회차와 시험 범위 연결을 풉니다." && pending.refusal == nil)
+        // The declaration's words, so the screen follows when the action's wording changes.
+        #expect(pending.question == workspace.confirmation(UnitRemove(course: graphTheory, unit: unit.id)) && pending.question.contains("'매칭'"))
+        #expect(pending.refusal == nil)
         #expect(try file(workspace).units.count == 1)
         pending.perform()
         #expect(try file(workspace).units.isEmpty && model.openUnit == nil)
