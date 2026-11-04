@@ -991,6 +991,17 @@
         }
       }
     },
+    "cleanup.plan.header.link": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결"
+          }
+        }
+      }
+    },
     "cleanup.plan.header.review": {
       "extractionState": "manual",
       "localizations": {
@@ -1031,6 +1042,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "건드리지 않을 GIST 기준 경로. 여러 번 줄 수 있다"
+          }
+        }
+      }
+    },
+    "cleanup.plan.link-exam": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험 %@"
+          }
+        }
+      }
+    },
+    "cleanup.plan.link-past-exam": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "족보"
+          }
+        }
+      }
+    },
+    "cleanup.plan.removals": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지울 빈 폴더"
           }
         }
       }
@@ -1101,6 +1145,17 @@
         }
       }
     },
+    "cleanup.reason.guessed-origin": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "직접 만든 것인지 추정"
+          }
+        }
+      }
+    },
     "cleanup.reason.guessed-week": {
       "extractionState": "manual",
       "localizations": {
@@ -1119,17 +1174,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이름 충돌"
-          }
-        }
-      }
-    },
-    "cleanup.reason.past-exam-name-kept": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "족보 이름 유지"
           }
         }
       }

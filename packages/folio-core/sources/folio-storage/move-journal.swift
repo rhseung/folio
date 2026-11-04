@@ -54,14 +54,14 @@ public enum MoveJournal {
             .compactMap { try? JSONFormat.decoder.decode(MoveRecord.self, from: Data($0)) }
     }
 
-    /// Runs `moves` in order and returns the batch ID for `undo`. Checks every source and target first,
-    /// so a stale plan fails before anything moves.
+    /// Runs `moves` in order, then removes `removals` if they are still empty, and returns the batch ID for `undo`.
+    /// Checks every source and target first, so a stale plan fails before anything moves.
     @discardableResult
-    public static func apply(_ moves: [PlannedMove], in gist: URL, device: DeviceID, now: Date) throws -> UUID {
+    public static func apply(_ moves: [PlannedMove], removing removals: [String] = [], in gist: URL, device: DeviceID, now: Date) throws -> UUID {
         let fm = FileManager.default
         // Lexical, since a target doesn't exist yet: `a/../../x` must not reach past the GIST folder.
         let root = gist.standardizedFileURL.path + "/"
-        for path in moves.flatMap({ [$0.from, $0.to] }) where !gist.appending(path: path).standardizedFileURL.path.hasPrefix(root) {
+        for path in moves.flatMap({ [$0.from, $0.to] }) + removals where !gist.appending(path: path).standardizedFileURL.path.hasPrefix(root) {
             throw Failure.outsideGIST(path)
         }
         for move in moves {
@@ -73,8 +73,17 @@ public enum MoveJournal {
             try writer.makeParents(of: move.to)
             try writer.move(move.from, to: move.to)
         }
-        try writer.removeEmptied(Set(moves.map { ($0.from as NSString).deletingLastPathComponent }))
+        for path in removals { try writer.removeFolderIfEmpty(path) }
+        try writer.removeEmptied(Set((moves.map(\.from) + removals).map { ($0 as NSString).deletingLastPathComponent }))
         return writer.batch
+    }
+
+    /// GIST-relative paths the journal shows were taken out of an `Exam Review` folder, where they are now.
+    public static func selfMadePaths(in gist: URL) throws -> Set<String> {
+        CleanupPlanner.selfMade(moves: try records(in: gist).compactMap { r in
+            guard r.op == .move, let from = r.from, let to = r.to else { return nil }
+            return (from, to)
+        })
     }
 
     /// Writes each course into `folder/.folio/course.json` under the same id, making the folders it needs. The caller

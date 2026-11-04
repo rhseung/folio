@@ -1,28 +1,25 @@
 @testable import FolioDomain
+import Foundation
 import Testing
 
 /// Cases taken from names in the real GIST folder.
 struct CleanupKeywordTests {
-    @Test(arguments: [
-        ("Mid-term-2022.pdf", nil, "2022 Midterm.pdf"),
-        ("final-term-2024.pdf", nil, "2024 Final.pdf"),
-        ("2023_final.pdf", nil, "2023 Final.pdf"),
-        ("Mid-term-Answers-2024.docx", nil, "2024 Midterm Solution.docx"),
-        ("2024 Midterm.pdf", "소순범", "2024 Midterm (소순범).pdf"),
-    ] as [(String, String?, String)])
-    func renamesPastExamsWithoutLoss(name: String, source: String?, expected: String) {
-        #expect(Keywords.pastExamName(name, source: source) == expected)
+    @Test func examFolderFromName() {
+        #expect(Keywords.examFolder(in: "quiz3 대비 정리.pdf") == "Quiz3")
+        #expect(Keywords.examFolder(in: "퀴즈 2 요약.pdf") == "Quiz2")
+        #expect(Keywords.examFolder(in: "01_ec3204_mid_mock.pdf") == "Midterm")
+        #expect(Keywords.examFolder(in: "기말 정리.pdf") == "Final")
+        #expect(Keywords.examFolder(in: "problems.pdf") == nil)
     }
 
-    @Test(arguments: [
-        "2024 일반화학 I_리자오지에_기말고사 출제발췌.pdf",  // professor name would be lost
-        "2023 기말 복기.pdf",
-        "Sample-Mid-Term.pdf",                           // no year
-        "final-sol.pdf",
-        "CG2023_final_2023.pdf",
-    ])
-    func keepsNamesThatWouldLoseInformation(name: String) {
-        #expect(Keywords.pastExamName(name, source: nil) == nil)
+    @Test(arguments: ["Quiz3 대비 정리.pdf", "컴파일러 핵심 요약.md", "01_EC3204_mid_mock.pdf", "컴파일러 압축본.pdf", "Cheat Sheet.pdf"])
+    func selfMadeNames(name: String) {
+        #expect(Keywords.looksSelfMade(name))
+    }
+
+    @Test(arguments: ["Guideline.pdf", "Exercise 1.pdf", "2024 Midterm.pdf", "exercise 1.png"])
+    func receivedNames(name: String) {
+        #expect(!Keywords.looksSelfMade(name))
     }
 
     @Test func assignmentNumbers() {
@@ -66,10 +63,79 @@ struct CleanupKeywordTests {
                 FolderTree(name: "Final-2023.pdf", content: .file(size: 1)),
             ])),
         ]))
-        var planner = CoursePlanner(course: course)
+        let other = FolderTree(name: "Exams", content: .folder([
+            FolderTree(name: "Past", content: .folder([FolderTree(name: "2023_final.pdf", content: .file(size: 1))])),
+        ]))
+        var planner = CoursePlanner(course: FolderTree(name: course.name, content: .folder(course.children + [other])))
         let moves = planner.plan()
-        #expect(Set(moves.map(\.to)) == ["Exams/Past/2023 Final.pdf", "Exams/Past/2023 Final (2).pdf"])
+        #expect(Set(moves.map(\.to)) == ["Inherited/2023_final.pdf", "Inherited/2023_final (2).pdf", "Inherited/Final-2023.pdf"])
         #expect(moves.contains { $0.review == .nameCollision })
+    }
+
+    /// Past exams keep their names in `Inherited`; a source folder moves whole and only loose files are marked.
+    @Test func pastExamsGoToInherited() {
+        let course = FolderTree(name: "GS1211 일반화학실험", content: .folder([
+            FolderTree(name: "Exams", content: .folder([
+                FolderTree(name: "Past", content: .folder([
+                    FolderTree(name: "관훈 선배 리포트", content: .folder([FolderTree(name: "Lab1.pdf", content: .file(size: 1))])),
+                    FolderTree(name: "mid-sol.pdf", content: .file(size: 1)),
+                ])),
+            ])),
+            FolderTree(name: "족보 (소순범)", content: .folder([FolderTree(name: "2024 중간.pdf", content: .file(size: 1))])),
+        ]))
+        var planner = CoursePlanner(course: course)
+        let moves = Dictionary(uniqueKeysWithValues: planner.plan().map { ($0.from, $0) })
+        #expect(moves["Exams/Past/관훈 선배 리포트"].map { ($0.to, $0.kind, $0.review) }! == ("Inherited/관훈 선배 리포트", nil, nil))
+        #expect(moves["Exams/Past/mid-sol.pdf"].map { ($0.to, $0.kind) }! == ("Inherited/mid-sol.pdf", .pastExam))
+        #expect(moves["족보 (소순범)/2024 중간.pdf"].map { ($0.to, $0.kind) }! == ("Inherited/소순범/2024 중간.pdf", .pastExam))
+    }
+
+    /// Where the journal says files came from `Exam Review`, `Exercises` is mixed: those go to Study for sure, the rest
+    /// only as a suggestion. An `Exercises` with no such history is the professor's and stays.
+    @Test func selfMadeFilesLeaveExercises() {
+        let file = { (name: String) in FolderTree(name: name, content: .file(size: 1)) }
+        let mixed = FolderTree(name: "GS2004 선형대수학", content: .folder([
+            FolderTree(name: "Exercises", content: .folder([file("Proofs.pdf"), file("Proofs.tex"), file("exercise 1.png")])),
+        ]))
+        var planner = CoursePlanner(course: mixed, selfMade: ["Exercises/Proofs.pdf", "Exercises/Proofs.tex"])
+        let moves = Dictionary(uniqueKeysWithValues: planner.plan().map { ($0.from, $0) })
+        #expect(moves["Exercises/Proofs.pdf"].map { ($0.to, $0.exam, $0.review) }! == ("Study/Proofs.pdf", "Midterm", nil))
+        #expect(moves["Exercises/exercise 1.png"].map { ($0.to, $0.exam, $0.review) }! == ("Study/exercise 1.png", nil, .guessedOrigin))
+
+        var clean = CoursePlanner(course: mixed)
+        #expect(clean.plan().isEmpty)
+    }
+
+    /// A new exam names its folder from its title, so the guessed `Midterm` must become the folder of the exam it means,
+    /// or no link at all when the course has no such exam.
+    @Test func examLinksNameExamsThatExist() {
+        let file = { (name: String) in FolderTree(name: name, content: .file(size: 1)) }
+        let course = FolderTree(name: "GS2004 선형대수학", content: .folder([
+            FolderTree(name: "Exercises", content: .folder([file("Proofs.pdf"), file("Final Mock.pdf")])),
+            file("Guideline.pdf"),
+        ]))
+        let selfMade: Set<String> = ["Exercises/Proofs.pdf", "Exercises/Final Mock.pdf"]
+        var midterm = Exam(device: UUID(), at: .now, title: "중간고사")
+        midterm.folder = "중간고사"
+        var titled = CoursePlanner(course: course, selfMade: selfMade, exams: [midterm])
+        let moves = Dictionary(uniqueKeysWithValues: titled.plan().map { ($0.from, $0) })
+        #expect(moves["Exercises/Proofs.pdf"]?.exam == "중간고사")
+        #expect(moves["Exercises/Final Mock.pdf"]?.exam == nil && moves["Exercises/Final Mock.pdf"]?.review == nil)
+        #expect(moves["Guideline.pdf"]?.to == "Exams/중간고사/Guideline.pdf" && moves["Guideline.pdf"]?.review == .guessedExam)
+
+        var none = CoursePlanner(course: course, selfMade: selfMade, exams: [])
+        #expect(none.plan().allSatisfy { $0.exam == nil })
+    }
+
+    @Test func journalFollowsSelfMadeFiles() {
+        let moves: [(from: String, to: String)] = [
+            ("c/Exam Review/a.pdf", "c/Exercises/a.pdf"),
+            ("c/Exam Review/b.pdf", "c/Exercises/b.pdf"),
+            ("c/Exercises/b.pdf", "c/Exercises/old/b.pdf"),
+            ("c/Exercises/old", "c/Archive/old"),
+            ("c/Lectures/x.pdf", "c/Exercises/x.pdf"),
+        ]
+        #expect(CleanupPlanner.selfMade(moves: moves) == ["c/Exercises/a.pdf", "c/Archive/old/b.pdf"])
     }
 
     /// An exam names its folder from its title, so a folder under Exams stays; only a loose file goes to an exam.
@@ -83,6 +149,22 @@ struct CleanupKeywordTests {
         ]))
         var planner = CoursePlanner(course: course)
         #expect(planner.plan().map(\.from) == ["Exams/Seating.pdf"])
+        #expect(planner.removals == ["Exams/Quiz 3"])
+    }
+
+    /// An exam folder keeps the exam's record; a summary made for it goes to Study, linked, as a suggestion.
+    @Test func selfMadeFilesLeaveExamFolders() {
+        let course = FolderTree(name: "EC4207 그래프 이론", content: .folder([
+            FolderTree(name: "Exams", content: .folder([
+                FolderTree(name: "Quiz3", content: .folder([
+                    FolderTree(name: "Quiz3 대비 정리.pdf", content: .file(size: 1)), FolderTree(name: "Guideline.pdf", content: .file(size: 1)),
+                ])),
+            ])),
+        ]))
+        var planner = CoursePlanner(course: course)
+        let moves = planner.plan()
+        #expect(moves.map { [$0.from, $0.to, $0.exam ?? ""] } == [["Exams/Quiz3/Quiz3 대비 정리.pdf", "Study/Quiz3 대비 정리.pdf", "Quiz3"]])
+        #expect(moves.first?.review == .guessedOrigin)
     }
 
     /// 2026-2 일반화학실험: experiments counted in schedule order; the leading `2_`/`3_` are not lab numbers.

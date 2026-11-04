@@ -9,7 +9,8 @@ public struct LayoutIssue: Hashable, Sendable {
         case invalidAssignmentFolder
         case invalidExamFolder
         case invalidLectureFileName
-        case invalidPastExamFileName
+        /// `Exams/Past` or `Notes/Exports`, from before files were split by origin. Cleanup empties them.
+        case legacyFolder
     }
 
     public var kind: Kind
@@ -84,11 +85,11 @@ public enum LayoutCheck {
                         issues.append(.init(.invalidExamFolder, itemPath))
                         continue
                     }
-                    if item.name == StandardLayout.pastExamsFolder {
-                        for file in item.children where !(file.isFile && StandardLayout.isPastExamFileName(file.name)) {
-                            issues.append(.init(.invalidPastExamFileName, "\(itemPath)/\(file.name)"))
-                        }
-                    }
+                    if item.name == StandardLayout.legacyPastExamsFolder { issues.append(.init(.legacyFolder, itemPath)) }
+                }
+            case .notes:
+                if entry[child: StandardLayout.legacyNoteExportsFolder]?.isFile == false {
+                    issues.append(.init(.legacyFolder, "\(path)/\(StandardLayout.legacyNoteExportsFolder)"))
                 }
             default:
                 break

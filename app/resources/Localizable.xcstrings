@@ -4088,7 +4088,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "시험 폴더 Exams/%@도 만듭니다"
+            "value": "파일을 넣으면 시험 폴더 Exams/%@에 둡니다"
           }
         }
       }
@@ -5457,13 +5457,13 @@
         }
       }
     },
-    "material-role.exam-prep": {
+    "material-role.exam": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "시험 대비"
+            "value": "시험 기록"
           }
         }
       }
@@ -5475,6 +5475,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "연습 문제"
+          }
+        }
+      }
+    },
+    "material-role.inherited": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "물려받은 자료"
           }
         }
       }
@@ -5512,13 +5523,13 @@
         }
       }
     },
-    "material-role.past-exam": {
+    "material-role.study": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "족보"
+            "value": "공부 자료"
           }
         }
       }
@@ -10957,6 +10968,17 @@
         }
       }
     },
+    "review-reason.guessed-origin": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "직접 만든 것인지 추정"
+          }
+        }
+      }
+    },
     "review-reason.guessed-week": {
       "extractionState": "manual",
       "localizations": {
@@ -10975,17 +10997,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이름 충돌"
-          }
-        }
-      }
-    },
-    "review-reason.past-exam-name-kept": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "족보 이름 유지"
           }
         }
       }
@@ -16595,7 +16606,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "⌘B로 PDF를 만들어 Notes/Exports에 둡니다"
+            "value": "⌘B로 PDF를 만들어 Study에 둡니다"
           }
         }
       }

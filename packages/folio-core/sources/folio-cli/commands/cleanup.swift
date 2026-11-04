@@ -15,12 +15,18 @@ struct CleanupCommand: ParsableCommand {
         .guessedNumber: String(localized: .cleanupReasonGuessedNumber),
         .unknownNumber: String(localized: .cleanupReasonUnknownNumber),
         .guessedExam: String(localized: .cleanupReasonGuessedExam),
-        .pastExamNameKept: String(localized: .cleanupReasonPastExamNameKept),
+        .guessedOrigin: String(localized: .cleanupReasonGuessedOrigin),
         .guessedFolder: String(localized: .cleanupReasonGuessedFolder),
         .unknownFile: String(localized: .cleanupReasonUnknownFile),
         .unknownFolder: String(localized: .cleanupReasonUnknownFolder),
         .nameCollision: String(localized: .cleanupReasonNameCollision),
     ]
+
+    /// What the move writes to course.json: the exam it links to, and the past exam mark.
+    static func link(_ m: PlannedMove) -> String {
+        ((m.exam.map { [String(localized: .cleanupPlanLinkExam($0))] } ?? []) + (m.kind == .pastExam ? [String(localized: .cleanupPlanLinkPastExam)] : []))
+            .joined(separator: ", ")
+    }
 
     struct Plan: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .cleanupPlanAbstract), discussion: String(localized: .cleanupPlanDiscussion))
@@ -30,7 +36,7 @@ struct CleanupCommand: ParsableCommand {
 
         func run() throws {
             let gist = try CLI.gist(g)
-            let plan = CleanupPlanner.plan(try gist.readTree(), skip: Set(skip))
+            let plan = try gist.cleanupPlan(skip: Set(skip))
             if let out { try StoredDocument(new: plan).write(to: URL(filePath: absolute(out))) }
             if g.json { return try printJSON(plan) }
             say(String(localized: .cleanupPlanTitle).styled(.bold) + "  " + String(localized: .cleanupPlanSummary(plan.moves.count, plan.moves.filter { $0.review != nil }.count)).styled(.dim))
@@ -43,11 +49,17 @@ struct CleanupCommand: ParsableCommand {
                 }
                 say()
                 say(group.styled(.bold))
-                var t = Table(header: [String(localized: .cleanupPlanHeaderFrom), String(localized: .cleanupPlanHeaderTo), String(localized: .cleanupPlanHeaderReview)], shrink: [0, 1])
+                var t = Table(header: [String(localized: .cleanupPlanHeaderFrom), String(localized: .cleanupPlanHeaderTo),
+                                       String(localized: .cleanupPlanHeaderLink), String(localized: .cleanupPlanHeaderReview)], shrink: [0, 1])
                 for m in groups[group]!.sorted(by: { $0.from < $1.from }) {
-                    t.rows.append([rel(m.from), rel(m.to), m.review.map { CleanupCommand.reasonText[$0]!.styled(.yellow) } ?? ""])
+                    t.rows.append([rel(m.from), rel(m.to), CleanupCommand.link(m), m.review.map { CleanupCommand.reasonText[$0]!.styled(.yellow) } ?? ""])
                 }
                 t.print()
+            }
+            if !plan.removals.isEmpty {
+                say()
+                say(String(localized: .cleanupPlanRemovals).styled(.bold))
+                for r in plan.removals { say("  \(r)") }
             }
             if !plan.skipped.isEmpty {
                 say()
@@ -76,7 +88,7 @@ struct CleanupCommand: ParsableCommand {
             }
             var options = g
             options.yes = true
-            let result = try perform(spec: CleanupApply(moves: moves), options, ctx: ctx)
+            let result = try perform(spec: CleanupApply(moves: moves, removals: file.removals), options, ctx: ctx)
             if !g.json, let batch = result.made { say(String(localized: .cleanupApplyUndoHint(batch.uuidString)).styled(.dim)) }
         }
     }

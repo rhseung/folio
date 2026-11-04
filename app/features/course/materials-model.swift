@@ -227,7 +227,7 @@ final class MaterialsModel {
         let labs = [String(prefix.dropLast()): file.labNumbers]
         let labWeeks = [String(prefix.dropLast()): file.labWeeks]
         let moves = await Task.detached {
-            (try? GISTStore(url: url).readTree()).map { CleanupPlanner.plan($0, labs: labs, labWeeks: labWeeks).moves } ?? []
+            (try? GISTStore(url: url).cleanupPlan(labs: labs, labWeeks: labWeeks))?.moves ?? []
         }.value
         return moves.filter { $0.from.hasPrefix(prefix) }
     }
@@ -308,7 +308,7 @@ final class ImportPlaceModel {
         var places: [String]
         var isLecture: Bool { places == [CourseFolder.lectures.rawValue] }
         /// Assignments and exams name which one even when there is one, so the choice reads plainly.
-        var perItem: Bool { places[0].contains("/") && places != ["\(CourseFolder.exams.rawValue)/\(StandardLayout.pastExamsFolder)"] }
+        var perItem: Bool { places[0].contains("/") }
     }
 
     /// Places by kind label, in the order first met: `과제` → `Assignments/HW00`, `Assignments/HW01`, …

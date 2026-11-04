@@ -36,8 +36,24 @@ extension Transcript: StoredModel {
 }
 
 extension CourseFile: StoredModel {
-    public static let schemaVersion = 4
-    public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [1: dropSessionKind, 2: dropSessionIndex, 3: dropExamKind]
+    public static let schemaVersion = 5
+    public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [
+        1: dropSessionKind, 2: dropSessionIndex, 3: dropExamKind, 4: splitRolesByOrigin,
+    ]
+
+    /// v4 roles mixed origin and purpose: `pastExam` for `Exams/Past`, `examPrep` for anything in an exam folder. Past
+    /// exams now sit in `Inherited` and an exam folder holds only that exam's record, so the roles follow the folders.
+    /// Files stay where they are; the cleanup plan moves them and marks past exam papers, which a user can review.
+    static func splitRolesByOrigin(_ raw: inout JSONValue) throws {
+        guard case .array(var materials)? = raw["materials"] else { return }
+        for i in materials.indices {
+            if case .string(let role)? = materials[i]["role"], let renamed = MaterialRole.legacy[role] {
+                materials[i]["role"] = .string(renamed.rawValue)
+            }
+            if materials[i]["examIds"] == nil { materials[i]["examIds"] = .array([]) }
+        }
+        raw["materials"] = .array(materials)
+    }
 
     /// v3 exams had a kind (midterm, final, quiz, other) the prep folder was named from. The exam now keeps the folder
     /// it had, so its files stay put. An `other` exam had none; it gets one from its title, as a new exam would, after
@@ -52,7 +68,7 @@ extension CourseFile: StoredModel {
             if kind == .string("quiz") { quizzes += 1 }
             let title = exams[i]["title"].flatMap { if case .string(let t) = $0 { t } else { nil } } ?? ""
             // The v3 rule: a title that is a standard folder name names the folder, else the kind does.
-            let named = StandardLayout.isExamFolderName(title) && title != StandardLayout.pastExamsFolder
+            let named = StandardLayout.isExamFolderName(title)
             let byKind: String? = switch kind {
             case .string("midterm"): StandardLayout.midtermFolder
             case .string("final"): StandardLayout.finalFolder

@@ -40,6 +40,18 @@ extension CourseFile {
         if linked { materials[m].unitIds.append(unit) }
     }
 
+    public mutating func setMaterial(_ material: UUID, exam: UUID, linked: Bool) {
+        guard let m = materials.firstIndex(where: { $0.id == material }) else { return }
+        materials[m].examIds.removeAll { $0 == exam }
+        if linked { materials[m].examIds.append(exam) }
+    }
+
+    /// What an exam gathers: the files in its own folder, then the ones linked to it from elsewhere (`Study`, `Inherited`).
+    public func materials(for exam: Exam) -> [Material] {
+        let folder = MaterialIntake.folder(of: exam).map { $0 + "/" }
+        return materials.filter { m in folder.map { m.path.hasPrefix($0) } == true || m.examIds.contains(exam.id) }
+    }
+
     public func sessionLinks(of material: UUID) -> [(session: Session, link: SessionMaterial)] {
         sessions.sorted(by: Session.inOrder)
             .compactMap { s in s.materials.first { $0.materialId == material }.map { (s, $0) } }
@@ -74,6 +86,7 @@ extension CourseFile {
             if materials[m].id == id {
                 materials[m].sessionIds += dup.sessionIds.filter { !materials[m].sessionIds.contains($0) }
                 materials[m].unitIds += dup.unitIds.filter { !materials[m].unitIds.contains($0) }
+                materials[m].examIds += dup.examIds.filter { !materials[m].examIds.contains($0) }
                 materials[m].kind = materials[m].kind ?? dup.kind
             }
         }

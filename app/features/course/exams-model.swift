@@ -62,12 +62,13 @@ final class ExamsModel {
         if let folder = folder(of: exam) { workspace.importFiles(urls, into: folder, course: course.id) }
     }
 
-    func fileCount(_ folder: String) -> Int {
-        course.file.materials.filter { $0.path.hasPrefix(folder + "/") && $0.status != .ignored }.count
+    /// The exam folder's files and the ones linked to the exam from `Study` and `Inherited`.
+    func fileCount(_ exam: Exam) -> Int {
+        course.file.materials(for: exam).filter { $0.status != .ignored }.count
     }
 
-    func folderDetail(_ folder: String) -> String {
-        let count = fileCount(folder)
+    func folderDetail(_ exam: Exam) -> String {
+        let count = fileCount(exam)
         return String(localized: count == 0 ? .examsFolderDropHint : .examsFileCount(count))
     }
 
@@ -116,7 +117,7 @@ final class ExamsModel {
     func pastFacts(_ exam: Exam) -> String {
         let scoped = exam.scopeUnitIds.count
         let checked = exam.plan.filter { done.contains($0.id) }.count
-        let files = folder(of: exam).map { fileCount($0) } ?? 0
+        let files = fileCount(exam)
         let facts = (component(of: exam).map { [$0] } ?? [])
             + (scoped > 0 ? [String(localized: .examsScopeUnits(scoped))] : exam.scopeText.isEmpty ? [] : [exam.scopeText])
             + (exam.location.isEmpty ? [] : [exam.location])

@@ -42,11 +42,6 @@ struct StandardLayoutTests {
         #expect(StandardLayout.lectureWeek("10_SDT.pdf") == 10)
         #expect(StandardLayout.lectureWeek("03 Syntax.pdf") == nil)
 
-        #expect(StandardLayout.isPastExamFileName("2024 Midterm (소순범).pdf"))
-        #expect(StandardLayout.isPastExamFileName("2024 Midterm (소순범) Solution.pdf"))
-        #expect(StandardLayout.isPastExamFileName("2025 Final.pdf"))
-        #expect(!StandardLayout.isPastExamFileName("2024 중간.pdf"))
-
         #expect(StandardLayout.isExamFolderName("Quiz2"))
         #expect(!StandardLayout.isExamFolderName("Exam Review"))
 
@@ -60,8 +55,10 @@ struct StandardLayoutTests {
         #expect(MaterialRole(path: "Lectures/05_Matchings.pdf") == .lecture)
         #expect(MaterialRole(path: "Assignments/HW03/26h3.pdf") == .assignment)
         #expect(MaterialRole(path: "Assignments/Lab01/Lab1 Manual.pdf") == .lab)
-        #expect(MaterialRole(path: "Exams/Past/2025 Final.pdf") == .pastExam)
-        #expect(MaterialRole(path: "Exams/Midterm/Problems.pdf") == .examPrep)
+        #expect(MaterialRole(path: "Inherited/2025 Final.pdf") == .inherited)
+        #expect(MaterialRole(path: "Inherited/소순범/2024 Midterm.pdf") == .inherited)
+        #expect(MaterialRole(path: "Exams/Midterm/Guideline.pdf") == .exam)
+        #expect(MaterialRole(path: "Study/Problems.pdf") == .study)
         #expect(MaterialRole(path: "Syllabus.pdf") == nil)
         #expect(MaterialRole(path: "Assignments/stray.pdf") == nil)
         #expect(MaterialRole(path: "Notes/a.md") == nil)

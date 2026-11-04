@@ -15,6 +15,8 @@ struct MaterialNoteStudyTests {
     static let set = UUID(uuidString: "A0000000-0000-4000-8000-0000000000D1")!
     static let addSet = ["problem-set", "add", "EC4207", "Exercise 1", "--problems", "1", "3a", "--id", set.uuidString]
     static let noteID = UUID(uuidString: "6f1d2c4e-8a3b-4f5e-9c1d-2b7a8e0f3d41")!
+    static let exam = UUID(uuidString: "A0000000-0000-4000-8000-0000000000E7")!
+    static let addExam = ["exam", "add", "EC4207", "Midterm", "--id", exam.uuidString]
 
     func material(_ gist: GISTStore, _ name: String) throws -> UUID {
         try #require(try h.file(gist).materials.first { $0.path.hasSuffix(name) }).id
@@ -59,6 +61,12 @@ struct MaterialNoteStudyTests {
     @Test func linkUnit() throws {
         try h.expectSame(["material", "link-unit", "EC4207/05_Matchings.pdf", "매칭"], setup: [Self.track, Self.addUnit]) { gist in
             MaterialLinkUnit(course: course, material: try material(gist, "05_Matchings.pdf"), unit: Self.unit, linked: true)
+        }
+    }
+
+    @Test func linkExam() throws {
+        try h.expectSame(["material", "link-exam", "EC4207/Problems.pdf", "Midterm"], setup: [Self.track, Self.addExam]) { gist in
+            MaterialLinkExam(course: course, material: try material(gist, "Study/Problems.pdf"), exam: Self.exam, linked: true)
         }
     }
 
@@ -107,10 +115,10 @@ struct MaterialNoteStudyTests {
     @Test func writeTakesTheHashShowReadsNow() throws {
         let gist = try Harness.fixtureCopy()
         _ = h.cli(Self.track, gist: gist)
-        let tex = gist.appending(path: "2026-3/EC4207 그래프 이론/Exams/Midterm/Problems.tex")
+        let tex = gist.appending(path: "2026-3/EC4207 그래프 이론/Study/Problems.tex")
         try "% 다른 기기에서 고침\n".write(to: tex, atomically: true, encoding: .utf8)
         let shown = try #require(try JSONSerialization.jsonObject(with: Data(h.cli(["material", "show", "EC4207/Problems.tex", "--json"], gist: gist).out.utf8)) as? [String: Any])
-        #expect(shown["text"] as? String == "% 다른 기기에서 고침\n" && shown["path"] as? String == "Exams/Midterm/Problems.tex")
+        #expect(shown["text"] as? String == "% 다른 기기에서 고침\n" && shown["path"] as? String == "Study/Problems.tex")
         let hash = try #require(shown["contentHash"] as? String)
         let file = try scratch("Problems.tex", "x")
         #expect(h.cli(["material", "write", "EC4207/Problems.tex", "--file", file, "--expect", hash], gist: gist).code == 0)
@@ -169,6 +177,45 @@ struct MaterialNoteStudyTests {
         let backup = FileManager.default.temporaryDirectory.appending(path: "folio-cli-backup-\(UUID().uuidString)").path
         try h.expectSame(["cleanup", "apply", "--plan", try planFile(), "--backup", backup, "--yes"]) { _ in CleanupApply(moves: [Self.move]) }
         #expect(try FileManager.default.contentsOfDirectory(atPath: backup).count == 1)
+    }
+
+    /// A moved file keeps its material, which then gets the exam link and past exam mark the plan carried.
+    @Test func cleanupApplyLinksMovedFiles() throws {
+        let gist = try Harness.fixtureCopy()
+        _ = h.cli(Self.track, gist: gist)
+        _ = h.cli(Self.addExam, gist: gist)
+        let store = GISTStore(url: gist)
+        let before = try material(store, "Exercises/Exercise 1.pdf")
+        let ec = "2026-3/EC4207 그래프 이론"
+        try h.direct(CleanupApply(moves: [
+            PlannedMove(from: "\(ec)/Exercises/Exercise 1.pdf", to: "\(ec)/Study/Exercise 1.pdf", exam: "Midterm"),
+            PlannedMove(from: "\(ec)/Exams/Midterm/Seating.pdf", to: "\(ec)/Inherited/Seating.pdf", kind: .pastExam),
+        ]), gist: gist)
+        let f = try h.file(store)
+        let study = try #require(f.materials.first { $0.path == "Study/Exercise 1.pdf" })
+        #expect(study.id == before && study.examIds == [Self.exam] && study.role == .study)
+        #expect(f.materials.first { $0.path == "Inherited/Seating.pdf" }.map { ($0.kind, $0.role) }! == (.pastExam, .inherited))
+        #expect(f.materials(for: try #require(f.exams.first { $0.id == Self.exam })).map(\.path).contains("Study/Exercise 1.pdf"))
+    }
+
+    @Test func cleanupApplyNotesLinksToMissingExams() throws {
+        let gist = try Harness.fixtureCopy()
+        _ = h.cli(Self.track, gist: gist)
+        let ec = "2026-3/EC4207 그래프 이론"
+        let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
+        try CleanupApply(moves: [PlannedMove(from: "\(ec)/Exercises/Exercise 1.pdf", to: "\(ec)/Study/Exercise 1.pdf", exam: "Quiz9")]).run(ctx)
+        #expect(ctx.notes.contains { $0.contains("Study/Exercise 1.pdf") && $0.contains("Quiz9") })
+        #expect(try h.file(GISTStore(url: gist)).materials.first { $0.path == "Study/Exercise 1.pdf" }?.examIds == [])
+    }
+
+    @Test func cleanupRemovesEmptyExamFolders() throws {
+        let gist = try Harness.fixtureCopy()
+        let empty = "2026-3/EC4207 그래프 이론/Exams/Quiz1"
+        try FileManager.default.createDirectory(at: gist.appending(path: empty), withIntermediateDirectories: true)
+        try h.direct(CleanupApply(moves: [], removals: [empty]), gist: gist)
+        #expect(!FileManager.default.fileExists(atPath: gist.appending(path: empty).path))
+        try h.direct(CleanupUndo(batch: try MoveJournal.records(in: gist).first!.batch), gist: gist)
+        #expect(FileManager.default.fileExists(atPath: gist.appending(path: empty).path))
     }
 
     @Test func cleanupUndo() throws {

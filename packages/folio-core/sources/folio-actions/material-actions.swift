@@ -22,6 +22,29 @@ public struct MaterialLinkSession {
     }
 }
 
+@Action("material link-exam", "자료를 시험에 연결하거나 떼기. 시험 폴더 밖의 자료(Study, Inherited)를 그 시험에 모은다",
+        done: "자료 '{material}'과(와) 시험 '{exam}'의 연결을 바꿨습니다",
+        examples: ["folio material link-exam EC4207/Study/Problems.pdf 중간고사", "folio material link-exam EC4207/Study/Problems.pdf 중간고사 --off"],
+        phrases: ["자료 시험 연결", "시험 대비 자료 연결", "족보 시험에 붙이기"])
+public struct MaterialLinkExam {
+    /// 과목
+    @Arg var course: Course.ID
+    /// 자료
+    @Arg var material: Material.ID
+    /// 같은 과목의 시험
+    @Arg var exam: Exam.ID
+    /// 연결 떼기
+    @Off("off") var linked = true
+
+    public func run(_ ctx: ActionContext) throws {
+        try ctx.edit(course) { f in
+            _ = try index(material, in: f.materials, .valueMaterial)
+            _ = try index(exam, in: f.exams, .valueExam)
+            f.setMaterial(material, exam: exam, linked: linked)
+        }
+    }
+}
+
 @Action("material link-unit", "자료를 단원에 연결하거나 떼기", done: "자료 '{material}'과(와) 단원 '{unit}'의 연결을 바꿨습니다",
         examples: ["folio material link-unit EC4207/05_Matchings.pdf 매칭", "folio material link-unit EC4207/05_Matchings.pdf 매칭 --off"],
         phrases: ["자료 단원 연결"])
@@ -232,14 +255,43 @@ public struct MaterialTrash {
 @Action("cleanup apply", "검토한 계획대로 옮기기. 먼저 GIST 폴더 전체를 백업한다", effect: .moves, confirm: "파일과 폴더 {moves}을(를) 옮깁니다.", done: "파일 {moves}을(를) 옮겼습니다", phrases: ["정리 실행"], cli: .manual)
 public struct CleanupApply {
     var moves: [PlannedMove]
+    var removals: [String] = []
     var course: Course.ID?
 
     public func run(_ ctx: ActionContext) throws {
         for m in moves { ctx.record(Change(.moved, m.from, to: m.to)) }
+        for r in removals { ctx.record(Change(.removed, r + "/")) }
         guard !ctx.dryRun else { return }
-        ctx.made(try MoveJournal.apply(moves, in: ctx.gist.url, device: ctx.device, now: ctx.now))
+        ctx.made(try MoveJournal.apply(moves, removing: removals, in: ctx.gist.url, device: ctx.device, now: ctx.now))
         ctx.invalidate()
         if let course { try MaterialTrack(course: course).run(ctx) }
+        try annotate(ctx)
+    }
+
+    /// Writes each moved file's exam link and kind. Tracking runs first so the file's material already has its new
+    /// path (and keeps its id when it was tracked before). Undoing the moves leaves these on the materials.
+    func annotate(_ ctx: ActionContext) throws {
+        let annotated = moves.filter { $0.exam != nil || $0.kind != nil }
+        guard !annotated.isEmpty else { return }
+        for store in try ctx.gist.courseStores() {
+            let base = ctx.relative(store.url) + "/"
+            let mine = annotated.filter { $0.to.hasPrefix(base) }
+            guard !mine.isEmpty, let id = try? store.load().model.course.id else { continue }
+            if id != course { try MaterialTrack(course: id).run(ctx) }
+            try ctx.edit(id) { f in
+                for move in mine {
+                    guard let m = f.materials.firstIndex(where: { $0.path == String(move.to.dropFirst(base.count)) }) else { continue }
+                    if let kind = move.kind { f.materials[m].kind = kind }
+                    guard let folder = move.exam else { continue }
+                    // The plan read the exams earlier; one renamed or deleted since can't be linked.
+                    if let exam = f.exams.first(where: { $0.folder == folder }) {
+                        f.setMaterial(f.materials[m].id, exam: exam.id, linked: true)
+                    } else {
+                        ctx.note(String(localized: .noteCleanupUnlinked(move.to, folder)))
+                    }
+                }
+            }
+        }
     }
 }
 

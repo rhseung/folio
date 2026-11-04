@@ -44,13 +44,24 @@ public struct SemesterFolder: Hashable, Sendable {
     }
 }
 
+/// Folders are split by who made what is in them, never by what it is for: which exam or unit a file serves is a
+/// link in `course.json`, so a file made for two exams still has one place.
 public enum CourseFolder: String, CaseIterable, Sendable {
+    // Received
     case syllabus = "Syllabus"
     case lectures = "Lectures"
+    /// Practice the professor gave out. Nothing self-made goes here, or the folder no longer tells its files apart.
     case exercises = "Exercises"
     case textbooks = "Textbooks"
+    /// From seniors and earlier terms, under original names, loose or in a folder per source. Whether a file is a past
+    /// exam paper is its `MaterialKind`, not its name.
+    case inherited = "Inherited"
+    // Graded work: one folder per assignment or exam, holding only that item's own record
     case assignments = "Assignments"
     case exams = "Exams"
+    // Self-made
+    /// Problem sets, mock exams, summaries and their `.tex` sources, and notes exported to PDF.
+    case study = "Study"
     case notes = "Notes"
     case ink = "Ink"
     /// Lecture recordings and their transcripts.
@@ -84,14 +95,16 @@ public enum StandardLayout {
     /// At the GIST root: `_Credited/<source>/<course>` for credited terms, named by where the credits came from
     /// (`영재고 AP`) because a year says little about them. The `_` keeps it apart from term folders.
     public static let creditedFolder = "_Credited"
-    public static let pastExamsFolder = "Past"
+    /// `Exams/Past` held past exams before `Inherited`. Cleanup empties it, and no new exam takes the name meanwhile.
+    public static let legacyPastExamsFolder = "Past"
     public static let quizFolderPrefix = "Quiz"
     /// What exam folders were called before an exam kept its own folder name; cleanup still sorts legacy material into them.
     public static let midtermFolder = "Midterm"
     public static let finalFolder = "Final"
-    /// Inside `Notes/`: files the notes embed, and notes exported to PDF.
+    /// Inside `Notes/`: files the notes embed.
     public static let noteAssetsFolder = "assets"
-    public static let noteExportsFolder = "Exports"
+    /// `Notes/Exports` held exported PDFs before `Study`. Cleanup empties it; until then its PDFs are not notes.
+    public static let legacyNoteExportsFolder = "Exports"
 
     // Inside `.folio/`
     public static let transcriptFile = "transcript.json"
@@ -147,14 +160,9 @@ public enum StandardLayout {
         name.wholeMatch(of: /(\d{2})(-\d+)?_.+/).flatMap { Int($0.1) }
     }
 
-    /// `<year> <Midterm|Final|Quiz> (<source>)`, optionally followed by ` Solution`.
-    public static func isPastExamFileName(_ name: String) -> Bool {
-        name.wholeMatch(of: /\d{4} (Midterm|Final|Quiz)( \(.+\))?( Solution)?\.[^.]+/) != nil
-    }
-
-    /// `Midterm`, `Final`, `Quiz1`, ... (one folder per Exam), plus `Past`.
+    /// `Midterm`, `Final`, `Quiz1`, ...: what exam folders were named before an exam named its own.
     public static func isExamFolderName(_ name: String) -> Bool {
-        if name == pastExamsFolder || name == midtermFolder || name == finalFolder { return true }
+        if name == midtermFolder || name == finalFolder { return true }
         return name.hasPrefix(quizFolderPrefix) && Int(name.dropFirst(quizFolderPrefix.count)).map { $0 > 0 } == true
     }
 

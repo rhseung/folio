@@ -749,6 +749,17 @@
         }
       }
     },
+    "note.cleanup.unlinked": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: 시험 폴더 %2$@인 시험이 없어 연결하지 않았습니다"
+          }
+        }
+      }
+    },
     "note.import.calendar.cancelled": {
       "extractionState": "manual",
       "localizations": {

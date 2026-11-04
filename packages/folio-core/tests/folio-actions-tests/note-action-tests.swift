@@ -99,8 +99,8 @@ struct NoteActionTests {
         try Data("%PDF".utf8).write(to: elsewhere)
         #expect(throws: ActionError.self) { try run(NoteBuild(course: Self.graphTheory, note: "Notes/증명.tex", pdf: elsewhere.path)) }
         let ctx = try run(NoteBuild(course: Self.graphTheory, note: "Notes/증명.tex", pdf: built.path))
-        #expect(ctx.changes.first == Change(.added, "2026-3/EC4207 그래프 이론/Notes/Exports/증명.pdf"))
-        #expect(try text("Notes/Exports/증명.pdf") == "%PDF")
+        #expect(ctx.changes.first == Change(.added, "2026-3/EC4207 그래프 이론/Study/증명.pdf"))
+        #expect(try text("Study/증명.pdf") == "%PDF")
         #expect(throws: ActionError.self) { try run(NoteBuild(course: Self.graphTheory, note: "Notes/2주차-1.md", pdf: built.path)) }
     }
 
@@ -115,18 +115,18 @@ struct NoteActionTests {
             try Data(text.utf8).write(to: url)
             return url.path
         }
-        let exports = try store().fileURL("Notes/Exports")
+        let exports = try store().fileURL("Study")
         try FileManager.default.createDirectory(at: exports, withIntermediateDirectories: true)
         try Data("%PDF theirs".utf8).write(to: exports.appending(path: "증명.pdf"))
 
-        #expect(throws: ActionError.conflict("같은 이름의 PDF가 이미 있고 Folio가 만든 것이 아니라서 바꾸지 않았습니다: Notes/Exports/증명.pdf. 바꾸려면 --overwrite를 줍니다")) {
+        #expect(throws: ActionError.conflict("같은 이름의 PDF가 이미 있고 Folio가 만든 것이 아니라서 바꾸지 않았습니다: Study/증명.pdf. 바꾸려면 --overwrite를 줍니다")) {
             try run(NoteBuild(course: Self.graphTheory, note: "Notes/증명.tex", pdf: try built("%PDF mine")))
         }
-        #expect(try text("Notes/Exports/증명.pdf") == "%PDF theirs")
+        #expect(try text("Study/증명.pdf") == "%PDF theirs")
         try run(NoteBuild(course: Self.graphTheory, note: "Notes/증명.tex", pdf: try built("%PDF mine"), overwrite: true))
-        #expect(try text("Notes/Exports/증명.pdf") == "%PDF mine")
+        #expect(try text("Study/증명.pdf") == "%PDF mine")
         try run(NoteBuild(course: Self.graphTheory, note: "Notes/증명.tex", pdf: try built("%PDF again")))
-        #expect(try text("Notes/Exports/증명.pdf") == "%PDF again")
+        #expect(try text("Study/증명.pdf") == "%PDF again")
     }
 
     /// Without an entry there is nowhere to keep the hash, so the next build couldn't tell its own PDF.
@@ -137,15 +137,15 @@ struct NoteActionTests {
         }
     }
 
-    @Test func anExamSummarysPDFGoesToExercises() throws {
+    @Test func anExamSummarysPDFGoesToStudy() throws {
         try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "중간 정리", kind: .examSummary, format: .tex))
         let folder = TexEngine.outputFolder(for: try store().fileURL("Notes/중간 정리.tex"))
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let built = folder.appending(path: "\(UUID().uuidString).pdf")
         try Data("%PDF".utf8).write(to: built)
         try run(NoteBuild(course: Self.graphTheory, note: "Notes/중간 정리.tex", pdf: built.path))
-        #expect(try text("Exercises/중간 정리.pdf") == "%PDF")
-        #expect(try file().materials.contains { $0.path == "Exercises/중간 정리.pdf" })
+        #expect(try text("Study/중간 정리.pdf") == "%PDF")
+        #expect(try file().materials.contains { $0.path == "Study/중간 정리.pdf" })
     }
 
     /// Unknown keys stay in the file; references to things that are gone are dropped; an id another note already has

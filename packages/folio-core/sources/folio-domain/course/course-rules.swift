@@ -59,6 +59,7 @@ extension CourseFile: Document {
         Items(\.materials, noun: String(localized: .modelNounMaterial), name: \.path) {
             Refs(\.sessionIds, to: Session.self, onDelete: .nullify)
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
+            Refs(\.examIds, to: Exam.self, onDelete: .nullify)
         }
         Items(\.units, noun: String(localized: .modelNounUnit), name: \.title) {
             NonEmpty(\.title, String(localized: .ruleUnitTitleEmpty))
