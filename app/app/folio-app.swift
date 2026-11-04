@@ -13,20 +13,24 @@ struct FolioApp: App {
     }
 
     var body: some Scene {
-        WindowGroup {
+        // The id names the saved window frame. Without it the name is the content's type, which holds the addresses of
+        // private types and so changes with every build: each new build forgot the window and opened it afresh.
+        WindowGroup(id: "main") {
             RootView()
                 #if os(macOS)
-                // Three columns side by side are the app's layout; narrower, pages stacked their figures into slivers.
-                .frame(minWidth: 1120, minHeight: 640)
+                .frame(minWidth: Theme.Size.windowMin.width, minHeight: Theme.Size.windowMin.height)
                 #endif
                 .appServices()
                 .followsAppearance()
                 .environment(workspace)
                 .buttonStyle(.pointing(.automatic))
         }
-        // Fits a 1512pt-wide laptop screen; wider, macOS stretches the first window edge to edge.
-        .defaultSize(width: 1280, height: 860)
+        .defaultSize(Theme.Size.windowIdeal)
         #if os(macOS)
+        // Only a window with nothing saved. A saved frame bigger than its screen AppKit already cuts to the screen.
+        .defaultWindowPlacement { _, context in
+            WindowPlacement(.center, size: WindowSize.opening(in: context.defaultDisplay.visibleRect.size))
+        }
         .defaultLaunchBehavior(Self.hostingTests ? .suppressed : .automatic)
         // The compact row keeps the frame around the content panel thin.
         .windowToolbarStyle(.unifiedCompact(showsTitle: false))

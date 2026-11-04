@@ -164,6 +164,12 @@ enum Theme {
         static let toolbarButton: CGFloat = 32
         /// The window's search field, centered in the toolbar row.
         static let searchField: CGFloat = 320
+        /// The Mac window. Narrower than `windowMin`, the three columns squeeze a page's figures into slivers. A new
+        /// window takes `windowShare` of its screen's visible area, up to `windowIdeal` on a large display
+        /// (`WindowSize`): a fixed default wider than a laptop screen made macOS stretch it edge to edge.
+        static let windowMin = CGSize(width: 1120, height: 640)
+        static let windowIdeal = CGSize(width: 1440, height: 900)
+        static let windowShare = 0.9
     }
 
     enum Typeface {
