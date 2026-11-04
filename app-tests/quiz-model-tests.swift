@@ -86,10 +86,10 @@ struct QuizModelTests {
 
     @Test func removingACardReloadsTheList() throws {
         let f = try QuizFixture()
-        f.model.removingCard = f.cards[2]
-        f.model.removeCard(in: f.course)
+        f.model.remove(f.cards[2], in: f.course)
+        #expect(f.model.cards.count == 3)
+        try #require(f.model.pending).perform()
         #expect(f.model.cards.map(\.id) == [f.cards[0].id, f.cards[1].id])
-        #expect(f.model.removingCard == nil)
     }
 }
 

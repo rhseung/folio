@@ -11,8 +11,7 @@ final class CourseGradesModel {
     var target = 90.0
     var editingEntry: ScoreEntry?
     var editingComponent: GradeComponent?
-    var deletingComponent: GradeComponent?
-    var deletingEntry: ScoreEntry?
+    var pending: PendingAction?
 
     init(workspace: Workspace, course: UUID) {
         self.workspace = workspace
@@ -63,20 +62,9 @@ final class CourseGradesModel {
     /// Swaps a component with its neighbor and renumbers all, since imported components may share one `order`.
     func move(_ id: UUID, by delta: Int) { workspace.run(ComponentMove(course: courseId, component: id, by: delta)) }
 
-    func remove(_ c: GradeComponent) { workspace.run(ComponentRemove(course: courseId, component: c.id)) }
+    func remove(_ c: GradeComponent) { pending = workspace.ask(ComponentRemove(course: courseId, component: c.id)) }
 
-    func remove(_ e: ScoreEntry) { workspace.run(ScoreRemove(course: courseId, score: e.id)) }
-
-    static func removeTitle(_ c: GradeComponent) -> String { String(localized: .courseGradesRemoveComponentConfirm(c.name)) }
-
-    static func removeMessage(_ c: GradeComponent, in file: CourseFile) -> String? {
-        let scores = file.scores.filter { $0.componentId == c.id }.count
-        return scores > 0 ? String(localized: .courseGradesRemoveComponentScores(scores)) : nil
-    }
-
-    static func removeTitle(_ e: ScoreEntry) -> String {
-        e.title.isEmpty ? String(localized: .courseGradesRemoveScoreConfirm) : String(localized: .courseGradesRemoveNamedScoreConfirm(e.title))
-    }
+    func remove(_ e: ScoreEntry) { pending = workspace.ask(ScoreRemove(course: courseId, score: e.id)) }
 
     // MARK: Attendance
 

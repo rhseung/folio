@@ -12,7 +12,6 @@ struct SessionsView: View {
     let openNote: (UUID) -> Void
     @State private var editingTimes = false
     @State private var adding = false
-    @State private var confirmingDelete = false
 
     init(workspace: Workspace, course: LoadedCourse, openNote: @escaping (UUID) -> Void) {
         _model = State(initialValue: SessionsModel(workspace: workspace, courseId: course.id))
@@ -47,6 +46,7 @@ struct SessionsView: View {
         .sheet(isPresented: $editingTimes) { ClassTimesSheet(workspace: model.workspace, course: course) }
         .sheet(isPresented: $adding) { SessionFormSheet(workspace: model.workspace, course: course) }
         .task(id: file.sessions) { model.loadUntouched(course) }
+        .confirming($model.pending)
     }
 
     func header(_ week: SessionsModel.Week) -> some View {
@@ -106,7 +106,7 @@ struct SessionsView: View {
         return NoticeCard(title: String(localized: .sessionsUntouchedTitle(model.untouched.count)),
                           detail: String(localized: .sessionsUntouchedDetail),
                           systemImage: "calendar.badge.minus") {
-            Button(.sessionsRemoveEllipsis) { confirmingDelete = true }.buttonStyle(.pointing(.bordered))
+            Button(.sessionsRemoveEllipsis) { model.removeUntouched() }.buttonStyle(.pointing(.bordered))
         } rows: {
             ForEach(Array(shown.enumerated()), id: \.element.id) { i, s in
                 CardRow(last: i == shown.count - 1 && model.untouchedMore == 0) {
@@ -118,11 +118,6 @@ struct SessionsView: View {
             if model.untouchedMore > 0 {
                 CardRow(last: true) { EmptyLine(String(localized: .commonMoreCount(model.untouchedMore))) }
             }
-        }
-        .confirmationDialog(String(localized: .sessionsUntouchedConfirm(model.untouched.count)), isPresented: $confirmingDelete) {
-            Button(.sessionsRemove, role: .destructive) { model.removeUntouched() }
-        } message: {
-            Text(.sessionsUntouchedConfirmMessage)
         }
     }
 }
@@ -600,8 +595,6 @@ struct SessionCard: View {
     var now = Date.now
     let openNote: (UUID) -> Void
     @State private var playing: Recording?
-    @State private var confirmingDelete = false
-    @State private var deleteRefusal: String?
     @State private var editing = false
     @Environment(\.openURL) private var openURL
 
@@ -642,16 +635,6 @@ struct SessionCard: View {
         }
         .contentShape(.rect)
         .contextMenu { menuItems }
-        .confirmationDialog(model.removeConfirmation(session, in: file), isPresented: $confirmingDelete) {
-            Button(.sessionsRemove, role: .destructive) { model.remove(session) }
-        } message: {
-            Text(.sessionsRemoveMessage)
-        }
-        .alert(Text(.sessionsRemoveRefused), isPresented: Binding(get: { deleteRefusal != nil }, set: { if !$0 { deleteRefusal = nil } })) {
-            Button(.commonOk, role: .cancel) {}
-        } message: {
-            Text(deleteRefusal ?? "")
-        }
         .sheet(item: $playing) { RecordingPlayer(workspace: model.workspace, courseId: course.id, store: course.store, recording: $0, title: model.playerTitle(session, in: file)) }
         .sheet(isPresented: $editing) { SessionFormSheet(workspace: model.workspace, course: course, session: session) }
     }
@@ -750,10 +733,7 @@ struct SessionCard: View {
         Button(.commonEditEllipsis) { editing = true }
         Toggle(String(localized: .sessionsCancelled), isOn: Binding(get: { session.isCancelled }, set: { model.setCancelled($0, of: session) }))
         Divider()
-        Button(.sessionsRemoveSessionEllipsis, role: .destructive) {
-            deleteRefusal = model.removalRefusal(session)
-            if deleteRefusal == nil { confirmingDelete = true }
-        }
+        Button(.sessionsRemoveSessionEllipsis, role: .destructive) { model.remove(session) }
     }
 
     func open(_ kind: NoteKind) {

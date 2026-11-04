@@ -21,12 +21,7 @@ struct QuizCardsView: View {
         .sheet(item: $model.editing) { draft in
             CardEditorSheet(workspace: model.workspace, course: course, draft: draft, units: course.file.units) { model.load(course) }
         }
-        .confirmationDialog(String(localized: .quizCardRemoveConfirm),
-                            isPresented: Binding(get: { model.removingCard != nil }, set: { if !$0 { model.removingCard = nil } })) {
-            Button(.commonDelete, role: .destructive) { model.removeCard(in: course) }
-        } message: {
-            Text(.quizCardRemoveMessage)
-        }
+        .confirming($model.pending)
     }
 
     func rows(_ entries: [QuizModel.Entry]) -> some View {
@@ -58,7 +53,7 @@ struct QuizCardsView: View {
                 .contextMenu {
                     Button(.commonEdit) { model.editing = CardDraft(card) }
                     Divider()
-                    Button(.commonDeleteEllipsis, role: .destructive) { model.removingCard = card }
+                    Button(.commonDeleteEllipsis, role: .destructive) { model.remove(card, in: course) }
                 }
             }
         }
@@ -82,7 +77,6 @@ struct CardEditorSheet: View {
     @State private var model: CardEditorModel
     let units: [FolioDomain.Unit]
     let saved: () -> Void
-    @State private var confirmingDelete = false
 
     init(workspace: Workspace, course: LoadedCourse, draft: CardDraft, units: [FolioDomain.Unit], saved: @escaping () -> Void) {
         _model = State(initialValue: CardEditorModel(workspace: workspace, course: course, draft: draft))
@@ -92,7 +86,12 @@ struct CardEditorSheet: View {
 
     var body: some View {
         SheetForm(title: model.title, confirm: String(localized: .commonSave), disabled: !model.draft.isValid, carded: false,
-                  deleteTitle: model.deleteTitle, onDelete: { confirmingDelete = true }) {
+                  deleteTitle: model.deleteTitle, onDelete: {
+            model.remove {
+                saved()
+                dismiss()
+            }
+        }) {
             Card {
                 FormRow(label: String(localized: .quizUnit)) { SearchSelect(selection: $model.draft.unitId, options: model.unitOptions(units)) }
                 // "유형" is the category, as the solve filter and the statistics call it.
@@ -123,15 +122,7 @@ struct CardEditorSheet: View {
             saved()
             dismiss()
         }
-        .confirmationDialog(String(localized: .quizCardRemoveConfirm), isPresented: $confirmingDelete) {
-            Button(.commonDelete, role: .destructive) {
-                model.remove()
-                saved()
-                dismiss()
-            }
-        } message: {
-            Text(.quizCardRemoveMessage)
-        }
+        .confirming($model.pending)
     }
 }
 

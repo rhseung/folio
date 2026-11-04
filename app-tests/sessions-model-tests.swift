@@ -111,6 +111,26 @@ struct SessionsModelTests {
         model.loadUntouched(try #require(workspace.course(graphTheory)))
         #expect(model.untouched.count == 1 && model.untouchedMore == 0)
         model.removeUntouched()
+        try #require(model.pending).perform()
         #expect(workspace.course(graphTheory)?.file.sessions.count == 1)
+    }
+
+    /// A refused removal says why rather than asking for something that would then fail.
+    @Test func removingALinkedSessionSaysWhyInsteadOfAsking() throws {
+        let workspace = try fixtureWorkspace()
+        let model = SessionsModel(workspace: workspace, courseId: graphTheory)
+        let free = try session(workspace, daysFromNow: 7)
+        let noted = try session(workspace, daysFromNow: 14)
+        workspace.run(SessionNote(course: graphTheory, session: noted.id, kind: .rough))
+        let count = try #require(workspace.course(graphTheory)).file.sessions.count
+
+        model.remove(noted)
+        #expect(model.pending?.refusal != nil)
+        model.remove(free)
+        let pending = try #require(model.pending)
+        #expect(pending.refusal == nil && pending.question.hasPrefix("회차 ") && pending.question.hasSuffix("을(를) 지웁니다."))
+        #expect(try #require(workspace.course(graphTheory)).file.sessions.count == count)
+        pending.perform()
+        #expect(try #require(workspace.course(graphTheory)).file.sessions.count == count - 1)
     }
 }

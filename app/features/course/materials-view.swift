@@ -42,12 +42,7 @@ struct MaterialsView: View {
         .sheet(isPresented: Binding(get: { !model.incoming.isEmpty }, set: { if !$0 { model.incoming = [] } })) {
             ImportPlaceSheet(workspace: model.workspace, course: model.course, files: model.incoming, places: model.places)
         }
-        .confirmationDialog(String(localized: .materialsTrashConfirm), isPresented: Binding(get: { model.trashing != nil }, set: { if !$0 { model.trashing = nil } }),
-                            presenting: model.trashing) { m in
-            Button(.materialsTrash, role: .destructive) { model.trash(m) }
-        } message: { m in
-            Text(.materialsTrashMessage(m.path))
-        }
+        .confirming($model.pending)
         .alert(String(localized: .materialsRename), isPresented: Binding(get: { model.renaming != nil }, set: { if !$0 { model.renaming = nil } }), presenting: model.renaming) { m in
             TextField(String(localized: .materialsRenameField), text: $model.newName)
             Button(.materialsRenameConfirm) { model.rename(m) }
@@ -191,7 +186,7 @@ struct MaterialsView: View {
             }
         }
         Divider()
-        Button(.materialsTrashEllipsis, role: .destructive) { model.trashing = m }
+        Button(.materialsTrashEllipsis, role: .destructive) { model.trash(m) }
     }
 
     @ViewBuilder func fileRow(_ m: FolioDomain.Material, name: String) -> some View {

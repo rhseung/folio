@@ -29,7 +29,7 @@ struct AssignmentsView: View {
                                     Button(.commonEditEllipsis) { model.editing = a }
                                     Menu(String(localized: .assignmentsStatus)) { statusItems(a) }
                                     Divider()
-                                    Button(.commonDeleteEllipsis, role: .destructive) { model.removing = a }
+                                    Button(.commonDeleteEllipsis, role: .destructive) { model.remove(a) }
                                 }
                                 .fileDrop { model.drop($0, on: a) }
                         }
@@ -38,12 +38,7 @@ struct AssignmentsView: View {
             }
         }
         .sheet(item: $model.editing) { AssignmentSheet(workspace: model.workspace, course: model.course, assignment: $0) }
-        .confirmationDialog(String(localized: .assignmentsRemoveConfirm(model.removing?.title ?? "")),
-                            isPresented: Binding(get: { model.removing != nil }, set: { if !$0 { model.removing = nil } }), presenting: model.removing) { a in
-            Button(.commonDelete, role: .destructive) { model.remove(a) }
-        } message: { _ in
-            Text(.assignmentsRemoveMessage)
-        }
+        .confirming($model.pending)
     }
 
     @ViewBuilder func statusItems(_ a: Assignment) -> some View {
@@ -109,7 +104,6 @@ struct AssignmentsView: View {
 struct AssignmentSheet: View {
     @State private var model: AssignmentSheetModel
     @Environment(\.dismiss) private var dismiss
-    @State private var confirmingDelete = false
     @State private var pickingFiles = false
 
     init(workspace: Workspace, course: LoadedCourse, assignment: Assignment) {
@@ -122,7 +116,7 @@ struct AssignmentSheet: View {
         let store = model.course.store
         SheetForm(title: model.sheetTitle, confirm: String(localized: .commonSave),
                   disabled: model.title.isEmpty || model.invalid,
-                  carded: false, width: 560, deleteTitle: String(localized: .assignmentsDelete), onDelete: { confirmingDelete = true }) {
+                  carded: false, width: 560, deleteTitle: String(localized: .assignmentsDelete), onDelete: { model.delete { dismiss() } }) {
             Block(String(localized: .assignmentsSheetAssignment)) {
                 Card {
                     FormRow(label: String(localized: .assignmentsFieldTitle), detail: model.titleDetail) {
@@ -197,14 +191,7 @@ struct AssignmentSheet: View {
         } onConfirm: {
             if model.apply() { dismiss() }
         }
-        .confirmationDialog(String(localized: .assignmentsRemoveConfirm(model.assignment.title)), isPresented: $confirmingDelete) {
-            Button(.commonDelete, role: .destructive) {
-                model.delete()
-                dismiss()
-            }
-        } message: {
-            Text(.assignmentsRemoveMessage)
-        }
+        .confirming($model.pending)
         .onAppear { model.load() }
     }
 }

@@ -38,7 +38,8 @@ extension Workspace {
     }
 
     /// Marks units as not needing review, one `skip` event each, with no study time.
-    func skipReviews(_ units: [(courseId: UUID, unitId: UUID)]) {
-        run(ReviewSkip(units: units.map { ReviewSkip.Target(course: $0.courseId, unit: $0.unitId) }))
+    /// Asks first for more than one unit, as the CLI does; the caller shows what comes back with `.confirming`.
+    func skipReviews(_ units: [(courseId: UUID, unitId: UUID)]) -> PendingAction? {
+        ask(ReviewSkip(units: units.map { ReviewSkip.Target(course: $0.courseId, unit: $0.unitId) }))
     }
 }

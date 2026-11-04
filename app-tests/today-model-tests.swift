@@ -45,10 +45,20 @@ struct TodayModelTests {
         #expect(model.reviewProgress(now: .now).doneToday == 0)
         workspace.run(ReviewRecord(course: graphTheory, unit: unit, result: .good, start: .now.addingTimeInterval(-60), end: .now))
         workspace.run(ReviewRecord(course: graphTheory, unit: unit, result: .easy, start: .now.addingTimeInterval(-60), end: .now))
-        workspace.skipReviews([(graphTheory, other)])
+        _ = workspace.skipReviews([(graphTheory, other)])
         let progress = model.reviewProgress(now: .now)
         #expect(progress.doneToday == 1)
         #expect(progress.streak == 1)
+    }
+
+    @Test func skippingSeveralReviewsAsksButOneDoesNot() throws {
+        let workspace = try fixtureWorkspace()
+        let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
+        let other = try #require(workspace.run(UnitAdd(course: graphTheory, title: "채색"))?.made)
+        #expect(workspace.skipReviews([(graphTheory, unit)]) == nil)
+        let pending = try #require(workspace.skipReviews([(graphTheory, unit), (graphTheory, other)]))
+        // A list of course-and-unit pairs is told by its count, as the CLI tells it.
+        #expect(pending.question.hasPrefix("단원 ") && pending.question.hasSuffix("의 복습을 건너뜁니다.") && pending.role == nil)
     }
 
     @Test func nearDeadlinesSayHowSoonAndFarOnesTheirDate() throws {

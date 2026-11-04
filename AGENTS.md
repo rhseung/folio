@@ -71,6 +71,8 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
     - 선언한 뒤 `mise run gen-cli`로 CLI 명령을 다시 만든다. 손으로 쓰는 명령은 `cli: .manual`로 둔다.
     - 규칙은 액션이 아니라 `FolioDomain`의 모델(`course-rules.swift`의 `Document.model`)에 둔다. 모든 저장이 그 규칙으로 검사한다.
     - 화면은 규칙을 다시 적지 않는다. 버튼을 켜고 끌 때는 `workspace.can(액션)`, 막힌 이유는 `refusal`, 확인 문구는 `confirmation`으로 묻는다. 앱이 보여 주는 문서로 미리 실행해 본다.
+    - `confirm:`이 있는 액션은 `workspace.ask(액션)`으로 실행하고 결과를 모델의 `pending`에 둔다. 뷰는 `.confirming($model.pending)`으로 묻고, 막힌 액션이면 묻지 않고 이유를 보여 준다. 확인 문구를 화면에서 따로 쓰지 않는다.
+    - 여러 항목을 한 번에 바꾸는 버튼은 액션을 반복해 부르지 않고 목록을 받는 액션 하나로 실행한다. 그래야 한 번 묻고, 하나가 막히면 아무것도 쓰기 전에 멈춘다.
 - 새 관심사가 생기면 위 표에 모듈을 추가하고 방향을 정한 뒤 만든다.
 
 ### 구조 축

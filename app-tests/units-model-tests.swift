@@ -18,10 +18,12 @@ struct UnitsModelTests {
         let unit = try #require(try file(workspace).units.first)
         #expect(unit.title == "매칭")
         model.openUnit = unit.id
-        model.removing = unit
-        #expect(model.removalTitle == "‘매칭’ 단원을 삭제할까요?")
         model.remove(unit)
-        #expect(try file(workspace).units.isEmpty && model.openUnit == nil && model.removing == nil)
+        let pending = try #require(model.pending)
+        #expect(pending.question == "단원 '매칭'을(를) 지우고 회차와 시험 범위 연결을 풉니다." && pending.refusal == nil)
+        #expect(try file(workspace).units.count == 1)
+        pending.perform()
+        #expect(try file(workspace).units.isEmpty && model.openUnit == nil)
     }
 
     @Test func sessionsLineNamesThreeThenCountsTheRest() throws {

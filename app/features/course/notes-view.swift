@@ -47,16 +47,7 @@ struct NoteList: View {
                 selection = id
             }
         }
-        .confirmationDialog(String(localized: .notesDeleteConfirm(model.deleting?.title ?? "")),
-                            isPresented: Binding(get: { model.deleting != nil }, set: { if !$0 { model.deleting = nil } })) {
-            Button(.notesTrash, role: .destructive) {
-                guard let note = model.deleting else { return }
-                model.delete(note)
-                if note.meta.id != nil && note.meta.id == selection { selection = nil }
-            }
-        } message: {
-            Text(.notesDeleteMessage)
-        }
+        .confirming($model.pending)
         // Notes made elsewhere (the Claude panel) and links changed in the editor show up here too.
         .onChange(of: selection) { _, id in model.reloadIfMissing(id) }
         .onChange(of: model.workspace.notesRevision) { model.reload() }
@@ -89,7 +80,9 @@ struct NoteList: View {
         .contextMenu {
             Button(.notesOpen) { open(note) }
             Divider()
-            Button(.notesDeleteEllipsis, systemImage: "trash", role: .destructive) { model.deleting = note }
+            Button(.notesDeleteEllipsis, systemImage: "trash", role: .destructive) {
+                model.delete(note) { if note.meta.id != nil && note.meta.id == selection { selection = nil } }
+            }
         }
     }
 

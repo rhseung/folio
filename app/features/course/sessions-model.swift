@@ -8,6 +8,7 @@ import Observation
 /// row's own under-way state, which its TimelineView passes in.
 @MainActor @Observable
 final class SessionsModel {
+    var pending: PendingAction?
     let workspace: Workspace
     let courseId: UUID
     private(set) var untouched: [Session] = []
@@ -169,7 +170,7 @@ final class SessionsModel {
     var untouchedMore: Int { untouched.count - untouchedShown.count }
 
     func removeUntouched() {
-        workspace.run(SessionRemove(course: courseId, sessions: untouched.map(\.id)))
+        pending = workspace.ask(SessionRemove(course: courseId, sessions: untouched.map(\.id)), button: .sessionsRemove)
     }
 
     // MARK: A session's row
@@ -237,10 +238,6 @@ final class SessionsModel {
 
     func playerTitle(_ session: Session, in file: CourseFile) -> String { "\(file.course.title) · \(file.title(of: session, calendar: calendar))" }
 
-    func removeConfirmation(_ session: Session, in file: CourseFile) -> String {
-        String(localized: .sessionsRemoveConfirm(file.day(of: session, calendar: calendar)))
-    }
-
     // MARK: A session's actions
 
     func takesAttendance(_ session: Session) -> Bool {
@@ -261,8 +258,7 @@ final class SessionsModel {
 
     func note(_ kind: NoteKind, of session: Session) -> UUID? { workspace.note(kind, of: session.id, in: courseId) }
 
-    /// Why the session can't be deleted, or nil when it can.
-    func removalRefusal(_ session: Session) -> String? { workspace.refusal(SessionRemove(course: courseId, sessions: [session.id])) }
-
-    func remove(_ session: Session) { workspace.run(SessionRemove(course: courseId, sessions: [session.id])) }
+    func remove(_ session: Session) {
+        pending = workspace.ask(SessionRemove(course: courseId, sessions: [session.id]), button: .sessionsRemove)
+    }
 }

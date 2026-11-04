@@ -10,6 +10,7 @@ final class ScoreEntryModel {
     let course: LoadedCourse
     let entry: ScoreEntry
     let isNew: Bool
+    var pending: PendingAction?
     var componentId: UUID
     var title: String
     var score: String
@@ -63,7 +64,9 @@ final class ScoreEntryModel {
         return saved != nil
     }
 
-    func remove() { workspace.run(ScoreRemove(course: course.id, score: entry.id)) }
+    func remove(then done: @escaping @MainActor () -> Void) {
+        pending = workspace.ask(ScoreRemove(course: course.id, score: entry.id)) { _ in done() }
+    }
 }
 
 @MainActor @Observable
@@ -72,6 +75,7 @@ final class ComponentModel {
     let course: LoadedCourse
     let component: GradeComponent
     let isNew: Bool
+    var pending: PendingAction?
     var name: String
     var group: String
     var weight: Double
@@ -130,7 +134,9 @@ final class ComponentModel {
     }
 
     /// Its scores go with it; assignments and exams that fed it stay, unlinked.
-    func remove() { workspace.run(ComponentRemove(course: course.id, component: component.id)) }
+    func remove(then done: @escaping @MainActor () -> Void) {
+        pending = workspace.ask(ComponentRemove(course: course.id, component: component.id)) { _ in done() }
+    }
 }
 
 /// Percents are typed as text and stored as fractions; an empty field means the rule is unset.

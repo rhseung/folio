@@ -8,7 +8,7 @@ final class AssignmentsModel {
     let workspace: Workspace
     private let initial: LoadedCourse
     var editing: Assignment?
-    var removing: Assignment?
+    var pending: PendingAction?
 
     init(workspace: Workspace, course: LoadedCourse) {
         self.workspace = workspace
@@ -31,7 +31,7 @@ final class AssignmentsModel {
         return AssignmentGroup.allCases.compactMap { g in grouped[g].map { (g, g.sorted($0)) } }
     }
 
-    func remove(_ a: Assignment) { workspace.run(AssignmentRemove(course: course.id, assignment: a.id)) }
+    func remove(_ a: Assignment) { pending = workspace.ask(AssignmentRemove(course: course.id, assignment: a.id)) }
 
     func setStatus(_ a: Assignment, _ status: AssignmentStatus) {
         workspace.run(AssignmentStatusSet(course: course.id, assignment: a.id, status: status))
@@ -105,6 +105,7 @@ final class AssignmentSheetModel {
     let workspace: Workspace
     private let initial: LoadedCourse
     let assignment: Assignment
+    var pending: PendingAction?
     var title = ""
     var hasDue = false
     var due = Date.now
@@ -198,7 +199,7 @@ final class AssignmentSheetModel {
     func kind(of m: FolioDomain.Material) -> MaterialKind { m.kind ?? AssignmentFiles.guessKind(fileName: (m.path as NSString).lastPathComponent) }
 
     // Saved at once like an added file, not on confirm: the file is already in the folder whatever the sheet does.
-    func setKind(_ m: FolioDomain.Material, _ kind: MaterialKind) { workspace.run(MaterialKindSet(course: course.id, materials: [m.id], kind: kind)) }
+    func setKind(_ m: FolioDomain.Material, _ kind: MaterialKind) { pending = workspace.ask(MaterialKindSet(course: course.id, materials: [m.id], kind: kind)) }
 
     func apply() -> Bool {
         let scored = targetComponents
@@ -214,5 +215,7 @@ final class AssignmentSheetModel {
                                             components: scored.map(\.id), scores: entered)) != nil
     }
 
-    func delete() { workspace.run(AssignmentRemove(course: course.id, assignment: assignment.id)) }
+    func delete(then done: @escaping @MainActor () -> Void) {
+        pending = workspace.ask(AssignmentRemove(course: course.id, assignment: assignment.id)) { _ in done() }
+    }
 }
