@@ -152,7 +152,45 @@ enum ClassCard {
         }
     }
 
-    /// A rounded pill button: the review note's state, a recording.
+    /// The capsule a card's trailing row is made of. A state nothing opens (recording now, minutes left) is a bare tag,
+    /// and `Pill` wraps the same tag in a button, so the row keeps one height and font whichever it holds.
+    struct Tag: View {
+        @Environment(\.accent) private var accent
+        let title: String
+        var symbol: String?
+        var tone: Tone = .plain
+
+        var body: some View {
+            HStack(spacing: Theme.Space.xs) {
+                if let symbol { Image(systemName: symbol) }
+                Text(title)
+            }
+            // Fixed-width digits so a countdown ticking each minute doesn't jiggle the row.
+            .font(Theme.Typeface.label.monospacedDigit())
+            .foregroundStyle(foreground)
+            .padding(.horizontal, Theme.Space.s)
+            .frame(height: 24)
+            .background(fill, in: .capsule)
+            .fixedSize()
+        }
+
+        private var foreground: Color {
+            switch tone {
+            case .plain: Theme.Palette.textSecondary
+            case .accent: accent.ink
+            default: tone.foreground
+            }
+        }
+
+        private var fill: Color {
+            switch tone {
+            case .accent: accent.tint
+            case .success: Theme.Palette.success.opacity(Theme.Opacity.tint)
+            default: tone.fill
+            }
+        }
+    }
+
     struct Pill: View {
         let title: String
         var symbol: String?
@@ -162,16 +200,7 @@ enum ClassCard {
 
         var body: some View {
             Button(action: action) {
-                HStack(spacing: Theme.Space.xs) {
-                    if let symbol { Image(systemName: symbol) }
-                    Text(title)
-                }
-                .font(Theme.Typeface.label)
-                .foregroundStyle(tone == .plain ? Theme.Palette.textSecondary : tone.foreground)
-                .padding(.horizontal, Theme.Space.s)
-                .frame(height: 24)
-                .background(tone == .success ? Theme.Palette.success.opacity(Theme.Opacity.tint) : tone.fill, in: .capsule)
-                .contentShape(.capsule)
+                Tag(title: title, symbol: symbol, tone: tone).contentShape(.capsule)
             }
             .buttonStyle(.pointing(.plain))
             .fixedSize()
@@ -616,7 +645,7 @@ struct SessionCard: View {
         let recorder = model.workspace.recorder
         HStack(spacing: Theme.Space.s) {
             if recordings.contains(where: { $0.id == recorder.current }) {
-                Label(.sessionsRecording, systemImage: "waveform").font(Theme.Typeface.label).foregroundStyle(Theme.Palette.danger)
+                ClassCard.Tag(title: String(localized: .sessionsRecording), symbol: "waveform", tone: .danger)
                     .symbolEffect(.variableColor.iterative, isActive: recorder.state == .recording)
             } else if let last = recordings.last {
                 ClassCard.Pill(title: model.recordingsLabel(recordings.count), symbol: "waveform", help: String(localized: .sessionsRecordingPlayHelp)) { playing = last }
@@ -633,8 +662,7 @@ struct SessionCard: View {
                 EmptyView()
             }
             if live {
-                Text(model.minutesLeft(until: expected, now: now)).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink)
-                    .monospacedDigit().fixedSize()
+                ClassCard.Tag(title: model.minutesLeft(until: expected, now: now), tone: .accent)
             }
         }
     }
