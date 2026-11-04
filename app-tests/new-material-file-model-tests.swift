@@ -17,11 +17,12 @@ struct NewMaterialFileModelTests {
         course = try #require(workspace.course(graphTheory))
     }
 
-    @Test func startsInTheNewestAssignmentFolder() {
-        let model = NewMaterialFileModel(workspace: workspace, course: course, folder: nil)
+    @Test func startsInTheFolderOfTheAssignmentDueLast() throws {
+        workspace.run(AssignmentAdd(course: graphTheory, title: "HW 4", due: workspace.now.addingTimeInterval(86_400)))
+        let model = NewMaterialFileModel(workspace: workspace, course: try #require(workspace.course(graphTheory)), folder: nil)
         #expect(model.places.prefix(2) == ["Study", "Archive"])
-        #expect(model.places.contains("Assignments/HW03"))
-        #expect(model.folder == "Assignments/SP01")
+        #expect(model.places.contains("Assignments/SP01"))
+        #expect(model.folder == "Assignments/HW04")
     }
 
     @Test func aNameWithoutAnExtensionIsATex() {

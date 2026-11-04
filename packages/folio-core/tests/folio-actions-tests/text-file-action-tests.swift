@@ -232,6 +232,22 @@ struct MaterialNewTests {
         }
     }
 
+    @Test func aFolderNoExamOwnsIsRefused() throws {
+        #expect(throws: ActionError.rule("과제나 시험의 폴더가 아닙니다: Exams/중간고사오타")) {
+            try run(MaterialNew(course: Self.course, folder: "Exams/중간고사오타", name: "a.tex"))
+        }
+        #expect(!FileManager.default.fileExists(atPath: store.fileURL("Exams/중간고사오타").path))
+    }
+
+    /// Its files were tracked one by one before `git init`; tracking now reads the folder as one project.
+    @Test func aFolderThatBecameACodeProjectIsRefused() throws {
+        try FileManager.default.createDirectory(at: store.fileURL("Assignments/HW03/.git"), withIntermediateDirectories: true)
+        #expect(throws: ActionError.rule("코드 프로젝트 폴더 안에는 만들지 않습니다: Assignments/HW03")) {
+            try run(MaterialNew(course: Self.course, folder: "Assignments/HW03", name: "hw3.tex"))
+        }
+        #expect(!FileManager.default.fileExists(atPath: store.fileURL("Assignments/HW03/hw3.tex").path))
+    }
+
     @Test func aDryRunWritesNothing() throws {
         let ctx = try run(MaterialNew(course: Self.course, folder: "Study", name: "b.tex"), dryRun: true)
         #expect(ctx.changes.contains { $0.kind == .added && $0.path.hasSuffix("Study/b.tex") })

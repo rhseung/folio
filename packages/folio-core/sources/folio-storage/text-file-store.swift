@@ -16,6 +16,18 @@ extension CourseStore {
         try CoordinatedFile.create(Data(text.utf8), at: fileURL(coursePath))
     }
 
+    /// The folder at or above `folder` (below the course folder) that tracking reads as one code project, as the disk has
+    /// it now: a folder tracked file by file becomes one when `git init` runs in it.
+    public func codeProject(containing folder: String) -> String? {
+        let parts = folder.split(separator: "/").map(String.init)
+        for n in parts.indices {
+            let path = parts[...n].joined(separator: "/")
+            guard let names = try? FileManager.default.contentsOfDirectory(atPath: fileURL(path).path) else { return nil }
+            if IndexRules.isCodeProject(childNames: names) { return path }
+        }
+        return nil
+    }
+
     /// Replaces a file the app made itself, such as a build's PDF. Never used for files the user brought in.
     /// `keepOld` sends the file there to the Trash first, where the user can still take it back.
     public func replaceFile(_ coursePath: String, with source: URL, keepOld: Bool = false) throws {

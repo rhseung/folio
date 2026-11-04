@@ -55,14 +55,18 @@ public struct MaterialNew {
 
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.store(course)
+        let file = try ctx.file(course)
         let folder = folder.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
         guard NewMaterialFile.accepts(folder: folder) else { throw ActionError.rule(String(localized: .errorMaterialNewPlace(folder))) }
+        let places = NewMaterialFile.places(assignments: file.assignments, exams: file.exams, assignmentFolders: try store.assignmentFolders())
+        guard NewMaterialFile.accepts(folder: folder, places: places) else { throw ActionError.rule(String(localized: .errorMaterialNewNoItem(folder))) }
         guard NewMaterialFile.isFileName(name) else { throw ActionError.rule(String(localized: .errorMaterialNewName(name))) }
         guard MaterialFormat(path: name).isText else { throw ActionError.rule(String(localized: .errorMaterialNewFormat(name))) }
         let path = "\(folder)/\(name)"
-        // Tracking sees a code project as one folder, so a file made inside it would have no row to open.
-        if let project = try ctx.file(course).materials.first(where: { $0.isFolder && path.hasPrefix($0.path + "/") }) {
-            throw ActionError.rule(String(localized: .errorMaterialNewInFolder(project.path)))
+        // Tracking sees a code project as one folder, so a file made inside it would have no row to open. Read from the
+        // disk: the tracked list lags a `git init` or a project not tracked yet.
+        if let project = store.codeProject(containing: folder) ?? file.materials.first(where: { $0.isFolder && path.hasPrefix($0.path + "/") })?.path {
+            throw ActionError.rule(String(localized: .errorMaterialNewInFolder(project)))
         }
         guard !FileManager.default.fileExists(atPath: store.fileURL(path).path) else {
             throw ActionError.conflict(String(localized: .errorMaterialNewTaken(path)))
@@ -70,7 +74,11 @@ public struct MaterialNew {
         try ctx.io(Change(.added, try ctx.relative(course, path))) { try store.createText(path, text: NewMaterialFile.text(for: name)) }
         guard !ctx.dryRun else { return }
         try ctx.edit(course) { f in try store.refreshMaterials(in: &f, device: ctx.device, now: ctx.now) }
-        if let m = try ctx.file(course).materials.first(where: { $0.path == path }) { ctx.made(m.id) }
+        // A folder grown past the size limit is also tracked as one item; the file is there, but there is no row to open.
+        guard let m = try ctx.file(course).materials.first(where: { $0.path == path }) else {
+            throw ActionError.rule(String(localized: .errorMaterialNewUntracked(path)))
+        }
+        ctx.made(m.id)
     }
 }
 

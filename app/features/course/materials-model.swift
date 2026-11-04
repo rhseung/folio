@@ -123,7 +123,11 @@ final class MaterialsModel {
         Task { await load() }
     }
 
-    func acceptsNewFile(_ folder: PathTree<FolioDomain.Material>) -> Bool { NewMaterialFile.accepts(folder: folder.path) }
+    func acceptsNewFile(_ folder: PathTree<FolioDomain.Material>) -> Bool {
+        let file = course.file
+        return NewMaterialFile.accepts(folder: folder.path,
+                                       places: NewMaterialFile.places(assignments: file.assignments, exams: file.exams, assignmentFolders: assignmentFolders))
+    }
 
     func startNewFile(in folder: String?) {
         newFileFolder = folder

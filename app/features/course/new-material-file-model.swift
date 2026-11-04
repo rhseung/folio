@@ -13,7 +13,7 @@ final class NewMaterialFileModel {
     var folder: String
     var name = ""
 
-    /// `folder` is where the menu was opened; without one, the newest assignment's folder.
+    /// `folder` is where the menu was opened; without one, the folder of the assignment due last.
     init(workspace: Workspace, course: LoadedCourse, folder: String?) {
         self.workspace = workspace
         initial = course
@@ -23,7 +23,7 @@ final class NewMaterialFileModel {
         // A subfolder such as `Assignments/HW04/src` is not a place of its own but still takes a file.
         if let folder, !places.contains(folder) { places.append(folder) }
         self.places = places
-        self.folder = folder ?? places.last { $0.hasPrefix(CourseFolder.assignments.rawValue + "/") } ?? places[0]
+        self.folder = folder ?? NewMaterialFile.defaultPlace(assignments: file.assignments, places: places) ?? places[0]
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }

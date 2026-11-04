@@ -320,6 +320,17 @@
         }
       }
     },
+    "error.material.new-no-item": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제나 시험의 폴더가 아닙니다: %@"
+          }
+        }
+      }
+    },
     "error.material.new-place": {
       "extractionState": "manual",
       "localizations": {
@@ -338,6 +349,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "같은 이름의 파일이 이미 있습니다: %@"
+          }
+        }
+      }
+    },
+    "error.material.new-untracked": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일은 만들었지만 자료로 추적되지 않는 폴더입니다: %@"
           }
         }
       }
