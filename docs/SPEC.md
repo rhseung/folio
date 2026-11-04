@@ -343,14 +343,14 @@ Me/GIST/
 
 ### Note
 
-노트는 마크다운이나 LaTeX 파일이며, 메타데이터는 `course.json`의 `notes`에 경로와 함께 둡니다. 노트의 회차는 저장하지 않고 그 노트를 가리키는 회차(`roughNoteId`, `reviewNoteId`)로 읽습니다. 러프와 복습 노트의 단원은 그 회차의 단원, 시험 종합 정리의 단원은 그 시험의 범위로 읽습니다.
+노트는 마크다운 파일이며, 메타데이터는 frontmatter에 둡니다.
 
 | 필드 | 형식 | 설명 |
 | --- | --- | --- |
 | id | UUID | 식별자 |
-| path | 문자열 | 과목 폴더 기준 경로 |
 | kind | `rough`, `review`, `exam_summary`, `topic`, `free` | 러프, 복습, 시험 종합 정리, 단원 정리, 자유 노트 |
-| unitIds | Unit ID 배열 | 단원 정리 노트의 단원. 다른 종류는 비어 있다 |
+| sessionId | Session ID 또는 없음 | 러프와 복습 노트의 강의 회차 |
+| unitIds | Unit ID 배열 | 관련 단원 |
 | examId | Exam ID 또는 없음 | 시험 종합 정리의 대상 시험 |
 | tags | 문자열 배열 | 자유 태그 |
 
