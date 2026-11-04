@@ -191,7 +191,7 @@ struct NoteRoomPastTheEndTests {
     }
 
     /// Clicks below a short note, left, middle and right, near the window's bottom.
-    static func clicksBelow(_ view: NSTextView, in window: NSWindow) throws {
+    static func clicksBelow(_ view: NSTextView, in window: NSWindow) {
         NoteScrollTests.trim(view)
         view.enclosingScrollView?.tile()
         // The pointer turned to an arrow there too; the clip view shows its document cursor where the note doesn't reach.
@@ -208,14 +208,14 @@ struct NoteRoomPastTheEndTests {
         }
     }
 
-    @Test func aClickPastTheEditorsEndPutsTheCaretAtTheEnd() throws {
+    @Test func aClickPastTheEditorsEndPutsTheCaretAtTheEnd() {
         let (view, window) = NoteScrollTests.source("첫 줄\n\n둘째 줄 끝")
-        try Self.clicksBelow(view, in: window)
+        Self.clicksBelow(view, in: window)
     }
 
-    @Test func aClickPastThePreviewsEndPutsTheCaretAtTheEnd() throws {
+    @Test func aClickPastThePreviewsEndPutsTheCaretAtTheEnd() {
         let (view, window) = NoteScrollTests.reader(NoteScrollTests.Body("첫 문단\n\n둘째 문단 끝"))
         window.makeFirstResponder(view)
-        try Self.clicksBelow(view, in: window)
+        Self.clicksBelow(view, in: window)
     }
 }
