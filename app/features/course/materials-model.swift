@@ -24,6 +24,9 @@ final class MaterialsModel {
     var trashing: FolioDomain.Material?
     /// Folder paths opened in the tree; folders start closed so a course with many reports stays short.
     var opened: Set<String> = []
+    var creatingFile = false
+    /// Where the new-file sheet starts; nil picks the newest assignment's folder.
+    var newFileFolder: String?
 
     init(workspace: Workspace, course: LoadedCourse) {
         self.workspace = workspace
@@ -122,6 +125,28 @@ final class MaterialsModel {
         workspace.run(CleanupUndo(batch: batch, course: course.id))
         lastBatch = nil
         Task { await load() }
+    }
+
+    func acceptsNewFile(_ folder: PathTree<FolioDomain.Material>) -> Bool {
+        let file = course.file
+        return NewMaterialFile.accepts(folder: folder.path,
+                                       places: NewMaterialFile.places(assignments: file.assignments, exams: file.exams, assignmentFolders: assignmentFolders))
+    }
+
+    func startNewFile(in folder: String?) {
+        newFileFolder = folder
+        creatingFile = true
+    }
+
+    /// Straight into the editor; its folders stay open behind it for when the editor closes.
+    func created(_ id: UUID) {
+        guard let m = materials.first(where: { $0.id == id }) else { return }
+        var folder = dir(m.path)
+        while !folder.isEmpty {
+            opened.insert(folder)
+            folder = dir(folder)
+        }
+        viewing = id
     }
 
     func untrack(_ m: FolioDomain.Material) { workspace.run(MaterialUntrack(course: course.id, material: m.id)) }

@@ -10,7 +10,7 @@ enum GeneratedCommands {
     static let component: [any ParsableCommand.Type] = [ComponentAdd.self, ComponentSet.self, ComponentRemove.self]
     static let exam: [any ParsableCommand.Type] = [ExamAdd.self, ExamSet.self, ExamRemove.self, ExamSummary.self]
     static let examPlan: [any ParsableCommand.Type] = [ExamPlanAdd.self]
-    static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialLinkExam.self, MaterialUntrack.self, MaterialTrash.self, MaterialBuild.self]
+    static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialLinkExam.self, MaterialUntrack.self, MaterialTrash.self, MaterialNew.self, MaterialBuild.self]
     static let note: [any ParsableCommand.Type] = [NoteAdopt.self, NoteRemove.self, NoteBuild.self]
     static let problemSet: [any ParsableCommand.Type] = [ProblemSetRemove.self, ProblemLinkUnit.self]
     static let recording: [any ParsableCommand.Type] = [RecordingTrim.self]
@@ -898,6 +898,30 @@ enum GeneratedCommands {
             let action = FolioActions.MaterialTrash(
                 course: c.id,
                 material: try r.id("Material", materialName, in: c)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct MaterialNew: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "new", abstract: "과제·시험 폴더나 Study, Archive에 새 텍스트 파일(.tex, 코드, .txt 등) 만들기. .tex는 바로 빌드되는 문서 틀로 시작한다", discussion: """
+            예시:
+              folio material new EC4207 Assignments/HW03 hw3.tex
+              folio material new EC4207 Study 풀이.py --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
+        @Argument(help: "과목 폴더 기준 폴더. 예: Assignments/HW04, Exams/중간고사, Study") var folder: String
+        @Argument(help: "확장자까지 쓴 파일 이름. 예: hw4.tex") var name: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let c = try r.course(course)
+            let action = FolioActions.MaterialNew(
+                course: c.id,
+                folder: folder,
+                name: name
             )
             try perform(spec: action, g, ctx: ctx)
         }

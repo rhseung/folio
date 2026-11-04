@@ -16952,6 +16952,94 @@
         }
       }
     },
+    "materials.new-confirm": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "만들기"
+          }
+        }
+      }
+    },
+    "materials.new-file-ellipsis": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 파일…"
+          }
+        }
+      }
+    },
+    "materials.new-file-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제·시험 폴더나 Study, Archive에 .tex, 코드, 텍스트 파일을 만들고 바로 편집합니다."
+          }
+        }
+      }
+    },
+    "materials.new-folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더"
+          }
+        }
+      }
+    },
+    "materials.new-name": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름"
+          }
+        }
+      }
+    },
+    "materials.new-name-example": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예: hw4.tex"
+          }
+        }
+      }
+    },
+    "materials.new-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확장자로 형식을 정하고, 빼면 .tex로 만듭니다. .tex는 바로 빌드되는 문서 틀로 시작합니다."
+          }
+        }
+      }
+    },
+    "materials.new-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 파일"
+          }
+        }
+      }
+    },
     "settings.class-minutes": {
       "extractionState": "manual",
       "localizations": {
