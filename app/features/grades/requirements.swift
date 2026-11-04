@@ -29,16 +29,16 @@ struct RequirementsView: View {
 
             // What needs a decision sits up here with its own buttons, where it's seen, not in a list at the bottom.
             if !suggestions.isEmpty {
+                let refusals = model.acceptRefusals(suggestions)
                 NoticeCard(title: model.suggestionsTitle(suggestions.count), detail: String(localized: .requirementsSuggestionsDetail), trailing: {
                     if suggestions.count > 1 {
-                        let refusal = model.acceptRefusal(suggestions)
                         Button(.requirementsApplyAll) { model.accept(suggestions) }.buttonStyle(.ghost)
-                            .disabled(refusal != nil).help(refusal ?? "")
+                            .disabled(refusals.all != nil).help(refusals.all ?? "")
                     }
                 }) {
                     ForEach(Array(suggestions.enumerated()), id: \.element.id) { i, s in
                         let course = model.course(s.courseId)
-                        let refusal = model.acceptRefusal([s])
+                        let refusal = refusals.rows[s.courseId]
                         CardRow(last: i == suggestions.count - 1) {
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                                 Text(course?.title ?? "").font(Theme.Typeface.bodyStrong).lineLimit(1)

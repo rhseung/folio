@@ -150,7 +150,7 @@ struct RequirementsModelTests {
 
         let model = RequirementsModel(workspace: workspace)
         let suggestions = model.audit.suggestions
-        #expect(suggestions.count == 2 && model.acceptRefusal(suggestions) == nil)
+        #expect(suggestions.count == 2 && model.acceptRefusals(suggestions).all == nil)
         model.accept(suggestions)
         let pending = try #require(model.pending)
         #expect(pending.question.hasPrefix("과목 ") && pending.question.contains("그래프 이론") && pending.question.contains("선형대수학"))
@@ -159,6 +159,9 @@ struct RequirementsModelTests {
         #expect(workspace.course(graphTheory)?.file.course.categoryIds == [elective.id])
         #expect(workspace.course(linear)?.file.course.categoryIds == [elective.id])
         #expect(model.audit.suggestions.isEmpty)
+        // Applied, they have nothing left to take: the whole is refused and each row says so too.
+        let refused = model.acceptRefusals(suggestions)
+        #expect(refused.all != nil && refused.rows.count == 2)
     }
 
     @Test func secondProgramStartsAsADoubleMajor() throws {

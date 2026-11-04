@@ -147,8 +147,18 @@ final class RequirementsModel {
         pending = workspace.ask(RequirementAccept(courses: suggestions.map(\.courseId)))
     }
 
-    func acceptRefusal(_ suggestions: [HandbookClassifier.Suggestion]) -> String? {
-        workspace.refusal(RequirementAccept(courses: suggestions.map(\.courseId)))
+    struct AcceptRefusals {
+        var all: String?
+        var rows: [UUID: String] = [:]
+    }
+
+    /// One dry run covers every row, since a course that goes through with the rest goes through alone. Only when
+    /// that is refused does each row get its own, to find which one is blocked.
+    func acceptRefusals(_ suggestions: [HandbookClassifier.Suggestion]) -> AcceptRefusals {
+        guard let all = workspace.refusal(RequirementAccept(courses: suggestions.map(\.courseId))) else { return AcceptRefusals() }
+        var rows: [UUID: String] = [:]
+        for s in suggestions { rows[s.courseId] = workspace.refusal(RequirementAccept(courses: [s.courseId])) }
+        return AcceptRefusals(all: all, rows: rows)
     }
 
     private func approval(_ courseId: UUID) -> CourseSet { CourseSet(course: courseId, [.sharingApproved(true)]) }
