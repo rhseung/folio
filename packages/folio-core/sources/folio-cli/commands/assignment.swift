@@ -97,9 +97,15 @@ struct AssignmentCommand: ParsableCommand {
                 }
                 (componentGroup, componentId) = (group.value, group.value == nil ? componentId : nil)
             }
-            // Only scores in the covered components change: they are sent again unless `--score none` clears them.
-            let covered = componentGroup.map { g in f.components.filter { $0.group == g }.map(\.id) } ?? componentId.map { [$0] } ?? []
-            var scores = f.scores.filter { $0.assignmentId == a.id }.map { AssignmentSave.Score(component: $0.componentId, score: $0.score, max: $0.max) }
+            // Like the sheet, the old target's components go along with the new ones, so retargeting drops the old
+            // target's scores; scores elsewhere (moved on the grades page) are left alone.
+            func components(group: String?, id: UUID?) -> [UUID] {
+                group.map { g in f.components.filter { $0.group == g }.map(\.id) } ?? id.map { [$0] } ?? []
+            }
+            let covered = components(group: componentGroup, id: componentId)
+            let shown = covered + components(group: a.componentGroup, id: a.componentId).filter { !covered.contains($0) }
+            var scores = f.scores.filter { $0.assignmentId == a.id && covered.contains($0.componentId) }
+                .map { AssignmentSave.Score(component: $0.componentId, score: $0.score, max: $0.max) }
             if score == ["none"] { scores = [] }
             for s in score where s != "none" {
                 let (target, value) = s.firstIndex(of: ":").map { (String(s[..<$0]), String(s[s.index(after: $0)...])) } ?? (nil, s)
@@ -115,7 +121,7 @@ struct AssignmentCommand: ParsableCommand {
             }
             try perform(spec: AssignmentSave(course: c.id, assignment: a.id, title: title ?? a.title, due: due.map(\.value?.date) ?? a.due, status: status ?? a.status,
                                        repeats: repeats.map(\.value) ?? a.repeats, componentId: componentId, componentGroup: componentGroup, memo: memo ?? a.memo,
-                                       components: covered, scores: scores),
+                                       components: shown, scores: scores),
                         g, ctx: ctx)
         }
     }
