@@ -7,10 +7,10 @@ enum WindowSize {
                height: side(ideal: Theme.Size.windowIdeal.height, least: Theme.Size.windowMin.height, room: visible.height))
     }
 
-    // Down to the 4pt grid, then never under the minimum, and never past the screen: on a screen smaller than the
-    // minimum the window fills it rather than spilling over.
+    // Down to the 4pt grid, then never under the minimum, even on a screen smaller than it: the content's own minimum
+    // frame would win over a smaller ask anyway.
     private static func side(ideal: CGFloat, least: CGFloat, room: CGFloat) -> CGFloat {
         let share = (room * Theme.Size.windowShare / 4).rounded(.down) * 4
-        return min(max(min(ideal, share), least), room)
+        return max(min(ideal, share), least)
     }
 }

@@ -15,20 +15,21 @@ struct WindowSizeTests {
         #expect(Theme.Size.windowMin.width <= 1280 && Theme.Size.windowMin.height <= 767)
     }
 
-    @Test func aScreenUnderTheMinimumIsFilled() {
-        #expect(WindowSize.opening(in: CGSize(width: 1024, height: 600)) == CGSize(width: 1024, height: 600))
+    // The content's minimum frame keeps the window at least this big, so asking for less would only mislead.
+    @Test func aScreenUnderTheMinimumGetsTheMinimum() {
+        #expect(WindowSize.opening(in: CGSize(width: 1024, height: 600)) == Theme.Size.windowMin)
     }
 
     // The bug this guards: the old fixed 1520pt default was wider than a 1512pt screen.
-    @Test func neverOpensPastTheScreenNorUnderTheMinimum() {
+    @Test func neverOpensPastAScreenThatHoldsTheMinimumNorUnderIt() {
         for width in stride(from: 800, through: 3200, by: 7) {
             for height in stride(from: 500, through: 2000, by: 11) {
                 let room = CGSize(width: width, height: height)
                 let size = WindowSize.opening(in: room)
-                #expect(size.width <= room.width && size.height <= room.height)
+                if room.width >= Theme.Size.windowMin.width { #expect(size.width <= room.width) }
+                if room.height >= Theme.Size.windowMin.height { #expect(size.height <= room.height) }
                 #expect(size.width <= Theme.Size.windowIdeal.width && size.height <= Theme.Size.windowIdeal.height)
-                #expect(size.width >= min(Theme.Size.windowMin.width, room.width))
-                #expect(size.height >= min(Theme.Size.windowMin.height, room.height))
+                #expect(size.width >= Theme.Size.windowMin.width && size.height >= Theme.Size.windowMin.height)
             }
         }
     }
