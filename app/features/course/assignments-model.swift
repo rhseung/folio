@@ -187,7 +187,12 @@ final class AssignmentSheetModel {
             maxes[s.componentId] = s.max.formatted()
         }
         target = assignment.componentGroup.map { .group($0) } ?? (assignment.componentId ?? own.first?.componentId).map { .component($0) } ?? .none
+        loadedComponents = targetComponents.map(\.id)
     }
+
+    /// The fields shown when the sheet opened; a score in one of them that the user moved the target away from goes,
+    /// while one in a component the sheet never showed (moved there on the grades page) stays.
+    private var loadedComponents: [UUID] = []
 
     func importFiles(_ urls: [URL]) { workspace.importFiles(urls, into: folder, course: course.id) }
 
@@ -211,7 +216,7 @@ final class AssignmentSheetModel {
         if case .group(let g) = target { group = g }
         return workspace.run(AssignmentSave(course: course.id, assignment: assignment.id, title: title, due: hasDue ? due : nil, status: status,
                                             repeats: repeats, componentId: componentId, componentGroup: group, memo: memo,
-                                            components: scored.map(\.id), scores: entered)) != nil
+                                            components: Array(Set(loadedComponents + scored.map(\.id))), scores: entered)) != nil
     }
 
     func delete() { workspace.run(AssignmentRemove(course: course.id, assignment: assignment.id)) }
