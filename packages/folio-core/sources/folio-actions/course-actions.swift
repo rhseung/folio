@@ -229,6 +229,29 @@ public struct GraduationSet {
     }
 }
 
+/// The categories come from the handbook here, not from the caller, so the app and the CLI apply what
+/// `requirement check` lists. Every course is matched before any is written, so a course with no suggestion leaves
+/// the others untouched.
+@Action("requirement accept", "학사편람의 분류 제안 받아들이기. 여러 과목이면 확인을 받는다",
+        confirm: "과목 {courses}의 분류를 학사편람대로 바꿉니다.", done: "과목 {courses}의 분류를 학사편람대로 바꿨습니다",
+        phrases: ["학사편람 분류 적용", "분류 제안 적용", "제안 모두 적용"], cli: .manual)
+public struct RequirementAccept {
+    /// 과목
+    @Arg var courses: [Course.ID]
+
+    public func run(_ ctx: ActionContext) throws {
+        let catalog = try ctx.catalog().scoped(to: ctx.transcript().graduation.programs)
+        let picked = try courses.map { try ctx.file($0).course }
+        let suggested = Dictionary(keepingFirst: HandbookClassifier.suggest(courses: picked, semesters: try ctx.transcript().semesters, catalog: catalog)
+            .map { ($0.courseId, $0.categoryIds) })
+        let changes = try picked.map { c in
+            guard let ids = suggested[c.id] else { throw ActionError.rule(String(localized: .errorRequirementNoSuggestion(c.title))) }
+            return (c.id, ids)
+        }
+        for (id, ids) in changes { try ctx.edit(id) { $0.course.categoryIds = ids } }
+    }
+}
+
 /// Replaces catalog.json's tables; rows that changed are stamped as edited from this device. Unknown keys are kept.
 @Action("catalog set", "catalog.json을 파일 내용으로 바꾸기. 바뀐 행만 수정 시각이 바뀐다", done: "카탈로그를 바꿨습니다", phrases: ["카탈로그 수정"], cli: .manual)
 public struct CatalogSet {

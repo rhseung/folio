@@ -17,7 +17,7 @@ struct UnitsView: View {
     var body: some View {
         Group {
             if let id = model.openUnit, let unit = course.file.units.first(where: { $0.id == id }) {
-                UnitDetail(model: model, course: course, unit: unit, delete: { model.removing = unit })
+                UnitDetail(model: model, course: course, unit: unit, delete: { model.remove(unit) })
             } else {
                 list
             }
@@ -26,13 +26,7 @@ struct UnitsView: View {
         .onChange(of: model.workspace.quizRevision) { model.loadQuiz(model.workspace.course(course.id) ?? course) }
         // Initial too: the page starts on its list, and the unit it had open last time is gone with its model.
         .onChange(of: model.openUnit, initial: true) { _, id in opened(id) }
-        .confirmationDialog(model.removalTitle, isPresented: Binding(get: { model.removing != nil }, set: { if !$0 { model.removing = nil } })) {
-            Button(.commonDelete, role: .destructive) {
-                if let unit = model.removing { model.remove(unit) }
-            }
-        } message: {
-            Text(.unitsDeleteMessage)
-        }
+        .confirming($model.pending)
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.unitStep, initial: true) { _, step in
             if step != nil { model.openUnit = UnitTree.outline(course.file.units).first?.unit.id }
@@ -135,7 +129,7 @@ struct UnitsView: View {
         Button(.unitsMoveUp) { model.move(unit, by: -1) }
         Button(.unitsMoveDown) { model.move(unit, by: 1) }
         Divider()
-        Button(.commonDeleteEllipsis, role: .destructive) { model.removing = unit }
+        Button(.commonDeleteEllipsis, role: .destructive) { model.remove(unit) }
     }
 
     /// Held classes no unit covers, newest first: linking one here starts its unit's review from that class.

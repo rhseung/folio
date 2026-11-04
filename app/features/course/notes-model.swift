@@ -13,7 +13,7 @@ final class NoteListModel {
     private(set) var notes: [NoteFile] = []
     var filter: NoteKind?
     var adding = false
-    var deleting: NoteFile?
+    var pending: PendingAction?
 
     init(workspace: Workspace, course: LoadedCourse) {
         self.workspace = workspace
@@ -93,9 +93,12 @@ final class NoteListModel {
     }
 
     /// Sessions let go of the note first: a note left behind by a failed trash is harmless, a link to nothing is not.
-    func delete(_ note: NoteFile) {
-        if let path = course.store.coursePath(of: note.url) { workspace.run(NoteRemove(course: course.id, note: path)) }
-        reload()
+    func delete(_ note: NoteFile, then done: @escaping @MainActor () -> Void = {}) {
+        guard let path = course.store.coursePath(of: note.url) else { return }
+        pending = workspace.ask(NoteRemove(course: course.id, note: path), button: .notesTrash) { [weak self] _ in
+            self?.reload()
+            done()
+        }
     }
 }
 

@@ -55,7 +55,7 @@ struct CourseGradesView: View {
                                     Button(.courseGradesEditEllipsis) { model.editingEntry = e }
                                     Button(e.excused ? .courseGradesInclude : .courseGradesExcuse) { model.setExcused(e, !e.excused) }
                                     Divider()
-                                    Button(.courseGradesRemoveScoreEllipsis, role: .destructive) { model.deletingEntry = e }
+                                    Button(.courseGradesRemoveScoreEllipsis, role: .destructive) { model.remove(e) }
                                 }
                         }
                     }
@@ -81,18 +81,7 @@ struct CourseGradesView: View {
                 }
             }
         }
-        .confirmationDialog(model.deletingComponent.map(CourseGradesModel.removeTitle) ?? "",
-                            isPresented: Binding(get: { model.deletingComponent != nil }, set: { if !$0 { model.deletingComponent = nil } }),
-                            presenting: model.deletingComponent) { c in
-            Button(.commonDelete, role: .destructive) { model.remove(c) }
-        } message: { c in
-            if let message = CourseGradesModel.removeMessage(c, in: file) { Text(message) }
-        }
-        .confirmationDialog(model.deletingEntry.map(CourseGradesModel.removeTitle) ?? "",
-                            isPresented: Binding(get: { model.deletingEntry != nil }, set: { if !$0 { model.deletingEntry = nil } }),
-                            presenting: model.deletingEntry) { e in
-            Button(.commonDelete, role: .destructive) { model.remove(e) }
-        }
+        .confirming($model.pending)
         .sheet(item: $model.editingEntry) { ScoreEntrySheet(workspace: model.workspace, course: course, entry: $0) }
         .sheet(item: $model.editingComponent) { ComponentSheet(workspace: model.workspace, course: course, component: $0) }
         .sheet(isPresented: $editingPolicy) { PolicySheet(workspace: model.workspace, course: course) }
@@ -142,7 +131,7 @@ struct CourseGradesView: View {
             Button(.courseGradesMoveUp) { model.move(c.id, by: -1) }.disabled(i == 0)
             Button(.courseGradesMoveDown) { model.move(c.id, by: 1) }.disabled(i == components.count - 1)
             Divider()
-            Button(.courseGradesRemoveComponentEllipsis, role: .destructive) { model.deletingComponent = c }
+            Button(.courseGradesRemoveComponentEllipsis, role: .destructive) { model.remove(c) }
         }
     }
 

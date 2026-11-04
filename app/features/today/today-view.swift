@@ -6,7 +6,6 @@ import SwiftUI
 struct TodayView: View {
     @State private var model: TodayModel
     @Environment(\.searchTarget) private var searchTarget
-    @State private var skippingAll = false
     @State private var wide = true
     @State private var hoveredNote: UUID?
 
@@ -39,6 +38,7 @@ struct TodayView: View {
         }
         .navigationSubtitle(summary.studyDay.description)
         .sheet(item: $model.editing) { AssignmentSheet(workspace: model.workspace, course: $0.course, assignment: $0.assignment) }
+        .confirming($model.pending)
     }
 
     // MARK: Exams and deadlines
@@ -190,14 +190,9 @@ struct TodayView: View {
                         .symbolEffect(.bounce, value: reviews.streak)
                 }
                 if !all.isEmpty {
-                    Button(.todayReviewsSkipAll) { skippingAll = true }
+                    Button(.todayReviewsSkipAll) { model.skip(all) }
                         .buttonStyle(.ghost)
                         .font(Theme.Typeface.caption)
-                        .confirmationDialog(String(localized: .todayReviewsSkipAllConfirm(all.count)), isPresented: $skippingAll) {
-                            Button(.todayReviewsSkipAllButton(all.count)) { model.skip(all) }
-                        } message: {
-                            Text(.todayReviewsSkipAllMessage)
-                        }
                 }
             }
             if left == 0 {

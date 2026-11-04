@@ -7,6 +7,7 @@ import Observation
 @MainActor @Observable
 final class CourseModel {
     let workspace: Workspace
+    var pending: PendingAction?
     let courseId: UUID
     var section: CourseSection = .overview
     var openNote: UUID?
@@ -132,7 +133,7 @@ final class CourseModel {
         return Array((due + covered.suffix(8).reversed()).prefix(8))
     }
 
-    func skipReview(_ unit: FolioDomain.Unit) { workspace.skipReviews([(courseId, unit.id)]) }
+    func skipReview(_ unit: FolioDomain.Unit) { pending = workspace.skipReviews([(courseId, unit.id)]) }
 
     func stats(_ file: CourseFile, reviews: [Workspace.ReviewEntry], suggested: Workspace.SuggestedSession?, now: Date) -> [StatStrip.Item] {
         // A class the timetable promises counts before it is made; without it a course that makes sessions as it goes

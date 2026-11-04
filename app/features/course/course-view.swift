@@ -273,7 +273,7 @@ struct CourseColumn: View {
 
 struct CourseOverview: View {
     @Environment(\.accent) private var accent
-    let model: CourseModel
+    @Bindable var model: CourseModel
     let course: LoadedCourse
     @State private var editing = false
     @State private var wide = true
@@ -327,6 +327,7 @@ struct CourseOverview: View {
 
             InfoBlocks(workspace: model.workspace, course: course)
         }
+        .confirming($model.pending)
     }
 
     func weekBlock(_ file: CourseFile, suggested: Workspace.SuggestedSession?, now: Date) -> some View {

@@ -21,7 +21,7 @@ final class MaterialsModel {
     var incoming: [URL] = []
     var renaming: FolioDomain.Material?
     var newName = ""
-    var trashing: FolioDomain.Material?
+    var pending: PendingAction?
     /// Folder paths opened in the tree; folders start closed so a course with many reports stays short.
     var opened: Set<String> = []
     var creatingFile = false
@@ -122,9 +122,10 @@ final class MaterialsModel {
 
     func undo() {
         guard let batch = lastBatch else { return }
-        workspace.run(CleanupUndo(batch: batch, course: course.id))
-        lastBatch = nil
-        Task { await load() }
+        pending = workspace.ask(CleanupUndo(batch: batch, course: course.id)) { [weak self] _ in
+            self?.lastBatch = nil
+            Task { await self?.load() }
+        }
     }
 
     func acceptsNewFile(_ folder: PathTree<FolioDomain.Material>) -> Bool {
@@ -150,8 +151,8 @@ final class MaterialsModel {
     }
 
     func untrack(_ m: FolioDomain.Material) { workspace.run(MaterialUntrack(course: course.id, material: m.id)) }
-    func trash(_ m: FolioDomain.Material) { workspace.run(MaterialTrash(course: course.id, material: m.id)) }
-    func ignore(_ ids: [UUID]) { workspace.run(MaterialStatusSet(course: course.id, materials: ids, status: .ignored)) }
+    func trash(_ m: FolioDomain.Material) { pending = workspace.ask(MaterialTrash(course: course.id, material: m.id), button: .materialsTrash) }
+    func ignore(_ ids: [UUID]) { pending = workspace.ask(MaterialStatusSet(course: course.id, materials: ids, status: .ignored)) }
 
     func startRenaming(_ m: FolioDomain.Material) {
         newName = ((m.path as NSString).lastPathComponent as NSString).deletingPathExtension
@@ -167,14 +168,18 @@ final class MaterialsModel {
         let base = newName.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "/", with: "-")
         let name = ext.isEmpty ? base : "\(base).\(ext)"
         guard !base.isEmpty, name != (m.path as NSString).lastPathComponent else { return }
-        move(m, to: (dir(m.path) as NSString).appendingPathComponent(name))
+        // The rename alert shows the new name, so pressing it is the approval; asking again would ask twice.
+        if let batch = workspace.run(MaterialMove(course: course.id, material: m.id, to: (dir(m.path) as NSString).appendingPathComponent(name)))?.made {
+            lastBatch = batch
+        }
     }
 
-    func move(_ m: FolioDomain.Material, to place: String) {
-        if let batch = workspace.run(MaterialMove(course: course.id, material: m.id, to: place))?.made { lastBatch = batch }
+    func move(_ m: FolioDomain.Material, into place: String) {
+        let action = MaterialMove(course: course.id, material: m.id, to: "\(place)/\((m.path as NSString).lastPathComponent)")
+        pending = workspace.ask(action) { [weak self] ctx in
+            if let batch = ctx.made { self?.lastBatch = batch }
+        }
     }
-
-    func move(_ m: FolioDomain.Material, into place: String) { move(m, to: "\(place)/\((m.path as NSString).lastPathComponent)") }
 
     func relink(to file: URL) {
         guard let id = relinking else { return }

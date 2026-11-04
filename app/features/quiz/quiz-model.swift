@@ -31,8 +31,7 @@ final class QuizModel {
     var request: SolveRequest?
     var generating: FolioDomain.Unit?
     var editing: CardDraft?
-    var removingCard: QuizCard?
-    var removingSet: ProblemSet?
+    var pending: PendingAction?
 
     init(workspace: Workspace) { self.workspace = workspace }
 
@@ -102,10 +101,8 @@ final class QuizModel {
         [card.type.label, card.category.label, card.source == .ai ? "Claude" : nil].compactMap { $0 }.joined(separator: " · ")
     }
 
-    func removeCard(in course: LoadedCourse) {
-        if let card = removingCard { workspace.run(QuizCardRemove(course: course.id, unit: card.unitId, card: card.id)) }
-        load(course)
-        removingCard = nil
+    func remove(_ card: QuizCard, in course: LoadedCourse) {
+        pending = workspace.ask(QuizCardRemove(course: course.id, unit: card.unitId, card: card.id)) { [weak self] _ in self?.load(course) }
     }
 
     // MARK: Statistics
@@ -212,8 +209,7 @@ final class QuizModel {
         workspace.run(ProblemLinkUnit(course: course.id, set: set, number: problem.number, unit: unit, linked: !problem.unitIds.contains(unit)))
     }
 
-    func removeSet(in course: LoadedCourse) {
-        if let set = removingSet { workspace.run(ProblemSetRemove(course: course.id, set: set.id)) }
-        removingSet = nil
+    func remove(_ set: ProblemSet, in course: LoadedCourse) {
+        pending = workspace.ask(ProblemSetRemove(course: course.id, set: set.id))
     }
 }

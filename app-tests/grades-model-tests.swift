@@ -1,3 +1,4 @@
+import FolioActions
 import FolioDomain
 import Foundation
 import Testing
@@ -133,6 +134,36 @@ struct RequirementsModelTests {
         #expect(workspace.catalog.categories.first { $0.id == child.id }?.parentId == nil)
     }
 
+    /// Applying all is one action, so it is asked once and a course the handbook can't place stops the rest.
+    @Test func applyingEverySuggestionAsksOnceThenAppliesThemAll() throws {
+        let workspace = try fixtureWorkspace()
+        var catalog = workspace.catalog
+        let (ec, ma) = (CourseCode(device: device, at: .now, prefix: "EC"), CourseCode(device: device, at: .now, prefix: "MA"))
+        let elective = RequirementCategory(device: device, at: .now, name: "전공선택")
+        catalog.codes += [ec, ma]
+        catalog.categories.append(elective)
+        catalog.handbooks = [Handbook(year: 2026, source: "2026 학사편람", areas: ["EC4207": "전공선택", "MA2001": "전공선택"])]
+        workspace.saveCatalog(catalog)
+        let linear = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
+        #expect(workspace.run(CourseRename(course: graphTheory, title: "그래프 이론", codes: [ec.id], number: "4207")) != nil)
+        #expect(workspace.run(CourseRename(course: linear, title: "선형대수학", codes: [ma.id], number: "2001")) != nil)
+
+        let model = RequirementsModel(workspace: workspace)
+        let suggestions = model.audit.suggestions
+        #expect(suggestions.count == 2 && model.acceptRefusals(suggestions).all == nil)
+        model.accept(suggestions)
+        let pending = try #require(model.pending)
+        #expect(pending.question.hasPrefix("과목 ") && pending.question.contains("그래프 이론") && pending.question.contains("선형대수학"))
+        #expect(workspace.course(graphTheory)?.file.course.categoryIds.isEmpty == true)
+        pending.perform()
+        #expect(workspace.course(graphTheory)?.file.course.categoryIds == [elective.id])
+        #expect(workspace.course(linear)?.file.course.categoryIds == [elective.id])
+        #expect(model.audit.suggestions.isEmpty)
+        // Applied, they have nothing left to take: the whole is refused and each row says so too.
+        let refused = model.acceptRefusals(suggestions)
+        #expect(refused.all != nil && refused.rows.count == 2)
+    }
+
     @Test func secondProgramStartsAsADoubleMajor() throws {
         let workspace = try fixtureWorkspace()
         var catalog = workspace.catalog
@@ -176,8 +207,6 @@ struct CourseGradesModelTests {
         file.scores = [ScoreEntry(device: device, at: .now, componentId: quiz.id, title: "1", score: 8, max: 10),
                        ScoreEntry(device: device, at: .now, componentId: quiz.id, title: "2", score: 0, max: 10, excused: true)]
         #expect(model.componentDetail(quiz, in: file) == "최저 1회 제외 · 1/4회")
-        #expect(CourseGradesModel.removeMessage(quiz, in: file) == "이 항목의 점수 2개도 함께 삭제됩니다.")
-        #expect(CourseGradesModel.removeMessage(component("Final", 40), in: file) == nil)
     }
 
     /// 선형대수학's rule: six absences cap the grade at B0, nine or more give F.
@@ -212,8 +241,6 @@ struct CourseGradesModelTests {
         #expect(8.0.points == "평균 +8점")
         #expect((-1.5).points == "평균 -1.5점")
         #expect(Aggregation.bestOf(2).label == "상위 2회")
-        let titled = ScoreEntry(device: device, at: .now, componentId: UUID(), title: "Quiz 3", score: 1, max: 1)
-        #expect(CourseGradesModel.removeTitle(titled) == "‘Quiz 3’ 점수를 삭제할까요?")
     }
 }
 

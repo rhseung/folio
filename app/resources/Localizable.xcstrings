@@ -441,28 +441,6 @@
         }
       }
     },
-    "assignments.remove-confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@을 지울까요?"
-          }
-        }
-      }
-    },
-    "assignments.remove-message": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과제 항목과 연결된 점수만 지웁니다. 폴더와 파일은 그대로 둡니다."
-          }
-        }
-      }
-    },
     "assignments.renamed-folder": {
       "extractionState": "manual",
       "localizations": {
@@ -1596,6 +1574,17 @@
         }
       }
     },
+    "common.move": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "옮기기"
+          }
+        }
+      }
+    },
     "common.none": {
       "extractionState": "manual",
       "localizations": {
@@ -1647,6 +1636,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 열기"
+          }
+        }
+      }
+    },
+    "common.refused": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "할 수 없습니다"
           }
         }
       }
@@ -2729,39 +2729,6 @@
         }
       }
     },
-    "course-grades.remove-component.confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "‘%@’ 항목을 삭제할까요?"
-          }
-        }
-      }
-    },
-    "course-grades.remove-component.scores": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 항목의 점수 %lld개도 함께 삭제됩니다."
-          }
-        }
-      }
-    },
-    "course-grades.remove-named-score.confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "‘%@’ 점수를 삭제할까요?"
-          }
-        }
-      }
-    },
     "course-grades.remove-score-ellipsis": {
       "extractionState": "manual",
       "localizations": {
@@ -2769,17 +2736,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "점수 삭제…"
-          }
-        }
-      }
-    },
-    "course-grades.remove-score.confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 점수를 삭제할까요?"
           }
         }
       }
@@ -4500,28 +4456,6 @@
         }
       }
     },
-    "exams.remove-confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@을 삭제할까요?"
-          }
-        }
-      }
-    },
-    "exams.remove-message": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시험 기록과 계획을 지웁니다. 시험 폴더와 파일은 그대로 둡니다."
-          }
-        }
-      }
-    },
     "exams.review.late": {
       "extractionState": "manual",
       "localizations": {
@@ -6172,17 +6106,6 @@
         }
       }
     },
-    "materials.trash-confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "휴지통으로 옮길까요?"
-          }
-        }
-      }
-    },
     "materials.trash-ellipsis": {
       "extractionState": "manual",
       "localizations": {
@@ -6190,17 +6113,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "휴지통으로 옮기기…"
-          }
-        }
-      }
-    },
-    "materials.trash-message": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ 파일을 휴지통으로 옮기고 자료 목록에서 지웁니다. 휴지통에서 되살릴 수 있습니다."
           }
         }
       }
@@ -6480,17 +6392,6 @@
         }
       }
     },
-    "notes.delete-confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "‘%@’ 노트를 삭제할까요?"
-          }
-        }
-      }
-    },
     "notes.delete-ellipsis": {
       "extractionState": "manual",
       "localizations": {
@@ -6498,17 +6399,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "노트 삭제…"
-          }
-        }
-      }
-    },
-    "notes.delete-message": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트 파일을 휴지통으로 옮기고, 이 노트를 러프나 복습 노트로 쓰던 회차에서 연결을 뺍니다. 휴지통에서 되살릴 수 있고, 노트에 넣은 그림은 assets 폴더에 그대로 둡니다."
           }
         }
       }
@@ -7899,28 +7789,6 @@
         }
       }
     },
-    "quiz.card.remove-confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 카드를 삭제할까요?"
-          }
-        }
-      }
-    },
-    "quiz.card.remove-message": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지난 풀이 기록은 로그에 남습니다."
-          }
-        }
-      }
-    },
     "quiz.card.rubric": {
       "extractionState": "manual",
       "localizations": {
@@ -8537,17 +8405,6 @@
         }
       }
     },
-    "quiz.problems.remove-confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "‘%@’ 묶음을 삭제할까요?"
-          }
-        }
-      }
-    },
     "quiz.problems.remove-ellipsis": {
       "extractionState": "manual",
       "localizations": {
@@ -8555,17 +8412,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "묶음 삭제…"
-          }
-        }
-      }
-    },
-    "quiz.problems.remove-message": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "번호 격자와 단원 연결이 사라집니다. 문제지와 해설 파일, 풀이 기록은 그대로 둡니다."
           }
         }
       }
@@ -13201,17 +13047,6 @@
         }
       }
     },
-    "sessions.remove-confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ 회차를 지울까요?"
-          }
-        }
-      }
-    },
     "sessions.remove-ellipsis": {
       "extractionState": "manual",
       "localizations": {
@@ -13219,28 +13054,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "지우기…"
-          }
-        }
-      }
-    },
-    "sessions.remove-message": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "같은 주의 다른 회차 번호는 그대로입니다."
-          }
-        }
-      }
-    },
-    "sessions.remove-refused": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 회차는 지울 수 없습니다"
           }
         }
       }
@@ -13450,28 +13263,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "단원 검색"
-          }
-        }
-      }
-    },
-    "sessions.untouched-confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "빈 회차 %lld개를 지울까요?"
-          }
-        }
-      }
-    },
-    "sessions.untouched-confirm-message": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "연결된 것이 없는 회차만 지웁니다."
           }
         }
       }
@@ -14807,39 +14598,6 @@
         }
       }
     },
-    "today.reviews.skip-all.button": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld단원 건너뛰기"
-          }
-        }
-      }
-    },
-    "today.reviews.skip-all.confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복습 %lld단원을 건너뛸까요?"
-          }
-        }
-      }
-    },
-    "today.reviews.skip-all.message": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이미 공부한 것으로 보고 오늘 화면에서 뺍니다. 틀린 퀴즈 카드나 시험 계획이 생기면 다시 올라옵니다."
-          }
-        }
-      }
-    },
     "today.study.axis.course": {
       "extractionState": "manual",
       "localizations": {
@@ -15093,17 +14851,6 @@
         }
       }
     },
-    "units.delete-confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "‘%@’ 단원을 삭제할까요?"
-          }
-        }
-      }
-    },
     "units.delete-ellipsis": {
       "extractionState": "manual",
       "localizations": {
@@ -15111,17 +14858,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "단원 삭제…"
-          }
-        }
-      }
-    },
-    "units.delete-message": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "회차와 시험 범위 연결이 풀리고, 하위 단원은 한 단계 위로 올라갑니다. 노트와 퀴즈 파일은 그대로 둡니다."
           }
         }
       }

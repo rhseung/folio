@@ -1,7 +1,7 @@
 /// Every action, in one place: `folio actions --check` fails on any of them without a CLI command or an equivalence test.
 public enum Actions {
     public static let all: [any Action.Type] = platform + [
-        SemesterAdd.self, SemesterSet.self, SemesterSource.self, TranscriptAdd.self, TranscriptMove.self, CourseAdd.self, CourseRename.self, CourseSet.self, GraduationSet.self, CatalogSet.self,
+        SemesterAdd.self, SemesterSet.self, SemesterSource.self, TranscriptAdd.self, TranscriptMove.self, CourseAdd.self, CourseRename.self, CourseSet.self, GraduationSet.self, RequirementAccept.self, CatalogSet.self,
         SettingsSet.self,
         SessionAdd.self, SessionRemove.self, SessionSet.self, SessionNote.self, SessionLinkViewed.self, AttendanceSet.self,
         UnitAdd.self, UnitRemove.self, UnitSet.self, UnitMove.self, UnitLink.self,

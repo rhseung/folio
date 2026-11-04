@@ -49,12 +49,7 @@ struct ExamsView: View {
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.editExam, initial: true) { _, on in model.editing = on ? model.course.file.exams.first : nil }
         #endif
-        .confirmationDialog(String(localized: .examsRemoveConfirm(model.removing?.title ?? "")),
-                            isPresented: Binding(get: { model.removing != nil }, set: { if !$0 { model.removing = nil } }), presenting: model.removing) { exam in
-            Button(.commonDelete, role: .destructive) { model.remove(exam) }
-        } message: { _ in
-            Text(.examsRemoveMessage)
-        }
+        .confirming($model.pending)
         .task(id: model.course.id) { model.load() }
     }
 
@@ -203,7 +198,7 @@ struct ExamsView: View {
         Button(model.summaryTitle(exam)) { openSummary(exam) }
         Button(.commonEditEllipsis) { model.editing = exam }
         Divider()
-        Button(.commonDeleteEllipsis, role: .destructive) { model.removing = exam }
+        Button(.commonDeleteEllipsis, role: .destructive) { model.remove(exam) }
     }
 
     func menu(_ exam: Exam) -> some View {

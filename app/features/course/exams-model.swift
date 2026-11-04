@@ -9,7 +9,7 @@ final class ExamsModel {
     let workspace: Workspace
     private let initial: LoadedCourse
     var editing: Exam?
-    var removing: Exam?
+    var pending: PendingAction?
     /// Summary note per exam, read once per course; opening one adds to it.
     private(set) var notes: [UUID: UUID] = [:]
     private(set) var done: Set<UUID> = []
@@ -54,7 +54,7 @@ final class ExamsModel {
         editing = Exam(device: workspace.device, at: .now, title: "", start: start)
     }
 
-    func remove(_ exam: Exam) { workspace.run(ExamRemove(course: course.id, exam: exam.id)) }
+    func remove(_ exam: Exam) { pending = workspace.ask(ExamRemove(course: course.id, exam: exam.id)) }
 
     func folder(of exam: Exam) -> String? { MaterialIntake.folder(of: exam) }
 
@@ -210,7 +210,7 @@ final class ExamsModel {
     }
 
     func removePlanItem(_ id: UUID, of exam: Exam) {
-        workspace.run(ExamPlanRemove(course: course.id, exam: exam.id, item: id))
+        pending = workspace.ask(ExamPlanRemove(course: course.id, exam: exam.id, item: id))
     }
 }
 

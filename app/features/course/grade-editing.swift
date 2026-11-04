@@ -4,7 +4,6 @@ import SwiftUI
 struct ScoreEntrySheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model: ScoreEntryModel
-    @State private var confirmingDelete = false
 
     init(workspace: Workspace, course: LoadedCourse, entry: ScoreEntry) {
         _model = State(initialValue: ScoreEntryModel(workspace: workspace, course: course, entry: entry))
@@ -12,7 +11,7 @@ struct ScoreEntrySheet: View {
 
     var body: some View {
         SheetForm(title: model.sheetTitle, confirm: model.confirmTitle, disabled: !model.valid,
-                  deleteTitle: model.isNew ? nil : String(localized: .scoreSheetRemove), onDelete: { confirmingDelete = true }) {
+                  deleteTitle: model.isNew ? nil : String(localized: .scoreSheetRemove), onDelete: { model.remove { dismiss() } }) {
             // A new score is added from its component's tile, which already picked the component.
             if !model.isNew {
                 FormRow(label: String(localized: .scoreSheetComponent)) {
@@ -43,19 +42,13 @@ struct ScoreEntrySheet: View {
         } onConfirm: {
             if model.confirm() { dismiss() }
         }
-        .confirmationDialog(CourseGradesModel.removeTitle(model.entry), isPresented: $confirmingDelete) {
-            Button(.commonDelete, role: .destructive) {
-                model.remove()
-                dismiss()
-            }
-        }
+        .confirming($model.pending)
     }
 }
 
 struct ComponentSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model: ComponentModel
-    @State private var confirmingDelete = false
 
     init(workspace: Workspace, course: LoadedCourse, component: GradeComponent) {
         _model = State(initialValue: ComponentModel(workspace: workspace, course: course, component: component))
@@ -63,7 +56,7 @@ struct ComponentSheet: View {
 
     var body: some View {
         SheetForm(title: model.sheetTitle, confirm: model.confirmTitle, disabled: model.invalid,
-                  deleteTitle: model.isNew ? nil : String(localized: .componentSheetRemove), onDelete: { confirmingDelete = true }) {
+                  deleteTitle: model.isNew ? nil : String(localized: .componentSheetRemove), onDelete: { model.remove { dismiss() } }) {
             FormRow(label: String(localized: .componentSheetName)) { InlineField(String(localized: .componentSheetNameExample), text: $model.name) }
             FormRow(label: String(localized: .componentSheetGroup), detail: String(localized: .componentSheetGroupDetail)) {
                 InlineField(String(localized: .componentSheetGroupExample), text: $model.group)
@@ -94,14 +87,7 @@ struct ComponentSheet: View {
         } onConfirm: {
             if model.confirm() { dismiss() }
         }
-        .confirmationDialog(CourseGradesModel.removeTitle(model.component), isPresented: $confirmingDelete) {
-            Button(.commonDelete, role: .destructive) {
-                model.remove()
-                dismiss()
-            }
-        } message: {
-            if let message = CourseGradesModel.removeMessage(model.component, in: model.course.file) { Text(message) }
-        }
+        .confirming($model.pending)
     }
 }
 

@@ -67,6 +67,7 @@ final class CardEditorModel {
     let workspace: Workspace
     let course: LoadedCourse
     var draft: CardDraft
+    var pending: PendingAction?
 
     init(workspace: Workspace, course: LoadedCourse, draft: CardDraft) {
         self.workspace = workspace
@@ -86,8 +87,9 @@ final class CardEditorModel {
         return workspace.run(QuizCardSave(course: course.id, cards: [card], movedFrom: draft.original?.unitId)) != nil
     }
 
-    func remove() {
-        if let card = draft.original { workspace.run(QuizCardRemove(course: course.id, unit: card.unitId, card: card.id)) }
+    func remove(then done: @escaping @MainActor () -> Void) {
+        guard let card = draft.original else { return }
+        pending = workspace.ask(QuizCardRemove(course: course.id, unit: card.unitId, card: card.id)) { _ in done() }
     }
 }
 

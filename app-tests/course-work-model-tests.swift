@@ -227,6 +227,28 @@ struct MaterialsModelTests {
         #expect(lectures.count == 3)
         #expect(model.renameMessage(lectures.rows.compactMap { if case .file(let m, _, _) = $0 { m } else { nil } }[0]) == "확장자 .pdf는 그대로 둡니다. 바꾼 이름은 되돌릴 수 있게 기록합니다.")
     }
+
+    /// The move menu asks with the action's own words; the rename alert already shows the new name, so it doesn't.
+    @Test func movingAFileAsksButRenamingDoesNot() throws {
+        let (workspace, course) = try fixtureCourse()
+        workspace.run(MaterialTrack(course: linearAlgebra))
+        let model = MaterialsModel(workspace: workspace, course: course)
+        let m = try #require(model.materials.first { $0.isPDF && !model.moveTargets($0).isEmpty })
+        let place = try #require(model.moveTargets(m).first)
+        model.move(m, into: place)
+        let pending = try #require(model.pending)
+        #expect(pending.question.hasSuffix("(으)로 옮깁니다.") && pending.question.contains(place) && pending.refusal == nil)
+        #expect(model.materials.first { $0.id == m.id }?.path == m.path && model.lastBatch == nil)
+        pending.perform()
+        let moved = try #require(model.materials.first { $0.id == m.id })
+        #expect(moved.path.hasPrefix(place + "/") && model.lastBatch != nil)
+
+        model.pending = nil
+        model.startRenaming(moved)
+        model.newName = "새 이름"
+        model.rename(moved)
+        #expect(model.pending == nil && model.materials.first { $0.id == m.id }?.path == "\(place)/새 이름.pdf")
+    }
 }
 
 @MainActor
@@ -252,8 +274,11 @@ struct NotesModelTests {
 
         model.filter = nil
         #expect(model.parts.map(\.title) == ["수업 노트", "단원 정리"])
-        model.delete(model.shown.first { $0.meta.id == id }!)
-        #expect(model.parts.map(\.title) == ["수업 노트"])
+        var closed = false
+        model.delete(model.shown.first { $0.meta.id == id }!) { closed = true }
+        #expect(!closed && model.parts.map(\.title) == ["수업 노트", "단원 정리"])
+        try #require(model.pending).perform()
+        #expect(closed && model.parts.map(\.title) == ["수업 노트"])
     }
 
     @Test func editorNamesItsLinkAndFindsNotesByTitle() throws {

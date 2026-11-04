@@ -17,7 +17,7 @@ final class UnitsModel {
     let courseId: UUID
     var newTitle = ""
     var openUnit: UUID?
-    var removing: FolioDomain.Unit?
+    var pending: PendingAction?
     private(set) var quiz: [UUID: QuizStats] = [:]
     /// The open unit's rename field, saved when it is submitted or the unit closes.
     var name = ""
@@ -85,12 +85,10 @@ final class UnitsModel {
     }
 
     func remove(_ unit: FolioDomain.Unit) {
-        workspace.run(UnitRemove(course: courseId, unit: unit.id))
-        if openUnit == unit.id { openUnit = nil }
-        removing = nil
+        pending = workspace.ask(UnitRemove(course: courseId, unit: unit.id)) { [weak self] _ in
+            if self?.openUnit == unit.id { self?.openUnit = nil }
+        }
     }
-
-    var removalTitle: String { String(localized: .unitsDeleteConfirm(removing?.title ?? "")) }
 
     // MARK: The open unit
 

@@ -7,6 +7,7 @@ import Observation
 @MainActor @Observable
 final class TodayModel {
     let workspace: Workspace
+    var pending: PendingAction?
 
     init(workspace: Workspace) { self.workspace = workspace }
 
@@ -61,7 +62,7 @@ final class TodayModel {
     }
 
     func skip(_ entries: [Workspace.ReviewEntry]) {
-        workspace.skipReviews(entries.map { ($0.courseId, $0.item.unitId) })
+        pending = workspace.skipReviews(entries.map { ($0.courseId, $0.item.unitId) })
     }
 
     /// Timetable suggestions for the study day on screen: past midnight but before the boundary, tomorrow's aren't today's.

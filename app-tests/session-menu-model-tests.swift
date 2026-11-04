@@ -80,7 +80,7 @@ struct SessionMenuModelTests {
         let review = ReviewModel(workspace: workspace, items: [.init(courseId: graphTheory, unitId: a)])
         review.started = .now.addingTimeInterval(-120)
         review.record(.skip)
-        workspace.skipReviews([(graphTheory, b)])
+        _ = workspace.skipReviews([(graphTheory, b)])
 
         let events = workspace.reviews(of: graphTheory).map(\.event)
         #expect(events.map(\.result) == [.skip, .skip])

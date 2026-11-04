@@ -18,10 +18,14 @@ struct UnitsModelTests {
         let unit = try #require(try file(workspace).units.first)
         #expect(unit.title == "매칭")
         model.openUnit = unit.id
-        model.removing = unit
-        #expect(model.removalTitle == "‘매칭’ 단원을 삭제할까요?")
         model.remove(unit)
-        #expect(try file(workspace).units.isEmpty && model.openUnit == nil && model.removing == nil)
+        let pending = try #require(model.pending)
+        // The declaration's words, so the screen follows when the action's wording changes.
+        #expect(pending.question == workspace.confirmation(UnitRemove(course: graphTheory, unit: unit.id)) && pending.question.contains("'매칭'"))
+        #expect(pending.refusal == nil)
+        #expect(try file(workspace).units.count == 1)
+        pending.perform()
+        #expect(try file(workspace).units.isEmpty && model.openUnit == nil)
     }
 
     @Test func sessionsLineNamesThreeThenCountsTheRest() throws {

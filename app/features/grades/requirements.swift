@@ -29,13 +29,16 @@ struct RequirementsView: View {
 
             // What needs a decision sits up here with its own buttons, where it's seen, not in a list at the bottom.
             if !suggestions.isEmpty {
+                let refusals = model.acceptRefusals(suggestions)
                 NoticeCard(title: model.suggestionsTitle(suggestions.count), detail: String(localized: .requirementsSuggestionsDetail), trailing: {
                     if suggestions.count > 1 {
-                        Button(.requirementsApplyAll) { model.applyAll(suggestions) }.buttonStyle(.ghost)
+                        Button(.requirementsApplyAll) { model.accept(suggestions) }.buttonStyle(.ghost)
+                            .disabled(refusals.all != nil).help(refusals.all ?? "")
                     }
                 }) {
                     ForEach(Array(suggestions.enumerated()), id: \.element.id) { i, s in
                         let course = model.course(s.courseId)
+                        let refusal = refusals.rows[s.courseId]
                         CardRow(last: i == suggestions.count - 1) {
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                                 Text(course?.title ?? "").font(Theme.Typeface.bodyStrong).lineLimit(1)
@@ -44,10 +47,11 @@ struct RequirementsView: View {
                             Spacer(minLength: Theme.Space.m)
                             Text(model.suggestionChange(s))
                                 .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(2).multilineTextAlignment(.trailing)
-                            Button(.requirementsApply) { model.setCategories(s.courseId, s.categoryIds) }.buttonStyle(.ghost)
+                            Button(.requirementsApply) { model.accept([s]) }.buttonStyle(.ghost)
+                                .disabled(refusal != nil).help(refusal ?? "")
                         }
                         .contextMenu {
-                            Button(.requirementsApply) { model.setCategories(s.courseId, s.categoryIds) }
+                            Button(.requirementsApply) { model.accept([s]) }.disabled(refusal != nil)
                             if let course { Button(.commonOpenCourse) { openCourse(course) } }
                         }
                     }
@@ -68,14 +72,16 @@ struct RequirementsView: View {
             ForEach(unallowed, id: \.categoryId) { s in
                 NoticeCard(title: model.unallowedTitle(s), detail: model.unallowedDetail(s), trailing: { EmptyView() }) {
                     ForEach(Array(s.unallowed.enumerated()), id: \.element.id) { i, course in
+                        let refusal = model.approvalRefusal(course.id)
                         CardRow(last: i == s.unallowed.count - 1) {
                             courseLabel(course)
                             Spacer(minLength: Theme.Space.m)
                             categoryMenu(course)
                             Button(.requirementsApproveSharing) { model.approveSharing(course.id) }.buttonStyle(.ghost)
+                                .disabled(refusal != nil).help(refusal ?? "")
                         }
                         .contextMenu {
-                            Button(.requirementsApproveSharingMenu) { model.approveSharing(course.id) }
+                            Button(.requirementsApproveSharingMenu) { model.approveSharing(course.id) }.disabled(refusal != nil)
                             Button(.commonOpenCourse) { openCourse(course) }
                         }
                     }
@@ -126,6 +132,7 @@ struct RequirementsView: View {
         } message: { _ in Text(.requirementsRemoveMessage) }
         .sheet(item: $model.editing) { RequirementSheet(workspace: model.workspace, category: $0) }
         .sheet(isPresented: $editingProfile) { ProfileSheet(workspace: model.workspace) }
+        .confirming($model.pending)
     }
 
     func courseLabel(_ course: Course, showsTaking: Bool = true) -> some View {

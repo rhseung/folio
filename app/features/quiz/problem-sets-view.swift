@@ -3,7 +3,7 @@ import SwiftUI
 
 struct ProblemSetsView: View {
     let course: LoadedCourse
-    let model: QuizModel
+    @Bindable var model: QuizModel
     @State private var adding = false
 
     var body: some View {
@@ -32,12 +32,7 @@ struct ProblemSetsView: View {
             }
         }
         .sheet(isPresented: $adding) { ProblemSetSheet(workspace: model.workspace, course: course) }
-        .confirmationDialog(String(localized: .quizProblemsRemoveConfirm(model.removingSet?.title ?? "")),
-                            isPresented: Binding(get: { model.removingSet != nil }, set: { if !$0 { model.removingSet = nil } })) {
-            Button(.commonDelete, role: .destructive) { model.removeSet(in: course) }
-        } message: {
-            Text(.quizProblemsRemoveMessage)
-        }
+        .confirming($model.pending)
     }
 
     func setBlock(_ set: ProblemSet, units: [FolioDomain.Unit]) -> some View {
@@ -76,7 +71,7 @@ struct ProblemSetsView: View {
         if let m = solution { Button(.quizProblemsOpenSolution) { open(m) } }
         if sheet != nil || solution != nil { Divider() }
         #endif
-        Button(.quizProblemsRemoveEllipsis, role: .destructive) { model.removingSet = set }
+        Button(.quizProblemsRemoveEllipsis, role: .destructive) { model.remove(set, in: course) }
     }
 
     #if os(macOS)

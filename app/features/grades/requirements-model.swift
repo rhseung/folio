@@ -11,6 +11,7 @@ final class RequirementsModel {
     let workspace: Workspace
     var editing: RequirementCategory?
     var removing: RequirementCategory?
+    var pending: PendingAction?
     /// The category whose courses are showing in a popover.
     var showing: UUID?
 
@@ -141,9 +142,30 @@ final class RequirementsModel {
 
     func setCategories(_ courseId: UUID, _ ids: [UUID]) { workspace.run(CourseSet(course: courseId, [.categories(ids)])) }
 
-    func applyAll(_ suggestions: [HandbookClassifier.Suggestion]) { for s in suggestions { setCategories(s.courseId, s.categoryIds) } }
+    /// One action for all of them, so a course the handbook can't place stops the rest before any is written.
+    func accept(_ suggestions: [HandbookClassifier.Suggestion]) {
+        pending = workspace.ask(RequirementAccept(courses: suggestions.map(\.courseId)))
+    }
 
-    func approveSharing(_ courseId: UUID) { workspace.run(CourseSet(course: courseId, [.sharingApproved(true)])) }
+    struct AcceptRefusals {
+        var all: String?
+        var rows: [UUID: String] = [:]
+    }
+
+    /// One dry run covers every row, since a course that goes through with the rest goes through alone. Only when
+    /// that is refused does each row get its own, to find which one is blocked.
+    func acceptRefusals(_ suggestions: [HandbookClassifier.Suggestion]) -> AcceptRefusals {
+        guard let all = workspace.refusal(RequirementAccept(courses: suggestions.map(\.courseId))) else { return AcceptRefusals() }
+        var rows: [UUID: String] = [:]
+        for s in suggestions { rows[s.courseId] = workspace.refusal(RequirementAccept(courses: [s.courseId])) }
+        return AcceptRefusals(all: all, rows: rows)
+    }
+
+    private func approval(_ courseId: UUID) -> CourseSet { CourseSet(course: courseId, [.sharingApproved(true)]) }
+
+    func approveSharing(_ courseId: UUID) { workspace.run(approval(courseId)) }
+
+    func approvalRefusal(_ courseId: UUID) -> String? { workspace.refusal(approval(courseId)) }
 
     static func removeTitle(_ category: RequirementCategory) -> String { String(localized: .requirementsRemoveConfirm(category.name)) }
 
