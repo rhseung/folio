@@ -126,7 +126,7 @@ public enum NotionNotesImporter {
                     // A session holds one note of each kind. One that has another keeps it, and this note comes in
                     // without the session rather than as a second note the model refuses.
                     let s = file.sessions[index]
-                    let taken = s.note(of: kind).map { $0 != row.id } ?? false || file.notes.contains { $0.sessionId == s.id && $0.kind == kind }
+                    let taken = s.note(of: kind).map { $0 != row.id } ?? false
                     if taken {
                         let name = file.name(of: s)
                         result.warnings.append(String(localized: review ? .importNotesSessionHasReview(row.title, name) : .importNotesSessionHasRough(row.title, name)))

@@ -47,7 +47,7 @@ final class NoteListModel {
         func detail(_ n: NoteFile, _ text: String?) -> String? { n.meta.id == nil ? String(localized: .notesNeedsId) : text }
 
         let classNotes = notes.filter { $0.meta.kind == .rough || $0.meta.kind == .review }
-            .map { (note: $0, session: file.session(of: $0.meta)) }
+            .map { (note: $0, session: file.session(pointingAt: $0.meta.id)) }
             .sorted { a, b in
                 switch (a.session, b.session) {
                 case let (x?, y?) where x.id != y.id: x.date > y.date
@@ -250,7 +250,11 @@ final class NoteEditorModel {
     }
 
     func toggleTopic(_ unit: UUID) {
-        if meta.kind != .topic { relink(.topic) }
+        // The units another kind shows are its session's or exam's, not the note's own, so a new topic note starts empty.
+        if meta.kind != .topic {
+            meta.unitIds = []
+            relink(.topic)
+        }
         if let i = meta.unitIds.firstIndex(of: unit) { meta.unitIds.remove(at: i) } else { meta.unitIds.append(unit) }
         saveLinks()
     }

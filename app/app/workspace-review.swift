@@ -21,16 +21,13 @@ extension Workspace {
         })
     }
 
+    /// A note's units are read from its session or exam (`CourseFile.meta(of:)`), so a class unlinked from the unit
+    /// takes its notes with it.
     func notes(for unit: FolioDomain.Unit, in courseId: UUID) -> [NoteFile] {
         guard let course = course(courseId) else { return [] }
-        let sessions = course.file.sessions.filter { unit.sessionIds.contains($0.id) }
-        let linked = Set(sessions.flatMap { [$0.roughNoteId, $0.reviewNoteId].compactMap { $0 } })
         let rank: [NoteKind: Int] = [.review: 0, .rough: 1]
         return ((try? course.store.notes()) ?? [])
-            .filter { n in
-                n.meta.id.map(linked.contains) == true || n.meta.unitIds.contains(unit.id)
-                    || n.meta.sessionId.map(unit.sessionIds.contains) == true
-            }
+            .filter { $0.meta.unitIds.contains(unit.id) }
             .sorted { a, b in
                 let (ra, rb) = (rank[a.meta.kind] ?? 2, rank[b.meta.kind] ?? 2)
                 return ra != rb ? ra < rb : a.title.localizedStandardCompare(b.title) == .orderedAscending

@@ -187,7 +187,7 @@ public struct ExamSummary {
         let settings = try ctx.settings()
         let title = "\(exam.title) 종합 정리"
         let body = NoteTemplate.body(for: .examSummary, title: title, sections: settings.noteSections(for: .examSummary))
-        let meta = NoteMeta(id: note, kind: .examSummary, unitIds: exam.scopeUnitIds, examId: exam.id, math: settings.newNoteMath)
+        let meta = NoteMeta(id: note, kind: .examSummary, examId: exam.id, math: settings.newNoteMath)
         ctx.made(try ctx.createNote(course, title: title, meta: meta, body: body))
     }
 }

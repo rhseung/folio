@@ -48,11 +48,24 @@ struct CalendarImportTests {
     @Test func linksNotesNamedAfterTopics() {
         var lab = Session(device: device, at: now, week: 3, date: at(16, 10, 30))
         lab.topic = "Accuracy & Precision"
-        let taken = UUID(), free = UUID()
+        let taken = UUID(), topic = UUID(), free = UUID()
         let links = CalendarImporter.noteLinks(sessions: [lab], notes: [
-            (taken, "Accuracy & Precision", UUID()), (free, "Accuracy & Precision", nil),
+            (taken, "Accuracy & Precision", NoteMeta(id: taken, kind: .review, sessionId: UUID())),
+            (topic, "Accuracy & Precision", NoteMeta(id: topic, kind: .topic)),
+            (free, "Accuracy & Precision", NoteMeta(id: free)),
         ])
         #expect(links.map(\.note) == [free])
+    }
+
+    /// Two classes with one topic can't share a note: the earlier one takes it.
+    @Test func aNoteGoesToOneSession() {
+        var first = Session(device: device, at: now, week: 3, date: at(16, 10, 30))
+        var second = Session(device: device, at: now, week: 4, date: at(23, 10, 30))
+        first.topic = "Kinematics"
+        second.topic = "Kinematics"
+        let note = UUID()
+        let links = CalendarImporter.noteLinks(sessions: [second, first], notes: [(note, "Kinematics", NoteMeta(id: note))])
+        #expect(links.map(\.session) == [first.id])
     }
 
     /// A day the calendar skips inside its span is a cancelled class; the session stays, marked.

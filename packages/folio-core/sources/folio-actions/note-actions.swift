@@ -57,7 +57,7 @@ struct NoteLinks {
     var units: [FolioDomain.Unit.ID]
 
     /// Checked here as well as by the model, for an error that names what is missing.
-    func apply(to meta: inout NoteMeta, in course: CourseFile, keepUnits: Bool = false) throws {
+    func apply(to meta: inout NoteMeta, in course: CourseFile) throws {
         if kind == .rough || kind == .review, let session {
             guard let s = course.sessions.first(where: { $0.id == session }) else { throw ActionError.notFound(String(localized: .errorNotFoundSession)) }
             if s.isCancelled { throw ActionError.rule(String(localized: .errorNoteCancelledSession)) }
@@ -72,7 +72,8 @@ struct NoteLinks {
         meta.kind = kind
         meta.sessionId = kind == .rough || kind == .review ? session : nil
         meta.examId = kind == .examSummary ? exam : nil
-        meta.unitIds = kind == .topic ? units : keepUnits ? meta.unitIds : []
+        // Other kinds read their units from the session or exam, so a topic note's units go when it becomes one.
+        meta.unitIds = kind == .topic ? units : []
     }
 }
 
@@ -133,8 +134,7 @@ public struct NoteLink {
 
     public func run(_ ctx: ActionContext) throws {
         var meta = try FolioActions.note(ctx, course: self.course, id: note).meta
-        // Units a note had stay when it becomes another kind: they are what it is about, not a place it belongs.
-        try NoteLinks(kind: kind, session: session, exam: exam, units: units).apply(to: &meta, in: try ctx.file(self.course), keepUnits: true)
+        try NoteLinks(kind: kind, session: session, exam: exam, units: units).apply(to: &meta, in: try ctx.file(self.course))
         meta.math = math ?? meta.math
         try ctx.edit(self.course) { f in
             guard let i = f.notes.firstIndex(where: { $0.id == note }) else { return }
@@ -175,8 +175,7 @@ public struct NoteMigrate {
                     // linked from the session too, or the session would still ask for that note.
                     if meta.kind == .rough || meta.kind == .review, let s = f.sessions.first(where: { $0.id == meta.sessionId }) {
                         let pointed = s.note(of: meta.kind)
-                        let taken = pointed.map { $0 != id } ?? false || f.notes.contains { $0.sessionId == s.id && $0.kind == meta.kind }
-                        if taken { meta.sessionId = nil } else { f.linkNote(id, to: s.id, as: meta.kind) }
+                        if pointed.map({ $0 != id }) ?? false { meta.sessionId = nil } else { f.linkNote(id, to: s.id, as: meta.kind) }
                     }
                     f.notes.append(NoteEntry(id: id, device: ctx.device, at: ctx.now, path: store.notePath(of: n.url), meta: meta))
                 }

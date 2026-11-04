@@ -36,10 +36,50 @@ extension Transcript: StoredModel {
 }
 
 extension CourseFile: StoredModel {
-    public static let schemaVersion = 5
+    public static let schemaVersion = 6
     public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [
-        1: dropSessionKind, 2: dropSessionIndex, 3: dropExamKind, 4: splitRolesByOrigin,
+        1: dropSessionKind, 2: dropSessionIndex, 3: dropExamKind, 4: splitRolesByOrigin, 5: keepNoteLinksOnSessions,
     ]
+
+    /// v5 kept a note's session twice, as the note's `sessionId` and the session's `roughNoteId`/`reviewNoteId`, and
+    /// gave rough, review and exam notes a copy of their session's units or exam's scope that never followed later
+    /// changes. The session now holds the link alone and those units are read from it. A note's `sessionId` is moved
+    /// to its session when that slot is free and nothing else points at the note; a note a session points at takes
+    /// that slot's kind (`import calendar` linked review notes without making them one); a second pointer at a note
+    /// lets go of it, the first in the file keeping it.
+    static func keepNoteLinksOnSessions(_ raw: inout JSONValue) throws {
+        func id(_ value: JSONValue?) -> UUID? { if case .string(let s)? = value { UUID(uuidString: s) } else { nil } }
+        let slots = [("roughNoteId", "rough"), ("reviewNoteId", "review")]
+        var sessions: [JSONValue] = if case .array(let a)? = raw["sessions"] { a } else { [] }
+        var notes: [JSONValue] = if case .array(let a)? = raw["notes"] { a } else { [] }
+        var kindOf: [UUID: String] = [:]
+
+        for i in sessions.indices {
+            for (key, kind) in slots {
+                guard let note = id(sessions[i][key]) else { continue }
+                if kindOf[note] == nil {
+                    kindOf[note] = kind
+                } else {
+                    sessions[i][key] = nil
+                    if key == "reviewNoteId" { sessions[i]["reviewNoteDraft"] = nil }
+                }
+            }
+        }
+        for n in notes.indices {
+            guard let note = id(notes[n]["id"]), kindOf[note] == nil, let session = id(notes[n]["sessionId"]),
+                  case .string(let kind)? = notes[n]["kind"], let (key, _) = slots.first(where: { $0.1 == kind }),
+                  let s = sessions.firstIndex(where: { id($0["id"]) == session }), id(sessions[s][key]) == nil else { continue }
+            sessions[s][key] = .string(note.uuidString)
+            kindOf[note] = kind
+        }
+        for n in notes.indices {
+            if let note = id(notes[n]["id"]), let kind = kindOf[note] { notes[n]["kind"] = .string(kind) }
+            if notes[n]["kind"] != .string(NoteKind.topic.rawValue) { notes[n]["unitIds"] = .array([]) }
+            notes[n]["sessionId"] = nil
+        }
+        if raw["sessions"] != nil { raw["sessions"] = .array(sessions) }
+        if raw["notes"] != nil { raw["notes"] = .array(notes) }
+    }
 
     /// v4 roles mixed origin and purpose: `pastExam` for `Exams/Past`, `examPrep` for anything in an exam folder. Past
     /// exams now sit in `Inherited` and an exam folder holds only that exam's record, so the roles follow the folders.

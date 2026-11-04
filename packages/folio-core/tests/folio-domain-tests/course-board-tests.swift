@@ -43,15 +43,30 @@ struct CourseBoardTests {
         #expect(AssignmentGroup.graded.sorted([older, late, undated]).map(\.title) == ["B", "D", "C"])
     }
 
-    @Test func aNoteBelongsToTheSessionPointingAtItBeforeItsFrontmatter() {
-        let note = UUID()
-        var pointing = Session(device: device, at: now, week: 3, date: now)
-        pointing.reviewNoteId = note
-        let named = Session(device: device, at: now, week: 2, date: now)
-        let file = CourseFile(course: Course(device: device, at: now, title: ""), sessions: [named, pointing])
-        #expect(file.session(of: NoteMeta(id: note, kind: .review, sessionId: named.id))?.id == pointing.id)
-        #expect(file.session(of: NoteMeta(id: UUID(), kind: .rough, sessionId: named.id))?.id == named.id)
-        #expect(file.session(of: NoteMeta(id: nil, kind: .rough)) == nil)
+    /// A note's session is the one pointing at it, and its units follow that session or its exam's scope as they are
+    /// now; only a topic note's own units count, and a stored copy on another kind is ignored.
+    @Test func aNotesLinksAreReadFromItsSessionAndExam() {
+        let review = UUID(), topic = UUID(), summary = UUID(), loose = UUID()
+        var taught = Unit(device: device, at: now, title: "매칭", order: 0)
+        let tested = Unit(device: device, at: now, title: "트리", order: 1)
+        var session = Session(device: device, at: now, week: 3, date: now)
+        session.reviewNoteId = review
+        session.unitIds = [taught.id]
+        taught.sessionIds = [session.id]
+        var exam = Exam(device: device, at: now, title: "중간")
+        exam.scopeUnitIds = [tested.id]
+        func entry(_ id: UUID, _ kind: NoteKind, units: [UUID] = [], exam: UUID? = nil) -> NoteEntry {
+            NoteEntry(id: id, device: device, at: now, path: "Notes/\(id).md", meta: NoteMeta(id: id, kind: kind, unitIds: units, examId: exam))
+        }
+        var stale = entry(review, .review)
+        stale.unitIds = [tested.id]
+        let file = CourseFile(course: Course(device: device, at: now, title: ""), units: [taught, tested], sessions: [session], exams: [exam],
+                              notes: [stale, entry(topic, .topic, units: [tested.id]), entry(summary, .examSummary, exam: exam.id), entry(loose, .rough)])
+        let meta = Dictionary(uniqueKeysWithValues: file.notes.map { ($0.id, file.meta(of: $0)) })
+        #expect(meta[review]?.sessionId == session.id && meta[review]?.unitIds == [taught.id])
+        #expect(meta[topic]?.unitIds == [tested.id] && meta[topic]?.sessionId == nil)
+        #expect(meta[summary]?.unitIds == [tested.id])
+        #expect(meta[loose]?.sessionId == nil && meta[loose]?.unitIds == [])
         #expect(file.session(pointingAt: nil) == nil)
     }
 

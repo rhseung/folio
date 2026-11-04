@@ -116,13 +116,14 @@ public enum CalendarImporter {
         return counts.filter { $0.value >= 3 }.keys.sorted { ($0.weekday, $0.startMinute) < ($1.weekday, $1.startMinute) }
     }
 
-    /// Session -> note pairs where a session's topic is a note's title and neither is linked yet.
-    public static func noteLinks(sessions: [Session], notes: [(id: UUID, title: String, sessionId: UUID?)]) -> [(session: UUID, note: UUID)] {
-        let free = notes.filter { $0.sessionId == nil }
-        return sessions.compactMap { s in
-            guard !s.topic.isEmpty, s.reviewNoteId == nil,
-                  let note = free.first(where: { $0.title == s.topic }) else { return nil }
-            return (s.id, note.id)
+    /// Session -> review note pairs where a session's topic is a note's title and neither is linked yet. Only a free
+    /// or review note is taken: a topic note's units or a rough note's kind would be lost by becoming a review note.
+    /// Each note goes to one session, the first by order, since two sessions with one topic can't share a note.
+    public static func noteLinks(sessions: [Session], notes: [(id: UUID, title: String, meta: NoteMeta)]) -> [(session: UUID, note: UUID)] {
+        var free = notes.filter { $0.meta.sessionId == nil && ($0.meta.kind == .free || $0.meta.kind == .review) }
+        return sessions.sorted(by: Session.inOrder).compactMap { s in
+            guard !s.topic.isEmpty, s.reviewNoteId == nil, let i = free.firstIndex(where: { $0.title == s.topic }) else { return nil }
+            return (s.id, free.remove(at: i).id)
         }
     }
 
