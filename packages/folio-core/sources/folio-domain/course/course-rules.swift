@@ -16,6 +16,8 @@ extension Course {
                 c.schedule.allSatisfy { $0.link.map { OnlineLink.url($0) != nil } ?? true }
             },
             Ref(\.semesterId, to: Semester.self, onDelete: .restrict),
+            // Passes in the transcript, which has no materials: a course there has no folder.
+            Ref(\.syllabusMaterialId, to: Material.self, as: String(localized: .modelLabelSyllabus), onDelete: .nullify),
             Check("Course.semester", String(localized: .ruleCourseSemester)) { c, _, w in
                 guard let t = w.transcript, let s = c.semesterId else { return true }
                 return t.semesters.contains { $0.id == s }
@@ -53,10 +55,40 @@ extension Session {
     }
 }
 
+extension ExamPlanItem {
+    // A target is one pointer whose kind says what it points at, so the model sees it as two optional pointers.
+    // Clearing one keeps the item as a plain dated to-do.
+    var unitTarget: UUID? {
+        get { target.flatMap { $0.kind == .problemSet ? nil : $0.id } }
+        set { pointTarget(unitTarget, to: newValue) }
+    }
+
+    var problemSetTarget: UUID? {
+        get { target.flatMap { $0.kind == .problemSet ? $0.id : nil } }
+        set { pointTarget(problemSetTarget, to: newValue) }
+    }
+
+    private mutating func pointTarget(_ old: UUID?, to new: UUID?) {
+        guard old != nil else { return }
+        if let new { target?.id = new } else { target = nil }
+    }
+}
+
+extension ProblemSet {
+    /// Every problem's units as one list. Problems have no ids of their own, so the model reaches them through the set;
+    /// setting it keeps on each problem only the units still listed.
+    var problemUnitIds: [UUID] {
+        get { problems.flatMap(\.unitIds) }
+        set { for i in problems.indices { problems[i].unitIds = problems[i].unitIds.filter(newValue.contains) } }
+    }
+}
+
 extension CourseFile: Document {
     public static let model = Model<CourseFile>(place: String(localized: .modelPlaceCourse)) {
         One(\.course, noun: String(localized: .modelNounCourse), name: \.title) { Course.members() }
         Items(\.materials, noun: String(localized: .modelNounMaterial), name: \.path) {
+            Ref(\.sourceOf, to: Material.self, onDelete: .nullify)
+            Ref(\.solutionOf, to: Material.self, onDelete: .nullify)
             Refs(\.sessionIds, to: Session.self, onDelete: .nullify)
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
             Refs(\.examIds, to: Exam.self, onDelete: .nullify)
@@ -92,13 +124,8 @@ extension CourseFile: Document {
         }
         Items(\.exams, \.plan, noun: String(localized: .modelNounExamPlanItem), name: \.title) {
             NonEmpty(\.title, String(localized: .ruleExamPlanItemTitleEmpty))
-            Check("ExamPlanItem.target", String(localized: .ruleExamPlanItemTarget)) { item, f in
-                guard let t = item.target else { return true }
-                return switch t.kind {
-                case .unit, .quiz: f.units.contains { $0.id == t.id }
-                case .problemSet: f.problemSets.contains { $0.id == t.id }
-                }
-            }
+            Ref(\.unitTarget, to: Unit.self, onDelete: .nullify)
+            Ref(\.problemSetTarget, to: ProblemSet.self, onDelete: .nullify)
         }
         Items(\.assignments, noun: String(localized: .modelNounAssignment), name: \.title) {
             NonEmpty(\.title, String(localized: .ruleAssignmentTitleEmpty))
@@ -130,7 +157,7 @@ extension CourseFile: Document {
             Check("ScoreEntry.max", String(localized: .ruleScoreEntryMax)) { s, _ in s.max > 0 }
             Ref(\.componentId, to: GradeComponent.self, onDelete: .cascade)
             Ref(\.examId, to: Exam.self, onDelete: .nullify)
-            Ref(\.assignmentId, to: Assignment.self, onDelete: .nullify)
+            Ref(\.assignmentId, to: Assignment.self, onDelete: .cascade)
         }
         Items(\.attendance, noun: String(localized: .modelNounAttendance), name: { a, f in f.sessions.first { $0.id == a.sessionId }.map(f.name(of:)) ?? a.id.uuidString }) {
             Ref(\.sessionId, to: Session.self, onDelete: .restrict)
@@ -143,9 +170,7 @@ extension CourseFile: Document {
             Check("ProblemSet.problems", String(localized: .ruleProblemSetProblems)) { p, _ in !p.problems.isEmpty }
             Ref(\.materialId, to: Material.self, as: String(localized: .modelLabelProblemMaterial), onDelete: .nullify)
             Ref(\.solutionMaterialId, to: Material.self, as: String(localized: .modelLabelSolutionMaterial), onDelete: .nullify)
-            Check("ProblemSet.units", String(localized: .ruleProblemSetUnits)) { p, f in
-                p.problems.allSatisfy { $0.unitIds.allSatisfy { u in f.units.contains { $0.id == u } } }
-            }
+            Refs(\.problemUnitIds, to: Unit.self, onDelete: .nullify)
         }
         Items(\.recordings, noun: String(localized: .modelNounRecording), name: \.file) {
             Ref(\.sessionId, to: Session.self, onDelete: .nullify)

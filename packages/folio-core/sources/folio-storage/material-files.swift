@@ -66,6 +66,6 @@ extension CourseStore {
     public func trash(_ id: UUID, in file: inout CourseFile) throws {
         guard let m = file.materials.first(where: { $0.id == id }) else { return }
         try CoordinatedFile.trash(fileURL(m.path))
-        file.materials.removeAll { $0.id == id }
+        try file.remove(Material.self, id)
     }
 }
