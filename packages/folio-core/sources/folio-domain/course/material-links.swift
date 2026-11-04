@@ -47,10 +47,7 @@ extension CourseFile {
     }
 
     /// What an exam gathers: the files in its own folder, then the ones linked to it from elsewhere (`Study`, `Inherited`).
-    public func materials(for exam: Exam) -> [Material] {
-        let folder = MaterialIntake.folder(of: exam).map { $0 + "/" }
-        return materials.filter { m in folder.map { m.path.hasPrefix($0) } == true || m.examIds.contains(exam.id) }
-    }
+    public func materials(for exam: Exam) -> [Material] { materials(of: .exam(exam.id)).map(\.material) }
 
     public func sessionLinks(of material: UUID) -> [(session: Session, link: SessionMaterial)] {
         sessions.sorted(by: Session.inOrder)
