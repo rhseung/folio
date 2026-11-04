@@ -97,7 +97,7 @@ struct AssignmentCommand: ParsableCommand {
                 }
                 (componentGroup, componentId) = (group.value, group.value == nil ? componentId : nil)
             }
-            // The sheet always sends every covered component and its scores; one left out would lose its score.
+            // Only scores in the covered components change: they are sent again unless `--score none` clears them.
             let covered = componentGroup.map { g in f.components.filter { $0.group == g }.map(\.id) } ?? componentId.map { [$0] } ?? []
             var scores = f.scores.filter { $0.assignmentId == a.id }.map { AssignmentSave.Score(component: $0.componentId, score: $0.score, max: $0.max) }
             if score == ["none"] { scores = [] }

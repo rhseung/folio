@@ -131,6 +131,8 @@ extension CourseFile: Document {
             Ref(\.componentId, to: GradeComponent.self, onDelete: .cascade)
             Ref(\.examId, to: Exam.self, onDelete: .nullify)
             Ref(\.assignmentId, to: Assignment.self, onDelete: .nullify)
+            Check("ScoreEntry.source", String(localized: .ruleScoreEntrySource)) { s, _ in s.assignmentId == nil || s.examId == nil }
+            Check("ScoreEntry.unique", String(localized: .ruleScoreEntryUnique)) { s, f in !f.hasScore(s.source, in: s.componentId, other: s.id) }
         }
         Items(\.attendance, noun: String(localized: .modelNounAttendance), name: { a, f in f.sessions.first { $0.id == a.sessionId }.map(f.name(of:)) ?? a.id.uuidString }) {
             Ref(\.sessionId, to: Session.self, onDelete: .restrict)
