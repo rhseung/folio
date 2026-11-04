@@ -8,7 +8,7 @@ struct UnitsView: View {
     let course: LoadedCourse
     let opened: (UUID?) -> Void
 
-    init(workspace: Workspace, course: LoadedCourse, opened: @escaping (UUID?) -> Void = { _ in }) {
+    init(workspace: Workspace, course: LoadedCourse, opened: @escaping (UUID?) -> Void) {
         _model = State(initialValue: UnitsModel(workspace: workspace, courseId: course.id))
         self.course = course
         self.opened = opened
