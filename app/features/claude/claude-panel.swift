@@ -10,13 +10,16 @@ struct ClaudePanel: View {
     @Environment(\.showSettings) private var showSettings
     let course: LoadedCourse
     let openNote: UUID?
+    let openUnit: UUID?
     let insertIntoNote: (String) -> Void
     let showNote: (UUID) -> Void
 
-    init(workspace: Workspace, course: LoadedCourse, openNote: UUID?, insertIntoNote: @escaping (String) -> Void, showNote: @escaping (UUID) -> Void) {
+    init(workspace: Workspace, course: LoadedCourse, openNote: UUID?, openUnit: UUID?, insertIntoNote: @escaping (String) -> Void,
+         showNote: @escaping (UUID) -> Void) {
         _model = State(initialValue: ClaudeModel(workspace: workspace))
         self.course = course
         self.openNote = openNote
+        self.openUnit = openUnit
         self.insertIntoNote = insertIntoNote
         self.showNote = showNote
     }
@@ -119,7 +122,7 @@ struct ClaudePanel: View {
         if let chat = model.chat, !chat.messages.isEmpty {
             HTMLView(body: ClaudeModel.html(chat, partial: model.sending && model.answering == model.chatID ? model.partial : nil, cards: !course.file.units.isEmpty,
                                             describe: model.describe),
-                     onAction: { model.handle($0, course: course, openNote: openNote, insertIntoNote: insertIntoNote, showNote: showNote) })
+                     onAction: { model.handle($0, course: course, openNote: openNote, openUnit: openUnit, insertIntoNote: insertIntoNote, showNote: showNote) })
         } else {
             VStack(spacing: Theme.Space.s) {
                 Image(systemName: model.hasKey ? "sparkle" : "key")

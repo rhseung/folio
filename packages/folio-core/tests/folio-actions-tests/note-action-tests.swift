@@ -27,6 +27,22 @@ struct NoteActionTests {
     func store() throws -> CourseStore { try ActionContext(gist: gist, device: device).store(Self.graphTheory) }
     func text(_ path: String) throws -> String { try String(contentsOf: try store().fileURL(path), encoding: .utf8) }
 
+    /// The app re-reads its note and card lists from these, whichever screen or tool ran the action.
+    @Test func changesSayWhetherNotesOrCardsWereTouched() throws {
+        let id = UUID(), unit = UUID()
+        let added = try run(NoteAdd(id: id, course: Self.graphTheory, title: "매칭 정리"))
+        #expect(added.changes.filter(\.touchesNotes).count == 2 && !added.changes.contains(where: \.touchesQuizzes))
+        let unitAdded = try run(UnitAdd(id: unit, course: Self.graphTheory, title: "매칭"))
+        #expect(!unitAdded.changes.contains { $0.touchesNotes || $0.touchesQuizzes })
+        let linked = try run(NoteLink(course: Self.graphTheory, note: id, kind: .topic, units: [unit]))
+        #expect(linked.changes.map(\.touchesNotes) == [true])
+        let card = QuizCard(device: device, at: now, unitId: unit, type: .free, category: .definition, prompt: "p", answer: "a")
+        let saved = try run(QuizCardSave(course: Self.graphTheory, cards: [card]))
+        #expect(saved.changes.map(\.touchesQuizzes) == [true] && !saved.changes.contains(where: \.touchesNotes))
+        let answered = try run(QuizRecord(course: Self.graphTheory, attempt: QuizAttemptEvent(cardId: card.id, verdict: .wrong, grader: .self)))
+        #expect(answered.changes.map(\.touchesQuizzes) == [true])
+    }
+
     @Test func aTexNoteIsAFileWithAnEntry() throws {
         let id = UUID()
         try run(NoteAdd(id: id, course: Self.graphTheory, title: "매칭 정리", kind: .topic, format: .tex))

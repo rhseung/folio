@@ -6,10 +6,12 @@ import SwiftUI
 struct UnitsView: View {
     @State private var model: UnitsModel
     let course: LoadedCourse
+    let opened: (UUID?) -> Void
 
-    init(workspace: Workspace, course: LoadedCourse) {
+    init(workspace: Workspace, course: LoadedCourse, opened: @escaping (UUID?) -> Void = { _ in }) {
         _model = State(initialValue: UnitsModel(workspace: workspace, courseId: course.id))
         self.course = course
+        self.opened = opened
     }
 
     var body: some View {
@@ -21,6 +23,9 @@ struct UnitsView: View {
             }
         }
         .task(id: course.file.units.map(\.id)) { model.loadQuiz(course) }
+        .onChange(of: model.workspace.quizRevision) { model.loadQuiz(model.workspace.course(course.id) ?? course) }
+        // Initial too: the page starts on its list, and the unit it had open last time is gone with its model.
+        .onChange(of: model.openUnit, initial: true) { _, id in opened(id) }
         .confirmationDialog(model.removalTitle, isPresented: Binding(get: { model.removing != nil }, set: { if !$0 { model.removing = nil } })) {
             Button(.commonDelete, role: .destructive) {
                 if let unit = model.removing { model.remove(unit) }

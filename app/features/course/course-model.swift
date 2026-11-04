@@ -10,6 +10,8 @@ final class CourseModel {
     let courseId: UUID
     var section: CourseSection = .overview
     var openNote: UUID?
+    /// The unit the units page has open, reported by it, so a card made in the Claude panel goes there.
+    var openUnit: UUID?
     /// An answer the Claude panel puts at the end of the open note; the editor takes it and clears it.
     var noteInsert: String?
 

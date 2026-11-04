@@ -191,8 +191,8 @@ final class ClaudeModel {
 
     /// `folio://action/<copy|insert|newnote|card>/<message ID>` and `folio://action/apply/<message ID>/<proposal>` from
     /// the answer's links. `openNote` is the note open beside the panel, which `insert` writes into through
-    /// `insertIntoNote`; without one it makes a free note.
-    func handle(_ url: URL, course: LoadedCourse, openNote: UUID?, insertIntoNote: (String) -> Void, showNote: (UUID) -> Void) {
+    /// `insertIntoNote`; without one it makes a free note. `openUnit` is the unit the units page shows, where a card goes.
+    func handle(_ url: URL, course: LoadedCourse, openNote: UUID?, openUnit: UUID? = nil, insertIntoNote: (String) -> Void, showNote: (UUID) -> Void) {
         let parts = url.pathComponents
         guard parts.count >= 3, let id = UUID(uuidString: parts[2]),
               let message = chat?.messages.first(where: { $0.id == id }) else { return }
@@ -224,10 +224,10 @@ final class ClaudeModel {
                 status = String(localized: .claudeStatusFreeNote)
             }
         case "card":
-            guard let unit = course.file.units.first, let messages = chat?.messages,
+            guard let unit = course.file.unitForNewCard(viewing: openUnit, note: openNote), let messages = chat?.messages,
                   let i = messages.firstIndex(where: { $0.id == id }) else { break }
             // The question it answered is the card's prompt; the answer its model answer. Both stay editable in the sheet.
-            var draft = CardDraft(unitId: unit.id)
+            var draft = CardDraft(unitId: unit)
             draft.prompt = messages[..<i].last { $0.role == .user }?.text ?? ""
             draft.answer = message.text
             cardDraft = draft

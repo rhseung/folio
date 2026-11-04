@@ -78,9 +78,7 @@ final class NewNoteModel {
         guard canAdd else { return nil }
         let action = NoteAdd(course: course.id, title: trimmedTitle, kind: kind, format: format,
                              session: link == .session ? sessionId : nil, exam: link == .exam ? examId : nil, units: link == .units ? unitIds : [])
-        guard let id = workspace.run(action)?.made else { return nil }
-        workspace.notesRevision += 1
-        return id
+        return workspace.run(action)?.made
     }
 }
 

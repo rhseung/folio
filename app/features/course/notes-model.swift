@@ -84,11 +84,6 @@ final class NoteListModel {
 
     func reload() { notes = (try? course.store.notes()) ?? [] }
 
-    /// Notes made elsewhere (the Claude panel) show up once one of them is chosen.
-    func reloadIfMissing(_ id: UUID?) {
-        if let id, !notes.contains(where: { $0.meta.id == id }) { reload() }
-    }
-
     /// The note's ID, giving one first to a note moved in from an old folder.
     func open(_ note: NoteFile) -> UUID? {
         if let id = note.meta.id { return id }
@@ -260,7 +255,6 @@ final class NoteEditorModel {
         let ran = workspace.run(NoteLink(course: course.id, note: id, kind: meta.kind, session: meta.sessionId, exam: meta.examId, units: meta.unitIds, math: meta.math))
         // A refused link leaves the file as it was; the label would otherwise show a kind the note doesn't have.
         if ran == nil, let saved = store.note(at: store.notePath(of: note.url), in: course.file) { meta = saved.meta }
-        workspace.notesRevision += 1
     }
 
     // MARK: Assets
