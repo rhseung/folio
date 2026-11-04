@@ -42,6 +42,9 @@ struct MaterialsView: View {
         .sheet(isPresented: Binding(get: { !model.incoming.isEmpty }, set: { if !$0 { model.incoming = [] } })) {
             ImportPlaceSheet(workspace: model.workspace, course: model.course, files: model.incoming, places: model.places)
         }
+        .sheet(isPresented: $model.creatingFile) {
+            NewMaterialFileSheet(workspace: model.workspace, course: model.course, folder: model.newFileFolder) { model.created($0) }
+        }
         .confirming($model.pending)
         .alert(String(localized: .materialsRename), isPresented: Binding(get: { model.renaming != nil }, set: { if !$0 { model.renaming = nil } }), presenting: model.renaming) { m in
             TextField(String(localized: .materialsRenameField), text: $model.newName)
@@ -76,6 +79,8 @@ struct MaterialsView: View {
             HStack {
                 Button(.materialsAddFiles) { picking = true }
                     .help(Text(.materialsAddFilesHelp))
+                Button(.materialsNewFileEllipsis) { model.startNewFile(in: nil) }
+                    .help(Text(.materialsNewFileHelp))
                 Button(.materialsTrack) { model.track() }
                     .help(Text(.materialsTrackHelp))
                 if model.lastBatch != nil {
@@ -140,6 +145,13 @@ struct MaterialsView: View {
             Text(folder.name).font(Theme.Typeface.bodyStrong).lineLimit(1)
             Text("\(folder.count)").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
             Spacer()
+            Menu { folderMenu(folder) } label: {
+                Image(systemName: "ellipsis")
+            }
+            .menuStyle(.button)
+            .buttonStyle(.borderless).pointingHand()
+            .menuIndicator(.hidden)
+            .fixedSize()
         }
         .padding(.leading, CGFloat(depth) * Self.indent)
         .opens { toggle(folder) }
@@ -152,6 +164,10 @@ struct MaterialsView: View {
     }
 
     @ViewBuilder func folderMenu(_ folder: PathTree<FolioDomain.Material>) -> some View {
+        if model.acceptsNewFile(folder) {
+            Button(.materialsNewFileEllipsis) { model.startNewFile(in: folder.path) }
+            Divider()
+        }
         Button(model.opened.contains(folder.path) ? .materialsCollapse : .materialsExpand) { toggle(folder) }
         #if os(macOS)
         Button(.materialsShowInFinder) { NSWorkspace.shared.activateFileViewerSelecting([model.fileURL(folder.path)]) }

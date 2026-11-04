@@ -287,6 +287,83 @@
         }
       }
     },
+    "error.material.new-format": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folio에서 편집하는 형식(.tex, 코드, .txt 등)만 만듭니다: %@"
+          }
+        }
+      }
+    },
+    "error.material.new-in-folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "코드 프로젝트 폴더 안에는 만들지 않습니다: %@"
+          }
+        }
+      }
+    },
+    "error.material.new-name": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 이름으로 쓸 수 없습니다: %@"
+          }
+        }
+      }
+    },
+    "error.material.new-no-item": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제나 시험의 폴더가 아닙니다: %@"
+          }
+        }
+      }
+    },
+    "error.material.new-place": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 파일은 과제·시험 폴더나 Study, Archive에만 만듭니다: %@"
+          }
+        }
+      }
+    },
+    "error.material.new-taken": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 이름의 파일이 이미 있습니다: %@"
+          }
+        }
+      }
+    },
+    "error.material.new-untracked": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일은 만들었지만 자료로 추적되지 않는 폴더입니다: %@"
+          }
+        }
+      }
+    },
     "error.material.not-tex": {
       "extractionState": "manual",
       "localizations": {
