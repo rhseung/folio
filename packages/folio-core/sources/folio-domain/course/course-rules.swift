@@ -102,6 +102,14 @@ extension CourseFile: Document {
         Items(\.sessions, noun: String(localized: .modelNounSession), name: { s, f in f.name(of: s) }) {
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
             Refs(\.materialIds, to: Material.self, onDelete: .nullify)
+            // The session is the only side that holds the link, so the note it names must be of that slot's kind.
+            Ref(\.roughNoteId, to: NoteEntry.self, onDelete: .nullify)
+            Ref(\.reviewNoteId, to: NoteEntry.self, onDelete: .nullify)
+            Check("Session.noteKind", String(localized: .ruleSessionNoteKind)) { s, f in
+                [(s.roughNoteId, NoteKind.rough), (s.reviewNoteId, .review)].allSatisfy { id, kind in
+                    id.map { id in f.notes.first { $0.id == id }.map { $0.kind == kind } ?? true } ?? true
+                }
+            }
             Check("Session.time", String(localized: .ruleSessionTime)) { s, _ in s.end.map { $0 > s.date } ?? true }
             Check("Session.link", String(localized: .ruleSessionLink)) { s, _ in s.link.map { OnlineLink.url($0) != nil } ?? true }
             Check("Session.pages", String(localized: .ruleSessionPages)) { s, _ in
@@ -178,16 +186,18 @@ extension CourseFile: Document {
             Ref(\.sessionId, to: Session.self, onDelete: .nullify)
         }
         Items(\.notes, noun: String(localized: .modelNounNote), name: \.path) {
-            Ref(\.sessionId, to: Session.self, onDelete: .nullify)
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
             Ref(\.examId, to: Exam.self, onDelete: .nullify)
             // Notes are found by their file, so two entries on one file would give it two sets of properties.
             Check("NoteEntry.path", String(localized: .ruleNotePath)) { n, f in f.notes.count { $0.path == n.path } == 1 }
-            // A session points at one rough and one review note, so a second one would sit under it unseen by the session.
-            Check("NoteEntry.session", String(localized: .ruleNoteSession)) { n, f in
-                guard let s = n.sessionId, n.kind == .rough || n.kind == .review else { return true }
-                return f.notes.count { $0.sessionId == s && $0.kind == n.kind } == 1
-            }
+            // Other kinds read their units from their session or exam; a stored copy would go stale and resurface.
+            Check("NoteEntry.units", String(localized: .ruleNoteUnits)) { n, _ in n.kind == .topic || n.unitIds.isEmpty }
+        }
+        // A note's session is the one pointing at it, so two pointers would give it two.
+        Rule("NoteEntry.session") { f, _ in
+            let pointers = f.sessions.flatMap { [$0.roughNoteId, $0.reviewNoteId].compactMap { $0 } }
+            let counts = Dictionary(pointers.map { ($0, 1) }, uniquingKeysWith: +)
+            return f.notes.filter { (counts[$0.id] ?? 0) > 1 }.map { ($0.id, String(localized: .ruleNoteSession($0.path))) }
         }
         Pair(\.exams, \.scopeUnitIds, \.units, \.examIds)
         Pair(\.sessions, \.unitIds, \.units, \.sessionIds)

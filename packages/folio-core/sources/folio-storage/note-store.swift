@@ -52,7 +52,7 @@ extension CourseStore {
     /// Folio) has no id until it is adopted.
     public func notes(in file: CourseFile) -> [NoteFile] {
         let entries = Dictionary(file.notes.map { ($0.path, $0) }, uniquingKeysWith: { a, _ in a })
-        return noteURLs().map { NoteFile(url: $0, meta: entries[notePath(of: $0)]?.meta ?? NoteMeta(id: nil)) }.sorted { $0.title < $1.title }
+        return noteURLs().map { NoteFile(url: $0, meta: entries[notePath(of: $0)].map(file.meta(of:)) ?? NoteMeta(id: nil)) }.sorted { $0.title < $1.title }
     }
 
     func noteURLs() -> [URL] {
@@ -83,7 +83,7 @@ extension CourseStore {
     public func note(at path: String, in file: CourseFile) -> NoteFile? {
         let url = url.appending(path: path)
         guard NoteFormat(path: path) != nil, FileManager.default.fileExists(atPath: url.path) else { return nil }
-        return NoteFile(url: url, meta: file.notes.first { $0.path == notePath(of: url) }?.meta ?? NoteMeta(id: nil))
+        return NoteFile(url: url, meta: file.notes.first { $0.path == notePath(of: url) }.map(file.meta(of:)) ?? NoteMeta(id: nil))
     }
 
     public func read(_ note: NoteFile) throws -> String {

@@ -51,6 +51,8 @@ public enum NoteFormat: String, Codable, Sendable, CaseIterable {
 
 /// A note's properties, kept in course.json beside its path instead of in the file. A `.tex` file has no place for
 /// them that TeX and other editors leave alone, and keeping them out of both formats lets the two work the same way.
+/// The note's session is not stored here: the session pointing at it says so (`Session.roughNoteId`, `reviewNoteId`),
+/// and a second copy here drifted from it. Read the links through `CourseFile.meta(of:)`.
 public struct NoteEntry: Entity {
     public var id: UUID
     public var createdAt: Date
@@ -60,7 +62,7 @@ public struct NoteEntry: Entity {
     /// Relative to the course folder, `/`-separated, like a material's.
     public var path: String
     public var kind: NoteKind
-    public var sessionId: UUID?
+    /// A topic note's own units. Other kinds take theirs from their session or exam, so they store none.
     public var unitIds: [UUID]
     public var examId: UUID?
     public var tags: [String]
@@ -75,25 +77,34 @@ public struct NoteEntry: Entity {
         updatedBy = device
         self.path = path
         kind = meta.kind
-        sessionId = meta.sessionId
-        unitIds = meta.unitIds
-        examId = meta.examId
-        tags = meta.tags
+        unitIds = []
+        tags = []
         math = meta.math
+        apply(meta)
     }
 
-    public var meta: NoteMeta {
-        NoteMeta(id: id, kind: kind, sessionId: sessionId, unitIds: unitIds, examId: examId, tags: tags, math: math)
-    }
-
-    /// Everything but the id, which an entry keeps for life.
+    /// Everything but the id, which an entry keeps for life, and the session, which the session holds.
     public mutating func apply(_ meta: NoteMeta) {
         kind = meta.kind
-        sessionId = meta.sessionId
-        unitIds = meta.unitIds
+        unitIds = meta.kind == .topic ? meta.unitIds : []
         examId = meta.examId
         tags = meta.tags
         math = meta.math
+    }
+}
+
+extension CourseFile {
+    /// A note's links as they read now: its session is the one pointing at it, and its units are the session's or
+    /// the exam's scope as they are today, so unlinking a session from a unit takes its notes off that unit too.
+    public func meta(of entry: NoteEntry) -> NoteMeta {
+        let session = session(pointingAt: entry.id)
+        let units: [UUID] = switch entry.kind {
+        case .topic: entry.unitIds
+        case .rough, .review: session.map { units(of: $0).map(\.id) } ?? []
+        case .examSummary: exams.first { $0.id == entry.examId }?.scopeUnitIds ?? []
+        case .free: []
+        }
+        return NoteMeta(id: entry.id, kind: entry.kind, sessionId: session?.id, unitIds: units, examId: entry.examId, tags: entry.tags, math: entry.math)
     }
 }
 

@@ -61,6 +61,21 @@ struct UnitsModelTests {
         #expect(model.subtitle(try file(workspace), states: [:]) == "단원 1개 · 오늘 복습 0개 · 단원 없는 회차 1")
     }
 
+    /// A class note shows under a unit while its class is linked to the unit, and leaves with the class.
+    @Test func aClassNoteLeavesTheUnitWithItsClass() throws {
+        let workspace = try fixtureWorkspace()
+        let model = UnitsModel(workspace: workspace, courseId: graphTheory)
+        let unitId = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
+        let session = try #require(workspace.run(SessionAdd(course: graphTheory, date: Calendar.current.date(byAdding: .day, value: -1, to: .now)!))?.made)
+        workspace.run(UnitLink(course: graphTheory, unit: unitId, sessions: [session]))
+        let note = try #require(workspace.run(SessionNote(course: graphTheory, session: session, kind: .review))?.made)
+        model.loadNotes(try #require(try file(workspace).units.first))
+        #expect(model.notes.map(\.meta.id) == [note])
+        workspace.run(UnitLink(course: graphTheory, unit: unitId, sessions: [session], linked: false))
+        model.loadNotes(try #require(try file(workspace).units.first))
+        #expect(model.notes.isEmpty)
+    }
+
     @Test func reviewTimeReadsInSecondsThenMinutes() {
         #expect(UnitsModel.minutes(42) == "42초")
         #expect(UnitsModel.minutes(150) == "2분")

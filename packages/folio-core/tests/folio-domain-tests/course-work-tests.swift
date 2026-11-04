@@ -297,20 +297,26 @@ struct CourseWorkTests {
         #expect(rules(s).isDisjoint(with: ["Session.time", "Session.link"]))
     }
 
-    /// Whatever writes the entries, a session can't end up with two review notes it doesn't see.
-    @Test func aSessionHasOneNoteOfEachKind() {
-        let s = Session(device: device, at: .now, week: 10, date: date("2026-11-04 21:00"))
-        func entry(_ path: String, _ kind: NoteKind) -> NoteEntry {
-            var meta = NoteMeta(id: nil)
-            meta.kind = kind
-            meta.sessionId = s.id
-            return NoteEntry(id: UUID(), device: device, at: .now, path: path, meta: meta)
+    /// The session holds a note's link alone: it names a note of its slot's kind, and no note has two sessions.
+    @Test func aNoteHasOneSessionOfItsKind() {
+        var s = Session(device: device, at: .now, week: 10, date: date("2026-11-04 21:00"))
+        var other = Session(device: device, at: .now, week: 11, date: date("2026-11-11 21:00"))
+        let review = NoteEntry(id: UUID(), device: device, at: .now, path: "Notes/a.md", meta: NoteMeta(id: nil, kind: .review))
+        let free = NoteEntry(id: UUID(), device: device, at: .now, path: "Notes/b.md", meta: NoteMeta(id: nil))
+        func rules(_ sessions: [Session], _ notes: [NoteEntry] = [review, free]) -> Set<String> {
+            var file = CourseFile(course: courses[0], sessions: sessions)
+            file.notes = notes
+            return Set(CourseFile.model.violations(in: file).map(\.rule.name))
         }
-        var file = CourseFile(course: courses[0], sessions: [s])
-        file.notes = [entry("Notes/a.md", .review), entry("Notes/b.md", .rough)]
-        #expect(!Set(CourseFile.model.violations(in: file).map(\.rule.name)).contains("NoteEntry.session"))
-        file.notes.append(entry("Notes/c.md", .review))
-        #expect(Set(CourseFile.model.violations(in: file).map(\.rule.name)).contains("NoteEntry.session"))
+        s.reviewNoteId = review.id
+        #expect(rules([s, other]).isDisjoint(with: ["NoteEntry.session", "Session.noteKind", "NoteEntry.units"]))
+        other.reviewNoteId = review.id
+        #expect(rules([s, other]).contains("NoteEntry.session"))
+        other.reviewNoteId = free.id
+        #expect(rules([s, other]).contains("Session.noteKind"))
+        var stale = review
+        stale.unitIds = [UUID()]
+        #expect(rules([s], [stale]).contains("NoteEntry.units"))
     }
 
     // MARK: Quick add

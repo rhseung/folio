@@ -29,8 +29,9 @@ struct RemoveActionTests {
         try store.save(doc)
     }
 
+    // Only a topic note keeps units of its own; any other kind would drop them on the way in.
     func note(_ path: String, units: [UUID] = [], exam: UUID? = nil) -> NoteEntry {
-        NoteEntry(id: UUID(), device: device, at: now, path: path, meta: NoteMeta(unitIds: units, examId: exam))
+        NoteEntry(id: UUID(), device: device, at: now, path: path, meta: NoteMeta(kind: units.isEmpty ? .free : .topic, unitIds: units, examId: exam))
     }
 
     func problems(_ title: String, units: [UUID]) -> ProblemSet {
@@ -100,18 +101,24 @@ struct RemoveActionTests {
         #expect(plan.allSatisfy { $0.target == nil })
     }
 
+    /// A class note reads its units from its session, so it loses the unit when the session does.
     @Test func aSessionNoteKeepsItsUnitsUntilTheUnitGoes() throws {
         let session = UUID()
         let unit = Unit(device: device, at: now, title: "매칭", order: 90)
         try run(SessionAdd(id: session, course: Self.course, date: now))
         try edit { f in f.units.append(unit) }
         try edit { f in f.toggle(session: session, unit: unit.id) }
-        try run(SessionNote(course: Self.course, session: session, kind: .rough))
-        #expect(try file().notes.contains { $0.unitIds.contains(unit.id) })
+        let note = UUID()
+        try run(SessionNote(id: note, course: Self.course, session: session, kind: .rough))
+        func units() throws -> [UUID] {
+            let f = try file()
+            return f.meta(of: try #require(f.notes.first { $0.id == note })).unitIds
+        }
+        #expect(try units() == [unit.id])
 
         try run(UnitRemove(course: Self.course, unit: unit.id))
 
-        #expect(try file().notes.allSatisfy { !$0.unitIds.contains(unit.id) })
+        #expect(try units().isEmpty)
     }
 
     @Test func anExamWithASummaryNoteAndLinkedMaterialsGoes() throws {

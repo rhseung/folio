@@ -60,7 +60,8 @@ struct NoteActionTests {
         let s = try #require(try file().sessions.first { $0.id == session })
         #expect(s.reviewNoteId == id && s.reviewNoteUnfinished)
         let entry = try #require(try file().notes.first { $0.id == id })
-        #expect(entry.sessionId == session && entry.examId == nil)
+        let linked = try file()
+        #expect(linked.meta(of: entry).sessionId == session && entry.examId == nil)
     }
 
     /// A session holds one review note; another can't take it from the app, the CLI or MCP alike.
@@ -174,7 +175,8 @@ struct NoteActionTests {
         try run(NoteMigrate(course: Self.graphTheory))
 
         let entry = try #require(try file().notes.first { $0.path == "Notes/사본.md" })
-        #expect(entry.id != Self.note && entry.kind == .review && entry.sessionId == nil)
+        let migrated = try file()
+        #expect(entry.id != Self.note && entry.kind == .review && migrated.meta(of: entry).sessionId == nil)
         #expect(try text("Notes/사본.md") == "---\nauthor: 나\n---\n\n# 사본\n")
 
         let after = try file()
@@ -193,9 +195,75 @@ struct NoteActionTests {
         }
         try run(NoteMigrate(course: Self.graphTheory))
         let claims = try file().notes.filter { $0.path.hasPrefix("Notes/정리") }
-        #expect(claims.count == 2 && claims.count { $0.sessionId == session } == 1)
-        // The session points back at the one that kept it, so it no longer asks for a review note.
-        let kept = try #require(claims.first { $0.sessionId == session })
-        #expect(try file().sessions.first { $0.id == session }?.reviewNoteId == kept.id)
+        // The session points at one of them, so it no longer asks for a review note.
+        let pointed = try #require(try file().sessions.first { $0.id == session }?.reviewNoteId)
+        #expect(claims.count == 2 && claims.contains { $0.id == pointed })
+    }
+
+    func meta(_ id: UUID) throws -> NoteMeta {
+        let f = try file()
+        return f.meta(of: try #require(f.notes.first { $0.id == id }))
+    }
+
+    /// A class note's units are its session's as they are now, so unlinking the class from a unit takes the note off it.
+    @Test func aSessionNotesUnitsFollowTheSession() throws {
+        let session = UUID(), unit = UUID(), note = UUID()
+        try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
+        try run(UnitAdd(id: unit, course: Self.graphTheory, title: "매칭"))
+        try run(UnitLink(course: Self.graphTheory, unit: unit, sessions: [session]))
+        try run(SessionNote(id: note, course: Self.graphTheory, session: session, kind: .review))
+        #expect(try file().notes.first { $0.id == note }?.unitIds == [])
+        #expect(try meta(note).unitIds == [unit] && meta(note).sessionId == session)
+        try run(UnitLink(course: Self.graphTheory, unit: unit, sessions: [session], linked: false))
+        #expect(try meta(note).unitIds == [])
+    }
+
+    @Test func anExamSummarysUnitsFollowTheScope() throws {
+        let exam = UUID(), unit = UUID(), note = UUID()
+        try run(ExamAdd(id: exam, course: Self.graphTheory, title: "모의고사"))
+        try run(UnitAdd(id: unit, course: Self.graphTheory, title: "매칭"))
+        try run(ExamSummary(note: note, course: Self.graphTheory, exam: exam))
+        #expect(try meta(note).unitIds == [])
+        try run(ExamScope(course: Self.graphTheory, exam: exam, unit: unit))
+        #expect(try meta(note).unitIds == [unit])
+    }
+
+    /// Becoming a topic note doesn't bring back units the note had as another kind, and leaving it drops them.
+    @Test func changingKindDropsTheOtherKindsLinks() throws {
+        let session = UUID(), unit = UUID(), other = UUID(), note = UUID()
+        try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
+        try run(UnitAdd(id: unit, course: Self.graphTheory, title: "매칭"))
+        try run(UnitAdd(id: other, course: Self.graphTheory, title: "트리"))
+        try run(UnitLink(course: Self.graphTheory, unit: unit, sessions: [session]))
+        try run(NoteAdd(id: note, course: Self.graphTheory, title: "필기", kind: .rough, session: session))
+        try run(NoteLink(course: Self.graphTheory, note: note, kind: .topic, units: [other]))
+        #expect(try meta(note).unitIds == [other] && meta(note).sessionId == nil)
+        #expect(try file().sessions.first { $0.id == session }?.roughNoteId == nil)
+        try run(NoteLink(course: Self.graphTheory, note: note, kind: .rough, session: session, units: [other]))
+        #expect(try file().notes.first { $0.id == note }?.unitIds == [])
+        #expect(try meta(note).unitIds == [unit])
+    }
+
+    /// The session holds the link alone, so it can't name a note of another kind.
+    @Test func aSessionPointsOnlyAtANoteOfItsSlotsKind() throws {
+        let session = UUID(), note = UUID()
+        try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
+        try run(NoteAdd(id: note, course: Self.graphTheory, title: "메모"))
+        let ctx = ActionContext(gist: gist, device: device, now: now)
+        #expect(throws: ActionError.self) {
+            try ctx.edit(Self.graphTheory) { f in
+                if let i = f.sessions.firstIndex(where: { $0.id == session }) { f.sessions[i].reviewNoteId = note }
+            }
+        }
+    }
+
+    /// `import calendar` gives a free note named after a class's topic to that class as its review note.
+    @Test func importCalendarMakesTheNoteAReviewNote() throws {
+        let note = UUID()
+        try run(NoteAdd(id: note, course: Self.graphTheory, title: "평면 그래프"))
+        let start = ISO8601DateFormatter().date(from: "2026-10-26T01:00:00Z")!
+        try run(ImportCalendar(meetings: [CalendarMeeting(course: "EC4207 그래프 이론", start: start, end: start + 4500, room: "A229", topic: "평면 그래프")]))
+        let s = try #require(try file().sessions.first { $0.reviewNoteId == note })
+        #expect(try meta(note).kind == .review && meta(note).sessionId == s.id)
     }
 }

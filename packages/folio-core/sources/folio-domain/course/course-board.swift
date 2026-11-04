@@ -30,15 +30,10 @@ public enum AssignmentGroup: CaseIterable, Sendable {
 }
 
 extension CourseFile {
-    /// The session pointing at a note is the one the sessions page shows it under, whatever its frontmatter says.
+    /// A note's session: the only place the link is kept.
     public func session(pointingAt note: UUID?) -> Session? {
         guard let note else { return nil }
         return sessions.first { $0.roughNoteId == note || $0.reviewNoteId == note }
-    }
-
-    /// A note's session: the one pointing at it, else the one its frontmatter names.
-    public func session(of meta: NoteMeta) -> Session? {
-        session(pointingAt: meta.id) ?? meta.sessionId.flatMap { id in sessions.first { $0.id == id } }
     }
 }
 
