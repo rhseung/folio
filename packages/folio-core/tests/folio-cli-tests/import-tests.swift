@@ -118,6 +118,29 @@ struct ImportCommandTests {
         #expect(h.cli(["import", "handbook", unknown], gist: try Harness.fixtureCopy()).code == Exit.rule.rawValue)
     }
 
+    @Test func requirementAcceptTakesTheHandbookCategory() throws {
+        let req = try payload("requirements.json", Self.requirements)
+        let path = try payload("handbook.json", #"{"year": 2026, "source": "2026 학사편람", "areas": {"EC4207": "전공선택"}}"#)
+        let setup = [["import", "requirements", req], ["import", "handbook", path]]
+        // The fixture's courses carry no codes, and the handbook finds a course by its code.
+        let coded: (URL) throws -> Void = { url in
+            let at = Date(timeIntervalSince1970: 1_790_000_000)
+            let ctx = ActionContext(gist: GISTStore(url: url), device: h.device, now: at)
+            var ec = CourseCode(device: h.device, at: at, prefix: "EC")
+            ec.id = UUID(uuidString: "C0DE0000-0000-4000-8000-000000000001")!
+            try ctx.editCatalog { $0.codes.append(ec) }
+            try ctx.edit(Harness.graphTheory) { $0.course.codes = [ec.id]; $0.course.number = "4207" }
+        }
+        try h.expectSame(["requirement", "accept", "EC4207"], setup: setup, prepare: coded) { _ in RequirementAccept(courses: [Harness.graphTheory]) }
+        // Without a handbook row there is nothing to take, and nothing is written.
+        let gist = try Harness.fixtureCopy()
+        try coded(gist)
+        _ = h.cli(["import", "requirements", req], gist: gist)
+        let before = try Harness.files(gist)
+        #expect(h.cli(["requirement", "accept", "EC4207"], gist: gist).code == Exit.rule.rawValue)
+        #expect(try Harness.files(gist) == before)
+    }
+
     @Test func dryRunWritesNothing() throws {
         let path = try payload("units.json", #"{"course": "EC4207 그래프 이론", "units": [{"title": "트리"}]}"#)
         let gist = try Harness.fixtureCopy()
