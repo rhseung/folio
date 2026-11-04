@@ -46,18 +46,24 @@ extension CourseFile: StoredModel {
     /// changes. The session now holds the link alone and those units are read from it. A note's `sessionId` is moved
     /// to its session when that slot is free and nothing else points at the note; a note a session points at takes
     /// that slot's kind (`import calendar` linked review notes without making them one); a second pointer at a note
-    /// lets go of it, the first in the file keeping it.
+    /// lets go of it, the first in the file keeping it. A pointer at a topic or exam note lets go too: that
+    /// `import calendar` took any unlinked note, and making it a review note would drop the units its user chose.
     static func keepNoteLinksOnSessions(_ raw: inout JSONValue) throws {
         func id(_ value: JSONValue?) -> UUID? { if case .string(let s)? = value { UUID(uuidString: s) } else { nil } }
         let slots = [("roughNoteId", "rough"), ("reviewNoteId", "review")]
         var sessions: [JSONValue] = if case .array(let a)? = raw["sessions"] { a } else { [] }
         var notes: [JSONValue] = if case .array(let a)? = raw["notes"] { a } else { [] }
         var kindOf: [UUID: String] = [:]
+        let kept: Set<String> = [NoteKind.topic.rawValue, NoteKind.examSummary.rawValue]
+        let ownUnits = Set(notes.compactMap { n -> UUID? in
+            guard case .string(let kind)? = n["kind"], kept.contains(kind) else { return nil }
+            return id(n["id"])
+        })
 
         for i in sessions.indices {
             for (key, kind) in slots {
                 guard let note = id(sessions[i][key]) else { continue }
-                if kindOf[note] == nil {
+                if kindOf[note] == nil && !ownUnits.contains(note) {
                     kindOf[note] = kind
                 } else {
                     sessions[i][key] = nil

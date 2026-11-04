@@ -50,6 +50,15 @@ struct NoteLinkMigrationTests {
         #expect(r.sessions[2]["roughNoteId"] == nil)
     }
 
+    /// `import calendar` once took any unlinked note named after a class, a topic note too; it stays a topic note
+    /// with its units, and the session lets go of it.
+    @Test func aPointedTopicOrExamNoteKeepsItsKind() throws {
+        let r = try migrated(sessions: [session(1, review: 10, draft: true), session(2, rough: 11)], notes: [note(10, "topic"), note(11, "exam_summary")])
+        #expect(r.notes.map { $0["kind"] } == [.string("topic"), .string("exam_summary")])
+        #expect(r.notes[0]["unitIds"] == .array([.string(unit.uuidString)]))
+        #expect(r.sessions[0]["reviewNoteId"] == nil && r.sessions[0]["reviewNoteDraft"] == nil && r.sessions[1]["roughNoteId"] == nil)
+    }
+
     @Test func onlyTopicNotesKeepUnits() throws {
         let r = try migrated(sessions: [], notes: [note(10, "topic"), note(11, "review"), note(12, "exam_summary"), note(13, "free")])
         #expect(r.notes.map { $0["unitIds"] } == [.array([.string(unit.uuidString)]), .array([]), .array([]), .array([])])
