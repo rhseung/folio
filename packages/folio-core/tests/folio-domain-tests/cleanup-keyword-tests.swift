@@ -1,4 +1,5 @@
 @testable import FolioDomain
+import Foundation
 import Testing
 
 /// Cases taken from names in the real GIST folder.
@@ -103,6 +104,27 @@ struct CleanupKeywordTests {
 
         var clean = CoursePlanner(course: mixed)
         #expect(clean.plan().isEmpty)
+    }
+
+    /// A new exam names its folder from its title, so the guessed `Midterm` must become the folder of the exam it means,
+    /// or no link at all when the course has no such exam.
+    @Test func examLinksNameExamsThatExist() {
+        let file = { (name: String) in FolderTree(name: name, content: .file(size: 1)) }
+        let course = FolderTree(name: "GS2004 선형대수학", content: .folder([
+            FolderTree(name: "Exercises", content: .folder([file("Proofs.pdf"), file("Final Mock.pdf")])),
+            file("Guideline.pdf"),
+        ]))
+        let selfMade: Set<String> = ["Exercises/Proofs.pdf", "Exercises/Final Mock.pdf"]
+        var midterm = Exam(device: UUID(), at: .now, title: "중간고사")
+        midterm.folder = "중간고사"
+        var titled = CoursePlanner(course: course, selfMade: selfMade, exams: [midterm])
+        let moves = Dictionary(uniqueKeysWithValues: titled.plan().map { ($0.from, $0) })
+        #expect(moves["Exercises/Proofs.pdf"]?.exam == "중간고사")
+        #expect(moves["Exercises/Final Mock.pdf"]?.exam == nil && moves["Exercises/Final Mock.pdf"]?.review == nil)
+        #expect(moves["Guideline.pdf"]?.to == "Exams/중간고사/Guideline.pdf" && moves["Guideline.pdf"]?.review == .guessedExam)
+
+        var none = CoursePlanner(course: course, selfMade: selfMade, exams: [])
+        #expect(none.plan().allSatisfy { $0.exam == nil })
     }
 
     @Test func journalFollowsSelfMadeFiles() {

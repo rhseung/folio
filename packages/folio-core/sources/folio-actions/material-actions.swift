@@ -282,8 +282,12 @@ public struct CleanupApply {
                 for move in mine {
                     guard let m = f.materials.firstIndex(where: { $0.path == String(move.to.dropFirst(base.count)) }) else { continue }
                     if let kind = move.kind { f.materials[m].kind = kind }
-                    if let folder = move.exam, let exam = f.exams.first(where: { $0.folder == folder }) {
+                    guard let folder = move.exam else { continue }
+                    // The plan read the exams earlier; one renamed or deleted since can't be linked.
+                    if let exam = f.exams.first(where: { $0.folder == folder }) {
                         f.setMaterial(f.materials[m].id, exam: exam.id, linked: true)
+                    } else {
+                        ctx.note(String(localized: .noteCleanupUnlinked(move.to, folder)))
                     }
                 }
             }

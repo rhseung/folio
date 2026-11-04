@@ -101,8 +101,11 @@ public enum CleanupPlanner {
     /// `labs` maps a GIST-relative course path to its experiment titles and their numbers, so reports named after an
     /// experiment land in that experiment's `Lab<NN>`; `labWeeks` gives each experiment's first week, so its manual
     /// becomes that week's lecture material. `selfMade` holds GIST-relative paths known to be self-made (`selfMade(moves:)`).
+    /// `exams` maps a course path to its exams, so links name an exam that exists; a course missing from it keeps the
+    /// names guessed from files.
     public static func plan(_ gist: FolderTree, skip: Set<String> = [], labs: [String: [String: Int]] = [:],
-                            labWeeks: [String: [Int: Int]] = [:], selfMade: Set<String> = []) -> CleanupPlan {
+                            labWeeks: [String: [Int: Int]] = [:], selfMade: Set<String> = [],
+                            exams: [String: [Exam]] = [:]) -> CleanupPlan {
         var moves: [PlannedMove] = []
         var skipped: [String] = []
         var removals: [String] = []
@@ -130,7 +133,8 @@ public enum CleanupPlanner {
                     continue
                 } else if StandardLayout.isCourseFolderName(child.name) {
                     let mine = Set(selfMade.filter { $0.hasPrefix(path + "/") }.map { String($0.dropFirst(path.count + 1)) })
-                    var planner = CoursePlanner(course: child, labs: labs[path] ?? [:], labWeeks: labWeeks[path] ?? [:], selfMade: mine)
+                    var planner = CoursePlanner(course: child, labs: labs[path] ?? [:], labWeeks: labWeeks[path] ?? [:], selfMade: mine,
+                                                exams: exams[path])
                     moves += planner.plan().map {
                         .init(from: "\(path)/\($0.from)", to: "\(path)/\($0.to)", review: $0.review, exam: $0.exam, kind: $0.kind)
                     }
@@ -151,15 +155,34 @@ struct CoursePlanner {
     let labWeeks: [Int: Int]
     /// Course-relative.
     let selfMade: Set<String>
+    /// Nil when the course's exams weren't read.
+    let exams: [Exam]?
     var moves: [PlannedMove] = []
     var removals: [String] = []
     var lectures: [(path: String, name: String)] = []
 
-    init(course: FolderTree, labs: [String: Int] = [:], labWeeks: [Int: Int] = [:], selfMade: Set<String> = []) {
+    init(course: FolderTree, labs: [String: Int] = [:], labWeeks: [Int: Int] = [:], selfMade: Set<String> = [], exams: [Exam]? = nil) {
         self.course = course
         self.labs = labs
         self.labWeeks = labWeeks
         self.selfMade = selfMade
+        self.exams = exams
+    }
+
+    /// The folder of the exam a guess such as `Midterm` or `Quiz3` means. A new exam names its folder from its title
+    /// (`중간고사`), so the guess is read against each exam's folder and title. Nil when no exam matches: apply links by
+    /// folder, and a plan that names a missing exam would show a link apply then drops.
+    func examLink(_ guess: String?) -> String? {
+        guard let guess, let exams else { return guess }
+        let named = exams.filter { $0.folder != nil }
+        if named.contains(where: { $0.folder == guess }) { return guess }
+        return named.first { e in [e.folder, e.title].compactMap { $0 }.contains { Keywords.examFolder(in: $0.lowercased()) == guess } }?.folder
+    }
+
+    /// Where a file for the guessed exam goes: that exam's folder when there is one.
+    func examFolder(_ guess: String?) -> String {
+        let name = guess ?? Keywords.defaultExam
+        return examLink(name) ?? name
     }
 
     mutating func plan() -> [PlannedMove] {
@@ -203,13 +226,13 @@ struct CoursePlanner {
                 } else if item.isFile {
                     // Any folder here is an exam's own, named from its title (as the layout check holds); only loose
                     // files go to an exam. The tree alone can't tell which exam a folder belongs to.
-                    moves.append(.init(from: path, to: "\(base)/\(Keywords.defaultExam)/\(item.name)", review: .guessedExam))
+                    moves.append(.init(from: path, to: "\(base)/\(examFolder(nil))/\(item.name)", review: .guessedExam))
                 } else if case .folder(let files) = item.content {
                     if files.isEmpty { removals.append(path) }
                     // An exam folder holds the exam's own record; a summary made for it belongs in Study, linked.
                     for file in files where file.isFile && Keywords.looksSelfMade(file.name) {
                         moves.append(.init(from: "\(path)/\(file.name)", to: "\(CourseFolder.study.rawValue)/\(file.name)",
-                                           review: .guessedOrigin, exam: item.name))
+                                           review: .guessedOrigin, exam: examLink(item.name)))
                     }
                 }
             }
@@ -221,7 +244,7 @@ struct CoursePlanner {
                 let path = "\(base)/\(item.name)"
                 let to = "\(CourseFolder.study.rawValue)/\(item.name)"
                 if selfMade.contains(path) {
-                    moves.append(.init(from: path, to: to, exam: Keywords.examFolder(in: item.name.lowercased()) ?? Keywords.defaultExam))
+                    moves.append(.init(from: path, to: to, exam: examLink(Keywords.examFolder(in: item.name.lowercased()) ?? Keywords.defaultExam)))
                 } else {
                     moves.append(.init(from: path, to: to, review: .guessedOrigin))
                 }
@@ -263,7 +286,7 @@ struct CoursePlanner {
             // Made to prepare for an exam: Study, linked to the exam its name gives, else the midterm.
             for item in node.children {
                 moves.append(.init(from: "\(base)/\(item.name)", to: "\(CourseFolder.study.rawValue)/\(item.name)",
-                                   exam: Keywords.examFolder(in: item.name.lowercased()) ?? Keywords.defaultExam))
+                                   exam: examLink(Keywords.examFolder(in: item.name.lowercased()) ?? Keywords.defaultExam)))
             }
         case .textbooks:
             for item in node.children {
@@ -300,12 +323,12 @@ struct CoursePlanner {
             let exam = Keywords.examFolder(in: lower)
             let ext = (name as NSString).pathExtension
             moves.append(.init(
-                from: name, to: "\(CourseFolder.exams.rawValue)/\(exam ?? Keywords.defaultExam)/\(role.name).\(ext)",
+                from: name, to: "\(CourseFolder.exams.rawValue)/\(examFolder(exam))/\(role.name).\(ext)",
                 review: exam == nil ? .guessedExam : nil
             ))
         } else if Keywords.looksSelfMade(name) {
             moves.append(.init(from: name, to: "\(CourseFolder.study.rawValue)/\(name)", review: .guessedOrigin,
-                               exam: Keywords.examFolder(in: lower)))
+                               exam: examLink(Keywords.examFolder(in: lower))))
         } else if name.firstMatch(of: /^\d{1,2}[ _]/) != nil {
             lectures.append((name, name))
         } else if Keywords.textbook.contains(where: { lower.contains($0) }) || name.firstMatch(of: /\(.+\)\.[^.]+$/) != nil {

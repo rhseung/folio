@@ -198,6 +198,16 @@ struct MaterialNoteStudyTests {
         #expect(f.materials(for: try #require(f.exams.first { $0.id == Self.exam })).map(\.path).contains("Study/Exercise 1.pdf"))
     }
 
+    @Test func cleanupApplyNotesLinksToMissingExams() throws {
+        let gist = try Harness.fixtureCopy()
+        _ = h.cli(Self.track, gist: gist)
+        let ec = "2026-3/EC4207 그래프 이론"
+        let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
+        try CleanupApply(moves: [PlannedMove(from: "\(ec)/Exercises/Exercise 1.pdf", to: "\(ec)/Study/Exercise 1.pdf", exam: "Quiz9")]).run(ctx)
+        #expect(ctx.notes.contains { $0.contains("Study/Exercise 1.pdf") && $0.contains("Quiz9") })
+        #expect(try h.file(GISTStore(url: gist)).materials.first { $0.path == "Study/Exercise 1.pdf" }?.examIds == [])
+    }
+
     @Test func cleanupRemovesEmptyExamFolders() throws {
         let gist = try Harness.fixtureCopy()
         let empty = "2026-3/EC4207 그래프 이론/Exams/Quiz1"

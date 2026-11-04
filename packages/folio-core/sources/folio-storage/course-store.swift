@@ -65,7 +65,14 @@ public struct GISTStore: Sendable {
     /// The cleanup plan for the folder as it is now. The journal tells which files in `Exercises` an earlier cleanup took
     /// from `Exam Review`, which the tree alone can't.
     public func cleanupPlan(skip: Set<String> = [], labs: [String: [String: Int]] = [:], labWeeks: [String: [Int: Int]] = [:]) throws -> CleanupPlan {
-        CleanupPlanner.plan(try readTree(), skip: skip, labs: labs, labWeeks: labWeeks, selfMade: try MoveJournal.selfMadePaths(in: url))
+        let root = url.standardizedFileURL.path
+        var exams: [String: [Exam]] = [:]
+        for store in try courseStores() {
+            guard let file = try? store.load().model else { continue }
+            exams[String(store.url.standardizedFileURL.path.dropFirst(root.count + 1))] = file.exams
+        }
+        return CleanupPlanner.plan(try readTree(), skip: skip, labs: labs, labWeeks: labWeeks,
+                                   selfMade: try MoveJournal.selfMadePaths(in: url), exams: exams)
     }
 
     /// Copies the whole GIST folder to `<directory>/GIST-<timestamp>` outside iCloud. Required before cleanup.
