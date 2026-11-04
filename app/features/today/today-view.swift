@@ -73,7 +73,7 @@ struct TodayView: View {
             if exams.isEmpty {
                 EmptyCard(symbol: "calendar", title: String(localized: .todayExamsEmpty), detail: String(localized: .todayExamsEmptyDetail))
             } else {
-                // Spaced like the to-do list beside it: no rules between rows, air instead.
+                // The to-do list's row inset beside it, but without its rules.
                 Card {
                     ForEach(exams, id: \.exam.id) { examRow($0) }
                 }
@@ -115,10 +115,15 @@ struct TodayView: View {
                           detail: String(localized: .todayDeadlinesEmptyDetail))
             } else {
                 Card {
-                    // Rows touch the card's edges with no padding around them, so a tinted row ends flush with the card
-                    // instead of leaving a white strip above or below it.
+                    // The card has no inset and every row the same one, so a tinted row fills to the card's edges and
+                    // its content sits in the middle of the band. Extra inset on the end rows pushed it off-centre.
                     VStack(spacing: 0) {
-                        ForEach(shown) { deadlineRow($0, first: $0.id == shown.first?.id, last: $0.id == shown.last?.id) }
+                        ForEach(shown) { row in
+                            // Full width, unlike `CardRow`'s rule from the text: a band's edge already spans the card,
+                            // and a rule starting 16pt in left a notch where it met one.
+                            if row.id != shown.first?.id { Theme.Palette.lineSoft.frame(height: 1) }
+                            deadlineRow(row)
+                        }
                     }
                     .clipShape(.rect(cornerRadius: Theme.Radius.card))
                 }
@@ -126,7 +131,7 @@ struct TodayView: View {
         }
     }
 
-    func deadlineRow(_ row: TodayModel.DeadlineRow, first: Bool, last: Bool) -> some View {
+    func deadlineRow(_ row: TodayModel.DeadlineRow) -> some View {
         let item = row.item
         let accent = model.workspace.accent(item.courseId)
         let tone: Tone? = switch row.urgency {
@@ -151,10 +156,8 @@ struct TodayView: View {
                 }
             }
             .padding(.horizontal, Theme.Space.l)
-            // The card's own inset at its ends, as wide as at the sides. It goes inside the row, not on the card, so a
-            // tinted end row still fills to the card's edge.
-            .padding(.top, first ? Theme.Space.l : Theme.Space.s)
-            .padding(.bottom, last ? Theme.Space.l : Theme.Space.s)
+            // 12, not `Inset.row`'s 10: inside a band the chip needs room above and below to read as centred.
+            .padding(.vertical, Theme.Space.m)
             .background(tone.map { $0.fill.opacity(Theme.Opacity.toneRow) } ?? .clear)
             .contentShape(.rect)
         }
