@@ -1,6 +1,7 @@
 import FolioActions
 import FolioDomain
 import Foundation
+import SwiftUI
 import Testing
 @testable import Folio
 
@@ -132,5 +133,18 @@ struct SessionsModelTests {
         #expect(try #require(workspace.course(graphTheory)).file.sessions.count == count)
         pending.perform()
         #expect(try #require(workspace.course(graphTheory)).file.sessions.count == count - 1)
+    }
+
+    /// LaunchServices answers the Zoom app launch on a background queue; a refused launch still opens the web link.
+    @Test func joinFallsBackToTheWebLinkFromABackgroundQueue() async {
+        let web = URL(string: "https://zoom.us/j/1")!
+        let opened = await withCheckedContinuation { (done: CheckedContinuation<URL, Never>) in
+            let fallback = JoinOnlineButton.fallback(to: web, with: OpenURLAction { url in
+                done.resume(returning: url)
+                return .handled
+            })
+            DispatchQueue.global().async { fallback(false) }
+        }
+        #expect(opened == web)
     }
 }

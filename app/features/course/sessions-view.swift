@@ -413,7 +413,16 @@ struct JoinOnlineButton: View {
 
     static func join(_ url: URL, _ openURL: OpenURLAction) {
         guard let app = OnlineLink.appURL(url) else { return openURL(url) }
-        openURL(app) { accepted in if !accepted { openURL(url) } }
+        openURL(app, completion: fallback(to: url, with: openURL))
+    }
+
+    // On macOS, LaunchServices calls this completion on its own background queue. A closure written here would be
+    // inferred @MainActor (this is a View), and Swift 6 traps when it runs off the main queue, so it must be
+    // @Sendable and hop back to the main actor before opening the web link.
+    static func fallback(to url: URL, with openURL: OpenURLAction) -> @Sendable (Bool) -> Void {
+        { @Sendable accepted in
+            if !accepted { Task { @MainActor in openURL(url) } }
+        }
     }
 }
 
