@@ -318,10 +318,7 @@ struct TodayView: View {
         .padding(.vertical, Theme.Space.tight)
         .onHover { hoveredNote = $0 ? item.session.id : (hoveredNote == item.session.id ? nil : hoveredNote) }
         .contextMenu {
-            SessionMenu(courseId: item.courseId, sessionId: item.session.id, openNote: openNote(in: item.courseId)) { go(item.courseId, .sessions) }
-            Divider()
-            if unfinished { Button(.todayNoteFinish, systemImage: "checkmark") { model.finishReviewNote(item) } }
-            Button(.todayNoteNoReview, systemImage: "forward") { model.skipReviewNote(item) }
+            SessionMenu(courseId: item.courseId, sessionId: item.session.id, openNote: openNote(in: item.courseId), showSessions: { go(item.courseId, .sessions) })
         }
     }
 

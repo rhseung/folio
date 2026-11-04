@@ -48,6 +48,8 @@ folio note link "EC4207/매칭 정리" --kind topic --unit 매칭 --dry-run
 # 회차와 출석
 folio session add EC4207 --date "2026-11-02 10:30" --dry-run
 folio attendance set EC4207/2주차-1 absent --dry-run
+# 아직 없는 회차의 결석은 회차와 함께 만든다
+folio session add EC4207 --date "2026-11-11 10:30" --attendance absent --dry-run
 
 # 시험
 folio exam add EC4207 기말고사 --start "2026-12-14 10:00" --end "2026-12-14 12:00" --dry-run
@@ -63,6 +65,8 @@ folio transcript add "영재고 AP" "일반물리학 및 연습 II" --code GS --
 
 # 복습
 folio review record EC4207/매칭 good --start "2026-10-28 20:00" --end "2026-10-28 20:40" --dry-run
+# 건너뛰기는 review skip. 단원을 열어 본 시간이 있을 때만 --start와 --end를 준다
+folio review skip EC4207/매칭 --dry-run
 ```
 
 ## 졸업 요건과 학사편람
