@@ -177,3 +177,45 @@ struct NoteScrollTests {
         }
     }
 }
+
+/// The room past the note's end is a content inset with no text view under it: a click there, below the middle of the
+/// editor, went to the scroll view and left the caret where it was.
+@MainActor @Suite(.serialized)
+struct NoteRoomPastTheEndTests {
+    /// A click as the window gives it: to the view under the point, with the button already up.
+    static func click(_ window: NSWindow, at point: NSPoint) {
+        guard let down = NSEvent.mouseEvent(with: .leftMouseDown, location: point, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1),
+              let up = NSEvent.mouseEvent(with: .leftMouseUp, location: point, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 0) else { return }
+        window.postEvent(up, atStart: true)
+        window.contentView?.hitTest(point)?.mouseDown(with: down)
+    }
+
+    /// Clicks below a short note, left, middle and right, near the window's bottom.
+    static func clicksBelow(_ view: NSTextView, in window: NSWindow) throws {
+        NoteScrollTests.trim(view)
+        view.enclosingScrollView?.tile()
+        // The pointer turned to an arrow there too; the clip view shows its document cursor where the note doesn't reach.
+        #expect(view.enclosingScrollView?.contentView.documentCursor === NSCursor.iBeam)
+        let below = NSPoint(x: 0, y: 60)
+        #expect(view.convert(below, from: nil).y > view.bounds.maxY, "the point should be past the note's end")
+        let end = (view.string as NSString).length
+        for x in [100.0, 450.0, 800.0] {
+            view.setSelectedRange(NSRange(location: 0, length: 0))
+            let point = NSPoint(x: x, y: below.y)
+            #expect(window.contentView?.hitTest(point) === view, "\(x)")
+            click(window, at: point)
+            #expect(view.selectedRange() == NSRange(location: end, length: 0), "\(x)")
+        }
+    }
+
+    @Test func aClickPastTheEditorsEndPutsTheCaretAtTheEnd() throws {
+        let (view, window) = NoteScrollTests.source("첫 줄\n\n둘째 줄 끝")
+        try Self.clicksBelow(view, in: window)
+    }
+
+    @Test func aClickPastThePreviewsEndPutsTheCaretAtTheEnd() throws {
+        let (view, window) = NoteScrollTests.reader(NoteScrollTests.Body("첫 문단\n\n둘째 문단 끝"))
+        window.makeFirstResponder(view)
+        try Self.clicksBelow(view, in: window)
+    }
+}
