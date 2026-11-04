@@ -101,9 +101,7 @@ public struct ExamRemove {
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
             _ = try index(exam, in: f.exams, .valueExam)
-            f.exams.removeAll { $0.id == exam }
-            for i in f.units.indices { f.units[i].examIds.removeAll { $0 == exam } }
-            for i in f.scores.indices where f.scores[i].examId == exam { f.scores[i].examId = nil }
+            try f.remove(Exam.self, exam)
         }
     }
 }
@@ -338,8 +336,7 @@ public struct AssignmentRemove {
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
             _ = try index(assignment, in: f.assignments, .valueAssignment)
-            f.assignments.removeAll { $0.id == assignment }
-            f.scores.removeAll { $0.assignmentId == assignment }
+            try f.remove(Assignment.self, assignment)
         }
     }
 }
@@ -538,10 +535,7 @@ public struct ComponentRemove {
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
             _ = try index(component, in: f.components, .valueComponent)
-            f.components.removeAll { $0.id == component }
-            f.scores.removeAll { $0.componentId == component }
-            for i in f.assignments.indices where f.assignments[i].componentId == component { f.assignments[i].componentId = nil }
-            for i in f.exams.indices where f.exams[i].componentId == component { f.exams[i].componentId = nil }
+            try f.remove(GradeComponent.self, component)
         }
     }
 }

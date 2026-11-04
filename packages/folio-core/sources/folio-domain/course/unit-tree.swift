@@ -78,16 +78,6 @@ public enum UnitTree {
 }
 
 extension CourseFile {
-    /// Removes a unit and every reference to it in this file. Its children move up to its parent.
-    /// Notes and quiz files keep the dangling ID: they are the user's files and an ID that resolves to nothing is harmless.
-    public mutating func removeUnit(_ id: UUID) {
-        guard let removed = units.first(where: { $0.id == id }) else { return }
-        for i in units.indices where units[i].parentId == id { units[i].parentId = removed.parentId }
-        units.removeAll { $0.id == id }
-        for i in sessions.indices { sessions[i].unitIds.removeAll { $0 == id } }
-        for i in exams.indices { exams[i].scopeUnitIds.removeAll { $0 == id } }
-    }
-
     /// Links or unlinks a session, keeping `Unit.sessionIds` and `Session.unitIds` in step.
     public mutating func toggle(session: UUID, unit: UUID) {
         guard let u = units.firstIndex(where: { $0.id == unit }), let s = sessions.firstIndex(where: { $0.id == session }) else { return }

@@ -199,6 +199,17 @@
         }
       }
     },
+    "model.label.syllabus": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "강의계획서"
+          }
+        }
+      }
+    },
     "model.missing-target": {
       "extractionState": "manual",
       "localizations": {
@@ -672,17 +683,6 @@
         }
       }
     },
-    "rule.exam-plan-item.target": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "공부 계획 항목 '{name}'이 가리키는 대상이 이 과목에 없습니다"
-          }
-        }
-      }
-    },
     "rule.exam-plan-item.title.empty": {
       "extractionState": "manual",
       "localizations": {
@@ -910,17 +910,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "문제 묶음 제목이 비었습니다"
-          }
-        }
-      }
-    },
-    "rule.problem-set.units": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문제 묶음 '{name}'의 문제가 가리키는 단원이 이 과목에 없습니다"
           }
         }
       }
