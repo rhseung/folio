@@ -95,6 +95,10 @@ extension CourseFile {
                 .map { SessionMaterial(materialId: swap($0.materialId)!, firstPage: $0.firstPage, lastPage: $0.lastPage) }
                 .uniqued(on: \.materialId)
         }
+        for p in problemSets.indices {
+            problemSets[p].materialId = swap(problemSets[p].materialId)
+            problemSets[p].solutionMaterialId = swap(problemSets[p].solutionMaterialId)
+        }
         for a in assignments.indices {
             assignments[a].problemMaterialId = swap(assignments[a].problemMaterialId)
             assignments[a].submissionMaterialIds = Array(assignments[a].submissionMaterialIds.map { swap($0)! }.uniqued())

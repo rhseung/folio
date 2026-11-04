@@ -55,7 +55,7 @@ struct UnitTreeTests {
         #expect(titles(units) == ["A", "-B", "C"])
     }
 
-    @Test func removingAUnitClearsLinksAndLiftsChildren() {
+    @Test func removingAUnitClearsLinksAndLiftsChildren() throws {
         let parent = unit("P", 1)
         let removed = unit("R", 1, parent: parent)
         let child = unit("K", 1, parent: removed)
@@ -64,7 +64,7 @@ struct UnitTreeTests {
         session.unitIds = [removed.id]
         exam.scopeUnitIds = [removed.id, parent.id]
         var file = CourseFile(course: Course(device: device, at: now, title: "T"), units: [parent, removed, child], sessions: [session], exams: [exam])
-        file.removeUnit(removed.id)
+        try file.remove(Unit.self, removed.id)
         #expect(titles(file.units) == ["P", "-K"])
         #expect(file.sessions[0].unitIds.isEmpty)
         #expect(file.exams[0].scopeUnitIds == [parent.id])
