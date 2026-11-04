@@ -459,9 +459,11 @@ struct RootView: View {
         Binding {
             current != toggledTerms.contains(semester.id)
         } set: { _ in
-            // Closed under the pointer, the folder shuts at once rather than when the pointer leaves.
-            hoveredTerm = nil
             withAnimation(.snappy(duration: 0.2)) {
+                // Closed under the pointer, the folder shuts at once rather than when the pointer leaves. Inside the
+                // animation: cleared outside it, the unanimated change rode the same update and the courses popped in
+                // with no slide. Only the first click after the pointer arrives clears it, so later ones still slid.
+                hoveredTerm = nil
                 if toggledTerms.remove(semester.id) == nil { toggledTerms.insert(semester.id) }
             }
         }
