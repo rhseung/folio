@@ -144,3 +144,21 @@ extension CourseFile {
         return added
     }
 }
+
+extension CourseFile {
+    /// The unit a note is about: one it links, then its session's, then its exam's scope. A unit since removed is skipped.
+    public func unit(ofNote id: UUID) -> UUID? {
+        let known = Set(units.map(\.id))
+        let entry = notes.first { $0.id == id }
+        let session = sessions.first { $0.id == entry?.sessionId || $0.roughNoteId == id || $0.reviewNoteId == id }
+        let sessionUnits = session.map { s in s.unitIds + UnitTree.outline(units).map(\.unit).filter { $0.sessionIds.contains(s.id) }.map(\.id) } ?? []
+        let examUnits = exams.first { $0.id == entry?.examId }?.scopeUnitIds ?? []
+        return ((entry?.unitIds ?? []) + sessionUnits + examUnits).first(where: known.contains)
+    }
+
+    /// Where a new card goes: the unit on screen, else the open note's, else the first in the outline.
+    public func unitForNewCard(viewing unit: UUID?, note: UUID?) -> UUID? {
+        if let unit, units.contains(where: { $0.id == unit }) { return unit }
+        return note.flatMap(unit(ofNote:)) ?? UnitTree.outline(units).first?.unit.id
+    }
+}

@@ -67,6 +67,25 @@ public struct Change: Codable, Sendable, Equatable {
     }
 }
 
+extension Change {
+    /// A note file, or a note's entry in course.json, where its kind and links live.
+    public var touchesNotes: Bool {
+        func inNotes(_ path: String?) -> Bool { path?.split(separator: "/").contains { $0 == CourseFolder.notes.rawValue } == true }
+        let courseFile = path.split(separator: "/").last == Substring(StandardLayout.courseFile)
+        return inNotes(path) || inNotes(to) || courseFile && item?.hasPrefix(Self.notesItem) == true
+    }
+
+    /// A unit's card file under `.folio/quizzes`, or a card's attempt in the log, which decides its open wrong answers.
+    public var touchesQuizzes: Bool {
+        let parts = path.split(separator: "/").map(String.init)
+        return zip(parts, parts.dropFirst()).contains { $0 == (StandardLayout.metadataFolder, StandardLayout.quizzesFolder) }
+            || item == QuizAttemptEvent.type
+    }
+
+    /// `diff` names an entry by the JSON key of the array it is in: `CourseFile.notes` encodes as `notes`.
+    static let notesItem = "notes/"
+}
+
 extension [Change] {
     /// One entry per file and item, for an action that touches the same item more than once (or several actions run
     /// on one context): added stays added, a later removal wins, and each field keeps its first before and last after.

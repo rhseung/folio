@@ -78,7 +78,8 @@ struct CourseView: View {
     }
 
     func claude(_ course: LoadedCourse) -> some View {
-        ClaudePanel(workspace: model.workspace, course: course, openNote: model.section == .notes ? model.openNote : nil, insertIntoNote: { model.noteInsert = $0 }) {
+        ClaudePanel(workspace: model.workspace, course: course, openNote: model.section == .notes ? model.openNote : nil,
+                    openUnit: model.section == .units ? model.openUnit : nil, insertIntoNote: { model.noteInsert = $0 }) {
             model.show(note: $0)
         }
     }
@@ -143,7 +144,7 @@ struct CourseView: View {
                     switch model.section {
                     case .overview: CourseOverview(model: model, course: course)
                     case .sessions: SessionsView(workspace: workspace, course: course) { model.show(note: $0) }
-                    case .units: UnitsView(workspace: workspace, course: course)
+                    case .units: UnitsView(workspace: workspace, course: course) { model.openUnit = $0 }
                     case .notes: NotesView(workspace: workspace, course: course, selection: model.openNote, insert: $model.noteInsert) { model.openNote = $0 }
                     // One branch for every quiz page, so the quiz model and a pending solve request survive switching pages.
                     case .quizSolve, .quizCards, .quizStats, .quizProblems: QuizView(workspace: model.workspace, course: course, section: $model.section)
