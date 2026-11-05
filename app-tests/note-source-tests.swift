@@ -25,23 +25,24 @@ struct NoteSourceTests {
         return Frontmatter.split((try? String(contentsOf: url, encoding: .utf8)) ?? "").body
     }
 
-    /// The caret is one height on every body line, empty or holding smaller code, and the text sits in the middle of
-    /// its line, so a box around it is padded the same above and below.
-    @Test func linesAreOneHeightWithTheTextCentered() throws {
+    /// The caret is one height on every body line, empty or holding smaller code, and stands over the text, not the
+    /// whole line: the line's gap is above the text, and a caret through it reached up to the line before.
+    @Test func linesAreOneHeightWithTheCaretOverTheText() throws {
         let text = "본문 줄\n\n`code` 섞인 줄\n> 인용\n## 제목\n끝"
         let (view, _) = Self.editor(text)
         let ns = text as NSString
         let body = try #require(NoteRender.caret(view, at: 0))
         let manager = try #require(view.textLayoutManager)
         let line = try #require(manager.textLayoutFragment(for: manager.documentRange.location)).layoutFragmentFrame
-        #expect(body.height < line.height && abs(body.midY - line.midY) <= 0.5)
+        #expect(body.height < line.height)
         for i in [ns.range(of: "\n\n").location + 1, ns.range(of: "섞인").location, ns.range(of: "인용").location, ns.range(of: "끝").location] {
             #expect(try #require(NoteRender.caret(view, at: i)).height == body.height)
         }
         #expect(try #require(NoteRender.caret(view, at: ns.range(of: "제목").location)).height > body.height)
-        for word in ["본문", "인용", "제목"] {
-            let gaps = try #require(NoteRender.gaps(view, at: ns.range(of: word).location))
-            #expect(abs(gaps.above - gaps.below) <= 1, "\(word): \(gaps)")
+        for word in ["본문", "섞인", "인용", "제목", "끝"] {
+            let at = ns.range(of: word).location
+            let caret = try #require(NoteRender.caret(view, at: at)), drawn = try #require(NoteRender.text(view, at: at))
+            #expect(abs(caret.minY - drawn.lowerBound) <= 1 && abs(caret.maxY - drawn.upperBound) <= 1, "\(word): caret \(caret), text \(drawn)")
         }
     }
 
@@ -162,6 +163,17 @@ struct NoteSourceTests {
         // On the note's last line there's no room under it, so the bubble goes over it, where the view still shows it.
         let image = try #require(bubble(at: ns.range(of: "sample").location))
         #expect(image.frame.maxY <= view.bounds.maxY && image.frame.minY >= 0, "\(image.frame) in \(view.bounds)")
+    }
+
+    @Test func renderDarkBubble() {
+        let text = "역행렬의 행렬식 $det(A^-1) = 1/det(A)$ 은 이렇다.\n\n둘째 줄"
+        let (view, window) = Self.editor(text, width: 600, dark: true)
+        view.drawsBackground = true
+        view.backgroundColor = NoteLook.card
+        view.configure(accent: CourseAccent.presets[0].accent, syntax: .asciimath, dark: true)
+        window.makeFirstResponder(view)
+        view.setSelectedRange(NSRange(location: (text as NSString).range(of: "det(A^").location, length: 0))
+        NoteRender.write(view, "bubble-dark")
     }
 
     @Test func theBubbleTakesItsWindowsLook() throws {

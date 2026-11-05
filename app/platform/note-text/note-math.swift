@@ -118,7 +118,13 @@ import UIKit
         else { return nil }
         context.scaleBy(x: scale, y: scale)
         context.translateBy(x: offset.x, y: offset.y)
+        // SwiftMath colors a stretched delimiter, a fraction's bar and a root with `NSColor.setFill()`, which sets the
+        // current graphics context's color, not this one's; with none current they came out black. On the iPad the
+        // image renderer makes its context current.
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(cgContext: context, flipped: false)
         list.draw(context)
+        NSGraphicsContext.restoreGraphicsState()
         return context.makeImage().map { NSImage(cgImage: $0, size: size) }
         #else
         return UIGraphicsImageRenderer(size: size).image { renderer in

@@ -23,11 +23,8 @@ enum NoteLook {
     static let margin: CGFloat = 40
     static let paragraphGap: CGFloat = 14
     static let blockGap: CGFloat = 20
-    static let boxPadding: CGFloat = 12
-    static let boxIndent: CGFloat = 18
     static let listIndent: CGFloat = 24
     static let radius: CGFloat = 12
-    static let tint = CGFloat(0.07)
 
     static func font(_ size: CGFloat, _ weight: PlatformFont.Weight = .regular, italic: Bool = false, mono: Bool = false) -> PlatformFont {
         let base = mono ? PlatformFont.monospacedSystemFont(ofSize: size, weight: weight) : PlatformFont.systemFont(ofSize: size, weight: weight)
@@ -56,46 +53,23 @@ enum NoteLook {
     static let line = Swatch.line.native
     static let lineSoft = Swatch.lineSoft.native
     static let fill = Swatch.fill.native
-    static let codeFill = Swatch.codeFill.native
     static let card = Swatch.card.native
     static let danger = preset("red").accent
-
-    /// `color` at `alpha` over the page, as one opaque color: a translucent tint drawn paragraph by paragraph shows a
-    /// seam where two paragraphs meet.
-    static func tint(_ color: PlatformColor, _ alpha: CGFloat) -> PlatformColor {
-        #if os(macOS)
-        return NSColor(name: nil) { appearance in
-            var out = color
-            appearance.performAsCurrentDrawingAppearance {
-                if let c = color.usingColorSpace(.sRGB), let b = card.usingColorSpace(.sRGB) { out = b.blended(withFraction: alpha, of: c) ?? color }
-            }
-            return out
-        }
-        #else
-        return UIColor { traits in
-            var (r1, g1, b1, a1, r2, g2, b2, a2): (CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0, 0, 0, 0, 0)
-            card.resolvedColor(with: traits).getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
-            color.resolvedColor(with: traits).getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
-            return UIColor(red: r1 + (r2 - r1) * alpha, green: g1 + (g2 - g1) * alpha, blue: b1 + (b2 - b1) * alpha, alpha: 1)
-        }
-        #endif
-    }
 
     static func preset(_ name: String) -> (accent: PlatformColor, ink: PlatformColor) {
         let a = CourseAccent.presets.first { $0.name == name }?.accent ?? .gray
         return (a.native, a.inkNative)
     }
 
-    /// Callout kinds borrow the course presets, so a theorem is violet in every course; proofs and remarks have no tint.
-    static func callout(_ type: String) -> (color: PlatformColor, tinted: Bool) {
+    /// Callout kinds borrow the course presets, so a theorem is violet in every course.
+    static func callout(_ type: String) -> PlatformColor {
         switch type {
-        case "definition", "info", "note", "abstract": (preset("blue").accent, true)
-        case "theorem", "lemma", "corollary", "proposition": (preset("violet").accent, true)
-        case "example", "counterexample", "tip", "summary", "solution": (preset("green").accent, true)
-        case "warning", "important", "question": (preset("orange").accent, true)
-        case "danger": (danger, true)
-        case "proof", "remark": (CourseAccent.gray.native, false)
-        default: (CourseAccent.gray.native, true)
+        case "definition", "info", "note", "abstract": preset("blue").accent
+        case "theorem", "lemma", "corollary", "proposition": preset("violet").accent
+        case "example", "counterexample", "tip", "summary", "solution": preset("green").accent
+        case "warning", "important", "question": preset("orange").accent
+        case "danger": danger
+        default: CourseAccent.gray.native
         }
     }
 

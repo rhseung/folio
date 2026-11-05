@@ -143,10 +143,12 @@ final class NoteClipView: NSClipView {
     }
 }
 
-/// A TextKit 2 text view for notes: the column centered at the note measure, `NoteFragment`s drawn, and the note's own
-/// clicks (⌘ on a link, a task's box) taken before the text view's.
+/// A TextKit 2 text view for notes: the column centered at the note measure, and the note's own clicks (⌘ on a link, a
+/// task's box) taken before the text view's. It draws only styled text, as TextKit lays it out.
+///
+/// The system text views, not a package such as STTextView: that one is AppKit-first with its UIKit port still young,
+/// and Hangul composition, which the system views get right and `NoteHangulTests` guard, is where editors break.
 class NoteTextView: NSTextView {
-    let layout = NoteLayout()
     private let content = NSTextContentStorage()
     var baseURL: URL?
     var openNote: (String) -> Void = { _ in }
@@ -162,7 +164,6 @@ class NoteTextView: NSTextView {
         manager.textContainer = container
         content.addTextLayoutManager(manager)
         super.init(frame: .zero, textContainer: container)
-        manager.delegate = layout
         drawsBackground = false
         allowsUndo = true
         isRichText = false
@@ -184,15 +185,10 @@ class NoteTextView: NSTextView {
 
     override init(frame: NSRect, textContainer: NSTextContainer?) { fatalError() }
 
-    /// The text column's width, which pictures fit.
+    /// The text column's width, which the bubble's pictures fit.
     var columnWidth: CGFloat { max(120, min(NoteLook.measure, bounds.width) - 2 * NoteLook.margin) }
 
-    /// What a line can hold: the column less TextKit's padding at each end of a line. A picture sized to the column
-    /// reached past it by that padding.
-    var lineWidth: CGFloat { columnWidth - 2 * (textContainer?.lineFragmentPadding ?? 0) }
-
     func accentColors(_ accent: CourseAccent) {
-        layout.accent = accent.native
         insertionPointColor = accent.native
         selectedTextAttributes = [.backgroundColor: accent.native.withAlphaComponent(0.24)]
     }
@@ -356,7 +352,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         let at = caret > paragraph.location ? caret - 1 : min(caret, storage.length - 1)
         let around = storage.attributes(at: at, effectiveRange: nil)
         var typing: [NSAttributedString.Key: Any] = [.foregroundColor: NoteLook.text]
-        for key in [NSAttributedString.Key.font, .paragraphStyle, .noteRaise, .noteCaret] { typing[key] = around[key] }
+        for key in [NSAttributedString.Key.font, .paragraphStyle, .noteCaret] { typing[key] = around[key] }
         typingAttributes = typing
     }
 
@@ -647,9 +643,8 @@ extension MarkdownEditor: UIViewRepresentable {
     }
 }
 
-/// The iPad's text view for notes: TextKit 2, the column centered at the note measure, `NoteFragment`s drawn.
+/// The iPad's text view for notes: TextKit 2, the column centered at the note measure.
 class NoteTextView: UITextView {
-    let layout = NoteLayout()
     private let content = NSTextContentStorage()
     var baseURL: URL?
     var openNote: (String) -> Void = { _ in }
@@ -662,7 +657,6 @@ class NoteTextView: UITextView {
         manager.textContainer = container
         content.addTextLayoutManager(manager)
         super.init(frame: .zero, textContainer: container)
-        manager.delegate = layout
         backgroundColor = .clear
         alwaysBounceVertical = true
         // The room past the note's end is a content inset, and UIKit would shorten the indicator by it too.
@@ -687,11 +681,7 @@ class NoteTextView: UITextView {
 
     var columnWidth: CGFloat { max(120, min(NoteLook.measure, bounds.width) - 2 * NoteLook.margin) }
 
-    /// What a line can hold: the column less TextKit's padding at each end of a line.
-    var lineWidth: CGFloat { columnWidth - 2 * textContainer.lineFragmentPadding }
-
     func accentColors(_ accent: CourseAccent) {
-        layout.accent = accent.native
         tintColor = accent.native
     }
 

@@ -11,7 +11,7 @@ import WebKit
 /// The note-view checks (`NoteScreenTests`, `NoteLayoutTests`, `NoteClickGridTests`, `NoteHangulTests`) see the views
 /// only through this: what's drawn, which view a point hits, where the caret goes, how far the page scrolls. This is
 /// the one file that knows the edit view is a TextKit 2 text view in an `NSScrollView` and the preview a web view.
-/// The rewrite of the edit view (#267) changes this file and the reference pictures, and keeps the checks.
+/// A new edit view (as #267 made) changes this file and the reference pictures, and keeps the checks.
 ///
 /// Points are in the panel, from its top left, one pixel a point.
 @MainActor final class NoteBench {
