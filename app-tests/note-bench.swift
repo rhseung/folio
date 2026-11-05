@@ -282,6 +282,12 @@ import Testing
 
     func selectAll() { perform(#selector(NSText.selectAll(_:))) }
 
+    /// The caret at `location` with the page left where it is; moving it by key scrolls to it.
+    func placeCaret(at location: Int) {
+        guard kind == .edit else { return }
+        textView?.setSelectedRange(NSRange(location: location, length: 0))
+    }
+
     /// A standard editing action, as a key sends it.
     func perform(_ action: Selector) { _ = input?.tryToPerform(action, with: nil) }
 

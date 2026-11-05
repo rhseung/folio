@@ -1,4 +1,3 @@
-import AppKit
 import Foundation
 import Testing
 @testable import Folio
@@ -63,7 +62,7 @@ struct NoteClickGridTests {
                     guard bench.hit(at: p) == .note else { continue }
                     // The caret starts at the far end of the note, so a click that does nothing leaves it out of reach.
                     // Not a selection: a click inside one waits to see whether a drag starts, which timed the test out.
-                    bench.perform(above < length / 2 ? #selector(NSResponder.moveToEndOfDocument(_:)) : #selector(NSResponder.moveToBeginningOfDocument(_:)))
+                    bench.placeCaret(at: above < length / 2 ? length : 0)
                     let scrolled = bench.scrollY
                     bench.click(at: p)
                     let at = "(\(Int(p.x)), \(Int(p.y)))"
