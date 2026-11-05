@@ -7,23 +7,25 @@ import Testing
 /// (`NoteScreenTests`) catch the rest, but they're made anew when the look changes; these hold through any look.
 @MainActor @Suite(.serialized, .timeLimit(.minutes(5)))
 struct NoteLayoutTests {
-    /// The text column in a panel `width` wide, its margins left out.
-    static func column(_ width: CGFloat) -> ClosedRange<CGFloat> {
+    /// The text column of a picture of the panel, its margins left out. It's the picture's width, not the panel's:
+    /// where scrollers always show (a Mac with a mouse, the CI runner) they take their width off the note.
+    static func column(_ shot: Pixels) -> ClosedRange<CGFloat> {
+        let width = CGFloat(shot.width)
         let left = (width - min(NoteLook.measure, width)) / 2 + NoteLook.margin
         return left...(width - left)
     }
 
     /// Ink left and right of the column, a point of antialiasing allowed at each edge.
-    static func outside(_ shot: Pixels, _ width: CGFloat) -> (left: Int, right: Int) {
-        let column = Self.column(width)
+    static func outside(_ shot: Pixels) -> (left: Int, right: Int) {
+        let column = Self.column(shot)
         let height = CGFloat(shot.height)
         return (shot.ink(in: CGRect(x: 0, y: 0, width: column.lowerBound - 1, height: height)),
                 shot.ink(in: CGRect(x: column.upperBound + 1, y: 0, width: CGFloat(shot.width) - column.upperBound - 1, height: height)))
     }
 
     /// Whether each row of the column has ink in it, top down.
-    static func inkedRows(_ shot: Pixels, _ width: CGFloat) -> [Bool] {
-        let column = Self.column(width)
+    static func inkedRows(_ shot: Pixels) -> [Bool] {
+        let column = Self.column(shot)
         return (0..<shot.height).map { shot.ink(in: CGRect(x: column.lowerBound, y: CGFloat($0), width: column.upperBound - column.lowerBound, height: 1)) > 0 }
     }
 
@@ -46,18 +48,17 @@ struct NoteLayoutTests {
 
     @Test(arguments: NoteShot.light)
     func everyBlockStaysInTheColumn(_ shot: NoteShot) async {
-        let width = CGFloat(shot.width)
         let all = shot.bench(NoteBench.allMarkdown)
         await all.settle()
-        let whole = Self.outside(await all.wholeNote(), width)
+        let whole = Self.outside(await all.wholeNote())
         #expect(whole.left == 0 && whole.right == 0, "every construct, \(shot.name): ink outside the column \(whole)")
 
         let long = shot.bench(NoteBench.longNote)
         await long.settle()
-        let opened = Self.outside(long.snapshot(), width)
+        let opened = Self.outside(long.snapshot())
         #expect(opened.left == 0 && opened.right == 0, "long note opened, \(shot.name): ink outside the column \(opened)")
         await long.scrollToEnd()
-        let end = Self.outside(long.snapshot(), width)
+        let end = Self.outside(long.snapshot())
         #expect(end.left == 0 && end.right == 0, "long note at its end, \(shot.name): ink outside the column \(end)")
     }
 
@@ -66,7 +67,7 @@ struct NoteLayoutTests {
     func theWholePanelIsDrawnOnOpen(_ shot: NoteShot) async {
         let bench = shot.bench(NoteBench.longNote)
         await bench.settle()
-        let opened = Self.inkedRows(bench.snapshot(), CGFloat(shot.width))
+        let opened = Self.inkedRows(bench.snapshot())
         let blank = Self.longestBlank(opened, to: opened.count)
         #expect(blank.height < Self.gap, "opened: nothing drawn for \(blank.height) points from \(blank.from) of \(opened.count)")
         #expect(opened.suffix(opened.count / 4).contains(true), "opened: the bottom quarter of the panel is empty")
@@ -74,7 +75,7 @@ struct NoteLayoutTests {
         await bench.scrollToEnd()
         let end = bench.scrollY
         await bench.scroll(to: end / 2)
-        let middle = Self.inkedRows(bench.snapshot(), CGFloat(shot.width))
+        let middle = Self.inkedRows(bench.snapshot())
         let gap = Self.longestBlank(middle, to: middle.count)
         #expect(gap.height < Self.gap, "scrolled: nothing drawn for \(gap.height) points from \(gap.from) of \(middle.count)")
     }
@@ -88,7 +89,7 @@ struct NoteLayoutTests {
         #expect(bench.scrollY == 0)
         await bench.scrollToEnd()
         #expect(bench.scrollY > 0, "the long note should scroll")
-        let rows = Self.inkedRows(bench.snapshot(), CGFloat(shot.width))
+        let rows = Self.inkedRows(bench.snapshot())
         let last = try #require(rows.lastIndex(of: true), "nothing drawn at the end")
         let room = rows.count - last
         #expect(room >= rows.count / 3, "\(shot.name): \(room) points below the last line of \(rows.count)")

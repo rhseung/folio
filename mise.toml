@@ -75,9 +75,15 @@ depends = ["generate"]
 run = """
 out="${FOLIO_NOTE_SCREENS:-.build/note-screens}"
 case "$out" in /*) ;; *) out="$PWD/$out" ;; esac
-rm -rf "$out"
+rm -rf "$out" .build/test-app.xcresult
+status=0
 TEST_RUNNER_FOLIO_NOTE_SCREENS="$out" TEST_RUNNER_FOLIO_NOTE_SCREENS_STRICT="${FOLIO_NOTE_SCREENS_STRICT:-}" \
-xcodebuild -scheme Folio -destination 'platform=macOS' test -quiet -skipMacroValidation
+xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -quiet -skipMacroValidation || status=$?
+# -quiet leaves out why a test failed; the summary has each failure's message.
+if [ "$status" -ne 0 ] && [ -d .build/test-app.xcresult ]; then
+  xcrun xcresulttool get test-results summary --path .build/test-app.xcresult --compact
+fi
+exit "$status"
 """
 
 [tasks.test-ipad]
