@@ -372,6 +372,19 @@ extension CourseFile {
     }
 }
 
+/// A note to be renamed: its entry, where its file is now (course-relative), and the title it takes.
+public struct NoteRetitle: Equatable, Sendable {
+    public var note: UUID
+    public var path: String
+    public var title: String
+
+    public init(note: UUID, path: String, title: String) {
+        self.note = note
+        self.path = path
+        self.title = title
+    }
+}
+
 extension CourseFile {
     public func name(of session: Session) -> String { session.name(among: sessions) }
 
@@ -413,26 +426,66 @@ extension CourseFile {
         return kind == .review ? "\(title) 정리" : title
     }
 
+    /// Session notes still named `10주차-2` or `10주차-2 정리`, as notes were named before #273, with the title a note
+    /// gets now. A review note covering several classes takes its first. A note the user titled, or one no session
+    /// points at, keeps its name.
+    public func legacySessionNoteRetitles(calendar: Calendar) -> [NoteRetitle] {
+        notes.compactMap { entry in
+            guard entry.kind == .rough || entry.kind == .review,
+                  let session = sessions(pointingAt: entry.id).first(where: { $0.note(of: entry.kind) == entry.id }) else { return nil }
+            let name = ((entry.path as NSString).lastPathComponent as NSString).deletingPathExtension
+            guard name.precomposedStringWithCanonicalMapping.wholeMatch(of: /\d+주차-\d+( 정리)?( \d+)?/) != nil else { return nil }
+            return NoteRetitle(note: entry.id, path: entry.path, title: noteTitle(for: session, kind: entry.kind, calendar: calendar))
+        }
+    }
+
     /// In code, not the catalog: a file name must not change with the device's language.
     static let noteWeekdays = ["월", "화", "수", "목", "금", "토", "일"]
 
     static let noteSubjectLimit = 60
 
     /// The subject as it can sit in a file name: path and Obsidian link characters dropped or made `-` (the store
-    /// would otherwise turn `TCP: flow` into `TCP- flow`), and cut at a word so a long topic doesn't make a name
-    /// Finder truncates.
+    /// would otherwise turn `TCP: flow` into `TCP- flow`), and short enough that Finder doesn't truncate the name.
+    /// Units joined by ` · ` are kept whole, as many as fit; one cut at a word loses the `and`, `of` or `(` left
+    /// hanging, which read as a broken name.
     static func noteSubject(_ subject: String) -> String {
-        var s = String(subject.map { ch -> Character in
+        let parts = subject.components(separatedBy: " · ").map(fileNameSafe).filter { !$0.isEmpty }
+        var kept: [String] = []
+        for part in parts {
+            guard (kept + [part]).joined(separator: " · ").count <= noteSubjectLimit else { break }
+            kept.append(part)
+        }
+        if kept.isEmpty, let first = parts.first { kept = [shortened(first)] }
+        return kept.joined(separator: " · ")
+    }
+
+    static func fileNameSafe(_ text: String) -> String {
+        let s = String(text.map { ch -> Character in
             if "/\\|".contains(ch) { return "-" }
             if ":#^[]".contains(ch) || ch.isNewline { return " " }
             return ch
         })
-        s = s.split(whereSeparator: \.isWhitespace).joined(separator: " ")
-        s = String(s.drop { $0 == "." || $0 == " " })
-        guard s.count > noteSubjectLimit else { return s }
-        let head = s.prefix(noteSubjectLimit)
-        let cut = head.lastIndex(of: " ").flatMap { head.distance(from: head.startIndex, to: $0) >= noteSubjectLimit / 2 ? head[..<$0] : nil } ?? head
-        return String(cut).trimmingCharacters(in: CharacterSet(charactersIn: " -·.,"))
+        return String(s.split(whereSeparator: \.isWhitespace).joined(separator: " ").drop { $0 == "." })
+    }
+
+    static let danglingWords: Set<String> = ["a", "an", "and", "as", "at", "by", "for", "from", "in", "into", "of", "on", "or", "the", "to", "under", "vs", "with", "&"]
+
+    static func shortened(_ text: String) -> String {
+        var words: [Substring] = []
+        for word in text.split(separator: " ") {
+            guard (words + [word]).joined(separator: " ").count <= noteSubjectLimit else { break }
+            words.append(word)
+        }
+        guard !words.isEmpty else { return String(text.prefix(noteSubjectLimit)) }
+        var s = words.joined(separator: " ")
+        while true {
+            let before = s
+            s = s.trimmingCharacters(in: CharacterSet(charactersIn: " ,;-·."))
+            if let last = s.split(separator: " ").last, danglingWords.contains(last.lowercased()) { s = String(s.dropLast(last.count)) }
+            if s.filter({ $0 == "(" }).count > s.filter({ $0 == ")" }).count, let open = s.lastIndex(of: "(") { s = String(s[..<open]) }
+            if s == before { break }
+        }
+        return s.isEmpty ? String(text.prefix(noteSubjectLimit)) : s
     }
 
     /// A past class still owing its review note: not when the session or the whole course is left out of review.

@@ -299,11 +299,71 @@ struct CourseWorkTests {
         #expect(unbroken == "11-03(화) " + String(repeating: "가", count: 60))
     }
 
+    /// A cut that ends on `and`, `of a` or an open `(` reads as a broken name, so those go too.
+    @Test func aCutSubjectLeavesNothingHanging() {
+        var s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
+        let title = { (topic: String) in
+            s.topic = topic
+            return CourseFile(course: courses[0], sessions: [s]).noteTitle(for: s, kind: .rough, calendar: calendar)
+        }
+        #expect(title("Forest, Tree, Leaf, Cut-Edge and Equivalent Definitions of a Tree in General") == "11-03(화) Forest, Tree, Leaf, Cut-Edge and Equivalent Definitions")
+        #expect(title("Walk, Trail, Path, Cycle and Bipartite Graphs (König's Theorem on Cycles)") == "11-03(화) Walk, Trail, Path, Cycle and Bipartite Graphs")
+    }
+
+    /// Units are kept whole, as many as fit, rather than the last one cut midway.
+    @Test func aSubjectOfUnitsKeepsWholeUnits() {
+        let s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
+        var file = CourseFile(course: courses[0], sessions: [s])
+        let titles = ["Minimum Degree Two Forces a Cycle", "Eulerian Circuits", "Degree-Sum Formula"]
+        file.units = titles.enumerated().map { i, t in
+            var u = Unit(device: device, at: .now, title: t, order: i + 1)
+            u.sessionIds = [s.id]
+            return u
+        }
+        #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-03(화) Minimum Degree Two Forces a Cycle · Eulerian Circuits")
+    }
+
     /// The name is the day the class was held, as its title is, not the study day the 4 a.m. boundary would give.
     @Test func aLateClassIsNamedByItsCalendarDay() {
         let s = Session(device: device, at: .now, week: 10, date: date("2026-11-06 01:00"))
         let file = CourseFile(course: courses[0], sessions: [s])
         #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-06(금)")
+    }
+
+    /// Only names `session note` gave before #273 change; a title the user chose, or a note no session points at, stays.
+    @Test func oldSessionNoteNamesAreRetitled() {
+        var s = Session(device: device, at: .now, week: 10, date: date("2026-11-05 10:30"))
+        var t = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
+        s.topic = "Reliable data transfer"
+        let rough = UUID(), review = UUID(), mine = UUID(), loose = UUID(), copy = UUID()
+        s.roughNoteId = rough
+        s.reviewNoteId = review
+        t.reviewNoteId = review
+        t.roughNoteId = mine
+        var file = CourseFile(course: courses[0], sessions: [s, t])
+        let entry = { (id: UUID, path: String, kind: NoteKind) in NoteEntry(id: id, device: device, at: .now, path: path, meta: NoteMeta(id: id, kind: kind)) }
+        // macOS file names come back decomposed; the name still reads as `10주차-2`.
+        file.notes = [entry(rough, "Notes/10주차-2.md", .rough), entry(review, "Notes/10주차-1 정리 2.md", .review),
+                      entry(mine, "Notes/TCP 필기.md", .rough), entry(loose, "Notes/3주차-1.md", .rough),
+                      entry(copy, "Notes/" + "9주차-1".decomposedStringWithCanonicalMapping + ".tex", .free)]
+        let retitles = file.legacySessionNoteRetitles(calendar: calendar)
+        #expect(retitles == [NoteRetitle(note: rough, path: "Notes/10주차-2.md", title: "11-05(목) Reliable data transfer"),
+                             NoteRetitle(note: review, path: "Notes/10주차-1 정리 2.md", title: "11-03(화) 정리")])
+
+        t.roughNoteId = copy
+        file.sessions = [s, t]
+        file.notes[4] = entry(copy, "Notes/" + "9주차-1".decomposedStringWithCanonicalMapping + ".tex", .rough)
+        #expect(file.legacySessionNoteRetitles(calendar: calendar).map(\.note) == [rough, review, copy])
+    }
+
+    @Test func retitlingChangesOnlyTheTemplatesHeading() {
+        let md = "# 10주차-2\n\n## 10주차-2\n# 둘째\n"
+        #expect(NoteTemplate.retitled(md, from: "10주차-2", to: "11-05(목) RDT", format: .markdown) == "# 11-05(목) RDT\n\n## 10주차-2\n# 둘째\n")
+        #expect(NoteTemplate.retitled("# 내가 바꾼 제목\n", from: "10주차-2", to: "x", format: .markdown) == "# 내가 바꾼 제목\n")
+        #expect(NoteTemplate.retitled("본문만\n", from: "10주차-2", to: "x", format: .markdown) == "본문만\n")
+        let tex = NoteTemplate.body(for: .rough, title: "10주차-2", format: .tex)
+        let retitled = NoteTemplate.retitled(tex, from: "10주차-2", to: "11-05(목) A_B", format: .tex)
+        #expect(retitled.contains("\\section*{11-05(목) A\\_B}") && !retitled.contains("10주차-2"))
     }
 
     @Test func movingASessionNamesItByItsNewDate() {

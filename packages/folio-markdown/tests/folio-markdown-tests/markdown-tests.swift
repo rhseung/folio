@@ -141,6 +141,14 @@ struct LinkTests {
         #expect(links[4].objectKind == "material" && links[4].fragment == "page=12" && links[4].objectID != nil)
     }
 
+    @Test func retargetingKeepsEachLinksParts() {
+        let text = "[[7주차-2 정리]], [[7주차-2 정리#예시|예시]], ![[7주차-2 정리#^c1]], [[7주차-2 정리 2]], [[7주차-2]], [[ 7주차-2 정리 ]]"
+        let out = WikiLink.retargeted(text, from: "7주차-2 정리", to: "10-14(화) 매칭 정리")
+        #expect(out == "[[10-14(화) 매칭 정리]], [[10-14(화) 매칭 정리#예시|예시]], ![[10-14(화) 매칭 정리#^c1]], [[7주차-2 정리 2]], [[7주차-2]], [[10-14(화) 매칭 정리]]")
+        #expect(WikiLink.retargeted("[[Matching]]", from: "matching", to: "Flows") == "[[Flows]]")
+        #expect(WikiLink.retargeted("[[material:ABC#page=3]] 그대로", from: "7주차-2", to: "x") == "[[material:ABC#page=3]] 그대로")
+    }
+
     @Test func rendersLinksButNotInsideCode() {
         let out = HTMLRenderer.render(markdown: "See [[Vector Space#^def-vs|정의]] and `[[raw]]` and [[material:ABC#page=3]]")
         #expect(out.contains("<a class=\"wikilink\" href=\"folio://note/Vector%20Space#^def-vs\">정의</a>"))

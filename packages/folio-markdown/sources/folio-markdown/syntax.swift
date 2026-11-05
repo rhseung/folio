@@ -39,6 +39,17 @@ public struct WikiLink: Hashable, Sendable {
     public static func all(in text: String) -> [WikiLink] {
         text.matches(of: pattern).map(WikiLink.init)
     }
+
+    /// `text` with links to the note `old` pointing at `new`, keeping each link's heading, block, alias and embed.
+    /// Targets match ignoring case, as Obsidian and the notes list resolve them.
+    public static func retargeted(_ text: String, from old: String, to new: String) -> String {
+        text.replacing(pattern) { m in
+            let target = m.2.trimmingCharacters(in: .whitespaces)
+            guard target.caseInsensitiveCompare(old) == .orderedSame else { return String(m.0) }
+            let fragment = m.4.map { "#\(m.3 ?? "")\($0)" } ?? ""
+            return "\(m.1)[[\(new)\(fragment)\(m.5.map { "|\($0)" } ?? "")]]"
+        }
+    }
 }
 
 /// Obsidian callout `> [!type]± title`. `-` means folded by default.
