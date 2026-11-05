@@ -36,6 +36,28 @@ struct NoteMathTests {
         }
     }
 
+    /// SwiftMath colors a stretched delimiter, a fraction's bar and a root through the current graphics context, not
+    /// the one it draws into; with none current they came out black, unseen on a dark bubble.
+    @Test func darkMathDrawsEveryPartInItsColor() throws {
+        for (source, syntax) in [("det(A^-1) = 1/det(A)", MathSyntax.asciimath), ("rank(AB) <= rank(A) < n => AB", .asciimath),
+                                 (#"\left( \frac{a}{b} \right) + \sqrt{x}"#, .latex)] {
+            let picture = try #require(NoteMath.picture(source, syntax: syntax, display: false, size: 16, color: NoteLook.text, dark: true))
+            let image = try #require(picture.image.cgImage(forProposedRect: nil, context: nil, hints: nil))
+            let (w, h) = (image.width, image.height)
+            var bytes = [UInt8](repeating: 0, count: w * h * 4)
+            let context = try #require(CGContext(data: &bytes, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+                                                 space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+            context.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
+            var ink = 0, dark = 0
+            for i in stride(from: 0, to: bytes.count, by: 4) where bytes[i + 3] > 128 {
+                ink += 1
+                // Premultiplied: a light pixel's brightest channel is close to its alpha.
+                if Double(max(bytes[i], bytes[i + 1], bytes[i + 2])) < 0.5 * Double(bytes[i + 3]) { dark += 1 }
+            }
+            #expect(ink > 0 && dark == 0, "\(source): \(dark) dark of \(ink) inked pixels")
+        }
+    }
+
     @Test func everydayCommandsSwiftMathLacksStillDraw() throws {
         for tex in [#"0, \dots, n-1"#, #"i \bmod n"#, #"a \equiv b \pmod{n}"#, #"a \mod n"#, #"\operatorname{rank} A"#,
                     #"p \implies q"#, #"q \impliedby p"#, #"A \subsetneq B"#, #"a \nmid b"#, #"\therefore x"#, #"\blacksquare"#,

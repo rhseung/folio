@@ -165,6 +165,17 @@ struct NoteSourceTests {
         #expect(image.frame.maxY <= view.bounds.maxY && image.frame.minY >= 0, "\(image.frame) in \(view.bounds)")
     }
 
+    @Test func renderDarkBubble() {
+        let text = "역행렬의 행렬식 $det(A^-1) = 1/det(A)$ 은 이렇다.\n\n둘째 줄"
+        let (view, window) = Self.editor(text, width: 600, dark: true)
+        view.drawsBackground = true
+        view.backgroundColor = NoteLook.card
+        view.configure(accent: CourseAccent.presets[0].accent, syntax: .asciimath, dark: true)
+        window.makeFirstResponder(view)
+        view.setSelectedRange(NSRange(location: (text as NSString).range(of: "det(A^").location, length: 0))
+        NoteRender.write(view, "bubble-dark")
+    }
+
     @Test func theBubbleTakesItsWindowsLook() throws {
         let card = { (name: NSAppearance.Name) -> CGColor? in
             var color: CGColor?
