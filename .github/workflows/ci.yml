@@ -32,8 +32,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # test-app builds the Mac app to host the screen-model tests, so it stands in for build-mac.
-        task: [test-app, build-ipad]
+        # test-app builds the Mac app to host the screen-model tests, so it stands in for build-mac. test-ipad runs the
+        # iPad's own tests on a simulator.
+        task: [test-app, build-ipad, test-ipad]
     env:
       # Every other check builds Debug, so the iPad build goes Release: it also catches code that reaches what only
       # exists under #if DEBUG. It runs on PRs because macOS-only APIs broke main three times when it ran after merging.

@@ -80,6 +80,14 @@ TEST_RUNNER_FOLIO_NOTE_SCREENS="$out" TEST_RUNNER_FOLIO_NOTE_SCREENS_STRICT="${F
 xcodebuild -scheme Folio -destination 'platform=macOS' test -quiet -skipMacroValidation
 """
 
+[tasks.test-ipad]
+description = "Run the iPad tests (Hangul in the edit view) on the first available iPad simulator"
+depends = ["generate"]
+run = """
+id=$(xcrun simctl list devices available | grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}')
+xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" test -quiet -skipMacroValidation
+"""
+
 [tasks.note-screens]
 description = "Take the note-view pictures a CI run left as the new references: mise run note-screens -- <run ID>"
 run = "scripts/note-screens.sh"
