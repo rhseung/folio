@@ -15,7 +15,8 @@ public struct NoteMeta: Equatable, Sendable {
     /// Nil for markdown that hasn't been given an ID yet (e.g. moved in from an old 노트 folder).
     public var id: UUID?
     public var kind: NoteKind
-    public var sessionId: UUID?
+    /// In date order. A review note may cover several classes caught up on at once; a rough note has one.
+    public var sessionIds: [UUID]
     public var unitIds: [UUID]
     public var examId: UUID?
     public var tags: [String]
@@ -25,11 +26,17 @@ public struct NoteMeta: Equatable, Sendable {
                 math: MathSyntax = .latex) {
         self.id = id
         self.kind = kind
-        self.sessionId = sessionId
+        self.sessionIds = sessionId.map { [$0] } ?? []
         self.unitIds = unitIds
         self.examId = examId
         self.tags = tags
         self.math = math
+    }
+
+    /// The first session, or setting the only one. Old frontmatter and the action inputs name a single session.
+    public var sessionId: UUID? {
+        get { sessionIds.first }
+        set { sessionIds = newValue.map { [$0] } ?? [] }
     }
 }
 
@@ -51,8 +58,8 @@ public enum NoteFormat: String, Codable, Sendable, CaseIterable {
 
 /// A note's properties, kept in course.json beside its path instead of in the file. A `.tex` file has no place for
 /// them that TeX and other editors leave alone, and keeping them out of both formats lets the two work the same way.
-/// The note's session is not stored here: the session pointing at it says so (`Session.roughNoteId`, `reviewNoteId`),
-/// and a second copy here drifted from it. Read the links through `CourseFile.meta(of:)`.
+/// The note's sessions are not stored here: the sessions pointing at it say so (`Session.roughNoteId`, `reviewNoteId`),
+/// and a second copy here drifted from them. Read the links through `CourseFile.meta(of:)`.
 public struct NoteEntry: Entity {
     public var id: UUID
     public var createdAt: Date
@@ -94,17 +101,19 @@ public struct NoteEntry: Entity {
 }
 
 extension CourseFile {
-    /// A note's links as they read now: its session is the one pointing at it, and its units are the session's or
-    /// the exam's scope as they are today, so unlinking a session from a unit takes its notes off that unit too.
+    /// A note's links as they read now: its sessions are the ones pointing at it, and its units are theirs or the
+    /// exam's scope as they are today, so unlinking a session from a unit takes its notes off that unit too.
     public func meta(of entry: NoteEntry) -> NoteMeta {
-        let session = session(pointingAt: entry.id)
+        let sessions = sessions(pointingAt: entry.id)
         let units: [UUID] = switch entry.kind {
         case .topic: entry.unitIds
-        case .rough, .review: session.map { units(of: $0).map(\.id) } ?? []
+        case .rough, .review: UnitTree.outline(self.units).map(\.unit).filter { u in sessions.contains { u.sessionIds.contains($0.id) } }.map(\.id)
         case .examSummary: exams.first { $0.id == entry.examId }?.scopeUnitIds ?? []
         case .free: []
         }
-        return NoteMeta(id: entry.id, kind: entry.kind, sessionId: session?.id, unitIds: units, examId: entry.examId, tags: entry.tags, math: entry.math)
+        var meta = NoteMeta(id: entry.id, kind: entry.kind, unitIds: units, examId: entry.examId, tags: entry.tags, math: entry.math)
+        meta.sessionIds = sessions.map(\.id)
+        return meta
     }
 }
 

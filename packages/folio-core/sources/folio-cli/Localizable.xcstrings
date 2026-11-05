@@ -4099,7 +4099,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "러프 노트와 복습 노트는 --session, 시험 종합 정리는 --exam, 주제 노트는 --unit을 받는다. 종류를 바꾸면 예전 연결은 떨어진다.\n\n예시:\n  folio note link EC4207/2주차-1 --kind review --session 2주차-1\n  folio note link \"EC4207/매칭 정리\" --kind topic --unit 매칭 --unit \"이분 그래프\""
+            "value": "러프 노트와 복습 노트는 --session, 시험 종합 정리는 --exam, 주제 노트는 --unit을 받는다. 종류를 바꾸면 예전 연결은 떨어진다.\n복습 노트는 --session의 회차를 옮기지 않고 더한다. 여러 회차를 한 번에 더할 때는 note link-sessions, 회차 하나를 뗄 때는 note unlink-session을 쓴다.\n\n예시:\n  folio note link EC4207/2주차-1 --kind review --session 2주차-1\n  folio note link \"EC4207/매칭 정리\" --kind topic --unit 매칭 --unit \"이분 그래프\""
           }
         }
       }

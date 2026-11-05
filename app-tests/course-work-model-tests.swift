@@ -298,6 +298,29 @@ struct NotesModelTests {
         #expect(NoteEditorModel.markdown(for: URL(filePath: "/x/a b.png"), path: "assets/a b.png") == "![a b](assets/a%20b.png)")
     }
 
+    /// Classes caught up on together share one review note: picking a class in the link menu adds it, picking it again
+    /// takes it off, and the list names the classes it covers.
+    @Test func aReviewNoteCoversTheClassesPicked() throws {
+        let (workspace, course) = try fixtureCourse()
+        let day: TimeInterval = 86_400
+        let first = try #require(workspace.run(SessionAdd(course: linearAlgebra, date: .now - 9 * day))?.made)
+        let second = try #require(workspace.run(SessionAdd(course: linearAlgebra, date: .now - 2 * day))?.made)
+        let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "밀린 복습", kind: .review, session: first))?.made)
+        let editor = NoteEditorModel(workspace: workspace, course: course, note: try #require(try course.store.note(id: id)))
+        editor.load()
+        editor.pick(second, as: .review)
+        #expect(editor.linkedSessions.map(\.id) == [first, second] && editor.meta.sessionIds == [first, second])
+        let file = try #require(workspace.course(linearAlgebra)).file
+        #expect([first, second].allSatisfy { s in file.sessions.first { $0.id == s }?.reviewNoteId == id })
+        let span = try #require(file.sessionSpan(of: id))
+        #expect(editor.currentLink == "\(span) 복습 노트")
+        let list = NoteListModel(workspace: workspace, course: course)
+        list.reload()
+        #expect(list.parts.first?.rows.first { $0.note.meta.id == id }?.detail == "\(span) · 복습")
+        editor.pick(first, as: .review)
+        #expect(editor.linkedSessions.map(\.id) == [second])
+    }
+
     /// A session's note takes the session's name, as `session note` names it, until the user types their own title.
     @Test func aNewSessionNoteIsNamedAfterItsSession() throws {
         let (workspace, course) = try fixtureCourse()

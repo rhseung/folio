@@ -11,7 +11,7 @@ enum GeneratedCommands {
     static let exam: [any ParsableCommand.Type] = [ExamAdd.self, ExamSet.self, ExamRemove.self, ExamSummary.self]
     static let examPlan: [any ParsableCommand.Type] = [ExamPlanAdd.self]
     static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialLinkExam.self, MaterialUntrack.self, MaterialTrash.self, MaterialNew.self, MaterialBuild.self]
-    static let note: [any ParsableCommand.Type] = [NoteAdopt.self, NoteRemove.self, NoteBuild.self]
+    static let note: [any ParsableCommand.Type] = [NoteAdopt.self, NoteLinkSessions.self, NoteUnlinkSession.self, NoteRemove.self, NoteBuild.self]
     static let problemSet: [any ParsableCommand.Type] = [ProblemSetRemove.self, ProblemLinkUnit.self]
     static let recording: [any ParsableCommand.Type] = [RecordingTrim.self]
     static let review: [any ParsableCommand.Type] = [ReviewRecord.self]
@@ -985,6 +985,50 @@ enum GeneratedCommands {
             let action = FolioActions.NoteAdopt(
                 course: c.id,
                 note: try r.path("NotePath", noteName, in: c)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct NoteLinkSessions: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "link-sessions", abstract: "복습 노트를 회차 여러 개에 연결하기. 이미 연결된 회차는 그대로 둔다", discussion: """
+            예시:
+              folio note link-sessions \"EC4207/9주차 정리\" 9주차-1 9주차-2
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<복습 노트>", valueName: "note"), completion: Complete.ref("Note")) var note: String
+        @Argument(help: ArgumentHelp("회차. 예: 9주차-1. 여러 번 줄 수 있다", valueName: "sessions"), completion: Complete.ref("Session")) var sessions: [String]
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, noteName) = try r.split(note)
+            let action = FolioActions.NoteLinkSessions(
+                course: c.id,
+                note: try r.id("Note", noteName, in: c),
+                sessions: try sessions.map { try r.id("Session", $0, in: c) }
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct NoteUnlinkSession: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "unlink-session", abstract: "회차 하나에서 노트 떼기. 노트가 맡은 다른 회차는 그대로 둔다", discussion: """
+            예시:
+              folio note unlink-session \"EC4207/9주차 정리\" 9주차-1
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<노트>", valueName: "note"), completion: Complete.ref("Note")) var note: String
+        @Argument(help: ArgumentHelp("회차", valueName: "session"), completion: Complete.ref("Session")) var session: String = ""
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, noteName) = try r.split(note)
+            let action = FolioActions.NoteUnlinkSession(
+                course: c.id,
+                note: try r.id("Note", noteName, in: c),
+                session: try r.id("Session", session, in: c)
             )
             try perform(spec: action, g, ctx: ctx)
         }

@@ -67,7 +67,7 @@ struct CourseBoardTests {
         #expect(meta[topic]?.unitIds == [tested.id] && meta[topic]?.sessionId == nil)
         #expect(meta[summary]?.unitIds == [tested.id])
         #expect(meta[loose]?.sessionId == nil && meta[loose]?.unitIds == [])
-        #expect(file.session(pointingAt: nil) == nil)
+        #expect(file.sessions(pointingAt: nil).isEmpty)
     }
 
     @Test func reviewOnTrackNeedsANoteAndAFutureDueDay() {

@@ -52,6 +52,8 @@ folio assignment status EC4207/HW3 submitted --dry-run
 # 노트
 folio note add EC4207 "매칭 정리" --kind topic --dry-run
 folio note link "EC4207/매칭 정리" --kind topic --unit 매칭 --dry-run
+# 밀린 몇 회차를 복습 노트 하나로 복습했을 때. 회차 하나를 뗄 때는 note unlink-session
+folio note link-sessions "EC4207/9주차 정리" 9주차-1 9주차-2 --dry-run
 
 # 회차와 출석
 folio session add EC4207 --date "2026-11-02 10:30" --dry-run

@@ -145,6 +145,55 @@ public struct NoteLink {
     }
 }
 
+/// One review note for several classes caught up on at once. Each session points at the note, as a session with its
+/// own note does, so course.json keeps its shape. Sessions already linked stay; one holding another review note is
+/// refused before anything is written, as `note link` refuses it.
+@Action("note link-sessions", "복습 노트를 회차 여러 개에 연결하기. 이미 연결된 회차는 그대로 둔다", done: "노트 '{note}'에 회차를 연결했습니다",
+        examples: [#"folio note link-sessions "EC4207/9주차 정리" 9주차-1 9주차-2"#],
+        phrases: ["복습 노트 여러 회차", "밀린 수업 한 번에 복습", "회차 여러 개 복습 노트"])
+public struct NoteLinkSessions {
+    /// 과목
+    @Arg var course: Course.ID
+    /// 복습 노트
+    @Arg var note: Note.ID
+    /// 회차. 예: 9주차-1
+    @Arg var sessions: [Session.ID]
+
+    public func run(_ ctx: ActionContext) throws {
+        var meta = try FolioActions.note(ctx, course: course, id: note).meta
+        guard meta.kind == .review else { throw ActionError.rule(String(localized: .errorNoteLinkSessionsKind)) }
+        let file = try ctx.file(course)
+        for session in sessions { try NoteLinks(kind: .review, session: session, exam: nil, units: []).apply(to: &meta, in: file) }
+        try ctx.edit(course) { f in
+            for session in sessions { f.linkNote(note, to: session, as: .review) }
+        }
+    }
+}
+
+/// Takes one session off a note; the other sessions a review note covers keep it.
+@Action("note unlink-session", "회차 하나에서 노트 떼기. 노트가 맡은 다른 회차는 그대로 둔다", done: "회차 '{session}'에서 노트 '{note}'을(를) 뗐습니다",
+        examples: [#"folio note unlink-session "EC4207/9주차 정리" 9주차-1"#], phrases: ["복습 노트 회차 빼기", "노트 회차 연결 풀기"])
+public struct NoteUnlinkSession {
+    /// 과목
+    @Arg var course: Course.ID
+    /// 노트
+    @Arg var note: Note.ID
+    /// 회차
+    @Arg var session: Session.ID
+
+    public func run(_ ctx: ActionContext) throws {
+        try ctx.edit(course) { f in
+            guard f.notes.contains(where: { $0.id == note }) else { throw ActionError.notFound(String(localized: .errorNotFoundNote("\(note)"))) }
+            let s = f.sessions[try index(session, in: f.sessions, .valueSession)]
+            // A mistyped session would otherwise report the note taken off a class it was never on.
+            guard s.roughNoteId == note || s.reviewNoteId == note else {
+                throw ActionError.rule(String(localized: .errorNoteSessionNotLinked(f.name(of: s))))
+            }
+            f.unlinkNote(note, from: session)
+        }
+    }
+}
+
 /// Moves Folio's properties out of the notes' frontmatter into course.json, once, for notes from before #206. The
 /// entries are saved before any file is touched, and a note that already has one is only cleaned, so a run that stops
 /// halfway is finished by running it again. A link to a session, unit or exam that is gone is dropped, as is a second

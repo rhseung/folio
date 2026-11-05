@@ -42,7 +42,9 @@ struct NoteCommand: ParsableCommand {
             var id: UUID?
             var path: String
             var kind: NoteKind
+            /// The first of `sessionIds`, kept for readers from before a review note could cover several.
             var sessionId: UUID?
+            var sessionIds: [UUID]
             var examId: UUID?
             var unitIds: [UUID]
         }
@@ -54,10 +56,10 @@ struct NoteCommand: ParsableCommand {
             let notes = try store.notes()
             let path = { (n: NoteFile) in store.coursePath(of: n.url) ?? n.url.lastPathComponent }
             if g.json {
-                return try printJSON(notes.map { Item(id: $0.meta.id, path: path($0), kind: $0.meta.kind, sessionId: $0.meta.sessionId, examId: $0.meta.examId, unitIds: $0.meta.unitIds) })
+                return try printJSON(notes.map { Item(id: $0.meta.id, path: path($0), kind: $0.meta.kind, sessionId: $0.meta.sessionId, sessionIds: $0.meta.sessionIds, examId: $0.meta.examId, unitIds: $0.meta.unitIds) })
             }
             let f = c.file
-            let session = { (n: NoteFile) in n.meta.sessionId.flatMap { id in f.sessions.first { $0.id == id } }.map { f.name(of: $0) } ?? "" }
+            let session = { (n: NoteFile) in f.sessionSpan(of: n.meta.id) ?? "" }
             if lines {
                 for n in notes { line(["\(c.code)/\(path(n))", n.title, n.meta.kind.rawValue, session(n)]) }
                 return

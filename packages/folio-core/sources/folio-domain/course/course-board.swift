@@ -30,10 +30,18 @@ public enum AssignmentGroup: CaseIterable, Sendable {
 }
 
 extension CourseFile {
-    /// A note's session: the only place the link is kept.
-    public func session(pointingAt note: UUID?) -> Session? {
-        guard let note else { return nil }
-        return sessions.first { $0.roughNoteId == note || $0.reviewNoteId == note }
+    /// A note's sessions, in date order: the sessions are the only place the link is kept. A rough note has one; a
+    /// review note may cover several classes caught up on at once.
+    public func sessions(pointingAt note: UUID?) -> [Session] {
+        guard let note else { return [] }
+        return sessions.filter { $0.roughNoteId == note || $0.reviewNoteId == note }.sorted(by: Session.inOrder)
+    }
+
+    /// `9주차-1 – 10주차-1`: the first and last of the note's sessions, or the one alone. Nil with none.
+    public func sessionSpan(of note: UUID?) -> String? {
+        let linked = sessions(pointingAt: note)
+        guard let first = linked.first, let last = linked.last else { return nil }
+        return first.id == last.id ? name(of: first) : String(localized: .sessionSpan(name(of: first), name(of: last)))
     }
 }
 

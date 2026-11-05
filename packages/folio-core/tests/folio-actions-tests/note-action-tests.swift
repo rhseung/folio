@@ -89,6 +89,44 @@ struct NoteActionTests {
         #expect(try file().notes.first { $0.id == id }?.math == .asciimath)
     }
 
+    /// Classes caught up on at once share one review note: linking adds a class without taking the note off the others.
+    @Test func aReviewNoteGathersSeveralSessions() throws {
+        let days = [0.0, 2, 7].map { now.addingTimeInterval($0 * 86_400) }
+        let ids = days.map { _ in UUID() }
+        for (id, day) in zip(ids, days) { try run(SessionAdd(id: id, course: Self.graphTheory, date: day)) }
+        let note = UUID()
+        try run(NoteAdd(id: note, course: Self.graphTheory, title: "rdt 정리", kind: .review, session: ids[0]))
+        try run(NoteLinkSessions(course: Self.graphTheory, note: note, sessions: [ids[2], ids[1]]))
+        #expect(try file().sessions(pointingAt: note).map(\.id) == ids)
+        // The note was made from the template, so every class it covers waits for it to be written; writing it
+        // finishes them together.
+        #expect(try file().sessions.filter { ids.contains($0.id) }.allSatisfy(\.reviewNoteUnfinished))
+        try run(SessionSet(course: Self.graphTheory, session: ids[1], reviewUnfinished: .set(false)))
+        #expect(try !file().sessions.contains { ids.contains($0.id) && $0.reviewNoteUnfinished })
+        // `note link` adds too, and doesn't move it.
+        try run(NoteUnlinkSession(course: Self.graphTheory, note: note, session: ids[0]))
+        #expect(try file().sessions(pointingAt: note).map(\.id) == [ids[1], ids[2]])
+        // A session the note isn't on is a mistake to report, not a silent success.
+        #expect(throws: ActionError.self) { try run(NoteUnlinkSession(course: Self.graphTheory, note: note, session: ids[0])) }
+        try run(NoteLink(course: Self.graphTheory, note: note, kind: .review, session: ids[0]))
+        #expect(try meta(note).sessionIds == ids)
+        try run(NoteRemove(course: Self.graphTheory, note: "Notes/rdt 정리.md"))
+        #expect(try file().sessions.allSatisfy { $0.reviewNoteId != note })
+    }
+
+    /// The whole list is checked before anything is written, so one refused class leaves the others unlinked.
+    @Test func linkingSessionsRefusesBeforeWriting() throws {
+        let free = UUID(), taken = UUID(), note = UUID(), other = UUID()
+        try run(SessionAdd(id: free, course: Self.graphTheory, date: now))
+        try run(SessionAdd(id: taken, course: Self.graphTheory, date: now.addingTimeInterval(86_400)))
+        try run(NoteAdd(id: other, course: Self.graphTheory, title: "다른 정리", kind: .review, session: taken))
+        try run(NoteAdd(id: note, course: Self.graphTheory, title: "정리", kind: .review))
+        #expect(throws: ActionError.self) { try run(NoteLinkSessions(course: Self.graphTheory, note: note, sessions: [free, taken])) }
+        #expect(try file().sessions(pointingAt: note).isEmpty)
+        // Only a review note covers several classes; a rough note is linked with `note link`.
+        #expect(throws: ActionError.self) { try run(NoteLinkSessions(course: Self.graphTheory, note: Self.note, sessions: [free])) }
+    }
+
     @Test func aSecondNoteOfTheSameTitleGetsANumber() throws {
         try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "2주차-1"))
         #expect(try file().notes.map(\.path).contains("Notes/2주차-1 2.md"))

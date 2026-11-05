@@ -639,6 +639,17 @@
         }
       }
     },
+    "error.note.link-sessions-kind": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차 여러 개에 연결하는 노트는 복습 노트뿐입니다. 먼저 note link --kind review로 바꾸세요"
+          }
+        }
+      }
+    },
     "error.note.session-has-review": {
       "extractionState": "manual",
       "localizations": {
@@ -657,6 +668,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "회차 %@에는 이미 러프 노트가 있습니다"
+          }
+        }
+      }
+    },
+    "error.note.session-not-linked": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차 %@은(는) 이 노트에 연결되어 있지 않습니다"
           }
         }
       }
