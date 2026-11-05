@@ -77,7 +77,7 @@ extension String {
         return "\u{1B}[\(styles.map(\.sgr).joined(separator: ";"))m\(self)\u{1B}[0m"
     }
 
-    /// A course's color token (`CourseColor.token`, always a preset or gray) as the nearest of the terminal's own 16
+    /// A course's color token (`CourseColor.token`, always a preset) as the nearest of the terminal's own 16
     /// colors, which the user's theme already tunes for its background.
     func course(_ token: String) -> String {
         let ansi: [String: Style] = ["violet": .magenta, "pink": .magenta, "blue": .blue, "teal": .cyan, "green": .green,

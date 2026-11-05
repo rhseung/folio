@@ -249,10 +249,12 @@ struct CourseAccent: Hashable {
     var ink: Color { Color(light: inkLight, dark: inkDark) }
     var tint: Color { color.opacity(Theme.Opacity.tint) }
 
+    /// Where no course is in view (a paused recording, a proof callout). Not a course preset; `graphite` is.
     static let gray = CourseAccent(light: 0x706C66, dark: 0x9A98A8, inkLight: 0x4A4741, inkDark: 0xC9C7D6)
 
-    /// The app icon's palette, plus olive and teal so a busy term still gets eight. Light values must match
-    /// `CourseColor.anchors`. Gray is left out: it reads as "no color" next to the others.
+    /// The app icon's palette, plus olive and teal so a busy term still gets eight, and graphite for a course that should
+    /// stay quiet. Light values must match `CourseColor.anchors`. Graphite takes the paper's warm gray, since a pure gray
+    /// read cold beside it; its ink sits past the colored inks' 5.5:1 so that text on its tint reads as plain text.
     static let presets: [(name: String, accent: CourseAccent)] = [
         ("violet", .init(light: 0x8B7CF6, dark: 0xA49CFE, inkLight: 0x5B45BA, inkDark: 0xC2BFFF)),
         ("blue", .init(light: 0x3B5BDB, dark: 0x87A7FF, inkLight: 0x2D48C6, inkDark: 0xAEC5FF)),
@@ -262,12 +264,12 @@ struct CourseAccent: Hashable {
         ("olive", .init(light: 0x8A8A3C, dark: 0xC9C25A, inkLight: 0x5C5C22, inkDark: 0xE0DA8A)),
         ("teal", .init(light: 0x1D8FA8, dark: 0x4CC3D9, inkLight: 0x125F70, inkDark: 0x8ADCEA)),
         ("red", .init(light: 0xFF6B4A, dark: 0xFE8165, inkLight: 0xA92602, inkDark: 0xFEB19F)),
+        ("graphite", .init(light: 0x6E6B66, dark: 0xA8A49E, inkLight: 0x46433E, inkDark: 0xD2CEC8)),
     ]
 
     /// Which preset an unset color falls back to is `CourseColor`'s, shared with the folio command.
     static func resolve(token stored: String, position: Int) -> CourseAccent {
         let token = CourseColor.token(stored, position: position)
-        if token == "gray" { return .gray }
         return presets.first { $0.name == token }?.accent ?? presets[0].accent
     }
 }
