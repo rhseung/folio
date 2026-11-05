@@ -2,7 +2,7 @@ import SwiftUI
 import WebKit
 
 /// Shows rendered HTML in the Claude panel. The page's own JavaScript is off: answers are content, not code. Math is
-/// typeset by the bundled reader script, which runs in the app's separate script world. Notes use `NoteReader`.
+/// typeset by the bundled reader script, which runs in the app's separate script world. Notes use `NotePreview`.
 struct HTMLView {
     let body: String
     /// The note's folder, so `assets/…` images resolve.

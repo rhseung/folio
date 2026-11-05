@@ -3,14 +3,15 @@ import FolioDomain
 import FolioMarkdown
 import SwiftUI
 import Testing
+import WebKit
 @testable import Folio
 
-/// A note view as the app hosts it: `MarkdownEditor` or `NoteReader` in SwiftUI, in a window that's never shown.
+/// A note view as the app hosts it: `MarkdownEditor` or `NotePreview` in SwiftUI, in a window that's never shown.
 ///
 /// The note-view checks (`NoteScreenTests`, `NoteLayoutTests`, `NoteClickGridTests`, `NoteHangulTests`) see the views
 /// only through this: what's drawn, which view a point hits, where the caret goes, how far the page scrolls. This is
-/// the one file that knows they are TextKit 2 text views in an `NSScrollView`. The rewrites (#266 a web view for the
-/// preview, #267 a plain source editor) change this file and the reference pictures, and keep the checks.
+/// the one file that knows the edit view is a TextKit 2 text view in an `NSScrollView` and the preview a web view.
+/// The rewrite of the edit view (#267) changes this file and the reference pictures, and keeps the checks.
 ///
 /// Points are in the panel, from its top left, one pixel a point.
 @MainActor final class NoteBench {
@@ -47,7 +48,7 @@ import Testing
                     // `saveFile` names the update it came with, so `update()` can tell SwiftUI handed it to the view.
                     MarkdownEditor(text: text, baseURL: baseURL, math: .latex, insert: $insert, saveFile: { _, _ in "update \(count)" }, openNote: { _ in })
                 case .preview:
-                    NoteReader(text: note, baseURL: baseURL, math: .latex)
+                    NotePreview(text: note, baseURL: baseURL, math: .latex)
                 }
             }
             .environment(\.accent, CourseAccent.presets[0].accent)
@@ -107,7 +108,7 @@ import Testing
         return notes
     }()
 
-    // MARK: The TextKit views
+    // MARK: The views
 
     private var scrollView: NSScrollView? {
         func find(_ view: NSView) -> NSScrollView? {
@@ -119,27 +120,78 @@ import Testing
 
     private var textView: NSTextView? { scrollView?.documentView as? NSTextView }
 
-    private var widgets: [WidgetWebView] {
-        func all(_ view: NSView) -> [WidgetWebView] { ((view as? WidgetWebView).map { [$0] } ?? []) + view.subviews.flatMap(all) }
-        return textView.map(all) ?? []
+    private var preview: PreviewWebView? {
+        func find(_ view: NSView) -> PreviewWebView? {
+            if let web = view as? PreviewWebView { return web }
+            return view.subviews.lazy.compactMap(find).first
+        }
+        return find(host)
     }
+
+    /// The preview is drawn in its own process, so what it shows is read while settling and kept for `snapshot`.
+    private var shown: (pixels: Pixels, scrollY: CGFloat)?
 
     // MARK: Settling
 
     /// Lets SwiftUI place the view and the view draw, until what's drawn stops changing (or a few seconds pass).
     func settle() async {
+        if kind == .preview { return await settlePreview() }
         var last: Pixels?
         for round in 0..<40 {
             host.layoutSubtreeIfNeeded()
             window.displayIfNeeded()
             try? await Task.sleep(for: .milliseconds(50))
             guard scrollView != nil, round >= 2 else { continue }
-            // A widget's block takes its page's height once the page says it.
-            if round < 30, widgets.contains(where: { $0.isLoading || $0.pageHeight == nil }) { continue }
             let now = snapshot()
             if now == last { return }
             last = now
         }
+    }
+
+    private func settlePreview() async {
+        var last: (pixels: Pixels, scrollY: CGFloat)?
+        for round in 0..<60 {
+            host.layoutSubtreeIfNeeded()
+            window.displayIfNeeded()
+            try? await Task.sleep(for: .milliseconds(50))
+            // The page has the note, and every widget's frame the height its page said.
+            guard let web = preview, round >= 2, round >= 50 || web.page?.settled == true else { continue }
+            guard let now = await previewShot(web) else { continue }
+            shown = now
+            if let last, now.pixels == last.pixels, now.scrollY == last.scrollY { return }
+            last = now
+        }
+    }
+
+    /// What the page shows, without the scroller where one always shows. A snapshot taken without waiting for the
+    /// screen: the window is never shown, so the screen never updates.
+    private func previewShot(_ web: PreviewWebView) async -> (pixels: Pixels, scrollY: CGFloat)? {
+        let read = "return [document.documentElement.clientWidth, innerHeight, scrollY]"
+        guard let box = try? await web.callAsyncJavaScript(read, contentWorld: .defaultClient) as? [Double], box.count == 3,
+              box[0] >= 1, box[1] >= 1 else { return nil }
+        let (width, height) = (Int(box[0]), Int(box[1]))
+        let config = WKSnapshotConfiguration()
+        config.rect = CGRect(x: 0, y: 0, width: width, height: height)
+        config.afterScreenUpdates = false
+        let page = pageColor
+        let pixels = await withCheckedContinuation { (done: CheckedContinuation<Pixels?, Never>) in
+            web.takeSnapshot(with: config) { image, _ in
+                done.resume(returning: image.flatMap { Self.pixels($0, width: width, height: height, page: page) })
+            }
+        }
+        return pixels.map { ($0, CGFloat(box[2])) }
+    }
+
+    /// The snapshot at one pixel a point whatever the screen, so CI and a Retina Mac make pictures of the same size.
+    nonisolated private static func pixels(_ image: NSImage, width: Int, height: Int, page: CGColor) -> Pixels? {
+        guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4, space: Pixels.space,
+                                      bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return nil }
+        let graphics = NSGraphicsContext(cgContext: context, flipped: false)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = graphics
+        image.draw(in: CGRect(x: 0, y: 0, width: width, height: height))
+        NSGraphicsContext.restoreGraphicsState()
+        return context.makeImage().map { Pixels($0, page: page) }
     }
 
     /// Has SwiftUI update the note view, as a change anywhere around it in the app does.
@@ -155,6 +207,7 @@ import Testing
 
     /// What the panel shows, without its scrollers, which come and go.
     func snapshot() -> Pixels {
+        if kind == .preview { return shown?.pixels ?? blank }
         guard let clip = scrollView?.contentView, clip.bounds.width >= 1, clip.bounds.height >= 1,
               let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(clip.bounds.width), pixelsHigh: Int(clip.bounds.height),
                                          bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .calibratedRGB,
@@ -173,6 +226,14 @@ import Testing
 
     /// The whole note, the panel grown to its height.
     func wholeNote() async -> Pixels {
+        if kind == .preview {
+            // Down to the last block and the page's own room below it, not the room it keeps to scroll past the end.
+            let read = "const last = document.body.lastElementChild; return last ? last.getBoundingClientRect().bottom + scrollY + 96 : 0"
+            guard let web = preview, let bottom = try? await web.callAsyncJavaScript(read, contentWorld: .defaultClient) as? Double else { return blank }
+            window.setContentSize(NSSize(width: size.width, height: min(16_000, max(size.height, CGFloat(bottom).rounded(.up)))))
+            await settle()
+            return snapshot()
+        }
         guard let view = textView, let manager = view.textLayoutManager else { return blank }
         manager.ensureLayout(for: manager.documentRange)
         let height = (manager.usageBoundsForTextContainer.height + 2 * view.textContainerInset.height).rounded(.up)
@@ -194,7 +255,7 @@ import Testing
 
     // MARK: Scrolling
 
-    var scrollY: CGFloat { scrollView?.contentView.bounds.minY ?? 0 }
+    var scrollY: CGFloat { kind == .preview ? shown?.scrollY ?? 0 : scrollView?.contentView.bounds.minY ?? 0 }
 
     func scroll(to y: CGFloat) async {
         jump(to: y)
@@ -203,6 +264,10 @@ import Testing
 
     /// Scrolls without waiting for the view to draw.
     func jump(to y: CGFloat) {
+        if kind == .preview {
+            preview?.callAsyncJavaScript("scrollTo(0, y)", arguments: ["y": y], in: nil, in: .defaultClient)
+            return
+        }
         guard let scroll = scrollView else { return }
         let clip = scroll.contentView
         clip.scroll(to: clip.constrainBoundsRect(NSRect(origin: NSPoint(x: 0, y: y), size: clip.bounds.size)).origin)
@@ -210,7 +275,8 @@ import Testing
     }
 
     /// As far down as the page goes. TextKit guesses the height of text it hasn't laid out and corrects it as the end
-    /// comes into view, so this goes on until a scroll to the end stays where it is.
+    /// comes into view, and the preview's widgets take their height as they load, so this goes on until a scroll to
+    /// the end stays where it is.
     func scrollToEnd() async {
         for _ in 0..<10 {
             let before = scrollY
@@ -235,6 +301,11 @@ import Testing
 
     func hit(at p: CGPoint) -> Hit {
         guard let view = hitView(at: p) else { return .other("nothing") }
+        if kind == .preview {
+            // The page handles every point of itself: its widgets, its sideways scrolling and its scroller.
+            guard let web = preview else { return .other("no note view") }
+            return view === web || view.isDescendant(of: web) ? .note : .other(String(describing: type(of: view)))
+        }
         guard let note = textView, let scroll = scrollView else { return .other("no note view") }
         if view === note || view.isDescendant(of: note) { return .note }
         // `NoteScrollView` takes some clicks over the note itself and hands them on to it.

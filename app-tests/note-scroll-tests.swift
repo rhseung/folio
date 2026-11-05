@@ -47,33 +47,11 @@ struct NoteScrollTests {
         let view = SourceTextView()
         view.delegate = view
         let window = host(view)
-        view.baseURL = NoteReaderTests.fixtures
+        view.baseURL = NoteRender.fixtures
         view.load(text)
         view.configure(accent: CourseAccent.presets[0].accent, syntax: .latex, dark: false)
         fit(view)
         window.makeFirstResponder(view)
-        return (view, window)
-    }
-
-    final class Body {
-        var text: String
-        init(_ text: String) { self.text = text }
-    }
-
-    static func reader(_ body: Body) -> (ReaderTextView, NSWindow) {
-        let view = ReaderTextView()
-        let window = host(view)
-        view.baseURL = NoteReaderTests.fixtures
-        view.edit = { from, to, old, new in
-            var lines = body.text.components(separatedBy: "\n")
-            guard lines[(from - 1)...(to - 1)].joined(separator: "\n") == old else { return false }
-            lines.replaceSubrange((from - 1)...(to - 1), with: new.components(separatedBy: "\n"))
-            body.text = lines.joined(separator: "\n")
-            return true
-        }
-        view.configure(accent: CourseAccent.presets[0].accent, syntax: .latex, dark: false)
-        view.show(body.text)
-        fit(view)
         return (view, window)
     }
 
@@ -103,36 +81,6 @@ struct NoteScrollTests {
         #expect(view.selectedRange().location == 0)
     }
 
-    @Test func openingAFoldedCalloutKeepsItsTitleStill() throws {
-        let body = Body(Self.filler + "\n> [!note]- 접힌 콜아웃\n> 안의 본문\n> 둘째 줄\n\n" + Self.filler)
-        let (view, _) = Self.reader(body)
-        let title = (view.string as NSString).range(of: "접힌 콜아웃").location
-        Self.reveal(view, title)
-        let before = try #require(Self.shown(view, title))
-        #expect(view.click(at: title))
-        #expect(view.string.contains("안의 본문"))
-        #expect(abs(try #require(Self.shown(view, (view.string as NSString).range(of: "접힌 콜아웃").location)) - before) <= 1)
-    }
-
-    @Test func tickingABoxInTheReaderKeepsItStill() throws {
-        let body = Body(Self.filler + "\n- [ ] 할 일\n- [ ]\n\n" + Self.filler)
-        let (view, _) = Self.reader(body)
-        let item = (view.string as NSString).range(of: "할 일").location
-        Self.reveal(view, item)
-        let before = try #require(Self.shown(view, item))
-        let box = try #require((item - 4..<item).first { view.textStorage?.attribute(.noteTask, at: $0, effectiveRange: nil) != nil })
-        #expect(view.click(at: box))
-        #expect(body.text.contains("- [x] 할 일"))
-        view.show(body.text)
-        #expect(abs(try #require(Self.shown(view, (view.string as NSString).range(of: "할 일").location)) - before) <= 1)
-        // A bare `- [ ]` is a box too, and ticks.
-        let bare = try #require(view.textStorage.map { s in
-            (0..<s.length).last { s.attribute(.noteTask, at: $0, effectiveRange: nil) != nil }
-        } ?? nil)
-        #expect(view.click(at: bare))
-        #expect(body.text.contains("- [x]\n"))
-    }
-
     /// The view's frame cut to the note as laid out, as the app's is, instead of `fit`'s room to spare.
     static func trim(_ view: NSTextView) {
         guard let manager = view.textLayoutManager else { return }
@@ -152,31 +100,17 @@ struct NoteScrollTests {
         #expect(last < clip.bounds.height * 0.6 && last > clip.bounds.height * 0.3, "\(last) of \(clip.bounds.height)")
     }
 
-    /// With the editor scrolled to the note's end, its top line is half a screen or so above it. The preview, cut to
-    /// its note, brought that line only as far as its own end allowed, short of the top of the screen.
-    @Test func thePreviewFollowsTheEditorToTheEnd() throws {
-        let body = Body(Self.filler + "\n앞 문단\n\n둘째\n\n셋째")
-        let (view, _) = Self.reader(body)
-        Self.trim(view)
-        let line = body.text.components(separatedBy: "\n").firstIndex(of: "앞 문단")! + 1
-        view.follow(line: line, frac: 0)
-        let shown = try #require(Self.shown(view, (view.string as NSString).range(of: "앞 문단").location))
-        #expect(abs(shown - NoteLook.margin) <= 2, "\(shown)")
-    }
-
     @Test func theScrollerRunsTheWholeHeight() throws {
-        for preview in [false, true] {
-            let view: NSTextView = preview ? ReaderTextView() : SourceTextView()
-            let window = Self.host(view)
-            view.setFrameSize(NSSize(width: 900, height: 2000))
-            let scroll = try #require(view.enclosingScrollView)
-            // Shown whatever the machine's scroller setting, which hid it on CI and left its frame empty.
-            scroll.autohidesScrollers = false
-            scroll.tile()
-            let scroller = try #require(scroll.verticalScroller)
-            #expect(abs(scroller.frame.height - scroll.frame.height) <= 1, "\(preview): \(scroller.frame) in \(scroll.frame)")
-            _ = window
-        }
+        let view = SourceTextView()
+        let window = Self.host(view)
+        view.setFrameSize(NSSize(width: 900, height: 2000))
+        let scroll = try #require(view.enclosingScrollView)
+        // Shown whatever the machine's scroller setting, which hid it on CI and left its frame empty.
+        scroll.autohidesScrollers = false
+        scroll.tile()
+        let scroller = try #require(scroll.verticalScroller)
+        #expect(abs(scroller.frame.height - scroll.frame.height) <= 1, "\(scroller.frame) in \(scroll.frame)")
+        _ = window
     }
 }
 
@@ -237,8 +171,8 @@ struct NoteLowerHalfTests {
     }
 }
 
-/// The room past the note's end has no text view under it: a click there, below the middle of the
-/// editor, went to the scroll view and left the caret where it was.
+/// The room past the note's end has no text view under it: a click there, below the middle of the editor, went to the
+/// scroll view and left the caret where it was.
 @MainActor @Suite(.serialized)
 struct NoteRoomPastTheEndTests {
     /// A click as the window gives it: to the view under the point, with the button already up.
@@ -269,12 +203,6 @@ struct NoteRoomPastTheEndTests {
 
     @Test func aClickPastTheEditorsEndPutsTheCaretAtTheEnd() {
         let (view, window) = NoteScrollTests.source("첫 줄\n\n둘째 줄 끝")
-        Self.clicksBelow(view, in: window)
-    }
-
-    @Test func aClickPastThePreviewsEndPutsTheCaretAtTheEnd() {
-        let (view, window) = NoteScrollTests.reader(NoteScrollTests.Body("첫 문단\n\n둘째 문단 끝"))
-        window.makeFirstResponder(view)
         Self.clicksBelow(view, in: window)
     }
 }

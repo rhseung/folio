@@ -201,7 +201,7 @@ private struct SourcePane: View {
             if let pdf {
                 PDFKitView(controller: pdf)
             } else if let text {
-                NoteReader(text: text, baseURL: note?.url.deletingLastPathComponent(), math: note?.meta.math ?? .latex)
+                NotePreview(text: text, baseURL: note?.url.deletingLastPathComponent(), math: note?.meta.math ?? .latex)
             } else if failed {
                 ContentUnavailableView(String(localized: .reviewSourceFailed), systemImage: "doc.questionmark", description: Text(source.title))
             } else {

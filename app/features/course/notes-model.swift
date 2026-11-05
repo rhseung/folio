@@ -190,7 +190,7 @@ final class NoteEditorModel {
 
     func saveIfDirty() { if dirty { saveNow(force: false) } }
 
-    /// Writes a block edited in the read view over its lines, if they still hold what the page showed.
+    /// Writes a task box ticked in the preview over its line, if it still holds what the page showed.
     func replaceLines(_ from: Int, _ to: Int, _ old: String, _ new: String) -> Bool {
         var lines = body.components(separatedBy: "\n")
         guard from >= 1, from <= to, to <= lines.count, lines[(from - 1)...(to - 1)].joined(separator: "\n") == old else { return false }

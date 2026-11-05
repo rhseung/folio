@@ -70,13 +70,10 @@ struct MarkdownEditor {
     }
 }
 
-/// Room past the note's end. The editor's last line comes up to the middle of the screen, since one writes at the end;
-/// the preview's to the top, since its blocks stand further apart than the source's lines and it must still reach the
-/// line the editor shows at the top.
+/// Room past the note's end: the editor's last line comes up to the middle of the screen, since one writes at the end.
+/// The preview has room of its own (web/src/note.css), to bring its last block up to the top.
 enum NoteOverscroll {
-    static func bottom(_ height: CGFloat, preview: Bool) -> CGFloat {
-        preview ? max(0, height - 2 * NoteLook.margin) : (height / 2).rounded()
-    }
+    static func bottom(_ height: CGFloat) -> CGFloat { (height / 2).rounded() }
 }
 
 #if os(macOS)
@@ -123,23 +120,13 @@ final class NoteScrollView: NSScrollView {
     required init?(coder: NSCoder) { fatalError() }
 
     // Every click over the note is routed here, whatever AppKit's own hit test gave: with a plain clip view the scroll
-    // view took clicks over its document itself, and with `NoteClipView` it hands back the deepest view instead. A
-    // widget under the point gets its click. Code and wide pictures scroll sideways, so the trackpad and the scroller
-    // have to reach their scroll view; a click on what it shows goes to the scroll view itself, which hands it on to
-    // the note. A code block's text view would take the keyboard, and with it the note's shortcuts and find bar. The
-    // room past the note's end is the clip view's, under no part of the note; a click there went nowhere, so the note
-    // takes it and puts the caret at its end.
+    // view took clicks over its document itself, and with `NoteClipView` it hands back the deepest view instead. A view
+    // the note puts over its text (the preview bubble) takes no clicks. The room past the note's end is the clip
+    // view's, under no part of the note; a click there went nowhere, so the note takes it and puts the caret at its end.
     override func hitTest(_ point: NSPoint) -> NSView? {
         let hit = super.hitTest(point)
         guard let hit, let document = documentView, hit === self || hit === contentView || hit.isDescendant(of: document) else { return hit }
-        let inClip = contentView.convert(point, from: superview)
-        if document.convert(inClip, from: contentView).y >= document.bounds.maxY { return document }
-        guard let under = document.hitTest(inClip), under !== document else { return document }
-        let chain = sequence(first: under, next: \.superview)
-        if chain.contains(where: { $0 is WidgetWebView }) { return under }
-        guard let side = chain.lazy.compactMap({ $0 as? SideScrollView }).first else { return document }
-        if let bar = side.horizontalScroller, under === bar || under.isDescendant(of: bar) { return under }
-        return side
+        return document
     }
 }
 
@@ -150,7 +137,7 @@ final class NoteClipView: NSClipView {
     override var documentRect: NSRect {
         var rect = super.documentRect
         guard let document = documentView else { return rect }
-        let room = NoteOverscroll.bottom(bounds.height, preview: document is ReaderTextView)
+        let room = NoteOverscroll.bottom(bounds.height)
         rect.size.height = max(rect.height, document.frame.height + room)
         return rect
     }
@@ -711,7 +698,7 @@ class NoteTextView: UITextView {
     override func layoutSubviews() {
         let inset = max(NoteLook.margin, (bounds.width - NoteLook.measure) / 2 + NoteLook.margin)
         if textContainerInset.left != inset { textContainerInset = UIEdgeInsets(top: NoteLook.margin, left: inset, bottom: NoteLook.margin, right: inset) }
-        let bottom = NoteOverscroll.bottom(bounds.height, preview: self is ReaderTextView)
+        let bottom = NoteOverscroll.bottom(bounds.height)
         if contentInset.bottom != bottom { contentInset.bottom = bottom }
         super.layoutSubviews()
         if columnWidth != column {

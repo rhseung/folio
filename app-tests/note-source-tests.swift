@@ -13,7 +13,7 @@ struct NoteSourceTests {
         let view = SourceTextView()
         view.delegate = view
         let window = NoteRender.host(view, width: width, dark: dark)
-        view.baseURL = NoteReaderTests.fixtures
+        view.baseURL = NoteRender.fixtures
         view.load(text)
         view.configure(accent: CourseAccent.presets[0].accent, syntax: .latex, dark: dark)
         NoteRender.layout(view)
