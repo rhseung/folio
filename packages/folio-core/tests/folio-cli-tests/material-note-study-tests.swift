@@ -286,6 +286,13 @@ struct MaterialNoteStudyTests {
         }
     }
 
+    @Test func noteRetitle() throws {
+        let setup = [SessionCommandTests.add, ["note", "link", "EC4207/2주차-1", "--kind", "rough", "--session", "9주차-1"]]
+        try h.expectSame(["note", "retitle", "EC4207", "--yes"], setup: setup) { _ in
+            NoteRetitleSessions(course: course)
+        }
+    }
+
     @Test func noteLink() throws {
         try h.expectSame(["note", "link", "EC4207/2주차-1", "--kind", "review", "--session", "9주차-1"], setup: [SessionCommandTests.add]) { _ in
             NoteLink(course: course, note: Self.noteID, kind: .review, session: SessionCommandTests.id)

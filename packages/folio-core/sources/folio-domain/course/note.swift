@@ -140,6 +140,21 @@ public enum NoteTemplate {
         }
     }
 
+    /// `text` with the heading `body(for:title:)` wrote changed from `old` to `new`. Only the first top heading, and
+    /// only when it still reads `old`: one the user rewrote is theirs.
+    public static func retitled(_ text: String, from old: String, to new: String, format: NoteFormat) -> String {
+        let (heading, replacement) = switch format {
+        case .markdown: ("# \(old)", "# \(new)")
+        case .tex: ("\\section*{\(texEscaped(old))}", "\\section*{\(texEscaped(new))}")
+        }
+        var lines = text.components(separatedBy: "\n")
+        let isTop: (String) -> Bool = format == .markdown ? { $0.hasPrefix("# ") } : { $0.hasPrefix("\\section") }
+        guard let i = lines.firstIndex(where: { isTop($0.trimmingCharacters(in: .whitespaces)) }),
+              lines[i].trimmingCharacters(in: .whitespaces) == heading else { return text }
+        lines[i] = replacement
+        return lines.joined(separator: "\n")
+    }
+
     /// A title is plain text, so TeX's special characters in it are written as themselves.
     static func texEscaped(_ text: String) -> String {
         text.map { c -> String in

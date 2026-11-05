@@ -30,7 +30,7 @@ func readText(_ source: String) throws -> String {
 struct NoteCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "note", abstract: String(localized: .noteAbstract),
-        subcommands: [List.self, Show.self, Add.self, Write.self, Link.self, Migrate.self] + GeneratedCommands.note)
+        subcommands: [List.self, Show.self, Add.self, Write.self, Link.self, Migrate.self, Retitle.self] + GeneratedCommands.note)
 
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .noteListAbstract), discussion: String(localized: .noteListDiscussion))
@@ -127,6 +127,19 @@ struct NoteCommand: ParsableCommand {
             let ctx = try CLI.context(g)
             let id = try course.map { try Resolver(ctx).course($0).id }
             try perform(spec: NoteMigrate(course: id), g, ctx: ctx)
+        }
+    }
+
+    struct Retitle: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: String(localized: .noteRetitleAbstract), discussion: String(localized: .noteRetitleDiscussion))
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp(String(localized: .noteRetitleHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String?
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let id = try course.map { try Resolver(ctx).course($0).id }
+            let result = try perform(spec: NoteRetitleSessions(course: id), g, ctx: ctx)
+            if !g.json, let batch = result.made { say(String(localized: .noteRetitleUndo(batch.uuidString)).styled(.dim)) }
         }
     }
 

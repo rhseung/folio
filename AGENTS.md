@@ -196,7 +196,7 @@ Me/GIST/
 - `Inherited`에는 선배와 이전 학기에서 받은 자료를 종류와 상관없이 원래 이름으로 둔다. 출처별 하위 폴더(`Inherited/관훈 선배 리포트/`)는 써도 되고, 낱개 파일은 `Inherited`에 바로 둔다. 족보 시험지(해설 포함)인지는 이름이 아니라 `course.json`의 자료 종류(`pastExam`)로 표시하고, 시험에 쓸 자료는 그 시험에 연결한다(`material link-exam`). `Exams/Past`는 없앴다.
 - `Exercises`에는 교수가 준 채점 없는 연습 문제만 둔다.
 - `Study`에는 직접 만든 파일을 둔다. 문제집, 모의고사, 요약 PDF와 `.tex` 원본, 노트를 빌드한 PDF(`Study/<제목>.pdf`)가 여기 온다. 어느 시험·단원용인지는 `material link-exam`, `material link-unit`으로 연결하고(앱에서는 자료 연결 편집기, 단원 페이지, 시험 카드), 시험 화면은 시험 폴더의 파일과 연결된 자료를 함께 센다. 어떤 자료가 회차, 단원, 시험에 딸리는지는 `CourseFile.routes(of:to:)` 하나가 정한다. 회차는 그 단원과 상위 단원의 자료를, 단원은 그 회차의 자료를 함께 본다. Folio 마크다운 노트는 `Notes`에 둔다.
-- 회차 노트는 수업 날짜와 주제로 이름을 짓는다(`Notes/11-05(목) Principles of reliable data transfer.md`, 복습 노트는 뒤에 ` 정리`). 규칙은 `CourseFile.noteTitle(for:kind:calendar:)` 하나다. 그 전에 `10주차-2`로 만든 노트는 이름을 바꾸지 않는다. `N주차-M`은 CLI의 회차 이름과 녹음 파일에 그대로 쓴다.
+- 회차 노트는 수업 날짜와 주제로 이름을 짓는다(`Notes/11-05(목) Principles of reliable data transfer.md`, 복습 노트는 뒤에 ` 정리`). 규칙은 `CourseFile.noteTitle(for:kind:calendar:)` 하나다. 그 전에 `10주차-2`로 만든 노트는 저절로 바뀌지 않고, `note retitle`로 한 번에 바꾼다. `N주차-M`은 CLI의 회차 이름과 녹음 파일에 그대로 쓴다.
 - 앱 밖의 파일은 복사해서 들여오고, 같은 이름이 있으면 ` 2`를 붙여 덮어쓰지 않는다.
 
 ## 실제 데이터 위치
@@ -255,6 +255,7 @@ Me/GIST/
 - 단원: `import units <units.json>...`. 과목마다 `{"course": <과목 폴더 이름>, "units": [{"title", "sessions": ["3주차-1"], "children"}]}`. 제목으로 맞춰 없는 단원만 더하고 회차 연결은 더하기만 한다
 - 시험 범위: `exam scope <과목>/<시험> --taught`. 그 시험 전에 지난 회차에 연결된 단원(과 상위 단원)을 범위에 더한다. 빼지는 않는다
 - 졸업 요건과 학생 정보: `import requirements <requirements.json>`. 학사편람 분류 표: `import handbook <handbook.json> [--accept]`. 두 파일 모두 실제 학업 데이터라 저장소에 넣지 않는다
+- 예전 회차 노트 이름: `note retitle [<과목>]`. 회차에 연결된 노트 중 이름이 `10주차-2`, `10주차-2 정리`인 것만 날짜와 주제 이름으로 바꾸고, 템플릿이 쓴 첫 제목과 과목 노트의 위키링크도 따라 바꾼다. 이동은 `moves.jsonl`의 한 묶음이고 `cleanup undo`가 이름, 제목, 링크를 함께 되돌린다
 - 폴더 없는 과목 옮기기: `transcript move`. 스키마 1의 `transcript.json`에 있던 과목을 같은 ID로 과목 폴더에 옮긴다. 인정학기 과목이 있으면 먼저 `semester source <학기> <출처>`로 출처를 정한다. `cleanup undo`로 되돌린다
 - 학기별 학점과 GPA: `gpa`
 

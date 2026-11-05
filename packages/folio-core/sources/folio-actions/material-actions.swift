@@ -295,7 +295,7 @@ public struct CleanupApply {
     }
 }
 
-@Action("cleanup undo", "cleanup apply나 material mv로 옮긴 묶음을 되돌리기", effect: .moves, confirm: "묶음 {batch}의 이동을 되돌립니다.", done: "묶음 {batch}의 이동을 되돌렸습니다", phrases: ["정리 되돌리기", "이동 취소"], cli: .manual)
+@Action("cleanup undo", "cleanup apply, material mv, note retitle로 옮긴 묶음을 되돌리기", effect: .moves, confirm: "묶음 {batch}의 이동을 되돌립니다.", done: "묶음 {batch}의 이동을 되돌렸습니다", phrases: ["정리 되돌리기", "이동 취소"], cli: .manual)
 public struct CleanupUndo {
     @Arg var batch: MoveBatch.ID
     var course: Course.ID?
@@ -304,8 +304,11 @@ public struct CleanupUndo {
         let records = try MoveJournal.records(in: ctx.gist.url).filter { $0.batch == batch && $0.undoOf == nil }
         guard !records.isEmpty else { throw ActionError.notFound(String(localized: .errorNotFoundMoveBatch("\(batch)"))) }
         for r in records.reversed() { ctx.record(Change(.moved, r.to ?? "", to: r.from)) }
-        guard !ctx.dryRun else { return }
-        ctx.made(try MoveJournal.undo(batch: batch, in: ctx.gist.url, device: ctx.device, now: ctx.now))
+        let moves = records.reversed().compactMap { r in r.op == .move ? r.to.flatMap { to in r.from.map { PlannedMove(from: to, to: $0) } } : nil }
+        // Notes `note retitle` renamed take their old titles back, in headings and links too.
+        guard let undone = try NoteTitles.follow(moves, ctx, move: { try MoveJournal.undo(batch: batch, in: ctx.gist.url, device: ctx.device, now: ctx.now) })
+        else { return }
+        ctx.made(undone)
         ctx.invalidate()
         if let course { try MaterialTrack(course: course).run(ctx) }
     }

@@ -372,6 +372,19 @@ extension CourseFile {
     }
 }
 
+/// A note to be renamed: its entry, where its file is now (course-relative), and the title it takes.
+public struct NoteRetitle: Equatable, Sendable {
+    public var note: UUID
+    public var path: String
+    public var title: String
+
+    public init(note: UUID, path: String, title: String) {
+        self.note = note
+        self.path = path
+        self.title = title
+    }
+}
+
 extension CourseFile {
     public func name(of session: Session) -> String { session.name(among: sessions) }
 
@@ -411,6 +424,19 @@ extension CourseFile {
         let subject = subject(of: session).map(Self.noteSubject).flatMap { $0.isEmpty ? nil : $0 }
         let title = subject.map { "\(day) \($0)" } ?? day
         return kind == .review ? "\(title) 정리" : title
+    }
+
+    /// Session notes still named `10주차-2` or `10주차-2 정리`, as notes were named before #273, with the title a note
+    /// gets now. A review note covering several classes takes its first. A note the user titled, or one no session
+    /// points at, keeps its name.
+    public func legacySessionNoteRetitles(calendar: Calendar) -> [NoteRetitle] {
+        notes.compactMap { entry in
+            guard entry.kind == .rough || entry.kind == .review,
+                  let session = sessions(pointingAt: entry.id).first(where: { $0.note(of: entry.kind) == entry.id }) else { return nil }
+            let name = ((entry.path as NSString).lastPathComponent as NSString).deletingPathExtension
+            guard name.precomposedStringWithCanonicalMapping.wholeMatch(of: /\d+주차-\d+( 정리)?( \d+)?/) != nil else { return nil }
+            return NoteRetitle(note: entry.id, path: entry.path, title: noteTitle(for: session, kind: entry.kind, calendar: calendar))
+        }
     }
 
     /// In code, not the catalog: a file name must not change with the device's language.

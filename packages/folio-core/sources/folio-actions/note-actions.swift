@@ -236,6 +236,86 @@ public struct NoteMigrate {
     }
 }
 
+/// Renames the session notes still named `10주차-2` the way `session note` names new ones (#273). The files move as one
+/// `moves.jsonl` batch (`made`), and `cleanup undo` of it turns names, headings and links back. A taken name gets ` 2`.
+/// The course may be left out, which generated commands can't take, so the command is written by hand.
+@Action("note retitle", "예전 이름(10주차-2)의 회차 노트를 날짜와 주제 이름으로 바꾸기. 노트의 첫 제목과 다른 노트의 링크도 따라 바뀐다",
+        effect: .moves, confirm: "회차 노트의 이름을 날짜와 주제로 바꿉니다.", done: "회차 노트의 이름을 바꿨습니다",
+        phrases: ["노트 이름 날짜로", "예전 노트 이름 바꾸기", "주차 이름 노트"], cli: .manual)
+public struct NoteRetitleSessions {
+    /// 과목. 빼면 모든 과목
+    @Arg var course: Course.ID?
+
+    public func run(_ ctx: ActionContext) throws {
+        let courses = try course.map { [$0] } ?? ctx.gist.courseStores().map { try $0.load().model.course.id }
+        var moves: [PlannedMove] = []
+        for course in courses {
+            let store = try ctx.store(course)
+            var taken = Set<String>()
+            for r in try ctx.file(course).legacySessionNoteRetitles(calendar: ctx.calendar) {
+                // newNoteURL names a file in Notes/ itself; a note filed deeper would move up a folder, which is more
+                // than a rename.
+                let url = store.newNoteURL(title: r.title, format: NoteFormat(path: r.path) ?? .markdown, avoiding: taken)
+                guard store.fileURL(r.path).deletingLastPathComponent().standardizedFileURL == url.deletingLastPathComponent().standardizedFileURL else { continue }
+                taken.insert(url.deletingPathExtension().lastPathComponent)
+                moves.append(PlannedMove(from: try ctx.relative(course, r.path), to: ctx.relative(url)))
+            }
+        }
+        guard !moves.isEmpty else { return }
+        for move in moves { ctx.record(Change(.moved, move.from, to: move.to)) }
+        if let batch = try NoteTitles.follow(moves, ctx, move: { try MoveJournal.apply(moves, in: ctx.gist.url, device: ctx.device, now: ctx.now) }) {
+            ctx.made(batch)
+        }
+    }
+}
+
+/// A note's title is its file name, so moving a note's file renames it.
+enum NoteTitles {
+    /// Runs `move` (`moves` are GIST-relative, as `moves.jsonl` keeps them) and carries each moved note's title
+    /// over: its entry's path, the heading its template wrote, and the links to it from the course's notes. Moves of
+    /// other files pass through. The texts are read before `move`, so a dry run reports them from where they are.
+    /// Returns what `move` returned; nothing on a dry run.
+    static func follow(_ moves: [PlannedMove], _ ctx: ActionContext, move: () throws -> UUID) throws -> UUID? {
+        // Loading every course is only worth it when a note moved; an undo of a folder cleanup shouldn't fail on one.
+        guard moves.contains(where: { NoteFormat(path: $0.from) != nil }) else { return ctx.dryRun ? nil : try move() }
+        struct Edit { var store: CourseStore, url: URL, text: String }
+        var renamed: [UUID: [(note: UUID, from: String, to: String)]] = [:]
+        var edits: [Edit] = []
+        for store in try ctx.gist.courseStores() {
+            let course = try store.load().model.course.id
+            let file = try ctx.file(course)
+            let prefix = ctx.relative(store.url) + "/"
+            let byPath = Dictionary(moves.filter { $0.from.hasPrefix(prefix) && $0.to.hasPrefix(prefix) }.map { (String($0.from.dropFirst(prefix.count)), String($0.to.dropFirst(prefix.count))) },
+                                    uniquingKeysWith: { a, _ in a })
+            let notes = file.notes.compactMap { e in byPath[e.path].map { (note: e.id, from: e.path, to: $0) } }
+            guard !notes.isEmpty else { continue }
+            renamed[course] = notes
+            let title = { (path: String) in ((path as NSString).lastPathComponent as NSString).deletingPathExtension }
+            for n in try ctx.notes(course) {
+                let path = store.notePath(of: n.url)
+                let own = notes.first { $0.from == path }
+                var text = try store.read(n)
+                let before = text
+                if let own { text = NoteTemplate.retitled(text, from: title(own.from), to: title(own.to), format: n.format) }
+                if n.format == .markdown {
+                    for r in notes { text = WikiLink.retargeted(text, from: title(r.from), to: title(r.to)) }
+                }
+                if text != before { edits.append(Edit(store: store, url: own.map { store.fileURL($0.to) } ?? n.url, text: text)) }
+            }
+        }
+        let batch = ctx.dryRun ? nil : try move()
+        for (course, notes) in renamed {
+            try ctx.edit(course) { f in
+                for n in notes { if let i = f.notes.firstIndex(where: { $0.id == n.note }) { f.notes[i].path = n.to } }
+            }
+        }
+        for e in edits {
+            try ctx.io(Change(.changed, ctx.relative(e.url))) { try e.store.write(NoteFile(url: e.url, meta: NoteMeta(id: nil)), text: e.text) }
+        }
+        return batch
+    }
+}
+
 /// Sessions let go of the note first: a note left behind by a failed trash is harmless, a link to nothing is not.
 /// The note goes to the Trash; its images stay in `assets/`, which other notes may share.
 @Action("note rm", "노트를 휴지통으로. 회차의 연결도 뗀다", discussion: "그림은 assets에 남는다.", effect: .removes,
