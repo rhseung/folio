@@ -36,7 +36,7 @@ struct NoteTypingTests {
                 let style = a[.paragraphStyle] as? NSParagraphStyle
                 return "\(font?.pointSize ?? 0) b\(traits.contains(.bold)) m\(traits.contains(.monoSpace)) i\(traits.contains(.italic)) "
                     + "\(color.map { String(format: "%.3f %.3f %.3f %.3f", $0.redComponent, $0.greenComponent, $0.blueComponent, $0.alphaComponent) } ?? "-") "
-                    + "\(style?.minimumLineHeight ?? -1) \(style?.paragraphSpacing ?? -1) \(a[.noteRaise] as? CGFloat ?? -1)"
+                    + "\(style?.minimumLineHeight ?? -1) \(style?.maximumLineHeight ?? -1) \(a[.noteCaret] as? CGFloat ?? -1)"
             }
         }
         return out

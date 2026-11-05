@@ -21,12 +21,15 @@ extension NSAttributedString.Key {
     static let noteImage = NSAttributedString.Key("folio.image")
     /// Lines of a fenced code block, where Enter is only a line break.
     static let noteCode = NSAttributedString.Key("folio.code")
+    /// How tall the caret stands on the paragraph's lines: its text's, not the whole fixed line's.
+    static let noteCaret = NSAttributedString.Key("folio.caret")
 }
 
 /// Styles the note's markdown source in place: marks stay in the text, dimmed, and the text after them takes fonts,
-/// weights, colors and tints, never spacing, so every line starts at the same x and the caret walks the raw text.
-/// Rendered math and images only float in a bubble by the caret: drawn in the text, they
-/// added height the text didn't have, so the view couldn't scroll to a picture under the note's last line.
+/// weights and colors, never spacing, so every line starts at the same x and the caret walks the raw text.
+/// Pictures, rendered math and the boxes of callouts and code are the preview's (#267): drawn in the edit view, they
+/// made its lines and padding differ from the text's and brought the same layout bugs twice. Math and images float
+/// only in a bubble by the caret, over the text.
 @MainActor struct SourceStyler {
     var accent: CourseAccent
     var syntax: MathSyntax
@@ -98,9 +101,8 @@ extension NSAttributedString.Key {
             w.marks.append(NSRange(location: NSMaxRange(span.range) - 1, length: 1))
         }
         for block in math.blocks {
-            let box = NoteBox(fill: NoteLook.tint(accent.native, 0.06), first: true, last: true)
             for n in block.lines {
-                w.set(Self.withBreak(lines[n], in: storage), [Self.mono: true, .foregroundColor: accent.inkNative, .noteBox: box, .noteMathBlock: block.tex])
+                w.set(Self.withBreak(lines[n], in: storage), [Self.mono: true, .foregroundColor: accent.inkNative, .noteMathBlock: block.tex])
             }
         }
 
@@ -216,7 +218,7 @@ extension NSAttributedString.Key {
             dim(ends: s.prefix { $0 == "~" }.count, r, &w)
         case is InlineCode:
             w.code.append(r)
-            w.set(r, [Self.mono: true, .backgroundColor: NoteLook.codeFill])
+            w.set(r, [Self.mono: true])
             dim(ends: s.prefix { $0 == "`" }.count, r, &w)
         case let link as Markdown.Link:
             let href = link.destination ?? ""
@@ -252,13 +254,8 @@ extension NSAttributedString.Key {
         case let quote as BlockQuote:
             let header = quote.calloutHeader
             let lines = w.lineRanges(r)
-            let box = header.flatMap { h -> NoteBox? in
-                let kind = NoteLook.callout(h.type)
-                return kind.tinted ? NoteBox(fill: NoteLook.tint(kind.color, NoteLook.tint), first: true, last: true) : nil
-            }
             for line in lines {
                 if header == nil { w.set(line, [.foregroundColor: NoteLook.text2]) }
-                if let box { w.set(Self.withBreak(line, in: w.storage), [.noteBox: box]) }
                 let s = w.text.substring(with: line)
                 if let m = s.firstMatch(of: #/^[ \t]*(?:>[ \t]?)+/#) { w.marks.append(Self.nsRange(m.range, in: s, at: line.location)) }
             }
@@ -266,7 +263,7 @@ extension NSAttributedString.Key {
                 let s = w.text.substring(with: first)
                 if let m = s.firstMatch(of: /\[![A-Za-z-]+\][+-]?/) {
                     let type = Self.nsRange(m.range, in: s, at: first.location)
-                    let color = NoteLook.callout(header.type).color
+                    let color = NoteLook.callout(header.type)
                     w.set(type, [Self.weight: PlatformFont.Weight.bold.rawValue, .foregroundColor: color])
                     w.set(NSRange(location: NSMaxRange(type), length: NSMaxRange(first) - NSMaxRange(type)), [Self.weight: PlatformFont.Weight.semibold.rawValue])
                 }
@@ -274,9 +271,8 @@ extension NSAttributedString.Key {
         case let block as CodeBlock:
             w.code.append(r)
             let lines = w.lineRanges(r)
-            let box = NoteBox(fill: NoteLook.codeFill, first: true, last: true)
             for line in lines {
-                w.set(Self.withBreak(line, in: w.storage), [.noteBox: box, .noteCode: true, Self.mono: true])
+                w.set(Self.withBreak(line, in: w.storage), [.noteCode: true, Self.mono: true])
             }
             guard let first = lines.first, let last = lines.last else { break }
             w.marks.append(first)
@@ -445,12 +441,69 @@ struct MathScan {
         cache[url] = (date, image)
         return image
     }
+}
 
-    /// Obsidian's `![alt|300](src)` caps the width; without it the picture takes the column, never more.
-    static func fit(_ natural: CGSize, alt: String, width: CGFloat) -> CGSize {
-        let asked = alt.firstMatch(of: /\|\s*(\d+)(?:x\d+)?\s*$/).flatMap { CGFloat(Int($0.1) ?? 0) }
-        let w = min(asked ?? natural.width, width)
-        guard natural.width > 0 else { return .zero }
-        return CGSize(width: w, height: natural.height * w / natural.width)
+/// One line height per paragraph, from its tallest font and the line gap, so a code span or a dimmed mark doesn't
+/// shift its line and every line of the paragraph is the same. TextKit 2 sits the text on the bottom of a line this tall
+/// and leaves the gap above it, with nothing drawn in it; the caret it reports is the whole line, so `caret` cuts it to
+/// the text. With `lineSpacing` alone the caret on an empty line stood a gap taller than on a line with text.
+enum NoteLines {
+    static func fix(_ text: NSMutableAttributedString) {
+        let ns = text.string as NSString
+        var at = 0
+        while at < ns.length {
+            let p = ns.paragraphRange(for: NSRange(location: at, length: 0))
+            at = NSMaxRange(p)
+            var ascent: CGFloat = 0, descent: CGFloat = 0
+            text.enumerateAttribute(.font, in: p) { value, _, _ in
+                guard let font = value as? PlatformFont else { return }
+                ascent = max(ascent, font.ascender)
+                descent = max(descent, -font.descender)
+            }
+            guard ascent > 0, let style = (text.attribute(.paragraphStyle, at: p.location, effectiveRange: nil) as? NSParagraphStyle)?
+                .mutableCopy() as? NSMutableParagraphStyle else { continue }
+            let natural = ascent + descent
+            let height = ((natural + style.lineSpacing) / 2).rounded() * 2
+            style.lineSpacing = 0
+            style.minimumLineHeight = height
+            style.maximumLineHeight = height
+            text.addAttribute(.paragraphStyle, value: style, range: p)
+            text.addAttribute(.noteCaret, value: natural.rounded(), range: p)
+        }
+    }
+
+    /// The caret over the text at the bottom of its line, not the whole line.
+    static func caret(_ rect: CGRect, at offset: Int, in text: NSAttributedString) -> CGRect {
+        guard text.length > 0, let height = text.attribute(.noteCaret, at: min(offset, text.length - 1), effectiveRange: nil) as? CGFloat,
+              height < rect.height else { return rect }
+        return CGRect(x: rect.minX, y: rect.maxY - height, width: rect.width, height: height)
+    }
+}
+
+/// Whether two stylings of the same text look the same. Each styling makes its own colors, which aren't equal as
+/// objects, so they're compared by what they draw.
+enum NoteAttributes {
+    static func same(_ a: NSAttributedString, _ b: NSAttributedString, in range: NSRange) -> Bool {
+        var i = range.location
+        while i < NSMaxRange(range) {
+            var ra = NSRange(), rb = NSRange()
+            let x = a.attributes(at: i, effectiveRange: &ra), y = b.attributes(at: i, effectiveRange: &rb)
+            guard same(x, y) else { return false }
+            i = min(NSMaxRange(ra), NSMaxRange(rb))
+        }
+        return true
+    }
+
+    static func same(_ x: [NSAttributedString.Key: Any], _ y: [NSAttributedString.Key: Any]) -> Bool {
+        x.count == y.count && x.allSatisfy { key, value in y[key].map { same(value, $0) } ?? false }
+    }
+
+    static func same(_ x: Any?, _ y: Any?) -> Bool {
+        switch (x, y) {
+        case (nil, nil): return true
+        case let (a as PlatformColor, b as PlatformColor): return a === b || a.cgColor == b.cgColor
+        case let (a as NSObject, b as NSObject): return a.isEqual(b)
+        default: return false
+        }
     }
 }
