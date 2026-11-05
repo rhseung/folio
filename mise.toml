@@ -85,7 +85,10 @@ description = "Run the iPad tests (Hangul in the edit view) on the first availab
 depends = ["generate"]
 run = """
 id=$(xcrun simctl list devices available | grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}')
-xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" test -quiet -skipMacroValidation
+rm -rf .build/test-ipad.xcresult
+xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test -quiet -skipMacroValidation
+# -quiet leaves out the tests themselves; the count shows they ran.
+xcrun xcresulttool get test-results summary --path .build/test-ipad.xcresult --compact
 """
 
 [tasks.note-screens]
