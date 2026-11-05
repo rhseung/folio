@@ -193,9 +193,10 @@ extension CourseFile: Document {
             // Other kinds read their units from their session or exam; a stored copy would go stale and resurface.
             Check("NoteEntry.units", String(localized: .ruleNoteUnits)) { n, _ in n.kind == .topic || n.unitIds.isEmpty }
         }
-        // A note's session is the one pointing at it, so two pointers would give it two.
+        // A rough note is taken during one class, so a second session pointing at it would give it two. A review note
+        // may cover several classes reviewed at once; `Session.noteKind` keeps one note from filling both slots.
         Rule("NoteEntry.session") { f, _ in
-            let pointers = f.sessions.flatMap { [$0.roughNoteId, $0.reviewNoteId].compactMap { $0 } }
+            let pointers = f.sessions.compactMap(\.roughNoteId)
             let counts = Dictionary(pointers.map { ($0, 1) }, uniquingKeysWith: +)
             return f.notes.filter { (counts[$0.id] ?? 0) > 1 }.map { ($0.id, String(localized: .ruleNoteSession($0.path))) }
         }

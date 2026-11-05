@@ -60,7 +60,7 @@ public struct SessionRemove {
     @Arg var sessions: [Session.ID]
 
     public func run(_ ctx: ActionContext) throws {
-        let noted = Set(try ctx.notes(course).compactMap(\.meta.sessionId))
+        let noted = Set(try ctx.notes(course).flatMap(\.meta.sessionIds))
         try ctx.edit(course) { f in
             for id in sessions {
                 let s = f.sessions[try index(id, in: f.sessions, .valueSession)]
@@ -112,6 +112,10 @@ public struct SessionSet {
                 cancelled.apply(&s.isCancelled)
                 skipsReview.apply(&s.skipsReview)
                 reviewUnfinished.apply(&s.reviewNoteUnfinished)
+            }
+            // A review note covering several classes is written once, so they are marked together.
+            if let unfinished = reviewUnfinished.value, let note = f.sessions.first(where: { $0.id == session })?.reviewNoteId {
+                f.setReviewNoteUnfinished(note, unfinished)
             }
             // A class that didn't happen has no attendance to count.
             if cancelled.value == true { f.attendance.removeAll { $0.sessionId == session } }

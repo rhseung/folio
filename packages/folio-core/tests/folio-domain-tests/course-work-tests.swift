@@ -297,21 +297,26 @@ struct CourseWorkTests {
         #expect(rules(s).isDisjoint(with: ["Session.time", "Session.link"]))
     }
 
-    /// The session holds a note's link alone: it names a note of its slot's kind, and no note has two sessions.
-    @Test func aNoteHasOneSessionOfItsKind() {
+    /// The session holds a note's link alone: it names a note of its slot's kind, and no rough note has two sessions.
+    /// A review note may cover several.
+    @Test func aRoughNoteHasOneSession() {
         var s = Session(device: device, at: .now, week: 10, date: date("2026-11-04 21:00"))
         var other = Session(device: device, at: .now, week: 11, date: date("2026-11-11 21:00"))
         let review = NoteEntry(id: UUID(), device: device, at: .now, path: "Notes/a.md", meta: NoteMeta(id: nil, kind: .review))
         let free = NoteEntry(id: UUID(), device: device, at: .now, path: "Notes/b.md", meta: NoteMeta(id: nil))
-        func rules(_ sessions: [Session], _ notes: [NoteEntry] = [review, free]) -> Set<String> {
+        let rough = NoteEntry(id: UUID(), device: device, at: .now, path: "Notes/c.md", meta: NoteMeta(id: nil, kind: .rough))
+        func rules(_ sessions: [Session], _ notes: [NoteEntry] = [review, free, rough]) -> Set<String> {
             var file = CourseFile(course: courses[0], sessions: sessions)
             file.notes = notes
             return Set(CourseFile.model.violations(in: file).map(\.rule.name))
         }
         s.reviewNoteId = review.id
-        #expect(rules([s, other]).isDisjoint(with: ["NoteEntry.session", "Session.noteKind", "NoteEntry.units"]))
         other.reviewNoteId = review.id
+        #expect(rules([s, other]).isDisjoint(with: ["NoteEntry.session", "Session.noteKind", "NoteEntry.units"]))
+        s.roughNoteId = rough.id
+        other.roughNoteId = rough.id
         #expect(rules([s, other]).contains("NoteEntry.session"))
+        other.roughNoteId = nil
         other.reviewNoteId = free.id
         #expect(rules([s, other]).contains("Session.noteKind"))
         var stale = review

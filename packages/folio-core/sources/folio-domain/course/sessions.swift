@@ -426,29 +426,48 @@ extension CourseFile {
 extension CourseFile {
     /// Drops every session's link to a deleted note, so no session claims a rough or review note that is gone.
     public mutating func forgetNote(_ id: UUID) {
-        for i in sessions.indices {
-            if sessions[i].roughNoteId == id { sessions[i].roughNoteId = nil }
-            if sessions[i].reviewNoteId == id {
-                sessions[i].reviewNoteId = nil
-                sessions[i].reviewNoteUnfinished = false
-            }
+        for i in sessions.indices { unlinkNote(id, from: sessions[i].id) }
+    }
+
+    /// Takes the note off one session, leaving any other session it covers.
+    public mutating func unlinkNote(_ id: UUID, from session: UUID) {
+        guard let i = sessions.firstIndex(where: { $0.id == session }) else { return }
+        if sessions[i].roughNoteId == id { sessions[i].roughNoteId = nil }
+        if sessions[i].reviewNoteId == id {
+            sessions[i].reviewNoteUnfinished = false
+            sessions[i].reviewNoteId = nil
         }
     }
 
-    /// Makes the note `session`'s rough or review note, in place of the one it had; the note leaves any session it
-    /// was linked to before. Other kinds aren't a session's note, so they only unlink. A review note linked again to
-    /// the same session keeps its unfinished mark: changing only its math syntax is not writing it.
+    /// Makes the note `session`'s rough or review note, in place of the one it had. A rough note leaves any session it
+    /// was linked to before; a review note may cover several classes caught up on at once, so it is added and keeps
+    /// the others. A note that was another kind leaves every session. Other kinds aren't a session's note, so they
+    /// only unlink, as does no session.
     public mutating func linkNote(_ id: UUID, to session: UUID?, as kind: NoteKind) {
-        let unfinished = sessions.first { $0.id == session && $0.reviewNoteId == id }?.reviewNoteUnfinished ?? false
-        forgetNote(id)
+        let keeps = kind == .review && session != nil
+        for s in sessions where s.roughNoteId == id || (!keeps && s.reviewNoteId == id) { unlinkNote(id, from: s.id) }
         guard let session, let i = sessions.firstIndex(where: { $0.id == session }) else { return }
         switch kind {
         case .rough: sessions[i].roughNoteId = id
         case .review:
+            // The unfinished mark belongs to the note but is kept on its sessions: a session joining a note being
+            // written takes the mark, and one linked again keeps its own (changing only the math syntax is not
+            // writing it).
+            let unfinished = sessions[i].reviewNoteId == id ? sessions[i].reviewNoteUnfinished : isReviewNoteUnfinished(id)
             sessions[i].reviewNoteId = id
             sessions[i].reviewNoteUnfinished = unfinished
         default: break
         }
+    }
+
+    /// Whether the review note is still being written, as marked on any session it covers.
+    public func isReviewNoteUnfinished(_ id: UUID) -> Bool {
+        sessions.contains { $0.reviewNoteId == id && $0.reviewNoteUnfinished }
+    }
+
+    /// Marks the review note written or not on every session it covers, so the classes reviewed together finish together.
+    public mutating func setReviewNoteUnfinished(_ id: UUID, _ unfinished: Bool) {
+        for i in sessions.indices where sessions[i].reviewNoteId == id { sessions[i].reviewNoteUnfinished = unfinished }
     }
 }
 
