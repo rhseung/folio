@@ -67,9 +67,22 @@ depends = ["generate"]
 run = "xcodebuild -scheme Folio -destination 'platform=macOS' build -quiet -skipMacroValidation"
 
 [tasks.test-app]
-description = "Run the app's screen-model tests on macOS"
+description = "Run the app's tests on macOS: screen models, and the note views against their reference screens"
 depends = ["generate"]
-run = "xcodebuild -scheme Folio -destination 'platform=macOS' test -quiet -skipMacroValidation"
+# xcodebuild passes TEST_RUNNER_-prefixed variables to the tests without the prefix. A note-view picture that is missing
+# or differs from its reference lands in FOLIO_NOTE_SCREENS; FOLIO_NOTE_SCREENS_STRICT fails a run on a macOS other than
+# the one the references were made on, instead of skipping the comparison (CI sets it).
+run = """
+out="${FOLIO_NOTE_SCREENS:-.build/note-screens}"
+case "$out" in /*) ;; *) out="$PWD/$out" ;; esac
+rm -rf "$out"
+TEST_RUNNER_FOLIO_NOTE_SCREENS="$out" TEST_RUNNER_FOLIO_NOTE_SCREENS_STRICT="${FOLIO_NOTE_SCREENS_STRICT:-}" \
+xcodebuild -scheme Folio -destination 'platform=macOS' test -quiet -skipMacroValidation
+"""
+
+[tasks.note-screens]
+description = "Take the note-view pictures a CI run left as the new references: mise run note-screens -- <run ID>"
+run = "scripts/note-screens.sh"
 
 [tasks.render]
 description = "Draw every page and sheet for each fixture scenario into FOLIO_RENDER_DIR (default .build/renders), with no window on screen"
