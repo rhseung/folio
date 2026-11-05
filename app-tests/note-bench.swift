@@ -275,6 +275,8 @@ import Testing
     /// Where the input method would put its window for `range`, in the panel.
     func rect(of range: NSRange) -> CGRect {
         guard let input else { return .null }
+        // TextKit 2 lays out only around what's shown, and has no rect for text further off.
+        if let manager = textView?.textLayoutManager { manager.ensureLayout(for: manager.documentRange) }
         let screen = input.firstRect(forCharacterRange: range, actualRange: nil)
         let inWindow = window.convertFromScreen(screen)
         return CGRect(x: inWindow.minX, y: size.height - inWindow.maxY, width: inWindow.width, height: inWindow.height)

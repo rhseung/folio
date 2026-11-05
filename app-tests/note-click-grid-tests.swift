@@ -75,7 +75,7 @@ struct NoteClickGridTests {
                         continue
                     }
                     if p.y > end.maxY {
-                        if caret.location != length { wrong.append("\(at) past the end put the caret at \(caret.location) of \(length)") }
+                        if caret.location != length { wrong.append("\(at) past the end, below \(Int(end.maxY)), put the caret at \(caret.location) of \(length)") }
                     } else {
                         let off = p.y < caret.rect.minY ? caret.rect.minY - p.y : max(0, p.y - caret.rect.maxY)
                         if off > Self.reach { wrong.append("\(at) put the caret \(Int(off)) points away, at \(Int(caret.rect.minY))") }
