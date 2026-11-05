@@ -23,9 +23,10 @@ import Testing
         init(_ text: String) { self.text = text }
     }
 
-    /// Changed to have SwiftUI update the note view, as any change around it in the app does.
+    /// Changed to have SwiftUI update the note view, as any change around it in the app does (a save, the preview
+    /// scrolling beside it).
     @Observable final class Pulse {
-        var accent = 0
+        var count = 0
     }
 
     struct Rig: View {
@@ -39,16 +40,17 @@ import Testing
         var body: some View {
             // Read here so a new text or pulse updates the view, as the note screen's model does.
             let note = text.wrappedValue
-            let accent = CourseAccent.presets[pulse.accent % 2].accent
+            let count = pulse.count
             Group {
                 switch kind {
                 case .edit:
-                    MarkdownEditor(text: text, baseURL: baseURL, math: .latex, insert: $insert, saveFile: { _, _ in nil }, openNote: { _ in })
+                    // `saveFile` names the update it came with, so `update()` can tell SwiftUI handed it to the view.
+                    MarkdownEditor(text: text, baseURL: baseURL, math: .latex, insert: $insert, saveFile: { _, _ in "update \(count)" }, openNote: { _ in })
                 case .preview:
                     NoteReader(text: note, baseURL: baseURL, math: .latex)
                 }
             }
-            .environment(\.accent, accent)
+            .environment(\.accent, CourseAccent.presets[0].accent)
             .environment(\.colorScheme, dark ? .dark : .light)
         }
     }
@@ -140,10 +142,13 @@ import Testing
         }
     }
 
-    /// Has SwiftUI update the note view, as a change anywhere around it in the app does: here, the course's color.
-    func update() async {
-        pulse.accent += 1
+    /// Has SwiftUI update the note view, as a change anywhere around it in the app does.
+    func update(sourceLocation: SourceLocation = #_sourceLocation) async {
+        pulse.count += 1
         await settle()
+        if let editor = textView as? SourceTextView, editor.saveFile("", Data()) != "update \(pulse.count)" {
+            Issue.record("SwiftUI didn't update the edit view", sourceLocation: sourceLocation)
+        }
     }
 
     // MARK: Pictures
