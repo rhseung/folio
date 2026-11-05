@@ -405,13 +405,16 @@ extension CourseFile {
     /// title's `/`, which a file name can't hold. Notes made before this keep their `10주차-2` names.
     public func noteTitle(for session: Session, kind: NoteKind, calendar: Calendar) -> String {
         let c = calendar.dateComponents([.month, .day], from: session.date)
-        let weekday = String(localized: ClassTime.weekdayNames[calendar.isoWeekday(of: session.date) - 1])
+        let weekday = Self.noteWeekdays[calendar.isoWeekday(of: session.date) - 1]
         let two = { (n: Int) in n < 10 ? "0\(n)" : "\(n)" }
         let day = "\(two(c.month!))-\(two(c.day!))(\(weekday))"
         let subject = subject(of: session).map(Self.noteSubject).flatMap { $0.isEmpty ? nil : $0 }
         let title = subject.map { "\(day) \($0)" } ?? day
         return kind == .review ? "\(title) 정리" : title
     }
+
+    /// In code, not the catalog: a file name must not change with the device's language.
+    static let noteWeekdays = ["월", "화", "수", "목", "금", "토", "일"]
 
     static let noteSubjectLimit = 60
 
