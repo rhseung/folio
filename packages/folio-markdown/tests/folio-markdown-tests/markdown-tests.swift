@@ -210,6 +210,50 @@ struct BlockTests {
     }
 }
 
+/// The note preview's blocks: the same HTML as the whole note, cut where its top-level blocks start, with their lines.
+struct RenderedBlockTests {
+    @Test func blocksJoinToTheWholeNoteAndKnowTheirLines() {
+        let text = "# 제목\n\n첫 문단\n둘째 줄\n\n$$\nx^2\n$$\n\n> [!theorem] 정리\n> 본문\n\n> [!proof]\n> 증명"
+        let note = ParsedNote(text)
+        let blocks = HTMLRenderer.blocks(note)
+        #expect(blocks.map(\.html).joined() == HTMLRenderer.render(note))
+        #expect(blocks.map(\.lines) == [1...1, 3...4, 6...8, 10...11, 13...14])
+        // A proof right under its theorem still joins it, block by block.
+        #expect(blocks[4].html.contains("callout-proof attached"))
+    }
+
+    @Test func taskBoxesCarryTheirLines() {
+        let note = ParsedNote("- [ ] 하나\n- [x] 둘\n    - [ ] 안쪽\n\n> - [ ] 인용 안")
+        let html = HTMLRenderer.blocks(note).map(\.html).joined()
+        for (line, checked) in [(1, false), (2, true), (3, false), (5, false)] {
+            #expect(html.contains("<input type=\"checkbox\" data-line=\"\(line)\" disabled\(checked ? " checked" : "")>"), "\(line)")
+        }
+        // The whole-note rendering, which the Claude panel uses, has no lines to write back to.
+        #expect(!HTMLRenderer.render(note).contains("data-line"))
+    }
+
+    @Test func lineNumbersCountFromTheBodyPastTheFrontmatter() {
+        let note = ParsedNote("---\nid: x\n---\n\n본문")
+        #expect(HTMLRenderer.blocks(note).map(\.lines) == [2...2])
+    }
+}
+
+struct TaskBoxTests {
+    @Test(arguments: [
+        ("- [ ] 할 일", "- [x] 할 일"), ("- [x] 끝", "- [ ] 끝"), ("- [X] 끝", "- [ ] 끝"), ("    * [ ] 안쪽", "    * [x] 안쪽"),
+        ("1. [ ] 번호", "1. [x] 번호"), ("2) [x] 번호", "2) [ ] 번호"), ("> - [ ] 인용", "> - [x] 인용"), ("> > + [ ] 겹친", "> > + [x] 겹친"),
+        ("- [ ]", "- [x]"), ("- [ ] [ ] 둘째 칸은 글", "- [x] [ ] 둘째 칸은 글"),
+    ])
+    func togglesTheItemsBox(line: String, toggled: String) {
+        #expect(TaskBox.toggled(line) == toggled)
+    }
+
+    @Test(arguments: ["할 일 [ ]", "- [y] 아님", "-[ ] 띄움 없음", "- [ ]글", "```", "", "[ ] 목록 아님"])
+    func leavesOtherLinesAlone(line: String) {
+        #expect(TaskBox.toggled(line) == nil)
+    }
+}
+
 @Test func noteImagesFindsLinksAndEmbedsInOrderOnce() {
     let body = """
     ![IMG_3182|400](assets/IMG_3182.JPG)
