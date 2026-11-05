@@ -299,6 +299,30 @@ struct CourseWorkTests {
         #expect(unbroken == "11-03(화) " + String(repeating: "가", count: 60))
     }
 
+    /// A cut that ends on `and`, `of a` or an open `(` reads as a broken name, so those go too.
+    @Test func aCutSubjectLeavesNothingHanging() {
+        var s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
+        let title = { (topic: String) in
+            s.topic = topic
+            return CourseFile(course: courses[0], sessions: [s]).noteTitle(for: s, kind: .rough, calendar: calendar)
+        }
+        #expect(title("Forest, Tree, Leaf, Cut-Edge and Equivalent Definitions of a Tree in General") == "11-03(화) Forest, Tree, Leaf, Cut-Edge and Equivalent Definitions")
+        #expect(title("Walk, Trail, Path, Cycle and Bipartite Graphs (König's Theorem on Cycles)") == "11-03(화) Walk, Trail, Path, Cycle and Bipartite Graphs")
+    }
+
+    /// Units are kept whole, as many as fit, rather than the last one cut midway.
+    @Test func aSubjectOfUnitsKeepsWholeUnits() {
+        let s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
+        var file = CourseFile(course: courses[0], sessions: [s])
+        let titles = ["Minimum Degree Two Forces a Cycle", "Eulerian Circuits", "Degree-Sum Formula"]
+        file.units = titles.enumerated().map { i, t in
+            var u = Unit(device: device, at: .now, title: t, order: i + 1)
+            u.sessionIds = [s.id]
+            return u
+        }
+        #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-03(화) Minimum Degree Two Forces a Cycle · Eulerian Circuits")
+    }
+
     /// The name is the day the class was held, as its title is, not the study day the 4 a.m. boundary would give.
     @Test func aLateClassIsNamedByItsCalendarDay() {
         let s = Session(device: device, at: .now, week: 10, date: date("2026-11-06 01:00"))
