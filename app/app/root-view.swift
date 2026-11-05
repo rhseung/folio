@@ -136,7 +136,7 @@ struct RootView: View {
     var sidebar: some View {
         // Ticks for the class under way: its row's fill and minutes. Around the list, not inside the row, so the row's
         // background (where the fill is drawn) is rebuilt with it.
-        TimelineView(.periodic(from: .now, by: 30)) { context in
+        LiveTime(workspace) { now in
         // The places stay put and the terms scroll in the space under them, as the list of terms grows each term.
         VStack(spacing: 0) {
         List(selection: listSelection) {
@@ -157,7 +157,7 @@ struct RootView: View {
             // The current term starts open, since its courses are what's opened daily.
             Section {
                 // Built once per tick for every course row's hint, not once per row.
-                let summary = TodaySummary.build(courses: workspace.currentCourses.map(\.file), now: context.date, settings: workspace.settings, calendar: workspace.calendar)
+                let summary = TodaySummary.build(courses: workspace.currentCourses.map(\.file), now: now, settings: workspace.settings, calendar: workspace.calendar)
                 ForEach(sidebarSemesters, id: \.id) { semester in
                     let courses = workspace.sidebarCourses(in: semester)
                     let current = semester.id == workspace.currentSemester?.id
@@ -167,7 +167,7 @@ struct RootView: View {
                             if over { hoveredTerm = semester.id } else if hoveredTerm == semester.id { hoveredTerm = nil }
                         }
                     if open {
-                        ForEach(courses) { courseRow($0, last: $0.id == courses.last?.id, now: context.date, hint: current ? summary.hint(for: $0.id, now: context.date) : nil) }
+                        ForEach(courses) { courseRow($0, last: $0.id == courses.last?.id, now: now, hint: current ? summary.hint(for: $0.id, now: now) : nil) }
                             .onMove { workspace.moveSidebarCourses(in: semester, from: $0, to: $1) }
                     }
                 }
@@ -402,8 +402,8 @@ struct RootView: View {
     }
 
     var recordMenu: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { context in
-            let ongoing = workspace.ongoingClass(at: context.date)
+        LiveTime(workspace) { now in
+            let ongoing = workspace.ongoingClass(at: now)
             Button {
                 if let ongoing { workspace.record(ongoing.session.id, in: ongoing.courseId) }
             } label: {

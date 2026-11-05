@@ -70,9 +70,9 @@ struct SessionsView: View {
         case .exam(let exam, let date):
             ExamMarkerRow(model: model, exam: exam, date: date)
         case .session(let session, let exams):
-            TimelineView(.periodic(from: .now, by: 30)) { _ in
-                SessionCard(model: model, course: course, session: session, now: model.workspace.now, openNote: openNote)
-                    .modifier(ClassExamCard(model: model, exams: exams, now: model.workspace.now))
+            LiveTime(model.workspace) { now in
+                SessionCard(model: model, course: course, session: session, now: now, openNote: openNote)
+                    .modifier(ClassExamCard(model: model, exams: exams, now: now))
             }
             .fileDrop { model.importFiles($0, into: session) }
         case .planned(_, let exams):

@@ -8,27 +8,25 @@ struct TodayWash: View {
     let courses: [UUID]
 
     var body: some View {
-        TimelineView(.periodic(from: .now, by: 30)) { _ in
-            let now = model.nowCourse(at: model.workspace.now)
-            ZStack {
-                ForEach(Array(courses.enumerated()), id: \.element) { i, id in
-                    // Spread edge to edge; a lone course sits left, over the title, rather than dead center.
-                    let x = courses.count == 1 ? 0.25 : 0.06 + 0.88 * Double(i) / Double(courses.count - 1)
-                    RadialGradient(colors: [model.workspace.accent(id).color.opacity(Theme.Opacity.courseWash), .clear],
-                                   center: UnitPoint(x: x, y: 0), startRadius: 0, endRadius: Theme.Size.washReach)
-                }
-                .opacity(now == nil ? 1 : 0)
-                if let now {
-                    RadialGradient(colors: [model.workspace.accent(now).color.opacity(Theme.Opacity.courseWash), .clear],
-                                   center: UnitPoint(x: 0.25, y: 0), startRadius: 0, endRadius: Theme.Size.washReachFocus)
-                        .transition(.opacity)
-                }
+        let now = model.nowCourse(at: model.workspace.liveNow)
+        ZStack {
+            ForEach(Array(courses.enumerated()), id: \.element) { i, id in
+                // Spread edge to edge; a lone course sits left, over the title, rather than dead center.
+                let x = courses.count == 1 ? 0.25 : 0.06 + 0.88 * Double(i) / Double(courses.count - 1)
+                RadialGradient(colors: [model.workspace.accent(id).color.opacity(Theme.Opacity.courseWash), .clear],
+                               center: UnitPoint(x: x, y: 0), startRadius: 0, endRadius: Theme.Size.washReach)
             }
-            .frame(height: Theme.Size.washHeight)
-            // The glows alone end in arcs; the mask fades them out evenly at one depth.
-            .mask(LinearGradient(stops: [.init(color: .primary, location: 0.3), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
-            .animation(.easeInOut(duration: 0.6), value: now)
+            .opacity(now == nil ? 1 : 0)
+            if let now {
+                RadialGradient(colors: [model.workspace.accent(now).color.opacity(Theme.Opacity.courseWash), .clear],
+                               center: UnitPoint(x: 0.25, y: 0), startRadius: 0, endRadius: Theme.Size.washReachFocus)
+                    .transition(.opacity)
+            }
         }
+        .frame(height: Theme.Size.washHeight)
+        // The glows alone end in arcs; the mask fades them out evenly at one depth.
+        .mask(LinearGradient(stops: [.init(color: .primary, location: 0.3), .init(color: .clear, location: 1)], startPoint: .top, endPoint: .bottom))
+        .animation(.easeInOut(duration: 0.6), value: now)
         .allowsHitTesting(false)
         .accessibilityHidden(true)
     }

@@ -10,18 +10,16 @@ struct TodayHeader: View {
 
     var body: some View {
         // The counts include ended classes, so the line moves on as the day does.
-        TimelineView(.periodic(from: .now, by: 60)) { _ in
-            let now = model.workspace.now
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .bottom, spacing: Theme.Space.xl) {
-                    heading(now: now)
-                    Spacer(minLength: 0)
-                    week
-                }
-                VStack(alignment: .leading, spacing: Theme.Space.l) {
-                    heading(now: now)
-                    week
-                }
+        let now = model.workspace.liveNow
+        ViewThatFits(in: .horizontal) {
+            HStack(alignment: .bottom, spacing: Theme.Space.xl) {
+                heading(now: now)
+                Spacer(minLength: 0)
+                week
+            }
+            VStack(alignment: .leading, spacing: Theme.Space.l) {
+                heading(now: now)
+                week
             }
         }
         // The page's own gaps fit block to block; the date sits apart from the day below it, as in the mockup.
@@ -89,6 +87,7 @@ struct DayRibbonCard: View {
     let go: (UUID, CourseSection) -> Void
     let openNote: (UUID) -> (UUID) -> Void
     @State private var opened: String?
+    @State private var width: CGFloat = 0
 
     static let label: CGFloat = 16
     static let track: CGFloat = 48
@@ -99,12 +98,12 @@ struct DayRibbonCard: View {
         let note = due > 0 ? String(localized: .todayRibbonNoteDue(classes.count, due)) : String(localized: .todayRibbonNote(classes.count))
         Block(String(localized: .todayClasses), note: classes.isEmpty ? nil : note) {
             Card(padding: Theme.Space.l) {
-                TimelineView(.periodic(from: .now, by: 30)) { _ in
-                    GeometryReader { proxy in
-                        canvas(ribbon, width: proxy.size.width, now: model.workspace.now)
-                    }
-                    .frame(height: Self.label * 2 + Self.track + Theme.Space.xs * 2)
-                }
+                // Measured beside the canvas, not with a GeometryReader around it: a GeometryReader's closure is not
+                // run again when the time changes, so the now line read in it stood still.
+                canvas(ribbon, width: width, now: model.workspace.liveNow)
+                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                    .frame(height: Self.label * 2 + Self.track + Theme.Space.xs * 2, alignment: .top)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
             }
         }
     }

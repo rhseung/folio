@@ -54,6 +54,10 @@ final class Workspace {
     /// Set by previews and offscreen renders, so a scenario's day doesn't follow the real clock.
     var pinnedNow: Date?
     var now: Date { pinnedNow ?? .now }
+    let clock = LiveClock()
+    /// `now` on the shared minute clock: a view that reads it is redrawn as the minute turns. Kept apart from `now`,
+    /// which every page reads when it draws, so those pages don't all redraw each minute.
+    var liveNow: Date { pinnedNow ?? clock.now }
 
     static let bookmarkKey = "folio.gistBookmark"
     /// The folder as a plain path for the folio command, which can't resolve this app's bookmark without a sandbox warning.
