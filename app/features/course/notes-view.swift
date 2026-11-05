@@ -250,7 +250,6 @@ struct NoteLinkMenu: View {
 
     var body: some View {
         let meta = model.meta
-        let session = model.linkedSession
         let current = model.currentLink
         func item(_ title: String, on: Bool, action: @escaping () -> Void) -> some View {
             Button(action: action) { if on { Label(title, systemImage: "checkmark") } else { Text(title) } }
@@ -259,7 +258,7 @@ struct NoteLinkMenu: View {
             ForEach([NoteKind.rough, .review], id: \.self) { kind in
                 Menu(String(localized: .notesLinkAsKind(kind.label))) {
                     ForEach(model.linkSessions(kind)) { s in
-                        item(model.sessionName(s), on: meta.kind == kind && session?.id == s.id) { model.relink(kind, session: s.id) }
+                        item(model.sessionName(s), on: model.isLinked(s, as: kind)) { model.pick(s.id, as: kind) }
                     }
                 }
             }

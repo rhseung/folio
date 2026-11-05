@@ -46,10 +46,11 @@ final class NoteListModel {
         // A note moved in from an old folder has no ID until opened; it says so instead of a kind it doesn't have yet.
         func detail(_ n: NoteFile, _ text: String?) -> String? { n.meta.id == nil ? String(localized: .notesNeedsId) : text }
 
+        // A review note covering several classes sits with the latest of them and names the range it covers.
         let classNotes = notes.filter { $0.meta.kind == .rough || $0.meta.kind == .review }
-            .map { (note: $0, session: file.session(pointingAt: $0.meta.id)) }
+            .map { (note: $0, sessions: file.sessions(pointingAt: $0.meta.id)) }
             .sorted { a, b in
-                switch (a.session, b.session) {
+                switch (a.sessions.last, b.sessions.last) {
                 case let (x?, y?) where x.id != y.id: x.date > y.date
                 case (_?, nil): true
                 case (nil, _?): false
@@ -57,8 +58,8 @@ final class NoteListModel {
                 }
             }
             .map { n, s in
-                Row(note: n, detail: detail(n, s.map { "\($0.date.formatted(.dateTime.month().day().weekday())) · \(n.meta.kind.label)" }
-                                                ?? "\(n.meta.kind.label) · " + String(localized: .notesNoSession)))
+                let covered = s.count > 1 ? file.sessionSpan(of: n.meta.id) : s.first.map { $0.date.formatted(.dateTime.month().day().weekday()) }
+                return Row(note: n, detail: detail(n, covered.map { "\($0) · \(n.meta.kind.label)" } ?? "\(n.meta.kind.label) · " + String(localized: .notesNoSession)))
             }
 
         let exams = notes.filter { $0.meta.kind == .examSummary }
@@ -221,14 +222,18 @@ final class NoteEditorModel {
     var linkExams: [Exam] { course.file.exams.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) } }
     /// Outline order: `order` counts among siblings only, so sorting by it alone interleaves chapters and their units.
     var outline: [(unit: FolioDomain.Unit, depth: Int)] { UnitTree.outline(course.file.units) }
-    var linkedSession: Session? { course.file.session(pointingAt: meta.id) }
+    var linkedSessions: [Session] { course.file.sessions(pointingAt: meta.id) }
 
     func sessionName(_ s: Session) -> String { course.file.title(of: s, calendar: workspace.calendar) }
 
     var currentLink: String {
         switch meta.kind {
         case .rough, .review:
-            linkedSession.map { String(localized: .notesLinkSession(course.file.day(of: $0, calendar: workspace.calendar), meta.kind.label)) } ?? String(localized: .notesLinkNoSession(meta.kind.label))
+            switch linkedSessions.count {
+            case 0: String(localized: .notesLinkNoSession(meta.kind.label))
+            case 1: String(localized: .notesLinkSession(course.file.day(of: linkedSessions[0], calendar: workspace.calendar), meta.kind.label))
+            default: String(localized: .notesLinkSession(course.file.sessionSpan(of: meta.id) ?? "", meta.kind.label))
+            }
         case .examSummary:
             linkExams.first { $0.id == meta.examId }.map { String(localized: .notesLinkExam($0.title)) } ?? String(localized: .notesLinkNoExam)
         case .topic:
@@ -236,6 +241,21 @@ final class NoteEditorModel {
                                               ?? String(localized: .notesNoUnits)))
         case .free: String(localized: .notesPartFree)
         }
+    }
+
+    func isLinked(_ s: Session, as kind: NoteKind) -> Bool { meta.kind == kind && linkedSessions.contains { $0.id == s.id } }
+
+    /// A review note covers every class reviewed in it, so picking a class adds it or takes it off again; a rough note,
+    /// or a note becoming a review note, moves to the class picked.
+    func pick(_ session: UUID, as kind: NoteKind) {
+        guard let id = meta.id else { return }
+        guard kind == .review, meta.kind == .review else { return relink(kind, session: session) }
+        if linkedSessions.contains(where: { $0.id == session }) {
+            workspace.run(NoteUnlinkSession(course: course.id, note: id, session: session))
+        } else {
+            workspace.run(NoteLinkSessions(course: course.id, note: id, sessions: [session]))
+        }
+        meta.sessionIds = linkedSessions.map(\.id)
     }
 
     /// One kind at a time: becoming another kind lets go of the session or exam the old one belonged to.

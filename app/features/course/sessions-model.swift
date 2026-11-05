@@ -163,7 +163,7 @@ final class SessionsModel {
         let now = now ?? workspace.now
         // Unreadable notes might point at any of them, so none is offered then.
         guard let notes = try? course.store.notes() else { untouched = []; return }
-        untouched = course.file.untouchedFutureSessions(now: now, notedSessions: Set(notes.compactMap(\.meta.sessionId)))
+        untouched = course.file.untouchedFutureSessions(now: now, notedSessions: Set(notes.flatMap(\.meta.sessionIds)))
     }
 
     var untouchedShown: [Session] { Array(untouched.prefix(4)) }
