@@ -132,9 +132,9 @@ private struct Builder {
         for (course, schedule, icon) in timetable {
             try run(CourseSet(course: course, fields: [.schedule(schedule), .icon(icon)]), at: setup)
         }
-        // A colloquium carries no credits and nothing to study, but still meets every week.
+        // A colloquium carries no credits and nothing to study, but still meets every week; graphite keeps it quiet.
         let colloquium = try run(CourseAdd(semester: fall, title: "콜로퀴움", code: codes[3].id, number: "9331", credits: 0, mode: .passFail), at: setup)
-        try run(CourseSet(course: colloquium, fields: [.schedule(slots([3], 1050, 1110, "Lecture Hall"))]), at: setup)
+        try run(CourseSet(course: colloquium, fields: [.schedule(slots([3], 1050, 1110, "Lecture Hall")), .color(CourseColor.neutral)]), at: setup)
 
         let staffed: [(UUID, [UUID], FolioDomain.Category)] = [
             (graph, [people[0].id, people[3].id], major), (robotics, [people[1].id], major), (os, [people[2].id], major),

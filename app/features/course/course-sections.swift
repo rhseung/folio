@@ -276,6 +276,7 @@ struct CourseColorSwatches: View {
     static let names: [String: LocalizedStringResource] = [
         "violet": .courseColorViolet, "blue": .courseColorBlue, "orange": .courseColorOrange, "green": .courseColorGreen,
         "pink": .courseColorPink, "olive": .courseColorOlive, "teal": .courseColorTeal, "red": .courseColorRed,
+        "graphite": .courseColorGraphite,
     ]
 
     var body: some View {

@@ -2014,6 +2014,17 @@
         }
       }
     },
+    "course-color.graphite": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그래파이트"
+          }
+        }
+      }
+    },
     "course-color.red": {
       "extractionState": "manual",
       "localizations": {

@@ -106,7 +106,8 @@ struct Avatar: View {
     var size: CGFloat = 26
 
     var body: some View {
-        let accent = CourseAccent.presets[Int(id.uuid.0) % CourseAccent.presets.count].accent
+        let colors = CourseAccent.presets.filter { $0.name != CourseColor.neutral }
+        let accent = colors[Int(id.uuid.0) % colors.count].accent
         Circle().fill(accent.color.opacity(0.18))
             .frame(width: size, height: size)
             .overlay {
