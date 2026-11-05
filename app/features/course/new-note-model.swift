@@ -55,7 +55,7 @@ final class NewNoteModel {
     var sessionOptions: [PickOption<UUID?>] {
         let sessions = course.file.sessions.filter { [kind] in !$0.isCancelled && $0.note(of: kind) == nil }.sorted { $0.date > $1.date }
         return [PickOption(id: nil, title: String(localized: .commonNone))]
-            + sessions.map { PickOption(id: $0.id, title: course.file.name(of: $0), detail: $0.topic.isEmpty ? nil : $0.topic) }
+            + sessions.map { PickOption(id: $0.id, title: course.file.title(of: $0, calendar: workspace.calendar)) }
     }
 
     var examOptions: [PickOption<UUID?>] {
@@ -70,7 +70,7 @@ final class NewNoteModel {
     private func suggestTitle() {
         guard title == suggested else { return }
         let session = link == .session ? course.file.sessions.first { $0.id == sessionId } : nil
-        suggested = session.map { course.file.noteTitle(for: $0, kind: kind) } ?? ""
+        suggested = session.map { course.file.noteTitle(for: $0, kind: kind, calendar: workspace.calendar) } ?? ""
         title = suggested
     }
 

@@ -321,7 +321,7 @@ struct NotesModelTests {
         #expect(editor.linkedSessions.map(\.id) == [second])
     }
 
-    /// A session's note takes the session's name, as `session note` names it, until the user types their own title.
+    /// A session's note takes the session's date and subject, as `session note` names it, until the user types their own title.
     @Test func aNewSessionNoteIsNamedAfterItsSession() throws {
         let (workspace, course) = try fixtureCourse()
         let session = try #require(workspace.run(SessionAdd(course: linearAlgebra, date: .now))?.made)
@@ -329,7 +329,7 @@ struct NotesModelTests {
         #expect(sheet.link == .session && sheet.sessionOptions.contains { $0.id == session })
         sheet.sessionId = session
         let file = try #require(workspace.course(linearAlgebra)).file
-        let name = file.name(of: try #require(file.sessions.first { $0.id == session }))
+        let name = file.noteTitle(for: try #require(file.sessions.first { $0.id == session }), kind: .rough, calendar: workspace.calendar)
         #expect(sheet.title == "\(name) 정리")
         sheet.kind = .rough
         #expect(sheet.title == name)
