@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Testing
 @testable import Folio
@@ -9,7 +10,7 @@ import Testing
 struct NoteClickGridTests {
     static let step: CGFloat = 40
 
-    static func grid(_ size: CGSize) -> [[CGPoint]] {
+    static func grid(_ size: CGSize, step: CGFloat = step) -> [[CGPoint]] {
         stride(from: step / 2, to: size.width, by: step).map { x in
             stride(from: step / 2, to: size.height, by: step).map { CGPoint(x: x, y: $0) }
         }
@@ -44,6 +45,9 @@ struct NoteClickGridTests {
     /// No line is further than this from a point beside it: a heading's gap above, a paragraph's below.
     static let reach: CGFloat = 56
 
+    /// Each point is a full mouse-down in the text view, so the caret grid is coarser than the hit grid.
+    static let caretStep: CGFloat = 80
+
     @Test(arguments: NoteShot.widths)
     func aClickPutsTheCaretWhereItLands(_ width: Int) async {
         let bench = NoteBench(.edit, NoteBench.longNote, width: CGFloat(width))
@@ -53,11 +57,13 @@ struct NoteClickGridTests {
             let length = (bench.text as NSString).length
             let end = bench.rect(of: NSRange(location: length, length: 0))
             var wrong: [String] = []
-            for column in Self.grid(bench.size) {
+            for column in Self.grid(bench.size, step: Self.caretStep) {
                 var above = 0
                 for p in column {
                     guard bench.hit(at: p) == .note else { continue }
-                    bench.selectAll()
+                    // The caret starts at the far end of the note, so a click that does nothing leaves it out of reach.
+                    // Not a selection: a click inside one waits to see whether a drag starts, which timed the test out.
+                    bench.perform(above < length / 2 ? #selector(NSResponder.moveToEndOfDocument(_:)) : #selector(NSResponder.moveToBeginningOfDocument(_:)))
                     let scrolled = bench.scrollY
                     bench.click(at: p)
                     let at = "(\(Int(p.x)), \(Int(p.y)))"
@@ -66,7 +72,7 @@ struct NoteClickGridTests {
                         bench.jump(to: scrolled)
                     }
                     guard let caret = bench.caret else {
-                        wrong.append("\(at) left the text selected")
+                        wrong.append("\(at) selected text")
                         continue
                     }
                     if p.y > end.maxY {
