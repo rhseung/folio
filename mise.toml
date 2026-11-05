@@ -75,7 +75,9 @@ depends = ["generate"]
 run = """
 out="${FOLIO_NOTE_SCREENS:-.build/note-screens}"
 case "$out" in /*) ;; *) out="$PWD/$out" ;; esac
-rm -rf "$out" .build/test-app.xcresult
+# Only the pictures a run leaves: FOLIO_NOTE_SCREENS may name a folder that holds other files.
+if [ -d "$out" ]; then find "$out" -maxdepth 1 -type f -name '*.png' -delete; rm -f "$out/machine.txt"; fi
+rm -rf .build/test-app.xcresult
 status=0
 TEST_RUNNER_FOLIO_NOTE_SCREENS="$out" TEST_RUNNER_FOLIO_NOTE_SCREENS_STRICT="${FOLIO_NOTE_SCREENS_STRICT:-}" \
 xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -quiet -skipMacroValidation || status=$?
@@ -91,6 +93,7 @@ description = "Run the iPad tests (Hangul in the edit view) on the first availab
 depends = ["generate"]
 run = """
 id=$(xcrun simctl list devices available | grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}')
+[ -n "$id" ] || { echo "no available iPad simulator" >&2; exit 1; }
 rm -rf .build/test-ipad.xcresult
 xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test -quiet -skipMacroValidation
 # -quiet leaves out the tests themselves; the count shows they ran.
