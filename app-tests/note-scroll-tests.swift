@@ -168,17 +168,74 @@ struct NoteScrollTests {
         for preview in [false, true] {
             let view: NSTextView = preview ? ReaderTextView() : SourceTextView()
             let window = Self.host(view)
+            view.setFrameSize(NSSize(width: 900, height: 2000))
             let scroll = try #require(view.enclosingScrollView)
             scroll.tile()
             let scroller = try #require(scroll.verticalScroller)
-            #expect(scroll.contentInsets.bottom > 0)
             #expect(abs(scroller.frame.height - scroll.frame.height) <= 1, "\(preview): \(scroller.frame) in \(scroll.frame)")
             _ = window
         }
     }
 }
 
-/// The room past the note's end is a content inset with no text view under it: a click there, below the middle of the
+/// The room past the note's end was a bottom content inset, and a long note's lower half on screen lay over it: a note
+/// just opened was drawn only above it, and the clip view left clicks there to the scroll view's background.
+@MainActor @Suite(.serialized)
+struct NoteLowerHalfTests {
+    /// A long note just opened, laid out the way the window does it rather than by hand.
+    static func opened() -> (SourceTextView, NSWindow) {
+        let view = SourceTextView()
+        view.delegate = view
+        // As `MarkdownEditor` does: the note goes into a view with no size yet, which SwiftUI sizes afterwards.
+        let scroll = NoteScrollView(document: view)
+        view.load(NoteScrollTests.filler)
+        view.configure(accent: CourseAccent.presets[0].accent, syntax: .latex, dark: false)
+        let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 900, height: 400), styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView!.addSubview(scroll)
+        scroll.frame = window.contentView!.bounds
+        window.contentView?.layoutSubtreeIfNeeded()
+        window.displayIfNeeded()
+        window.makeFirstResponder(view)
+        return (view, window)
+    }
+
+    /// The share of the scroll view's lower half that has ink in it, as the window draws it.
+    static func inkBelowTheMiddle(_ scroll: NSView) throws -> Double {
+        let rep = try #require(scroll.bitmapImageRepForCachingDisplay(in: scroll.bounds))
+        scroll.cacheDisplay(in: scroll.bounds, to: rep)
+        var inked = 0, total = 0
+        // Bitmap rows run top down; the lower half is the second half of them.
+        for y in stride(from: rep.pixelsHigh / 2 + 8, to: rep.pixelsHigh - 8, by: 2) {
+            for x in stride(from: 0, to: rep.pixelsWide, by: 4) {
+                total += 1
+                if let color = rep.colorAt(x: x, y: y), color.alphaComponent > 0.5, color.brightnessComponent < 0.6 { inked += 1 }
+            }
+        }
+        return Double(inked) / Double(max(1, total))
+    }
+
+    @Test func theWholeScreenIsDrawnOnOpen() throws {
+        let (view, _) = Self.opened()
+        let scroll = try #require(view.enclosingScrollView)
+        #expect(view.frame.height > scroll.bounds.height, "the note should run past the screen")
+        #expect(try Self.inkBelowTheMiddle(scroll) > 0.005)
+    }
+
+    @Test func theLowerHalfTakesClicks() throws {
+        let (view, window) = Self.opened()
+        for y in [40.0, 120.0, 180.0] {
+            view.setSelectedRange(NSRange(location: 0, length: 0))
+            let point = NSPoint(x: 450, y: y)
+            #expect(window.contentView?.hitTest(point) === view, "\(y)")
+            let expected = try #require(view.characterIndex(at: view.convert(point, from: nil)))
+            NoteRoomPastTheEndTests.click(window, at: point)
+            #expect(view.selectedRange().location > 0, "\(y)")
+            #expect(abs(view.selectedRange().location - expected) <= 1, "\(y): \(view.selectedRange()) vs \(expected)")
+        }
+    }
+}
+
+/// The room past the note's end has no text view under it: a click there, below the middle of the
 /// editor, went to the scroll view and left the caret where it was.
 @MainActor @Suite(.serialized)
 struct NoteRoomPastTheEndTests {
