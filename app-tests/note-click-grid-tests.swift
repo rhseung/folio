@@ -54,7 +54,8 @@ struct NoteClickGridTests {
             // The text view exists only once SwiftUI has placed it.
             bench.focus()
             let length = (bench.text as NSString).length
-            let end = bench.rect(of: NSRange(location: length, length: 0))
+            // The last character, not the place after it: the input method has no rect for the very end.
+            let end = bench.rect(of: (bench.text as NSString).rangeOfCharacter(from: .newlines.inverted, options: .backwards))
             var wrong: [String] = []
             for column in Self.grid(bench.size, step: Self.caretStep) {
                 var above = 0
