@@ -830,3 +830,12 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
     }
 }
 #endif
+
+extension NSTextLayoutManager {
+    /// The top of the line holding character `index`, laid out as far as there.
+    func top(of index: Int) -> CGFloat? {
+        guard let location = location(documentRange.location, offsetBy: index) else { return nil }
+        ensureLayout(for: NSTextRange(location: documentRange.location, end: location) ?? documentRange)
+        return textLayoutFragment(for: location)?.layoutFragmentFrame.minY
+    }
+}

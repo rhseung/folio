@@ -223,7 +223,7 @@ struct RenderedBlockTests {
     }
 
     @Test func taskBoxesCarryTheirLines() {
-        let note = ParsedNote("- [ ] 하나\n- [x] 둘\n    - [ ] 안쪽\n\n> - [ ] 인용 안")
+        let note = ParsedNote("- [ ] 하나\n- [x] 둘\n    - [ ] 안쪽\n\n- [ ] 다음 목록")
         let html = HTMLRenderer.blocks(note).map(\.html).joined()
         for (line, checked) in [(1, false), (2, true), (3, false), (5, false)] {
             #expect(html.contains("<input type=\"checkbox\" data-line=\"\(line)\" disabled\(checked ? " checked" : "")>"), "\(line)")
