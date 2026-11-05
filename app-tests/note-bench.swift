@@ -126,16 +126,16 @@ import Testing
 
     // MARK: Settling
 
-    /// Lets SwiftUI place the view and the view draw, until what's drawn stops changing.
+    /// Lets SwiftUI place the view and the view draw, until what's drawn stops changing (or a few seconds pass).
     func settle() async {
         var last: Pixels?
-        for round in 0..<60 {
+        for round in 0..<40 {
             host.layoutSubtreeIfNeeded()
             window.displayIfNeeded()
-            try? await Task.sleep(for: .milliseconds(60))
+            try? await Task.sleep(for: .milliseconds(50))
             guard scrollView != nil, round >= 2 else { continue }
             // A widget's block takes its page's height once the page says it.
-            if round < 50, widgets.contains(where: { $0.isLoading || $0.pageHeight == nil }) { continue }
+            if round < 30, widgets.contains(where: { $0.isLoading || $0.pageHeight == nil }) { continue }
             let now = snapshot()
             if now == last { return }
             last = now
@@ -162,7 +162,11 @@ import Testing
         else { return blank }
         // One pixel a point whatever the screen, so CI and a Retina Mac make pictures of the same size.
         rep.size = clip.bounds.size
+        // The caret blinks, so what's drawn would never settle with it.
+        let carets = textView?.subviews.filter { $0 is NSTextInsertionIndicator && !$0.isHidden } ?? []
+        for caret in carets { caret.isHidden = true }
         clip.cacheDisplay(in: clip.bounds, to: rep)
+        for caret in carets { caret.isHidden = false }
         guard let image = rep.cgImage else { return blank }
         return Pixels(image, page: pageColor)
     }
@@ -193,11 +197,16 @@ import Testing
     var scrollY: CGFloat { scrollView?.contentView.bounds.minY ?? 0 }
 
     func scroll(to y: CGFloat) async {
+        jump(to: y)
+        await settle()
+    }
+
+    /// Scrolls without waiting for the view to draw.
+    func jump(to y: CGFloat) {
         guard let scroll = scrollView else { return }
         let clip = scroll.contentView
         clip.scroll(to: clip.constrainBoundsRect(NSRect(origin: NSPoint(x: 0, y: y), size: clip.bounds.size)).origin)
         scroll.reflectScrolledClipView(clip)
-        await settle()
     }
 
     /// As far down as the page goes. TextKit guesses the height of text it hasn't laid out and corrects it as the end

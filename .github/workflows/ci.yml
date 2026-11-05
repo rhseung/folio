@@ -29,6 +29,8 @@ jobs:
 
   build:
     runs-on: xcode-27
+    # A test stuck on the main thread outlives its own time limit; without this the job would run for six hours.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:

@@ -5,7 +5,7 @@ import Testing
 /// Points across the whole panel, as it opens and scrolled, each clicked: every one must reach the note, or what the
 /// note shows there (a widget, a block that scrolls sideways). In the edit view a click puts the caret where it lands.
 /// The lower half of a long note once took no clicks at all (#263).
-@MainActor @Suite(.serialized)
+@MainActor @Suite(.serialized, .timeLimit(.minutes(5)))
 struct NoteClickGridTests {
     static let step: CGFloat = 40
 
@@ -63,7 +63,7 @@ struct NoteClickGridTests {
                     let at = "(\(Int(p.x)), \(Int(p.y)))"
                     if abs(bench.scrollY - scrolled) > 0.5 {
                         wrong.append("\(at) moved the page by \(bench.scrollY - scrolled)")
-                        await bench.scroll(to: scrolled)
+                        bench.jump(to: scrolled)
                     }
                     guard let caret = bench.caret else {
                         wrong.append("\(at) left the text selected")

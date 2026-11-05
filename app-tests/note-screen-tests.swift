@@ -21,7 +21,7 @@ struct NoteShot: Sendable, CustomTestStringConvertible {
 
 /// The note views drawn and held against reference pictures made on CI (`NoteScreens`): every markdown construct,
 /// and a note taller than the panel as it opens and scrolled to its end.
-@MainActor @Suite(.serialized)
+@MainActor @Suite(.serialized, .timeLimit(.minutes(5)))
 struct NoteScreenTests {
     @Test(arguments: NoteShot.all)
     func everyConstruct(_ shot: NoteShot) async {

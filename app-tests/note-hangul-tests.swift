@@ -9,7 +9,7 @@ private let linearAlgebra = UUID(uuidString: "C0000000-0000-4000-8000-0000000000
 
 /// Hangul typed into the edit view as the Korean input method types it, with SwiftUI updating the view and the note
 /// saving between keys: the syllable being composed stays whole, and every finished one lands in the note's file.
-@MainActor @Suite(.serialized)
+@MainActor @Suite(.serialized, .timeLimit(.minutes(5)))
 struct NoteHangulTests {
     enum Key: CustomStringConvertible {
         /// The syllable being composed, shown marked.

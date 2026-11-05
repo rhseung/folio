@@ -5,7 +5,7 @@ import Testing
 /// The note views' layout, read off what they draw: blocks stay in the text column, a note just opened is drawn down
 /// to the bottom of the panel, and the page scrolls on past the note's end. Pictures compared with references
 /// (`NoteScreenTests`) catch the rest, but they're made anew when the look changes; these hold through any look.
-@MainActor @Suite(.serialized)
+@MainActor @Suite(.serialized, .timeLimit(.minutes(5)))
 struct NoteLayoutTests {
     /// The text column in a panel `width` wide, its margins left out.
     static func column(_ width: CGFloat) -> ClosedRange<CGFloat> {
