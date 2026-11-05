@@ -13,6 +13,9 @@ final class PDFController {
     private(set) var matches: [PDFSelection] = []
     private(set) var matchIndex = 0
     @ObservationIgnored private var observer: (any NSObjectProtocol)?
+    #if os(macOS)
+    @ObservationIgnored private var lightBackground: NSColor?
+    #endif
 
     init(document: PDFDocument, page: Int) {
         pageCount = document.pageCount
@@ -43,18 +46,18 @@ final class PDFController {
     }
 
     #if os(macOS)
-    /// Shows the pages light-on-dark without touching the file: inverting turns white paper black, and turning the
-    /// hue back halfway keeps a red still red.
+    /// Shows the pages on the theme's dark paper without touching the file (`DarkPaper`). PDFKit draws the gaps
+    /// between pages through the same filter, so their color goes in as what the filter turns into the dark line.
+    /// Mac only: UIKit layers take no Core Image filters, so on iPad the pages keep their printed white.
     func darken(_ on: Bool) {
         guard on != !view.contentFilters.isEmpty else { return }
         view.wantsLayer = true
         view.layerUsesCoreImageFilters = true
-        guard on, let invert = CIFilter(name: "CIColorInvert"), let hue = CIFilter(name: "CIHueAdjust") else {
-            view.contentFilters = []
-            return
-        }
-        hue.setValue(Double.pi, forKey: kCIInputAngleKey)
-        view.contentFilters = [invert, hue]
+        // An inverted drop shadow glows around each page.
+        view.pageShadowsEnabled = !on
+        view.contentFilters = on ? DarkPaper.theme.filters : []
+        if on { lightBackground = view.backgroundColor }
+        view.backgroundColor = on ? DarkPaper.theme.source(of: Swatch.lineSoft.dark) : lightBackground ?? view.backgroundColor
     }
     #endif
 
@@ -82,6 +85,66 @@ final class PDFController {
         view.go(to: matches[matchIndex])
     }
 }
+
+#if os(macOS)
+/// Dark mode for a PDF, as one color matrix: each color's lightness flips while its hue stays (red stays red), and
+/// white paper and black type land on the theme's dark card and ink instead of pure black and white.
+///
+/// The flip is `v + (1 - 2·luma(v))` on every channel. Built from luma alone, it moves a color along the gray axis,
+/// keeping its chroma; it is also its own inverse, which `source(of:)` uses to find what input gives a wanted output.
+/// Layer filters run in linear light, so the matrix is wrapped in tone curves and works on sRGB values, where the token
+/// hex values are, and where a flipped mid gray still looks mid gray.
+struct DarkPaper {
+    // Rec. 601 luma, the weights a hue rotation keeps fixed.
+    static let luma = SIMD3<Double>(0.299, 0.587, 0.114)
+    static let theme = DarkPaper(paper: Swatch.card.dark, ink: Swatch.text.dark)
+
+    let paper: SIMD3<Double>, ink: SIMD3<Double>
+
+    init(paper: UInt32, ink: UInt32) {
+        self.paper = Self.rgb(paper)
+        self.ink = Self.rgb(ink)
+    }
+
+    static func rgb(_ hex: UInt32) -> SIMD3<Double> {
+        SIMD3(Double(hex >> 16 & 0xFF), Double(hex >> 8 & 0xFF), Double(hex & 0xFF)) / 255
+    }
+
+    static func flip(_ v: SIMD3<Double>) -> SIMD3<Double> {
+        v + SIMD3(repeating: 1 - 2 * (luma * v).sum())
+    }
+
+    func apply(_ v: SIMD3<Double>) -> SIMD3<Double> {
+        paper + (ink - paper) * Self.flip(v)
+    }
+
+    /// The color that comes out as `hex` once filtered.
+    func source(of hex: UInt32) -> NSColor {
+        let v = Self.flip((Self.rgb(hex) - paper) / (ink - paper))
+        return NSColor(srgbRed: v.x, green: v.y, blue: v.z, alpha: 1)
+    }
+
+    /// Row `i` of the matrix: (ink − paper)ᵢ times the flip's row, offset by inkᵢ (the flip of black is all ones).
+    var filters: [CIFilter] {
+        let scale = ink - paper
+        func row(_ i: Int) -> CIVector {
+            var weights = -2 * Self.luma
+            weights[i] += 1
+            weights *= scale[i]
+            return CIVector(x: weights.x, y: weights.y, z: weights.z, w: 0)
+        }
+        let matrix = CIFilter(name: "CIColorMatrix")!
+        matrix.setValue(row(0), forKey: "inputRVector")
+        matrix.setValue(row(1), forKey: "inputGVector")
+        matrix.setValue(row(2), forKey: "inputBVector")
+        matrix.setValue(CIVector(x: 0, y: 0, z: 0, w: 1), forKey: "inputAVector")
+        matrix.setValue(CIVector(x: ink.x, y: ink.y, z: ink.z, w: 0), forKey: "inputBiasVector")
+        // A saturated color flips past white (pure red to 1.4, 0.4, 0.4 before the paper and ink range); clamped, it stays a
+        // light red.
+        return [CIFilter(name: "CILinearToSRGBToneCurve")!, matrix, CIFilter(name: "CIColorClamp")!, CIFilter(name: "CISRGBToneCurveToLinear")!]
+    }
+}
+#endif
 
 struct PDFKitView {
     let controller: PDFController
