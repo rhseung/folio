@@ -292,6 +292,22 @@ struct MaterialNoteStudyTests {
         }
     }
 
+    static let laterSession = UUID(uuidString: "A0000000-0000-4000-8000-000000000002")!
+    static let reviewSetup = [SessionCommandTests.add, ["session", "add", "EC4207", "--date", "2026-10-30 10:30", "--id", laterSession.uuidString],
+                              ["note", "link", "EC4207/2주차-1", "--kind", "review", "--session", "9주차-1"]]
+
+    @Test func noteLinkSessions() throws {
+        try h.expectSame(["note", "link-sessions", "EC4207/2주차-1", "9주차-1", "9주차-2"], setup: Self.reviewSetup) { _ in
+            NoteLinkSessions(course: course, note: Self.noteID, sessions: [SessionCommandTests.id, Self.laterSession])
+        }
+    }
+
+    @Test func noteUnlinkSession() throws {
+        try h.expectSame(["note", "unlink-session", "EC4207/2주차-1", "9주차-1"], setup: Self.reviewSetup) { _ in
+            NoteUnlinkSession(course: course, note: Self.noteID, session: SessionCommandTests.id)
+        }
+    }
+
     @Test func noteRemove() throws {
         let gist = try Harness.fixtureCopy()
         #expect(h.cli(["note", "rm", "EC4207/2주차-1"], gist: gist).code == Exit.needsConfirmation.rawValue)
