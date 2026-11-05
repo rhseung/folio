@@ -78,12 +78,31 @@ export function preview({ typeset, redraw }) {
       let tail = 0;
       while (tail < shown.length - head && tail < blocks.length - head
         && shown[shown.length - 1 - tail].html === blocks[blocks.length - 1 - tail].html) tail++;
-      const after = shown[shown.length - tail]?.nodes[0] ?? null;
-      for (const block of shown.slice(head, shown.length - tail)) for (const node of block.nodes) node.remove();
-      const made = blocks.slice(head, blocks.length - tail).map((block) => ({ html: block.html, nodes: make(block.html) }));
-      for (const block of made) for (const node of block.nodes) document.body.insertBefore(node, after);
+      const first = (list, from) => list.slice(from).find((b) => b.nodes.length)?.nodes[0];
+      const after = first(shown, shown.length - tail) ?? null;
+      // Between the unchanged ends, a block whose HTML is still there stays where it is: moving an element would
+      // reload a widget's frame. The rest are made anew in place.
+      const old = shown.slice(head, shown.length - tail);
+      const middle = [], made = [];
+      let p = 0;
+      for (const block of blocks.slice(head, blocks.length - tail)) {
+        let j = p;
+        while (j < old.length && old[j].html !== block.html) j++;
+        if (j < old.length) {
+          for (const gone of old.slice(p, j)) for (const node of gone.nodes) node.remove();
+          middle.push(old[j]);
+          p = j + 1;
+        } else {
+          const anchor = first(old, p) ?? after;
+          const fresh = { html: block.html, nodes: make(block.html) };
+          for (const node of fresh.nodes) document.body.insertBefore(node, anchor);
+          made.push(fresh);
+          middle.push(fresh);
+        }
+      }
+      for (const gone of old.slice(p)) for (const node of gone.nodes) node.remove();
       prepare(made.flatMap((b) => b.nodes));
-      shown = [...shown.slice(0, head), ...made, ...shown.slice(shown.length - tail)];
+      shown = [...shown.slice(0, head), ...middle, ...shown.slice(shown.length - tail)];
       if (editable) prepare(shown.flatMap((b) => b.nodes));
       // Lines move with every edit above a block, which leaves its HTML as it was.
       shown.forEach((block, i) => {

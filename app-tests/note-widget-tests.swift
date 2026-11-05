@@ -102,13 +102,14 @@ struct NoteWidgetTests {
         <!doctype html><script>
         window.violations = 0
         document.addEventListener('securitypolicyviolation', () => window.violations++)
+        // Frames the widget makes inherit its sandbox: it can't reach into them, and their own code runs without
+        // what the widget's page lost.
         const blank = document.createElement('iframe')
         document.documentElement.append(blank)
-        window.blankPeers = typeof blank.contentWindow.RTCPeerConnection
+        try { window.blankPeers = typeof blank.contentWindow.RTCPeerConnection } catch { window.blankPeers = 'unreachable' }
         const written = document.createElement('iframe')
-        written.srcdoc = '<p>frame'
-        const loaded = new Promise(done => written.onload = done)
-          .then(() => window.writtenPeers = typeof written.contentWindow.RTCPeerConnection)
+        written.srcdoc = '<script>parent.postMessage(typeof RTCPeerConnection, "*")<\\/script>'
+        const loaded = new Promise(done => addEventListener('message', e => { window.writtenPeers = e.data; done() }))
         document.documentElement.append(written)
         const fetched = fetch('https://example.com/').then(() => window.fetched = 'loaded', () => window.fetched = 'blocked')
         Promise.allSettled([fetched, loaded]).then(() => setTimeout(() => window.done = true, 50))
@@ -120,8 +121,7 @@ struct NoteWidgetTests {
         #expect(try await Self.value(rig, "window.fetched") as? String == "blocked")
         #expect(try await Self.value(rig, "window.violations") as? Int ?? 0 > 0)
         #expect(try await Self.value(rig, "typeof RTCPeerConnection") as? String == "undefined")
-        // A frame of the page's own has a window of its own, with its own copy of everything the page lost.
-        #expect(try await Self.value(rig, "window.blankPeers") as? String == "undefined")
+        #expect(try await Self.value(rig, "window.blankPeers") as? String == "unreachable")
         #expect(try await Self.value(rig, "window.writtenPeers") as? String == "undefined")
     }
 
@@ -158,7 +158,8 @@ struct NoteWidgetTests {
         defer { rig.close() }
         await rig.settle()
         try await Task.sleep(for: .milliseconds(500))
-        #expect(try await Self.heights(rig).styled == 200)
+        let heights = try await Self.heights(rig)
+        #expect(heights.styled == 200, "\(heights)")
     }
 
     /// Content that grows again while the block is following it (a font, an image, a chart drawn a frame later) isn't
@@ -172,7 +173,8 @@ struct NoteWidgetTests {
         defer { rig.close() }
         await rig.settle()
         try await Task.sleep(for: .milliseconds(500))
-        #expect(try await Self.heights(rig).styled == 420)
+        let heights = try await Self.heights(rig)
+        #expect(heights.styled == 420, "\(heights)")
     }
 
     /// A block written with no height still shows, so its page can say how tall it is.

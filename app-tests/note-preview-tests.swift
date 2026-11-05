@@ -21,6 +21,7 @@ import WebKit
         page.view.frame = window.contentView!.bounds
         page.view.autoresizingMask = [.width, .height]
         window.contentView!.addSubview(page.view)
+        Self.keepDrawing(page.view, in: window)
         self.text = text
         self.baseURL = baseURL
         if editable {
@@ -35,12 +36,25 @@ import WebKit
         show(text)
     }
 
+    /// WebKit stops a page's rendering updates while its window isn't on screen, and a widget's frame then never
+    /// hears it was resized. The window is put in the window list far off every screen, and WebKit told not to
+    /// judge by what covers it, so it draws as in the app; nothing shows and nothing takes focus.
+    static func keepDrawing(_ view: WKWebView, in window: NSWindow) {
+        let setter = Selector(("_setWindowOcclusionDetectionEnabled:"))
+        if view.responds(to: setter), let method = class_getInstanceMethod(type(of: view), setter) {
+            typealias Set = @convention(c) (AnyObject, Selector, Bool) -> Void
+            unsafeBitCast(method_getImplementation(method), to: Set.self)(view, setter, false)
+        }
+        window.orderBack(nil)
+    }
+
     func show(_ text: String) {
         self.text = text
         page.show(text, baseURL: baseURL, math: .latex, accent: accent, dark: false)
     }
 
     func close() {
+        window.orderOut(nil)
         page.view.removeFromSuperview()
         page.recycle()
     }
