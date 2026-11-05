@@ -9791,6 +9791,28 @@
         }
       }
     },
+    "recording.copy-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "줄을 눌러 고르고, Shift를 누른 채 눌러 범위를 넓힙니다. ⌘A는 모든 줄을 고릅니다."
+          }
+        }
+      }
+    },
+    "recording.copy-lines": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld줄 복사"
+          }
+        }
+      }
+    },
     "recording.empty": {
       "extractionState": "manual",
       "localizations": {
@@ -9864,6 +9886,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "15초 앞으로"
+          }
+        }
+      }
+    },
+    "recording.line-play": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 줄부터 재생"
           }
         }
       }

@@ -34,6 +34,82 @@ struct RecordingPlayerModelTests {
         #expect(model.hasLines)
     }
 
+    func picking(_ texts: [String]) throws -> RecordingPlayerModel {
+        let f = try QuizFixture()
+        let recording = Recording(device: f.workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a")
+        let model = RecordingPlayerModel(workspace: f.workspace, courseId: f.courseId, store: f.course.store, recording: recording)
+        model.transcript = LectureTranscript(locale: "ko-KR", lines: texts.enumerated().map { i, text in
+            LectureTranscript.Line(start: Double(i * 5), end: Double(i * 5 + 5), text: text)
+        })
+        return model
+    }
+
+    @Test func copyingNeedsAPick() throws {
+        let model = try picking(["행렬", "고윳값"])
+        #expect(!model.canCopy)
+        #expect(model.copiedText == "")
+        model.select(1, extending: false)
+        #expect(model.canCopy)
+        #expect(model.copiedText == "고윳값")
+    }
+
+    @Test func aPlainPickStartsOver() throws {
+        let model = try picking(["a", "b", "c", "d"])
+        model.select(0, extending: false)
+        model.select(2, extending: true)
+        model.select(3, extending: false)
+        #expect(model.selected == [3])
+    }
+
+    /// Shift-click covers the lines between the anchor and the click, either way, and a second Shift-click
+    /// re-reaches from the same anchor instead of adding to the first range.
+    @Test func shiftExtendsFromTheAnchor() throws {
+        let model = try picking(["a", "b", "c", "d", "e"])
+        model.select(3, extending: true)
+        #expect(model.selected == [3], "with nothing picked yet, Shift-click picks just that line")
+        model.select(1, extending: true)
+        #expect(model.selected == [1, 2, 3])
+        model.select(4, extending: true)
+        #expect(model.selected == [3, 4])
+    }
+
+    @Test func aRangeSkipsLinesASearchHides() throws {
+        let model = try picking(["그래프 정의", "트리", "그래프 탐색", "그래프 색칠"])
+        model.query = "그래프"
+        model.select(0, extending: false)
+        model.select(3, extending: true)
+        #expect(model.selected == [0, 2, 3])
+    }
+
+    @Test func selectAllTakesTheShownLines() throws {
+        let model = try picking(["그래프 정의", "트리", "그래프 탐색"])
+        model.selectAll()
+        #expect(model.selected == [0, 1, 2])
+        model.query = "그래프"
+        model.select(1, extending: false)
+        model.selectAll()
+        #expect(model.selected == [0, 2])
+    }
+
+    /// Lines come out in transcript order, in the same form the whole-transcript copy used, however they were picked.
+    @Test func copiedTextKeepsTranscriptOrder() throws {
+        let model = try picking(["행렬", "고윳값", "대각화"])
+        model.select(2, extending: false)
+        model.select(0, extending: true)
+        #expect(model.copiedText == "행렬\n고윳값\n대각화")
+        model.selectAll()
+        #expect(model.copiedText == model.transcript?.text)
+        #expect(model.copyLabel == String(localized: .recordingCopyLines(3)))
+    }
+
+    @Test func aNewTranscriptDropsThePick() throws {
+        let model = try picking(["행렬", "고윳값"])
+        model.selectAll()
+        model.reloadTranscript()
+        #expect(!model.canCopy)
+        #expect(model.copyLabel == String(localized: .recordingCopy))
+    }
+
     /// The sheet's height follows whether there are lines, so they must be known before it opens, not after `load`.
     @Test func readsTheTranscriptBeforeLoading() throws {
         let f = try QuizFixture()

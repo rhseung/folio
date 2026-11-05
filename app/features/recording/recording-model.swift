@@ -88,6 +88,41 @@ final class RecordingPlayerModel {
             .map { i, line in (i, line, marked.contains(i)) }
     }
 
+    // MARK: Selection
+
+    /// Transcript indices, like `shownLines`, so a search narrowing the list keeps what was picked before it.
+    private(set) var selected: Set<Int> = []
+    private var anchor: Int?
+
+    /// A plain pick starts over from that line; extending covers the shown lines between the anchor and it, so the
+    /// range is what the reader sees between the two clicks even while a search hides lines in between.
+    func select(_ index: Int, extending: Bool) {
+        guard extending, let anchor else {
+            selected = [index]
+            anchor = index
+            return
+        }
+        let range = min(anchor, index)...max(anchor, index)
+        selected = Set(shownLines.map(\.index).filter(range.contains))
+    }
+
+    func selectAll() {
+        let shown = shownLines.map(\.index)
+        selected = Set(shown)
+        anchor = anchor ?? shown.first
+    }
+
+    var canCopy: Bool { !selected.isEmpty }
+    var copyLabel: String {
+        selected.isEmpty ? String(localized: .recordingCopy) : String(localized: .recordingCopyLines(selected.count))
+    }
+    /// In transcript order, whichever order the lines were picked in, and in the transcript's own text form.
+    var copiedText: String {
+        guard let transcript else { return "" }
+        let lines = selected.sorted().filter(transcript.lines.indices.contains).map { transcript.lines[$0] }
+        return LectureTranscript(locale: transcript.locale, lines: lines).text
+    }
+
     var phase: TranscriptionPhase? { workspace.transcriptions.phase(of: recording.id) }
     /// Still being recorded or moved into the course folder, there is no audio in place to read or delete yet.
     private var settling: Bool { workspace.recorder.current == recording.id || workspace.finishingRecordings.contains(recording.id) }
@@ -152,7 +187,12 @@ final class RecordingPlayerModel {
 
     func transcribe() { workspace.transcribe(recording, course: courseId) }
     func cancelTranscription() { workspace.transcriptions.cancel(recording.id) }
-    func reloadTranscript() { transcript = store.transcript(of: recording) }
+    func reloadTranscript() {
+        transcript = store.transcript(of: recording)
+        // A new transcription splits the audio into other lines; the old indices would pick unrelated text.
+        selected = []
+        anchor = nil
+    }
 
     func remove() {
         player.stop()
