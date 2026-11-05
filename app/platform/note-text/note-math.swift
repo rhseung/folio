@@ -34,10 +34,6 @@ import UIKit
     }
 }
 
-/// A typeset formula in the read view, inline or display. A table can't shrink it as it does an image, so it holds
-/// its column open.
-final class MathAttachment: NSTextAttachment {}
-
 /// Math typeset by SwiftMath into a picture, kept by its source, size, color and appearance.
 @MainActor enum NoteMath {
     struct Picture {

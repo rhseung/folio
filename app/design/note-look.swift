@@ -12,8 +12,8 @@ typealias PlatformImage = UIImage
 typealias PlatformView = UIView
 #endif
 
-/// Type, colors and spacing of the native note views (app/platform/note-text). The Claude panel's web page still takes
-/// the same values from web/src/note.css.
+/// Type, colors and spacing of the notes: the edit view (app/platform/note-text) uses them as they are, and the pages
+/// (the preview, the Claude panel) get them as CSS variables through `NoteStyle`.
 enum NoteLook {
     static let body: CGFloat = 16
     /// Leading near 1.78 at the body size.

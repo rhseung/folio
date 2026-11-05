@@ -75,6 +75,7 @@ Folio가 아닌 앱에서 같은 느낌을 만들 때도 이 문서를 쓴다. "
 | `Theme.Typeface` | 글자 | 제목 3단(`pageTitle`, `columnTitle`, `sectionTitle`), 수치 4단(`figure` 화면의 주인공 수치, `figureCompact` 타일 수치, `figureMedium` 행 앞 날짜·성적 글자, `figureSmall` 표 안 수치), 본문(`bodyLarge`, `body`, `bodyStrong`, `caption`, `label`, `mono`) |
 | `Theme.Glyph` | 홀로 쓰는 SF Symbol 크기 | `tiny`, `small`, `regular`, `check`, `large`, `toolbar`(틀 위 버튼), `line`(`LineIcon`), `lineTitle`(열 제목 옆의 `LineIcon`, 칸은 그대로), `fab`(떠 있는 버튼). 글자 옆 아이콘은 글자의 글꼴을 따른다 |
 | `Swatch` | 노트 CSS와 함께 쓰는 색 | `NoteStyle`이 CSS 변수로 넘긴다. 노트 CSS에 색을 직접 적지 않는다 |
+| `NoteLook` | 노트의 글꼴 크기, 열 폭, 여백, 블록 간격 | 편집 보기(TextKit)는 값을 그대로 쓰고, 미리보기와 Claude 패널은 `NoteStyle`이 CSS 변수(`--measure`, `--margin`, `--block-gap`, `--h1` 등)로 받는다. 노트 CSS에 크기를 직접 적지 않는다 |
 
 ## 구성 요소
 
@@ -270,4 +271,4 @@ Folio가 아닌 앱에서 같은 느낌을 만들 때도 이 문서를 쓴다. "
 
 화면 확인은 먼저 화면 밖 렌더로 한다. `mise run render`가 `FolioFixtures`의 상황(`Scenario`: 수업이 꽉 찬 날, 시험이 한 달 안에 여섯 개 몰린 날, 한가한 토요일, 빈 학기)마다 모든 페이지와 시트를 라이트와 다크로 그려 `FOLIO_RENDER_DIR`(기본 `.build/renders`)에 PNG로 남긴다. 폭과 높이는 `FOLIO_RENDER_SIZES`(`1180,720,1440x900`처럼, 높이를 빼면 페이지 끝까지)로, 화면과 상황은 `FOLIO_RENDER_SCREENS`와 `FOLIO_RENDER_SCENARIOS`로 고른다. 상황에는 지어낸 성적, 사람, 졸업 분류가 들어 있어 성적과 졸업 요건 화면도 빈 화면이 아니다. 상황은 고정된 시각을 기준으로 액션을 거쳐 만들어서 실제 시계와 실제 GIST 폴더에 기대지 않고, 창이 화면에 뜨지 않는다. Xcode 캔버스에서는 같은 상황을 `TodayView`의 `#Preview`로 본다. 바꾸기 전과 후를 같은 상황으로 그려 비교한다.
 
-화면 밖 렌더는 리퀴드 글라스 재질(빠른 추가 칸, 툴바, 사이드바)과 노트 보기(TextKit)와 `WKWebView`(Claude 패널)를 그리지 못하고, 창 틀과 뷰 안에서 여는 시트(단원 복습 등), PDF 보기도 없다. 이것들은 디버그 빌드의 창 스냅숏으로 본다. `FOLIO_GIST`에 `mise run fixture -- <폴더>`로 만든 가짜 폴더를, `FOLIO_SNAPSHOT_DIR`에 저장할 폴더를 주고 `open -n --env …`로 앱을 열면 실제 창으로 모든 화면을 PNG로 남기고 종료한다.
+화면 밖 렌더는 리퀴드 글라스 재질(빠른 추가 칸, 툴바, 사이드바)과 노트 보기(TextKit의 편집 보기, `WKWebView`의 미리보기)와 `WKWebView`(Claude 패널)를 그리지 못하고, 창 틀과 뷰 안에서 여는 시트(단원 복습 등), PDF 보기도 없다. 이것들은 디버그 빌드의 창 스냅숏으로 본다. `FOLIO_GIST`에 `mise run fixture -- <폴더>`로 만든 가짜 폴더를, `FOLIO_SNAPSHOT_DIR`에 저장할 폴더를 주고 `open -n --env …`로 앱을 열면 실제 창으로 모든 화면을 PNG로 남기고 종료한다.

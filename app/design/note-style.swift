@@ -1,7 +1,8 @@
 import Foundation
 
-/// Theme colors as CSS variables for note pages (web/src/note.css names no color of its own), plus the bundled
-/// stylesheet and scripts built into resources/web by `mise run build-web` (Xcode copies them to the bundle root).
+/// Theme colors and `NoteLook`'s sizes as CSS variables for note pages (web/src/note.css names no color of its own and
+/// takes the column, type sizes and gaps from these), plus the bundled stylesheet and scripts built into resources/web
+/// by `mise run build-web` (Xcode copies them to the bundle root).
 enum NoteStyle {
     static func variables(accent: CourseAccent) -> String {
         func block(_ pick: (UInt32, UInt32) -> UInt32) -> String {
@@ -20,8 +21,16 @@ enum NoteStyle {
                 + [("accent", pick(accent.light, accent.dark)), ("accent-ink", pick(accent.inkLight, accent.inkDark))]
             return pairs.map { String(format: "--%@:#%06X;", $0.0, $0.1) }.joined()
         }
-        return ":root{\(block { l, _ in l })}@media (prefers-color-scheme: dark){:root{\(block { _, d in d })}}"
+        return ":root{\(block { l, _ in l })}@media (prefers-color-scheme: dark){:root{\(block { _, d in d })}}" + sizes
     }
+
+    static let sizes: String = {
+        let values: [(String, CGFloat)] = [
+            ("measure", NoteLook.measure), ("margin", NoteLook.margin), ("body", NoteLook.body), ("paragraph-gap", NoteLook.paragraphGap),
+            ("block-gap", NoteLook.blockGap), ("radius", NoteLook.radius), ("code-size", NoteLook.codeSize), ("label-size", NoteLook.labelSize),
+        ] + NoteLook.headingSizes.enumerated().map { ("h\($0.offset + 1)", $0.element) }
+        return ":root{" + values.map { String(format: "--%@:%gpx;", $0.0, Double($0.1)) }.joined() + "}"
+    }()
 
     static func resource(_ name: String) -> String {
         Bundle.main.url(forResource: name, withExtension: nil)

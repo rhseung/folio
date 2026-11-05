@@ -191,8 +191,8 @@ struct NoteEditor: View {
                 if shown != .read { editor }
                 if shown == .split { Theme.Palette.lineSoft.frame(width: 1) }
                 if shown != .write {
-                    NoteReader(text: model.body, baseURL: model.baseURL, math: model.meta.math, openNote: openNote, edit: model.replaceLines,
-                               link: shown == .split ? preview : nil, toggleMode: toggleMode)
+                    NotePreview(text: model.body, baseURL: model.baseURL, math: model.meta.math, openNote: openNote, edit: model.replaceLines,
+                                link: shown == .split ? preview : nil, toggleMode: toggleMode)
                 }
             }
         }

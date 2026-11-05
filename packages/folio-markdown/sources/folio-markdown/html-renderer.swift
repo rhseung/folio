@@ -14,12 +14,31 @@ public struct HTMLRenderer {
         render(ParsedNote(markdown))
     }
 
+    /// A top-level block of a note and the body lines it was written on.
+    public struct Block: Equatable, Sendable {
+        public var html: String
+        public var lines: ClosedRange<Int>?
+    }
+
+    /// The note block by block, so a page can redraw only the blocks that changed and follow an editor by line. Task
+    /// boxes carry their item's body line as `data-line`, so a tick can be written back to the source.
+    public static func blocks(_ note: ParsedNote) -> [Block] {
+        var r = HTMLRenderer()
+        r.note = note
+        return r.rendered(Array(note.document.children)).map { Block(html: $0.html, lines: note.lines(of: $0.node)) }
+    }
+
     var counters: [String: Int] = [:]
+    var note: ParsedNote?
 
     // MARK: Blocks
 
     mutating func blocks(_ nodes: [Markup]) -> String {
-        var out = ""
+        rendered(nodes).map(\.html).joined()
+    }
+
+    mutating func rendered(_ nodes: [Markup]) -> [(node: Markup, html: String)] {
+        var out: [(node: Markup, html: String)] = []
         var previousCallout: String?
         for node in nodes {
             let html: String
@@ -30,7 +49,7 @@ public struct HTMLRenderer {
                 html = block(node)
                 previousCallout = nil
             }
-            out += html
+            out.append((node, html))
         }
         return out
     }
@@ -70,7 +89,8 @@ public struct HTMLRenderer {
     }
 
     mutating func listItem(_ item: ListItem) -> String {
-        let box = item.checkbox.map { "<input type=\"checkbox\" disabled\($0 == .checked ? " checked" : "")> " } ?? ""
+        let line = note?.lines(of: item).map { " data-line=\"\($0.lowerBound)\"" } ?? ""
+        let box = item.checkbox.map { "<input type=\"checkbox\"\(line) disabled\($0 == .checked ? " checked" : "")> " } ?? ""
         // The item's own text renders without <p>, also above a sublist; a <p> there would add a paragraph margin.
         if let p = item.child(at: 0) as? Paragraph {
             let (html, id) = Self.splitBlockID(inlines(Array(p.inlineChildren)))
@@ -240,7 +260,8 @@ public struct HTMLRenderer {
             }
             let text = link.alias ?? (link.target + (link.fragment.map { " › " + $0 } ?? ""))
             return link.isEmbed
-                ? "<div class=\"embed\" data-href=\"\(href)\"></div>"
+                // A link, not a block: it stands inside the paragraph the embed was written in.
+                ? "<a class=\"embed\" href=\"\(href)\">\(text)</a>"
                 : "<a class=\"wikilink\" href=\"\(href)\">\(text)</a>"
         }
     }

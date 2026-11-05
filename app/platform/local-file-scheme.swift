@@ -22,17 +22,28 @@ import WebKit
     /// The note folder's parent, so notes in a subfolder still reach `Notes/assets` by `../assets`.
     static func root(for folder: URL?) -> URL? { folder?.standardizedFileURL.deletingLastPathComponent() }
 
+    private var running = Set<ObjectIdentifier>()
+
     func webView(_ webView: WKWebView, start task: any WKURLSchemeTask) {
         guard let url = task.request.url, let root else { return task.didFailWithError(URLError(.fileDoesNotExist)) }
         let file = URL(fileURLWithPath: url.path(percentEncoded: false)).standardizedFileURL
-        guard file.path.hasPrefix(root.path + "/"), let data = LocalFile.read(file) else {
-            return task.didFailWithError(URLError(.fileDoesNotExist))
+        guard file.path.hasPrefix(root.path + "/") else { return task.didFailWithError(URLError(.fileDoesNotExist)) }
+        let id = ObjectIdentifier(task as AnyObject)
+        running.insert(id)
+        Task {
+            let data = await Self.read(file)
+            // A task the page stopped (the note changed, the view closed) may not be answered.
+            guard running.remove(id) != nil else { return }
+            guard let data else { return task.didFailWithError(URLError(.fileDoesNotExist)) }
+            let type = UTType(filenameExtension: file.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
+            task.didReceive(URLResponse(url: url, mimeType: type, expectedContentLength: data.count, textEncodingName: nil))
+            task.didReceive(data)
+            task.didFinish()
         }
-        let type = UTType(filenameExtension: file.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
-        task.didReceive(URLResponse(url: url, mimeType: type, expectedContentLength: data.count, textEncodingName: nil))
-        task.didReceive(data)
-        task.didFinish()
     }
 
-    func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) {}
+    func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) { running.remove(ObjectIdentifier(task as AnyObject)) }
+
+    /// Off the main thread: a coordinated read of a file iCloud hasn't downloaded waits for the download.
+    nonisolated static func read(_ file: URL) async -> Data? { LocalFile.read(file) }
 }
