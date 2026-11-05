@@ -260,7 +260,8 @@ public struct HTMLRenderer {
             }
             let text = link.alias ?? (link.target + (link.fragment.map { " › " + $0 } ?? ""))
             return link.isEmbed
-                ? "<div class=\"embed\" data-href=\"\(href)\"></div>"
+                // A link, not a block: it stands inside the paragraph the embed was written in.
+                ? "<a class=\"embed\" href=\"\(href)\">\(text)</a>"
                 : "<a class=\"wikilink\" href=\"\(href)\">\(text)</a>"
         }
     }

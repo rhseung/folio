@@ -222,6 +222,11 @@ struct RenderedBlockTests {
         #expect(blocks[4].html.contains("callout-proof attached"))
     }
 
+    @Test func anEmbedShowsTheNotesName() {
+        let html = HTMLRenderer.render(ParsedNote("앞\n\n![[2주차-1]]"))
+        #expect(html.contains("<a class=\"embed\" href=\"folio://note/2%EC%A3%BC%EC%B0%A8-1\">2주차-1</a>"), "\(html)")
+    }
+
     @Test func taskBoxesCarryTheirLines() {
         let note = ParsedNote("- [ ] 하나\n- [x] 둘\n    - [ ] 안쪽\n\n- [ ] 다음 목록")
         let html = HTMLRenderer.blocks(note).map(\.html).joined()

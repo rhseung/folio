@@ -195,6 +195,15 @@ struct NotePreviewTests {
         #expect(right <= column + 1, "\(right) past \(column)")
     }
 
+    /// `%`, `#` and `&` in a formula's text are the characters, not TeX's comment and markup.
+    @Test func textInMathReadsAsWritten() async throws {
+        let rig = PreviewRig("$\\textbf{오차 5% 이내} \\text{과제 #3 \\& 4} \\textit{A & B}$")
+        defer { rig.close() }
+        await rig.settle()
+        #expect(try await rig.js("return document.querySelectorAll('.math-error').length") as? Int == 0)
+        #expect(try await rig.js("return document.querySelectorAll('.katex').length") as? Int == 1)
+    }
+
     /// The page loads the note's own pictures and nothing from outside.
     @Test func picturesComeFromTheNotesFolder() async throws {
         let folder = FileManager.default.temporaryDirectory.appending(path: "preview-\(UUID().uuidString)")
