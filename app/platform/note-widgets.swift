@@ -188,19 +188,38 @@ struct WidgetSizer {
         url.scheme == "about" || (url.scheme == scheme && url.host == "widget")
     }
 
+    private var running = Set<ObjectIdentifier>()
+
     func webView(_ webView: WKWebView, start task: any WKURLSchemeTask) {
         guard let url = task.request.url, url.host == "widget", let id = UUID(uuidString: url.lastPathComponent) else {
             return task.didFailWithError(URLError(.fileDoesNotExist))
         }
         let file = folder.flatMap { StandardLayout.widgetFile(id, noteFolder: $0) }
-        let data = file.flatMap { LocalFile.read($0) } ?? Self.notice(file)
-        let headers = ["Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": Self.policy]
-        task.didReceive(HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: headers)!)
-        task.didReceive(data)
-        task.didFinish()
+        let key = ObjectIdentifier(task as AnyObject)
+        running.insert(key)
+        Task {
+            // Read as `LocalFileScheme` reads pictures, off the main thread.
+            let read = if let file { await LocalFileScheme.read(file) } else { Data?.none }
+            guard running.remove(key) != nil else { return }
+            let data = Self.withPolicy(read ?? Self.notice(file))
+            let headers = ["Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": Self.policy]
+            task.didReceive(HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: headers)!)
+            task.didReceive(data)
+            task.didFinish()
+        }
     }
 
-    func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) {}
+    func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) { running.remove(ObjectIdentifier(task as AnyObject)) }
+
+    /// The policy also as the page's first element: WebKit doesn't apply a policy header to a frame's page, only to a
+    /// window's. After a doctype, which a tag ahead of it would turn off.
+    static func withPolicy(_ page: Data) -> Data {
+        let meta = Data("<meta http-equiv=\"Content-Security-Policy\" content=\"\(policy)\">".utf8)
+        let head = String(decoding: page.prefix(256), as: UTF8.self)
+        guard let doctype = head.firstMatch(of: /^\s*<!doctype[^>]*>/.ignoresCase()) else { return meta + page }
+        let end = head[..<doctype.range.upperBound].utf8.count
+        return page.prefix(end) + meta + page.dropFirst(end)
+    }
 
     static func notice(_ file: URL?) -> Data {
         let text = switch file {
