@@ -54,8 +54,10 @@ struct NoteClickGridTests {
             // The text view exists only once SwiftUI has placed it.
             bench.focus()
             let length = (bench.text as NSString).length
-            // The last character, not the place after it: the input method has no rect for the very end.
-            let end = bench.rect(of: (bench.text as NSString).rangeOfCharacter(from: .newlines.inverted, options: .backwards))
+            // The last character, not the place after it: the input method has no rect for the very end. Nor for text off
+            // the panel, where the note's end is below every point.
+            let last = bench.rect(of: (bench.text as NSString).rangeOfCharacter(from: .newlines.inverted, options: .backwards))
+            let end = last.maxY > 0 && last.minY < bench.size.height ? last.maxY : .infinity
             var wrong: [String] = []
             for column in Self.grid(bench.size, step: Self.caretStep) {
                 var above = 0
@@ -75,8 +77,8 @@ struct NoteClickGridTests {
                         wrong.append("\(at) selected text")
                         continue
                     }
-                    if p.y > end.maxY {
-                        if caret.location != length { wrong.append("\(at) past the end, below \(Int(end.maxY)), put the caret at \(caret.location) of \(length)") }
+                    if p.y > end {
+                        if caret.location != length { wrong.append("\(at) past the end, below \(Int(end)), put the caret at \(caret.location) of \(length)") }
                     } else {
                         let off = p.y < caret.rect.minY ? caret.rect.minY - p.y : max(0, p.y - caret.rect.maxY)
                         if off > Self.reach { wrong.append("\(at) put the caret \(Int(off)) points away, at \(Int(caret.rect.minY))") }
