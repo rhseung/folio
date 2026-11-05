@@ -5,7 +5,7 @@ import Foundation
 import Observation
 
 /// The sessions page and its rows. Times are judged against `now` when the page draws, not on a timer, except a
-/// row's own under-way state, which its TimelineView passes in.
+/// row's own under-way state, which its `LiveTime` passes in.
 @MainActor @Observable
 final class SessionsModel {
     var pending: PendingAction?
