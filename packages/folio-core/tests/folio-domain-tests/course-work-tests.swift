@@ -262,6 +262,50 @@ struct CourseWorkTests {
         #expect(file.title(of: s, calendar: calendar) == "11/3(화): 행복에도 습관이 무섭다")
     }
 
+    @Test func aSessionNoteIsNamedByTheDayAndWhatTheClassCovered() {
+        var s = Session(device: device, at: .now, week: 10, date: date("2026-11-05 10:30"))
+        var file = CourseFile(course: courses[0], sessions: [s])
+        #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-05(목)")
+        #expect(file.noteTitle(for: s, kind: .review, calendar: calendar) == "11-05(목) 정리")
+
+        let parent = Unit(device: device, at: .now, title: "Transport layer", order: 1)
+        var child = Unit(device: device, at: .now, title: "Reliable data transfer", order: 1, parentId: parent.id)
+        child.sessionIds = [s.id]
+        file.units = [parent, child]
+        #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-05(목) Reliable data transfer")
+
+        s.topic = "Principles of reliable data transfer"
+        file.sessions = [s]
+        #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-05(목) Principles of reliable data transfer")
+        #expect(file.noteTitle(for: s, kind: .review, calendar: calendar) == "11-05(목) Principles of reliable data transfer 정리")
+    }
+
+    @Test func aSessionNoteNameHoldsNoPathOrLinkCharacters() {
+        var s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
+        s.topic = "..TCP: flow/congestion [ch. 3] #1"
+        let file = CourseFile(course: courses[0], sessions: [s])
+        #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-03(화) TCP flow-congestion ch. 3 1")
+    }
+
+    @Test func aLongSubjectIsCutAtAWord() {
+        var s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
+        s.topic = "Principles of reliable data transfer with pipelined protocols, Go-Back-N and selective repeat"
+        let file = CourseFile(course: courses[0], sessions: [s])
+        let title = file.noteTitle(for: s, kind: .review, calendar: calendar)
+        #expect(title == "11-03(화) Principles of reliable data transfer with pipelined 정리")
+
+        s.topic = String(repeating: "가", count: 100)
+        let unbroken = CourseFile(course: courses[0], sessions: [s]).noteTitle(for: s, kind: .rough, calendar: calendar)
+        #expect(unbroken == "11-03(화) " + String(repeating: "가", count: 60))
+    }
+
+    /// The name is the day the class was held, as its title is, not the study day the 4 a.m. boundary would give.
+    @Test func aLateClassIsNamedByItsCalendarDay() {
+        let s = Session(device: device, at: .now, week: 10, date: date("2026-11-06 01:00"))
+        let file = CourseFile(course: courses[0], sessions: [s])
+        #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-06(금)")
+    }
+
     @Test func movingASessionNamesItByItsNewDate() {
         let start = LocalDate(year: 2026, month: 9, day: 1)!
         let a = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))

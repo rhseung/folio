@@ -145,7 +145,7 @@ public struct SessionNote {
             return
         }
         let settings = try ctx.settings()
-        let title = file.noteTitle(for: s, kind: kind)
+        let title = file.noteTitle(for: s, kind: kind, calendar: ctx.calendar)
         let body = NoteTemplate.body(for: kind, title: title, sections: settings.noteSections(for: kind))
         let made = try ctx.createNote(course, title: title, meta: NoteMeta(id: id, kind: kind, math: settings.newNoteMath), body: body)
         try ctx.edit(course) { f in

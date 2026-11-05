@@ -400,10 +400,39 @@ extension CourseFile {
         return subject(of: session).map { String(localized: .sessionTitled(day, $0)) } ?? day
     }
 
-    /// A rough note is named after its session, a review note "<session> 정리". The title becomes the file name, so
-    /// `session note` and the new-note sheet must name a session's note the same way.
-    public func noteTitle(for session: Session, kind: NoteKind) -> String {
-        kind == .review ? "\(name(of: session)) 정리" : name(of: session)
+    /// `11-05(목) Principles of reliable data transfer`, with ` 정리` for a review note. The title becomes the file
+    /// name, so `session note` and the new-note sheet must name a session's note the same way. `-` stands for the
+    /// title's `/`, which a file name can't hold. Notes made before this keep their `10주차-2` names.
+    public func noteTitle(for session: Session, kind: NoteKind, calendar: Calendar) -> String {
+        let c = calendar.dateComponents([.month, .day], from: session.date)
+        let weekday = Self.noteWeekdays[calendar.isoWeekday(of: session.date) - 1]
+        let two = { (n: Int) in n < 10 ? "0\(n)" : "\(n)" }
+        let day = "\(two(c.month!))-\(two(c.day!))(\(weekday))"
+        let subject = subject(of: session).map(Self.noteSubject).flatMap { $0.isEmpty ? nil : $0 }
+        let title = subject.map { "\(day) \($0)" } ?? day
+        return kind == .review ? "\(title) 정리" : title
+    }
+
+    /// In code, not the catalog: a file name must not change with the device's language.
+    static let noteWeekdays = ["월", "화", "수", "목", "금", "토", "일"]
+
+    static let noteSubjectLimit = 60
+
+    /// The subject as it can sit in a file name: path and Obsidian link characters dropped or made `-` (the store
+    /// would otherwise turn `TCP: flow` into `TCP- flow`), and cut at a word so a long topic doesn't make a name
+    /// Finder truncates.
+    static func noteSubject(_ subject: String) -> String {
+        var s = String(subject.map { ch -> Character in
+            if "/\\|".contains(ch) { return "-" }
+            if ":#^[]".contains(ch) || ch.isNewline { return " " }
+            return ch
+        })
+        s = s.split(whereSeparator: \.isWhitespace).joined(separator: " ")
+        s = String(s.drop { $0 == "." || $0 == " " })
+        guard s.count > noteSubjectLimit else { return s }
+        let head = s.prefix(noteSubjectLimit)
+        let cut = head.lastIndex(of: " ").flatMap { head.distance(from: head.startIndex, to: $0) >= noteSubjectLimit / 2 ? head[..<$0] : nil } ?? head
+        return String(cut).trimmingCharacters(in: CharacterSet(charactersIn: " -·.,"))
     }
 
     /// A past class still owing its review note: not when the session or the whole course is left out of review.
