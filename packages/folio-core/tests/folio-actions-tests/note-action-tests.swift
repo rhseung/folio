@@ -243,7 +243,6 @@ struct NoteActionTests {
         return f.meta(of: try #require(f.notes.first { $0.id == id }))
     }
 
-    /// A class note's units are its session's as they are now, so unlinking the class from a unit takes the note off it.
     /// Session notes named before #273 take the date and subject; their headings and the links to them follow, and
     /// undoing the batch turns all three back.
     @Test func retitlingRenamesOldSessionNotesAndUndoTurnsThemBack() throws {
@@ -255,6 +254,11 @@ struct NoteActionTests {
         let other = UUID()
         try run(SessionAdd(id: other, course: Self.graphTheory, date: now.addingTimeInterval(86400)))
         try run(NoteAdd(id: own, course: Self.graphTheory, title: "내 필기", kind: .rough, session: other))
+        // A note deleted in Finder keeps its entry; it is skipped rather than stopping the rest.
+        let gone = UUID(), third = UUID()
+        try run(SessionAdd(id: third, course: Self.graphTheory, date: now.addingTimeInterval(2 * 86400)))
+        try run(NoteAdd(id: gone, course: Self.graphTheory, title: "9주차-3", kind: .rough, session: third))
+        try FileManager.default.removeItem(at: try store().fileURL("Notes/9주차-3.md"))
         let before = try ["Notes/2주차-1.md", "Notes/9주차-1 정리.md", "Notes/모음.md"].map(text)
 
         let s = try #require(try file().sessions.first { $0.id == session })
@@ -268,7 +272,7 @@ struct NoteActionTests {
         let batch = try #require(try run(NoteRetitleSessions(course: Self.graphTheory)).made)
         let paths = try Dictionary(uniqueKeysWithValues: file().notes.map { ($0.id, $0.path) })
         #expect(paths[Self.note] == "Notes/\(rough).md" && paths[review] == "Notes/\(rough) 정리.md")
-        #expect(paths[own] == "Notes/내 필기.md")
+        #expect(paths[own] == "Notes/내 필기.md" && paths[gone] == "Notes/9주차-3.md")
         #expect(try text("Notes/\(rough).md").hasPrefix("# \(rough)\n"))
         #expect(try text("Notes/\(rough) 정리.md").hasPrefix("# \(rough) 정리\n"))
         #expect(try text("Notes/모음.md") == "[[\(rough)]]와 [[\(rough) 정리#예시|예시]], [[다른 노트]]\n")
@@ -280,6 +284,7 @@ struct NoteActionTests {
         #expect(try ["Notes/2주차-1.md", "Notes/9주차-1 정리.md", "Notes/모음.md"].map(text) == before)
     }
 
+    /// A class note's units are its session's as they are now, so unlinking the class from a unit takes the note off it.
     @Test func aSessionNotesUnitsFollowTheSession() throws {
         let session = UUID(), unit = UUID(), note = UUID()
         try run(SessionAdd(id: session, course: Self.graphTheory, date: now))

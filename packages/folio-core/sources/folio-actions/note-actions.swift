@@ -253,10 +253,14 @@ public struct NoteRetitleSessions {
             let store = try ctx.store(course)
             var taken = Set<String>()
             for r in try ctx.file(course).legacySessionNoteRetitles(calendar: ctx.calendar) {
+                // An entry whose file was renamed or deleted in Finder has nothing to move, and the journal would
+                // refuse the whole batch for it.
+                let source = store.fileURL(r.path)
+                guard FileManager.default.fileExists(atPath: source.path) else { continue }
                 // newNoteURL names a file in Notes/ itself; a note filed deeper would move up a folder, which is more
                 // than a rename.
                 let url = store.newNoteURL(title: r.title, format: NoteFormat(path: r.path) ?? .markdown, avoiding: taken)
-                guard store.fileURL(r.path).deletingLastPathComponent().standardizedFileURL == url.deletingLastPathComponent().standardizedFileURL else { continue }
+                guard source.deletingLastPathComponent().standardizedFileURL == url.deletingLastPathComponent().standardizedFileURL else { continue }
                 taken.insert(url.deletingPathExtension().lastPathComponent)
                 moves.append(PlannedMove(from: try ctx.relative(course, r.path), to: ctx.relative(url)))
             }
