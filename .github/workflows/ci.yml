@@ -29,18 +29,32 @@ jobs:
 
   build:
     runs-on: xcode-27
+    # A test stuck on the main thread outlives its own time limit; without this the job would run for six hours.
+    timeout-minutes: 45
     strategy:
       fail-fast: false
       matrix:
-        # test-app builds the Mac app to host the screen-model tests, so it stands in for build-mac.
-        task: [test-app, build-ipad]
+        # test-app builds the Mac app to host the screen-model tests, so it stands in for build-mac. test-ipad runs the
+        # iPad's own tests on a simulator.
+        task: [test-app, build-ipad, test-ipad]
     env:
       # Every other check builds Debug, so the iPad build goes Release: it also catches code that reaches what only
       # exists under #if DEBUG. It runs on PRs because macOS-only APIs broke main three times when it ran after merging.
       FOLIO_CONFIGURATION: ${{ matrix.task == 'build-ipad' && 'Release' || 'Debug' }}
+      # The note-view references are this runner's pictures; on a new runner image the comparison fails rather than
+      # quietly stopping. A missing or changed picture lands here and goes up as the note-screens artifact.
+      FOLIO_NOTE_SCREENS_STRICT: 1
+      FOLIO_NOTE_SCREENS: ${{ github.workspace }}/.build/note-screens
     steps:
       - uses: actions/checkout@v7
       - run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
       - run: defaults write -g AppleLanguages -array ko-KR en-US && defaults write -g AppleLocale ko_KR
       - uses: jdx/mise-action@v5
       - run: mise run ${{ matrix.task }}
+      # `mise run note-screens -- <run ID>` takes these as the new references.
+      - if: failure() && matrix.task == 'test-app'
+        uses: actions/upload-artifact@v7
+        with:
+          name: note-screens
+          path: .build/note-screens
+          if-no-files-found: ignore

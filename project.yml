@@ -102,3 +102,26 @@ targets:
         # XcodeGen points a multiplatform app's host at the iOS layout; the Mac app keeps its binary in Contents/MacOS.
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/Folio.app/Contents/MacOS/Folio
         BUNDLE_LOADER: $(TEST_HOST)
+  # Hangul typed into the iPad's edit view, run inside the app on an iPad simulator (mise run test-ipad). The Mac's
+  # note-view checks are in FolioTests, which builds these files to nothing (#if os(iOS)).
+  FolioPadTests:
+    type: bundle.unit-test
+    supportedDestinations: [iOS]
+    sources: [app-tests/ipad]
+    dependencies:
+      - target: Folio
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        TARGETED_DEVICE_FAMILY: "2"
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Folio.app/Folio
+        BUNDLE_LOADER: $(TEST_HOST)
+schemes:
+  # Its own scheme: in Folio's, a Mac test run would also try to run these iOS-only tests.
+  FolioPad:
+    build:
+      targets:
+        Folio: all
+        FolioPadTests: [test]
+    test:
+      targets: [FolioPadTests]
