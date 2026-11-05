@@ -106,6 +106,8 @@ struct NoteActionTests {
         // `note link` adds too, and doesn't move it.
         try run(NoteUnlinkSession(course: Self.graphTheory, note: note, session: ids[0]))
         #expect(try file().sessions(pointingAt: note).map(\.id) == [ids[1], ids[2]])
+        // A session the note isn't on is a mistake to report, not a silent success.
+        #expect(throws: ActionError.self) { try run(NoteUnlinkSession(course: Self.graphTheory, note: note, session: ids[0])) }
         try run(NoteLink(course: Self.graphTheory, note: note, kind: .review, session: ids[0]))
         #expect(try meta(note).sessionIds == ids)
         try run(NoteRemove(course: Self.graphTheory, note: "Notes/rdt 정리.md"))

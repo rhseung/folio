@@ -184,7 +184,11 @@ public struct NoteUnlinkSession {
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
             guard f.notes.contains(where: { $0.id == note }) else { throw ActionError.notFound(String(localized: .errorNotFoundNote("\(note)"))) }
-            _ = try index(session, in: f.sessions, .valueSession)
+            let s = f.sessions[try index(session, in: f.sessions, .valueSession)]
+            // A mistyped session would otherwise report the note taken off a class it was never on.
+            guard s.roughNoteId == note || s.reviewNoteId == note else {
+                throw ActionError.rule(String(localized: .errorNoteSessionNotLinked(f.name(of: s))))
+            }
             f.unlinkNote(note, from: session)
         }
     }

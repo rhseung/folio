@@ -672,6 +672,17 @@
         }
       }
     },
+    "error.note.session-not-linked": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차 %@은(는) 이 노트에 연결되어 있지 않습니다"
+          }
+        }
+      }
+    },
     "error.note.title-empty": {
       "extractionState": "manual",
       "localizations": {

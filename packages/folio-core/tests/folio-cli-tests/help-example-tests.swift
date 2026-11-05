@@ -33,7 +33,7 @@ struct HelpExampleTests {
         ["material", "track", "EC4207"],
         ["note", "add", "EC4207", "매칭 정리", "--kind", "topic"],
         ["note", "add", "EC4207", "시험 메모"],
-        ["note", "add", "EC4207", "9주차 정리", "--kind", "review"],
+        ["note", "add", "EC4207", "9주차 정리", "--kind", "review", "--session", "9주차-1"],
         ["exam", "plan", "add", "EC4207/중간고사", "--day", "2026-10-18", "트리 단원 복습"],
         ["unit", "add", "EC4321", "기구학"],
     ]
