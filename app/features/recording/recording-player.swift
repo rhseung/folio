@@ -54,13 +54,13 @@ struct RecordingPlayer: View {
                             }
                             .padding(Theme.Space.s)
                         }
-                        // Focused from the start, so ⌘A then ⌘C copies everything without a click first; the search
-                        // field took the first focus before and swallowed both.
+                        // Picking a line focuses the list so ⌘A and ⌘C reach it. The sheet still opens on the search
+                        // field: `defaultFocus`, `prefersDefaultFocus` and setting focus in `.task` all lost to it.
                         .focusable(interactions: .edit)
                         .focusEffectDisabled()
                         .focused($linesFocused)
-                        .defaultFocus($linesFocused, true)
-                        .lineCommands(selectAll: { model.selectAll() }, copied: model.canCopy ? { model.copiedText } : nil)
+                        .onLineCommand("a") { model.selectAll() }
+                        .onLineCommand("c", model.canCopy ? { writePasteboard(model.copiedText) } : nil)
                         .onChange(of: current) { _, i in
                             guard let i, model.query.isEmpty, player.playing else { return }
                             withAnimation(.snappy(duration: 0.35)) { proxy.scrollTo(i, anchor: .center) }
@@ -239,20 +239,26 @@ struct RecordingPlayer: View {
             .help(Text(.recordingLinePlay))
             // With the audio gone there is nothing to seek to; the line can still be picked and copied.
             .allowsHitTesting(recording.hasAudio)
-            Text(line.text).foregroundStyle(playing || selected ? Theme.Palette.text : Theme.Palette.textSecondary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            if bookmarked { Image(systemName: "bookmark.fill").font(Theme.Typeface.label).foregroundStyle(Theme.Palette.warning) }
+            // The pick covers the row but the time: over the time too, iPad's UIKit tap would fire beside the
+            // button's jump and pick the line, while the Mac's button keeps the click to itself.
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Space.m) {
+                Text(line.text).foregroundStyle(playing || selected ? Theme.Palette.text : Theme.Palette.textSecondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if bookmarked { Image(systemName: "bookmark.fill").font(Theme.Typeface.label).foregroundStyle(Theme.Palette.warning) }
+            }
+            .padding(.vertical, Theme.Inset.listRow.top)
+            .padding(.trailing, Theme.Inset.listRow.trailing)
+            .contentShape(.rect)
+            .onPick { extending in
+                model.select(index, extending: extending)
+                linesFocused = true
+            }
+            .accessibilityAddTraits(selected ? .isSelected : [])
         }
-        .padding(Theme.Inset.listRow)
+        .padding(.leading, Theme.Inset.listRow.leading)
         // The pick wins over the playing tint: otherwise picking the playing line would show no change. The playing
         // line still keeps its accent time.
         .background(selected ? Theme.Palette.fill : playing ? accent.tint : .clear, in: .rect(cornerRadius: Theme.Radius.control))
-        .contentShape(.rect)
-        .onPick { extending in
-            model.select(index, extending: extending)
-            linesFocused = true
-        }
-        .accessibilityAddTraits(selected ? .isSelected : [])
         .animation(.snappy(duration: 0.25), value: playing)
     }
 }
@@ -261,26 +267,25 @@ private extension View {
     /// A tap that says whether Shift was held, to extend a pick. SwiftUI's tap carries no modifier keys.
     func onPick(_ action: @escaping (_ extending: Bool) -> Void) -> some View {
         #if os(macOS)
-        onTapGesture { action(NSEvent.modifierFlags.contains(.shift)) }
+        // The click's own flags: the keyboard's live state (`NSEvent.modifierFlags`) misses a Shift the click carries
+        // but no key holds, as from Accessibility or a scripted click.
+        onTapGesture { action((NSApp.currentEvent?.modifierFlags ?? NSEvent.modifierFlags).contains(.shift)) }
         #else
         // UIKit's recognizer reads the hardware keyboard's Shift; touch alone has no way to extend.
         gesture(PickTap(action: action))
         #endif
     }
 
-    /// ⌘A and ⌘C on the focused lines. A button shortcut on the Mac would take both from the search field even while
-    /// it is being typed in, so there they go through the responder chain as Edit menu commands.
-    func lineCommands(selectAll: @escaping () -> Void, copied: (() -> String)?) -> some View {
+    /// ⌘A (`"a"`) or ⌘C (`"c"`) on the focused lines; `nil` leaves the command off. A button shortcut on the Mac
+    /// would take the key from the search field even while it is being typed in, so there it goes through the
+    /// responder chain as the Edit menu's command.
+    func onLineCommand(_ key: KeyEquivalent, _ action: (() -> Void)?) -> some View {
         #if os(macOS)
-        // The payload is returned, not written here: SwiftUI fills the pasteboard with what the command returns.
-        var payload: (() -> [NSItemProvider])?
-        if let copied { payload = { [NSItemProvider(object: copied() as NSString)] } }
-        return onCommand(#selector(NSText.selectAll(_:)), perform: selectAll)
-            .onCopyCommand(perform: payload)
+        onCommand(key == "a" ? #selector(NSText.selectAll(_:)) : #selector(NSText.copy(_:)), perform: action)
         #else
-        return onKeyPress(keys: ["a", "c"]) { press in
-            guard press.modifiers.contains(.command) else { return .ignored }
-            if press.key == "a" { selectAll() } else if let copied { writePasteboard(copied()) }
+        onKeyPress(keys: [key]) { press in
+            guard press.modifiers.contains(.command), let action else { return .ignored }
+            action()
             return .handled
         }
         #endif
@@ -300,12 +305,7 @@ private extension View {
 private struct PickTap: UIGestureRecognizerRepresentable {
     let action: (_ extending: Bool) -> Void
 
-    func makeUIGestureRecognizer(context: Context) -> UITapGestureRecognizer {
-        let tap = UITapGestureRecognizer()
-        // Left on, it would cancel the touch the line's time button needs to jump.
-        tap.cancelsTouchesInView = false
-        return tap
-    }
+    func makeUIGestureRecognizer(context: Context) -> UITapGestureRecognizer { UITapGestureRecognizer() }
 
     func handleUIGestureRecognizerAction(_ recognizer: UITapGestureRecognizer, context: Context) {
         guard recognizer.state == .ended else { return }
