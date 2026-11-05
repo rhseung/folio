@@ -106,6 +106,7 @@ final class NoteScrollView: NSScrollView {
         autohidesScrollers = true
         drawsBackground = false
         borderType = .noBorder
+        contentView = NoteClipView()
         findBarPosition = .aboveContent
         document.minSize = .zero
         document.maxSize = NSSize(width: CGFloat.greatestFiniteMagnitude, height: CGFloat.greatestFiniteMagnitude)
@@ -121,35 +122,37 @@ final class NoteScrollView: NSScrollView {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    // The scroll view takes a click over its document itself and hands it to the document view, so a widget over the
-    // text never got one; a widget under the point gets it. Code and wide pictures scroll sideways, so the trackpad and
-    // the scroller have to reach their scroll view; a click on what it shows goes to the scroll view itself, which
-    // hands it on to the note. A code block's text view would take the keyboard, and with it the note's shortcuts and
-    // find bar. The room past the note's end is a content inset, under no part of the note; a click there went
-    // nowhere, so the note takes it and puts the caret at its end.
+    // Every click over the note is routed here, whatever AppKit's own hit test gave: with a plain clip view the scroll
+    // view took clicks over its document itself, and with `NoteClipView` it hands back the deepest view instead. A
+    // widget under the point gets its click. Code and wide pictures scroll sideways, so the trackpad and the scroller
+    // have to reach their scroll view; a click on what it shows goes to the scroll view itself, which hands it on to
+    // the note. A code block's text view would take the keyboard, and with it the note's shortcuts and find bar. The
+    // room past the note's end is the clip view's, under no part of the note; a click there went nowhere, so the note
+    // takes it and puts the caret at its end.
     override func hitTest(_ point: NSPoint) -> NSView? {
         let hit = super.hitTest(point)
-        guard hit === self || hit === contentView, let document = documentView else { return hit }
+        guard let hit, let document = documentView, hit === self || hit === contentView || hit.isDescendant(of: document) else { return hit }
         let inClip = contentView.convert(point, from: superview)
         if document.convert(inClip, from: contentView).y >= document.bounds.maxY { return document }
-        guard let under = document.hitTest(inClip), under !== document else { return hit }
+        guard let under = document.hitTest(inClip), under !== document else { return document }
         let chain = sequence(first: under, next: \.superview)
         if chain.contains(where: { $0 is WidgetWebView }) { return under }
-        guard let side = chain.lazy.compactMap({ $0 as? SideScrollView }).first else { return hit }
+        guard let side = chain.lazy.compactMap({ $0 as? SideScrollView }).first else { return document }
         if let bar = side.horizontalScroller, under === bar || under.isDescendant(of: bar) { return under }
         return side
     }
+}
 
-    // The room past the note's end is a content inset, and AppKit insets the scrollers by it too: the track stopped
-    // at half the editor's height and near the top of the preview. A negative `scrollerInsets` doesn't undo that, so
-    // the vertical scroller is stretched back to the bottom after AppKit places it.
-    override func tile() {
-        let bottom = NoteOverscroll.bottom(frame.height, preview: documentView is ReaderTextView)
-        if contentInsets.bottom != bottom { contentInsets = NSEdgeInsets(top: 0, left: 0, bottom: bottom, right: 0) }
-        super.tile()
-        if let scroller = verticalScroller, scroller.frame.maxY < bounds.maxY {
-            scroller.frame.size.height = bounds.maxY - scroller.frame.minY
-        }
+/// The room past the note's end, as more document to scroll through. As a bottom content inset it was a strip the clip
+/// view leaves to the scroll view: clicks there went to the scroll view's background, even over text, and a note just
+/// opened was drawn only down to it, so the lower half of the screen stayed blank until a scroll and never took a click.
+final class NoteClipView: NSClipView {
+    override var documentRect: NSRect {
+        var rect = super.documentRect
+        guard let document = documentView else { return rect }
+        let room = NoteOverscroll.bottom(bounds.height, preview: document is ReaderTextView)
+        rect.size.height = max(rect.height, document.frame.height + room)
+        return rect
     }
 }
 
