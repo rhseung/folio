@@ -170,6 +170,8 @@ struct NoteScrollTests {
             let window = Self.host(view)
             view.setFrameSize(NSSize(width: 900, height: 2000))
             let scroll = try #require(view.enclosingScrollView)
+            // Shown whatever the machine's scroller setting, which hid it on CI and left its frame empty.
+            scroll.autohidesScrollers = false
             scroll.tile()
             let scroller = try #require(scroll.verticalScroller)
             #expect(abs(scroller.frame.height - scroll.frame.height) <= 1, "\(preview): \(scroller.frame) in \(scroll.frame)")
