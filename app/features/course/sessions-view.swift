@@ -53,7 +53,8 @@ struct SessionsView: View {
         HStack(spacing: Theme.Space.s) {
             Text(.sessionsWeek(week.number)).font(Theme.Typeface.sectionTitle)
                 .foregroundStyle(week.thisWeek ? accent.ink : Theme.Palette.textSecondary)
-            if week.thisWeek { Chip(String(localized: .sessionsThisWeek), tone: .accent) }
+                // The accent color is the only visible mark, so VoiceOver needs the word.
+                .accessibilityValue(week.thisWeek ? String(localized: .sessionsThisWeek) : "")
             Text(week.range).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
             if week.examWeek {
                 Text("· " + String(localized: .sessionsExamWeek)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
@@ -632,7 +633,8 @@ struct SessionCard: View {
                 Text(model.title(of: session, in: file)).font(Theme.Typeface.bodyStrong).lineLimit(1).truncationMode(.tail)
                     .foregroundStyle(model.hasSubject(session, in: file) ? Theme.Palette.text : Theme.Palette.textTertiary)
                     .help(file.title(of: session, calendar: model.calendar))
-                if live { Chip(String(localized: .sessionsNow), tone: .accent) }
+                    // The accent border and tile are the only visible mark, so VoiceOver needs the word.
+                    .accessibilityValue(live ? String(localized: .sessionsNow) : "")
                 if cancelled { Chip(String(localized: .sessionsCancelled)) }
                 if let late { Chip(late.label, tone: late.value == .late ? .warning : late.value == .absent ? .danger : .plain) }
             }
