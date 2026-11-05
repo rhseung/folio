@@ -1,32 +1,36 @@
-/* Note typography, shared by the reader and the live-preview editor.
-   Colors come from the app as variables (theme.swift is their only source, see note-style.swift): --text, --text-2,
-   --text-3, --line, --line-soft, --fill, --card, --accent, --accent-ink and the callout kinds --c-*. */
+/* Note typography, shared by the note preview, the Claude panel and PDF export.
+   Colors and sizes come from the app as variables (note-style.swift, from theme.swift and note-look.swift): --text,
+   --text-2, --text-3, --line, --line-soft, --fill, --card, --accent, --accent-ink, the callout kinds --c-*, and
+   --measure, --margin, --body, --paragraph-gap, --block-gap, --radius, --code-size, --label-size, --h1 to --h6. */
 
 :root {
   color-scheme: light dark;
-  --measure: 720px;
-  --body: 16px;
   --leading: 1.78;
-  --radius: 12px;
   --mono: ui-monospace, "SF Mono", Menlo, monospace;
   --sans: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Pretendard", sans-serif;
 }
 
 html { background: transparent; color: var(--text); -webkit-font-smoothing: antialiased; }
-body.note { margin: 0 auto; padding: 40px 40px 96px; max-width: var(--measure); font: var(--body)/var(--leading) var(--sans);
-  letter-spacing: -0.003em; word-break: keep-all; overflow-wrap: anywhere; }
+/* The measure takes the margins in, as the native views' column does. */
+body.note { box-sizing: border-box; margin: 0 auto; padding: var(--margin) var(--margin) 96px; max-width: var(--measure);
+  font: var(--body)/var(--leading) var(--sans); letter-spacing: -0.003em; word-break: keep-all; overflow-wrap: anywhere; }
+/* Beside the editor the preview brings any block up to the top, the note's end included. */
+body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); }
 ::selection { background: color-mix(in srgb, var(--accent) 28%, transparent); }
 
 /* Headings: a quiet hierarchy, the accent only as a short rule under h2. */
-.note h1 { font-size: 30px; line-height: 1.25; font-weight: 750; letter-spacing: -0.025em; margin: 0 0 28px; }
-.note h2 { font-size: 21px; line-height: 1.35; font-weight: 700; letter-spacing: -0.015em; margin: 48px 0 14px; padding-bottom: 8px;
+.note h1 { font-size: var(--h1); line-height: 1.25; font-weight: 750; letter-spacing: -0.025em; margin: 0 0 28px; }
+.note h2 { font-size: var(--h2); line-height: 1.35; font-weight: 700; letter-spacing: -0.015em; margin: 48px 0 14px; padding-bottom: 8px;
   border-bottom: 1px solid var(--line-soft); position: relative; }
 .note h2::after { content: ""; position: absolute; left: 0; bottom: -1px; width: 28px; height: 2px; border-radius: 2px; background: var(--accent); }
-.note h3 { font-size: 17.5px; font-weight: 680; margin: 32px 0 8px; }
-.note h4, .note h5, .note h6 { font-size: 15px; font-weight: 650; margin: 24px 0 6px; color: var(--text-2); }
+.note h3 { font-size: var(--h3); font-weight: 680; margin: 32px 0 8px; }
+.note h4 { font-size: var(--h4); }
+.note h5 { font-size: var(--h5); }
+.note h6 { font-size: var(--h6); color: var(--text-2); }
+.note h4, .note h5, .note h6 { font-weight: 650; margin: 24px 0 6px; }
 .note h1 + h2, .note h2:first-child { margin-top: 0; }
 
-.note p { margin: 0 0 14px; }
+.note p { margin: 0 0 var(--paragraph-gap); }
 .note strong { font-weight: 650; }
 .note em { font-style: italic; }
 .note del { color: var(--text-3); }
@@ -39,7 +43,7 @@ body.note { margin: 0 auto; padding: 40px 40px 96px; max-width: var(--measure); 
 .note a[href^="http"]::after { content: "↗"; font-size: .75em; margin-left: 2px; color: var(--text-3); }
 
 /* Lists */
-.note ul, .note ol { margin: 0 0 14px; padding-left: 1.5em; }
+.note ul, .note ol { margin: 0 0 var(--paragraph-gap); padding-left: 1.5em; }
 .note li { margin: 3px 0; padding-left: 2px; }
 .note li > ul, .note li > ol { margin: 3px 0 4px; }
 .note ul > li::marker { color: color-mix(in srgb, var(--accent) 70%, var(--text-3)); }
@@ -56,7 +60,7 @@ body.note { margin: 0 auto; padding: 40px 40px 96px; max-width: var(--measure); 
 /* Code */
 .note code { font: 0.86em var(--mono); background: var(--code-fill); padding: 2px 6px; border-radius: 6px; }
 .note pre { margin: 18px 0; padding: 14px 18px; background: var(--code-fill); border-radius: var(--radius); overflow-x: auto; line-height: 1.6; tab-size: 4; }
-.note pre code { background: none; padding: 0; font-size: 13.5px; }
+.note pre code { background: none; padding: 0; font-size: var(--code-size); }
 .note pre[data-lang]::before { content: attr(data-lang); display: block; font: 600 11px var(--sans); color: var(--text-3); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 8px; }
 /* Code colors from code.js's classes; scoped to code so markdown marks the editor also tags keep their own look. */
 :is(.note pre, .cm-code) :is(.tok-keyword, .tok-operatorKeyword) { color: var(--c-theorem); }
@@ -85,7 +89,7 @@ body.note { margin: 0 auto; padding: 40px 40px 96px; max-width: var(--measure); 
 @media (prefers-color-scheme: dark) { .note img[src$=".svg"] { background: #f4f2ee; } }
 
 /* Tables: rounded frame, tinted header, hover row. */
-.note table { border-collapse: separate; border-spacing: 0; margin: 20px 0; font-size: 14.5px; line-height: 1.6; max-width: 100%;
+.note table { border-collapse: separate; border-spacing: 0; margin: var(--block-gap) 0; font-size: 14.5px; line-height: 1.6; max-width: 100%;
   border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: block; overflow-x: auto; width: fit-content; }
 .note th, .note td { padding: 9px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line-soft); }
 .note th { background: var(--fill); font-weight: 650; font-size: 13.5px; color: var(--text-2); }
@@ -95,14 +99,14 @@ body.note { margin: 0 auto; padding: 40px 40px 96px; max-width: var(--measure); 
 
 /* Math */
 .note .math { font-size: 1.04em; }
-.note .math.display { display: block; margin: 20px 0; padding: 6px 0; overflow-x: auto; overflow-y: hidden; text-align: center; }
+.note .math.display { display: block; margin: var(--block-gap) 0; padding: 6px 0; overflow-x: auto; overflow-y: hidden; text-align: center; }
 .note .math.pending { font: .9em var(--mono); color: var(--text-3); }
 .note .math-error { font: .9em var(--mono); color: var(--c-danger); background: color-mix(in srgb, var(--c-danger) 10%, transparent); padding: 1px 5px; border-radius: 5px; }
 .note .katex { font-size: 1.08em; }
 .note .katex-display { margin: 0; }
 
 /* Callouts: a tinted card with a colored spine. Math-style blocks (definition, theorem, proof) read like a textbook. */
-.note .callout { --c: var(--c-neutral); margin: 20px 0; padding: 12px 18px 4px; border-radius: var(--radius);
+.note .callout { --c: var(--c-neutral); margin: var(--block-gap) 0; padding: 12px 18px 4px; border-radius: var(--radius);
   background: color-mix(in srgb, var(--c) 7%, transparent); border-left: 3px solid color-mix(in srgb, var(--c) 75%, transparent); }
 .note .callout:not([open]) { padding-bottom: 12px; }
 .note .callout > summary { cursor: pointer; list-style: none; margin-bottom: 6px; display: flex; gap: 8px; align-items: baseline; }
@@ -110,7 +114,7 @@ body.note { margin: 0 auto; padding: 40px 40px 96px; max-width: var(--measure); 
 .note .callout > summary::-webkit-details-marker { display: none; }
 .note .callout > summary::after { content: "›"; margin-left: auto; color: var(--text-3); transform: rotate(90deg); transition: transform .15s; }
 .note .callout:not([open]) > summary::after { transform: none; }
-.note .callout-label { font-weight: 700; font-size: 13px; letter-spacing: .02em; color: color-mix(in srgb, var(--c) 85%, var(--text)); white-space: nowrap; }
+.note .callout-label { font-weight: 700; font-size: var(--label-size); letter-spacing: .02em; color: color-mix(in srgb, var(--c) 85%, var(--text)); white-space: nowrap; }
 .note .callout-title { font-weight: 600; }
 .note .callout > p:last-child, .note .callout > ul:last-child, .note .callout > ol:last-child { margin-bottom: 10px; }
 .note .callout-definition, .note .callout-info, .note .callout-note, .note .callout-abstract { --c: var(--c-definition); }
@@ -120,8 +124,8 @@ body.note { margin: 0 auto; padding: 40px 40px 96px; max-width: var(--measure); 
 .note .callout-danger { --c: var(--c-danger); }
 .note .callout-proof, .note .callout-remark { --c: var(--c-neutral); background: none; }
 .note .callout-proof > :last-child::after { content: "∎"; float: right; color: var(--text-3); }
-/* A proof right under a theorem joins it: no gap (the -20px cancels the theorem's margin) and square corners where they meet. */
-.note .callout.attached { margin-top: -20px; border-top-left-radius: 0; border-top-right-radius: 0; }
+/* A proof right under a theorem joins it: no gap (the negative margin cancels the theorem's) and square corners where they meet. */
+.note .callout.attached { margin-top: calc(-1 * var(--block-gap)); border-top-left-radius: 0; border-top-right-radius: 0; }
 .note .callout:has(+ .callout.attached) { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
 
 /* Wikilinks and embeds */
@@ -129,11 +133,14 @@ body.note { margin: 0 auto; padding: 40px 40px 96px; max-width: var(--measure); 
 .note .embed { margin: 16px 0; padding: 10px 14px; border: 1px dashed var(--line); border-radius: 10px; color: var(--text-3); font-size: 14px; }
 .note .embed::before { content: "↪ " attr(data-href); }
 .note .cb-widget { border: 1px dashed var(--line); border-radius: var(--radius); }
+/* A widget runs in a frame of its own, as tall as its page says, up to most of the screen; past that it scrolls. */
+.note iframe.cb-widget { display: block; box-sizing: border-box; width: 100%; max-height: 80vh; margin: var(--block-gap) 0; border: 0; border-radius: 0; }
+
+/* Diagrams: drawn to their own size, never wider than the column, which scrolls them sideways if they can't shrink. */
+.note figure.mermaid { margin: var(--block-gap) 0; overflow-x: auto; text-align: center; }
+.note figure.mermaid svg { max-width: 100%; height: auto; }
 .note .raw-html { color: var(--text-3); }
 
 /* Footnotes and block IDs */
 .note [id^="^"]:target { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 6px; transition: background 1s; }
 
-/* A block typed into in the read view (reader.js `prepare`) looks like the rest of the note. */
-.note [contenteditable="true"] { outline: none; caret-color: var(--accent); }
-.note [contenteditable="true"] a { cursor: text; }
