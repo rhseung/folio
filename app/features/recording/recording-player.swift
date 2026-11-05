@@ -10,6 +10,7 @@ struct RecordingPlayer: View {
     @State private var model: RecordingPlayerModel
     @State private var deleting = false
     @State private var showingContext = false
+    @FocusState private var linesFocused: Bool
     @Environment(\.searchTarget) private var searchTarget
     private var player: AudioPlayback { model.player }
     private var recording: Recording { model.recording }
@@ -47,12 +48,19 @@ struct RecordingPlayer: View {
                         ScrollView {
                             LazyVStack(alignment: .leading, spacing: Theme.Space.xxs) {
                                 ForEach(model.shownLines, id: \.index) { i, line, bookmarked in
-                                    row(line, playing: i == current, bookmarked: bookmarked)
+                                    row(i, line, playing: i == current, selected: model.selected.contains(i), bookmarked: bookmarked)
                                         .id(i)
                                 }
                             }
                             .padding(Theme.Space.s)
                         }
+                        // Focused from the start, so ⌘A then ⌘C copies everything without a click first; the search
+                        // field took the first focus before and swallowed both.
+                        .focusable(interactions: .edit)
+                        .focusEffectDisabled()
+                        .focused($linesFocused)
+                        .defaultFocus($linesFocused, true)
+                        .lineCommands(selectAll: { model.selectAll() }, copied: model.canCopy ? { model.copiedText } : nil)
                         .onChange(of: current) { _, i in
                             guard let i, model.query.isEmpty, player.playing else { return }
                             withAnimation(.snappy(duration: 0.35)) { proxy.scrollTo(i, anchor: .center) }
@@ -70,8 +78,9 @@ struct RecordingPlayer: View {
             }
             if model.showsContext { contextBlock }
             HStack {
-                Button(.recordingCopy, systemImage: "doc.on.doc") { copy(model.transcript?.text ?? "") }.disabled(!model.hasLines)
+                Button(model.copyLabel, systemImage: "doc.on.doc") { writePasteboard(model.copiedText) }.disabled(!model.canCopy)
                     .buttonStyle(.ghost)
+                    .help(Text(.recordingCopyHelp))
                 if model.hasLines && recording.hasAudio {
                     Button(.recordingRetranscribe, systemImage: "arrow.clockwise") { model.transcribe() }
                         .buttonStyle(.ghost).disabled(!model.canTranscribe)
@@ -217,34 +226,93 @@ struct RecordingPlayer: View {
         }
     }
 
-    func row(_ line: LectureTranscript.Line, playing: Bool, bookmarked: Bool) -> some View {
-        Button { player.seek(line.start); player.play() } label: {
-            HStack(alignment: .firstTextBaseline, spacing: Theme.Space.m) {
+    /// Clicking the line picks it for copying and the time jumps there. A click that also jumped would move playback
+    /// with every pick and Shift-click, losing the place being listened to while choosing what to copy.
+    func row(_ index: Int, _ line: LectureTranscript.Line, playing: Bool, selected: Bool, bookmarked: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: Theme.Space.m) {
+            Button { player.seek(line.start); player.play() } label: {
                 Text(RecordingTime.label(line.start)).font(Theme.Typeface.label).monospacedDigit()
                     .foregroundStyle(playing ? accent.ink : Theme.Palette.textTertiary).frame(width: 52, alignment: .leading)
-                Text(line.text).foregroundStyle(playing ? Theme.Palette.text : Theme.Palette.textSecondary)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                if bookmarked { Image(systemName: "bookmark.fill").font(Theme.Typeface.label).foregroundStyle(Theme.Palette.warning) }
+                    .contentShape(.rect)
             }
-            .padding(Theme.Inset.listRow)
-            .background(playing ? accent.tint : .clear, in: .rect(cornerRadius: Theme.Radius.control))
-            .contentShape(.rect)
+            .buttonStyle(.pointing(.plain))
+            .help(Text(.recordingLinePlay))
+            // With the audio gone there is nothing to seek to; the line can still be picked and copied.
+            .allowsHitTesting(recording.hasAudio)
+            Text(line.text).foregroundStyle(playing || selected ? Theme.Palette.text : Theme.Palette.textSecondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if bookmarked { Image(systemName: "bookmark.fill").font(Theme.Typeface.label).foregroundStyle(Theme.Palette.warning) }
         }
-        .buttonStyle(.pointing(.plain))
-        // With the audio gone there is nothing to seek to; the line is only read.
-        .allowsHitTesting(recording.hasAudio)
+        .padding(Theme.Inset.listRow)
+        // The pick wins over the playing tint: otherwise picking the playing line would show no change. The playing
+        // line still keeps its accent time.
+        .background(selected ? Theme.Palette.fill : playing ? accent.tint : .clear, in: .rect(cornerRadius: Theme.Radius.control))
+        .contentShape(.rect)
+        .onPick { extending in
+            model.select(index, extending: extending)
+            linesFocused = true
+        }
+        .accessibilityAddTraits(selected ? .isSelected : [])
         .animation(.snappy(duration: 0.25), value: playing)
     }
+}
 
-    func copy(_ text: String) {
+private extension View {
+    /// A tap that says whether Shift was held, to extend a pick. SwiftUI's tap carries no modifier keys.
+    func onPick(_ action: @escaping (_ extending: Bool) -> Void) -> some View {
         #if os(macOS)
-        NSPasteboard.general.clearContents()
-        NSPasteboard.general.setString(text, forType: .string)
+        onTapGesture { action(NSEvent.modifierFlags.contains(.shift)) }
         #else
-        UIPasteboard.general.string = text
+        // UIKit's recognizer reads the hardware keyboard's Shift; touch alone has no way to extend.
+        gesture(PickTap(action: action))
+        #endif
+    }
+
+    /// ⌘A and ⌘C on the focused lines. A button shortcut on the Mac would take both from the search field even while
+    /// it is being typed in, so there they go through the responder chain as Edit menu commands.
+    func lineCommands(selectAll: @escaping () -> Void, copied: (() -> String)?) -> some View {
+        #if os(macOS)
+        // The payload is returned, not written here: SwiftUI fills the pasteboard with what the command returns.
+        var payload: (() -> [NSItemProvider])?
+        if let copied { payload = { [NSItemProvider(object: copied() as NSString)] } }
+        return onCommand(#selector(NSText.selectAll(_:)), perform: selectAll)
+            .onCopyCommand(perform: payload)
+        #else
+        return onKeyPress(keys: ["a", "c"]) { press in
+            guard press.modifiers.contains(.command) else { return .ignored }
+            if press.key == "a" { selectAll() } else if let copied { writePasteboard(copied()) }
+            return .handled
+        }
         #endif
     }
 }
+
+@MainActor private func writePasteboard(_ text: String) {
+    #if os(macOS)
+    NSPasteboard.general.clearContents()
+    NSPasteboard.general.setString(text, forType: .string)
+    #else
+    UIPasteboard.general.string = text
+    #endif
+}
+
+#if os(iOS)
+private struct PickTap: UIGestureRecognizerRepresentable {
+    let action: (_ extending: Bool) -> Void
+
+    func makeUIGestureRecognizer(context: Context) -> UITapGestureRecognizer {
+        let tap = UITapGestureRecognizer()
+        // Left on, it would cancel the touch the line's time button needs to jump.
+        tap.cancelsTouchesInView = false
+        return tap
+    }
+
+    func handleUIGestureRecognizerAction(_ recognizer: UITapGestureRecognizer, context: Context) {
+        guard recognizer.state == .ended else { return }
+        action(recognizer.modifierFlags.contains(.shift))
+    }
+}
+#endif
 
 @MainActor @Observable
 final class AudioPlayback {
