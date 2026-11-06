@@ -34,7 +34,7 @@ struct ClaudePanel: View {
             Theme.Palette.lineSoft.frame(height: 1)
             conversation
             if model.sending || model.status != nil { statusLine }
-            ChatComposer(enabled: model.hasKey, sending: model.sending) { model.send($0, course: course) }
+            ChatComposer(enabled: model.hasKey, sending: model.sending, send: { model.send($0, course: course) }, stop: model.stop)
         }
         .font(Theme.Typeface.body)
         .foregroundStyle(Theme.Palette.text)
@@ -144,7 +144,7 @@ struct ClaudePanel: View {
         HStack(spacing: Theme.Space.s) {
             if model.sending {
                 ProgressView().controlSize(.small)
-                Text(model.partial == nil ? .claudeWaiting : .claudeWriting)
+                Text(model.progress).lineLimit(1).truncationMode(.middle)
             } else if let status = model.status {
                 Text(status)
             }
@@ -154,7 +154,7 @@ struct ClaudePanel: View {
             }
         }
         .font(Theme.Typeface.caption)
-        .foregroundStyle(model.failed == nil ? Theme.Palette.textSecondary : Theme.Palette.danger)
+        .foregroundStyle(model.statusIsError ? Theme.Palette.danger : Theme.Palette.textSecondary)
         .padding(.horizontal, Theme.Space.l)
         .padding(.top, Theme.Space.s)
     }
@@ -175,6 +175,7 @@ struct ChatComposer: View {
     let enabled: Bool
     let sending: Bool
     let send: (String) -> Void
+    let stop: () -> Void
     @State private var text = ""
 
     var question: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -188,12 +189,12 @@ struct ChatComposer: View {
                 .lineLimit(1...8)
                 .onSubmit(submit)
                 .disabled(!enabled)
-            Button(action: submit) {
-                Image(systemName: "arrow.up.circle.fill").font(Theme.Glyph.large)
+            Button(action: sending ? stop : submit) {
+                Image(systemName: sending ? "stop.circle.fill" : "arrow.up.circle.fill").font(Theme.Glyph.large)
             }
             .buttonStyle(.ghost)
-            .disabled(!enabled || sending || question.isEmpty)
-            .help(Text(.claudeSend))
+            .disabled(!enabled || (!sending && question.isEmpty))
+            .help(Text(sending ? .claudeStop : .claudeSend))
             .alignmentGuide(.lastTextBaseline) { $0[VerticalAlignment.center] + 4.5 }
         }
         .padding(.horizontal, Theme.Space.m)

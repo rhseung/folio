@@ -1266,6 +1266,50 @@
         }
       }
     },
+    "claude.status.stopped": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "멈췄습니다"
+          }
+        }
+      }
+    },
+    "claude.stop": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "멈추기"
+          }
+        }
+      }
+    },
+    "claude.tool.proposing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제안 만드는 중: %@"
+          }
+        }
+      }
+    },
+    "claude.tool.reading": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "읽는 중: %@"
+          }
+        }
+      }
+    },
     "claude.waiting": {
       "extractionState": "manual",
       "localizations": {

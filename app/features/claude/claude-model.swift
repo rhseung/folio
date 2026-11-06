@@ -24,9 +24,18 @@ final class ClaudeModel {
     var sending = false
     var status: String?
     var failed: String?
+    /// The answer's current message only: an answer that reads with tools comes as several, and the ones before the
+    /// last lead up to tool calls rather than answer.
     var partial: String?
+    /// The tool the answer called last, until it writes again.
+    var tool: String?
+    var stopped = false
     /// The chat that answer belongs to: switching chats mid-answer must not show it under another conversation.
     var answering: UUID?
+    var openNote: UUID?
+    private var answer: Task<Void, Never>?
+    /// Tests answer through a fake provider; the app asks the workspace.
+    private let client: ((LoadedCourse) -> ClaudeClient)?
     var cardDraft: CardDraft?
     /// A proposed change that removes or moves, waiting on the panel's confirmation.
     var confirming: PendingProposal?
@@ -38,9 +47,18 @@ final class ClaudeModel {
         var id: String { "\(message)/\(index)" }
     }
 
-    init(workspace: Workspace) { self.workspace = workspace }
+    init(workspace: Workspace, client: ((LoadedCourse) -> ClaudeClient)? = nil) {
+        self.workspace = workspace
+        self.client = client
+    }
 
-    var hasKey: Bool { workspace.claudeReady }
+    var hasKey: Bool { client != nil || workspace.claudeReady }
+
+    var progress: String {
+        tool.map(Self.toolLabel) ?? String(localized: partial == nil ? .claudeWaiting : .claudeWriting)
+    }
+
+    var statusIsError: Bool { failed != nil && !stopped }
 
     var chat: Chat? { chats.first { $0.model.id == chatID }?.model }
 
@@ -63,6 +81,7 @@ final class ClaudeModel {
         chatID = id
         status = nil
         failed = nil
+        stopped = false
     }
 
     /// Readable files grouped by role in the materials page's order, unclassified last, so a file is found where that
@@ -90,6 +109,7 @@ final class ClaudeModel {
     }
 
     func loadOpenNote(_ id: UUID?, course: LoadedCourse) {
+        openNote = id
         openNoteItem = id.flatMap { noteContext($0, course: course, open: true) }
     }
 
@@ -101,7 +121,7 @@ final class ClaudeModel {
         guard let note = try? course.store.note(id: id), let text = try? course.store.read(note) else { return nil }
         let body = Frontmatter.split(text).body
         let images = course.store.contextImages(of: note, body: body).map { ContextItem.Image(name: $0.name, data: $0.data) }
-        return ContextBuilder.note(id: id, title: note.title, body: body, images: images, open: open)
+        return ContextBuilder.note(id: id, title: note.title, path: course.store.notePath(of: note.url), body: body, images: images, open: open)
     }
 
     func materialContext(_ material: Material, course: LoadedCourse) -> ContextItem? {
@@ -136,6 +156,8 @@ final class ClaudeModel {
 
     func send(_ question: String, course: LoadedCourse) {
         guard hasKey, !sending else { return }
+        // Read again from disk: the note was read when it opened, and has likely been edited since.
+        loadOpenNote(openNote, course: course)
         let context = built(course)
         var doc = chats.first { $0.model.id == chatID } ?? StoredDocument(new: Chat(device: workspace.device, at: .now, title: String(question.prefix(40))))
         doc.model.messages.append(ChatMessage(role: .user, text: question, at: .now, context: context.included.map(\.title)))
@@ -146,22 +168,26 @@ final class ClaudeModel {
         sending = true
         status = nil
         failed = nil
+        stopped = false
         partial = nil
-        let client = workspace.claude(for: course, folioTools: true)
+        tool = nil
+        let client = client?(course) ?? workspace.claude(for: course, folioTools: true)
         let asked = doc.model
         let stream = AnswerStream()
-        Task {
+        answer = Task {
             var doc = doc
             // Shown every half second rather than per piece: each update reloads the conversation's page.
             let ticker = Task { @MainActor in
                 while !Task.isCancelled {
                     try? await Task.sleep(for: .milliseconds(500))
-                    if let text = stream.text { partial = text }
+                    let now = stream.now
+                    if partial != now.text { partial = now.text }
+                    if tool != now.tool { tool = now.tool }
                 }
             }
-            defer { ticker.cancel(); partial = nil }
+            defer { ticker.cancel(); partial = nil; tool = nil }
             do {
-                let reply = try await client.reply(to: asked, context: context) { stream.append($0) }
+                let reply = try await client.reply(to: asked, context: context) { stream.take($0) }
                 doc.model.messages.append(ChatMessage(role: .assistant, text: reply.text, at: .now, proposals: reply.proposals))
                 doc.model.touch(by: workspace.device, at: .now)
                 let saved = doc
@@ -170,7 +196,9 @@ final class ClaudeModel {
             } catch {
                 doc.model.messages.removeLast()
                 failed = question
-                status = Self.message(for: error)
+                // The API provider reports a cancelled request as a URL error, not a CancellationError.
+                stopped = Task.isCancelled
+                status = stopped ? String(localized: .claudeStatusStopped) : Self.message(for: error)
             }
             if doc.model.messages.isEmpty {
                 chats.removeAll { $0.model.id == doc.model.id }
@@ -181,8 +209,13 @@ final class ClaudeModel {
             }
             answering = nil
             sending = false
+            answer = nil
         }
     }
+
+    /// Ends the request, and with it the `claude` process. The question goes back to the resend button, and the chat
+    /// keeps no half of it.
+    func stop() { answer?.cancel() }
 
     func replace(_ doc: StoredDocument<Chat>) {
         chats.removeAll { $0.model.id == doc.model.id }
@@ -280,6 +313,18 @@ final class ClaudeModel {
 
     // MARK: Helpers
 
+    /// `mcp__folio__note_show` reads as `note show`. A write only makes a proposal in the panel's server, which the line
+    /// says, so the user doesn't wait for a change that won't happen until they apply it.
+    static func toolLabel(_ name: String) -> String {
+        let prefix = "mcp__folio__"
+        let tool = name.hasPrefix(prefix) ? String(name.dropFirst(prefix.count)) : name
+        // The MCP server's naming (`MCPServer.name` in folio-cli, which the app doesn't link).
+        if let write = Actions.all.first(where: { $0.command.replacing(" --", with: "_").replacing(" ", with: "_") == tool }) {
+            return String(localized: .claudeToolProposing(write.command))
+        }
+        return String(localized: .claudeToolReading(tool.replacing("_", with: " ")))
+    }
+
     /// Kept out of the string catalog: it is written into the note file as its title.
     static let answerTitle = "Claude 답변"
 
@@ -355,10 +400,25 @@ final class ClaudeModel {
     }
 }
 
-/// Collects an answer's pieces off the main actor; the panel reads the text so far on its own schedule.
+/// Collects an answer's pieces off the main actor; the panel reads the state so far on its own schedule.
 final class AnswerStream: Sendable {
-    private let buffer = Mutex<String?>(nil)
+    struct State: Sendable, Equatable {
+        var text: String?
+        var tool: String?
+    }
 
-    var text: String? { buffer.withLock { $0 } }
-    func append(_ piece: String) { buffer.withLock { $0 = ($0 ?? "") + piece } }
+    private let state = Mutex(State())
+
+    var now: State { state.withLock { $0 } }
+
+    func take(_ event: StreamEvent) {
+        state.withLock { s in
+            switch event {
+            // A new message starts over: the text before it led up to a tool call, and only the last message is kept.
+            case .turn: s.text = nil
+            case .text(let piece): s.text = (s.text ?? "") + piece; s.tool = nil
+            case .tool(let name): s.tool = name
+            }
+        }
+    }
 }

@@ -9,9 +9,9 @@ struct ChatTests {
     @Test func panelContextKeepsSummaryAndRulesAndHonorsRemovals() {
         let file = CourseFile(course: Course(device: device, at: now, title: "선형대수학"))
         let noteID = UUID()
-        let open = ContextBuilder.note(id: noteID, title: "3주차", body: "고유값", open: true)
+        let open = ContextBuilder.note(id: noteID, title: "3주차", path: "Notes/3주차.md", body: "고유값", open: true)
         let added = [
-            ContextBuilder.note(id: noteID, title: "3주차", body: "고유값", open: false),
+            ContextBuilder.note(id: noteID, title: "3주차", path: "Notes/3주차.md", body: "고유값", open: false),
             ContextBuilder.material(path: "Lectures/03_eigen.pdf", text: "Eigenvalues"),
         ]
         let items = ContextBuilder.chatItems(course: file, rules: "정의는 전제부터", openNote: open, added: added, removed: [], now: now)
@@ -26,8 +26,9 @@ struct ChatTests {
     @Test func replySendsHistoryAndPutsContextBeforeTheNewQuestion() async throws {
         let fake = FakeProvider(responses: [FakeProvider.reply("$\\lambda$ 는 고유값입니다")])
         let file = CourseFile(course: Course(device: device, at: now, title: "선형대수학"))
-        let items = ContextBuilder.chatItems(course: file, rules: "규칙", openNote: ContextBuilder.note(id: UUID(), title: "3주차", body: "본문", open: true),
-                                             added: [], removed: [], now: now)
+        let noteID = UUID()
+        let open = ContextBuilder.note(id: noteID, title: "3주차", path: "Notes/09-15(월) 고유값 정리.md", body: "본문", open: true)
+        let items = ContextBuilder.chatItems(course: file, rules: "규칙", openNote: open, added: [], removed: [], now: now)
         var chat = Chat(device: device, at: now)
         chat.messages = [
             ChatMessage(role: .user, text: "첫 질문", at: now),
@@ -41,7 +42,11 @@ struct ChatTests {
         #expect(r.model == TaskConfig.defaults(for: .chat).model)
         #expect(r.messages.map(\.role) == [.user, .assistant, .user])
         #expect(r.messages[0].content == [.text("첫 질문")])
-        #expect(r.messages[2].content == [.text("<열린 노트: 3주차>\n본문\n</열린 노트: 3주차>"), .text("고유값이 뭐야?")])
+        // The path and ID tell Claude which file is open, which the title alone left it to guess.
+        #expect(r.messages[2].content == [.text("<열린 노트: 3주차>\n경로: Notes/09-15(월) 고유값 정리.md\nID: \(noteID.uuidString)\n\n본문\n</열린 노트: 3주차>"),
+                                          .text("고유값이 뭐야?")])
+        guard case .text(let instructions, _)? = r.system?.first else { Issue.record("no instructions"); return }
+        #expect(instructions.contains("Put the whole answer in your final message"))
         guard case .text(let stable, let cache)? = r.system?.last else { Issue.record("no system"); return }
         #expect(cache && stable.contains("과목: 선형대수학") && stable.contains("규칙"))
     }

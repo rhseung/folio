@@ -9,8 +9,11 @@ extension ContextBuilder {
         ContextItem(id: "rules", title: "노트 작성 규칙", tier: .userRules, text: text)
     }
 
-    public static func note(id: UUID, title: String, body: String, images: [ContextItem.Image] = [], open: Bool) -> ContextItem {
-        ContextItem(id: "note:\(id)", title: open ? "열린 노트: \(title)" : "노트: \(title)", tier: open ? .focus : .related, text: body, images: images)
+    /// `path` is relative to the course folder. It and the ID go in the text so Claude knows which file the note is and
+    /// can name it to Folio's tools; without them it guessed, and took a similar note for the open one.
+    public static func note(id: UUID, title: String, path: String, body: String, images: [ContextItem.Image] = [], open: Bool) -> ContextItem {
+        ContextItem(id: "note:\(id)", title: open ? "열린 노트: \(title)" : "노트: \(title)", tier: open ? .focus : .related,
+                    text: "경로: \(path)\nID: \(id.uuidString)\n\n\(body)", images: images)
     }
 
     public static func material(path: String, text: String) -> ContextItem {
@@ -31,7 +34,9 @@ extension ClaudeClient {
     You are a study assistant inside Folio, a university student's course notebook. Use the course context you are \
     given and say so when the answer is not in it. Answer in Korean unless asked otherwise. Write math as LaTeX in $…$ \
     and $$…$$, one display equation per block. When writing note content, follow the note-writing rules. Your earlier \
-    answers end with the state of the changes they proposed; rely on it rather than guessing whether a change was made.
+    answers end with the state of the changes they proposed; rely on it rather than guessing whether a change was made. \
+    Put the whole answer in your final message. Write nothing between tool calls: only the final message is kept and \
+    shown as the answer.
     """
 
     /// An earlier answer as sent back: its text, then what became of each change it proposed. Without the second
@@ -63,13 +68,13 @@ extension ClaudeClient {
 
     /// The context goes in the system prompt (stable part, cached) and in front
     /// of the newest question only; earlier turns are sent as plain text.
-    public func reply(to chat: Chat, context: BuiltContext, onText: (@Sendable (String) -> Void)? = nil) async throws -> MessagesResponse {
+    public func reply(to chat: Chat, context: BuiltContext, onEvent: (@Sendable (StreamEvent) -> Void)? = nil) async throws -> MessagesResponse {
         guard let last = chat.messages.last, last.role == .user else { throw ClaudeError.invalidOutput("no question to answer") }
         var messages = chat.messages.dropLast().map { m in
             Message(role: m.role == .user ? .user : .assistant, content: [.text(Self.history(m))])
         }
         messages.append(Message(role: .user, content: context.userBlocks + [.text(last.text)]))
-        return try await text(.chat, system: [.text(Self.chatInstructions)] + context.system, messages: messages, onText: onText)
+        return try await text(.chat, system: [.text(Self.chatInstructions)] + context.system, messages: messages, onEvent: onEvent)
     }
 }
 
