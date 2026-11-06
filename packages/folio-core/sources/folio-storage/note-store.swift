@@ -134,8 +134,7 @@ extension CourseStore {
     /// in any folder: a link names a note by its title alone (`[[증명]]`), so two of one title would share their links.
     public func movedNoteURL(_ note: NoteFile, to path: String, in file: CourseFile) -> URL? {
         var parts = path.split(separator: "/").map { $0.trimmingCharacters(in: .whitespaces) }
-        guard var name = parts.popLast(),
-              parts.allSatisfy({ !$0.isEmpty && !$0.hasPrefix(".") && !Self.nonNoteFolders.contains($0) }) else { return nil }
+        guard var name = parts.popLast(), parts.allSatisfy({ StandardLayout.noteFolderProblem($0) == nil }) else { return nil }
         if let format = NoteFormat(path: name) {
             guard format == note.format else { return nil }
             name = (name as NSString).deletingPathExtension

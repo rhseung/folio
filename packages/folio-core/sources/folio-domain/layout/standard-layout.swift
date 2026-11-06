@@ -146,6 +146,26 @@ public enum StandardLayout {
         !name.isEmpty && name == name.trimmingCharacters(in: .whitespaces) && !name.contains("/") && !name.contains(":") && !name.hasPrefix(".")
     }
 
+    public enum NoteFolderProblem: Sendable, Equatable {
+        case empty
+        /// One name only: a new folder goes straight into `Notes/`.
+        case nested
+        /// `assets` or `Exports`, whose files are not notes.
+        case reserved
+        case hidden
+    }
+
+    /// Why `name` (trimmed) can't be a folder notes are moved into, or nil when it can. `assets` and `Exports` match in
+    /// any case: the course folder is on a case-insensitive volume, so `Assets` is the same folder.
+    public static func noteFolderProblem(_ name: String) -> NoteFolderProblem? {
+        let name = name.trimmingCharacters(in: .whitespaces)
+        if name.isEmpty { return .empty }
+        if name.contains("/") || name.contains(":") { return .nested }
+        if name.hasPrefix(".") { return .hidden }
+        if [noteAssetsFolder, legacyNoteExportsFolder].contains(where: { $0.caseInsensitiveCompare(name) == .orderedSame }) { return .reserved }
+        return nil
+    }
+
     /// `<code> <title>`, e.g. `EC4207 그래프 이론`.
     public static func isCourseFolderName(_ name: String) -> Bool {
         name.wholeMatch(of: /[A-Z]{2,}\d{3,4} \S.*/) != nil

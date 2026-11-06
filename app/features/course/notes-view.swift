@@ -50,6 +50,9 @@ struct NoteList: View {
         .sheet(isPresented: Binding(get: { model.renaming != nil }, set: { if !$0 { model.renaming = nil } })) {
             if let note = model.renaming { NoteRenameSheet(workspace: model.workspace, course: model.course, note: note) }
         }
+        .sheet(isPresented: Binding(get: { model.newFolder != nil }, set: { if !$0 { model.newFolder = nil } })) {
+            if let note = model.newFolder { NoteFolderSheet(workspace: model.workspace, course: model.course, note: note) }
+        }
         .confirming($model.pending)
         // Notes made elsewhere (the Claude panel, a session's rough note) and links changed in the editor show up here too.
         .onChange(of: model.workspace.notesRevision) { model.reload() }
@@ -84,11 +87,12 @@ struct NoteList: View {
             if let id = note.meta.id { LinkMenu(link: AppLink(.note, id), course: model.course.id, trailing: true) }
             Divider()
             Button(.notesRenameEllipsis) { model.renaming = note }
-            let targets = model.moveTargets(note)
-            if !targets.isEmpty {
-                Menu(String(localized: .notesMoveTo)) {
-                    ForEach(targets, id: \.self) { folder in Button(model.folderLabel(folder)) { model.move(note, into: folder) } }
-                }
+            // Shown with no folder yet too: a new folder is where the first one comes from.
+            Menu(String(localized: .notesMoveTo)) {
+                let targets = model.moveTargets(note)
+                ForEach(targets, id: \.self) { folder in Button(model.folderLabel(folder)) { model.move(note, into: folder) } }
+                if !targets.isEmpty { Divider() }
+                Button(.notesFolderNewEllipsis) { model.newFolder = note }
             }
             Divider()
             Button(.notesDeleteEllipsis, systemImage: "trash", role: .destructive) {

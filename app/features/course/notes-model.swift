@@ -16,6 +16,7 @@ final class NoteListModel {
     var filter: NoteKind?
     var adding = false
     var renaming: NoteFile?
+    var newFolder: NoteFile?
     var pending: PendingAction?
 
     init(workspace: Workspace, course: LoadedCourse) {

@@ -320,6 +320,30 @@ struct NotesModelTests {
         #expect(course.store.coursePath(of: moved.url) == "Notes/정리/행렬식.md" && model.moveTargets(moved) == [""])
     }
 
+    /// With no folder in Notes/ yet, a note still moves into a new one; the sheet names the folder it makes and refuses
+    /// names a note can't be in.
+    @Test func movingIntoANewFolderMakesIt() throws {
+        let (workspace, course) = try fixtureCourse()
+        let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
+        let note = try #require(try course.store.note(id: id))
+        let sheet = NoteFolderModel(workspace: workspace, course: course, note: note)
+        #expect(!sheet.canSave && sheet.message == "새 폴더 이름을 적습니다.")
+        for name in ["assets", "Exports", ".숨김", "정리/증명"] {
+            sheet.name = name
+            #expect(!sheet.canSave, "\(name)")
+        }
+        sheet.name = " 중간 대비 "
+        #expect(sheet.target == "중간 대비/행렬식.md" && sheet.message == "폴더 Notes/중간 대비을(를) 만들고 Notes/중간 대비/행렬식.md(으)로 옮깁니다.")
+        #expect(sheet.move())
+        let list = NoteListModel(workspace: workspace, course: course)
+        list.reload()
+        let moved = try #require(list.notes.first { $0.meta.id == id })
+        #expect(course.store.coursePath(of: moved.url) == "Notes/중간 대비/행렬식.md" && list.folders == ["", "중간 대비"])
+        let again = NoteFolderModel(workspace: workspace, course: course, note: moved)
+        again.name = "중간 대비"
+        #expect(!again.canSave && again.message == "노트가 이미 이 폴더에 있습니다.")
+    }
+
     @Test func editorNamesItsLinkAndFindsNotesByTitle() throws {
         let (workspace, course) = try fixtureCourse()
         let notes = NotesModel(workspace: workspace, course: course)
