@@ -516,11 +516,11 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     }
 
     override func insertTab(_ sender: Any?) {
-        apply(SourceEditing.tab(string as NSString, selectedRange(), back: false, snippets: catalog.snippets))
+        apply(SourceEditing.tab(string as NSString, selectedRange(), back: false, snippets: catalog.snippets, asciiMath: !catalog.tex))
     }
 
     override func insertBacktab(_ sender: Any?) {
-        apply(SourceEditing.tab(string as NSString, selectedRange(), back: true, snippets: catalog.snippets))
+        apply(SourceEditing.tab(string as NSString, selectedRange(), back: true, snippets: catalog.snippets, asciiMath: !catalog.tex))
     }
 
     // Nothing here acts while a syllable is being composed: the input method owns those keys, and a pair closed or a
@@ -930,6 +930,7 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
     private var lineStarts: [Int] = [0]
     private var snippets: [Snippet] = []
     private var revealing: Int?
+    private var asciiMath = false
 
     override init() {
         super.init()
@@ -966,7 +967,8 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
 
     /// The completion menu is Mac-only for now (#31); pairs, lists and snippets on Tab work here too.
     func setAssist(_ assist: NoteAssist, syntax: MathSyntax) {
-        snippets = assist.snippets.filter { syntax == .latex || !$0.inMath }.map { Snippet(trigger: $0.trigger, body: $0.body, inMath: $0.inMath) }
+        snippets = assist.snippets(syntax: syntax)
+        asciiMath = syntax == .asciimath
     }
 
     func restyle() {
@@ -1020,7 +1022,7 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
         }
         let source = textStorage.string as NSString
         if text == "\t" {
-            apply(SourceEditing.tab(source, range, back: false, snippets: snippets))
+            apply(SourceEditing.tab(source, range, back: false, snippets: snippets, asciiMath: asciiMath))
             return false
         }
         if text.isEmpty, range.length == 1, selectedRange.length == 0,

@@ -16,6 +16,8 @@ public struct CompletionQuery: Equatable, Sendable {
         case texEnvironment
         /// A snippet's trigger just before the caret.
         case snippet
+        /// A word in AsciiMath math: a symbol or function by its AsciiMath name, or a snippet.
+        case asciiMath
     }
 
     public let kind: Kind
@@ -28,7 +30,7 @@ public struct CompletionQuery: Equatable, Sendable {
     /// ended; Tab still takes it.
     public var takesReturn: Bool {
         switch kind {
-        case .snippet: false
+        case .snippet, .asciiMath: false
         case .codeLanguage: !text.isEmpty
         default: true
         }
@@ -42,8 +44,9 @@ public struct CompletionItem: Equatable, Sendable, Identifiable {
     public var detail: String?
     /// An SF Symbol name.
     public var symbol: String?
-    /// TeX shown rendered beside the title.
+    /// A formula shown rendered beside the title, in TeX unless `previewAsciiMath`.
     public var preview: String?
+    public var previewAsciiMath: Bool
     /// Other names it is found by, as `table` for 표.
     public var keywords: [String]
     public var body: String
@@ -51,12 +54,13 @@ public struct CompletionItem: Equatable, Sendable, Identifiable {
     public var block: Bool
 
     public init(id: String, title: String, detail: String? = nil, symbol: String? = nil, preview: String? = nil,
-                keywords: [String] = [], body: String, block: Bool = false) {
+                previewAsciiMath: Bool = false, keywords: [String] = [], body: String, block: Bool = false) {
         self.id = id
         self.title = title
         self.detail = detail
         self.symbol = symbol
         self.preview = preview
+        self.previewAsciiMath = previewAsciiMath
         self.keywords = keywords
         self.body = body
         self.block = block
@@ -108,8 +112,18 @@ public enum Completion {
             if let (snippet, range) = Snippet.match(catalog.snippets, in: text, caret: caret, place: place) {
                 return CompletionQuery(kind: .snippet, text: snippet.trigger, range: range, place: place)
             }
-        case .math:
-            guard catalog.tex else { return nil }
+        case .math(_, let content):
+            guard catalog.tex else {
+                // Two letters or more: one letter is a variable, and offering on it would cover every formula.
+                if let m = prefix.firstMatch(of: #/(?:^|[^A-Za-z\\])([A-Za-z]{2,})$/#), caret - m.1.utf16.count >= content.location,
+                   !asciiMath(String(m.1), catalog: catalog).isEmpty {
+                    return make(.asciiMath, m.1)
+                }
+                if let (snippet, range) = Snippet.match(catalog.snippets, in: text, caret: caret, place: place) {
+                    return CompletionQuery(kind: .snippet, text: snippet.trigger, range: range, place: place)
+                }
+                return nil
+            }
             if let m = prefix.firstMatch(of: #/\\begin\{([A-Za-z*]*)$/#) {
                 return make(.texEnvironment, m.1, extra: next == 0x7D ? 1 : 0)
             }
@@ -140,11 +154,22 @@ public enum Completion {
         case .texEnvironment:
             return filter(TeXCommands.environments.map { CompletionItem(id: "env.\($0)", title: $0, body: $0) }, query.text, prefixOnly: true)
         case .snippet:
-            // Numbered, since settings don't stop two snippets sharing a trigger and the menu needs distinct ids.
-            return catalog.snippets.enumerated().filter { $0.element.trigger == query.text && $0.element.inMath == query.place.isMath }.map { i, s in
-                CompletionItem(id: "snippet.\(i).\(s.trigger)", title: s.trigger, detail: s.expanded.text, symbol: "text.insert", body: s.body)
-            }
+            return snippets(catalog, trigger: query.text, inMath: query.place.isMath)
+        case .asciiMath:
+            return asciiMath(query.text, catalog: catalog)
         }
+    }
+
+    // Numbered, since settings don't stop two snippets sharing a trigger and the menu needs distinct ids.
+    static func snippets(_ catalog: CompletionCatalog, trigger: String, inMath: Bool) -> [CompletionItem] {
+        catalog.snippets.enumerated().filter { $0.element.trigger == trigger && $0.element.inMath == inMath }.map { i, s in
+            CompletionItem(id: "snippet.\(i).\(s.trigger)", title: s.trigger, detail: s.expanded.text, symbol: "text.insert", body: s.body)
+        }
+    }
+
+    /// The snippets `word` triggers, then the symbols whose name starts with it.
+    static func asciiMath(_ word: String, catalog: CompletionCatalog) -> [CompletionItem] {
+        snippets(catalog, trigger: word, inMath: true) + filter(AsciiMathSymbols.items, word, prefixOnly: true)
     }
 
     /// Names that start with what's typed come first, then names that contain it; `prefixOnly` keeps only the first,
@@ -194,7 +219,7 @@ public enum Completion {
                 range = NSRange(location: range.location - trailing, length: range.length + trailing)
                 body = "\n" + body
             }
-        case .texCommand, .snippet:
+        case .texCommand, .snippet, .asciiMath:
             break
         }
         return Snippet(trigger: "", body: body, inMath: false).edit(replacing: range)

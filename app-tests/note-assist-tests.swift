@@ -214,6 +214,36 @@ struct NoteAssistTests {
             other.appearance = window.appearance
             Self.type(slash, "/")
             try Self.writeWithMenu(slash, "assist-slash-\(dark ? "dark" : "light")", dark: dark)
+            let (ascii, third) = Self.editor("# 행렬\n\n고윳값은 ", syntax: .asciimath)
+            third.appearance = window.appearance
+            Self.type(ascii, "$la")
+            try Self.writeWithMenu(ascii, "assist-asciimath-\(dark ? "dark" : "light")", dark: dark)
         }
+    }
+
+    // MARK: AsciiMath
+
+    @Test func asciiMathWordsOfferSymbols() {
+        let (view, _) = Self.editor("", syntax: .asciimath)
+        Self.type(view, "$al")
+        #expect(view.completion.query?.kind == .asciiMath && view.completion.current?.title == "alpha")
+        Self.tab(view)
+        #expect(Self.caretShown(view) == "$alpha|$")
+        Self.type(view, " fr")
+        view.acceptCompletion(view.completion.items.firstIndex { $0.title == "frac" })
+        #expect(Self.caretShown(view) == "$alpha frac(|)()$")
+        Self.type(view, "a")
+        view.insertTab(nil)
+        #expect(Self.caretShown(view) == "$alpha frac(a)(|)$")
+    }
+
+    @Test func asciiMathSnippetsComeFirst() {
+        let (view, _) = Self.editor("", syntax: .asciimath)
+        Self.type(view, "$sq")
+        #expect(view.completion.current?.id.hasPrefix("snippet.") == true)
+        // Return under a menu that opened by itself is the line break it would be.
+        #expect(view.completion.query?.takesReturn == false)
+        Self.tab(view)
+        #expect(Self.caretShown(view) == "$sqrt(|)$")
     }
 }

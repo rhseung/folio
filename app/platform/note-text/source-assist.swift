@@ -6,27 +6,36 @@ import SwiftUI
 /// settings.json.
 struct NoteAssist: Equatable {
     var snippets: [MathSnippet] = MathSnippet.defaults
+    var asciiSnippets: [MathSnippet] = MathSnippet.asciiMathDefaults
     var templates: [NoteKind: [String]] = [:]
 
-    init(snippets: [MathSnippet] = MathSnippet.defaults, templates: [NoteKind: [String]] = [:]) {
+    init(snippets: [MathSnippet] = MathSnippet.defaults, asciiSnippets: [MathSnippet] = MathSnippet.asciiMathDefaults,
+         templates: [NoteKind: [String]] = [:]) {
         self.snippets = snippets
+        self.asciiSnippets = asciiSnippets
         self.templates = templates
     }
 
     init(settings: FolioDomain.Settings) {
         snippets = settings.snippets
+        asciiSnippets = settings.asciiSnippets
         templates = Dictionary(uniqueKeysWithValues: NoteAssist.templateKinds.map { ($0, settings.noteSections(for: $0)) })
     }
 
     static let templateKinds: [NoteKind] = [.review, .examSummary, .topic]
 
+    /// The snippets outside formulas are the same in either syntax; inside them, each syntax has its own.
+    func snippets(syntax: MathSyntax) -> [Snippet] {
+        let math = syntax == .latex ? snippets.filter(\.inMath) : asciiSnippets.map { MathSnippet(trigger: $0.trigger, body: $0.body, inMath: true) }
+        return (snippets.filter { !$0.inMath } + math).map { Snippet(trigger: $0.trigger, body: $0.body, inMath: $0.inMath) }
+    }
+
     @MainActor func catalog(syntax: MathSyntax) -> CompletionCatalog {
-        let tex = syntax == .latex
-        return CompletionCatalog(
+        CompletionCatalog(
             slash: SlashBlocks.items(templates: Self.templateKinds.compactMap { kind in templates[kind].flatMap { $0.isEmpty ? nil : (kind, $0) } }),
             languages: NoteScripts.languages + ["mermaid"],
-            snippets: snippets.filter { tex || !$0.inMath }.map { Snippet(trigger: $0.trigger, body: $0.body, inMath: $0.inMath) },
-            tex: tex)
+            snippets: snippets(syntax: syntax),
+            tex: syntax == .latex)
     }
 }
 
@@ -150,11 +159,13 @@ struct CompletionMenuView: View {
                 .foregroundStyle(selected ? accent.ink : Theme.Palette.textTertiary)
                 .frame(width: Theme.Size.tile)
             Text(item.title)
-                .font(item.title.hasPrefix("\\") ? Theme.Typeface.mono : Theme.Typeface.body)
+                .font(item.title.hasPrefix("\\") || item.previewAsciiMath ? Theme.Typeface.mono : Theme.Typeface.body)
                 .foregroundStyle(selected ? accent.ink : Theme.Palette.text)
                 .lineLimit(1)
             Spacer(minLength: Theme.Space.s)
-            if let tex = item.preview, let picture = NoteMath.picture(tex, syntax: .latex, display: false, size: NoteLook.body, color: NoteLook.text, dark: scheme == .dark) {
+            if let formula = item.preview,
+               let picture = NoteMath.picture(formula, syntax: item.previewAsciiMath ? .asciimath : .latex, display: false, size: NoteLook.body,
+                                              color: NoteLook.text, dark: scheme == .dark) {
                 Image(platformImage: picture.image)
                     .resizable()
                     .frame(width: min(picture.size.width, Self.width / 3), height: min(picture.size.height, Self.rowHeight - Theme.Space.s))
@@ -175,7 +186,7 @@ struct CompletionMenuView: View {
         switch menu.query?.kind {
         case .callout: "exclamationmark.bubble"
         case .codeLanguage: "chevron.left.forwardslash.chevron.right"
-        case .texCommand, .texEnvironment: "function"
+        case .texCommand, .texEnvironment, .asciiMath: "function"
         default: "text.insert"
         }
     }
