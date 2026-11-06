@@ -37,10 +37,14 @@ enum LinkPlacement: CaseIterable {
 /// way of moving lands in the window's one history. `course` names where the target likely is; it is only a hint.
 struct OpenLinkAction {
     var handler: @MainActor (AppLink, LinkPlacement, UUID?) -> Void = { _, _, _ in }
+    var upHandler: @MainActor (AppLink) -> Void = { _ in }
 
     @MainActor func callAsFunction(_ link: AppLink, in placement: LinkPlacement = .here, course: UUID? = nil) {
         handler(link, placement, course)
     }
+
+    /// A folded list's back button (`Navigator.up`).
+    @MainActor func up(to link: AppLink) { upHandler(link) }
 }
 
 extension EnvironmentValues {
@@ -78,6 +82,13 @@ final class Navigator {
         }
     }
 
+    /// Back where the step before is `entry`, as a NavigationStack's back would: a person opened from the list
+    /// returns to it, and forward goes to the person again. From anywhere else (a person opened from a course) a new
+    /// step, so back still leads where the window came from.
+    func up(to entry: Entry) {
+        if history.back.last == entry { back() } else { go(entry) }
+    }
+
     func back(_ steps: Int = 1) { history.goBack(steps) }
     func forward(_ steps: Int = 1) { history.goForward(steps) }
 
@@ -103,8 +114,11 @@ extension Workspace {
     /// Where a link points, or nil when nothing it names is here (a deleted exam, a link from another GIST folder).
     func entry(for link: AppLink, hint: UUID? = nil) -> Navigator.Entry? {
         switch link.kind {
-        case .today, .grades, .requirements, .people, .codes, .settings:
+        case .today, .grades, .requirements, .people, .codes:
             return Navigator.Entry(link: link)
+        case .settings:
+            // Filled in here, so every step in a history names its tab and going back to one shows that tab.
+            return Navigator.Entry(link: .settings(link.settingsPage ?? SettingsTab.remembered.page))
         case .semester:
             return transcript.semesters.contains { $0.id == link.id } ? Navigator.Entry(link: link) : nil
         case .person:
@@ -142,7 +156,8 @@ extension Workspace {
             case .requirements: return String(localized: .rootNavRequirements)
             case .people: return String(localized: .rootNavPeople)
             case .codes: return String(localized: .rootNavCodes)
-            case .settings: return String(localized: .rootNavSettings)
+            case .settings:
+                return [String(localized: .rootNavSettings), link.settingsPage.map { SettingsTab($0).label }].compactMap { $0 }.joined(separator: " · ")
             case .semester: return transcript.semesters.first { $0.id == link.id }?.title ?? ""
             case .person: return catalog.people.first { $0.id == link.id }?.name ?? String(localized: .rootNavPeople)
             default: return link.string

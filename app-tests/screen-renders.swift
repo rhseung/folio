@@ -33,9 +33,6 @@ struct ScreenRenders {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let workspace = try Workspace.scenario(scenario)
         func wanted(_ screen: Screen) -> Bool { Self.screens.isEmpty || Self.screens.contains { screen.name.hasPrefix($0) } }
-        // The test host shares the app's bundle id and so its defaults: the user's last settings tab is put back.
-        let savedTab = UserDefaults.standard.string(forKey: SettingsTab.storageKey)
-        defer { UserDefaults.standard.set(savedTab, forKey: SettingsTab.storageKey) }
 
         for batch in batches(workspace) {
             let pages = batch.pages.filter(wanted), sheets = batch.sheets.filter(wanted)
@@ -64,8 +61,8 @@ struct ScreenRenders {
 
     typealias Screen = (name: String, view: () -> AnyView)
 
-    /// Screens that can be on screen together. Course sections, settings tabs and the search query are app-wide state the
-    /// views follow while they're open, so each value gets a batch of its own.
+    /// Screens that can be on screen together. The search query is app-wide state the palette follows while it's open,
+    /// so each value gets a batch of its own.
     struct Batch {
         var setup: () -> Void = {}
         var pages: [Screen] = []
@@ -74,15 +71,11 @@ struct ScreenRenders {
 
     func batches(_ workspace: Workspace) -> [Batch] {
         // Each page is drawn from its link, as a window draws it, so a course page needs no app-wide switch to show.
-        var plain = Batch(pages: ScreenCatalog.entries(workspace).filter { $0.name != "settings" }.map { name, entry in
+        var plain = Batch(pages: ScreenCatalog.entries(workspace).map { name, entry in
             (name, { AnyView(ScreenView(workspace: workspace, entry: entry)) })
         })
         plain.sheets = FormSnapshots.forms(workspace).map { name, view in ("form-\(name)", { view }) }
         var batches = [plain]
-        for tab in SettingsTab.allCases {
-            batches.append(Batch(setup: { UserDefaults.standard.set(tab.rawValue, forKey: SettingsTab.storageKey) },
-                                 pages: [("settings-\(tab)", { AnyView(ScreenView(workspace: workspace, entry: Navigator.Entry(link: .place(.settings)))) })]))
-        }
         for (name, query) in [("search-empty", ""), ("search", "매칭")] {
             batches.append(Batch(setup: { SnapshotDriver.shared.searchQuery = query },
                                  sheets: [(name, { AnyView(SearchPalette(workspace: workspace, close: {}, choose: { _, _ in })) })]))
@@ -102,8 +95,8 @@ struct ScreenRenders {
             ("requirements", Navigator.Entry(link: .place(.requirements))),
             ("people", Navigator.Entry(link: .place(.people))),
             ("codes", Navigator.Entry(link: .place(.codes))),
-            ("settings", Navigator.Entry(link: .place(.settings))),
         ]
+        entries += SettingsTab.allCases.map { ("settings-\($0)", Navigator.Entry(link: .settings($0.page))) }
         if let semester = workspace.currentSemester {
             entries.append(("semester", Navigator.Entry(link: AppLink(.semester, semester.id))))
         }

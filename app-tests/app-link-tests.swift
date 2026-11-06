@@ -48,6 +48,39 @@ struct NavigatorTests {
         #expect(linked.outsidePlacement(windowAge: 0.3) == .tab)
     }
 
+    @Test func upReturnsToTheListAPersonWasOpenedFrom() {
+        let navigator = Navigator()
+        let people = Navigator.Entry(link: .place(.people))
+        let person = Navigator.Entry(link: AppLink(.person, UUID()))
+        navigator.go(people)
+        navigator.go(person)
+        navigator.up(to: people)
+        #expect(navigator.current == people)
+        #expect(navigator.backList.map(\.link) == [.place(.today)])
+        // As the window's back: forward goes to the person again.
+        #expect(navigator.forwardList == [person])
+    }
+
+    @Test func upFromAPersonOpenedElsewhereIsANewStep() {
+        let navigator = Navigator()
+        let course = Navigator.Entry(link: .course(graphTheory), course: graphTheory)
+        let person = Navigator.Entry(link: AppLink(.person, UUID()))
+        navigator.go(course)
+        navigator.go(person)
+        navigator.up(to: Navigator.Entry(link: .place(.people)))
+        #expect(navigator.current.link == .place(.people))
+        #expect(navigator.backList.map(\.link) == [person.link, course.link, .place(.today)])
+    }
+
+    @Test func eachSettingsTabIsAStep() {
+        let navigator = Navigator()
+        navigator.go(Navigator.Entry(link: .settings(.general)))
+        navigator.go(Navigator.Entry(link: .settings(.claude)))
+        #expect(navigator.screen == .settings)
+        navigator.back()
+        #expect(navigator.current.link == .settings(.general))
+    }
+
     @Test func aPersonOpensOnThePeoplePage() {
         let navigator = Navigator(Navigator.Entry(link: AppLink(.person, UUID())))
         #expect(navigator.screen == .people)
@@ -83,14 +116,30 @@ struct WorkspaceLinkTests {
         let title = workspace.title(of: Navigator.Entry(link: AppLink(.exam, exam), course: graphTheory))
         #expect(title.hasSuffix("· 중간고사"))
         #expect(workspace.title(of: Navigator.Entry(link: .place(.today))) == String(localized: .rootNavToday))
+        #expect(workspace.title(of: Navigator.Entry(link: .settings(.claude))) == "\(String(localized: .rootNavSettings)) · Claude")
+    }
+
+    /// The address wins: a link naming a tab opens it, and only one naming none (the sidebar, ⌘,) takes the last picked.
+    @Test func aSettingsLinkWithoutATabOpensTheOneLastPicked() throws {
+        let workspace = try fixtureWorkspace()
+        // The test host shares the app's defaults: the user's last tab is put back.
+        let saved = UserDefaults.standard.string(forKey: SettingsTab.storageKey)
+        defer { UserDefaults.standard.set(saved, forKey: SettingsTab.storageKey) }
+        UserDefaults.standard.set(SettingsTab.backup.rawValue, forKey: SettingsTab.storageKey)
+        #expect(workspace.entry(for: .place(.settings))?.link == .settings(.backup))
+        #expect(workspace.entry(for: .settings(.claude))?.link == .settings(.claude))
     }
 }
 
-/// Every course page has a link of its own and comes back from it.
+/// Every course page and settings tab has a link of its own and comes back from it.
 struct CoursePageLinkTests {
     @Test func everySectionRoundTripsThroughItsPage() {
         for section in CourseSection.allCases {
             #expect(CourseSection(section.page) == section)
         }
+        for tab in SettingsTab.allCases {
+            #expect(SettingsTab(tab.page) == tab)
+        }
+        #expect(Set(SettingsTab.allCases.map(\.page)).count == AppLink.SettingsPage.allCases.count)
     }
 }

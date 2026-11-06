@@ -62,7 +62,11 @@ struct RootView: View {
         openWindow(id: FolioApp.mainWindow, value: request)
     }
 
-    var openLink: OpenLinkAction { OpenLinkAction { link, placement, course in open(link, in: placement, course: course) } }
+    var openLink: OpenLinkAction {
+        OpenLinkAction { link, placement, course in open(link, in: placement, course: course) } upHandler: { link in
+            if let entry = workspace.entry(for: link) { navigator.up(to: entry) }
+        }
+    }
 
     func openFromOutside(_ link: AppLink) {
         #if os(macOS)

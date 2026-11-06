@@ -111,7 +111,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
     - 화면은 `init(workspace:)`와 링크의 ID만 받는다. 링크가 가리키는 안쪽(과목의 구역, 연 파일·단원·노트, 사람)은 `\.place`로 읽는다. 다른 화면은 `\.openLink`로 열고, 여는 클로저를 인자로 받지 않는다.
     - 화면은 창 틀에 기대지 않는다. 툴바에 항목을 넣지 않고(도구는 `PageBar`, 보조 패널은 FAB), 창 크기가 아니라 자기 폭으로 배치를 고르며, 위치 표시에는 `.crumb`로 단계를 알리기만 한다. 그리는 것은 창(나중에는 칸)이다.
     - 화면은 받은 폭 안에 그린다. 전체 창(1440), 칸(720), 좁은 폭(390, iPhone) 어디서도 옆으로 넘치거나 행을 자르지 않고 접는다. 나란한 블록은 `Fold(wideFrom:)`로 넓을 때만 나란히 두고 좁으면 쌓는다. `FormRow`는 이름과 컨트롤이 한 줄에 들어가지 않으면 컨트롤을 이름 아래로 내리고, 다른 행은 `FoldingRow`로 같게 접는다.
-    - 목록 열과 본문이 나란한 화면은 `ColumnSplit`으로 둔다. 본문이 `ColumnSplit.pageRoom`보다 좁아지면, 구역 수가 고정인 열(과목, 설정)은 본문 위 `PageBar`의 구역 메뉴가 되고(`.menu`), 항목이 늘어나는 목록(사람, 퀴즈 범위, 과목의 노트 목록)은 목록과 본문 중 하나만 보인다(`.stack`). 고르기와 목록으로 돌아가기는 링크를 가진 것이면 `\.openLink`로 가서 창의 기록에 남는다(과목의 구역과 노트, 사람).
+    - 목록 열과 본문이 나란한 화면은 `ColumnSplit`으로 둔다. 본문이 `ColumnSplit.pageRoom`보다 좁아지면, 구역 수가 고정인 열(과목, 설정)은 본문 위 `PageBar`의 구역 메뉴가 되고(`.menu`), 항목이 늘어나는 목록(사람, 퀴즈 범위, 과목의 노트 목록)은 목록과 본문 중 하나만 보인다(`.stack`). 고르기와 목록으로 돌아가기는 링크를 가진 것이면 `\.openLink`로 가서 창의 기록에 남는다(과목의 구역과 노트, 설정의 탭 `folio://settings/<탭>`, 사람). 목록으로 돌아가는 버튼은 `openLink.up(to:)`를 부른다. 바로 앞 기록이 그 목록이면 창의 뒤로와 같고, 아니면 목록을 새로 연다. 탭 없는 `folio://settings`(사이드바, ⌘,)는 `Workspace.entry(for:)`가 마지막으로 고른 탭으로 채우므로, 기록의 모든 칸이 탭을 가진다.
     - `ScreenFitTests`(`mise run test-app`)가 모든 화면을 세 폭으로 그려 넘치는지 본다. `ColumnSplit`의 본문은 평소 0까지 줄어들어 넘친 것을 자르는데, 검사는 `\.revealsOverflow`로 이를 풀어 넘친 본문이 창을 밀어내게 해서 본다. 바뀐 화면은 `FOLIO_RENDER_SIZES=1440x900,720,390 mise run render`로 그려 눈으로 본다.
 - 모델 테스트는 `app-tests/<화면>-model-tests.swift`에 Swift Testing으로 쓰고, `fixtureWorkspace()`로 가짜 GIST 폴더를 연다.
 

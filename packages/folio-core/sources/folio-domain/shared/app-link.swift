@@ -1,7 +1,7 @@
 import Foundation
 
 /// The address of anything the app shows: `folio://<kind>/<ID>[#page=N|#^block|#heading]`, or a place that needs no
-/// ID (`folio://today`). Every way in (a note's link, the search palette, the sidebar, the CLI, a window's history)
+/// ID (`folio://today`, `folio://settings/claude`). Every way in (a note's link, the search palette, the sidebar, the CLI, a window's history)
 /// names its target with this one value, so there is one place that opens it.
 public struct AppLink: Hashable, Sendable {
     public enum Kind: String, CaseIterable, Sendable {
@@ -31,17 +31,26 @@ public struct AppLink: Hashable, Sendable {
         case overview, sessions, units, notes, materials, quiz, cards, stats, problems, assignments, exams, grades
     }
 
+    /// A tab is a screen of its own, like a course's page, so it is a path and not an anchor: the window's history
+    /// compares links without anchors and would take two tabs for one step.
+    public enum SettingsPage: String, CaseIterable, Sendable {
+        case profile, general, notifications, backup, letters, notes, recording, claude
+    }
+
     public private(set) var kind: Kind
     public private(set) var id: UUID?
     public private(set) var page: CoursePage?
+    /// Nil opens the tab settings showed last.
+    public private(set) var settingsPage: SettingsPage?
     public private(set) var anchor: Anchor?
 
     /// Parts that don't belong to the kind are dropped, so two links to the same thing are equal: a place has no ID,
-    /// only a course has pages, only a material has page numbers and only a note has blocks and headings.
-    private init(kind: Kind, id: UUID?, page: CoursePage?, anchor: Anchor?) {
+    /// only a course and settings have pages, only a material has page numbers and only a note has blocks and headings.
+    private init(kind: Kind, id: UUID?, page: CoursePage?, settingsPage: SettingsPage? = nil, anchor: Anchor?) {
         self.kind = kind
         self.id = kind.isPlace ? nil : id
         self.page = kind == .course && page != .overview ? page : nil
+        self.settingsPage = kind == .settings ? settingsPage : nil
         self.anchor = switch anchor {
         case .page(let n) where kind == .material && n >= 1: anchor
         case .block(let b) where kind == .note && Self.isBlockID(b): anchor
@@ -59,15 +68,19 @@ public struct AppLink: Hashable, Sendable {
         AppLink(kind: .course, id: id, page: page, anchor: nil)
     }
 
+    public static func settings(_ page: SettingsPage?) -> AppLink {
+        AppLink(kind: .settings, id: nil, page: nil, settingsPage: page, anchor: nil)
+    }
+
     public init(_ kind: Kind, _ id: UUID, anchor: Anchor? = nil) {
         precondition(!kind.isPlace, "\(kind) takes no ID")
         self.init(kind: kind, id: id, page: nil, anchor: anchor)
     }
 
     /// The same target without its page, block or heading: what a window's history compares.
-    public var withoutAnchor: AppLink { AppLink(kind: kind, id: id, page: page, anchor: nil) }
+    public var withoutAnchor: AppLink { with(nil) }
 
-    public func with(_ anchor: Anchor?) -> AppLink { AppLink(kind: kind, id: id, page: page, anchor: anchor) }
+    public func with(_ anchor: Anchor?) -> AppLink { AppLink(kind: kind, id: id, page: page, settingsPage: settingsPage, anchor: anchor) }
 
     // MARK: Text
 
@@ -77,6 +90,7 @@ public struct AppLink: Hashable, Sendable {
         var s = "\(Self.scheme)://\(kind.rawValue)"
         if let id { s += "/\(id.uuidString)" }
         if let page { s += "/\(page.rawValue)" }
+        if let settingsPage { s += "/\(settingsPage.rawValue)" }
         switch anchor {
         case .page(let n): s += "#page=\(n)"
         case .block(let b): s += "#^\(b)"
@@ -118,6 +132,11 @@ public struct AppLink: Hashable, Sendable {
         guard let first = parts.first, let kind = Kind(rawValue: first.lowercased()) else { return nil }
         let fragment = hash.map { String(rest[rest.index(after: $0)...]) } ?? ""
         if kind.isPlace {
+            if kind == .settings, parts.count == 2 {
+                guard let tab = SettingsPage(rawValue: parts[1].lowercased()) else { return nil }
+                self.init(kind: kind, id: nil, page: nil, settingsPage: tab, anchor: nil)
+                return
+            }
             guard parts.count == 1 else { return nil }
             self.init(kind: kind, id: nil, page: nil, anchor: nil)
             return

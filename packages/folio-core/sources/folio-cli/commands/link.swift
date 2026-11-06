@@ -4,7 +4,6 @@ import FolioStorage
 import Foundation
 
 extension AppLink.Kind: ExpressibleByArgument {}
-extension AppLink.CoursePage: ExpressibleByArgument {}
 
 /// What `folio link` and `folio open` point at: a kind and the item, named as every other command names it.
 struct LinkTarget: ParsableArguments {
@@ -13,7 +12,8 @@ struct LinkTarget: ParsableArguments {
     @Option(help: ArgumentHelp(String(localized: .linkHelpPage), valueName: "n")) var page: Int?
     @Option(help: ArgumentHelp(String(localized: .linkHelpHeading), valueName: "heading")) var heading: String?
     @Option(help: ArgumentHelp(String(localized: .linkHelpBlock), valueName: "id")) var block: String?
-    @Option(help: ArgumentHelp(String(localized: .linkHelpSection), valueName: "page")) var section: AppLink.CoursePage?
+    // A string, not an enum: which names it takes depends on the kind, a course's pages or settings' tabs.
+    @Option(help: ArgumentHelp(String(localized: .linkHelpSection), valueName: "page")) var section: String?
 
     struct Resolved: Encodable {
         var link: String
@@ -25,9 +25,10 @@ struct LinkTarget: ParsableArguments {
     func resolve(_ r: Resolver) throws -> Resolved {
         if page != nil, kind != .material { throw usage(.linkPageOnlyMaterial) }
         if heading != nil || block != nil, kind != .note { throw usage(.linkAnchorOnlyNote) }
-        if section != nil, kind != .course { throw usage(.linkSectionOnlyCourse) }
+        if section != nil, kind != .course, kind != .settings { throw usage(.linkSectionOnlyCourse) }
         if kind.isPlace {
             guard ref.isEmpty else { throw usage(.linkPlaceTakesNoRef(kind.rawValue)) }
+            if kind == .settings { return done(.settings(try page(AppLink.SettingsPage.self)), title: section ?? kind.rawValue) }
             return done(.place(kind), title: kind.rawValue)
         }
         switch kind {
@@ -36,7 +37,7 @@ struct LinkTarget: ParsableArguments {
             return done(AppLink(.semester, s.id), title: s.folder?.name ?? s.source ?? s.id.uuidString)
         case .course:
             let c = try r.course(ref)
-            return done(.course(c.id, page: section), title: "\(c.code) \(c.course.title)")
+            return done(.course(c.id, page: try page(AppLink.CoursePage.self)), title: "\(c.code) \(c.course.title)")
         case .person:
             let p = try r.person(ref)
             return done(AppLink(.person, p.id), title: p.name)
@@ -97,6 +98,14 @@ struct LinkTarget: ParsableArguments {
             }
         }
         throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound("카드", rest)))
+    }
+
+    func page<Page: RawRepresentable & CaseIterable>(_: Page.Type) throws -> Page? where Page.RawValue == String {
+        guard let section else { return nil }
+        guard let page = Page(rawValue: section.lowercased()) else {
+            throw usage(.linkBadSection(section, Page.allCases.map(\.rawValue).joined(separator: ", ")))
+        }
+        return page
     }
 
     func done(_ link: AppLink, title: String) -> Resolved {

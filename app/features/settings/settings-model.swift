@@ -15,8 +15,19 @@ final class SettingsModel {
     var apiKey = ""
     var keySaved = APIKeyStore.read() != nil
     var usage: [MonthlyUsage] = []
+    /// The tab the window's link names. Starts at the one last chosen for a link that names none, though a window
+    /// never holds one: `Workspace.entry(for:)` fills it in.
+    private(set) var tab: SettingsTab
 
-    init(workspace: Workspace) { self.workspace = workspace }
+    init(workspace: Workspace, tab: SettingsTab = .general) {
+        self.workspace = workspace
+        self.tab = tab
+    }
+
+    func follow(_ link: AppLink) {
+        guard link.kind == .settings, let page = link.settingsPage else { return }
+        tab = SettingsTab(page)
+    }
 
     func load() {
         settings = workspace.settings
@@ -119,5 +130,36 @@ extension SettingsTab {
         case .recording: String(localized: .settingsTabRecording)
         case .claude: "Claude"
         }
+    }
+
+    init(_ page: AppLink.SettingsPage) {
+        self = switch page {
+        case .profile: .profile
+        case .general: .general
+        case .notifications: .notifications
+        case .backup: .backup
+        case .letters: .catalog
+        case .notes: .notes
+        case .recording: .recording
+        case .claude: .claude
+        }
+    }
+
+    var page: AppLink.SettingsPage {
+        switch self {
+        case .profile: .profile
+        case .general: .general
+        case .notifications: .notifications
+        case .backup: .backup
+        case .catalog: .letters
+        case .notes: .notes
+        case .recording: .recording
+        case .claude: .claude
+        }
+    }
+
+    /// What a link without a tab (the sidebar, ⌘,) opens: the tab last picked.
+    static var remembered: SettingsTab {
+        UserDefaults.standard.string(forKey: storageKey).flatMap(SettingsTab.init(rawValue:)) ?? .general
     }
 }
