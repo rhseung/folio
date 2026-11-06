@@ -346,15 +346,16 @@ struct NoteActionTests {
         #expect(try meta(note).kind == .review && meta(note).sessionId == s.id)
     }
 
-    /// A proposal stands in for an earlier one by these fields. A second session or score made from the course
-    /// alone is another item, and a log entry adds to the last.
-    @Test func proposalTargetsAreTheArgumentsOfChangesThatPickAnItem() {
-        #expect(Actions.targets[NoteWrite.command] == ["course", "note"])
-        #expect(Actions.targets[NoteEdit.command] == ["course", "note"])
-        #expect(Actions.targets[NoteAdd.command] == ["course", "title"])
-        #expect(Actions.targets[MaterialTrack.command] == ["course"])
-        #expect(Actions.targets[SessionAdd.command] == nil)
-        #expect(Actions.targets[ScoreAdd.command] == nil)
-        #expect(Actions.targets[QuizRecord.command] == nil)
+    /// Rewrites replace, `set` actions of `Patch` fields set what they name, and the rest only add, so they never
+    /// stand in for an earlier proposal.
+    @Test func proposalTargetsFollowWhatEachCommandWrites() {
+        #expect(Actions.targets[NoteWrite.command] == ProposalTarget(arguments: ["course", "note"], effect: .replaces(covers: [NoteEdit.command])))
+        #expect(Actions.targets[ExamSet.command] == ProposalTarget(arguments: ["course", "exam"], effect: .sets))
+        #expect(Actions.targets[NoteLink.command]?.effect == .sets)
+        #expect(Actions.targets[MaterialWrite.command]?.effect == .replaces(covers: []))
+        for additive in [NoteEdit.command, NoteAdd.command, ExamAdd.command, SessionAdd.command, ScoreAdd.command, QuizRecord.command,
+                         ExamRemove.command, MaterialTrack.command, UnitLink.command] {
+            #expect(Actions.targets[additive] == nil, "\(additive)")
+        }
     }
 }

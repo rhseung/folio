@@ -52,27 +52,55 @@ public struct ProposalRef: Hashable, Sendable {
     }
 }
 
-extension Chat {
-    /// Pending proposals that a later answer proposed again for the same item with the same command. Applying the
-    /// older one after the newer would undo or repeat it, so only the newest is offered. `arguments` maps a command to
-    /// the fields that pick its item; a command missing from it is never superseded.
-    public func supersededProposals(arguments: [String: [String]]) -> Set<ProposalRef> {
-        struct Key: Hashable {
-            var command: String
-            var target: JSONValue
-        }
-        func key(_ p: ActionProposal) -> Key? {
-            arguments[p.command].flatMap { p.target($0) }.map { Key(command: p.command, target: $0) }
-        }
-        var later = Set<Key>()
-        var superseded = Set<ProposalRef>()
-        for message in messages.reversed() {
-            let proposals = message.proposals ?? []
-            for (i, p) in proposals.enumerated() where p.applied != true {
-                if let k = key(p), later.contains(k) { superseded.insert(ProposalRef(message: message.id, index: i)) }
+/// How a command's proposal stands to an earlier one for the same item: whether applying it leaves anything of the
+/// earlier one. A command without one only adds (a note edit's append, a new exam, a log entry) and never stands in
+/// for another proposal.
+public struct ProposalTarget: Sendable, Equatable {
+    public enum Effect: Sendable, Equatable {
+        /// Writes the item whole, so nothing of an earlier proposal of this command or of `covers` is left.
+        case replaces(covers: Set<String>)
+        /// Writes the fields present in its input; a field left out stays as it is.
+        case sets
+    }
+
+    /// The fields that pick the item, the action's `@Arg` fields.
+    public var arguments: [String]
+    public var effect: Effect
+
+    public init(arguments: [String], effect: Effect) {
+        self.arguments = arguments
+        self.effect = effect
+    }
+
+    /// Whether applying `later` (of this target's command) after `earlier` leaves nothing `earlier` would change.
+    public func overrides(_ earlier: ActionProposal, with later: ActionProposal) -> Bool {
+        guard let item = later.target(arguments), earlier.target(arguments) == item else { return false }
+        switch effect {
+        case .replaces(let covers):
+            return earlier.command == later.command || covers.contains(earlier.command)
+        case .sets:
+            // A field absent from the input is left as it is (`Patch.keep`, a nil optional); `null` clears it, so it counts.
+            func fields(_ p: ActionProposal) -> Set<String> {
+                guard case .object(let o) = p.input else { return [] }
+                return Set(o.keys).subtracting(arguments)
             }
-            // Added after the check: the proposals of one answer are separate changes, not versions of each other.
-            later.formUnion(proposals.compactMap(key))
+            return earlier.command == later.command && fields(earlier).isSubset(of: fields(later))
+        }
+    }
+}
+
+extension Chat {
+    /// Pending proposals that a later answer made pointless: applying the later one would write over everything the
+    /// earlier one changes, so applying the earlier after it would only undo it. Proposals of one answer are separate
+    /// changes and never supersede each other. `targets` maps a command to how it stands to earlier proposals; a
+    /// command missing from it supersedes nothing.
+    public func supersededProposals(targets: [String: ProposalTarget]) -> Set<ProposalRef> {
+        var superseded = Set<ProposalRef>()
+        for (m, message) in messages.enumerated() {
+            let later = messages[(m + 1)...].flatMap { $0.proposals ?? [] }.compactMap { p in targets[p.command].map { (p, $0) } }
+            for (i, p) in (message.proposals ?? []).enumerated() where p.applied != true {
+                if later.contains(where: { q, target in target.overrides(p, with: q) }) { superseded.insert(ProposalRef(message: message.id, index: i)) }
+            }
         }
         return superseded
     }

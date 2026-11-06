@@ -69,12 +69,12 @@ extension ClaudeClient {
     }
 
     /// The context goes in the system prompt (stable part, cached) and in front
-    /// of the newest question only; earlier turns are sent as plain text. `targets` is `Chat.supersededProposals`'s map
-    /// of the fields that pick each command's item.
-    public func reply(to chat: Chat, context: BuiltContext, targets: [String: [String]] = [:],
+    /// of the newest question only; earlier turns are sent as plain text. `targets` is what
+    /// `Chat.supersededProposals` decides by, which FolioAI can't read from the actions itself.
+    public func reply(to chat: Chat, context: BuiltContext, targets: [String: ProposalTarget] = [:],
                       onEvent: (@Sendable (StreamEvent) -> Void)? = nil) async throws -> MessagesResponse {
         guard let last = chat.messages.last, last.role == .user else { throw ClaudeError.invalidOutput("no question to answer") }
-        let superseded = chat.supersededProposals(arguments: targets)
+        let superseded = chat.supersededProposals(targets: targets)
         var messages = chat.messages.dropLast().map { m in
             let replaced = Set(superseded.filter { $0.message == m.id }.map(\.index))
             return Message(role: m.role == .user ? .user : .assistant, content: [.text(Self.history(m, superseded: replaced))])

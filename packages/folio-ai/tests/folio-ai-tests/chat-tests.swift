@@ -90,7 +90,7 @@ struct ChatTests {
             ChatMessage(role: .user, text: "됐어?", at: now),
         ])
         _ = try await ClaudeClient(provider: fake).reply(to: chat, context: ContextBuilder.build([], budgetTokens: 10),
-                                                         targets: ["note write": ["course", "note"]])
+                                                         targets: ["note write": ProposalTarget(arguments: ["course", "note"], effect: .replaces(covers: []))])
         let r = try #require(await fake.requests.first)
         func sent(_ i: Int) -> String { if case .text(let t, _)? = r.messages[i].content.first { t } else { "" } }
         #expect(sent(1).hasSuffix(": not applied; superseded by a later proposal"))

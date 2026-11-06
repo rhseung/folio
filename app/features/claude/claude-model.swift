@@ -280,7 +280,7 @@ final class ClaudeModel {
         Self.html(chat, partial: sending && answering == chatID ? partial : nil, cards: cards, superseded: superseded(chat), describe: describe)
     }
 
-    func superseded(_ chat: Chat) -> Set<ProposalRef> { chat.supersededProposals(arguments: Actions.targets) }
+    func superseded(_ chat: Chat) -> Set<ProposalRef> { chat.supersededProposals(targets: Actions.targets) }
 
     /// The proposal's line in the answer: what it would do, why it can't when the folder no longer allows it, and
     /// what it changes in a note. Each is a dry run, and the page is drawn again twice a second while an answer is
