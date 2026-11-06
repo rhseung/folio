@@ -37,6 +37,64 @@ struct MCPTests {
         }
     }
 
+    func toolNames(_ server: MCPServer, _ gist: URL) throws -> Set<String> {
+        guard case .array(let tools)? = try send(server, gist, "tools/list")["result"]?["tools"] else { return [] }
+        return Set(tools.compactMap { t -> String? in if case .string(let n)? = t["name"] { n } else { nil } })
+    }
+
+    @Test func thePanelOpensOnlyTheCourseTools() throws {
+        let gist = try Harness.fixtureCopy()
+        let panel = try toolNames(MCPServer(gist: nil, propose: true), gist)
+        let all = try toolNames(MCPServer(gist: nil, propose: false), gist)
+        #expect(panel.isSubset(of: all))
+        for tool in ["note_edit", "note_write", "note_show", "session_list", "exam_scope_taught", "attendance_set", "review_record",
+                     "problem-set_record", "search", "today", "course_show", "course_list"] {
+            #expect(panel.contains(tool), "\(tool) is not in the panel")
+        }
+        for tool in ["import_notion", "backup_create", "cleanup_apply", "settings_set", "catalog_show", "transcript_show", "requirement_check",
+                     "semester_add", "gpa", "recording_trim", "course_add", "course_rename", "course_set", "check"] {
+            #expect(!panel.contains(tool), "\(tool) is in the panel")
+            #expect(all.contains(tool), "\(tool) left the terminal's tools")
+        }
+    }
+
+    @Test func readResultsAreCompactJSON() throws {
+        let gist = try Harness.fixtureCopy()
+        // The fixture's note has empty `sessionIds` and `unitIds`, printed over several lines.
+        let (failed, texts) = try call(MCPServer(gist: nil, propose: true), gist, "note_list", ["course": "EC4207"])
+        #expect(!failed, "\(texts)")
+        let text = try #require(texts.first)
+        #expect(text.contains("\"path\""))
+        #expect(!text.contains("\n") && !text.contains("[]") && !text.contains("null") && !text.contains("{}"), "\(text)")
+        #expect((try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8))) != nil)
+    }
+
+    @Test func compactingDropsOnlyEmptyMembers() {
+        let pretty = "{\n  \"a\" : [\n    {}, null, 0\n  ],\n  \"b\" : null,\n  \"c\" : { \"d\" : [], \"e\" : {} },\n  \"f\" : \"\",\n  \"g\" : false\n}"
+        #expect(MCPServer.compact(pretty) == #"{"a":[{},null,0],"f":"","g":false}"#)
+        #expect(MCPServer.compact("노트가 없습니다: a") == "노트가 없습니다: a")
+        #expect(MCPServer.compact("[not json") == "[not json")
+        #expect(MCPServer.compact("42") == "42")
+    }
+
+    @Test func aProposedNoteEditCarriesOnlyTheChange() throws {
+        let (a, b) = (try Harness.fixtureCopy(), try Harness.fixtureCopy())
+        let before = try Harness.files(a)
+        let input: JSONValue = ["course": "EC4207", "note": "2주차-1", "replacements": .array([["old": "Matching", "new": "매칭"]]), "append": "질문"]
+        let (failed, texts) = try call(MCPServer(gist: nil, propose: true), a, "note_edit", input)
+        #expect(!failed, "\(texts)")
+        #expect(try Harness.files(a) == before)
+        #expect(texts.first?.contains("note_edit") == true)
+        let proposal = try #require(texts.compactMap(ActionProposal.init(text:)).first)
+        #expect(proposal.command == "note edit")
+        let type = try #require(Actions.all.first { $0.command == proposal.command })
+        try h.direct(try type.decode(JSONEncoder().encode(proposal.input)), gist: b)
+        let r = h.cli(["note", "show", "EC4207/2주차-1"], gist: b)
+        #expect(r.out.contains("> [!definition] 매칭") && r.out.contains("edges.\n질문"), "\(r.out)")
+        let missing = try call(MCPServer(gist: nil, propose: true), a, "note_edit", ["course": "EC4207", "note": "2주차-1", "append": ""])
+        #expect(missing.0)
+    }
+
     @Test func writesThroughTheSameRun() throws {
         let (a, b) = (try Harness.fixtureCopy(), try Harness.fixtureCopy())
         let input: JSONValue = ["course": "EC4207", "title": "중간고사 대비 퀴즈", "location": "A동"]
