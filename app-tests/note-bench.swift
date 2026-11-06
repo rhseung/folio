@@ -28,6 +28,8 @@ import WebKit
     /// scrolling beside it).
     @Observable final class Pulse {
         var count = 0
+        /// The heading or block the window's place points at, which moves with back and forward.
+        var anchor: AppLink.Anchor?
     }
 
     struct Rig: View {
@@ -36,13 +38,13 @@ import WebKit
         let baseURL: URL?
         let dark: Bool
         let pulse: Pulse
-        let anchor: AppLink.Anchor?
         @State private var insert: String?
 
         var body: some View {
             // Read here so a new text or pulse updates the view, as the note screen's model does.
             let note = text.wrappedValue
             let count = pulse.count
+            let anchor = pulse.anchor
             Group {
                 switch kind {
                 case .edit:
@@ -71,7 +73,8 @@ import WebKit
         let window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: width, height: height), styleMask: [.borderless], backing: .buffered, defer: false)
         window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         let pulse = Pulse()
-        let host = NSHostingView(rootView: Rig(kind: kind, text: text, baseURL: baseURL, dark: dark, pulse: pulse, anchor: anchor))
+        pulse.anchor = anchor
+        let host = NSHostingView(rootView: Rig(kind: kind, text: text, baseURL: baseURL, dark: dark, pulse: pulse))
         window.contentView = host
         (self.kind, self.dark, self.window, self.host, self.pulse) = (kind, dark, window, host, pulse)
     }
@@ -83,6 +86,12 @@ import WebKit
     }
 
     var size: CGSize { host.bounds.size }
+
+    /// Set as following a link to another heading of the same note, or going back to it without one, does.
+    var anchor: AppLink.Anchor? {
+        get { pulse.anchor }
+        set { pulse.anchor = newValue }
+    }
 
     // MARK: Notes
 

@@ -51,6 +51,9 @@ struct MarkdownEditor {
         if view.string != text, !view.hasMarkedText() { view.replace(with: text) }
         // Not before the note's text has come in: the model loads it after the view is made, and an anchor looked for
         // in the empty text would be given up on.
+        // Cleared with no anchor, as the preview does: back to the note without one and forward to the anchor again
+        // moves the caret again.
+        if anchor == nil { coordinator.revealed = nil }
         if let anchor, anchor != coordinator.revealed, !text.isEmpty, view.string == text {
             coordinator.revealed = anchor
             if let location = anchor.location(in: text) { view.reveal(location) }

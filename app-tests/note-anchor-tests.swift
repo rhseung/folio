@@ -33,6 +33,25 @@ struct NoteAnchorRevealTests {
         #expect(caret.rect.minY >= 0 && caret.rect.maxY <= bench.size.height / 3, "\(caret.rect)")
     }
 
+    @Test func goingBackAndForwardToTheSameHeadingMovesTheCaretAgain() async throws {
+        // Opened from the sidebar, then a link to a heading, back (no anchor), and forward: the view stays the same one.
+        let bench = NoteBench(.edit, note)
+        await bench.settle()
+        let heading = (note as NSString).range(of: "## Hall의 조건").location
+        bench.anchor = .heading("Hall의 조건")
+        await bench.settle()
+        #expect(bench.caret?.location == heading)
+        bench.anchor = nil
+        await bench.settle()
+        bench.placeCaret(at: 0)
+        await bench.scroll(to: 0)
+        bench.anchor = .heading("Hall의 조건")
+        await bench.settle()
+        let caret = try #require(bench.caret)
+        #expect(caret.location == heading)
+        #expect(caret.rect.minY >= 0 && caret.rect.maxY <= bench.size.height / 3, "\(caret.rect)")
+    }
+
     @Test func aMissingHeadingOpensAtTheTop() async throws {
         let bench = NoteBench(.edit, note, anchor: .heading("없는 제목"))
         await bench.settle()
