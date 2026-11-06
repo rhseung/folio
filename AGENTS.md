@@ -28,7 +28,7 @@ folio/
     DESIGN.md         # 디자인 시스템: 원칙, 토큰과 구성 요소의 쓰임, 패턴
   packages/
     folio-core/       # 모델, 저장소, 파일 추적, 성적과 GPA 계산, 복습 스케줄러. UI 코드 없음
-    folio-markdown/   # 마크다운 파서와 확장 문법(콜아웃, 위키링크, 블록 참조, cb-table, cb-widget)
+    folio-markdown/   # 마크다운 파서와 확장 문법(콜아웃, 위키링크, 블록 참조, 각주, cb-table, cb-widget), 편집 보기의 입력 보조와 표 편집 변환(`editing/`)
     folio-ai/         # Claude 연동 계층. 프로바이더 추상화, 맥락 구성, 작업별 요청과 응답 스키마
   app/                # 멀티플랫폼 앱 타깃(macOS, iPadOS)
   app-tests/          # 화면 모델 테스트와 노트 보기 회귀 검사(`mise run test-app`), iPad 테스트는 ipad/(`mise run test-ipad`)
