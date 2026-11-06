@@ -23,7 +23,6 @@ import UIKit
     static let groups: [[TableCommand]] = [
         [.rowAbove, .rowBelow, .columnLeft, .columnRight],
         [.moveRowUp, .moveRowDown, .moveColumnLeft, .moveColumnRight],
-        [.merge, .mergeRight, .mergeDown, .unmerge],
         [.deleteRow, .deleteColumn],
         [.format],
     ]
@@ -40,10 +39,6 @@ import UIKit
         case .moveRowDown: String(localized: .notesTableMoveRowDown)
         case .moveColumnLeft: String(localized: .notesTableMoveColumnLeft)
         case .moveColumnRight: String(localized: .notesTableMoveColumnRight)
-        case .merge: String(localized: .notesTableMerge)
-        case .mergeRight: String(localized: .notesTableMergeRight)
-        case .mergeDown: String(localized: .notesTableMergeDown)
-        case .unmerge: String(localized: .notesTableUnmerge)
         case .format: String(localized: .notesTableFormat)
         }
     }
@@ -59,14 +54,12 @@ import UIKit
         case .moveRowDown: "arrow.down"
         case .moveColumnLeft: "arrow.left"
         case .moveColumnRight: "arrow.right"
-        case .merge, .mergeRight, .mergeDown: "rectangle.split.2x1.slash"
-        case .unmerge: "rectangle.split.2x1"
         case .format: "text.alignleft"
         }
     }
 
     /// Rows and columns are added with ⌘ and ⌥⌘, moved with ⌃⌘, deleted with ⇧⌘⌫ and ⌥⇧⌘⌫, as Typora and Obsidian's
-    /// Advanced Tables have most of them. Merging and tidying are rare enough for the menu alone.
+    /// Advanced Tables have most of them. Tidying is rare enough for the menu alone.
     static func shortcut(_ command: TableCommand) -> Shortcut? {
         switch command {
         case .rowBelow: Shortcut(key: .enter)
@@ -79,7 +72,7 @@ import UIKit
         case .moveColumnRight: Shortcut(key: .right, control: true)
         case .deleteRow: Shortcut(key: .delete, shift: true)
         case .deleteColumn: Shortcut(key: .delete, shift: true, option: true)
-        case .merge, .mergeRight, .mergeDown, .unmerge, .format: nil
+        case .format: nil
         }
     }
 
@@ -96,8 +89,8 @@ import UIKit
         return Shortcut(key: key, shift: flags.contains(.shift), option: flags.contains(.option), control: flags.contains(.control))
     }
 
-    /// The table's commands as a submenu, each one off where it can't be done (a move past the edge, a cell that isn't
-    /// merged).
+    /// The table's commands as a submenu, each one off where it can't be done (a move past the edge, deleting the
+    /// last row or column).
     static func menu(for table: TableSource, run: @escaping @MainActor (SourceEditing.Edit) -> Void) -> NSMenuItem {
         let menu = NSMenu()
         menu.autoenablesItems = false

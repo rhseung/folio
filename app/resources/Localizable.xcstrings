@@ -6513,17 +6513,6 @@
         }
       }
     },
-    "notes.assist.merged-table": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "칸을 합친 표"
-          }
-        }
-      }
-    },
     "notes.assist.numbers": {
       "extractionState": "manual",
       "localizations": {
@@ -7217,39 +7206,6 @@
         }
       }
     },
-    "notes.table.merge": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "고른 칸 합치기"
-          }
-        }
-      }
-    },
-    "notes.table.merge-down": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아래 칸과 합치기"
-          }
-        }
-      }
-    },
-    "notes.table.merge-right": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오른쪽 칸과 합치기"
-          }
-        }
-      }
-    },
     "notes.table.move-column-left": {
       "extractionState": "manual",
       "localizations": {
@@ -7312,17 +7268,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "아래에 행 추가"
-          }
-        }
-      }
-    },
-    "notes.table.unmerge": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "합친 칸 나누기"
           }
         }
       }

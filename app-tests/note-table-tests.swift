@@ -47,11 +47,11 @@ struct NoteTableTests {
         let items = try #require(item.submenu?.items.filter { !$0.isSeparatorItem })
         #expect(items.count == TableCommand.allCases.count)
         let enabled = Set(items.filter(\.isEnabled).map(\.title))
-        #expect(enabled.contains(TableCommands.title(.rowBelow)) && enabled.contains(TableCommands.title(.mergeRight)))
-        #expect(!enabled.contains(TableCommands.title(.moveColumnLeft)) && !enabled.contains(TableCommands.title(.unmerge)))
-        let merge = try #require(items.first { $0.title == TableCommands.title(.mergeRight) })
-        _ = merge.target?.perform(merge.action, with: merge)
-        #expect(view.string.contains("```cb-table\n"))
+        #expect(enabled.contains(TableCommands.title(.rowBelow)) && enabled.contains(TableCommands.title(.moveRowUp)))
+        #expect(!enabled.contains(TableCommands.title(.moveColumnLeft)) && !enabled.contains(TableCommands.title(.moveRowDown)))
+        let up = try #require(items.first { $0.title == TableCommands.title(.moveRowUp) })
+        _ = up.target?.perform(up.action, with: up)
+        #expect(view.string.hasPrefix("앞\n\n| 1   | 2   |\n"))
     }
 
     /// No two table commands share a key.

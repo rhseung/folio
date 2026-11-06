@@ -1,21 +1,17 @@
 import Foundation
 import Markdown
 
-/// What the edit view can do to the table the caret is in. Each one rewrites the table's source.
+/// What the edit view can do to the GFM table the caret is in. Each one rewrites the table's source.
 public enum TableCommand: String, CaseIterable, Sendable {
     case rowAbove, rowBelow, columnLeft, columnRight
     case deleteRow, deleteColumn
     case moveRowUp, moveRowDown, moveColumnLeft, moveColumnRight
-    /// The cells the selection runs across become one.
-    case merge
-    case mergeRight, mergeDown, unmerge
-    /// Lines the pipes up (GFM), or lays the JSON out a row to a line (`cb-table`).
+    /// Lines the pipes up, as every other command also does.
     case format
 }
 
-/// Table edits as changes to the markdown source, for the Mac and iPad edit views alike. A GFM table stays GFM, its
-/// pipes lined up after every edit; merging cells turns it into a `cb-table`, the only table that can hold them, and
-/// splitting the last merged cell turns it back when nothing else (widths, cells of several lines) needs the JSON.
+/// Table edits as changes to the markdown source, for the Mac and iPad edit views alike. Only GFM pipe tables: a
+/// `cb-table` is drawn by the preview but not edited (#39).
 public enum TableEditing {
     /// The table the selection starts in, or nil outside one.
     public static func table(in text: NSString, selection: NSRange) -> TableSource? {
@@ -27,22 +23,16 @@ public enum TableEditing {
     }
 }
 
-/// A table found in the source: its grid, where it is, and the cells the selection starts and ends in.
+/// A GFM table found in the source: its grid, where it is, and the cell the selection starts in.
 public struct TableSource {
-    public enum Kind: Sendable { case gfm, cbTable }
-
-    public let kind: Kind
     public let grid: TableGrid
-    /// The slots the selection starts and ends in.
-    public let start: (row: Int, column: Int)
-    public let end: (row: Int, column: Int)
+    public let cell: (row: Int, column: Int)
     let text: NSString
-    /// The table's lines, fences included, without the last line break.
+    /// The table's lines, without the last line break.
     let block: NSRange
     /// What stands before the table on its first line and on the rest (a quote's `> `, a list item's indent).
     let firstPrefix: String
     let restPrefix: String
-    let fences: (open: String, close: String)?
 
     // MARK: Finding
 
@@ -53,24 +43,22 @@ public struct TableSource {
         let protectedLines = protected.text.split(separator: "\n", omittingEmptySubsequences: false)
         let document = Document(parsing: protected.text)
         let caretLine = Self.line(of: selection.location, in: lines)
-        let endLine = Self.line(of: NSMaxRange(selection), in: lines)
 
         // Lines of the protected text, 1-based, to the source's, 0-based.
         func source(_ line: Int) -> Int? {
             guard line >= 1, line <= protected.origin.count else { return nil }
             return protected.origin[line - 1] - 1
         }
-        var found: (node: Markup, first: Int, last: Int, column: Int)?
+        var found: (first: Int, last: Int, column: Int)?
         func walk(_ node: Markup) {
             guard found == nil else { return }
-            if node is Markdown.Table || (node as? CodeBlock)?.language == CBTable.language,
-               let range = node.range, let first = source(range.lowerBound.line), let last = source(range.upperBound.line),
+            if node is Markdown.Table, let range = node.range, let first = source(range.lowerBound.line), let last = source(range.upperBound.line),
                first <= caretLine, caretLine <= last {
                 // The column is in UTF-8 bytes of the protected line; what's before it is the same in the source.
                 let line = protectedLines[range.lowerBound.line - 1]
                 let bytes = min(range.lowerBound.column - 1, line.utf8.count)
                 let column = String(line.utf8.prefix(bytes)).map { $0.utf16.count } ?? 0
-                found = (node, first, last, column)
+                found = (first, last, column)
                 return
             }
             for child in node.children { walk(child) }
@@ -79,7 +67,7 @@ public struct TableSource {
         guard let found else { return nil }
 
         var last = found.last
-        // A table's range can run on over blank lines after it.
+        // A table's range could run on over blank lines after it.
         while last > found.first, text.substring(with: lines[last]).trimmingCharacters(in: .whitespaces).isEmpty { last -= 1 }
         // A caret on such a line is outside the table; its rows below would not reach that far.
         guard caretLine <= last else { return nil }
@@ -87,89 +75,54 @@ public struct TableSource {
         let firstPrefix = text.substring(with: NSRange(location: first.location, length: min(found.column, first.length)))
         self.firstPrefix = firstPrefix
         let blockLines = Array(lines[found.first...last])
-        let restPrefix = blockLines.count > 1 ? Self.prefix(of: text.substring(with: blockLines[1]), upTo: firstPrefix.utf16.count)
+        restPrefix = blockLines.count > 1 ? Self.prefix(of: text.substring(with: blockLines[1]), upTo: firstPrefix.utf16.count)
             : String(firstPrefix.map { $0 == ">" || $0.isWhitespace ? $0 : " " })
-        self.restPrefix = restPrefix
         let contents = blockLines.enumerated().map { i, line -> (range: NSRange, cut: Int) in
             let cut = i == 0 ? firstPrefix.utf16.count : Self.prefix(of: text.substring(with: line), upTo: firstPrefix.utf16.count).utf16.count
             return (line, min(cut, line.length))
         }
         self.text = text
         block = NSRange(location: blockLines[0].location, length: NSMaxRange(blockLines[blockLines.count - 1]) - blockLines[0].location)
-        let startLine = caretLine - found.first, stopLine = min(max(endLine, found.first), last) - found.first
 
-        if found.node is Markdown.Table {
-            kind = .gfm
-            fences = nil
-            let rows = contents.map { text.substring(with: NSRange(location: $0.range.location + $0.cut, length: $0.range.length - $0.cut)) }
-            guard rows.count >= 2 else { return nil }
-            let header = Self.split(rows[0]), delimiter = Self.split(rows[1])
-            let body = rows.dropFirst(2).map(Self.split)
-            let width = max(header.count, ([delimiter] + body).map(\.count).max() ?? 0)
-            guard width > 0 else { return nil }
-            func cells(_ split: [(text: String, range: NSRange)]) -> [TableGrid.Cell?] {
-                (0..<width).map { i in TableGrid.Cell(text: i < split.count ? split[i].text : "") }
-            }
-            let grid = TableGrid(columns: (0..<width).map { i in TableGrid.Column(align: i < delimiter.count ? Self.alignment(delimiter[i].text) : nil) },
-                                 rows: [TableGrid.Row(header: true, cells: cells(header))] + body.map { TableGrid.Row(cells: cells($0)) })
-            self.grid = grid
-            func slot(_ offset: Int, line: Int) -> (row: Int, column: Int) {
-                let content = contents[line]
-                let at = offset - content.range.location - content.cut
-                let split = Self.split(rows[line])
-                let column = split.firstIndex { at <= NSMaxRange($0.range) } ?? max(0, split.count - 1)
-                return (max(0, line - 1), min(column, width - 1))
-            }
-            start = slot(selection.location, line: startLine)
-            end = slot(NSMaxRange(selection), line: stopLine)
-        } else {
-            kind = .cbTable
-            let closes = blockLines.count > 1 && Self.isFence(text.substring(with: blockLines[blockLines.count - 1]))
-            fences = (text.substring(with: blockLines[0]), closes ? text.substring(with: blockLines[blockLines.count - 1]) : "\(restPrefix)```")
-            // The JSON as the lines between the fences hold it, without their prefixes, and where each line starts.
-            var json = ""
-            var starts: [(source: Int, json: Int, length: Int)] = []
-            for content in contents.dropFirst().dropLast(closes ? 1 : 0) {
-                if !json.isEmpty { json += "\n" }
-                let line = NSRange(location: content.range.location + content.cut, length: content.range.length - content.cut)
-                starts.append((line.location, json.utf16.count, line.length))
-                json += text.substring(with: line)
-            }
-            guard let node = JSONNode.parse(json), let (grid, places) = Self.grid(node) else { return nil }
-            self.grid = grid
-            func slot(_ offset: Int) -> (row: Int, column: Int) {
-                guard let line = starts.last(where: { $0.source <= offset }) else { return (0, 0) }
-                let at = line.json + min(max(0, offset - line.source), line.length)
-                return places.first { NSLocationInRange(at, $0.range) || NSMaxRange($0.range) == at }?.slot
-                    ?? places.first { $0.row && NSLocationInRange(at, $0.range) }?.slot ?? (0, 0)
-            }
-            start = slot(selection.location)
-            end = slot(NSMaxRange(selection))
+        let rows = contents.map { text.substring(with: NSRange(location: $0.range.location + $0.cut, length: $0.range.length - $0.cut)) }
+        guard rows.count >= 2 else { return nil }
+        let header = Self.split(rows[0]), delimiter = Self.split(rows[1])
+        let body = rows.dropFirst(2).map(Self.split)
+        let width = max(header.count, ([delimiter] + body).map(\.count).max() ?? 0)
+        guard width > 0 else { return nil }
+        func cells(_ split: [(text: String, range: NSRange)]) -> [String] {
+            (0..<width).map { i in i < split.count ? split[i].text : "" }
         }
+        grid = TableGrid(alignments: (0..<width).map { i in i < delimiter.count ? Self.alignment(delimiter[i].text) : nil },
+                         rows: [cells(header)] + body.map(cells))
+        // The delimiter row holds no cell; a caret on it is in the header.
+        let line = caretLine - found.first
+        let content = contents[line]
+        let at = selection.location - content.range.location - content.cut
+        let split = Self.split(rows[line])
+        let column = split.firstIndex { at <= NSMaxRange($0.range) } ?? max(0, split.count - 1)
+        cell = (max(0, line - 1), min(column, width - 1))
     }
 
     // MARK: Editing
 
-    /// The source with `command` done, the caret in the cell it leaves you in; nil when it can't be done here (a move
-    /// past the edge or through a merged cell, the last row, a cell that isn't merged).
+    /// The source with `command` done, the caret at the end of the cell it leaves you in; nil when it can't be done
+    /// here (a move past the edge, deleting the last row or column).
     public func edit(_ command: TableCommand) -> SourceEditing.Edit? {
         var grid = grid
-        let (r, c) = start
-        let here = grid.rect(r, c)
+        let (r, c) = cell
         var target = (row: r, column: c)
         switch command {
         case .rowAbove:
-            grid.insertRow(at: here.rows.lowerBound)
-            target = (here.rows.lowerBound, c)
+            grid.insertRow(at: r)
         case .rowBelow:
-            grid.insertRow(at: here.rows.upperBound + 1)
-            target = (here.rows.upperBound + 1, c)
+            grid.insertRow(at: r + 1)
+            target = (r + 1, c)
         case .columnLeft:
-            grid.insertColumn(at: here.columns.lowerBound)
-            target = (r, here.columns.lowerBound)
+            grid.insertColumn(at: c)
         case .columnRight:
-            grid.insertColumn(at: here.columns.upperBound + 1)
-            target = (r, here.columns.upperBound + 1)
+            grid.insertColumn(at: c + 1)
+            target = (r, c + 1)
         case .deleteRow:
             guard grid.height > 1 else { return nil }
             grid.removeRow(at: r)
@@ -186,38 +139,11 @@ public struct TableSource {
             let step = command == .moveColumnLeft ? -1 : 1
             guard grid.moveColumn(c, by: step) else { return nil }
             target = (r, c + step)
-        case .merge:
-            let rect = grid.closed(TableGrid.Rect(rows: min(r, end.row)...max(r, end.row), columns: min(c, end.column)...max(c, end.column)))
-            guard grid.merge(rect) else { return nil }
-            target = (rect.rows.lowerBound, rect.columns.lowerBound)
-        case .mergeRight:
-            let next = here.columns.upperBound + 1
-            guard next < grid.width else { return nil }
-            let other = grid.rect(here.rows.lowerBound, next)
-            guard other.rows == here.rows, grid.merge(TableGrid.Rect(rows: here.rows, columns: here.columns.lowerBound...other.columns.upperBound)) else { return nil }
-            target = (here.rows.lowerBound, here.columns.lowerBound)
-        case .mergeDown:
-            let next = here.rows.upperBound + 1
-            guard next < grid.height else { return nil }
-            let other = grid.rect(next, here.columns.lowerBound)
-            guard other.columns == here.columns, grid.merge(TableGrid.Rect(rows: here.rows.lowerBound...other.rows.upperBound, columns: here.columns)) else { return nil }
-            target = (here.rows.lowerBound, here.columns.lowerBound)
-        case .unmerge:
-            guard grid.unmerge(r, c) else { return nil }
-            target = (here.rows.lowerBound, here.columns.lowerBound)
         case .format:
             break
         }
-
-        // A GFM table's first row is its header, whatever moved there.
-        if kind == .gfm {
-            for i in grid.rows.indices { grid.rows[i].header = i == 0 }
-        }
-        let gfm = kind == .gfm ? !grid.hasMerged : Self.fitsGFM(grid)
-        let written = gfm ? Self.gfm(grid, first: firstPrefix, rest: restPrefix)
-            : Self.cbTable(grid, open: fences?.open ?? "\(firstPrefix)```\(CBTable.language)", close: fences?.close ?? "\(restPrefix)```", prefix: restPrefix)
-        let origin = grid.origin(min(target.row, grid.height - 1), min(target.column, grid.width - 1))
-        let caret = block.location + (written.cells[origin.row][origin.column].map(NSMaxRange) ?? 0)
+        let written = Self.gfm(grid, first: firstPrefix, rest: restPrefix)
+        let caret = block.location + NSMaxRange(written.cells[target.row][target.column])
         let new = text.replacingCharacters(in: block, with: written.text) as NSString
         return SourceEditing.diff(text, new, caret: caret)
     }
@@ -260,16 +186,6 @@ public struct TableSource {
         }
     }
 
-    /// Whether GFM can hold the table as it is: one header row on top, single-line cells, nothing merged, no widths
-    /// or fields only the JSON has.
-    static func fitsGFM(_ grid: TableGrid) -> Bool {
-        guard grid.height >= 1, grid.width >= 1, !grid.hasMerged, grid.headerColumn != true, grid.extra.isEmpty,
-              grid.columns.allSatisfy({ $0.isPlain && ($0.align == nil || CBTable.alignments.contains($0.align!)) }) else { return false }
-        return grid.rows.enumerated().allSatisfy { i, row in
-            row.header == (i == 0) && row.extra.isEmpty && row.cells.allSatisfy { $0.map { $0.extra.isEmpty && !$0.text.contains("\n") } ?? false }
-        }
-    }
-
     /// Pipes inside a cell's text escaped, as GFM needs them; ones already escaped stay as they are.
     static func escapePipes(_ text: String) -> String {
         var out = ""
@@ -283,11 +199,11 @@ public struct TableSource {
     }
 
     /// The table with its pipes lined up, and where each cell's text is in it.
-    static func gfm(_ grid: TableGrid, first: String, rest: String) -> (text: String, cells: [[NSRange?]]) {
-        let texts = grid.rows.map { $0.cells.map { escapePipes($0?.text ?? "") } }
+    static func gfm(_ grid: TableGrid, first: String, rest: String) -> (text: String, cells: [[NSRange]]) {
+        let texts = grid.rows.map { $0.map(escapePipes) }
         let widths = (0..<grid.width).map { c in max(3, texts.map { DisplayWidth.of($0[c]) }.max() ?? 0) }
         var out = ""
-        var cells: [[NSRange?]] = []
+        var cells: [[NSRange]] = []
         func line(_ prefix: String, _ items: [String]) -> [NSRange] {
             if !out.isEmpty { out += "\n" }
             out += prefix + "|"
@@ -302,7 +218,7 @@ public struct TableSource {
         cells.append(line(first, texts[0]))
         _ = line(rest, (0..<grid.width).map { c in
             let w = widths[c]
-            switch grid.columns[c].align {
+            switch grid.alignments[c] {
             case "left": return ":" + String(repeating: "-", count: w - 1)
             case "right": return String(repeating: "-", count: w - 1) + ":"
             case "center": return ":" + String(repeating: "-", count: w - 2) + ":"
@@ -310,106 +226,6 @@ public struct TableSource {
             }
         })
         for row in texts.dropFirst() { cells.append(line(rest, row)) }
-        return (out, cells)
-    }
-
-    // MARK: cb-table
-
-    /// The grid a `cb-table`'s JSON lays out, as a browser lays out its HTML: each cell in the next slot its row has
-    /// free, spans cut short at the table's edge or where another cell is. Also where each cell and row was written.
-    static func grid(_ node: JSONNode) -> (TableGrid, [(range: NSRange, slot: (row: Int, column: Int), row: Bool)])? {
-        guard let rowNodes = node["rows"]?.items, !rowNodes.isEmpty else { return nil }
-        let height = rowNodes.count
-        var slots: [[TableGrid.Cell??]] = Array(repeating: [], count: height)
-        var places: [(range: NSRange, slot: (row: Int, column: Int), row: Bool)] = []
-        func taken(_ r: Int, _ c: Int) -> Bool { c < slots[r].count && slots[r][c] != nil }
-        func put(_ r: Int, _ c: Int, _ value: TableGrid.Cell?) {
-            while slots[r].count <= c { slots[r].append(nil) }
-            slots[r][c] = .some(value)
-        }
-        var rows: [TableGrid.Row] = []
-        for (r, rowNode) in rowNodes.enumerated() {
-            var row = TableGrid.Row(header: rowNode["header"]?.bool ?? false, cells: [])
-            row.extra = rowNode.members?.filter { !["header", "cells"].contains($0.key) } ?? []
-            rows.append(row)
-            var c = 0
-            var first: Int?
-            for cellNode in rowNode["cells"]?.items ?? [] {
-                while taken(r, c) { c += 1 }
-                let rowspan = min(max(1, Int(cellNode["rowspan"]?.number ?? 1)), height - r)
-                var colspan = max(1, Int(cellNode["colspan"]?.number ?? 1))
-                var k = 1
-                while k < colspan, !(r..<(r + rowspan)).contains(where: { taken($0, c + k) }) { k += 1 }
-                colspan = k
-                var cell = TableGrid.Cell(text: cellNode["text"]?.string ?? "", colspan: colspan, rowspan: rowspan)
-                cell.extra = cellNode.members?.filter { !["text", "colspan", "rowspan"].contains($0.key) } ?? []
-                for rr in r..<(r + rowspan) {
-                    for cc in c..<(c + colspan) { put(rr, cc, rr == r && cc == c ? cell : nil) }
-                }
-                places.append((cellNode.range, (r, c), false))
-                first = first ?? c
-                c += colspan
-            }
-            places.append((rowNode.range, (r, first ?? 0), true))
-        }
-        let columnNodes = node["columns"]?.items ?? []
-        let width = max(columnNodes.count, slots.map(\.count).max() ?? 0)
-        guard width > 0 else { return nil }
-        for r in 0..<height {
-            rows[r].cells = (0..<width).map { c in c < slots[r].count ? slots[r][c] ?? TableGrid.Cell() : TableGrid.Cell() }
-        }
-        let columns = (0..<width).map { i -> TableGrid.Column in
-            guard i < columnNodes.count else { return TableGrid.Column() }
-            var column = TableGrid.Column(width: columnNodes[i]["width"]?.number, align: columnNodes[i]["align"]?.string)
-            column.extra = columnNodes[i].members?.filter { !["width", "align"].contains($0.key) } ?? []
-            return column
-        }
-        var grid = TableGrid(columns: columns, rows: rows, headerColumn: node["headerColumn"]?.bool)
-        grid.extra = node.members?.filter { !["columns", "rows", "headerColumn"].contains($0.key) } ?? []
-        return (grid, places)
-    }
-
-    /// The `cb-table` block, a row to a line, and where each cell's text is in it.
-    static func cbTable(_ grid: TableGrid, open: String, close: String, prefix: String) -> (text: String, cells: [[NSRange?]]) {
-        var out = open + "\n" + prefix + "{\n"
-        var cells: [[NSRange?]] = Array(repeating: Array(repeating: nil, count: grid.width), count: grid.height)
-        var parts: [String] = []
-        if !grid.columns.allSatisfy({ $0.isPlain && $0.align == nil }) {
-            let columns = grid.columns.map { column -> String in
-                var members: [JSONNode.Member] = []
-                if let w = column.width { members.append(.init(key: "width", value: JSONNode(.number(JSONNode.number(w))))) }
-                if let a = column.align { members.append(.init(key: "align", value: JSONNode(.string(a)))) }
-                return JSONNode(.object(members + column.extra)).text
-            }
-            parts.append("\"columns\": [" + columns.joined(separator: ", ") + "]")
-        }
-        if let h = grid.headerColumn { parts.append("\"headerColumn\": \(h)") }
-        for part in parts { out += prefix + "  " + part + ",\n" }
-        out += prefix + "  \"rows\": [\n"
-        for (r, row) in grid.rows.enumerated() {
-            out += prefix + "    {" + (row.header ? "\"header\": true, " : "") + "\"cells\": ["
-            var first = true
-            for (c, slot) in row.cells.enumerated() {
-                guard let cell = slot else { continue }
-                if !first { out += ", " }
-                first = false
-                out += "{\"text\": "
-                let quoted = JSONNode.quoted(cell.text)
-                // The caret goes at the text's end, inside its closing quote.
-                cells[r][c] = NSRange(location: out.utf16.count + 1, length: quoted.utf16.count - 2)
-                out += quoted
-                if cell.colspan > 1 { out += ", \"colspan\": \(cell.colspan)" }
-                if cell.rowspan > 1 { out += ", \"rowspan\": \(cell.rowspan)" }
-                for m in cell.extra { out += ", " + JSONNode.quoted(m.key) + ": " + m.value.text }
-                out += "}"
-            }
-            out += "]"
-            for m in row.extra { out += ", " + JSONNode.quoted(m.key) + ": " + m.value.text }
-            out += "}" + (r < grid.height - 1 ? "," : "") + "\n"
-        }
-        out += prefix + "  ]"
-        for m in grid.extra { out += ",\n" + prefix + "  " + JSONNode.quoted(m.key) + ": " + m.value.text }
-        out += "\n" + prefix + "}\n" + close
         return (out, cells)
     }
 
@@ -441,10 +257,6 @@ public struct TableSource {
             out.append(ch)
         }
         return out
-    }
-
-    static func isFence(_ line: String) -> Bool {
-        line.wholeMatch(of: #/[ \t>]*(`{3,}|~{3,})[ \t]*/#) != nil
     }
 }
 
