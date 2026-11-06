@@ -126,7 +126,7 @@ struct ClaudeModelTests {
         model.replace(StoredDocument(new: chat))
         model.select(chat.id)
         let page = ClaudeModel.html(chat, describe: model.describe)
-        #expect(page.contains(#"<div class="proposal"><span>"#))
+        #expect(page.contains(#"<div class="proposal"><div class="row"><span>"#))
         #expect(page.contains(#"<a href="folio://action/apply/\#(answer.id)/0">"#))
         #expect(!page.contains("SQL("))
 
@@ -183,6 +183,137 @@ struct ClaudeModelTests {
         model.select(chat.id)
         model.apply(message: answer.id, index: 0, course: course, confirmed: false)
         #expect(workspace.notesRevision > revision)
+    }
+
+    /// A chat of one answer holding `proposals`, open in the panel.
+    func open(_ proposals: [ActionProposal], in model: ClaudeModel) -> ChatMessage {
+        var chat = Chat(device: model.workspace.device, at: .now)
+        let answer = ChatMessage(role: .assistant, text: "제안했습니다", at: .now, proposals: proposals)
+        chat.messages = [ChatMessage(role: .user, text: "질문", at: .now), answer]
+        model.replace(StoredDocument(new: chat))
+        model.select(chat.id)
+        return answer
+    }
+
+    /// A rewrite shows the lines it changes against the note on disk, an edit each replacement and what it appends;
+    /// both escaped, since a note may hold HTML.
+    @Test func noteProposalsShowWhatTheyChange() throws {
+        let workspace = try fixtureWorkspace()
+        let model = ClaudeModel(workspace: workspace)
+        let course = try #require(workspace.course(graphTheory))
+        model.load(course)
+        let note = try #require(model.notes.first)
+        let path = course.store.notePath(of: note.url)
+        let old = try course.store.read(note)
+        let write = ActionProposal(command: NoteWrite.command, input: try JSONValue(NoteWrite(course: graphTheory, note: path, text: old + "<b>새 줄</b>\n")))
+        let edit = ActionProposal(command: NoteEdit.command, input: try JSONValue(NoteEdit(
+            course: graphTheory, note: path, replacements: [.init(old: "옛 글", new: "새 글\n둘째 줄")], append: "덧붙임")))
+
+        guard case .rewrite(let lines)? = model.describe(write).change else { Issue.record("no diff"); return }
+        #expect(lines.last == .added("<b>새 줄</b>"))
+        #expect(!lines.contains { if case .removed = $0 { true } else { false } })
+        #expect(model.describe(edit).change == .edit([.init(old: "옛 글", new: "새 글\n둘째 줄")], append: "덧붙임"))
+
+        _ = open([write, edit], in: model)
+        let page = ClaudeModel.html(try #require(model.chat), describe: model.describe)
+        #expect(page.contains(#"<details class="change"><summary>바뀌는 내용 +1 -0</summary>"#))
+        #expect(page.contains(#"<div class="l add">+ &lt;b&gt;새 줄&lt;/b&gt;</div>"#))
+        #expect(!page.contains("<b>새 줄</b>"))
+        #expect(page.contains(#"<summary>바뀌는 내용 +3 -1</summary>"#))
+        #expect(page.contains(#"<div class="l del">- 옛 글</div><div class="l add">+ 새 글</div><div class="l add">+ 둘째 줄</div>"#))
+        #expect(page.contains("끝에 덧붙임"))
+        // Applied, the line no longer offers a change to read.
+        var applied = write
+        applied.applied = true
+        #expect(model.describe(applied).change == nil)
+    }
+
+    /// One question for every proposal that asks, and nothing written while one of them would be refused.
+    @Test func applyingAllAsksOnceAndWritesNothingWhenOneIsRefused() throws {
+        let workspace = try fixtureWorkspace()
+        let model = ClaudeModel(workspace: workspace)
+        let (a, b, twin) = (UUID(), UUID(), UUID())
+        workspace.run(ExamAdd(id: a, course: graphTheory, title: "퀴즈 1"))
+        workspace.run(ExamAdd(id: b, course: graphTheory, title: "퀴즈 2"))
+        let course = try #require(workspace.course(graphTheory))
+        model.load(course)
+        func proposal(_ action: some Action) throws -> ActionProposal { ActionProposal(command: type(of: action).command, input: try JSONValue(action)) }
+
+        // Each alone would go through; the second can't once the first has made the exam.
+        let refused = open([try proposal(ExamAdd(id: twin, course: graphTheory, title: "새 시험")), try proposal(ExamAdd(id: twin, course: graphTheory, title: "또"))], in: model)
+        #expect(ClaudeModel.html(try #require(model.chat), describe: model.describe).contains("folio://action/applyall/\(refused.id)"))
+        model.applyAll(message: refused.id, course: course, confirmed: false)
+        #expect(model.confirming == nil)
+        #expect(workspace.error?.hasPrefix("2번째 제안이 막혀") == true)
+        #expect(workspace.course(graphTheory)?.file.exams.count == 2)
+        #expect(model.chat?.messages[1].proposals?.allSatisfy { $0.applied != true } == true)
+
+        let removes = open([try proposal(ExamRemove(course: graphTheory, exam: a)), try proposal(ExamRemove(course: graphTheory, exam: b)),
+                            try proposal(ExamAdd(course: graphTheory, title: "기말"))], in: model)
+        model.applyAll(message: removes.id, course: course, confirmed: false)
+        let question = try #require(model.confirming)
+        #expect(question.index == nil && question.question.split(separator: "\n").count == 2)
+        #expect(question.question.contains("퀴즈 1") && question.question.contains("퀴즈 2"))
+        #expect(workspace.course(graphTheory)?.file.exams.count == 2)
+        model.confirm(question, course: course)
+        #expect(workspace.course(graphTheory)?.file.exams.map(\.title) == ["기말"])
+        #expect(model.chat?.messages[1].proposals?.allSatisfy { $0.applied == true } == true)
+        #expect(try course.store.chats().first { $0.model.id == model.chatID }?.model.messages[1].proposals?.allSatisfy { $0.applied == true } == true)
+        #expect(model.status == "제안 3개를 적용했습니다")
+    }
+
+    /// Two changes to one exam in one answer run in the answer's order, so the last one stands.
+    @Test func applyingAllRunsInTheAnswersOrder() throws {
+        let workspace = try fixtureWorkspace()
+        let model = ClaudeModel(workspace: workspace)
+        let exam = UUID()
+        workspace.run(ExamAdd(id: exam, course: graphTheory, title: "퀴즈"))
+        let course = try #require(workspace.course(graphTheory))
+        model.load(course)
+        let first = ActionProposal(command: ExamSet.command, input: try JSONValue(ExamSet(course: graphTheory, exam: exam, title: .set("첫째"))))
+        let second = ActionProposal(command: ExamSet.command, input: try JSONValue(ExamSet(course: graphTheory, exam: exam, title: .set("둘째"))))
+        let answer = open([first, second], in: model)
+        model.applyAll(message: answer.id, course: course, confirmed: false)
+        #expect(workspace.course(graphTheory)?.file.exams.map(\.title) == ["둘째"])
+    }
+
+    /// A later answer's proposal for the same note replaces the earlier one, which then offers nothing.
+    @Test func aSupersededProposalIsNotOffered() throws {
+        let workspace = try fixtureWorkspace()
+        let model = ClaudeModel(workspace: workspace)
+        let course = try #require(workspace.course(graphTheory))
+        model.load(course)
+        let path = course.store.notePath(of: try #require(model.notes.first).url)
+        func write(_ text: String) throws -> ActionProposal {
+            ActionProposal(command: NoteWrite.command, input: try JSONValue(NoteWrite(course: graphTheory, note: path, text: text)))
+        }
+        let older = ChatMessage(role: .assistant, text: "1", at: .now, proposals: [try write("첫 안"), ActionProposal(command: ExamAdd.command, input: try JSONValue(ExamAdd(course: graphTheory, title: "퀴즈")))])
+        let newer = ChatMessage(role: .assistant, text: "2", at: .now, proposals: [try write("둘째 안")])
+        let chat = Chat(device: workspace.device, at: .now, messages: [older, newer])
+        let superseded = model.superseded(chat)
+        #expect(superseded == [ProposalRef(message: older.id, index: 0)])
+        #expect(ClaudeModel.offered(older, superseded: superseded, describe: model.describe) == [1])
+        let page = ClaudeModel.html(chat, superseded: superseded, describe: model.describe)
+        #expect(page.contains("대체됨"))
+        #expect(!page.contains("folio://action/apply/\(older.id)/0"))
+        #expect(page.contains("folio://action/apply/\(newer.id)/0"))
+        #expect(!page.contains("folio://action/applyall/"))
+    }
+
+    /// The page is drawn twice a second while an answer is written; its proposals' dry runs wait for the folder to change.
+    @Test func proposalLinesAreWorkedOutOncePerFolderChange() throws {
+        let workspace = try fixtureWorkspace()
+        let model = ClaudeModel(workspace: workspace)
+        let course = try #require(workspace.course(graphTheory))
+        model.load(course)
+        _ = open([ActionProposal(command: ExamAdd.command, input: try JSONValue(ExamAdd(course: graphTheory, title: "퀴즈")))], in: model)
+        let chat = try #require(model.chat)
+        _ = model.page(chat, cards: true)
+        _ = model.page(chat, cards: true)
+        #expect(model.described == 1)
+        workspace.run(UnitAdd(course: graphTheory, title: "매칭"))
+        _ = model.page(chat, cards: true)
+        #expect(model.described == 2)
     }
 
     /// The card goes to the unit on screen, then the open note's unit, and only without either to the first unit.

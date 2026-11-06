@@ -42,7 +42,7 @@ struct ClaudePanel: View {
         .task(id: openNote) { model.loadOpenNote(openNote, course: course) }
         .confirmationDialog(model.confirming?.question ?? "", isPresented: Binding(get: { model.confirming != nil }, set: { if !$0 { model.confirming = nil } }),
                             titleVisibility: .visible, presenting: model.confirming) { pending in
-            Button(.claudeProposalApply, role: .destructive) { model.apply(message: pending.message, index: pending.index, course: course, confirmed: true) }
+            Button(.claudeProposalApply, role: .destructive) { model.confirm(pending, course: course) }
         }
         .sheet(item: $model.cardDraft) { draft in
             CardEditorSheet(workspace: model.workspace, course: course, draft: draft, units: course.file.units) { model.status = String(localized: .claudeStatusCardMade) }
@@ -120,8 +120,7 @@ struct ClaudePanel: View {
 
     @ViewBuilder var conversation: some View {
         if let chat = model.chat, !chat.messages.isEmpty {
-            HTMLView(body: ClaudeModel.html(chat, partial: model.sending && model.answering == model.chatID ? model.partial : nil, cards: !course.file.units.isEmpty,
-                                            describe: model.describe),
+            HTMLView(body: model.page(chat, cards: !course.file.units.isEmpty),
                      onAction: { model.handle($0, course: course, openNote: openNote, openUnit: openUnit, insertIntoNote: insertIntoNote, showNote: showNote) })
         } else {
             VStack(spacing: Theme.Space.s) {

@@ -17479,6 +17479,94 @@
           }
         }
       }
+    },
+    "claude.proposal.superseded": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대체됨"
+          }
+        }
+      }
+    },
+    "claude.proposal.apply-all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld개 모두 적용"
+          }
+        }
+      }
+    },
+    "claude.proposal.changes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "바뀌는 내용 +%1$lld -%2$lld"
+          }
+        }
+      }
+    },
+    "claude.proposal.no-changes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트에서 바뀌는 줄이 없습니다"
+          }
+        }
+      }
+    },
+    "claude.proposal.skipped": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 줄 %lld개"
+          }
+        }
+      }
+    },
+    "claude.proposal.appended": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끝에 덧붙임"
+          }
+        }
+      }
+    },
+    "claude.proposal.blocked": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld번째 제안이 막혀 아무것도 적용하지 않았습니다: %2$@"
+          }
+        }
+      }
+    },
+    "claude.status.applied-all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제안 %lld개를 적용했습니다"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
