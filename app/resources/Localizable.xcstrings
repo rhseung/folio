@@ -16347,6 +16347,17 @@
         }
       }
     },
+    "text-file.pdf-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘-클릭하면 그 자리를 쓴 줄로 갑니다"
+          }
+        }
+      }
+    },
     "text-file.build": {
       "extractionState": "manual",
       "localizations": {

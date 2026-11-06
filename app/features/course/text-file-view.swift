@@ -44,6 +44,9 @@ struct TextFileView: View {
                     Theme.Palette.lineSoft.frame(width: 1)
                     // `PDFKitView` keeps the view it was made with, so each build's controller needs a view of its own.
                     PDFKitView(controller: controller).id(ObjectIdentifier(controller)).frame(maxWidth: .infinity)
+                        #if os(macOS)
+                        .help(Text(.textFilePdfHelp))
+                        #endif
                 }
             }
         }
@@ -156,6 +159,7 @@ struct TextFileView: View {
         controller = PDFController(document: document, page: controller?.page ?? 0)
         #if os(macOS)
         controller?.darken(colorScheme == .dark)
+        controller?.onCommandClick { [model] page, point in model.showSource(page: page, at: point) }
         #endif
         controller?.restore()
     }

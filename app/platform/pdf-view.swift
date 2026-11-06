@@ -15,6 +15,7 @@ final class PDFController {
     @ObservationIgnored private var observer: (any NSObjectProtocol)?
     #if os(macOS)
     @ObservationIgnored private var lightBackground: NSColor?
+    @ObservationIgnored private var commandClick: CommandClick?
     #endif
 
     init(document: PDFDocument, page: Int) {
@@ -59,6 +60,12 @@ final class PDFController {
         if on { lightBackground = view.backgroundColor }
         view.backgroundColor = on ? DarkPaper.theme.source(of: Swatch.lineSoft.dark) : lightBackground ?? view.backgroundColor
     }
+
+    /// ⌘-click, the TeX editors' way back to the source. A plain click stays PDFKit's, for selecting text and following
+    /// links. Mac only: only a Mac builds the PDF, so only a Mac has the data that says where a point came from.
+    func onCommandClick(_ handler: @escaping @MainActor (_ page: Int, _ point: CGPoint) -> Void) {
+        commandClick = CommandClick(view: view, handler: handler)
+    }
     #endif
 
     func zoomIn() { view.zoomIn(nil) }
@@ -87,6 +94,35 @@ final class PDFController {
 }
 
 #if os(macOS)
+/// Reports a ⌘-click as a page index and a point in PDF points from that page's top-left corner, where TeX measures.
+@MainActor
+private final class CommandClick: NSObject, NSGestureRecognizerDelegate {
+    private weak var view: PDFView?
+    private let handler: @MainActor (Int, CGPoint) -> Void
+
+    init(view: PDFView, handler: @escaping @MainActor (Int, CGPoint) -> Void) {
+        self.view = view
+        self.handler = handler
+        super.init()
+        let click = NSClickGestureRecognizer(target: self, action: #selector(clicked(_:)))
+        click.delegate = self
+        view.addGestureRecognizer(click)
+    }
+
+    func gestureRecognizerShouldBegin(_ gestureRecognizer: NSGestureRecognizer) -> Bool {
+        NSEvent.modifierFlags.contains(.command)
+    }
+
+    @objc private func clicked(_ click: NSClickGestureRecognizer) {
+        guard let view, let document = view.document else { return }
+        let location = click.location(in: view)
+        guard let page = view.page(for: location, nearest: true) else { return }
+        let point = view.convert(location, to: page)
+        let box = page.bounds(for: .mediaBox)
+        handler(document.index(for: page), CGPoint(x: point.x - box.minX, y: box.maxY - point.y))
+    }
+}
+
 /// Dark mode for a PDF, as one color matrix: each color's lightness flips while its hue stays (red stays red), and
 /// white paper and black type land on the theme's dark card and ink instead of pure black and white.
 ///
