@@ -3,6 +3,7 @@ import FolioAI
 import FolioDomain
 import FolioStorage
 import Foundation
+import Synchronization
 import Testing
 @testable import Folio
 
@@ -38,6 +39,55 @@ struct ClaudeModelTests {
         #expect(model.chats.isEmpty && model.chatID == nil)
         #expect(model.notes.map(\.title) == ["2주차-1"])
         #expect(model.addOptions(course).first?.section == "노트")
+    }
+
+    /// The open note goes as it is on disk when the question is sent, not as it was when it opened. Stopping leaves no
+    /// half chat and keeps the question for the resend button, which then answers as usual.
+    @Test func theOpenNoteIsReadWhenSentAndAStoppedQuestionCanBeSentAgain() async throws {
+        let workspace = try fixtureWorkspace()
+        let provider = StoppableProvider()
+        let model = ClaudeModel(workspace: workspace, client: { _ in ClaudeClient(provider: provider) })
+        let course = try #require(workspace.course(graphTheory))
+        model.load(course)
+        let note = try #require(model.notes.first)
+        let id = try #require(note.meta.id)
+        model.loadOpenNote(id, course: course)
+        try (String(contentsOf: note.url, encoding: .utf8) + "\n새로 쓴 줄\n").write(to: note.url, atomically: true, encoding: .utf8)
+
+        model.send("질문", course: course)
+        try await until { model.tool != nil }
+        let sent = try #require(provider.requests.withLock { $0.first })
+        let text = sent.messages.last?.content.compactMap { if case .text(let t, _) = $0 { t } else { nil } }.joined() ?? ""
+        #expect(text.contains("새로 쓴 줄"))
+        #expect(text.contains("경로: Notes/\(note.url.lastPathComponent)\nID: \(id.uuidString)"))
+        // The text before the tool call belonged to an earlier message, so only the tool shows.
+        #expect(model.partial == nil && model.progress == "읽는 중: note show")
+
+        model.stop()
+        try await until { !model.sending }
+        #expect(model.failed == "질문" && model.status == "멈췄습니다" && !model.statusIsError)
+        #expect(model.chats.isEmpty && model.chatID == nil)
+        #expect(try course.store.chats().isEmpty)
+
+        model.send(try #require(model.failed), course: course)
+        try await until { !model.sending }
+        #expect(model.failed == nil && model.status == nil)
+        #expect(model.chat?.messages.map(\.text) == ["질문", "답"])
+        #expect(try course.store.chats().first?.model.messages.count == 2)
+    }
+
+    @Test func toolCallsSayWhetherTheyReadOrPropose() {
+        #expect(ClaudeModel.toolLabel("mcp__folio__note_show") == "읽는 중: note show")
+        #expect(ClaudeModel.toolLabel("mcp__folio__note_add") == "제안 만드는 중: note add")
+        #expect(ClaudeModel.toolLabel("mcp__folio__exam_scope_taught") == "제안 만드는 중: exam scope --taught")
+    }
+
+    func until(_ condition: () -> Bool) async throws {
+        let clock = ContinuousClock(), start = clock.now
+        while !condition() {
+            guard clock.now - start < .seconds(10) else { Issue.record("timed out"); return }
+            try await Task.sleep(for: .milliseconds(20))
+        }
     }
 
     @Test func anAnswerIsNamedByItsFirstHeading() {
@@ -160,5 +210,26 @@ struct ClaudeModelTests {
         #expect(draftUnit(note: note, unit: nil) == second)
         #expect(draftUnit(note: nil, unit: nil) == first)
         #expect(model.cardDraft?.prompt == "매칭이란?")
+    }
+}
+
+/// The first answer reads with a tool, then runs until stopped; later ones answer at once.
+final class StoppableProvider: ClaudeProvider {
+    let requests = Mutex<[MessagesRequest]>([])
+
+    func send(_ request: MessagesRequest) async throws -> MessagesResponse {
+        try await send(request) { _ in }
+    }
+
+    func send(_ request: MessagesRequest, onEvent: @escaping @Sendable (StreamEvent) -> Void) async throws -> MessagesResponse {
+        let first = requests.withLock { $0.append(request); return $0.count == 1 }
+        if first {
+            let events: [StreamEvent] = [.turn, .text("Look at the note."), .tool("mcp__folio__note_show"), .turn]
+            events.forEach(onEvent)
+            try await Task.sleep(for: .seconds(60))
+        }
+        onEvent(.turn)
+        onEvent(.text("답"))
+        return FakeProvider.reply("답")
     }
 }

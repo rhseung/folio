@@ -1,6 +1,7 @@
 @testable import FolioAI
 import FolioDomain
 import Foundation
+import Synchronization
 import Testing
 
 final class StubProtocol: URLProtocol, @unchecked Sendable {
@@ -183,12 +184,57 @@ struct ContextTests {
 
 #if os(macOS)
 struct CLIProviderTests {
-    @Test func textDeltasComeFromPartialMessageLinesOnly() {
-        let delta = #"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"정리"}}}"#
-        let thinking = #"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"음"}}}"#
-        let result = #"{"type":"result","result":"정리"}"#
-        #expect(CLIProvider.textDelta(Data(delta.utf8)) == "정리")
-        #expect(CLIProvider.textDelta(Data(thinking.utf8)) == nil && CLIProvider.textDelta(Data(result.utf8)) == nil)
+    /// The lines of a real two-turn answer (claude 2.1.318, cut down): a tool call, then the answer in a new message.
+    @Test func streamEventsMarkTurnsToolsAndText() {
+        let lines = [
+            #"{"type":"system","subtype":"init"}"#,
+            #"{"type":"stream_event","event":{"type":"message_start","message":{"id":"msg_1","role":"assistant","content":[]}},"parent_tool_use_id":null}"#,
+            #"{"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"thinking","thinking":"","signature":""}}}"#,
+            #"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"thinking_delta","thinking":"음"}}}"#,
+            #"{"type":"stream_event","event":{"type":"content_block_delta","index":1,"delta":{"type":"text_delta","text":"Look at the note."}}}"#,
+            #"{"type":"stream_event","event":{"type":"content_block_start","index":2,"content_block":{"type":"tool_use","id":"toolu_1","name":"mcp__folio__course_list","input":{}}}}"#,
+            #"{"type":"stream_event","event":{"type":"content_block_delta","index":2,"delta":{"type":"input_json_delta","partial_json":"{}"}}}"#,
+            #"{"type":"stream_event","event":{"type":"message_stop"}}"#,
+            #"{"type":"user","message":{"role":"user","content":[{"type":"tool_result","content":"EC4207"}]}}"#,
+            #"{"type":"stream_event","event":{"type":"message_start","message":{"id":"msg_2","role":"assistant","content":[]}}}"#,
+            #"{"type":"stream_event","event":{"type":"content_block_start","index":0,"content_block":{"type":"text","text":""}}}"#,
+            #"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"과목은 "}}}"#,
+            #"{"type":"stream_event","event":{"type":"content_block_delta","index":0,"delta":{"type":"text_delta","text":"1개입니다."}}}"#,
+            #"{"type":"result","result":"과목은 1개입니다."}"#,
+        ]
+        #expect(lines.compactMap { CLIProvider.event(Data($0.utf8)) } == [
+            .turn, .text("Look at the note."), .tool("mcp__folio__course_list"), .turn, .text("과목은 "), .text("1개입니다."),
+        ])
+    }
+
+    /// Stopping a request ends the process at once instead of letting it run to the end of the answer.
+    @Test func cancellingEndsTheProcess() async throws {
+        let dir = FileManager.default.temporaryDirectory.appending(path: "folio-cli-cancel-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        defer { try? FileManager.default.removeItem(at: dir) }
+        let script = dir.appending(path: "claude"), pidFile = dir.appending(path: "pid")
+        // `exec`, so the process the provider started is the one still running, not a shell waiting on a child.
+        try """
+            #!/bin/sh
+            read line
+            echo $$ > '\(pidFile.path)'
+            echo '{"type":"stream_event","event":{"type":"message_start"}}'
+            exec sleep 30
+            """.write(to: script, atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: script.path)
+
+        let started = Mutex(false)
+        let provider = CLIProvider(executable: script)
+        let task = Task { try await provider.send(request) { if $0 == .turn { started.withLock { $0 = true } } } }
+        let clock = ContinuousClock(), begin = clock.now
+        while !started.withLock({ $0 }), clock.now - begin < .seconds(10) { try await Task.sleep(for: .milliseconds(20)) }
+        #expect(started.withLock { $0 })
+        let cancelled = clock.now
+        task.cancel()
+        await #expect(throws: CancellationError.self) { try await task.value }
+        #expect(clock.now - cancelled < .seconds(5))
+        let pid = try #require(Int32(String(contentsOf: pidFile, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines)))
+        #expect(kill(pid, 0) != 0)
     }
 
     let request = MessagesRequest(

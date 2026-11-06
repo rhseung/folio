@@ -4,12 +4,22 @@ import Foundation
 /// and `FakeProvider` in tests.
 public protocol ClaudeProvider: Sendable {
     func send(_ request: MessagesRequest) async throws -> MessagesResponse
-    func send(_ request: MessagesRequest, onText: @escaping @Sendable (String) -> Void) async throws -> MessagesResponse
+    func send(_ request: MessagesRequest, onEvent: @escaping @Sendable (StreamEvent) -> Void) async throws -> MessagesResponse
+}
+
+/// What an answer is doing while it is written. An answer that uses tools comes as several assistant messages, and
+/// only the last one is the answer; the ones before it lead up to tool calls.
+public enum StreamEvent: Sendable, Equatable {
+    /// A new assistant message began, so the text so far belonged to an earlier one.
+    case turn
+    case text(String)
+    /// A tool call, by its full name (`mcp__folio__note_show`).
+    case tool(String)
 }
 
 extension ClaudeProvider {
     // shortcut: the API provider answers all at once; give it SSE streaming if API-key users find the wait too blank.
-    public func send(_ request: MessagesRequest, onText: @escaping @Sendable (String) -> Void) async throws -> MessagesResponse {
+    public func send(_ request: MessagesRequest, onEvent: @escaping @Sendable (StreamEvent) -> Void) async throws -> MessagesResponse {
         try await send(request)
     }
 }

@@ -81,8 +81,8 @@ public struct ClaudeClient: Sendable {
 
     /// Refusals and truncation throw instead of returning partial text.
     public func text(_ task: ClaudeTask, system: [ContentBlock], messages: [Message],
-                     onText: (@Sendable (String) -> Void)? = nil) async throws -> MessagesResponse {
-        try await send(task, request(task, system: system, messages: messages), onText: onText)
+                     onEvent: (@Sendable (StreamEvent) -> Void)? = nil) async throws -> MessagesResponse {
+        try await send(task, request(task, system: system, messages: messages), onEvent: onEvent)
     }
 
     /// A reply that doesn't decode is asked for once more, then reported.
@@ -101,8 +101,8 @@ public struct ClaudeClient: Sendable {
         throw ClaudeError.invalidOutput(lastError)
     }
 
-    func send(_ task: ClaudeTask, _ request: MessagesRequest, onText: (@Sendable (String) -> Void)? = nil) async throws -> MessagesResponse {
-        let response = if let onText { try await provider.send(request, onText: onText) } else { try await provider.send(request) }
+    func send(_ task: ClaudeTask, _ request: MessagesRequest, onEvent: (@Sendable (StreamEvent) -> Void)? = nil) async throws -> MessagesResponse {
+        let response = if let onEvent { try await provider.send(request, onEvent: onEvent) } else { try await provider.send(request) }
         onUsage(APIUsageEvent(task: task, model: response.model, usage: response.usage))
         switch response.stop_reason {
         case "refusal": throw ClaudeError.refused

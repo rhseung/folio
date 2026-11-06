@@ -1,5 +1,6 @@
 import FolioDomain
 import Foundation
+import Synchronization
 
 #if os(macOS)
 /// Runs the user's own Claude Code CLI on their subscription. Its own tools stay off, so
@@ -123,21 +124,33 @@ public struct CLIProvider: ClaudeProvider {
     }
 
     public func send(_ request: MessagesRequest) async throws -> MessagesResponse {
-        try await respond(request, onText: nil)
+        try await respond(request, onEvent: nil)
     }
 
-    public func send(_ request: MessagesRequest, onText: @escaping @Sendable (String) -> Void) async throws -> MessagesResponse {
-        try await respond(request, onText: onText)
+    public func send(_ request: MessagesRequest, onEvent: @escaping @Sendable (StreamEvent) -> Void) async throws -> MessagesResponse {
+        try await respond(request, onEvent: onEvent)
     }
 
-    static func textDelta(_ line: Data) -> String? {
+    /// A line of `--include-partial-messages` output. Each assistant message, one per tool round, opens with
+    /// `message_start`; a tool call opens its block with the tool's name before its input streams in.
+    static func event(_ line: Data) -> StreamEvent? {
         guard let value = try? JSONDecoder().decode(JSONValue.self, from: line), value["type"] == .string("stream_event"),
-              let event = value["event"], event["type"] == .string("content_block_delta"),
-              let delta = event["delta"], delta["type"] == .string("text_delta"), case .string(let text)? = delta["text"] else { return nil }
-        return text
+              let event = value["event"] else { return nil }
+        switch event["type"] {
+        case .string("message_start"):
+            return .turn
+        case .string("content_block_start"):
+            guard let block = event["content_block"], block["type"] == .string("tool_use"), case .string(let name)? = block["name"] else { return nil }
+            return .tool(name)
+        case .string("content_block_delta"):
+            guard let delta = event["delta"], delta["type"] == .string("text_delta"), case .string(let text)? = delta["text"] else { return nil }
+            return .text(text)
+        default:
+            return nil
+        }
     }
 
-    func respond(_ request: MessagesRequest, onText: (@Sendable (String) -> Void)?) async throws -> MessagesResponse {
+    func respond(_ request: MessagesRequest, onEvent: (@Sendable (StreamEvent) -> Void)?) async throws -> MessagesResponse {
         let input = try Self.input(for: request)
         let temp = FileManager.default.temporaryDirectory.appending(path: "folio-claude-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: temp, withIntermediateDirectories: true)
@@ -148,14 +161,21 @@ public struct CLIProvider: ClaudeProvider {
             systemFile = temp.appending(path: "system.txt")
             try system.write(to: systemFile!, atomically: true, encoding: .utf8)
         }
-        let args = try Self.arguments(for: request, systemFile: systemFile, folio: folio) + (onText == nil ? [] : ["--include-partial-messages"])
+        let args = try Self.arguments(for: request, systemFile: systemFile, folio: folio) + (onEvent == nil ? [] : ["--include-partial-messages"])
         let (executable, cwd, errorFile) = (executable, workingDirectory, temp.appending(path: "stderr.txt"))
-        // shortcut: a cancelled task lets the process run to the end; terminate it once long requests can be cancelled.
-        let (output, status) = try await Task.detached {
-            try Self.run(executable, args, input: input, cwd: cwd, stderr: errorFile) { line in
-                if let onText, let text = Self.textDelta(line) { onText(text) }
-            }
-        }.value
+        let running = Running()
+        // Detached because the read blocks its thread. A detached task doesn't inherit cancellation, so the handler
+        // carries it over by ending the process, which ends the read too.
+        let (output, status) = try await withTaskCancellationHandler {
+            try await Task.detached {
+                try Self.run(executable, args, input: input, cwd: cwd, stderr: errorFile, running: running) { line in
+                    if let onEvent, let event = Self.event(line) { onEvent(event) }
+                }
+            }.value
+        } onCancel: {
+            running.cancel()
+        }
+        try Task.checkCancellation()
         do {
             return try Self.response(from: output, request: request)
         } catch ClaudeError.http(status: 0, _) where status != 0 {
@@ -164,7 +184,7 @@ public struct CLIProvider: ClaudeProvider {
         }
     }
 
-    static func run(_ executable: URL, _ args: [String], input: Data, cwd: URL?, stderr: URL,
+    static func run(_ executable: URL, _ args: [String], input: Data, cwd: URL?, stderr: URL, running: Running = Running(),
                     onLine: (Data) -> Void = { _ in }) throws -> (Data, Int32) {
         let process = Process()
         process.executableURL = executable
@@ -176,8 +196,10 @@ public struct CLIProvider: ClaudeProvider {
         process.standardOutput = stdout
         // A file, not a pipe: an unread stderr pipe that fills up would stall the process.
         process.standardError = try FileHandle(forWritingTo: stderr)
-        try process.run()
+        try running.start(process)
         let writer = stdin.fileHandleForWriting
+        // A process stopped before it read all its input would otherwise kill the app with SIGPIPE on the write below.
+        _ = fcntl(writer.fileDescriptor, F_SETNOSIGPIPE, 1)
         // Written from another thread so a long prompt can't block while stdout fills.
         Thread.detachNewThread {
             try? writer.write(contentsOf: input)
@@ -196,6 +218,29 @@ public struct CLIProvider: ClaudeProvider {
         }
         process.waitUntilExit()
         return (output, process.terminationStatus)
+    }
+
+    /// One request's process, so cancelling the request ends it. Otherwise `claude` runs on, and bills, to the end of
+    /// an answer nobody will see.
+    final class Running: Sendable {
+        private let state = Mutex<(process: Process?, cancelled: Bool)>((nil, false))
+
+        /// Under the lock, so a cancel that lands while the process starts isn't lost; and `terminate()` on a process
+        /// not yet started raises an Objective-C exception rather than doing nothing.
+        func start(_ process: Process) throws {
+            try state.withLock { s in
+                if s.cancelled { throw CancellationError() }
+                try process.run()
+                s.process = process
+            }
+        }
+
+        func cancel() {
+            state.withLock { s in
+                s.cancelled = true
+                s.process?.terminate()
+            }
+        }
     }
 }
 #endif
