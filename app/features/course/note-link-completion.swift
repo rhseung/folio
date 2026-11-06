@@ -16,6 +16,7 @@ import PDFKit
     private var index: SearchStore?
     private var refreshing: Task<Void, Never>?
     private var refreshedAt: Date?
+    private var listed: (revision: Int, notes: [UUID: [NoteFile]]) = (-1, [:])
 
     /// `index` stands in for this device's index, read up to date already; tests give one in memory.
     init(workspace: Workspace, course: UUID, note: NoteFile, index: SearchStore? = nil) {
@@ -52,7 +53,7 @@ import PDFKit
         }.value
         guard !Task.isCancelled else { return [] }
         var items = LinkCandidates.order(hits, course: courseId, excluding: note.meta.id).map { item(for: $0.item, alias: alias) }
-        let titles = (try? self.course?.store.notes())?.map(\.title) ?? []
+        let titles = self.course.map { notes(of: $0).map(\.title) } ?? []
         if LinkCandidates.offersNewNote(name, titles: titles) {
             items.append(CompletionItem(id: Self.newNote, title: String(localized: .notesAssistLinkNew(name)), symbol: "plus", body: name))
         }
@@ -154,9 +155,9 @@ import PDFKit
         let link = WikiLink.all(in: "[[\(target)]]").first
         let found: NoteFile?
         if let id = link?.noteID {
-            found = note.meta.id == id ? note : workspace.courses.lazy.compactMap { try? $0.store.note(id: id) }.first
+            found = note.meta.id == id ? note : workspace.courses.lazy.compactMap { self.notes(of: $0).first { $0.meta.id == id } }.first
         } else if link?.objectKind == nil {
-            found = (try? course?.store.notes())?.titled(target)
+            found = course.flatMap { notes(of: $0).titled(target) }
         } else {
             found = nil
         }
@@ -164,6 +165,16 @@ import PDFKit
         if found.url.standardizedFileURL == note.url.standardizedFileURL { return (found, id, text) }
         guard let body = try? holder(of: found)?.store.read(found) else { return nil }
         return (found, id, body)
+    }
+
+    /// Listed once per `notesRevision` rather than on every key typed: listing walks the course's Notes folder, which
+    /// on a large iCloud folder is slow enough to stall typing. Every note action and folder reload moves the revision.
+    func notes(of course: LoadedCourse) -> [NoteFile] {
+        if listed.revision != workspace.notesRevision { listed = (workspace.notesRevision, [:]) }
+        if let cached = listed.notes[course.id] { return cached }
+        let found = course.store.notes(in: course.file)
+        listed.notes[course.id] = found
+        return found
     }
 
     func holder(of note: NoteFile) -> LoadedCourse? {

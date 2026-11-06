@@ -29,9 +29,11 @@ public final class SearchStore: Sendable {
             // Text pulled out of a PDF, kept apart so editing course.json doesn't read every textbook again.
             try db.execute(sql: "CREATE TABLE pdf (path TEXT PRIMARY KEY, signature TEXT NOT NULL, text TEXT NOT NULL)")
         }
-        // Exams joined the index: forgetting what each course was read at reads them all again, PDFs from their cache.
+        // Exams joined the index: emptying it reads every course again, PDFs from their cache. The items go too, since
+        // `refresh` finds a removed course's items through `course`, and would never drop those of one gone meanwhile.
         migrator.registerMigration("v2-exams") { db in
             try db.execute(sql: "DELETE FROM course")
+            try db.execute(sql: "DELETE FROM item")
         }
         try migrator.migrate(db)
     }
