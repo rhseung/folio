@@ -276,26 +276,34 @@ public struct NoteRetitleSessions {
 /// A note's title is its file name, so moving a note's file renames it.
 enum NoteTitles {
     /// Runs `move` (`moves` are GIST-relative, as `moves.jsonl` keeps them) and carries each moved note's title
-    /// over: its entry's path, the heading its template wrote, and the links to it from the course's notes. Moves of
-    /// other files pass through. The texts are read before `move`, so a dry run reports them from where they are.
-    /// Returns what `move` returned; nothing on a dry run.
+    /// over: its entry's path, the heading its template wrote, the links to it by title from the course's notes, and
+    /// the shown title of links to it by ID (`[[note:<ID>|title]]`) from every course's notes, since an ID reaches
+    /// across courses. Moves of other files pass through. The texts are read before `move`, so a dry run reports them
+    /// from where they are. Returns what `move` returned; nothing on a dry run.
     static func follow(_ moves: [PlannedMove], _ ctx: ActionContext, move: () throws -> UUID) throws -> UUID? {
         // Loading every course is only worth it when a note moved; an undo of a folder cleanup shouldn't fail on one.
         guard moves.contains(where: { NoteFormat(path: $0.from) != nil }) else { return ctx.dryRun ? nil : try move() }
         struct Edit { var store: CourseStore, url: URL, text: String }
-        var renamed: [UUID: [(note: UUID, from: String, to: String)]] = [:]
+        typealias Rename = (note: UUID, from: String, to: String)
+        var renamed: [UUID: [Rename]] = [:]
         var edits: [Edit] = []
+        var courses: [(id: UUID, store: CourseStore)] = []
         for store in try ctx.gist.courseStores() {
             let course = try store.load().model.course.id
+            courses.append((course, store))
             let file = try ctx.file(course)
             let prefix = ctx.relative(store.url) + "/"
             let byPath = Dictionary(moves.filter { $0.from.hasPrefix(prefix) && $0.to.hasPrefix(prefix) }.map { (String($0.from.dropFirst(prefix.count)), String($0.to.dropFirst(prefix.count))) },
                                     uniquingKeysWith: { a, _ in a })
             let notes = file.notes.compactMap { e in byPath[e.path].map { (note: e.id, from: e.path, to: $0) } }
-            guard !notes.isEmpty else { continue }
-            renamed[course] = notes
-            let title = { (path: String) in ((path as NSString).lastPathComponent as NSString).deletingPathExtension }
-            for n in try ctx.notes(course) {
+            if !notes.isEmpty { renamed[course] = notes }
+        }
+        guard !renamed.isEmpty else { return ctx.dryRun ? nil : try move() }
+        let title = { (path: String) in ((path as NSString).lastPathComponent as NSString).deletingPathExtension }
+        let everywhere = renamed.values.flatMap { $0 }
+        for (course, store) in courses {
+            let notes = renamed[course] ?? []
+            for n in try ctx.notes(course) where !notes.isEmpty || n.format == .markdown {
                 let path = store.notePath(of: n.url)
                 let own = notes.first { $0.from == path }
                 var text = try store.read(n)
@@ -303,6 +311,7 @@ enum NoteTitles {
                 if let own { text = NoteTemplate.retitled(text, from: title(own.from), to: title(own.to), format: n.format) }
                 if n.format == .markdown {
                     for r in notes { text = WikiLink.retargeted(text, from: title(r.from), to: title(r.to)) }
+                    for r in everywhere { text = WikiLink.retitled(text, note: r.note, from: title(r.from), to: title(r.to)) }
                 }
                 if text != before { edits.append(Edit(store: store, url: own.map { store.fileURL($0.to) } ?? n.url, text: text)) }
             }

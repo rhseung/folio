@@ -35,10 +35,14 @@ public struct NoteEmbeds {
     public var key: String?
     public var labels: Labels
     public var find: (WikiLink) -> Note?
+    /// The title of the note an ID names, which a link without its own name shows. Apart from `find`, which only
+    /// returns notes it can draw: a link to a LaTeX note still resolves. Nil when no note has the ID.
+    public var title: (UUID) -> String?
 
-    public init(key: String?, labels: Labels, find: @escaping (WikiLink) -> Note?) {
+    public init(key: String?, labels: Labels, title: @escaping (UUID) -> String? = { _ in nil }, find: @escaping (WikiLink) -> Note?) {
         self.key = key
         self.labels = labels
+        self.title = title
         self.find = find
     }
 
@@ -51,7 +55,7 @@ extension WikiLink {
     /// A link to a note rather than to an app object or another file: `![[그림.png]]` and `![[slides.pdf]]` embed files,
     /// which this doesn't draw. An extension must start with a letter, so a title like `v1.2` is still a note.
     var namesNote: Bool {
-        guard objectKind == nil else { return false }
+        if let objectKind { return objectKind == "note" }
         let ext = (target as NSString).pathExtension
         return ext.lowercased() == "md" || ext.wholeMatch(of: /[A-Za-z][A-Za-z0-9]{0,4}/) == nil
     }
