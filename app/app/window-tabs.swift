@@ -3,17 +3,41 @@ import SwiftUI
 
 /// One window's tabs, each with its own history. The window draws them in its toolbar row itself rather than as
 /// AppKit window tabs, whose bar took a row of its own over the frame.
+///
+/// The screens of the most recent tabs stay alive behind the one in front (`alive`, chosen by `TabKeep`), so going back
+/// to one finds it as it was left; the others are drawn again from their address.
 @MainActor @Observable
 final class WindowTabs {
-    private(set) var strip: TabStrip<UUID>
+    private(set) var strip: TabStrip<UUID> {
+        didSet {
+            if oldValue.selected != strip.selected { left[oldValue.selected] = now() }
+            settle()
+        }
+    }
     private var navigators: [UUID: Navigator]
+    /// Each tab's breadcrumb steps, which its screen sets while alive. With one trail for the window, a screen kept
+    /// behind would keep its steps in the front tab's trail.
+    private var trails: [UUID: CrumbTrail]
+    /// The tabs whose screens are alive, the one in front among them.
+    private(set) var alive: Set<UUID>
+    /// When each tab last went behind another.
+    @ObservationIgnored private var left: [UUID: Date] = [:]
     /// Closing the last tab closes the window, which the window hands over once it has one.
     @ObservationIgnored var closeWindow: @MainActor () -> Void = {}
+    @ObservationIgnored var now: @MainActor () -> Date = { .now }
+    @ObservationIgnored var policy = WindowTabs.keep
+
+    /// How many screens wait behind the front tab and for how long. A note tab costs most: its preview's page runs in a
+    /// WebKit process of its own, about 80MB for a usual note and 270MB for a long one with math and diagrams, against
+    /// 10MB for a course page (measured with `TabMemoryProbe`; the numbers are in #304).
+    static let keep = TabKeep.Policy(limit: 3, idle: 30 * 60)
 
     init(_ first: Navigator) {
         let id = UUID()
         strip = TabStrip(id)
         navigators = [id: first]
+        trails = [id: CrumbTrail()]
+        alive = [id]
     }
 
     var selected: UUID { strip.selected }
@@ -22,11 +46,13 @@ final class WindowTabs {
     var current: Navigator { navigators[strip.selected] ?? Navigator() }
 
     func navigator(_ id: UUID) -> Navigator? { navigators[id] }
+    func trail(_ id: UUID) -> CrumbTrail? { trails[id] }
 
     /// `fromLink`: beside the tab in front rather than last.
     func open(_ navigator: Navigator = Navigator(), fromLink: Bool = false) {
         let id = UUID()
         navigators[id] = navigator
+        trails[id] = CrumbTrail()
         strip.open(id, afterSelected: fromLink)
     }
 
@@ -37,7 +63,9 @@ final class WindowTabs {
     func move(_ id: UUID, to index: Int) { strip.move(id, to: index) }
 
     func close(_ id: UUID) {
-        if strip.close(id) { navigators[id] = nil } else { closeWindow() }
+        guard strip.close(id) else { return closeWindow() }
+        navigators[id] = nil
+        trails[id] = nil
     }
 
     func closeSelected() { close(selected) }
@@ -45,14 +73,89 @@ final class WindowTabs {
     func closeOthers(than id: UUID) {
         strip.closeOthers(than: id)
         navigators = navigators.filter { $0.key == id }
+        trails = trails.filter { $0.key == id }
     }
 
     /// Takes a tab out for a window of its own; nil for the last one, which is the window already.
     func take(_ id: UUID) -> Navigator? {
         guard count > 1, let navigator = navigators[id], strip.close(id) else { return nil }
         navigators[id] = nil
+        trails[id] = nil
         return navigator
     }
+
+    /// Lets go of the screens that have waited behind too long; the window calls it as the minutes pass.
+    func tick() { settle() }
+
+    /// The system is short of memory: only the tab in front keeps its screen.
+    func dropBackground() { settle(pressure: true) }
+
+    private func settle(pressure: Bool = false) {
+        left = left.filter { strip.tabs.contains($0.key) }
+        let kept = TabKeep.alive(selected: strip.selected, alive: alive.intersection(strip.tabs), left: left, now: now(), policy: policy,
+                                 pressure: pressure)
+        if kept != alive { alive = kept }
+    }
+}
+
+/// The screens of the tabs kept alive, stacked. Only the one in front shows and takes the pointer and the keys: a kept
+/// screen's ⌘S or ⌘E, or the zoom keys of a file it shows, would otherwise act on a page no one sees. Each screen
+/// keeps its own breadcrumb steps and moves its own tab when it opens a link.
+struct TabScreens: View {
+    let tabs: WindowTabs
+    let workspace: Workspace
+    let openLink: (Navigator) -> OpenLinkAction
+
+    var body: some View {
+        ZStack {
+            // In the strip's order, so a screen keeps its place in the stack, and its state, as others come and go.
+            ForEach(tabs.ids.filter { tabs.alive.contains($0) }, id: \.self) { id in
+                if let navigator = tabs.navigator(id) {
+                    let front = id == tabs.selected
+                    TabScreen(workspace: workspace, navigator: navigator)
+                        .environment(tabs.trail(id))
+                        .environment(\.openLink, openLink(navigator))
+                        .opacity(front ? 1 : 0)
+                        .allowsHitTesting(front)
+                        .disabled(!front)
+                        .accessibilityHidden(!front)
+                        .zIndex(front ? 1 : 0)
+                }
+            }
+        }
+    }
+}
+
+/// One tab's screen. Its own view, so a move in one tab redraws only that tab's screen.
+private struct TabScreen: View {
+    let workspace: Workspace
+    let navigator: Navigator
+
+    var body: some View { ScreenView(workspace: workspace, entry: navigator.current) }
+}
+
+/// The system running short of memory, one notification on the Mac and the iPad alike.
+enum MemoryPressure {
+    #if os(macOS)
+    static let warning = Notification.Name("FolioMemoryPressure")
+    @MainActor private static var source: DispatchSourceMemoryPressure?
+
+    /// Once, for the app's life: the Mac has no memory warning of its own to listen to.
+    @MainActor static func start() {
+        guard source == nil else { return }
+        let pressure = DispatchSource.makeMemoryPressureSource(eventMask: [.warning, .critical], queue: .main)
+        pressure.setEventHandler { NotificationCenter.default.post(name: warning, object: nil) }
+        pressure.resume()
+        source = pressure
+    }
+
+    static var publisher: NotificationCenter.Publisher { NotificationCenter.default.publisher(for: warning) }
+    #else
+    static func start() {}
+    static var publisher: NotificationCenter.Publisher {
+        NotificationCenter.default.publisher(for: UIApplication.didReceiveMemoryWarningNotification)
+    }
+    #endif
 }
 
 extension FocusedValues {

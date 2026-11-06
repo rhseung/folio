@@ -32,12 +32,14 @@ struct NotePreview {
 
     @MainActor func makeCoordinator() -> Coordinator { Coordinator() }
 
-    @MainActor func update(_ page: NotePreviewPage, accent: CourseAccent, dark: Bool, openLink: OpenLinkAction = OpenLinkAction()) {
+    /// `enabled` false: a tab kept behind the one in front, whose page must not take ⌘E (the web view sees the key
+    /// before SwiftUI's disabled buttons would refuse it).
+    @MainActor func update(_ page: NotePreviewPage, accent: CourseAccent, dark: Bool, openLink: OpenLinkAction = OpenLinkAction(), enabled: Bool = true) {
         page.openNote = openNote
         page.openLink = openLink
         page.noteLink = noteLink
         page.edit = edit
-        page.toggleMode = toggleMode
+        page.toggleMode = enabled ? toggleMode : nil
         page.embeds = embeds
         if link?.page !== page { link?.page = page }
         page.link = link
@@ -50,13 +52,13 @@ struct NotePreview {
 extension NotePreview: NSViewRepresentable {
     func makeNSView(context: Context) -> PreviewWebView {
         update(context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
-               openLink: context.environment.openLink)
+               openLink: context.environment.openLink, enabled: context.environment.isEnabled)
         return context.coordinator.page.view
     }
 
     func updateNSView(_ view: PreviewWebView, context: Context) {
         update(context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
-               openLink: context.environment.openLink)
+               openLink: context.environment.openLink, enabled: context.environment.isEnabled)
     }
 
     static func dismantleNSView(_ view: PreviewWebView, coordinator: Coordinator) { coordinator.page.recycle() }

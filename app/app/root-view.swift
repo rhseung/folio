@@ -24,7 +24,6 @@ struct RootView: View {
     @AppStorage("sidebarOpen") private var sidebarOpen = true
     @State private var showingRecording = false
     @State private var quickAdding = false
-    @State private var trail = CrumbTrail()
     @Environment(\.colorScheme) private var colorScheme
     @State private var windowWidth: CGFloat = 1200
     #if os(macOS)
@@ -62,12 +61,13 @@ struct RootView: View {
     }
 
     /// The one place a link opens, whoever asked: a click in a note, the sidebar, search, a notification.
-    func open(_ link: AppLink, in placement: LinkPlacement = .here, course hint: UUID? = nil) {
+    /// `tab`: the tab whose screen asked, which `.here` moves; else the one in front.
+    func open(_ link: AppLink, in placement: LinkPlacement = .here, course hint: UUID? = nil, from tab: Navigator? = nil) {
         guard let entry = workspace.entry(for: link, hint: hint) else {
             workspace.error = String(localized: .linkNotFound(link.string))
             return
         }
-        guard placement != .here, multipleWindows else { return navigator.go(entry) }
+        guard placement != .here, multipleWindows else { return (tab ?? navigator).go(entry) }
         #if os(macOS)
         // Beside is a tab until panes (#62).
         if placement != .window { return tabs.open(Navigator(entry), fromLink: true) }
@@ -76,9 +76,12 @@ struct RootView: View {
         openWindow(id: FolioApp.mainWindow, value: WindowRequest(link: entry.link, course: entry.course))
     }
 
-    var openLink: OpenLinkAction {
-        OpenLinkAction { link, placement, course in open(link, in: placement, course: course) } upHandler: { link in
-            if let entry = workspace.entry(for: link) { navigator.up(to: entry) }
+    var openLink: OpenLinkAction { openLink(from: navigator) }
+
+    /// For one tab's screen: kept alive behind the front tab, it must still move its own tab.
+    func openLink(from tab: Navigator) -> OpenLinkAction {
+        OpenLinkAction { link, placement, course in open(link, in: placement, course: course, from: tab) } upHandler: { link in
+            if let entry = workspace.entry(for: link) { tab.up(to: entry) }
         }
     }
 
@@ -119,7 +122,6 @@ struct RootView: View {
                         // Roomier buttons and segmented controls, as in Alcove; text sizes stay with the tokens.
                         .controlSize(.large)
                         .environment(\.showSettings) { showSettings($0) }
-                        .environment(trail)
                         // No toolbar band: columns (course, quiz scope, inspector) run to the window top, and a band over them
                         // reads as a header cutting across every column.
                         #if os(macOS)
@@ -151,8 +153,14 @@ struct RootView: View {
                 #endif
                 .focusedSceneValue(\.showSettings) { showSettings($0) }
                 .focusedSceneValue(\.navigator, navigator)
+                .onAppear { MemoryPressure.start() }
+                .onReceive(MemoryPressure.publisher) { _ in tabs.dropBackground() }
+                // Minute by minute, for the screens that have waited behind too long.
+                .onChange(of: workspace.liveNow) { tabs.tick() }
                 #if os(macOS)
                 .focusedSceneValue(\.windowTabs, tabs)
+                // A text view in a tab gone behind would keep the keys, typing into a page no one sees.
+                .onChange(of: tabs.selected) { host.window?.makeFirstResponder(nil) }
                 .background { SwipeNavigation(back: { navigator.back() }, forward: { navigator.forward() }) }
                 .background {
                     WindowReader { window in
@@ -175,6 +183,7 @@ struct RootView: View {
         }
         #if DEBUG && os(macOS)
         .task {
+            await TabMemoryProbe.run(tabs: tabs, workspace: workspace)
             // Snapshots are for checking layout; a Touch ID prompt would stall them on locked screens.
             if SnapshotDriver.directory != nil { workspace.gradesUnlocked = true }
             if SnapshotDriver.recording, let course = workspace.currentCourses.first, let session = course.file.sessions.first {
@@ -436,7 +445,7 @@ struct RootView: View {
     /// The front tab's trail: its screen, then the course's section and what it opened, only while a course is shown
     /// (they clear as it goes).
     var crumbs: [Crumb] {
-        let steps = if case .course = selection { trail.crumbs } else { [Crumb]() }
+        let steps = if case .course = selection { tabs.trail(tabs.selected)?.crumbs ?? [] } else { [Crumb]() }
         return [workspace.placeCrumb(of: navigator.current)] + steps
     }
 
@@ -657,7 +666,7 @@ struct RootView: View {
 
     /// The window's panel draws its front tab's link as anything else that holds a screen does. Only the front tab is
     /// drawn, and afresh when it changes, as when its own history moves: a tab behind keeps where it is, not its view.
-    var detail: some View { ScreenView(workspace: workspace, entry: navigator.current).id(tabs.selected) }
+    var detail: some View { TabScreens(tabs: tabs, workspace: workspace, openLink: openLink(from:)) }
 
     /// Nil opens the tab last picked.
     func showSettings(_ tab: SettingsTab?) {

@@ -55,6 +55,46 @@ struct WindowTabsTests {
         #expect(tabs.navigator(kept) != nil)
     }
 
+    @Test func keepsTheRecentScreensAndLetsTheRestGo() {
+        let tabs = WindowTabs(Navigator())
+        var now = Date(timeIntervalSinceReferenceDate: 0)
+        tabs.now = { now }
+        tabs.policy = TabKeep.Policy(limit: 2, idle: 600)
+        let first = tabs.selected
+        for _ in 0..<3 {
+            now += 10
+            tabs.open()
+        }
+        // The front tab and the two most recently in front; the first went furthest back.
+        #expect(tabs.alive.count == 3 && !tabs.alive.contains(first))
+        // Waiting past the time lets the ones behind go.
+        now += 601
+        tabs.tick()
+        #expect(tabs.alive == [tabs.selected])
+        // In front again, a dropped tab is drawn again.
+        tabs.select(first)
+        #expect(tabs.alive.contains(first))
+    }
+
+    @Test func memoryPressureKeepsOnlyTheFront() {
+        let tabs = WindowTabs(Navigator())
+        tabs.open()
+        tabs.open()
+        #expect(tabs.alive.count == 3)
+        tabs.dropBackground()
+        #expect(tabs.alive == [tabs.selected])
+    }
+
+    @Test func eachTabHasItsOwnTrail() {
+        let tabs = WindowTabs(Navigator())
+        let first = tabs.selected
+        tabs.open()
+        tabs.trail(first)?.set(Crumb(title: "노트"), level: 1, owner: UUID())
+        #expect(tabs.trail(tabs.selected)?.crumbs.isEmpty == true)
+        tabs.close(first)
+        #expect(tabs.trail(first) == nil)
+    }
+
     @Test func aMovedTabsWindowRequestSurvivesSaving() throws {
         var history = LinkHistory(Navigator.Entry(link: .place(.today)))
         history.visit(Navigator.Entry(link: .course(graphTheory), course: graphTheory))
