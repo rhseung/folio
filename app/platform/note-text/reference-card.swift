@@ -13,6 +13,7 @@ import WebKit
     private let files = LocalFileScheme()
     private var loading: WKNavigation?
     private var loaded: ((CGFloat) -> Void)?
+    private var tallest = CGFloat.greatestFiniteMagnitude
 
     var web: WKWebView { host.web }
     var shown: Bool { !host.isHidden }
@@ -30,11 +31,13 @@ import WebKit
         host.isHidden = true
     }
 
-    /// Lays the card out `width` wide, off screen, and calls `done` with its height once its math is typeset.
-    func load(_ card: HTMLRenderer.ReferenceCard, math: String, accent: CourseAccent, baseURL: URL?, width: CGFloat,
+    /// Lays the card out `width` wide, off screen, and calls `done` with its height once its math is typeset. A block
+    /// taller than `maxHeight` fades out at the bottom.
+    func load(_ card: HTMLRenderer.ReferenceCard, math: String, accent: CourseAccent, baseURL: URL?, width: CGFloat, maxHeight: CGFloat,
               done: @escaping (CGFloat) -> Void) {
         hide()
         loaded = done
+        tallest = maxHeight
         // Barely high while it loads, so the page's height is its content's, not the view's.
         host.resize(CGSize(width: width, height: Theme.Space.xxs))
         files.root = LocalFileScheme.root(for: baseURL)
@@ -53,8 +56,12 @@ import WebKit
         guard navigation === loading, let done = loaded else { return }
         loading = nil
         loaded = nil
+        let tallest = tallest
         Task {
-            let height = try? await web.callAsyncJavaScript("return Math.ceil(document.body.getBoundingClientRect().height)", contentWorld: .defaultClient)
+            // The card takes no scroll, unlike the preview's, so a cut block says there is more by fading out.
+            let measure = "const h = Math.ceil(document.body.getBoundingClientRect().height); "
+                + "document.documentElement.classList.toggle('cut', h > tallest); return h"
+            let height = try? await web.callAsyncJavaScript(measure, arguments: ["tallest": Double(tallest)], contentWorld: .defaultClient)
             guard let height = (height as? NSNumber)?.doubleValue, height > 0 else { return }
             done(CGFloat(height))
         }
@@ -63,6 +70,7 @@ import WebKit
     // The note page's own padding is for a column; the card has the preview card's (`.ref-popover` in note.css).
     private static let css = "html{overflow:hidden}body.note{margin:0;padding:\(Int(Theme.Space.m))px \(Int(Theme.Space.l))px;max-width:none}"
         + "body.note>:first-child{margin-top:0}body.note>:last-child{margin-bottom:0}"
+        + "html.cut{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - \(Int(Theme.Space.xl))px),transparent)}"
 }
 
 /// The card over the editor: glass behind the page, as the completion menu floats (`floatingGlass()`).

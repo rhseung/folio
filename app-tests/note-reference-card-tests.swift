@@ -10,13 +10,14 @@ import Testing
 /// preview draws it, but never over the completion menu or a syllable being composed.
 @MainActor @Suite(.serialized, .timeLimit(.minutes(2)))
 struct NoteReferenceCardTests {
-    static let text = "앞 [[보조정리#^c1|그 식]] 뒤 [[보조정리]]\n"
+    static let text = "앞 [[보조정리#^c1|그 식]] 뒤 [[보조정리]]\n[[보조정리#^long|긴 블록]]\n"
 
     /// The window is returned to be kept: a view whose window goes away hides its card.
     func editor() throws -> (SourceTextView, NSWindow) {
         let gist = GISTStore(url: try Fixture.standard.copyToTemp())
         let store = try #require(try gist.courseStores().first { $0.url.lastPathComponent == "EC4207 그래프 이론" })
-        try store.createNote(at: store.newNoteURL(title: "보조정리", format: .markdown), text: "위\n\n증명할 것 $x^2$ ^c1\n\n아래")
+        try store.createNote(at: store.newNoteURL(title: "보조정리", format: .markdown),
+                             text: "위\n\n증명할 것 $x^2$ ^c1\n\n아래\n\n" + Array(repeating: "긴 줄", count: 80).joined(separator: "\n") + " ^long\n")
         let (view, window) = NoteAssistTests.editor(Self.text)
         view.cards = NoteEmbedSource(store: store, own: nil)
         return (view, window)
@@ -63,6 +64,23 @@ struct NoteReferenceCardTests {
         view.hover(at: try Self.point(view, at: Self.at("보조정리]]")))
         try await Task.sleep(for: .milliseconds(500))
         #expect(view.card?.shown == false)
+    }
+
+    /// A block taller than half the editor is cut there; it fades out at the bottom, since the card takes no scroll.
+    @Test func aTallBlockFadesWhereItIsCut() async throws {
+        let (view, window) = try editor()
+        defer { withExtendedLifetime(window) {} }
+        let cut = "return document.documentElement.classList.contains('cut')"
+        view.hover(at: try Self.point(view, at: Self.at("긴 블록")))
+        await Self.settle(view)
+        let card = try #require(view.card)
+        let scroll = try #require(card.host.superview)
+        #expect(card.shown && card.host.frame.height == (scroll.bounds.height / 2).rounded(), "\(card.host.frame)")
+        #expect(try await card.web.callAsyncJavaScript(cut, contentWorld: .defaultClient) as? Bool == true)
+        view.hover(at: try Self.point(view, at: Self.at("뒤")))
+        view.hover(at: try Self.point(view, at: Self.at("그 식")))
+        await Self.settle(view)
+        #expect(try await card.web.callAsyncJavaScript(cut, contentWorld: .defaultClient) as? Bool == false)
     }
 
     @Test func typingTakesTheCardAway() async throws {

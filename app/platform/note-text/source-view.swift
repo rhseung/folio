@@ -771,9 +771,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         card = page
         if page.host.superview !== scroll { scroll.addSubview(page.host) }
         let width = min(columnWidth, scroll.bounds.width - 2 * Theme.Space.s)
-        page.load(content, math: styler.syntax.rawValue, accent: accent, baseURL: baseURL, width: width) { [weak self] height in
+        let tallest = (scroll.bounds.height / 2).rounded()
+        page.load(content, math: styler.syntax.rawValue, accent: accent, baseURL: baseURL, width: width, maxHeight: tallest) { [weak self] height in
             guard let self, self.hovered == range, !self.hasMarkedText(), !self.completion.visible else { return }
-            self.placeCard(page, range: range, size: CGSize(width: width, height: min(height, (scroll.bounds.height / 2).rounded())))
+            self.placeCard(page, range: range, size: CGSize(width: width, height: min(height, tallest)))
         }
     }
 
