@@ -116,7 +116,7 @@ public struct MaterialBuild {
             return
         }
         let source = store.fileURL(m.path)
-        let output = try pdf.map { try Self.output($0, of: source) } ?? Self.compile(source)
+        let output = try pdf.map { try Self.output($0, of: source) } ?? Self.compile(source, ctx)
         try ctx.io(change) { try store.replaceFile(target, with: output, keepOld: exists && !ours) }
         try ctx.edit(course) { f in
             try store.refreshMaterials(in: &f, device: ctx.device, now: ctx.now)
@@ -140,10 +140,10 @@ public struct MaterialBuild {
         #endif
     }
 
-    static func compile(_ source: URL) throws -> URL {
+    static func compile(_ source: URL, _ ctx: ActionContext) throws -> URL {
         #if os(macOS)
         guard let engine = TexEngine.locate() else { throw ActionError.rule(String(localized: .errorTexNotInstalled)) }
-        let build = try engine.compile(source, into: TexEngine.outputFolder(for: source))
+        let build = try engine.compile(source, into: TexEngine.outputFolder(for: source), at: ctx.now, calendar: ctx.calendar)
         guard let pdf = build.pdf else {
             throw ActionError.rule(String(localized: .errorTexFailed(build.errors.map(\.description).joined(separator: "\n"))))
         }
@@ -190,7 +190,7 @@ public struct NoteBuild {
             ctx.record(change)
             return
         }
-        let built = try pdf.map { try MaterialBuild.output($0, of: file.url) } ?? MaterialBuild.compile(file.url)
+        let built = try pdf.map { try MaterialBuild.output($0, of: file.url) } ?? MaterialBuild.compile(file.url, ctx)
         try ctx.io(change) {
             try FileManager.default.createDirectory(at: store.fileURL(target).deletingLastPathComponent(), withIntermediateDirectories: true)
             try store.replaceFile(target, with: built, keepOld: exists && !ours)

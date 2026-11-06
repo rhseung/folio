@@ -3,6 +3,7 @@ import FolioDomain
 import FolioFixtures
 import FolioStorage
 import Foundation
+import PDFKit
 import Testing
 
 struct TextFileActionTests {
@@ -180,6 +181,28 @@ struct TextFileActionTests {
             try run(MaterialBuild(course: Self.course, material: tex.id))
         }
         #expect(!FileManager.default.fileExists(atPath: store.fileURL("Assignments/HW03/hw.pdf").path))
+    }
+
+    /// The PDF carries the day it was built: the same day gives the same bytes, the next day a new `\today`, and the PDF
+    /// built the day before is still known as Folio's, so replacing it doesn't ask.
+    @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
+    func aBuildIsStampedWithItsDay() throws {
+        var seoul = Calendar(identifier: .gregorian)
+        seoul.timeZone = try #require(TimeZone(identifier: "Asia/Seoul"))
+        func build(day: Int, _ hour: Int, _ minute: Int) throws -> Data {
+            let at = try #require(seoul.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute)))
+            let ctx = ActionContext(gist: gist, device: device, now: at, calendar: seoul)
+            try MaterialBuild(course: Self.course, material: try material("Assignments/HW03/hw.tex").id).run(ctx)
+            return try Data(contentsOf: store.fileURL("Assignments/HW03/hw.pdf"))
+        }
+        try store.writeText("Assignments/HW03/hw.tex", text: "\\documentclass{article}\n\\begin{document}\n\\today\n\\end{document}\n")
+        try run(MaterialTrack(course: Self.course))
+        let first = try build(day: 5, 0, 0)
+        let lastMinute = try build(day: 5, 23, 59)
+        let nextDay = try build(day: 6, 0, 0)
+        #expect(first == lastMinute)
+        #expect(nextDay != lastMinute)
+        #expect(PDFDocument(data: nextDay)?.string?.contains("November 6, 2026") == true)
     }
 
     /// The SyncTeX data stays in the build folder, and a click on the placed PDF finds the line that wrote there.

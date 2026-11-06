@@ -152,9 +152,10 @@ final class TextFileModel {
         building = true
         defer { building = false }
         let file = course.store.fileURL(path)
+        let (now, calendar) = (workspace.now, workspace.calendar)
         let result: TexEngine.Build
         do {
-            result = try await Task.detached { try engine.compile(file, into: TexEngine.outputFolder(for: file)) }.value
+            result = try await Task.detached { try engine.compile(file, into: TexEngine.outputFolder(for: file), at: now, calendar: calendar) }.value
         } catch {
             issues = [TexIssue(.error, message: error.localizedDescription)]
             return
