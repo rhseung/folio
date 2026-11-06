@@ -15,7 +15,11 @@ enum Destination: Hashable {
 struct RootView: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.scenePhase) private var scenePhase
-    @State private var selection: Destination? = .today
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.supportsMultipleWindows) private var multipleWindows
+    /// Every move in this window goes through it, so back and forward cover the sidebar, search and links alike.
+    @State private var navigator: Navigator
+    let request: WindowRequest?
     @State private var pickingFolder = false
     @State private var addingSemester = false
     @State private var addingCourse = false
@@ -27,8 +31,6 @@ struct RootView: View {
     @State private var navHeight: CGFloat?
     /// Whether the terms run on past the top and the bottom of their space, where the list fades out.
     @State private var searching = false
-    @State private var searchTarget: SearchTarget?
-    @State private var personTarget: UUID?
     @AppStorage(SettingsTab.storageKey) private var settingsTab: SettingsTab = .general
     @AppStorage("sidebarOpen") private var sidebarOpen = true
     @State private var showingRecording = false
@@ -36,6 +38,37 @@ struct RootView: View {
     @State private var trail = CrumbTrail()
     @Environment(\.colorScheme) private var colorScheme
     @State private var windowWidth: CGFloat = 1200
+
+    init(request: WindowRequest? = nil) {
+        self.request = request
+        _navigator = State(initialValue: Navigator(request.map { Navigator.Entry(link: $0.link, course: $0.course) } ?? Navigator.Entry(link: .place(.today))))
+    }
+
+    var selection: Destination? { navigator.destination }
+
+    /// The sidebar's rows pick a destination; choosing the one already shown keeps the page open inside it.
+    var selectionBinding: Binding<Destination?> {
+        Binding { navigator.destination } set: { new in
+            if let new, new != navigator.destination { open(new.link) }
+        }
+    }
+
+    /// The one place a link opens, whoever asked: a click in a note, the sidebar, search, a notification.
+    func open(_ link: AppLink, in placement: LinkPlacement = .here, course hint: UUID? = nil) {
+        guard let entry = workspace.entry(for: link, hint: hint) else {
+            workspace.error = String(localized: .linkNotFound(link.string))
+            return
+        }
+        guard placement != .here, multipleWindows else { return navigator.go(entry) }
+        // Beside is a tab until panes (#62). The iPad has no window tabs, so a tab there is a window of its own.
+        let request = WindowRequest(link: entry.link, course: entry.course, tab: placement != .window)
+        #if os(macOS)
+        if request.tab { WindowTabs.remember(request) }
+        #endif
+        openWindow(id: FolioApp.mainWindow, value: request)
+    }
+
+    var openLink: OpenLinkAction { OpenLinkAction { link, placement, course in open(link, in: placement, course: course) } }
 
     var body: some View {
         Group {
@@ -52,11 +85,7 @@ struct RootView: View {
                     detail
                         // Roomier buttons and segmented controls, as in Alcove; text sizes stay with the tokens.
                         .controlSize(.large)
-                        .environment(\.searchTarget, $searchTarget)
-                        // Any screen can jump into a course by setting the target, not only the search palette.
-                        .onChange(of: searchTarget) { _, target in if let target { selection = .course(target.courseId) } }
-                        .environment(\.personTarget, $personTarget)
-                        .onChange(of: personTarget) { _, target in if target != nil { selection = .people } }
+                        .environment(\.place, navigator.current)
                         .environment(\.showSettings) { showSettings($0) }
                         .environment(trail)
                         // No toolbar band: columns (course, quiz scope, inspector) run to the window top, and a band over them
@@ -67,6 +96,7 @@ struct RootView: View {
                         .background { Button(.commonSearch) { searching = true }.keyboardShortcut("k").opacity(0).accessibilityHidden(true) }
                 }
                 .toolbar { globalTools }
+                .environment(\.openLink, openLink)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { windowWidth = $0 }
                 // A size up from the compact row's default: plain icons at its own size read too small.
                 .controlSize(.regular)
@@ -75,9 +105,8 @@ struct RootView: View {
                         // An explicit top-aligned stack: overlay content is centered otherwise, leaving the palette mid-window.
                         ZStack(alignment: .top) {
                             Theme.Palette.scrim.ignoresSafeArea().onTapGesture { searching = false }
-                            SearchPalette(workspace: workspace, close: { searching = false }) { target in
-                                selection = .course(target.courseId)
-                                searchTarget = target
+                            SearchPalette(workspace: workspace, close: { searching = false }) { link, course in
+                                open(link, course: course)
                             }
                             .padding(.top, 90)
                         }
@@ -89,11 +118,21 @@ struct RootView: View {
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in workspace.recorder.stopNow() }
                 #endif
                 .focusedSceneValue(\.showSettings) { showSettings($0) }
+                .focusedSceneValue(\.navigator, navigator)
+                #if os(macOS)
+                .background { SwipeNavigation(back: { navigator.back() }, forward: { navigator.forward() }) }
+                .background {
+                    WindowReader { window in if let request { WindowTabs.attach(window, for: request) } }
+                }
+                #endif
                 #if DEBUG && os(macOS)
                 .onChange(of: SnapshotDriver.shared.searchQuery) { _, query in searching = query != nil }
                 #endif
             }
         }
+        // A folio:// link from outside (a calendar note, Obsidian, `folio open`) opens in the window in front, not a new one.
+        .onOpenURL { url in if let link = AppLink(url: url) { open(link) } }
+        .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
         .fileImporter(isPresented: $pickingFolder, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result { workspace.open(url) }
         }
@@ -107,7 +146,7 @@ struct RootView: View {
                                          paused: SnapshotDriver.recordingPaused, level: SnapshotDriver.recordingLevel)
             }
             let ids = workspace.currentCourses.map(\.id)
-            await SnapshotDriver.shared.run(select: { selection = $0 }, courses: ids, semester: workspace.currentSemester?.id)
+            await SnapshotDriver.shared.run(select: { open($0.link) }, courses: ids, semester: workspace.currentSemester?.id)
         }
         #endif
         .environment(\.gradesLocked, !workspace.gradesUnlocked)
@@ -129,7 +168,7 @@ struct RootView: View {
         #if os(macOS)
         .constant(nil)
         #else
-        $selection
+        selectionBinding
         #endif
     }
 
@@ -140,12 +179,12 @@ struct RootView: View {
         // The places stay put and the terms scroll in the space under them, as the list of terms grows each term.
         VStack(spacing: 0) {
         List(selection: listSelection) {
-            Label { Text(.rootNavToday) } icon: { sidebarIcon("house", .today) }.sidebarRow(.today, $selection)
-            Label { Text(.rootNavGrades) } icon: { sidebarIcon("chart.line.uptrend.xyaxis", .grades) }.sidebarRow(.grades, $selection)
-            Label { Text(.rootNavRequirements) } icon: { sidebarIcon("flag", .requirements) }.sidebarRow(.requirements, $selection)
-            Label { Text(.rootNavPeople) } icon: { sidebarIcon("person", .people) }.sidebarRow(.people, $selection)
-            Label { Text(.rootNavCodes) } icon: { sidebarIcon("number", .codes) }.sidebarRow(.codes, $selection)
-            Label { Text(.rootNavSettings) } icon: { sidebarIcon("gearshape", .settings) }.sidebarRow(.settings, $selection)
+            Label { Text(.rootNavToday) } icon: { sidebarIcon("house", .today) }.sidebarRow(.today, selectionBinding)
+            Label { Text(.rootNavGrades) } icon: { sidebarIcon("chart.line.uptrend.xyaxis", .grades) }.sidebarRow(.grades, selectionBinding)
+            Label { Text(.rootNavRequirements) } icon: { sidebarIcon("flag", .requirements) }.sidebarRow(.requirements, selectionBinding)
+            Label { Text(.rootNavPeople) } icon: { sidebarIcon("person", .people) }.sidebarRow(.people, selectionBinding)
+            Label { Text(.rootNavCodes) } icon: { sidebarIcon("number", .codes) }.sidebarRow(.codes, selectionBinding)
+            Label { Text(.rootNavSettings) } icon: { sidebarIcon("gearshape", .settings) }.sidebarRow(.settings, selectionBinding)
         }
         .scrollDisabled(true)
         .onScrollGeometryChange(for: CGFloat.self) { $0.contentSize.height } action: { _, height in
@@ -182,10 +221,7 @@ struct RootView: View {
         .overflowFade(.vertical)
         .focusable(false)
         if workspace.recorder.isActive {
-            RecordingBar(workspace: workspace) { destination, target in
-                selection = destination
-                if let target { searchTarget = target }
-            }
+            RecordingBar(workspace: workspace) { open($0) }
                 .padding([.horizontal, .bottom], Theme.Space.m)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
         }
@@ -196,13 +232,13 @@ struct RootView: View {
         .sheet(isPresented: $addingSemester) {
             AddSemesterSheet(workspace: workspace) { id in
                 guard let id else { return }
-                selection = .semester(id)
+                open(AppLink(.semester, id))
             }
         }
         // Outside the List: a sheet on a Section is copied onto every row, and with each copy bound to the same flag,
         // dismissing one let the next present again.
         .sheet(isPresented: $addingCourse) {
-            if let current = workspace.currentSemester { AddCourseSheet(workspace: workspace, semester: current) { if let id = $0 { selection = .course(id) } } }
+            if let current = workspace.currentSemester { AddCourseSheet(workspace: workspace, semester: current) { if let id = $0 { open(.course(id)) } } }
         }
     }
 
@@ -251,16 +287,21 @@ struct RootView: View {
 
     /// Actions that work from any page, so they live in the window's toolbar rather than on one screen.
     @ToolbarContentBuilder var globalTools: some ToolbarContent {
-        #if os(macOS)
+        // Back and forward right after the sidebar button, as in Finder and Safari. One item, so the gap between them
+        // is the stack's and the crumb after them knows where it starts (`crumbStart`).
         ToolbarItem(placement: .navigation) {
-            Button(sidebarOpen ? .rootSidebarClose : .rootSidebarOpen, systemImage: "sidebar.leading") { sidebarOpen.toggle() }
-                .keyboardShortcut("s", modifiers: [.control, .command])
-                .help(Text(sidebarOpen ? .rootSidebarCloseHelp : .rootSidebarOpenHelp))
-                .buttonStyle(.toolbar)
-                .toolbarGroup()
+            HStack(spacing: Self.historyGap) {
+                #if os(macOS)
+                Button(sidebarOpen ? .rootSidebarClose : .rootSidebarOpen, systemImage: "sidebar.leading") { sidebarOpen.toggle() }
+                    .keyboardShortcut("s", modifiers: [.control, .command])
+                    .help(Text(sidebarOpen ? .rootSidebarCloseHelp : .rootSidebarOpenHelp))
+                    .buttonStyle(.toolbar)
+                    .toolbarGroup()
+                #endif
+                HistoryButtons(navigator: navigator) { workspace.title(of: $0) }
+            }
         }
         .sharedBackgroundVisibility(.hidden)
-        #endif
         // A course adds its section after this; pages add their own controls after that.
         ToolbarItem(placement: .navigation) { crumb }
             .sharedBackgroundVisibility(.hidden)
@@ -344,8 +385,10 @@ struct RootView: View {
             .padding(.leading, max(Theme.Space.s, start - Self.crumbStart))
     }
 
-    /// Where the item after the sidebar button begins, from the window's left edge; measured in a window screenshot.
-    static let crumbStart: CGFloat = 140
+    /// Where the item after the sidebar button begins, from the window's left edge; measured in a window screenshot
+    /// before back and forward joined the button, and moved by their width.
+    static let crumbStart: CGFloat = 140 + historyGap + HistoryButtons.width
+    static let historyGap = Theme.Space.s
     /// Below this the trail folds anyway and its last step truncates.
     static let crumbMinWidth: CGFloat = 160
     /// The trailing buttons and the gaps around the search field, measured at their widest (a course, timer shown),
@@ -372,10 +415,9 @@ struct RootView: View {
                 Button { showingRecording = true } label: { recordingTime }
                     .help(Text(.rootRecording))
                     .popover(isPresented: $showingRecording, arrowEdge: .bottom) {
-                        RecordingBar(workspace: workspace) { destination, target in
+                        RecordingBar(workspace: workspace) { link in
                             showingRecording = false
-                            selection = destination
-                            if let target { searchTarget = target }
+                            open(link)
                         }
                         .frame(width: Theme.Size.sidebar)
                         .padding(Theme.Space.m)
@@ -442,7 +484,7 @@ struct RootView: View {
         }
         // On the label, under `sidebarRow`, so a chosen past term's row fill stays full strength.
         .opacity(past && !chosen ? Theme.Opacity.ended : 1)
-        .sidebarRow(.semester(semester.id), $selection, guide: .stem, guideShown: open)
+        .sidebarRow(.semester(semester.id), selectionBinding, guide: .stem, guideShown: open)
     }
 
     func sidebarIcon(_ symbol: String, _ destination: Destination) -> some View {
@@ -492,7 +534,7 @@ struct RootView: View {
         }
         .help(ongoing.map { String(localized: .rootInClass(course.file.subject(of: $0.session) ?? course.file.day(of: $0.session, calendar: workspace.calendar))) } ?? hint.map(hintHelp) ?? "")
         .padding(.leading, SidebarGuide.indent)
-        .sidebarRow(.course(course.id), $selection, fill: accent.tint, guide: last ? .lastCourse : .course, progress: ongoing?.fraction(at: now))
+        .sidebarRow(.course(course.id), selectionBinding, fill: accent.tint, guide: last ? .lastCourse : .course, progress: ongoing?.fraction(at: now))
     }
 
     @ViewBuilder func courseHint(_ hint: TodaySummary.CourseHint) -> some View {
@@ -521,11 +563,11 @@ struct RootView: View {
         switch selection {
         case .today, nil: TodayView(workspace: workspace)
         case .course(let id): CourseView(workspace: workspace, courseID: id).id(id)
-        case .semester(let id): SemesterView(workspace: workspace, semesterID: id) { selection = .course($0) }.id(id)
+        case .semester(let id): SemesterView(workspace: workspace, semesterID: id) { open(.course($0)) }.id(id)
         case .grades: GradesView(workspace: workspace)
         case .requirements:
-            RequirementsView(workspace: workspace) { selection = .course($0.id) }
-        case .people: PeopleView(workspace: workspace) { selection = .course($0) }
+            RequirementsView(workspace: workspace) { open(.course($0.id)) }
+        case .people: PeopleView(workspace: workspace) { open(.course($0)) }
         case .codes: CodesView(workspace: workspace)
         case .settings: SettingsView(workspace: workspace)
         }
@@ -534,7 +576,7 @@ struct RootView: View {
     /// Nil keeps the section last open.
     func showSettings(_ tab: SettingsTab?) {
         if let tab { settingsTab = tab }
-        selection = .settings
+        open(.place(.settings))
     }
 }
 
@@ -696,8 +738,10 @@ private extension View {
         )
         .accessibilityAddTraits(chosen ? [.isButton, .isSelected] : .isButton)
         .accessibilityAction { selection.wrappedValue = destination }
+        .contextMenu { LinkMenu(link: destination.link) }
         #else
         tag(destination)
+            .contextMenu { LinkMenu(link: destination.link) }
             .background(alignment: .leading) {
                 if guide != .stem, let line { line.padding(.vertical, -Theme.Space.xs).padding(.leading, Theme.Size.tile / 2) }
             }

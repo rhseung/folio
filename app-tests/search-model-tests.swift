@@ -1,3 +1,4 @@
+import FolioActions
 import FolioDomain
 import Foundation
 import Testing
@@ -32,11 +33,13 @@ struct SearchModelTests {
         #expect(model.selected == model.flat.count - 1)
     }
 
-    @Test func aHitOpensItsSectionAndItem() throws {
-        let model = SearchModel(workspace: try fixtureWorkspace())
-        let hit = try #require(hits().first { $0.item.kind == .note })
-        let target = model.target(hit)
-        #expect(target.section == .notes && target.noteId == hit.item.id && target.materialId == nil)
+    @Test func aHitOpensItsItemByLink() throws {
+        let workspace = try fixtureWorkspace()
+        let session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now))?.made)
+        let note = try #require(workspace.run(SessionNote(course: graphTheory, session: session, kind: .review))?.made)
+        let item = SearchItem(kind: .note, courseId: graphTheory, id: note, title: "정리")
+        #expect(AppLink(item) == AppLink(.note, note))
+        #expect(workspace.entry(for: AppLink(item), hint: item.courseId)?.course == graphTheory)
     }
 
     @Test func emptyMessageSaysWhetherToWidenTheFilters() throws {

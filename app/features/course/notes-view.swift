@@ -78,6 +78,7 @@ struct NoteList: View {
         .help(note.title)
         .contextMenu {
             Button(.notesOpen) { open(note) }
+            if let id = note.meta.id { LinkMenu(link: AppLink(.note, id), course: model.course.id, trailing: true) }
             Divider()
             Button(.notesDeleteEllipsis, systemImage: "trash", role: .destructive) {
                 model.delete(note) { if note.meta.id != nil && note.meta.id == selection { selection = nil } }
@@ -93,12 +94,15 @@ struct NoteList: View {
 struct NotesView: View {
     @State private var model: NotesModel
     let selection: UUID?
+    var anchor: AppLink.Anchor?
     var insert: Binding<String?> = .constant(nil)
     let open: (UUID) -> Void
 
-    init(workspace: Workspace, course: LoadedCourse, selection: UUID?, insert: Binding<String?> = .constant(nil), open: @escaping (UUID) -> Void) {
+    init(workspace: Workspace, course: LoadedCourse, selection: UUID?, anchor: AppLink.Anchor? = nil, insert: Binding<String?> = .constant(nil),
+         open: @escaping (UUID) -> Void) {
         _model = State(initialValue: NotesModel(workspace: workspace, course: course))
         self.selection = selection
+        self.anchor = anchor
         self.insert = insert
         self.open = open
     }
@@ -108,7 +112,7 @@ struct NotesView: View {
             if note.format == .tex {
                 TextFileView(workspace: model.workspace, course: model.course, note: note).id(note.url)
             } else {
-                NoteEditor(workspace: model.workspace, course: model.course, note: note, insert: insert) { title in
+                NoteEditor(workspace: model.workspace, course: model.course, note: note, anchor: anchor, insert: insert) { title in
                     if let id = model.noteId(titled: title) { open(id) }
                 }
                 .id(note.url)
@@ -128,6 +132,7 @@ struct NoteEditor: View {
     @State private var model: NoteEditorModel
     @Environment(\.accent) private var accent
     @Environment(\.scenePhase) private var scenePhase
+    var anchor: AppLink.Anchor?
     var insert: Binding<String?> = .constant(nil)
     let openNote: (String) -> Void
     @State private var panes = NotePanes()
@@ -135,8 +140,10 @@ struct NoteEditor: View {
     @State private var preview = PreviewLink()
     @State private var showsAssets = false
 
-    init(workspace: Workspace, course: LoadedCourse, note: NoteFile, insert: Binding<String?> = .constant(nil), openNote: @escaping (String) -> Void) {
+    init(workspace: Workspace, course: LoadedCourse, note: NoteFile, anchor: AppLink.Anchor? = nil, insert: Binding<String?> = .constant(nil),
+         openNote: @escaping (String) -> Void) {
         _model = State(initialValue: NoteEditorModel(workspace: workspace, course: course, note: note))
+        self.anchor = anchor
         self.insert = insert
         self.openNote = openNote
     }
@@ -191,7 +198,8 @@ struct NoteEditor: View {
                 if shown != .read { editor }
                 if shown == .split { Theme.Palette.lineSoft.frame(width: 1) }
                 if shown != .write {
-                    NotePreview(text: model.body, baseURL: model.baseURL, math: model.meta.math, openNote: openNote, edit: model.replaceLines,
+                    NotePreview(text: model.body, baseURL: model.baseURL, math: model.meta.math, openNote: openNote, anchor: anchor,
+                                noteLink: model.note.meta.id.map { AppLink(.note, $0) }, edit: model.replaceLines,
                                 link: shown == .split ? preview : nil, toggleMode: toggleMode)
                 }
             }

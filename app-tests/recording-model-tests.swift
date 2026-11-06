@@ -215,12 +215,12 @@ struct RecordingBarModelTests {
         let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a")
         workspace.recorder.stage(recording, course: graphTheory, title: "그래프 이론")
         let model = RecordingBarModel(workspace: workspace)
-        #expect(model.sessionTarget == SearchTarget(courseId: graphTheory, section: .sessions))
+        #expect(model.sessionLink == .course(graphTheory, page: .sessions))
 
         let review = try #require(workspace.run(SessionNote(course: graphTheory, session: session, kind: .review))?.made)
-        #expect(model.sessionTarget == SearchTarget(courseId: graphTheory, section: .notes, noteId: review))
+        #expect(model.sessionLink == AppLink(.note, review))
         let rough = try #require(workspace.run(SessionNote(course: graphTheory, session: session, kind: .rough))?.made)
-        #expect(model.sessionTarget == SearchTarget(courseId: graphTheory, section: .notes, noteId: rough))
+        #expect(model.sessionLink == AppLink(.note, rough))
     }
 }
 
@@ -278,7 +278,7 @@ struct TranscriptionContextModelTests {
         let withUnit = try player(context: try current())
         #expect(withUnit.contextSummary == String(localized: .recordingContextNoSlides))
         #expect(withUnit.shownContext?.topics == ["매칭"])
-        #expect(withUnit.materialsTarget == SearchTarget(courseId: graphTheory, section: .materials))
+        #expect(withUnit.materialsLink == .course(graphTheory, page: .materials))
     }
 
     @Test func anOldTranscriptSaysItKeptNoContext() async throws {
@@ -321,7 +321,7 @@ struct TranscriptionContextModelTests {
         workspace.recorder.stage(recording, course: graphTheory, title: "그래프 이론")
         let model = RecordingBarModel(workspace: workspace)
         #expect(model.contextSummary == String(localized: .recordingContextReading))
-        #expect(model.materialsTarget == SearchTarget(courseId: graphTheory, section: .materials))
+        #expect(model.materialsLink == .course(graphTheory, page: .materials))
     }
 
     let linearAlgebraID = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!

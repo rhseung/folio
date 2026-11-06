@@ -71,7 +71,8 @@ struct CourseView: View {
     @State private var claudeWidth = Theme.Size.claudePanel
     @State private var pageReset = 0
     @State private var claudeDragBase: CGFloat?
-    @Environment(\.searchTarget) private var searchTarget
+    @Environment(\.place) private var place
+    @Environment(\.openLink) private var openLink
 
     init(workspace: Workspace, courseID: UUID) {
         _model = State(initialValue: CourseModel(workspace: workspace, courseId: courseID))
@@ -138,17 +139,25 @@ struct CourseView: View {
                 CourseColumn(model: model, course: course)
                     .frame(width: Theme.Size.courseColumn)
                     // Back to the section's first screen from a file or unit opened in it.
-                    .crumb(model.section.title, level: 1, symbol: model.section.tab.symbol) { pageReset += 1 }
+                    .crumb(model.section.title, level: 1, symbol: model.section.tab.symbol) {
+                        model.resetPage()
+                        pageReset += 1
+                    }
                 ColumnDivider()
                 Group {
                     switch model.section {
                     case .overview: CourseOverview(model: model, course: course)
                     case .sessions: SessionsView(workspace: workspace, course: course) { model.show(note: $0) }
-                    case .units: UnitsView(workspace: workspace, course: course) { model.openUnit = $0 }
-                    case .notes: NotesView(workspace: workspace, course: course, selection: model.openNote, insert: $model.noteInsert) { model.openNote = $0 }
+                    case .units:
+                        UnitsView(workspace: workspace, course: course, place: model.place) { id in
+                            model.openUnit = id
+                            model.moved(id.map { AppLink(.unit, $0) })
+                        }
+                    case .notes:
+                        NotesView(workspace: workspace, course: course, selection: model.openNote, anchor: model.noteAnchor, insert: $model.noteInsert) { model.openNote = $0 }
                     // One branch for every quiz page, so the quiz model and a pending solve request survive switching pages.
                     case .quizSolve, .quizCards, .quizStats, .quizProblems: QuizView(workspace: model.workspace, course: course, section: $model.section)
-                    case .materials: MaterialsView(workspace: workspace, course: course)
+                    case .materials: MaterialsView(workspace: workspace, course: course, place: model.place, moved: model.moved)
                     case .assignments: AssignmentsView(workspace: workspace, course: course)
                     case .grades: CourseGradesView(workspace: workspace, course: course)
                     case .exams: ExamsView(workspace: workspace, course: course) { model.show(note: $0) }
@@ -170,9 +179,9 @@ struct CourseView: View {
             .navigationTitle(course.title)
             .navigationSubtitle(model.section.title)
             .studyTime(course: model.courseId)
-            .onChange(of: searchTarget.wrappedValue, initial: true) { _, target in
-                if let target, model.follow(target) { searchTarget.wrappedValue = nil }
-            }
+            // The window's link drives the page, and the page's own moves go back into the window's history.
+            .onChange(of: place, initial: true) { _, entry in if let entry { model.follow(entry) } }
+            .onChange(of: model.place) { _, link in openLink(link, course: model.courseId) }
             #if DEBUG && os(macOS)
             .onChange(of: SnapshotDriver.shared.section, initial: true) { _, new in if let new { model.section = new } }
             .onChange(of: SnapshotDriver.shared.claudePanel, initial: true) { _, new in showClaude = new }

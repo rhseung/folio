@@ -1,3 +1,4 @@
+import FolioDomain
 import SwiftUI
 
 /// The recording under way, at the foot of the sidebar: the sidebar is on every page, and a bar floating over the
@@ -5,9 +6,9 @@ import SwiftUI
 struct RecordingBar: View {
     @State private var model: RecordingBarModel
     @State private var showingTranscript = false
-    let open: (Destination, SearchTarget?) -> Void
+    let open: (AppLink) -> Void
 
-    init(workspace: Workspace, open: @escaping (Destination, SearchTarget?) -> Void) {
+    init(workspace: Workspace, open: @escaping (AppLink) -> Void) {
         _model = State(initialValue: RecordingBarModel(workspace: workspace))
         self.open = open
     }
@@ -17,15 +18,15 @@ struct RecordingBar: View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Button { if let id = model.course?.id { open(.course(id), nil) } } label: {
+                    Button { if let id = model.course?.id { open(.course(id)) } } label: {
                         Text(model.courseTitle).font(Theme.Typeface.bodyStrong).foregroundStyle(model.paused ? Theme.Palette.textSecondary : model.accent.ink).lineLimit(1)
                     }
                     .help(Text(.recordingOpenCourse))
-                    if let session = model.sessionName, let target = model.sessionTarget {
-                        Button { open(.course(target.courseId), target) } label: {
+                    if let session = model.sessionName, let link = model.sessionLink {
+                        Button { open(link) } label: {
                             Text(session).font(Theme.Typeface.caption).foregroundStyle(model.paused ? Theme.Palette.textTertiary : Theme.Palette.textSecondary).lineLimit(1)
                         }
-                        .help(Text(target.noteId == nil ? .recordingOpenSessions : .recordingOpenSession))
+                        .help(Text(link.kind == .note ? .recordingOpenSession : .recordingOpenSessions))
                     }
                 }
                 .buttonStyle(.pointing(.plain))
@@ -75,9 +76,9 @@ struct RecordingBar: View {
                     .help(Text(showingTranscript ? .recordingCollapse : .recordingExpand))
                     // Beside the sidebar, not inside it: the transcript wants a reading width the sidebar doesn't have.
                     .popover(isPresented: $showingTranscript, arrowEdge: .trailing) {
-                        TranscriptFeed(model: model) { target in
+                        TranscriptFeed(model: model) { link in
                             showingTranscript = false
-                            open(.course(target.courseId), target)
+                            open(link)
                         }
                         .frame(width: Theme.Size.claudePanel, height: 320)
                     }
@@ -138,7 +139,7 @@ private struct RecordingCardFace: View {
 
 private struct TranscriptFeed: View {
     let model: RecordingBarModel
-    let open: (SearchTarget) -> Void
+    let open: (AppLink) -> Void
     @State private var showingContext = false
 
     var body: some View {
@@ -170,7 +171,7 @@ private struct TranscriptFeed: View {
         if showingContext, let context = model.context {
             ScrollView {
                 Card {
-                    TranscriptionContextRows(context: context, link: model.materialsTarget.map { target in { open(target) } })
+                    TranscriptionContextRows(context: context, link: model.materialsLink.map { link in { open(link) } })
                 }
                 .padding([.horizontal, .bottom], Theme.Space.m)
             }

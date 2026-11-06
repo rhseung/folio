@@ -20,10 +20,10 @@ final class RecordingBarModel {
     var accent: CourseAccent { recorder.courseId.map { workspace.accent($0) } ?? CourseAccent.gray }
     var courseTitle: String { preparing ? String(localized: .recordingPreparing) : course?.title ?? recorder.title }
     /// Like a recent session in the course column: its rough note, else its review note, else the sessions list.
-    var sessionTarget: SearchTarget? {
+    var sessionLink: AppLink? {
         guard let course, let id = recorder.recording?.sessionId, let session = course.file.sessions.first(where: { $0.id == id }) else { return nil }
-        if let note = session.roughNoteId ?? session.reviewNoteId { return SearchTarget(courseId: course.id, section: .notes, noteId: note) }
-        return SearchTarget(courseId: course.id, section: .sessions)
+        if let note = session.roughNoteId ?? session.reviewNoteId { return AppLink(.note, note) }
+        return .course(course.id, page: .sessions)
     }
     var sessionName: String? {
         guard let course, let id = recorder.recording?.sessionId, let session = course.file.sessions.first(where: { $0.id == id }) else { return nil }
@@ -38,7 +38,7 @@ final class RecordingBarModel {
         context.map(TranscriptionContextText.summary) ?? String(localized: .recordingContextReading)
     }
     /// Where lecture files are linked to sessions: the course's files.
-    var materialsTarget: SearchTarget? { course.map { SearchTarget(courseId: $0.id, section: .materials) } }
+    var materialsLink: AppLink? { course.map { .course($0.id, page: .materials) } }
     func retellCaptionsIfChanged() { workspace.retellCaptionsIfChanged() }
 
     func toggle() {
@@ -177,7 +177,7 @@ final class RecordingPlayerModel {
         guard hasLines, let used = usedContext, let now = linkedContext else { return false }
         return used.differs(from: now)
     }
-    var materialsTarget: SearchTarget { SearchTarget(courseId: courseId, section: .materials) }
+    var materialsLink: AppLink { .course(courseId, page: .materials) }
 
     func loadContext() async {
         guard usedContext == nil, let file = courseFile, let session else { return }

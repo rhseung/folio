@@ -169,6 +169,7 @@ struct PDFThumbnails {
 extension PDFKitView: NSViewRepresentable {
     func makeNSView(context: Context) -> PDFView {
         controller.restore()
+        PDFLinks.attach(to: controller.view, opener: context.environment.openLink)
         return controller.view
     }
     func updateNSView(_ view: PDFView, context: Context) {}
@@ -182,6 +183,7 @@ extension PDFThumbnails: NSViewRepresentable {
 extension PDFKitView: UIViewRepresentable {
     func makeUIView(context: Context) -> PDFView {
         controller.restore()
+        PDFLinks.attach(to: controller.view, opener: context.environment.openLink)
         return controller.view
     }
     func updateUIView(_ view: PDFView, context: Context) {}

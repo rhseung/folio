@@ -14,6 +14,8 @@ final class MaterialsModel {
     var lastBatch: UUID?
     private var assignmentFolders: [String] = []
     var viewing: UUID?
+    /// The 0-based page a link asked the viewer for, taken once by it.
+    var requestedPage: Int?
     var preview: URL?
     var linking: UUID?
     var relinking: UUID?
@@ -187,6 +189,23 @@ final class MaterialsModel {
         let scoped = file.startAccessingSecurityScopedResource()
         defer { if scoped { file.stopAccessingSecurityScopedResource() } }
         workspace.run(MaterialRelink(course: course.id, material: id, file: file.path(percentEncoded: false)))
+    }
+
+    /// The file a link names, to open, with the page it asks for kept for the viewer. A link to the section itself
+    /// closes the file shown, as going back from it does.
+    func follow(_ link: AppLink) -> FolioDomain.Material? {
+        guard link.kind == .material else {
+            if link.kind == .course { viewing = nil }
+            return nil
+        }
+        guard let m = materials.first(where: { $0.id == link.id }) else { return nil }
+        if case .page(let n) = link.anchor { requestedPage = n - 1 }
+        return m
+    }
+
+    func takeRequestedPage() -> Int? {
+        defer { requestedPage = nil }
+        return requestedPage
     }
 
     /// A PDF or a text file opens here, a folder in Finder (by the view), anything else in Quick Look.

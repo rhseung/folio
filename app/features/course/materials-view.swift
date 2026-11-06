@@ -7,11 +7,14 @@ import SwiftUI
 struct MaterialsView: View {
     @State private var model: MaterialsModel
     @Environment(\.accent) private var accent
-    @Environment(\.searchTarget) private var target
     @State private var picking = false
+    let place: AppLink
+    let moved: (AppLink?) -> Void
 
-    init(workspace: Workspace, course: LoadedCourse) {
+    init(workspace: Workspace, course: LoadedCourse, place: AppLink, moved: @escaping (AppLink?) -> Void) {
         _model = State(initialValue: MaterialsModel(workspace: workspace, course: course))
+        self.place = place
+        self.moved = moved
     }
 
     var body: some View {
@@ -53,11 +56,11 @@ struct MaterialsView: View {
         } message: { m in
             Text(model.renameMessage(m))
         }
-        .onChange(of: target.wrappedValue, initial: true) { _, new in
-            guard let new, new.courseId == model.course.id, let id = new.materialId else { return }
-            target.wrappedValue = nil
-            if let m = model.materials.first(where: { $0.id == id }) { open(m) }
+        // The window's place opens a file, at a page if the link names one; back to the section closes it.
+        .onChange(of: place, initial: true) { _, link in
+            if let m = model.follow(link), !m.isFolder { open(m) }
         }
+        .onChange(of: model.viewing) { _, id in moved(id.map { AppLink(.material, $0) }) }
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.openPDF, initial: true) { _, new in
             // Fixtures ship without tracked files; register them so there is a PDF to show.
@@ -182,6 +185,7 @@ struct MaterialsView: View {
         } else {
             Button(m.isFolder ? .materialsOpenInFinder : .materialsOpen) { open(m) }
             Button(.materialsLinkEllipsis) { model.linking = m.id }
+            if !m.isFolder { LinkMenu(link: AppLink(.material, m.id), course: model.course.id, trailing: true) }
             if !m.isFolder {
                 Divider()
                 fileMenuItems(m)

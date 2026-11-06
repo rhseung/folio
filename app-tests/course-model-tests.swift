@@ -6,15 +6,40 @@ import Testing
 
 @MainActor
 struct CourseModelTests {
-    @Test func followsOnlyItsOwnCourseAndLeavesMaterialTargetsForTheMaterialsPage() throws {
+    @Test func followsOnlyLinksIntoItsOwnCourse() throws {
         let model = CourseModel(workspace: try fixtureWorkspace(), courseId: graphTheory)
-        #expect(!model.follow(SearchTarget(courseId: UUID(), section: .units)))
+        model.follow(Navigator.Entry(link: .course(UUID(), page: .units), course: UUID()))
         #expect(model.section == .overview)
         let note = UUID()
-        #expect(model.follow(SearchTarget(courseId: graphTheory, section: .notes, noteId: note)))
-        #expect(model.section == .notes && model.openNote == note)
-        #expect(!model.follow(SearchTarget(courseId: graphTheory, section: .materials, materialId: UUID())))
-        #expect(model.section == .materials)
+        model.follow(Navigator.Entry(link: AppLink(.note, note, anchor: .heading("정리")), course: graphTheory))
+        #expect(model.section == .notes && model.openNote == note && model.noteAnchor == .heading("정리"))
+        let material = AppLink(.material, UUID(), anchor: .page(3))
+        model.follow(Navigator.Entry(link: material, course: graphTheory))
+        // The materials page opens the file itself, from the place.
+        #expect(model.section == .materials && model.place == material && model.noteAnchor == nil)
+    }
+
+    /// Following a link changes the page without reporting a move; the page's own moves are reported once each.
+    @Test func reportsItsOwnMovesButNotTheOnesItFollows() throws {
+        let model = CourseModel(workspace: try fixtureWorkspace(), courseId: graphTheory)
+        let unit = AppLink(.unit, UUID())
+        model.follow(Navigator.Entry(link: unit, course: graphTheory))
+        #expect(model.place == unit)
+        model.section = .grades
+        #expect(model.place == .course(graphTheory, page: .grades))
+        let note = UUID()
+        model.section = .notes
+        model.openNote = note
+        #expect(model.place == AppLink(.note, note))
+        model.section = .materials
+        let file = AppLink(.material, UUID())
+        model.moved(file)
+        #expect(model.place == file)
+        // The same file at another page is the same place.
+        model.moved(file.with(.page(9)))
+        #expect(model.place == file)
+        model.moved(nil)
+        #expect(model.place == .course(graphTheory, page: .materials))
     }
 
     @Test func noteStateFollowsTheReviewNote() throws {

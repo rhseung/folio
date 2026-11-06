@@ -5,7 +5,7 @@ import SwiftUI
 
 struct TodayView: View {
     @State private var model: TodayModel
-    @Environment(\.searchTarget) private var searchTarget
+    @Environment(\.openLink) private var openLink
     @State private var wide = true
     @State private var hoveredNote: UUID?
 
@@ -401,11 +401,11 @@ struct TodayView: View {
     }
 
     func go(_ course: UUID, _ section: CourseSection) {
-        searchTarget.wrappedValue = SearchTarget(courseId: course, section: section)
+        openLink(.course(course, page: section.page), course: course)
     }
 
     func openNote(in course: UUID) -> (UUID) -> Void {
-        { searchTarget.wrappedValue = SearchTarget(courseId: course, section: .notes, noteId: $0) }
+        { openLink(AppLink(.note, $0), course: course) }
     }
 }
 

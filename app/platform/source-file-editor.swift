@@ -1,3 +1,4 @@
+import FolioDomain
 import SwiftUI
 
 /// A plain-text editor for `.tex`, code and text files: monospaced, colored by the note's code highlighter. The note
@@ -60,7 +61,11 @@ struct SourceFileEditor {
 
 #if os(macOS)
 extension SourceFileEditor: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSScrollView { makeView(context.coordinator) }
+    func makeNSView(context: Context) -> NSScrollView {
+        let scroll = makeView(context.coordinator)
+        (scroll.documentView as? SourceFileTextView)?.linkOpener = context.environment.openLink
+        return scroll
+    }
 
     @MainActor func makeView(_ coordinator: Coordinator) -> NSScrollView {
         let scroll = SourceFileTextView.scrollableTextView()
@@ -97,6 +102,7 @@ extension SourceFileEditor: NSViewRepresentable {
 
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         guard let view = scroll.documentView as? NSTextView else { return }
+        (view as? SourceFileTextView)?.linkOpener = context.environment.openLink
         update(view, context.coordinator)
     }
 
@@ -133,6 +139,20 @@ extension SourceFileEditor.Coordinator: NSTextViewDelegate {
 
 final class SourceFileTextView: NSTextView {
     var unmarked: () -> Void = {}
+    var linkOpener = OpenLinkAction()
+
+    /// ⌘-click on a `folio://` address written anywhere in the file (`\href{folio://…}`, a comment) opens it, as in the
+    /// note editor; a plain click places the caret.
+    override func mouseDown(with event: NSEvent) {
+        if event.modifierFlags.contains(.command), let window, textStorage?.length ?? 0 > 0 {
+            let i = characterIndex(for: window.convertPoint(toScreen: event.locationInWindow))
+            if i != NSNotFound, let link = AppLink.link(in: string, at: i) {
+                linkOpener(link)
+                return
+            }
+        }
+        super.mouseDown(with: event)
+    }
 
     // A syllable ended without a keystroke (a click elsewhere, another app) changes no text, so no `textDidChange`
     // colors it or hands it to the binding.

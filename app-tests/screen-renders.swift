@@ -108,7 +108,7 @@ struct ScreenRenders {
         }
         for (name, query) in [("search-empty", ""), ("search", "매칭")] {
             batches.append(Batch(setup: { SnapshotDriver.shared.searchQuery = query },
-                                 sheets: [(name, { AnyView(SearchPalette(workspace: workspace, close: {}, choose: { _ in })) })]))
+                                 sheets: [(name, { AnyView(SearchPalette(workspace: workspace, close: {}, choose: { _, _ in })) })]))
         }
         return batches
     }

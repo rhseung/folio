@@ -38,6 +38,16 @@ public struct WikiLink: Hashable, Sendable {
         isEmbed = m.1 == "!"
     }
 
+    /// Where the link goes: `folio://<kind>/<ID>` for an app object, `folio://note/<title>` for a note, with the
+    /// heading, block or page after `#`.
+    public var href: String {
+        let fragment = blockID.map { "#^" + $0 } ?? fragment.map { "#" + $0 } ?? ""
+        if let kind = objectKind {
+            return "folio://\(kind)/\(target.dropFirst(kind.count + 1))\(fragment)"
+        }
+        return "folio://note/\(target.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? target)\(fragment)"
+    }
+
     public static func all(in text: String) -> [WikiLink] {
         text.matches(of: pattern).map(WikiLink.init)
     }

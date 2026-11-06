@@ -16951,6 +16951,160 @@
           }
         }
       }
+    },
+    "link.open-here": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여기서 열기"
+          }
+        }
+      }
+    },
+    "link.open-beside": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "옆 칸에서 열기"
+          }
+        }
+      }
+    },
+    "link.open-tab": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 탭에서 열기"
+          }
+        }
+      }
+    },
+    "link.open-window": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 창에서 열기"
+          }
+        }
+      }
+    },
+    "link.open-in": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 곳에서 열기"
+          }
+        }
+      }
+    },
+    "link.copy": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "링크 복사"
+          }
+        }
+      }
+    },
+    "link.not-found": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "링크가 가리키는 항목을 찾지 못했습니다: %@"
+          }
+        }
+      }
+    },
+    "navigation.menu": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이동"
+          }
+        }
+      }
+    },
+    "navigation.back": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "뒤로"
+          }
+        }
+      }
+    },
+    "navigation.forward": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앞으로"
+          }
+        }
+      }
+    },
+    "navigation.back-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "뒤로 가기 (⌘[). 길게 누르면 지난 곳 목록"
+          }
+        }
+      }
+    },
+    "navigation.forward-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앞으로 가기 (⌘]). 길게 누르면 다음 곳 목록"
+          }
+        }
+      }
+    },
+    "link.copy-heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 제목의 링크 복사"
+          }
+        }
+      }
+    },
+    "link.copy-block": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 블록의 링크 복사"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

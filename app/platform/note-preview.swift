@@ -10,6 +10,10 @@ struct NotePreview {
     var baseURL: URL?
     var math: MathSyntax = .latex
     var openNote: (String) -> Void = { _ in }
+    /// Where a link opened at shows first: a heading or a block. Scrolled to once for each new one.
+    var anchor: AppLink.Anchor?
+    /// The note's own link, for copying a link to a heading or block from the menu; nil for a note without an ID.
+    var noteLink: AppLink?
     /// Writes a ticked box back: its line in `text`, what the line should still hold, and its new text. False when the
     /// line no longer holds it. Without it boxes don't tick.
     var edit: (@MainActor (_ from: Int, _ to: Int, _ old: String, _ new: String) -> Bool)?
@@ -24,25 +28,30 @@ struct NotePreview {
 
     @MainActor func makeCoordinator() -> Coordinator { Coordinator() }
 
-    @MainActor func update(_ page: NotePreviewPage, accent: CourseAccent, dark: Bool) {
+    @MainActor func update(_ page: NotePreviewPage, accent: CourseAccent, dark: Bool, openLink: OpenLinkAction = OpenLinkAction()) {
         page.openNote = openNote
+        page.openLink = openLink
+        page.noteLink = noteLink
         page.edit = edit
         page.toggleMode = toggleMode
         if link?.page !== page { link?.page = page }
         page.link = link
         page.show(text, baseURL: baseURL, math: math, accent: accent, dark: dark)
+        page.reveal(anchor)
     }
 }
 
 #if os(macOS)
 extension NotePreview: NSViewRepresentable {
     func makeNSView(context: Context) -> PreviewWebView {
-        update(context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark)
+        update(context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+               openLink: context.environment.openLink)
         return context.coordinator.page.view
     }
 
     func updateNSView(_ view: PreviewWebView, context: Context) {
-        update(context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark)
+        update(context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+               openLink: context.environment.openLink)
     }
 
     static func dismantleNSView(_ view: PreviewWebView, coordinator: Coordinator) { coordinator.page.recycle() }
@@ -50,12 +59,14 @@ extension NotePreview: NSViewRepresentable {
 #else
 extension NotePreview: UIViewRepresentable {
     func makeUIView(context: Context) -> PreviewWebView {
-        update(context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark)
+        update(context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+               openLink: context.environment.openLink)
         return context.coordinator.page.view
     }
 
     func updateUIView(_ view: PreviewWebView, context: Context) {
-        update(context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark)
+        update(context.coordinator.page, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+               openLink: context.environment.openLink)
     }
 
     static func dismantleUIView(_ view: PreviewWebView, coordinator: Coordinator) { coordinator.page.recycle() }
@@ -87,6 +98,14 @@ extension NotePreview: UIViewRepresentable {
     let widgets: NoteWidgets
 
     var openNote: (String) -> Void = { _ in }
+    var openLink = OpenLinkAction()
+    var noteLink: AppLink?
+    /// What the pointer was on when the page's menu was asked for: a link, which the menu's own items open, and the
+    /// heading or block, which they link to.
+    fileprivate(set) var menuHref: String?
+    fileprivate(set) var menuAnchor: AppLink.Anchor?
+    private var revealed: AppLink.Anchor?
+    private var revealing: AppLink.Anchor?
     var edit: (@MainActor (Int, Int, String, String) -> Bool)?
     var toggleMode: (@MainActor () -> Void)? {
         didSet { view.toggleMode = toggleMode }
@@ -133,6 +152,12 @@ extension NotePreview: UIViewRepresentable {
 
     func recycle() {
         openNote = { _ in }
+        openLink = OpenLinkAction()
+        menuHref = nil
+        menuAnchor = nil
+        noteLink = nil
+        revealed = nil
+        revealing = nil
         edit = nil
         toggleMode = nil
         link = nil
@@ -173,6 +198,7 @@ extension NotePreview: UIViewRepresentable {
         view.setValue(false, forKey: "drawsBackground")
         #else
         view.isOpaque = false
+        view.uiDelegate = self
         view.backgroundColor = .clear
         view.scrollView.backgroundColor = .clear
         #endif
@@ -240,12 +266,38 @@ extension NotePreview: UIViewRepresentable {
             rendering = false
             // Beside the editor the page follows it, except right after a tick here, which leaves the editor still.
             if ticked { ticked = false } else { link?.refollow() }
+            runReveal()
             render()
         }
     }
 
     /// The page has the note it was last given, with every widget's height known: what tests wait for.
     var settled: Bool { ready && !rendering && wanted == shown && !followRunning && widgets.settled }
+
+    // MARK: Showing a heading or block
+
+    /// Scrolls to where a link pointed, once the note is on the page; the same anchor again leaves the scroll alone.
+    func reveal(_ anchor: AppLink.Anchor?) {
+        guard anchor != revealed else { return }
+        revealed = anchor
+        revealing = anchor
+        if ready, !rendering, wanted == shown { runReveal() }
+    }
+
+    private func runReveal() {
+        guard let anchor = revealing else { return }
+        revealing = nil
+        let id: String
+        switch anchor {
+        case .heading(let text): id = HTMLRenderer.slug(text)
+        case .block(let block): id = "^" + block
+        case .page: return
+        }
+        Task {
+            _ = try? await view.callAsyncJavaScript("document.getElementById(id)?.scrollIntoView({block: 'start'})", arguments: ["id": id],
+                                                     contentWorld: .defaultClient)
+        }
+    }
 
     // MARK: Following the editor
 
@@ -279,6 +331,10 @@ extension NotePreview: UIViewRepresentable {
             guard let body = message.body as? [String: Any], message.frameInfo.isMainFrame else { return }
             // Boxes carry their line in the note's body, below any frontmatter.
             if body["type"] as? String == "task", let line = body["line"] as? Int, let page { page.tick(line: page.offset + line) }
+            if body["type"] as? String == "menu" {
+                page?.menuHref = body["href"] as? String
+                page?.menuAnchor = (body["block"] as? String).map(AppLink.Anchor.block) ?? (body["heading"] as? String).map(AppLink.Anchor.heading)
+            }
         }
     }
 
@@ -314,6 +370,11 @@ extension NotePreview: UIViewRepresentable {
         return url == Self.shellURL || url.absoluteString == "about:blank" ? .allow : .cancel
     }
 
+    /// Opens a link of the note in another place, from the page's menu.
+    func open(_ href: String, in placement: LinkPlacement) {
+        NoteLinks.open(href, base: nil, in: placement, openNote: openNote, openLink: openLink)
+    }
+
     private func open(_ url: URL) async {
         if url.scheme == LocalFileScheme.scheme, let fragment = url.fragment, url.pathExtension != "md" {
             // A link to a block or heading on this page.
@@ -325,7 +386,7 @@ extension NotePreview: UIViewRepresentable {
             if url.pathExtension == "md" { openNote(url.deletingPathExtension().lastPathComponent) }
             return
         }
-        NoteLinks.open(url.absoluteString, base: nil, openNote: openNote)
+        NoteLinks.open(url.absoluteString, base: nil, openNote: openNote, openLink: openLink)
     }
 }
 
@@ -351,13 +412,63 @@ final class PreviewWebView: WKWebView {
             "WKMenuItemIdentifierDownloadImage", "WKMenuItemIdentifierOpenFrameInNewWindow", "WKMenuItemIdentifierInspectElement",
         ]
         for item in menu.items where dropped.contains(item.identifier?.rawValue ?? "") { menu.removeItem(item) }
+        if let href = page?.menuHref, let link = AppLink(string: href) {
+            addLinkItems(menu, link)
+        } else if let note = page?.noteLink, let anchor = page?.menuAnchor, note.with(anchor) != note {
+            let link = note.with(anchor)
+            menu.insertItem(LinkMenuItem(String(localized: anchor.isBlock ? .linkCopyBlock : .linkCopyHeading), symbol: "link") { copyLink(link) }, at: 0)
+            if menu.items.count > 1 { menu.insertItem(.separator(), at: 1) }
+        }
         super.willOpenMenu(menu, with: event)
     }
+
+    /// A link into the app gets the same items as an item's menu, in place of WebKit's open and copy.
+    private func addLinkItems(_ menu: NSMenu, _ link: AppLink) {
+        let webKit: Set<String> = ["WKMenuItemIdentifierOpenLink", "WKMenuItemIdentifierCopyLink"]
+        for item in menu.items where webKit.contains(item.identifier?.rawValue ?? "") { menu.removeItem(item) }
+        var items = LinkPlacement.allCases.map { placement in
+            LinkMenuItem(placement.title, symbol: placement.symbol) { [weak self] in self?.page?.open(link.string, in: placement) }
+        }
+        items.append(LinkMenuItem(String(localized: .linkCopy), symbol: "link") { copyLink(link) })
+        for (i, item) in items.enumerated() { menu.insertItem(item, at: i) }
+        if menu.items.count > items.count { menu.insertItem(.separator(), at: items.count) }
+    }
+}
+
+/// A menu item that runs a closure, for menus AppKit builds.
+@MainActor final class LinkMenuItem: NSMenuItem {
+    private let run: @MainActor () -> Void
+
+    init(_ title: String, symbol: String, run: @escaping @MainActor () -> Void) {
+        self.run = run
+        super.init(title: title, action: #selector(fire), keyEquivalent: "")
+        target = self
+        image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+    }
+
+    required init(coder: NSCoder) { fatalError() }
+
+    @objc private func fire() { run() }
 }
 #else
 final class PreviewWebView: WKWebView {
     var toggleMode: (@MainActor () -> Void)?
     /// For tests, which find the view in SwiftUI's and reach the page through it.
     weak var page: NotePreviewPage?
+}
+
+extension NotePreviewPage: WKUIDelegate {
+    /// A link into the app gets the same items as an item's menu; any other link keeps WebKit's.
+    func webView(_ webView: WKWebView, contextMenuConfigurationFor element: WKContextMenuElementInfo) async -> UIContextMenuConfiguration? {
+        guard let url = element.linkURL, let link = AppLink(url: url) else { return nil }
+        let placements = LinkMenu.placements(multipleWindows: UIApplication.shared.supportsMultipleScenes)
+        return UIContextMenuConfiguration(identifier: nil, previewProvider: nil) { [weak self] _ in
+            let open = placements.map { placement in
+                UIAction(title: placement.title, image: UIImage(systemName: placement.symbol)) { _ in self?.open(link.string, in: placement) }
+            }
+            let copy = UIAction(title: String(localized: .linkCopy), image: UIImage(systemName: "link")) { _ in copyLink(link) }
+            return UIMenu(children: [UIMenu(options: .displayInline, children: open), copy])
+        }
+    }
 }
 #endif

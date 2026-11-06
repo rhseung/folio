@@ -11,7 +11,7 @@ struct RecordingPlayer: View {
     @State private var deleting = false
     @State private var showingContext = false
     @FocusState private var linesFocused: Bool
-    @Environment(\.searchTarget) private var searchTarget
+    @Environment(\.openLink) private var openLink
     private var player: AudioPlayback { model.player }
     private var recording: Recording { model.recording }
 
@@ -137,7 +137,7 @@ struct RecordingPlayer: View {
                     }
                     Card {
                         TranscriptionContextRows(context: context, termsRead: model.contextTermsRead) {
-                            searchTarget.wrappedValue = model.materialsTarget
+                            openLink(model.materialsLink, course: model.courseId)
                             dismiss()
                         }
                     }

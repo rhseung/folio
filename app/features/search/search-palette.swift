@@ -2,29 +2,14 @@ import FolioDomain
 import FolioIndex
 import SwiftUI
 
-struct SearchTarget: Equatable {
-    var courseId: UUID
-    var section: CourseSection
-    var noteId: UUID?
-    var materialId: UUID?
-}
-
-extension EnvironmentValues {
-    /// Set by RootView when a result is chosen. The course screen that acts on it sets it back to nil,
-    /// so leaving and re-entering a section doesn't replay an old jump.
-    @Entry var searchTarget: Binding<SearchTarget?> = .constant(nil)
-    /// A person to show on 교수와 조교, set from anywhere a name is shown; PeopleView picks it up and clears it.
-    @Entry var personTarget: Binding<UUID?> = .constant(nil)
-}
-
 struct SearchPalette: View {
     @State private var model: SearchModel
     let close: () -> Void
-    let choose: (SearchTarget) -> Void
+    let choose: (AppLink, UUID) -> Void
     @State private var resultsHeight: CGFloat = 0
     @FocusState private var focused: Bool
 
-    init(workspace: Workspace, close: @escaping () -> Void, choose: @escaping (SearchTarget) -> Void) {
+    init(workspace: Workspace, close: @escaping () -> Void, choose: @escaping (AppLink, UUID) -> Void) {
         _model = State(initialValue: SearchModel(workspace: workspace))
         self.close = close
         self.choose = choose
@@ -238,7 +223,7 @@ struct SearchPalette: View {
     }
 
     func open(_ hit: SearchHit) {
-        choose(model.target(hit))
+        choose(AppLink(hit.item), hit.item.courseId)
         close()
     }
 }

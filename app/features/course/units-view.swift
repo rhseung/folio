@@ -6,11 +6,16 @@ import SwiftUI
 struct UnitsView: View {
     @State private var model: UnitsModel
     let course: LoadedCourse
+    let place: AppLink
     let opened: (UUID?) -> Void
 
-    init(workspace: Workspace, course: LoadedCourse, opened: @escaping (UUID?) -> Void) {
-        _model = State(initialValue: UnitsModel(workspace: workspace, courseId: course.id))
+    init(workspace: Workspace, course: LoadedCourse, place: AppLink, opened: @escaping (UUID?) -> Void) {
+        let model = UnitsModel(workspace: workspace, courseId: course.id)
+        // Set before the first report below, which would otherwise tell the window the list is shown.
+        if place.kind == .unit { model.openUnit = place.id }
+        _model = State(initialValue: model)
         self.course = course
+        self.place = place
         self.opened = opened
     }
 
@@ -26,6 +31,10 @@ struct UnitsView: View {
         .onChange(of: model.workspace.quizRevision) { model.loadQuiz(model.workspace.course(course.id) ?? course) }
         // Initial too: the page starts on its list, and the unit it had open last time is gone with its model.
         .onChange(of: model.openUnit, initial: true) { _, id in opened(id) }
+        // Back and forward move between a unit and the list too.
+        .onChange(of: place) { _, link in
+            if link.kind == .unit { model.openUnit = link.id } else if link.kind == .course { model.openUnit = nil }
+        }
         .confirming($model.pending)
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.unitStep, initial: true) { _, step in
@@ -126,6 +135,8 @@ struct UnitsView: View {
 
     @ViewBuilder func menu(_ unit: FolioDomain.Unit) -> some View {
         Button(.commonOpen) { model.openUnit = unit.id }
+        LinkMenu(link: AppLink(.unit, unit.id), course: course.id, trailing: true)
+        Divider()
         Button(.unitsMoveUp) { model.move(unit, by: -1) }
         Button(.unitsMoveDown) { model.move(unit, by: 1) }
         Divider()
@@ -187,7 +198,7 @@ extension LocalDate {
 /// Renaming, moving and deleting the unit come last, since they are rare.
 struct UnitDetail: View {
     @Environment(\.accent) private var accent
-    @Environment(\.searchTarget) private var searchTarget
+    @Environment(\.openLink) private var openLink
     @Bindable var model: UnitsModel
     let course: LoadedCourse
     let unit: FolioDomain.Unit
@@ -391,12 +402,11 @@ struct UnitDetail: View {
     }
 
     func openMaterial(_ m: FolioDomain.Material) {
-        searchTarget.wrappedValue = SearchTarget(courseId: course.id, section: .materials, materialId: m.id)
+        openLink(AppLink(.material, m.id), course: course.id)
     }
 
-    /// Through the search target, which the course screen already follows to a note or a file.
     func openNote(_ id: UUID) {
-        searchTarget.wrappedValue = SearchTarget(courseId: course.id, section: .notes, noteId: id)
+        openLink(AppLink(.note, id), course: course.id)
     }
 }
 

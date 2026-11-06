@@ -94,7 +94,7 @@ private struct CodeTile: View {
 
 struct CodeEditor: View {
     let model: CodesModel
-    @Environment(\.searchTarget) private var searchTarget
+    @Environment(\.openLink) private var openLink
     @Binding var code: CourseCode
     let programs: [String]
     let courses: [UUID]
@@ -109,7 +109,7 @@ struct CodeEditor: View {
                     ScrollView {
                         VStack(alignment: .leading, spacing: 0) {
                             ForEach(records) { c in
-                                Button { searchTarget.wrappedValue = SearchTarget(courseId: c.id, section: .overview) } label: {
+                                Button { openLink(.course(c.id), course: c.id) } label: {
                                     HStack(spacing: Theme.Space.s) {
                                         CourseMark(model.workspace, c.id, inline: true)
                                         Text(c.title).lineLimit(1)

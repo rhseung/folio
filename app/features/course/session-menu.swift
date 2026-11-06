@@ -61,6 +61,7 @@ struct SessionMenu: View {
                 Divider()
                 Button(.courseShowSessions, systemImage: "calendar", action: showSessions)
             }
+            LinkMenu(link: AppLink(.session, sessionId), course: courseId, trailing: true)
         }
     }
 

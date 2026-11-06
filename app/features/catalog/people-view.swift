@@ -4,7 +4,7 @@ import SwiftUI
 struct PeopleView: View {
     @State private var model: PeopleModel
     let openCourse: (UUID) -> Void
-    @Environment(\.personTarget) private var target
+    @Environment(\.place) private var place
 
     init(workspace: Workspace, openCourse: @escaping (UUID) -> Void) {
         _model = State(initialValue: PeopleModel(workspace: workspace))
@@ -35,10 +35,8 @@ struct PeopleView: View {
             }
         }
         .navigationTitle(.peopleTitle)
-        .onChange(of: target.wrappedValue, initial: true) { _, id in
-            guard let id else { return }
-            model.selection = id
-            target.wrappedValue = nil
+        .onChange(of: place, initial: true) { _, entry in
+            if let entry, entry.link.kind == .person, let id = entry.link.id { model.selection = id }
         }
     }
 
