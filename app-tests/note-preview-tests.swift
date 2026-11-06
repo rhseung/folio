@@ -334,6 +334,23 @@ struct NoteEmbedPreviewTests {
         #expect((try await rig.js("return document.querySelector('div.embed .embed-body')?.textContent ?? ''") as? String)?.contains("정의할 것") == true)
     }
 
+    /// A title no note of the course has is drawn broken, until a note takes it.
+    @Test func aTitleNoNoteHasIsBrokenUntilOneIsMade() async throws {
+        let store = try course()
+        _ = try write(store, "정의 모음", "# 정의")
+        let rig = PreviewRig("[[정의 모음]] [[정의 모음.md|파일 이름]] [[새 노트]]\n\n앞 ![[새 노트]] 뒤", embeds: NoteEmbedSource(store: store, own: nil))
+        defer { rig.close() }
+        await rig.settle()
+        let broken = "return [...document.querySelectorAll('a.missing')].map(a => a.textContent).join(',')"
+        #expect(try await rig.js(broken) as? String == "새 노트,새 노트")
+
+        _ = try write(store, "새 노트", "")
+        rig.revision += 1
+        rig.show(rig.text)
+        await rig.settle()
+        #expect(try await rig.js(broken) as? String == "")
+    }
+
     /// Resting on a block reference shows its block in a card; moving off takes it away.
     @Test func aBlockReferenceShowsItsBlockOnHover() async throws {
         let store = try course()

@@ -276,20 +276,24 @@ public struct HTMLRenderer {
             let link = WikiLink(m)
             let href = link.href
             // The link was read from rendered HTML, so its target and alias are escaped already; a found title is not.
-            let found = noteTitle(link)
+            var named = link
+            named.target = Self.unescape(link.target)
+            let found = noteTitle(named)
             let text = link.alias ?? ((found.title.map(Self.escape) ?? link.target) + (link.fragment.map { " › " + $0 } ?? ""))
+            let missing = found.missing ? " missing" : ""
             return link.isEmbed
                 // A link, not a block: it stands inside the paragraph the embed was written in, with other text.
-                ? "<a class=\"embed\" href=\"\(href)\">\(text)</a>"
-                : "<a class=\"wikilink\(found.missing ? " missing" : "")\" href=\"\(href)\">\(text)</a>" + preview(link)
+                ? "<a class=\"embed\(missing)\" href=\"\(href)\">\(text)</a>"
+                : "<a class=\"wikilink\(missing)\" href=\"\(href)\">\(text)</a>" + preview(link)
         }
     }
 
     /// For a link by ID, the title of the note it names, which a link without its own name shows. `missing` when no
-    /// note has the ID, which only a page drawing embeds can tell; elsewhere (the Claude panel, PDF export) the link
-    /// shows its target.
+    /// note has the ID, or none the title a link by title names, which only a page drawing embeds can tell; elsewhere
+    /// (the Claude panel, PDF export) the link shows its target. A link to a file or another app object is left alone.
     func noteTitle(_ link: WikiLink) -> (title: String?, missing: Bool) {
-        guard let id = link.noteID, let embeds else { return (nil, false) }
+        guard let embeds, link.namesNote else { return (nil, false) }
+        guard let id = link.noteID else { return (nil, !embeds.hasNote(link.target)) }
         let title = embeds.title(id)
         return (title, title == nil)
     }
@@ -317,8 +321,9 @@ public struct HTMLRenderer {
     /// drawn (missing, inside itself, too deep) says why in its place.
     func embed(_ link: WikiLink) -> String {
         let part = link.blockID.map { " › ^" + $0 } ?? link.fragment.map { " › " + $0 } ?? ""
-        let name = Self.escape(link.alias ?? ((noteTitle(link).title ?? link.target) + part))
-        let head = "<a class=\"embed-title\" href=\"\(Self.escape(link.href))\">\(name)</a>"
+        let found = noteTitle(link)
+        let name = Self.escape(link.alias ?? ((found.title ?? link.target) + part))
+        let head = "<a class=\"embed-title\(found.missing ? " missing" : "")\" href=\"\(Self.escape(link.href))\">\(name)</a>"
         let empty = { (why: String) in "<div class=\"embed embed-empty\">\(head)<p class=\"embed-note\">\(Self.escape(why))</p></div>\n" }
         guard let embeds else { return "<p>\(head)</p>\n" }
         guard trail.count <= NoteEmbeds.depth else { return empty(embeds.labels.tooDeep) }
@@ -337,20 +342,41 @@ public struct HTMLRenderer {
     /// A block reference carries the block it names, which the page shows while the pointer rests on the link. A
     /// template holds it: its content is inert and may stand inside the paragraph, where a block element can't.
     func preview(_ link: WikiLink) -> String {
-        guard let embeds, !previewing, let block = link.blockID, link.namesNote else { return "" }
+        guard !previewing else { return "" }
         // The link was read from rendered HTML, so its target is escaped there.
         var named = link
         named.target = Self.unescape(link.target)
-        guard trail.count <= NoteEmbeds.depth, let found = embeds.find(named),
+        guard let card = card(named) else { return "" }
+        return "<template class=\"ref-preview\"\(Self.mathAttribute(card.math))>\(card.html)</template>"
+    }
+
+    /// What a block reference's card shows: the block's HTML and the math syntax of the note it is in.
+    public struct ReferenceCard: Equatable, Sendable {
+        public var html: String
+        public var math: String?
+    }
+
+    /// The card a block reference (`[[노트#^블록]]`, as written in the source) shows in the preview, for a view that
+    /// shows the source and floats the card itself. Nil for any other link.
+    public static func referenceCard(_ link: WikiLink, embeds: NoteEmbeds) -> ReferenceCard? {
+        var r = HTMLRenderer()
+        r.embeds = embeds
+        r.trail = embeds.key.map { [$0] } ?? []
+        return r.card(link)
+    }
+
+    /// The block a reference names, or why it can't be shown. Its own references get no card.
+    func card(_ link: WikiLink) -> ReferenceCard? {
+        guard let embeds, let block = link.blockID, link.namesNote else { return nil }
+        guard trail.count <= NoteEmbeds.depth, let found = embeds.find(link),
               let section = ParsedNote(found.text).section(heading: nil, block: block) else {
-            return "<template class=\"ref-preview\"><p class=\"embed-note\">\(Self.escape(embeds.labels.missing))</p></template>"
+            return ReferenceCard(html: "<p class=\"embed-note\">\(Self.escape(embeds.labels.missing))</p>", math: nil)
         }
         var child = inner()
-        child.trail = trail + [named.key(in: found.key)]
+        child.trail = trail + [link.key(in: found.key)]
         child.nested = true
         child.previewing = true
-        let body = child.blocks(Array(ParsedNote(section).document.children))
-        return "<template class=\"ref-preview\"\(Self.mathAttribute(found.math))>\(body)</template>"
+        return ReferenceCard(html: child.blocks(Array(ParsedNote(section).document.children)), math: found.math)
     }
 
     static func mathAttribute(_ math: String?) -> String {

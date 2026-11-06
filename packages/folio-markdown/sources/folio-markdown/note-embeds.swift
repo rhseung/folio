@@ -38,11 +38,16 @@ public struct NoteEmbeds {
     /// The title of the note an ID names, which a link without its own name shows. Apart from `find`, which only
     /// returns notes it can draw: a link to a LaTeX note still resolves. Nil when no note has the ID.
     public var title: (UUID) -> String?
+    /// Whether a link by title (`[[제목]]`, written by hand) names a note, found as the app finds it to open the link,
+    /// so a link drawn whole always opens and one drawn broken never does. Like `title`, apart from `find`.
+    public var hasNote: (String) -> Bool
 
-    public init(key: String?, labels: Labels, title: @escaping (UUID) -> String? = { _ in nil }, find: @escaping (WikiLink) -> Note?) {
+    public init(key: String?, labels: Labels, title: @escaping (UUID) -> String? = { _ in nil }, hasNote: @escaping (String) -> Bool = { _ in true },
+                find: @escaping (WikiLink) -> Note?) {
         self.key = key
         self.labels = labels
         self.title = title
+        self.hasNote = hasNote
         self.find = find
     }
 

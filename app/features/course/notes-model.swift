@@ -117,13 +117,18 @@ final class NotesModel {
 
     func note(_ id: UUID?) -> NoteFile? { id.flatMap { try? course.store.note(id: $0) } }
 
+    /// The note a link by title opens. One moved in from an old folder gets its ID here, as when opened from the list:
+    /// the preview draws its link whole, so the link must open it.
     func noteId(titled title: String) -> UUID? {
-        ((try? course.store.notes()) ?? []).titled(title)?.meta.id
+        guard let note = ((try? course.store.notes()) ?? []).linked(title) else { return nil }
+        if let id = note.meta.id { return id }
+        guard let path = course.store.coursePath(of: note.url) else { return nil }
+        return workspace.run(NoteAdopt(course: course.id, note: path))?.made
     }
 }
 
 /// The notes a note's preview draws in its embeds and block references' previews and names in its links: by title in
-/// its course, or by ID in any course (`[[note:<ID>]]`).
+/// its course, or by ID in any course (`[[note:<ID>]]`). A title is found as `NotesModel.noteId(titled:)` opens it.
 /// Read once for each `revision` (the workspace's `notesRevision`), not on every keystroke the preview redraws for.
 final class NoteEmbedSource {
     private let store: CourseStore
@@ -156,7 +161,13 @@ final class NoteEmbedSource {
         }
         let labels = NoteEmbeds.Labels(missing: String(localized: .notesEmbedMissing), loop: String(localized: .notesEmbedLoop),
                                        tooDeep: String(localized: .notesEmbedTooDeep))
-        return NoteEmbeds(key: own?.standardizedFileURL.path, labels: labels, title: { [self] id in noteFile(id: id)?.title }) { [self] link in find(link) }
+        return NoteEmbeds(key: own?.standardizedFileURL.path, labels: labels, title: { [self] id in noteFile(id: id)?.title },
+                          hasNote: { [self] title in note(titled: title) != nil }) { [self] link in find(link) }
+    }
+
+    private func note(titled title: String) -> NoteFile? {
+        if notes == nil { notes = (try? store.notes()) ?? [] }
+        return notes?.linked(title)
     }
 
     /// The course's own notes first; the others are listed only for an ID that isn't here, which a link copied from
@@ -169,10 +180,7 @@ final class NoteEmbedSource {
     }
 
     private func find(_ link: WikiLink) -> NoteEmbeds.Note? {
-        // Listed only once a note embeds or references another, so notes without any pay nothing.
-        if notes == nil { notes = (try? store.notes()) ?? [] }
-        let title = link.target.hasSuffix(".md") ? String(link.target.dropLast(3)) : link.target
-        let named: NoteFile? = if let id = link.noteID { noteFile(id: id) } else { notes?.titled(title) }
+        let named: NoteFile? = if let id = link.noteID { noteFile(id: id) } else { note(titled: link.target) }
         guard let note = named, note.format == .markdown else { return nil }
         if note.url.standardizedFileURL == own?.standardizedFileURL, let current {
             return NoteEmbeds.Note(key: note.url.standardizedFileURL.path, text: current, math: note.meta.math.rawValue)

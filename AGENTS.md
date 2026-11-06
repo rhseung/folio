@@ -201,7 +201,7 @@ Me/GIST/
 - `Exercises`에는 교수가 준 채점 없는 연습 문제만 둔다.
 - `Study`에는 직접 만든 파일을 둔다. 문제집, 모의고사, 요약 PDF와 `.tex` 원본, 노트를 빌드한 PDF(`Study/<제목>.pdf`)가 여기 온다. 어느 시험·단원용인지는 `material link-exam`, `material link-unit`으로 연결하고(앱에서는 자료 연결 편집기, 단원 페이지, 시험 카드), 시험 화면은 시험 폴더의 파일과 연결된 자료를 함께 센다. 어떤 자료가 회차, 단원, 시험에 딸리는지는 `CourseFile.routes(of:to:)` 하나가 정한다. 회차는 그 단원과 상위 단원의 자료를, 단원은 그 회차의 자료를 함께 본다. Folio 마크다운 노트는 `Notes`에 둔다.
 - 회차 노트는 수업 날짜와 주제로 이름을 짓는다(`Notes/11-05(목) Principles of reliable data transfer.md`, 복습 노트는 뒤에 ` 정리`). 규칙은 `CourseFile.noteTitle(for:kind:calendar:)` 하나다. 그 전에 `10주차-2`로 만든 노트는 저절로 바뀌지 않고, `note retitle`로 한 번에 바꾼다. `N주차-M`은 CLI의 회차 이름과 녹음 파일에 그대로 쓴다.
-- 노트 링크는 노트 ID로 건다: `[[note:<ID>|제목]]`, `[[note:<ID>#제목|표시]]`, `[[note:<ID>#^블록|표시]]`. 앱 링크 `folio://note/<ID>`로 열고 이름이 바뀌어도 깨지지 않는다. 손으로 쓴 `[[제목]]`은 과목 안에서 제목으로 찾고 ID 꼴로 바꾸지 않는다. 블록 ID는 원문의 `^id`라 같은 노트 안에서 옮긴 블록은 따라가고, 다른 노트로 옮기면 찾지 못한다.
+- 노트 링크는 노트 ID로 건다: `[[note:<ID>|제목]]`, `[[note:<ID>#제목|표시]]`, `[[note:<ID>#^블록|표시]]`. 앱 링크 `folio://note/<ID>`로 열고 이름이 바뀌어도 깨지지 않는다. 손으로 쓴 `[[제목]]`은 과목 안에서 제목으로 찾고 ID 꼴로 바꾸지 않는다. 링크를 열 때와 미리보기가 그 노트를 그리거나 깨진 링크로 그릴 때 모두 `[NoteFile].linked` 하나로 찾는다. 블록 ID는 원문의 `^id`라 같은 노트 안에서 옮긴 블록은 따라가고, 다른 노트로 옮기면 찾지 못한다.
 - 링크 자동 완성은 고른 항목을 ID 꼴로 넣고 이름을 `|` 뒤에 붙인다: 노트 `[[note:<ID>|제목]]`, 자료 `[[material:<ID>#page=N|파일 이름]]`, 그 밖은 앱 링크 종류 이름 그대로(`[[exam:<ID>|중간고사]]`). 이미 쓴 `|이름`은 그대로 둔다. ID가 없는 블록을 고르면 대상 노트 끝 줄에 `^id`를 붙이는데, 다른 노트면 `note write`(읽은 글과 다르면 거절)로, 쓰고 있는 노트면 편집 보기에서 쓴다.
 - 앱 밖의 파일은 복사해서 들여오고, 같은 이름이 있으면 ` 2`를 붙여 덮어쓰지 않는다.
 
@@ -228,7 +228,7 @@ Me/GIST/
     - `NoteClickGridTests`: 연 직후와 스크롤한 뒤 격자의 모든 점이 노트(또는 그 자리의 위젯, 가로 스크롤 블록)에 닿는지, 편집 보기에서는 클릭한 자리에 캐럿이 놓이는지 본다.
     - `NoteHangulTests`: 조합 중인 글자가 SwiftUI 갱신과 저장을 견디고, 조합이 끝난 글자가 노트 파일에 들어가는지 본다. iPad 편집 보기는 `app-tests/ipad`의 `NoteHangulPadTests`가 iPad 시뮬레이터에서 같은 입력을 본다(`mise run test-ipad`).
     - 검사는 보기를 `NoteBench`(`app-tests/note-bench.swift`)로만 다룬다. 그린 픽셀, 히트한 뷰, 캐럿 위치, 스크롤 범위만 보고 TextKit이나 웹 페이지의 내부는 보지 않는다. 미리보기는 `WKWebView`라서 스냅숏을 웹 프로세스에서 받는다. 편집 보기의 구현을 바꿀 때(#267처럼)는 이 파일과 기준 이미지만 바꾸고, 배치, 클릭, 한글 검사는 그대로 통과해야 한다.
-    - 미리보기의 동작(블록 단위 갱신, 할 일 체크, 콜아웃 접기 유지, 편집 보기 따라가기, 위젯 iframe의 격리와 높이, 임베드와 블록 참조 카드)은 `NotePreviewTests`, `NoteWidgetTests`, `NoteEmbedPreviewTests`가 페이지에 스크립트를 돌려 본다.
+    - 미리보기의 동작(블록 단위 갱신, 할 일 체크, 콜아웃 접기 유지, 편집 보기 따라가기, 위젯 iframe의 격리와 높이, 임베드와 블록 참조 카드, 깨진 링크)은 `NotePreviewTests`, `NoteWidgetTests`, `NoteEmbedPreviewTests`가 페이지에 스크립트를 돌려 본다. 편집 보기의 블록 참조 카드는 `NoteReferenceCardTests`가 본다.
 - 노트 보기 기준 이미지(`app-tests/references/notes`)는 CI 러너가 그린 것만 커밋한다. 글꼴 렌더가 macOS마다 달라서 비교는 이미지를 그린 macOS(`machine.txt`)에서만 하고, 다른 Mac에서는 건너뛴다. CI는 `FOLIO_NOTE_SCREENS_STRICT`를 켜서 러너의 macOS가 바뀌면 건너뛰지 않고 실패한다. 기준 이미지를 바꾸는 PR은 본문에 이전과 이후 이미지를 붙인다.
 - 테스트, 미리보기, 화면 밖 렌더는 이 Mac의 `Application Support/Folio`(녹음 복구, Whisper 모델)를 쓰지 않는다. 그 폴더는 앱의 `LocalFolders`로만 얻고 패키지는 쓰지 않으며(`mise run check-local-folders`가 `app`, `app-tests`, `packages`를 검사한다), 테스트와 미리보기에서 얻으려 하면 실행이 멈춘다. 화면 모델 테스트는 `fixtureWorkspace()`, 미리보기와 렌더는 `Workspace.scenario`가 임시 폴더를 준다. `FOLIO_GIST`로 가짜 폴더를 연 앱 실행(창 스냅숏 포함)은 녹음 폴더를 그 GIST 폴더마다 따로 임시 폴더에 둔다.
 

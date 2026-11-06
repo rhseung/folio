@@ -251,7 +251,8 @@ struct NoteEditor: View {
     var editor: some View {
         MarkdownEditor(text: $model.body, baseURL: model.baseURL, math: model.meta.math, insert: $model.pendingInsert,
                        saveFile: model.saveFile, openNote: openNote, onScroll: preview.follow,
-                       assist: NoteAssist(settings: model.workspace.settings, links: model.links), anchor: anchor)
+                       assist: NoteAssist(settings: model.workspace.settings, links: model.links), anchor: anchor, embeds: model.embeds,
+                       revision: model.workspace.notesRevision)
     }
 }
 

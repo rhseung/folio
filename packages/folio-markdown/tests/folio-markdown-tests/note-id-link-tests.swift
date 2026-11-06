@@ -77,3 +77,43 @@ struct NoteIDLinkTests {
         #expect(WikiLink.retitled(out, note: matching, from: "11-05(목) 매칭", to: "10주차-2") == text)
     }
 }
+
+/// `[[제목]]` written by hand: a title no note has is drawn broken, as a link by ID to no note is.
+struct MissingTitleLinkTests {
+    /// The titles the course's notes have, as the app finds a link's note to open it.
+    func page(_ text: String, titles: Set<String>) -> String {
+        let embeds = NoteEmbeds(key: "Host", labels: .init(missing: "MISSING", loop: "LOOP", tooDeep: "DEEP"),
+                                hasNote: { titles.contains($0) }) { link in
+            titles.contains(link.target) ? NoteEmbeds.Note(key: link.target, text: "본문 ^c1") : nil
+        }
+        return HTMLRenderer.blocks(ParsedNote(text), embeds: embeds).map(\.html).joined()
+    }
+
+    @Test func aTitleNoNoteHasIsBroken() {
+        let html = page("[[매칭]] [[매칭 정리|정리]] [[없는 노트#정의]] [[R&D]]", titles: ["매칭", "R&D"])
+        #expect(html.contains("<a class=\"wikilink\" href=\"folio://note/%EB%A7%A4%EC%B9%AD\">매칭</a>"), "\(html)")
+        #expect(html.contains("<a class=\"wikilink missing\" href=\"folio://note/%EB%A7%A4%EC%B9%AD%20%EC%A0%95%EB%A6%AC\">정리</a>"), "\(html)")
+        #expect(html.contains("<a class=\"wikilink missing\" href=\"folio://note/%EC%97%86%EB%8A%94%20%EB%85%B8%ED%8A%B8#정의\">없는 노트 › 정의</a>"), "\(html)")
+        // The title is looked for as written, not as the page escapes it.
+        #expect(html.contains(">R&amp;D</a>") && !html.contains("missing\" href=\"folio://note/R"), "\(html)")
+    }
+
+    @Test func anEmbedOfATitleNoNoteHasIsBroken() {
+        let html = page("앞 ![[없음]] 뒤\n\n![[없음]]\n\n![[매칭#^c1]]", titles: ["매칭"])
+        #expect(html.contains("<a class=\"embed missing\" href=\"folio://note/%EC%97%86%EC%9D%8C\">없음</a>"), "\(html)")
+        #expect(html.contains("<div class=\"embed embed-empty\"><a class=\"embed-title missing\""), "\(html)")
+        #expect(html.contains("<a class=\"embed-title\" href=\"folio://note/%EB%A7%A4%EC%B9%AD#^c1\">"), "\(html)")
+    }
+
+    /// Files and other app objects are not notes: `![[그림.png]]` and `[[material:…]]` stay as they were.
+    @Test func filesAndObjectsAreLeftAlone() {
+        let html = page("![[그림.png]] [[slides.pdf]] [[material:\(UUID().uuidString)#page=3]] [[v1.2]]", titles: [])
+        #expect(html.components(separatedBy: "missing").count == 2, "\(html)")
+        #expect(html.contains("<a class=\"wikilink missing\" href=\"folio://note/v1.2\">v1.2</a>"), "\(html)")
+    }
+
+    /// Without notes to look in (the Claude panel, PDF export) nothing can tell, and every link is drawn whole.
+    @Test func withoutNotesNoLinkIsBroken() {
+        #expect(!HTMLRenderer.render(markdown: "[[없음]] ![[없음]]").contains("missing"))
+    }
+}

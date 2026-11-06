@@ -130,8 +130,10 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 
 /* Wikilinks and embeds */
 .note a.wikilink { font-weight: 550; }
-/* A link by ID to a note that is gone: grey with a dashed underline, as an embed that can't be drawn is dashed. */
+/* A link to no note (an ID that is gone, a title no note has): grey with a dashed underline, as an embed that can't be
+   drawn is dashed. An embed's name is grey already. */
 .note a.wikilink.missing { color: var(--text-3); background-image: none; text-decoration: underline dashed var(--line); }
+.note a.embed.missing, .note .embed-title.missing { text-decoration: underline dashed var(--line); }
 /* An embed beside other text is a link to the note; one on its own line draws the note (or the part it names). */
 .note a.embed { display: block; margin: 16px 0; padding: 10px 14px; border: 1px dashed var(--line); border-radius: 10px; color: var(--text-3);
   font-size: 14px; background-image: none; }

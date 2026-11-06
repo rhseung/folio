@@ -150,4 +150,18 @@ struct BlockReferencePreviewTests {
     @Test func aTitleWithAnAmpersandIsFound() {
         #expect(page("[[R&D#^x]]", ["R&D": "찾음 ^x"]).contains("찾음"))
     }
+
+    /// The edit view floats the same card, from the link as written in the source.
+    @Test func theSourceGetsThePreviewsCard() {
+        let notes = ["R&D": "위\n\n정의 $x$ [[R&D#^c1]] ^c1\n\n아래"]
+        let found = embeds(notes, math: ["R&D": "asciimath"])
+        let card = HTMLRenderer.referenceCard(WikiLink.all(in: "[[R&D#^c1|보기]]")[0], embeds: found)
+        #expect(card?.math == "asciimath")
+        #expect(page("[[R&D#^c1|보기]]", notes, math: ["R&D": "asciimath"]).contains("<template class=\"ref-preview\" data-math=\"asciimath\">\(card?.html ?? "-")</template>"))
+        #expect(card?.html.contains("template") == false)
+        #expect(HTMLRenderer.referenceCard(WikiLink.all(in: "[[R&D#^gone]]")[0], embeds: found)?.html == "<p class=\"embed-note\">MISSING</p>")
+        for other in ["[[R&D]]", "[[R&D#위]]", "[[그림.png#^c1]]"] {
+            #expect(HTMLRenderer.referenceCard(WikiLink.all(in: other)[0], embeds: found) == nil, "\(other)")
+        }
+    }
 }

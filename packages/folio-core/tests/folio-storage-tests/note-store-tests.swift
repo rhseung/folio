@@ -29,6 +29,13 @@ struct NoteStoreTests {
         #expect(notes.titled("MATCHING")?.url.lastPathComponent == "Matching.md")
         #expect(notes.titled("2주차-1")?.meta.id != nil)
         #expect(notes.titled("없음") == nil)
+        // A link may name the file; a `.tex` note is still a note to open.
+        try store.createNote(at: store.newNoteURL(title: "증명", format: .tex), text: "")
+        let all = try store.notes()
+        #expect(all.linked("Matching.md")?.url.lastPathComponent == "Matching.md")
+        #expect(all.linked("matching")?.url.lastPathComponent == "Matching.md")
+        #expect(all.linked("증명")?.format == .tex)
+        #expect(all.linked("없음.md") == nil)
     }
 
     @Test func aFileWithoutAnEntryHasNoIDAndATexFileIsANote() throws {
