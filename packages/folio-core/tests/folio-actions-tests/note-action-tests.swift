@@ -308,6 +308,87 @@ struct NoteActionTests {
         #expect(try other() == "![[note:\(id)#정의|2주차-1]]\n")
     }
 
+    /// Renaming a note carries its entry, heading and the links to it by title and by ID along, in one batch that
+    /// `cleanup undo` turns back whole. A name the writer gave a link stays.
+    @Test func renamingANoteFollowsItsLinksAndUndoTurnsThemBack() throws {
+        let id = Self.note.uuidString, mine = UUID()
+        let body = "[[2주차-1#Matching]], [[note:\(id)|2주차-1]], [[note:\(id)|첫 수업]]\n"
+        try run(NoteAdd(id: mine, course: Self.graphTheory, title: "모음", body: body))
+        let before = try text("Notes/2주차-1.md")
+
+        let dry = ActionContext(gist: gist, device: device, now: now, dryRun: true)
+        try NoteMove(course: Self.graphTheory, note: "Notes/2주차-1.md", to: "매칭 기초").run(dry)
+        #expect(dry.changes.contains(Change(.moved, "2026-3/EC4207 그래프 이론/Notes/2주차-1.md", to: "2026-3/EC4207 그래프 이론/Notes/매칭 기초.md")))
+        #expect(try text("Notes/2주차-1.md") == before && dry.made == nil)
+
+        let ran = try run(NoteMove(course: Self.graphTheory, note: "Notes/2주차-1.md", to: "매칭 기초.md"))
+        let batch = try #require(ran.made)
+        #expect(ran.changes.contains { $0.touchesNotes })
+        #expect(try file().notes.first { $0.id == Self.note }?.path == "Notes/매칭 기초.md")
+        #expect(try text("Notes/매칭 기초.md").hasPrefix("# 매칭 기초\n"))
+        #expect(try text("Notes/모음.md") == "[[매칭 기초#Matching]], [[note:\(id)|매칭 기초]], [[note:\(id)|첫 수업]]\n")
+        #expect(try store().note(at: "Notes/2주차-1.md") == nil)
+
+        try run(CleanupUndo(batch: batch))
+        #expect(try file().notes.first { $0.id == Self.note }?.path == "Notes/2주차-1.md")
+        #expect(try text("Notes/2주차-1.md") == before && text("Notes/모음.md") == body)
+    }
+
+    /// Moved into a folder of Notes/, a note keeps its pictures, and a name another note of the course has gets ` 2`.
+    @Test func movingANoteIntoAFolderKeepsItsPicturesAndAvoidsTakenNames() throws {
+        let picture = UUID(), other = UUID()
+        try run(NoteAdd(id: picture, course: Self.graphTheory, title: "그림 노트", body: "# 그림 노트\n\n![](assets/a.png)\n"))
+        try run(NoteAdd(id: other, course: Self.graphTheory, title: "다른 노트"))
+        try run(NoteMove(course: Self.graphTheory, note: "Notes/다른 노트.md", to: "정리/다른 노트"))
+        #expect(try store().noteFolders() == ["", "정리"])
+
+        let batch = try #require(try run(NoteMove(course: Self.graphTheory, note: "Notes/그림 노트.md", to: "정리/다른 노트")).made)
+        #expect(try file().notes.first { $0.id == picture }?.path == "Notes/정리/다른 노트 2.md")
+        #expect(try text("Notes/정리/다른 노트 2.md") == "# 다른 노트 2\n\n![](../assets/a.png)\n")
+
+        try run(CleanupUndo(batch: batch))
+        #expect(try text("Notes/그림 노트.md") == "# 그림 노트\n\n![](assets/a.png)\n")
+        // Its own name is no other note's, so moving it alone keeps it.
+        try run(NoteMove(course: Self.graphTheory, note: "Notes/그림 노트.md", to: "그림 노트"))
+        #expect(try file().notes.first { $0.id == picture }?.path == "Notes/그림 노트.md")
+    }
+
+    /// A note moved in from an old folder has no entry until it is opened; its heading, pictures and the links to it
+    /// follow all the same, and it still has no entry afterwards.
+    @Test func aNoteWithoutAnEntryMovesWithItsLinks() throws {
+        let notes = try store().url.appending(path: "Notes")
+        try "# 그림\n\n![](assets/a.png)\n".write(to: notes.appending(path: "그림.md"), atomically: true, encoding: .utf8)
+        try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "모음", body: "[[그림]]\n"))
+        let entries = try file().notes
+        let batch = try #require(try run(NoteMove(course: Self.graphTheory, note: "Notes/그림.md", to: "정리/도식")).made)
+        #expect(try text("Notes/정리/도식.md") == "# 도식\n\n![](../assets/a.png)\n")
+        #expect(try text("Notes/모음.md") == "[[도식]]\n")
+        #expect(try file().notes == entries)
+        try run(CleanupUndo(batch: batch))
+        #expect(try text("Notes/그림.md") == "# 그림\n\n![](assets/a.png)\n" && text("Notes/모음.md") == "[[그림]]\n")
+    }
+
+    /// A `.tex` note renames as a markdown note does; the PDF built from it keeps its name.
+    @Test func renamingATexNoteLeavesItsPDF() throws {
+        let id = UUID()
+        try run(NoteAdd(id: id, course: Self.graphTheory, title: "증명", format: .tex))
+        let study = try store().fileURL("Study")
+        try FileManager.default.createDirectory(at: study, withIntermediateDirectories: true)
+        try Data("%PDF".utf8).write(to: study.appending(path: "증명.pdf"))
+        try run(NoteMove(course: Self.graphTheory, note: "Notes/증명.tex", to: "정리/귀류법"))
+        #expect(try file().notes.first { $0.id == id }?.path == "Notes/정리/귀류법.tex")
+        #expect(try text("Notes/정리/귀류법.tex").contains("\\section*{귀류법}"))
+        #expect(try text("Study/증명.pdf") == "%PDF")
+    }
+
+    @Test func aNoteStaysInNotesAndKeepsItsFormat() throws {
+        for to in ["assets/x", "Exports/x", ".hidden/x", "x.tex", "../x", "  "] {
+            #expect(throws: ActionError.self, "\(to)") { try run(NoteMove(course: Self.graphTheory, note: "Notes/2주차-1.md", to: to)) }
+        }
+        #expect(try run(NoteMove(course: Self.graphTheory, note: "Notes/2주차-1.md", to: "2주차-1")).made == nil)
+        #expect(try file().notes.first { $0.id == Self.note }?.path == "Notes/2주차-1.md")
+    }
+
     /// A class note's units are its session's as they are now, so unlinking the class from a unit takes the note off it.
     @Test func aSessionNotesUnitsFollowTheSession() throws {
         let session = UUID(), unit = UUID(), note = UUID()

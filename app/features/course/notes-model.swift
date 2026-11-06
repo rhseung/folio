@@ -11,8 +11,11 @@ final class NoteListModel {
     let workspace: Workspace
     private let initial: LoadedCourse
     private(set) var notes: [NoteFile] = []
+    /// Read with the notes, not in each row's menu, which every redraw of the list builds.
+    private(set) var folders: [String] = []
     var filter: NoteKind?
     var adding = false
+    var renaming: NoteFile?
     var pending: PendingAction?
 
     init(workspace: Workspace, course: LoadedCourse) {
@@ -83,7 +86,10 @@ final class NoteListModel {
                 Part(title: String(localized: .notesPartTopic), rows: topics), Part(title: String(localized: .notesPartFree), rows: free)].filter { !$0.rows.isEmpty }
     }
 
-    func reload() { notes = (try? course.store.notes()) ?? [] }
+    func reload() {
+        notes = (try? course.store.notes()) ?? []
+        folders = course.store.noteFolders()
+    }
 
     /// The note's ID, giving one first to a note moved in from an old folder.
     func open(_ note: NoteFile) -> UUID? {
@@ -91,6 +97,37 @@ final class NoteListModel {
         guard let path = course.store.coursePath(of: note.url), let id = workspace.run(NoteAdopt(course: course.id, note: path))?.made else { return nil }
         reload()
         return id
+    }
+
+    // MARK: Rename and move
+
+    /// Notes-relative, as `note mv` and the folder menu name places: "" for Notes/ itself.
+    static func notesPath(of url: URL, in store: CourseStore) -> String? {
+        let prefix = CourseFolder.notes.rawValue + "/"
+        return store.coursePath(of: url).flatMap { $0.hasPrefix(prefix) ? String($0.dropFirst(prefix.count)) : nil }
+    }
+
+    static func folder(of note: NoteFile, in store: CourseStore) -> String {
+        ((notesPath(of: note.url, in: store) ?? "") as NSString).deletingLastPathComponent
+    }
+
+    /// The other folders of Notes/ the note can go to.
+    func moveTargets(_ note: NoteFile) -> [String] {
+        let here = Self.folder(of: note, in: course.store)
+        return folders.filter { $0 != here }
+    }
+
+    func folderLabel(_ folder: String) -> String {
+        folder.isEmpty ? CourseFolder.notes.rawValue : CourseFolder.notes.rawValue + "/" + folder
+    }
+
+    /// Asks with the name the note will have there, ` 2` included, since that is what the user approves.
+    func move(_ note: NoteFile, into folder: String) {
+        let store = course.store
+        let path = (folder.isEmpty ? "" : folder + "/") + note.url.lastPathComponent
+        guard let source = store.coursePath(of: note.url), let url = store.movedNoteURL(note, to: path, in: course.file),
+              let target = Self.notesPath(of: url, in: store) else { return }
+        pending = workspace.ask(NoteMove(course: course.id, note: source, to: target)) { [weak self] _ in self?.reload() }
     }
 
     /// Sessions let go of the note first: a note left behind by a failed trash is harmless, a link to nothing is not.

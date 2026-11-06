@@ -9,6 +9,7 @@ struct TextFileView: View {
     /// A note's kind and links, for the same menu the markdown editor has.
     @State private var links: NoteEditorModel?
     @State private var controller: PDFController?
+    @State private var renaming = false
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
 
@@ -52,7 +53,14 @@ struct TextFileView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Theme.Palette.card)
-        .crumb(model.name, level: 2, symbol: model.isTex ? "doc.text" : "chevron.left.forwardslash.chevron.right")
+        // A `.tex` note renames from its name as a markdown note does; saved first, since the file is about to move.
+        .crumb(model.name, level: 2, symbol: model.isTex ? "doc.text" : "chevron.left.forwardslash.chevron.right", rename: links.map { _ in {
+            model.saveIfDirty()
+            renaming = true
+        } })
+        .sheet(isPresented: $renaming) {
+            if let links { NoteRenameSheet(workspace: links.workspace, course: links.course, note: links.note) }
+        }
         .onAppear(perform: model.load)
         // Saved a moment after typing stops, and whenever the file goes away, as notes are.
         .task(id: model.text) {

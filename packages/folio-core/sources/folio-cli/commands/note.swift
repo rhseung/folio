@@ -30,7 +30,7 @@ func readText(_ source: String) throws -> String {
 struct NoteCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "note", abstract: String(localized: .noteAbstract),
-        subcommands: [List.self, Show.self, Add.self, Write.self, Edit.self, Link.self, Migrate.self, Retitle.self] + GeneratedCommands.note)
+        subcommands: [List.self, Show.self, Add.self, Write.self, Edit.self, Link.self, Migrate.self, Retitle.self, Move.self] + GeneratedCommands.note)
 
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .noteListAbstract), discussion: String(localized: .noteListDiscussion))
@@ -140,6 +140,20 @@ struct NoteCommand: ParsableCommand {
             let id = try course.map { try Resolver(ctx).course($0).id }
             let result = try perform(spec: NoteRetitleSessions(course: id), g, ctx: ctx)
             if !g.json, let batch = result.made { say(String(localized: .noteRetitleUndo(batch.uuidString)).styled(.dim)) }
+        }
+    }
+
+    struct Move: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "mv", abstract: String(localized: .noteMvAbstract), discussion: String(localized: .noteMvDiscussion))
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpNote), valueName: "note"), completion: Complete.notes) var note: String
+        @Argument(help: ArgumentHelp(String(localized: .noteMvHelpTo), valueName: "name")) var to: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let (c, _, path) = try Resolver(ctx).notePath(note)
+            let result = try perform(spec: NoteMove(course: c.id, note: path, to: to), g, ctx: ctx)
+            if !g.json, let batch = result.made { say(String(localized: .noteMvUndo(batch.uuidString)).styled(.dim)) }
         }
     }
 

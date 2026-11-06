@@ -281,6 +281,45 @@ struct NotesModelTests {
         #expect(closed && model.parts.map(\.title) == ["수업 노트"])
     }
 
+    /// The sheet shows the name the note will get, ` 2` included, and saving it is the approval. The open note is found
+    /// again by its ID at the new path, and the list re-reads it.
+    @Test func renamingShowsTheNewFileNameAndKeepsTheNoteOpen() throws {
+        let (workspace, course) = try fixtureCourse()
+        let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
+        try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "고윳값")))
+        let note = try #require(try course.store.note(id: id))
+        let sheet = NoteRenameModel(workspace: workspace, course: course, note: note)
+        #expect(!sheet.canSave)
+        sheet.name = "  "
+        #expect(!sheet.canSave && sheet.message == "새 이름을 적습니다.")
+        sheet.name = "고윳값"
+        #expect(sheet.target == "고윳값 2.md" && sheet.message.hasPrefix("Notes/고윳값 2.md(으)로 바꿉니다."))
+        sheet.name = "a/b"
+        #expect(sheet.target == "a-b.md")
+        let revision = workspace.notesRevision
+        #expect(sheet.rename())
+        #expect(workspace.notesRevision > revision)
+        let notes = NotesModel(workspace: workspace, course: course)
+        #expect(notes.note(id)?.title == "a-b")
+    }
+
+    /// Moving asks first, with the name the note will have in the folder.
+    @Test func movingIntoAFolderAsksWithTheNewPath() throws {
+        let (workspace, course) = try fixtureCourse()
+        let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
+        try FileManager.default.createDirectory(at: course.store.url.appending(path: "Notes/정리"), withIntermediateDirectories: true)
+        let model = NoteListModel(workspace: workspace, course: course)
+        model.reload()
+        let note = try #require(model.notes.first { $0.meta.id == id })
+        #expect(model.moveTargets(note) == ["정리"] && model.folderLabel("정리") == "Notes/정리" && model.folderLabel("") == "Notes")
+        model.move(note, into: "정리")
+        let pending = try #require(model.pending)
+        #expect(pending.question.contains("Notes/정리/행렬식.md"))
+        pending.perform()
+        let moved = try #require(model.notes.first { $0.meta.id == id })
+        #expect(course.store.coursePath(of: moved.url) == "Notes/정리/행렬식.md" && model.moveTargets(moved) == [""])
+    }
+
     @Test func editorNamesItsLinkAndFindsNotesByTitle() throws {
         let (workspace, course) = try fixtureCourse()
         let notes = NotesModel(workspace: workspace, course: course)

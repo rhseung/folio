@@ -366,6 +366,27 @@ struct CourseWorkTests {
         #expect(retitled.contains("\\section*{11-05(목) A\\_B}") && !retitled.contains("10주차-2"))
     }
 
+    /// A note's pictures and file links are relative to its folder, so moving it rewrites them to reach the same files.
+    @Test func movingANoteKeepsItsRelativeLinks() {
+        let md = """
+        ![그림](assets/a%20b.png) [슬라이드](../Lectures/05_Matchings.pdf#page=3) ![](<assets/c d.png>)
+        [웹](https://example.com/x.png) [메일](mailto:a@b.c) [제목](#정의) [[note:x|이름]]
+        """
+        let moved = NoteTemplate.rebased(md, from: "Notes", to: "Notes/정리/중간", format: .markdown)
+        #expect(moved == """
+        ![그림](../../assets/a%20b.png) [슬라이드](../../../Lectures/05_Matchings.pdf#page=3) ![](<../../assets/c d.png>)
+        [웹](https://example.com/x.png) [메일](mailto:a@b.c) [제목](#정의) [[note:x|이름]]
+        """)
+        #expect(NoteTemplate.rebased(moved, from: "Notes/정리/중간", to: "Notes", format: .markdown) == md)
+        #expect(NoteTemplate.rebased("![](./assets/a.png)", from: "Notes/정리", to: "Notes/정리/옛", format: .markdown) == "![](../assets/a.png)")
+        #expect(NoteTemplate.rebased(md, from: "Notes", to: "Notes", format: .markdown) == md)
+        #expect(NoteTemplate.rebased("![](../../밖.png)", from: "Notes", to: "Notes/정리", format: .markdown) == "![](../../밖.png)")
+
+        let tex = "\\includegraphics[width=5cm]{assets/a.png}\n\\input{부록}\n\\section*{제목}\n"
+        #expect(NoteTemplate.rebased(tex, from: "Notes", to: "Notes/정리", format: .tex)
+            == "\\includegraphics[width=5cm]{../assets/a.png}\n\\input{../부록}\n\\section*{제목}\n")
+    }
+
     @Test func movingASessionNamesItByItsNewDate() {
         let start = LocalDate(year: 2026, month: 9, day: 1)!
         let a = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))

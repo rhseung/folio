@@ -332,6 +332,14 @@ struct MaterialNoteStudyTests {
         try h.expectSame(["note", "rm", "EC4207/2주차-1", "--yes"]) { _ in NoteRemove(course: course, note: "Notes/2주차-1.md") }
     }
 
+    @Test func noteMove() throws {
+        let gist = try Harness.fixtureCopy()
+        #expect(h.cli(["note", "mv", "EC4207/2주차-1", "정리/매칭"], gist: gist).code == Exit.needsConfirmation.rawValue)
+        try h.expectSame(["note", "mv", "EC4207/2주차-1", "정리/매칭", "--yes"]) { _ in
+            NoteMove(course: course, note: "Notes/2주차-1.md", to: "정리/매칭")
+        }
+    }
+
     // MARK: Quiz and problem sets
 
     @Test func quizAdd() throws {

@@ -129,6 +129,46 @@ extension CourseStore {
         return notesURL.appending(path: "\(name).\(format.fileExtension)")
     }
 
+    /// Where `note` goes renamed or moved to `path` in Notes/ (`정리/증명`; the note's own extension may be given), or nil
+    /// for a folder notes can't be in or another format. A name another note of the course has gets ` 2`, ` 3`, ...,
+    /// in any folder: a link names a note by its title alone (`[[증명]]`), so two of one title would share their links.
+    public func movedNoteURL(_ note: NoteFile, to path: String, in file: CourseFile) -> URL? {
+        var parts = path.split(separator: "/").map { $0.trimmingCharacters(in: .whitespaces) }
+        guard var name = parts.popLast(),
+              parts.allSatisfy({ !$0.isEmpty && !$0.hasPrefix(".") && !Self.nonNoteFolders.contains($0) }) else { return nil }
+        if let format = NoteFormat(path: name) {
+            guard format == note.format else { return nil }
+            name = (name as NSString).deletingPathExtension
+        }
+        let key = { (title: String) in title.precomposedStringWithCanonicalMapping.lowercased() }
+        let own = note.url.standardizedFileURL
+        let taken = Set(notes(in: file).filter { $0.url.standardizedFileURL != own }.map { key($0.title) })
+        let base = Self.fileName(for: name)
+        var title = base
+        var n = 2
+        while taken.contains(key(title)) {
+            title = "\(base) \(n)"
+            n += 1
+        }
+        return parts.reduce(notesURL) { $0.appending(path: $1) }.appending(path: "\(title).\(note.format.fileExtension)")
+    }
+
+    /// Folders in Notes/ a note can be moved to, Notes-relative and sorted; Notes/ itself is "".
+    public func noteFolders() -> [String] {
+        guard let enumerator = FileManager.default.enumerator(at: notesURL, includingPropertiesForKeys: [.isDirectoryKey],
+                                                              options: .skipsHiddenFiles) else { return [""] }
+        var folders = [""]
+        let root = notesURL.standardizedFileURL.pathComponents.count
+        for case let url as URL in enumerator where (try? url.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true {
+            if Self.nonNoteFolders.contains(url.lastPathComponent) {
+                enumerator.skipDescendants()
+            } else {
+                folders.append(url.standardizedFileURL.pathComponents.dropFirst(root).joined(separator: "/"))
+            }
+        }
+        return folders.sorted { $0.localizedStandardCompare($1) == .orderedAscending }
+    }
+
     /// Where a note's PDF goes, by title, wherever in Notes/ the note sits: Study, with everything else self-made.
     /// Notes/ keeps only notes, and a PDF there would be listed as neither a note nor a material.
     public func exportPath(of note: NoteFile) -> String {
