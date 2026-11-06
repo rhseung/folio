@@ -104,6 +104,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
 - **뷰**: 모델을 읽고 배치만 한다. `body`에서 묶기, 거르기, 세기를 하지 않고 `workspace`를 직접 부르지 않는다. 뷰는 `@State private var model`을 `init(workspace:)`에서 만들고, `@State`는 시트, 마우스 올림, 포커스 같은 화면 상태에만 쓴다.
 - **Workspace**: 폴더 읽기, 파일 감시, 액션 실행, `can`/`refusal`/`confirmation`만 맡는다. 한 기능만 쓰는 함수는 그 기능의 모델에 둔다.
 - `course.json` 밖의 파일을 읽는 목록(노트, 퀴즈 카드)은 `workspace.notesRevision`과 `quizRevision`이 바뀔 때 다시 읽는다. 두 값은 `Workspace`가 액션 결과의 `changes`(`touchesNotes`, `touchesQuizzes`)와 폴더 전체 다시 읽기로만 올린다. 화면이 직접 올리지 않으므로, 어느 화면이나 Claude 패널, CLI로 써도 열린 목록에 나타난다.
+- 열린 편집기(노트, 텍스트 파일)도 `notesRevision`이 바뀌면 디스크를 마지막으로 읽거나 쓴 내용과 비교한다. 저장하지 않은 변경이 없으면 본문과 메타를 다시 읽고, 있으면 덮어쓰지 않고 충돌로 묻는다. 메타는 처음 연 `NoteFile`이 아니라 지금의 `course.json`에서 읽는다.
 - 다른 화면이나 항목으로 옮길 때는 `@Environment(\.openLink)`에 `AppLink`를 넘긴다. 화면이 목적지를 직접 고르거나 링크 여는 법을 따로 구현하지 않는다. 그래야 모든 이동이 창의 기록 하나에 들어간다. 화면은 창이 지금 가리키는 곳을 `\.place`로 받아 따라가고, 자기 안에서 연 것(파일, 단원, 노트)은 다시 링크로 알린다(`CourseModel.place`).
 - 파생 계산 중 데이터의 규칙(주차 묶기, 빠진 복습 노트 판단)은 `FolioDomain`에 두고 `swift test`로 검사한다. 화면에만 필요한 계산은 모델에 둔다.
 - 모델 테스트는 `app-tests/<화면>-model-tests.swift`에 Swift Testing으로 쓰고, `fixtureWorkspace()`로 가짜 GIST 폴더를 연다.
