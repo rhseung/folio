@@ -23,10 +23,11 @@ final class WindowTabs {
 
     func navigator(_ id: UUID) -> Navigator? { navigators[id] }
 
-    func open(_ navigator: Navigator = Navigator()) {
+    /// `fromLink`: beside the tab in front rather than last.
+    func open(_ navigator: Navigator = Navigator(), fromLink: Bool = false) {
         let id = UUID()
         navigators[id] = navigator
-        strip.open(id)
+        strip.open(id, afterSelected: fromLink)
     }
 
     func select(_ id: UUID) { strip.select(id) }

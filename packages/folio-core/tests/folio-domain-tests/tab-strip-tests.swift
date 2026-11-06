@@ -14,6 +14,21 @@ struct TabStripTests {
         #expect(s.tabs == ["a", "b", "c"] && s.selected == "a")
     }
 
+    @Test func aTabFromALinkGoesBesideTheOneItCameFrom() {
+        var s = TabStrip("a")
+        for t in ["b", "c"] { s.open(t) }
+        s.select("a")
+        s.open("d", afterSelected: true)
+        #expect(s.tabs == ["a", "d", "b", "c"] && s.selected == "d")
+        // Another from there goes after it in turn.
+        s.open("e", afterSelected: true)
+        #expect(s.tabs == ["a", "d", "e", "b", "c"])
+        // From the last tab, last.
+        s.select("c")
+        s.open("f", afterSelected: true)
+        #expect(s.tabs.last == "f")
+    }
+
     @Test func closingTheTabInFrontBringsTheNextOne() {
         var s = TabStrip("a")
         for t in ["b", "c", "d"] { s.open(t) }
@@ -57,10 +72,17 @@ struct TabStripTests {
         #expect(s.selected == "c")
         s.select(number: 2)
         #expect(s.selected == "b")
-        s.select(number: 9)
+        s.select(number: 8)
         #expect(s.selected == "b")
         s.select(number: 0)
         #expect(s.selected == "b")
+        // ⌘9 is the last, with fewer than nine tabs or more.
+        s.select(number: 9)
+        #expect(s.selected == "c")
+        for t in 3...11 { s.open("\(t)") }
+        s.select(number: 1)
+        s.select(number: 9)
+        #expect(s.selected == "11")
     }
 
     @Test func movesATab() {
@@ -86,7 +108,7 @@ struct TabStripTests {
                 let some = s.tabs[k % s.tabs.count]
                 switch op {
                 case 0:
-                    s.open(next)
+                    s.open(next, afterSelected: k % 2 == 0)
                     next += 1
                 case 1: s.close(some)
                 case 2: s.selectNext()
@@ -124,14 +146,21 @@ struct TabFitTests {
         #expect(layout(200, others: [100, 100]) == TabFit.Layout(iconsOnly: true, shown: 0, hidden: 2))
     }
 
-    @Test func tabsStartAtThePanelCorner() async {
-        // The sidebar open: wherever the row put the buttons, the first tab starts at the trail's start.
-        await propertyCheck(input: Gen.int(in: 0...180), Gen.int(in: 200...400)) { after, trailStart in
-            let lead = TabFit.lead(trailStart: Double(trailStart), after: Double(after), gap: 8)
-            #expect(Double(after) + lead == Double(trailStart))
+    @Test func theFirstTabLinesUpWithThePanelEdge() async {
+        // Wherever the row put the buttons and wherever the panel's edge is: on the edge when it leaves the gap after
+        // the buttons, else the gap after them.
+        await propertyCheck(input: Gen.int(in: 0...300), Gen.int(in: 0...400)) { after, edge in
+            let start = Double(after) + TabFit.lead(panelEdge: Double(edge), after: Double(after), gap: 8)
+            if Double(edge - after) >= 8 {
+                #expect(start == Double(edge))
+            } else {
+                #expect(start == Double(after) + 8)
+            }
         }
-        // Folded, the corner is under the buttons: a gap after them.
-        #expect(TabFit.lead(trailStart: 20, after: 189, gap: 8) == 8)
+        // The sidebar open: the panel's edge at 216, the buttons ending at 189.
+        #expect(TabFit.lead(panelEdge: 216, after: 189, gap: 8) == 27)
+        // Folded, the edge is under the buttons.
+        #expect(TabFit.lead(panelEdge: 4, after: 189, gap: 8) == 8)
     }
 
     @Test func aLoneTabNeverNeedsTheMenu() {

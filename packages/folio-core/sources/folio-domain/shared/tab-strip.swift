@@ -20,10 +20,11 @@ public struct TabStrip<ID: Hashable & Sendable>: Equatable, Sendable {
 
     public var selectedIndex: Int { tabs.firstIndex(of: selected) ?? 0 }
 
-    /// A new tab goes last and comes to the front, wherever it was opened from.
-    public mutating func open(_ id: ID) {
+    /// A new tab comes to the front. One a link opened goes right after the tab it came from, as in Safari and
+    /// Chrome, so it sits beside what led to it; a blank one (⌘T, +) goes last.
+    public mutating func open(_ id: ID, afterSelected: Bool = false) {
         guard !tabs.contains(id) else { return select(id) }
-        tabs.append(id)
+        tabs.insert(id, at: afterSelected ? selectedIndex + 1 : tabs.count)
         selected = id
     }
 
@@ -31,8 +32,10 @@ public struct TabStrip<ID: Hashable & Sendable>: Equatable, Sendable {
         if tabs.contains(id) { selected = id }
     }
 
-    /// ⌘1 to ⌘9: the tab at that place from the left; past the last tab, nothing.
+    /// ⌘1 to ⌘8: the tab at that place from the left; past the last tab, nothing. ⌘9 is the last tab, however many,
+    /// as in Safari and Chrome.
     public mutating func select(number n: Int) {
+        if n == 9, let last = tabs.last { return selected = last }
         if tabs.indices.contains(n - 1) { selected = tabs[n - 1] }
     }
 
@@ -82,11 +85,12 @@ public enum TabFit {
         }
     }
 
-    /// The space before the first tab, after the buttons ending at `after`, so the tabs start at `trailStart` (`Space.l`
-    /// in from the content panel's corner) as the breadcrumb did. When the corner is under the buttons (the sidebar
-    /// folded), the tabs keep `gap` after them instead.
-    public static func lead(trailStart: Double, after: Double, gap: Double) -> Double {
-        max(gap, trailStart - after)
+    /// The space before the first tab, after the buttons ending at `after`, so the first tab's capsule starts at the
+    /// content panel's leading edge, `panelEdge`, and lines up with it. The capsule pads its own contents, so the
+    /// `Space.l` inset the bare breadcrumb took would leave the capsule short of the edge. When the edge is under the
+    /// buttons or near them (the sidebar folded), the tabs keep `gap` after them instead.
+    public static func lead(panelEdge: Double, after: Double, gap: Double) -> Double {
+        max(gap, panelEdge - after)
     }
 
     /// - Parameters:

@@ -78,11 +78,14 @@ struct NavigationCommands: Commands {
                 .keyboardShortcut(.tab, modifiers: [.control, .shift])
                 .disabled((tabs?.count ?? 0) < 2)
             Menu(String(localized: .tabsPick)) {
-                ForEach(1...9, id: \.self) { n in
+                ForEach(1...8, id: \.self) { n in
                     Button(.tabsNumber(n)) { tabs?.select(number: n) }
                         .keyboardShortcut(KeyEquivalent(Character(String(n))))
                         .disabled((tabs?.count ?? 0) < n)
                 }
+                Button(.tabsLast) { tabs?.select(number: 9) }
+                    .keyboardShortcut("9")
+                    .disabled((tabs?.count ?? 0) < 2)
             }
             #endif
         }

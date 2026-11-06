@@ -18172,6 +18172,17 @@
           }
         }
       }
+    },
+    "tabs.last": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마지막 탭"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

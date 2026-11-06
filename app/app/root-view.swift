@@ -70,7 +70,7 @@ struct RootView: View {
         guard placement != .here, multipleWindows else { return navigator.go(entry) }
         #if os(macOS)
         // Beside is a tab until panes (#62).
-        if placement != .window { return tabs.open(Navigator(entry)) }
+        if placement != .window { return tabs.open(Navigator(entry), fromLink: true) }
         #endif
         // The iPad has no tabs, so a tab there is a window of its own.
         openWindow(id: FolioApp.mainWindow, value: WindowRequest(link: entry.link, course: entry.course))
@@ -440,17 +440,16 @@ struct RootView: View {
         return [workspace.placeCrumb(of: navigator.current)] + steps
     }
 
-    /// Where the trail starts across the window: `Space.l` in from the panel's corner, beside the sidebar or, folded,
-    /// the window's edge.
-    var panelStart: CGFloat { (sidebarOpen ? Theme.Size.sidebar : Theme.Size.panelInset) + Theme.Space.l }
+    /// The content panel's leading edge across the window: beside the sidebar or, folded, the window's edge.
+    var panelEdge: CGFloat { sidebarOpen ? Theme.Size.sidebar : Theme.Size.panelInset }
 
     #if os(macOS)
     /// Where the back and forward buttons end across the window, the tabs' item placed where the row put it.
     var historyEnd: CGFloat { (leadingX ?? Self.leadingEstimate) + Theme.Size.toolbarButton + Self.historyGap + HistoryButtons.width }
 
-    /// From the back and forward buttons over to the trail's start; with the sidebar folded the corner is under the
-    /// buttons, and the tabs keep a gap after them instead.
-    var tabLead: CGFloat { TabFit.lead(trailStart: panelStart, after: historyEnd, gap: Theme.Space.s) }
+    /// From the back and forward buttons over to the panel's edge, where the first tab's capsule lines up; with the
+    /// sidebar folded the edge is under the buttons, and the tabs keep a gap after them instead.
+    var tabLead: CGFloat { TabFit.lead(panelEdge: panelEdge, after: historyEnd, gap: Theme.Space.s) }
 
     /// From the tabs' start to the search field, less a gap before it. Until the row has placed the field, the window's
     /// width less the field and the gaps the row keeps around it.
@@ -467,6 +466,9 @@ struct RootView: View {
     /// pushed the search field into the toolbar's overflow menu, where it was never measured.
     static let trailingEstimate = Theme.Size.searchField + Theme.Space.s + Theme.Size.toolbarButton * 5 + Theme.Space.xxs * 4
     #else
+    /// Where the bare trail starts: `Space.l` in from the panel's edge.
+    var panelStart: CGFloat { panelEdge + Theme.Space.l }
+
     var tabLead: CGFloat { max(Theme.Space.s, panelStart - Self.crumbStart) }
 
     var crumb: some View {
