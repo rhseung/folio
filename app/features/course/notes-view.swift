@@ -47,6 +47,9 @@ struct NoteList: View {
                 selection = id
             }
         }
+        .sheet(isPresented: Binding(get: { model.renaming != nil }, set: { if !$0 { model.renaming = nil } })) {
+            if let note = model.renaming { NoteRenameSheet(workspace: model.workspace, course: model.course, note: note) }
+        }
         .confirming($model.pending)
         // Notes made elsewhere (the Claude panel, a session's rough note) and links changed in the editor show up here too.
         .onChange(of: model.workspace.notesRevision) { model.reload() }
@@ -79,6 +82,14 @@ struct NoteList: View {
         .contextMenu {
             Button(.notesOpen) { open(note) }
             if let id = note.meta.id { LinkMenu(link: AppLink(.note, id), course: model.course.id, trailing: true) }
+            Divider()
+            Button(.notesRenameEllipsis) { model.renaming = note }
+            let targets = model.moveTargets(note)
+            if !targets.isEmpty {
+                Menu(String(localized: .notesMoveTo)) {
+                    ForEach(targets, id: \.self) { folder in Button(model.folderLabel(folder)) { model.move(note, into: folder) } }
+                }
+            }
             Divider()
             Button(.notesDeleteEllipsis, systemImage: "trash", role: .destructive) {
                 model.delete(note) { if note.meta.id != nil && note.meta.id == selection { selection = nil } }
@@ -139,6 +150,7 @@ struct NoteEditor: View {
     @State private var wide = false
     @State private var preview = PreviewLink()
     @State private var showsAssets = false
+    @State private var renaming = false
 
     init(workspace: Workspace, course: LoadedCourse, note: NoteFile, anchor: AppLink.Anchor? = nil, insert: Binding<String?> = .constant(nil),
          openNote: @escaping (String) -> Void) {
@@ -214,6 +226,12 @@ struct NoteEditor: View {
             Button("", action: toggleMode).keyboardShortcut("e")
                 .opacity(0).allowsHitTesting(false).accessibilityHidden(true)
         }
+        // The note's name is the screen's title; clicking it renames the note. Saved first: the file is about to move.
+        .crumb(model.note.title, level: 2, symbol: "doc.text", rename: {
+            model.saveIfDirty()
+            renaming = true
+        })
+        .sheet(isPresented: $renaming) { NoteRenameSheet(workspace: model.workspace, course: model.course, note: model.note) }
         .onAppear(perform: model.load)
         // Saved a moment after typing stops, and whenever the note goes away: switching notes or courses, closing the
         // window or quitting would otherwise drop the edits.

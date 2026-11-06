@@ -60,12 +60,14 @@ struct ColumnDivider: View {
     var body: some View { Theme.Palette.line.frame(width: 1).ignoresSafeArea() }
 }
 
-/// One step of the window's breadcrumb. A step with an action goes back to it; the last step is where the window is.
+/// One step of the window's breadcrumb. A step with an action goes back to it; the last step is where the window is,
+/// and one with `rename` (an open note) renames what is open when clicked, as a document's title does.
 struct Crumb {
     var title: String
     var symbol: String?
     var dot: Color?
     var action: (() -> Void)?
+    var rename: (() -> Void)?
 }
 
 /// The steps pages below the window's own add to its breadcrumb: 1 a course's section, 2 what the section opened.
@@ -81,8 +83,8 @@ struct Crumb {
 
 extension View {
     /// Adds this page to the window's breadcrumb while it is on screen. There is no back button: the steps before go back.
-    func crumb(_ title: String, level: Int, symbol: String? = nil, action: (() -> Void)? = nil) -> some View {
-        modifier(CrumbStep(title: title, level: level, symbol: symbol, action: action))
+    func crumb(_ title: String, level: Int, symbol: String? = nil, action: (() -> Void)? = nil, rename: (() -> Void)? = nil) -> some View {
+        modifier(CrumbStep(title: title, level: level, symbol: symbol, action: action, rename: rename))
     }
 }
 
@@ -91,6 +93,7 @@ private struct CrumbStep: ViewModifier {
     let level: Int
     let symbol: String?
     let action: (() -> Void)?
+    let rename: (() -> Void)?
     @Environment(CrumbTrail.self) private var trail: CrumbTrail?
     @State private var owner = UUID()
 
@@ -102,7 +105,7 @@ private struct CrumbStep: ViewModifier {
             .onDisappear { trail?.clear(level: level, owner: owner) }
     }
 
-    func register() { trail?.set(Crumb(title: title, symbol: symbol, action: action), level: level, owner: owner) }
+    func register() { trail?.set(Crumb(title: title, symbol: symbol, action: action, rename: rename), level: level, owner: owner) }
 }
 
 /// The window's breadcrumb. Longer than `foldWidth`, it keeps the first and last steps and folds the middle into "…",
@@ -165,6 +168,8 @@ struct Breadcrumb: View {
             }
             if between, let action = crumb.action {
                 Button(crumb.title, action: action).buttonStyle(.pointing(.plain)).help(Text(.designCrumbTopHelp(crumb.title)))
+            } else if i == crumbs.count - 1, let rename = crumb.rename {
+                Button(crumb.title, action: rename).buttonStyle(.pointing(.plain)).help(Text(.designCrumbRenameHelp))
             } else {
                 Text(crumb.title)
             }
