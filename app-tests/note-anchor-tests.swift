@@ -19,6 +19,8 @@ struct NoteAnchorRevealTests {
         // Far enough down the note that it was off screen when opened.
         #expect(bench.scrollY > 0)
         #expect(caret.rect.minY >= 0 && caret.rect.maxY <= bench.size.height / 3, "\(caret.rect)")
+        // Drawn there too, not only laid out: the scroller coming in narrows the column after the line is placed.
+        #expect(bench.snapshot().ink(in: CGRect(x: 0, y: caret.rect.minY, width: bench.size.width, height: caret.rect.height)) > 0)
     }
 
     @Test func theNoteArrivingAfterTheViewStillReachesTheHeading() async throws {

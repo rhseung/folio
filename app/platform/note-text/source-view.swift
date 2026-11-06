@@ -324,6 +324,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     /// Where a link opened the note at, kept until the view is on screen and sized: placed before, the line lands
     /// wherever TextKit's first height estimate put it.
     private var revealing: Int?
+    /// The line a link put on screen, held there until the user scrolls, clicks or types. Anything that lays the lines
+    /// above out again (the scroller coming in narrows the column, the look changing restyles the text) moves them
+    /// under a scroll left as it was, and the line slid off the screen.
+    private var keeping: Int?
 
     func configure(accent: CourseAccent, syntax: MathSyntax, dark: Bool) {
         accentColors(accent)
@@ -347,13 +351,43 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         revealing = nil
         let i = min(at, (string as NSString).length)
         setSelectedRange(NSRange(location: i, length: 0))
-        place(i, at: NoteLook.margin)
+        keeping = i
+        placeKept()
         window.makeFirstResponder(self)
     }
 
     override func setFrameSize(_ size: NSSize) {
+        let width = frame.width
         super.setFrameSize(size)
         if revealing != nil { DispatchQueue.main.async { [weak self] in self?.runReveal() } }
+        if size.width != width { placeKeptSoon() }
+    }
+
+    private func placeKeptSoon() {
+        guard keeping != nil else { return }
+        DispatchQueue.main.async { [weak self] in self?.placeKept() }
+    }
+
+    // The viewport is laid out again here: placing only scrolls, and the lines drawn stayed where the old layout had
+    // them. Laying it out corrects TextKit's guess at the height of what's below, which can move the scroll in turn, so
+    // the line is placed again until it stays.
+    private func placeKept() {
+        guard let keeping else { return }
+        for _ in 0..<4 {
+            place(keeping, at: NoteLook.margin)
+            textLayoutManager?.textViewportLayoutController.layoutViewport()
+            guard let y = screenY(of: keeping), abs(y - NoteLook.margin) > 0.5 else { return }
+        }
+    }
+
+    override func scrollWheel(with event: NSEvent) {
+        keeping = nil
+        super.scrollWheel(with: event)
+    }
+
+    override func keyDown(with event: NSEvent) {
+        keeping = nil
+        super.keyDown(with: event)
     }
 
     /// Everything shown comes from styling the text as it now stands, after every change, composing ones included; a
@@ -364,6 +398,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         lineStarts = SourceStyler.lines(storage.string).map(\.location)
         matchTyping()
         updateBubble()
+        placeKeptSoon()
     }
 
     override func shouldChangeText(in range: NSRange, replacementString: String?) -> Bool {
@@ -373,6 +408,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     }
 
     override func didChangeText() {
+        keeping = nil
         restyle()
         if let held {
             self.held = nil
@@ -590,6 +626,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     // MARK: Clicks
 
     override func mouseDown(with event: NSEvent) {
+        keeping = nil
         let point = convert(event.locationInWindow, from: nil)
         if let i = characterIndex(at: point) {
             if openLink(at: i, event: event) { return }
