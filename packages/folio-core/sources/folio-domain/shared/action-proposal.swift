@@ -7,11 +7,15 @@ public struct ActionProposal: Codable, Hashable, Sendable {
     public var input: JSONValue
     /// Set once the user applies it, so the chat shows it done instead of offering it again.
     public var applied: Bool?
+    /// Why it failed the last time the user applied it. Kept in the chat so the next question tells Claude, which
+    /// otherwise can only guess whether its change went through.
+    public var failure: String?
 
-    public init(command: String, input: JSONValue, applied: Bool? = nil) {
+    public init(command: String, input: JSONValue, applied: Bool? = nil, failure: String? = nil) {
         self.command = command
         self.input = input
         self.applied = applied
+        self.failure = failure
     }
 
     /// Starts the tool-result text block that carries the proposal, apart from the preview text beside it.

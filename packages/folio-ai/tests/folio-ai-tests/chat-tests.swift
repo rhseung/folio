@@ -46,6 +46,31 @@ struct ChatTests {
         #expect(cache && stable.contains("과목: 선형대수학") && stable.contains("규칙"))
     }
 
+    /// The next question carries what became of each proposed change, so Claude doesn't have to guess.
+    @Test func historyTellsWhatBecameOfEachProposal() async throws {
+        let long = String(repeating: "가", count: 500)
+        let proposals = [
+            ActionProposal(command: "note write", input: .object(["note": .string("Notes/a.md"), "text": .string(long)])),
+            ActionProposal(command: "note link", input: .object(["note": .string("n")]), applied: true),
+            ActionProposal(command: "exam rm", input: .object(["exam": .string("e")]), failure: "시험 'e'을(를) 찾을 수 없습니다"),
+        ]
+        let fake = FakeProvider(responses: [FakeProvider.reply("답")])
+        let chat = Chat(device: device, at: now, messages: [
+            ChatMessage(role: .user, text: "써 줘", at: now),
+            ChatMessage(role: .assistant, text: "제안했어요", at: now, proposals: proposals),
+            ChatMessage(role: .user, text: "됐어?", at: now),
+        ])
+        _ = try await ClaudeClient(provider: fake).reply(to: chat, context: ContextBuilder.build([], budgetTokens: 10))
+        let r = try #require(await fake.requests.first)
+        guard case .text(let sent, _)? = r.messages[1].content.first else { Issue.record("no answer text"); return }
+        #expect(sent.hasPrefix("제안했어요\n\n[Changes proposed in this answer]\n"))
+        #expect(sent.contains("- note write {\"note\":\"Notes/a.md\",\"text\":\"\(String(repeating: "가", count: 80))… (500 characters)\"}: not applied; the user has not approved it"))
+        #expect(sent.contains("- note link {\"note\":\"n\"}: applied"))
+        #expect(sent.contains("- exam rm {\"exam\":\"e\"}: the user applied it and it failed: 시험 'e'을(를) 찾을 수 없습니다"))
+        #expect(!sent.contains(long))
+        #expect(ClaudeClient.history(ChatMessage(role: .assistant, text: "그냥 답", at: now)) == "그냥 답")
+    }
+
     @Test func replyNeedsAQuestion() async {
         let chat = Chat(device: device, at: now, messages: [ChatMessage(role: .assistant, text: "a", at: now)])
         await #expect(throws: ClaudeError.self) {
