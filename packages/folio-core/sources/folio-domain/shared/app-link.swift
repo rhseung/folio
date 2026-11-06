@@ -290,3 +290,6 @@ public struct LinkHistory<Place: Equatable & Sendable>: Equatable, Sendable {
         return true
     }
 }
+
+/// A tab moved to a window of its own takes its history along.
+extension LinkHistory: Codable where Place: Codable {}

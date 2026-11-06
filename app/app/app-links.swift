@@ -57,7 +57,7 @@ extension EnvironmentValues {
 @MainActor @Observable
 final class Navigator {
     /// A link and the course it was found in, worked out once when it is opened rather than on every redraw.
-    struct Entry: Equatable, Sendable {
+    struct Entry: Equatable, Sendable, Codable {
         var link: AppLink
         var course: UUID?
     }
@@ -66,6 +66,11 @@ final class Navigator {
 
     init(_ start: Entry = Entry(link: .place(.today))) {
         history = LinkHistory(start)
+    }
+
+    /// A tab moved to a window of its own goes on from where it was, back and forward included.
+    init(history: LinkHistory<Entry>) {
+        self.history = history
     }
 
     var current: Entry { history.current }
@@ -97,7 +102,7 @@ final class Navigator {
     var forwardList: [Entry] { history.forward }
 
     /// Where a `folio://` link from outside the app (a calendar note, Obsidian, `folio open`) opens, `age` after this
-    /// window was made: in a new tab, so the page the window shows stays as it was. A window made a moment ago that
+    /// window was made: in a new tab of the window in front, so the page it shows stays as it was. A window made a moment ago that
     /// hasn't moved is the one the system made to receive the link, there being none open, and shows it itself; a tab
     /// would leave an empty Today behind it.
     func outsidePlacement(windowAge age: TimeInterval) -> LinkPlacement {
@@ -147,33 +152,41 @@ extension Workspace {
     /// What a step in the history is called in the list a held back button shows.
     func title(of entry: Navigator.Entry) -> String {
         let link = entry.link
-        let loaded = entry.course.flatMap(course)
-        let named = { (name: String?) in [loaded?.title, name].compactMap { $0 }.joined(separator: " · ") }
-        guard let file = loaded?.file else {
-            switch link.kind {
-            case .today: return String(localized: .rootNavToday)
-            case .grades: return String(localized: .rootNavGrades)
-            case .requirements: return String(localized: .rootNavRequirements)
-            case .people: return String(localized: .rootNavPeople)
-            case .codes: return String(localized: .rootNavCodes)
-            case .settings:
-                return [String(localized: .rootNavSettings), link.settingsPage.map { SettingsTab($0).label }].compactMap { $0 }.joined(separator: " · ")
-            case .semester: return transcript.semesters.first { $0.id == link.id }?.title ?? ""
-            case .person: return catalog.people.first { $0.id == link.id }?.name ?? String(localized: .rootNavPeople)
-            default: return link.string
-            }
+        let item = itemName(of: entry)
+        if let loaded = entry.course.flatMap(course) {
+            return [loaded.title, item].compactMap { $0 }.joined(separator: " · ")
         }
+        switch link.kind {
+        case .today: return String(localized: .rootNavToday)
+        case .grades: return String(localized: .rootNavGrades)
+        case .requirements: return String(localized: .rootNavRequirements)
+        case .people: return String(localized: .rootNavPeople)
+        case .codes: return String(localized: .rootNavCodes)
+        case .settings:
+            return [String(localized: .rootNavSettings), link.settingsPage.map { SettingsTab($0).label }].compactMap { $0 }.joined(separator: " · ")
+        case .semester: return transcript.semesters.first { $0.id == link.id }?.title ?? ""
+        case .person: return item ?? String(localized: .rootNavPeople)
+        default: return link.string
+        }
+    }
+
+    /// What a step shows inside its screen: a course's section, or the session, note or file it opened, or a person.
+    /// Nil for the screen itself.
+    func itemName(of entry: Navigator.Entry) -> String? {
+        let link = entry.link
+        if link.kind == .person { return catalog.people.first { $0.id == link.id }?.name }
+        guard let file = entry.course.flatMap(course)?.file else { return nil }
         let name = { (path: String) in ((path as NSString).lastPathComponent as NSString).deletingPathExtension }
         return switch link.kind {
-        case .course: named(link.page.map { CourseSection($0).title })
-        case .session: named(file.sessions.first { $0.id == link.id }.map { file.title(of: $0, calendar: calendar) })
-        case .unit: named(file.units.first { $0.id == link.id }?.title)
-        case .note: named(file.notes.first { $0.id == link.id }.map { name($0.path) })
-        case .material: named(file.materials.first { $0.id == link.id }.map { ($0.path as NSString).lastPathComponent })
-        case .assignment: named(file.assignments.first { $0.id == link.id }?.title)
-        case .exam: named(file.exams.first { $0.id == link.id }?.title)
-        case .problemSet: named(file.problemSets.first { $0.id == link.id }?.title)
-        default: named(CourseSection.quizCards.title)
+        case .course: link.page.map { CourseSection($0).title }
+        case .session: file.sessions.first { $0.id == link.id }.map { file.title(of: $0, calendar: calendar) }
+        case .unit: file.units.first { $0.id == link.id }?.title
+        case .note: file.notes.first { $0.id == link.id }.map { name($0.path) }
+        case .material: file.materials.first { $0.id == link.id }.map { ($0.path as NSString).lastPathComponent }
+        case .assignment: file.assignments.first { $0.id == link.id }?.title
+        case .exam: file.exams.first { $0.id == link.id }?.title
+        case .problemSet: file.problemSets.first { $0.id == link.id }?.title
+        default: CourseSection.quizCards.title
         }
     }
 }

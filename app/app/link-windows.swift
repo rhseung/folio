@@ -1,13 +1,17 @@
 import FolioDomain
 import SwiftUI
 
-/// A window or tab a link asked for. It carries an ID of its own: SwiftUI brings forward a window already showing the
-/// same value instead of opening another, and asking twice for one link should give two.
+/// A window a link asked for. It carries an ID of its own: SwiftUI brings forward a window already showing the same
+/// value instead of opening another, and asking twice for one link should give two.
 struct WindowRequest: Codable, Hashable {
     var id = UUID()
     var link: AppLink
     var course: UUID?
-    var tab = false
+    /// A tab moved out to this window brings where it has been.
+    var history: LinkHistory<Navigator.Entry>?
+
+    static func == (a: Self, b: Self) -> Bool { a.id == b.id }
+    func hash(into hasher: inout Hasher) { hasher.combine(id) }
 }
 
 extension FocusedValues {
@@ -49,9 +53,13 @@ struct HistoryButtons: View {
     }
 }
 
-/// ⌘[ and ⌘] in the menu bar, for the window in front, as in Finder's 이동 menu.
+/// ⌘[ and ⌘] in the menu bar, for the window in front, as in Finder's 이동 menu; on the Mac, moving between the
+/// window's tabs too.
 struct NavigationCommands: Commands {
     @FocusedValue(\.navigator) private var navigator
+    #if os(macOS)
+    @FocusedValue(\.windowTabs) private var tabs
+    #endif
 
     var body: some Commands {
         CommandMenu(Text(.navigationMenu)) {
@@ -61,6 +69,25 @@ struct NavigationCommands: Commands {
             Button(.navigationForward) { navigator?.forward() }
                 .keyboardShortcut("]")
                 .disabled(navigator?.history.canGoForward != true)
+            #if os(macOS)
+            Divider()
+            Button(.tabsNext) { tabs?.selectNext() }
+                .keyboardShortcut(.tab, modifiers: .control)
+                .disabled((tabs?.count ?? 0) < 2)
+            Button(.tabsPrevious) { tabs?.selectPrevious() }
+                .keyboardShortcut(.tab, modifiers: [.control, .shift])
+                .disabled((tabs?.count ?? 0) < 2)
+            Menu(String(localized: .tabsPick)) {
+                ForEach(1...8, id: \.self) { n in
+                    Button(.tabsNumber(n)) { tabs?.select(number: n) }
+                        .keyboardShortcut(KeyEquivalent(Character(String(n))))
+                        .disabled((tabs?.count ?? 0) < n)
+                }
+                Button(.tabsLast) { tabs?.select(number: 9) }
+                    .keyboardShortcut("9")
+                    .disabled((tabs?.count ?? 0) < 2)
+            }
+            #endif
         }
     }
 }
@@ -69,23 +96,84 @@ struct NavigationCommands: Commands {
 import AppKit
 import WebKit
 
-/// Joins a window a link asked to open as a tab to the window the link was in.
-@MainActor enum WindowTabs {
-    private static var openers: [UUID: WeakWindow] = [:]
+/// ⌘T and ⌘W work on the window's own tabs, as in Safari: the window's close moves to ⇧⌘W, and ⌘W on the last tab
+/// closes the window.
+struct TabCommands: Commands {
+    @FocusedValue(\.windowTabs) private var tabs
 
-    private struct WeakWindow { weak var window: NSWindow? }
-
-    /// `opener` is the window the link was in. The key window stands in for it only when that isn't known yet: a link
-    /// from outside can arrive while another app is in front and no window of this one is key.
-    static func remember(_ request: WindowRequest, opener: NSWindow?) {
-        openers[request.id] = WeakWindow(window: opener ?? NSApp.keyWindow)
+    var body: some Commands {
+        CommandGroup(after: .newItem) {
+            Button(.tabsNew) { tabs?.open() }
+                .keyboardShortcut("t")
+                .disabled(tabs == nil)
+        }
+        // Replaces the system's 닫기 (⌘W), which would close the whole window before the tab's command saw the key.
+        CommandGroup(replacing: .saveItem) {
+            Button(.tabsClose) {
+                // Not while a sheet is up: the tab would close under it, sheet and all.
+                guard NSApp.keyWindow?.sheetParent == nil else { return }
+                if let tabs { tabs.closeSelected() } else { NSApp.keyWindow?.performClose(nil) }
+            }
+            .keyboardShortcut("w")
+            Button(.tabsCloseWindow) { NSApp.keyWindow?.performClose(nil) }
+                .keyboardShortcut("w", modifiers: [.command, .shift])
+        }
     }
+}
 
-    static func attach(_ window: NSWindow, for request: WindowRequest) {
-        guard request.tab, let opener = openers.removeValue(forKey: request.id)?.window, opener !== window,
-              opener.tabbedWindows?.contains(window) != true else { return }
-        opener.addTabbedWindow(window, ordered: .above)
-        window.makeKeyAndOrderFront(nil)
+/// Where a toolbar item begins across its window. The row places its items itself: the first after the window's
+/// buttons (gone in full screen), the last pushed to the end by a flexible space. Nil while the item is out of the
+/// window, dropped into the row's overflow menu.
+struct WindowOffset: NSViewRepresentable {
+    let changed: @MainActor (CGFloat?) -> Void
+
+    func makeNSView(context: Context) -> Probe { Probe(changed: changed) }
+    func updateNSView(_ view: Probe, context: Context) { view.changed = changed }
+
+    final class Probe: NSView {
+        var changed: @MainActor (CGFloat?) -> Void
+        private var reported: CGFloat??
+        private var observers: [NSObjectProtocol] = []
+
+        init(changed: @escaping @MainActor (CGFloat?) -> Void) {
+            self.changed = changed
+            super.init(frame: .zero)
+        }
+
+        required init?(coder: NSCoder) { nil }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            for observer in observers { NotificationCenter.default.removeObserver(observer) }
+            observers = []
+            if let window {
+                // The item moves without this view's own frame changing, so the window's changes are watched too.
+                observers = [NSWindow.didResizeNotification, NSWindow.didEnterFullScreenNotification, NSWindow.didExitFullScreenNotification].map { name in
+                    NotificationCenter.default.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                        MainActor.assumeIsolated { self?.report() }
+                    }
+                }
+            }
+            report()
+        }
+
+        override func layout() {
+            super.layout()
+            report()
+        }
+
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        /// On the next turn: while the row is laying out, its items are still where they were.
+        func report() {
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                let x = window.map { _ in convert(NSPoint.zero, to: nil).x }
+                guard reported != .some(x) else { return }
+                reported = .some(x)
+                changed(x)
+            }
+        }
     }
 }
 

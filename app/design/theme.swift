@@ -166,8 +166,10 @@ enum Theme {
         static let rowHeight: CGFloat = 44
         static let tile: CGFloat = 22
         static let toolbarButton: CGFloat = 32
-        /// The window's search field, centered in the toolbar row.
-        static let searchField: CGFloat = 320
+        /// The window's search field, after the tabs: wide enough for "검색 ⌘K", the tabs taking the row's room.
+        static let searchField: CGFloat = 120
+        /// The longest name on a tab behind the front one, which shows where it is in full.
+        static let tabName: CGFloat = 120
         /// The Mac window. Narrower than `windowMin`, the three columns squeeze a page's figures into slivers. A new
         /// window takes `windowShare` of its screen's visible area, up to `windowIdeal` on a large display
         /// (`WindowSize`): a fixed default wider than a laptop screen made macOS stretch it edge to edge.

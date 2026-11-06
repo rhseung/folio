@@ -6,8 +6,9 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openWindow) private var openWindow
     @Environment(\.supportsMultipleWindows) private var multipleWindows
-    /// Every move in this window goes through it, so back and forward cover the sidebar, search and links alike.
-    @State private var navigator: Navigator
+    /// The window's tabs, each with the history every move in it goes through, so back and forward cover the sidebar,
+    /// search and links alike. The iPad has one, its windows being its tabs.
+    @State private var tabs: WindowTabs
     let request: WindowRequest?
     @State private var pickingFolder = false
     @State private var addingSemester = false
@@ -30,12 +31,26 @@ struct RootView: View {
     /// When this window was made, which tells a window made for a link from outside from one already in use.
     @State private var madeAt = Date.now
     @State private var host = WindowHost()
+    /// The search field and the buttons after it, measured: what's left of the row goes to the tabs.
+    @State private var trailingWidth = RootView.trailingEstimate
+    /// Where the toolbar row put its first item (the sidebar button) and its last (the search field), across the
+    /// window: the tabs start at the panel's corner and end before the search field.
+    @State private var leadingX: CGFloat?
+    @State private var trailingX: CGFloat?
     #endif
 
     init(request: WindowRequest? = nil) {
         self.request = request
-        _navigator = State(initialValue: Navigator(request.map { Navigator.Entry(link: $0.link, course: $0.course) } ?? Navigator.Entry(link: .place(.today))))
+        let navigator = if let history = request?.history {
+            Navigator(history: history)
+        } else {
+            Navigator(request.map { Navigator.Entry(link: $0.link, course: $0.course) } ?? Navigator.Entry(link: .place(.today)))
+        }
+        _tabs = State(initialValue: WindowTabs(navigator))
     }
+
+    /// The tab in front's history.
+    var navigator: Navigator { tabs.current }
 
     var selection: Screen? { navigator.screen }
 
@@ -53,12 +68,12 @@ struct RootView: View {
             return
         }
         guard placement != .here, multipleWindows else { return navigator.go(entry) }
-        // Beside is a tab until panes (#62). The iPad has no window tabs, so a tab there is a window of its own.
-        let request = WindowRequest(link: entry.link, course: entry.course, tab: placement != .window)
         #if os(macOS)
-        if request.tab { WindowTabs.remember(request, opener: host.window) }
+        // Beside is a tab until panes (#62).
+        if placement != .window { return tabs.open(Navigator(entry), fromLink: true) }
         #endif
-        openWindow(id: FolioApp.mainWindow, value: request)
+        // The iPad has no tabs, so a tab there is a window of its own.
+        openWindow(id: FolioApp.mainWindow, value: WindowRequest(link: entry.link, course: entry.course))
     }
 
     var openLink: OpenLinkAction {
@@ -67,9 +82,20 @@ struct RootView: View {
         }
     }
 
+    #if os(macOS)
+    /// Out of this window into one of its own, back and forward included. The last tab is the window already.
+    func moveToWindow(_ id: UUID) {
+        guard let moved = tabs.take(id) else { return }
+        openWindow(id: FolioApp.mainWindow, value: WindowRequest(link: moved.current.link, course: moved.current.course, history: moved.history))
+    }
+    #endif
+
     func openFromOutside(_ link: AppLink) {
         #if os(macOS)
         open(link, in: navigator.outsidePlacement(windowAge: Date.now.timeIntervalSince(madeAt)))
+        // The link came from another app in front; the tab it opened is what the user went to see.
+        NSApp.activate()
+        host.window?.makeKeyAndOrderFront(nil)
         #else
         // The iPad has no window tabs: a tab there is a window of its own, which would put the link's page in another
         // scene beside this one rather than in the one the user is looking at.
@@ -126,11 +152,12 @@ struct RootView: View {
                 .focusedSceneValue(\.showSettings) { showSettings($0) }
                 .focusedSceneValue(\.navigator, navigator)
                 #if os(macOS)
+                .focusedSceneValue(\.windowTabs, tabs)
                 .background { SwipeNavigation(back: { navigator.back() }, forward: { navigator.forward() }) }
                 .background {
                     WindowReader { window in
                         host.window = window
-                        if let request { WindowTabs.attach(window, for: request) }
+                        tabs.closeWindow = { [weak window] in window?.performClose(nil) }
                     }
                 }
                 #endif
@@ -156,6 +183,16 @@ struct RootView: View {
                                          paused: SnapshotDriver.recordingPaused, level: SnapshotDriver.recordingLevel)
             }
             let ids = workspace.currentCourses.map(\.id)
+            if SnapshotDriver.tabs > 1 {
+                // Tabs of every kind behind the first, which the walk below then moves through.
+                let notes = workspace.currentCourses.compactMap { c in c.file.notes.first.map { AppLink(.note, $0.id) } }
+                let links: [AppLink] = [.place(.grades)] + notes + ids.map { AppLink.course($0) } + [.place(.people), .place(.settings), .place(.today)]
+                for i in 1..<SnapshotDriver.tabs {
+                    let link = links[(i - 1) % links.count]
+                    tabs.open(Navigator(workspace.entry(for: link) ?? Navigator.Entry(link: .place(.today))))
+                }
+                tabs.select(number: 1)
+            }
             await SnapshotDriver.shared.run(select: { if let link = $0.link { open(link) } }, courses: ids, semester: workspace.currentSemester?.id)
         }
         #endif
@@ -297,115 +334,162 @@ struct RootView: View {
 
     /// Actions that work from any page, so they live in the window's toolbar rather than on one screen.
     @ToolbarContentBuilder var globalTools: some ToolbarContent {
-        // Back and forward right after the sidebar button, as in Finder and Safari. One item, so the gap between them
-        // is the stack's and the crumb after them knows where it starts (`crumbStart`).
+        #if os(macOS)
+        // The sidebar button, back and forward as in Finder and Safari, then the tabs, all one item: the gaps between
+        // them are the stack's, so the tabs start where the panel's corner says. As items of their own, the row
+        // spaced them as it saw fit and the tabs began short of the corner.
         ToolbarItem(placement: .navigation) {
-            HStack(spacing: Self.historyGap) {
-                #if os(macOS)
-                Button(sidebarOpen ? .rootSidebarClose : .rootSidebarOpen, systemImage: "sidebar.leading") { sidebarOpen.toggle() }
-                    .keyboardShortcut("s", modifiers: [.control, .command])
-                    .help(Text(sidebarOpen ? .rootSidebarCloseHelp : .rootSidebarOpenHelp))
-                    .buttonStyle(.toolbar)
-                    .toolbarGroup()
-                #endif
-                HistoryButtons(navigator: navigator) { workspace.title(of: $0) }
+            HStack(spacing: 0) {
+                HStack(spacing: Self.historyGap) {
+                    sidebarButton
+                    HistoryButtons(navigator: navigator) { workspace.title(of: $0) }
+                }
+                TabBar(tabs: tabs, workspace: workspace, crumbs: crumbs, room: tabRoom, moveToWindow: moveToWindow)
+                    .padding(.leading, tabLead)
             }
+            .background { WindowOffset { leadingX = $0 } }
+        }
+        .sharedBackgroundVisibility(.hidden)
+        // Pushes the search field and the buttons to the row's end, whatever room the tabs leave.
+        ToolbarSpacer(.flexible)
+        // The search field and the buttons in one item, so the gap between them is the stack's.
+        ToolbarItem {
+            HStack(spacing: Theme.Space.s) {
+                searchButton
+                tools
+            }
+            .onGeometryChange(for: CGFloat.self, of: \.size.width) { trailingWidth = $0 }
+            .background { WindowOffset { trailingX = $0 } }
+        }
+        .sharedBackgroundVisibility(.hidden)
+        #else
+        // Back and forward right after the sidebar, as in Safari. One item, so the crumb after them knows where it
+        // starts (`crumbStart`).
+        ToolbarItem(placement: .navigation) {
+            HistoryButtons(navigator: navigator) { workspace.title(of: $0) }
         }
         .sharedBackgroundVisibility(.hidden)
         // A course adds its section after this; pages add their own controls after that.
         ToolbarItem(placement: .navigation) { crumb }
             .sharedBackgroundVisibility(.hidden)
         ToolbarSpacer(.flexible)
-        // Between two flexible spacers: centered in the room the crumb and the buttons leave, as in the design. Not
-        // `.principal`, which centers on the window and, pushed over the panel, crowded the buttons into overflow.
-        ToolbarItem {
-            Button { searching = true } label: {
-                // No Spacer inside: a toolbar item with one has no fixed width, and the row drops it.
-                HStack(spacing: Theme.Space.s) {
-                    Image(systemName: "magnifyingglass")
-                    Text(.commonSearch)
-                }
-                .foregroundStyle(Theme.Palette.chromeText)
-                .frame(width: Theme.Size.searchField - Theme.Space.m * 2, alignment: .leading)
-                .overlay(alignment: .trailing) {
-                    Text("⌘K").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.chromeText)
-                }
-                .toolbarField()
-                .contentShape(.capsule)
-            }
-            .buttonStyle(.pointing(.plain))
-            .help(Text(.rootSearchHelp))
-        }
-        .sharedBackgroundVisibility(.hidden)
+        // Between two flexible spacers: centered in the room the crumb and the buttons leave. Not `.principal`, which
+        // centers on the window and, pushed over the panel, crowded the buttons into overflow.
+        ToolbarItem { searchButton }
+            .sharedBackgroundVisibility(.hidden)
         ToolbarSpacer(.flexible)
-        // One item for all the buttons, laid out here: as separate items the system spaces them far apart.
-        ToolbarItem {
-            HStack(spacing: Theme.Space.xxs) {
-                Button(.rootQuickAdd, systemImage: "plus") { quickAdding = true }
-                    .help(Text(.rootQuickAddHelp))
-                    .popover(isPresented: $quickAdding, arrowEdge: .bottom) {
-                        QuickAddField(workspace: workspace).padding(Theme.Space.l).frame(width: 440)
-                    }
-                recordButton
-                timerButton
-                Button(workspace.gradesUnlocked ? .rootLockGrades : .commonUnlockGrades, systemImage: workspace.gradesUnlocked ? "lock.open" : "lock") {
-                    if workspace.gradesUnlocked { workspace.lockGrades() } else { Task { await workspace.unlockGrades() } }
-                }
-                .help(Text(workspace.gradesUnlocked ? .rootHideGrades : .rootShowGrades))
-                Button(.rootReload, systemImage: "arrow.clockwise") { workspace.reload() }.help(Text(.rootReloadHelp))
-            }
-            .toolbarGroup()
-            .buttonStyle(.toolbar)
-            .menuStyle(.button)
-        }
-        .sharedBackgroundVisibility(.hidden)
+        ToolbarItem { tools }
+            .sharedBackgroundVisibility(.hidden)
+        #endif
     }
+
+    #if os(macOS)
+    var sidebarButton: some View {
+        Button(sidebarOpen ? .rootSidebarClose : .rootSidebarOpen, systemImage: "sidebar.leading") { sidebarOpen.toggle() }
+            .keyboardShortcut("s", modifiers: [.control, .command])
+            .help(Text(sidebarOpen ? .rootSidebarCloseHelp : .rootSidebarOpenHelp))
+            .buttonStyle(.toolbar)
+            .toolbarGroup()
+    }
+    #endif
+
+    var searchButton: some View {
+        Button { searching = true } label: {
+            // No Spacer inside: a toolbar item with one has no fixed width, and the row drops it.
+            HStack(spacing: Theme.Space.s) {
+                Image(systemName: "magnifyingglass")
+                Text(.commonSearch)
+            }
+            .foregroundStyle(Theme.Palette.chromeText)
+            .frame(width: Theme.Size.searchField - Theme.Space.m * 2, alignment: .leading)
+            .overlay(alignment: .trailing) {
+                Text("⌘K").font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.chromeText)
+            }
+            .toolbarField()
+            .contentShape(.capsule)
+        }
+        .buttonStyle(.pointing(.plain))
+        .help(Text(.rootSearchHelp))
+    }
+
+    /// One stack for all the buttons, laid out here: as separate items the system spaces them far apart.
+    var tools: some View {
+        HStack(spacing: Theme.Space.xxs) {
+            Button(.rootQuickAdd, systemImage: "plus") { quickAdding = true }
+                .help(Text(.rootQuickAddHelp))
+                .popover(isPresented: $quickAdding, arrowEdge: .bottom) {
+                    QuickAddField(workspace: workspace).padding(Theme.Space.l).frame(width: 440)
+                }
+            recordButton
+            timerButton
+            Button(workspace.gradesUnlocked ? .rootLockGrades : .commonUnlockGrades, systemImage: workspace.gradesUnlocked ? "lock.open" : "lock") {
+                if workspace.gradesUnlocked { workspace.lockGrades() } else { Task { await workspace.unlockGrades() } }
+            }
+            .help(Text(workspace.gradesUnlocked ? .rootHideGrades : .rootShowGrades))
+            Button(.rootReload, systemImage: "arrow.clockwise") { workspace.reload() }.help(Text(.rootReloadHelp))
+        }
+        .toolbarGroup()
+        .buttonStyle(.toolbar)
+        .menuStyle(.button)
+    }
+
+    /// The front tab's trail: its screen, then the course's section and what it opened, only while a course is shown
+    /// (they clear as it goes).
+    var crumbs: [Crumb] {
+        let steps = if case .course = selection { trail.crumbs } else { [Crumb]() }
+        return [workspace.placeCrumb(of: navigator.current)] + steps
+    }
+
+    /// The content panel's leading edge across the window: beside the sidebar or, folded, the window's edge.
+    var panelEdge: CGFloat { sidebarOpen ? Theme.Size.sidebar : Theme.Size.panelInset }
+
+    #if os(macOS)
+    /// Where the back and forward buttons end across the window, the tabs' item placed where the row put it.
+    var historyEnd: CGFloat { (leadingX ?? Self.leadingEstimate) + Theme.Size.toolbarButton + Self.historyGap + HistoryButtons.width }
+
+    /// From the back and forward buttons over to the panel's edge, where the first tab's capsule lines up; with the
+    /// sidebar folded the edge is under the buttons, and the tabs keep a gap after them instead.
+    var tabLead: CGFloat { TabFit.lead(panelEdge: panelEdge, after: historyEnd, gap: Theme.Space.s) }
+
+    /// From the tabs' start to the search field, less a gap before it. Until the row has placed the field, the window's
+    /// width less the field and the gaps the row keeps around it.
+    var tabRoom: CGFloat {
+        let end = trailingX ?? windowWidth - trailingWidth - Self.toolbarGaps
+        return end - historyEnd - tabLead - Theme.Space.s
+    }
+
+    /// The sidebar button's place when the row hasn't said yet: after the window's buttons, measured.
+    static let leadingEstimate: CGFloat = 84
+    /// Between the items and after the last to the window's edge, measured in a window snapshot.
+    static let toolbarGaps: CGFloat = 32
+    /// The search field and five buttons, until the item is measured. Not zero: the tabs then took the whole row and
+    /// pushed the search field into the toolbar's overflow menu, where it was never measured.
+    static let trailingEstimate = Theme.Size.searchField + Theme.Space.s + Theme.Size.toolbarButton * 5 + Theme.Space.xxs * 4
+    #else
+    /// Where the bare trail starts: `Space.l` in from the panel's edge.
+    var panelStart: CGFloat { panelEdge + Theme.Space.l }
+
+    var tabLead: CGFloat { max(Theme.Space.s, panelStart - Self.crumbStart) }
 
     var crumb: some View {
-        let first: Crumb = switch selection {
-        case .course(let id): Crumb(title: workspace.course(id)?.title ?? "", symbol: workspace.course(id)?.file.course.icon, dot: workspace.accent(id).color)
-        case .semester(let id):
-            { let semester = workspace.transcript.semesters.first { $0.id == id }
-              return Crumb(title: semester?.title ?? "", symbol: semester?.term == .credited ? "checkmark.seal" : "folder") }()
-        case .grades: Crumb(title: String(localized: .rootNavGrades), symbol: "chart.line.uptrend.xyaxis")
-        case .requirements: Crumb(title: String(localized: .rootNavRequirements), symbol: "flag")
-        case .people: Crumb(title: String(localized: .rootNavPeople), symbol: "person")
-        case .codes: Crumb(title: String(localized: .rootNavCodes), symbol: "number")
-        case .settings: Crumb(title: String(localized: .rootNavSettings), symbol: "gearshape")
-        // The address itself, as the page says it can't be found: not today's, which the page no longer shows.
-        case .missing: Crumb(title: navigator.current.link.string, symbol: "questionmark.folder")
-        case .today, nil: Crumb(title: String(localized: .rootNavToday), symbol: "house")
-        }
-        let start = (sidebarOpen ? Theme.Size.sidebar : Theme.Size.panelInset) + Theme.Space.l
         // Folds before where a window-centered search field would begin, so the trail doesn't push it aside; truncates
         // only where the field and the buttons would run out of room.
-        let room = windowWidth / 2 - Theme.Size.searchField / 2 - Theme.Space.l - start
-        #if os(macOS)
-        let timeShown = workspace.recorder.isActive && !sidebarOpen
-        #else
-        let timeShown = workspace.recorder.isActive
-        #endif
+        let room = windowWidth / 2 - Theme.Size.searchField / 2 - Theme.Space.l - panelStart
         // The elapsed time takes the record button's place and is wider than it.
-        let tools = Self.trailingTools + (timeShown ? Self.recordingTimeWidth - Theme.Size.toolbarButton : 0)
-        let limit = windowWidth - start - Theme.Size.searchField - tools
-        // A course's section and what it opened only while the course is shown: they clear as it goes.
-        let steps = if case .course = selection { trail.crumbs } else { [Crumb]() }
+        let tools = Self.trailingTools + (workspace.recorder.isActive ? Self.recordingTimeWidth - Theme.Size.toolbarButton : 0)
+        let limit = windowWidth - panelStart - Theme.Size.searchField - tools
         let inset = Theme.Space.m * 2  // the capsule's own padding, left out of the trail's room
-        return Breadcrumb(crumbs: [first] + steps, foldWidth: max(Self.crumbMinWidth, room - inset), maxWidth: max(Self.crumbMinWidth, limit - inset))
+        return Breadcrumb(crumbs: crumbs, foldWidth: max(Breadcrumb.minWidth, room - inset), maxWidth: max(Breadcrumb.minWidth, limit - inset))
             .toolbarField()
-            // From right after the sidebar button over to the panel's corner, folded or not.
-            .padding(.leading, max(Theme.Space.s, start - Self.crumbStart))
+            .padding(.leading, tabLead)
     }
 
-    /// Where the item after the sidebar button begins, from the window's left edge; measured in a window screenshot
-    /// before back and forward joined the button, and moved by their width.
+    /// Where the item after back and forward begins, from the window's left edge; measured in a window screenshot.
     static let crumbStart: CGFloat = 140 + historyGap + HistoryButtons.width
-    static let historyGap = Theme.Space.s
-    /// Below this the trail folds anyway and its last step truncates.
-    static let crumbMinWidth: CGFloat = 160
-    /// The trailing buttons and the gaps around the search field, measured at their widest (a course, timer shown),
-    /// less the Claude button that moved to the page.
+    /// The trailing buttons and the gaps around the search field, measured at their widest.
     static let trailingTools: CGFloat = 288
+    #endif
+    static let historyGap = Theme.Space.s
     /// The time's widest, a class past an hour ("1:15:00"), for the trail's room. The button itself hugs the time:
     /// held at this width, a short "9:48" sat in a wide gap and crowded the toolbar.
     static let recordingTimeWidth: CGFloat = 96
@@ -571,8 +655,9 @@ struct RootView: View {
         }
     }
 
-    /// The window's panel draws its link as anything else that holds a screen does.
-    var detail: some View { ScreenView(workspace: workspace, entry: navigator.current) }
+    /// The window's panel draws its front tab's link as anything else that holds a screen does. Only the front tab is
+    /// drawn, and afresh when it changes, as when its own history moves: a tab behind keeps where it is, not its view.
+    var detail: some View { ScreenView(workspace: workspace, entry: navigator.current).id(tabs.selected) }
 
     /// Nil opens the tab last picked.
     func showSettings(_ tab: SettingsTab?) {

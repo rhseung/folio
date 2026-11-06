@@ -10,6 +10,9 @@ struct FolioApp: App {
     init() {
         #if os(macOS)
         if Self.hostingTests { NSApplication.shared.setActivationPolicy(.prohibited) }
+        // The window draws its tabs in its toolbar row (`TabBar`); AppKit's tab bar would add a row of its own and a
+        // second kind of tab, and its menu items with it.
+        NSWindow.allowsAutomaticWindowTabbing = false
         #endif
     }
 
@@ -40,6 +43,9 @@ struct FolioApp: App {
         .commands {
             SettingsCommands()
             NavigationCommands()
+            #if os(macOS)
+            TabCommands()
+            #endif
         }
     }
 }
