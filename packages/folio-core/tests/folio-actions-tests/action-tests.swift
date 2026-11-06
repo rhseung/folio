@@ -152,6 +152,41 @@ struct ActionTests {
         #expect(try String(contentsOf: store.fileURL(path), encoding: .utf8).hasSuffix("바깥에서 고침"))
     }
 
+    @Test func aNoteEditReplacesInOrderAndAppendsOnANewLine() throws {
+        let store = try ActionContext(gist: gist, device: device).store(Self.graphTheory)
+        let path = "Notes/2주차-1.md"
+        let url = store.fileURL(path)
+        try "# 매칭\n\n짝짓기는 간선 집합이다".write(to: url, atomically: true, encoding: .utf8)
+        let edits = [NoteEdit.Replacement(old: "짝짓기는", new: "매칭은"), NoteEdit.Replacement(old: "# 매칭\n\n매칭", new: "# 매칭\n\n최대 매칭")]
+        let ctx = try run(NoteEdit(course: Self.graphTheory, note: path, replacements: edits, append: "- 질문"))
+        #expect(try String(contentsOf: url, encoding: .utf8) == "# 매칭\n\n최대 매칭은 간선 집합이다\n- 질문\n")
+        #expect(ctx.changes.map(\.path) == [ctx.relative(url)])
+        #expect(ctx.changes.allSatisfy { $0.touchesNotes })
+        try run(NoteEdit(course: Self.graphTheory, note: path, append: "\n다음 줄\n"))
+        #expect(try String(contentsOf: url, encoding: .utf8) == "# 매칭\n\n최대 매칭은 간선 집합이다\n- 질문\n\n다음 줄\n")
+    }
+
+    /// Nothing is written when any replacement fails, and a missing `old` reads as a change made elsewhere.
+    @Test func aNoteEditRefusesAnOldThatIsMissingOrNotUnique() throws {
+        let store = try ActionContext(gist: gist, device: device).store(Self.graphTheory)
+        let path = "Notes/2주차-1.md"
+        let url = store.fileURL(path)
+        try "a b a\n".write(to: url, atomically: true, encoding: .utf8)
+        #expect(throws: ActionError.conflict("2번째 바꿀 원문 'c'이(가) 노트에 없습니다. 노트가 바뀌었을 수 있으니 다시 읽고 고치세요: \(path)")) {
+            try run(NoteEdit(course: Self.graphTheory, note: path, replacements: [.init(old: "b", new: "B"), .init(old: "c", new: "C")]))
+        }
+        #expect(throws: ActionError.rule("1번째 바꿀 원문 'a'이(가) 노트에 2번 나옵니다. 앞뒤 글을 더 넣어 한 곳만 가리키세요")) {
+            try run(NoteEdit(course: Self.graphTheory, note: path, replacements: [.init(old: "a", new: "A")]))
+        }
+        #expect(throws: ActionError.rule("1번째 바꿀 원문이 비어 있습니다")) {
+            try run(NoteEdit(course: Self.graphTheory, note: path, replacements: [.init(old: "", new: "A")]))
+        }
+        #expect(throws: ActionError.rule("바꿀 원문이나 끝에 붙일 글을 하나 이상 주세요")) {
+            try run(NoteEdit(course: Self.graphTheory, note: path, append: ""))
+        }
+        #expect(try String(contentsOf: url, encoding: .utf8) == "a b a\n")
+    }
+
     @Test func everyActionHasItsOwnCommand() {
         let commands = Actions.all.map { $0.command }
         #expect(Set(commands).count == commands.count)

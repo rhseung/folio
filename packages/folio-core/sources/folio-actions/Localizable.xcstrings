@@ -617,6 +617,50 @@
         }
       }
     },
+    "error.note-edit.ambiguous": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld번째 바꿀 원문 '%2$@'이(가) 노트에 %3$lld번 나옵니다. 앞뒤 글을 더 넣어 한 곳만 가리키세요"
+          }
+        }
+      }
+    },
+    "error.note-edit.empty-old": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld번째 바꿀 원문이 비어 있습니다"
+          }
+        }
+      }
+    },
+    "error.note-edit.missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld번째 바꿀 원문 '%2$@'이(가) 노트에 없습니다. 노트가 바뀌었을 수 있으니 다시 읽고 고치세요: %3$@"
+          }
+        }
+      }
+    },
+    "error.note-edit.nothing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "바꿀 원문이나 끝에 붙일 글을 하나 이상 주세요"
+          }
+        }
+      }
+    },
     "error.note.cancelled-session": {
       "extractionState": "manual",
       "localizations": {

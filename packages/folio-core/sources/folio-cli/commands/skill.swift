@@ -28,7 +28,7 @@ Folio의 모든 데이터 변경은 `folio` 명령으로 한다. `course.json`�
 1. 쓰기 전에 먼저 `--dry-run`으로 바뀔 것을 보고, 사용자에게 보여 준다.
 2. 이동, 이름 변경, 삭제, 여러 항목을 한 번에 바꾸는 명령은 확인이 필요하다. 터미널이 아니면 종료 코드 5로 멈춘다. `folio run`도 무언가를 지우거나 옮기면 같은 확인을 받는다. 사용자가 승인한 뒤에만 `--yes`를 붙여 다시 실행한다.
 3. 종료 코드 3은 대상을 못 찾았거나 여러 개에 맞은 경우다. 오류에 나온 후보 중 하나를 사용자에게 확인하고 다시 실행한다.
-4. 노트를 고쳐 쓸 때는 `note show --json`의 `hash`를 `note write --expect`에 넘긴다. 그사이 앱이나 다른 기기에서 바뀌었으면 종료 코드 6으로 멈추니, 다시 읽고 고친다.
+4. 노트의 일부를 고치거나 끝에 덧붙일 때는 `note edit`에 바꿀 원문(`--old`)과 새 글(`--new`), 붙일 글(`--append`)만 준다. 원문은 노트에 꼭 한 번 나와야 한다. 노트 전체를 새로 쓸 때만 `note write`를 쓰고, `note show --json`의 `hash`를 `--expect`에 넘긴다. 어느 쪽이든 그사이 앱이나 다른 기기에서 바뀌었으면 종료 코드 6으로 멈추니, 다시 읽고 고친다.
 5. `set` 명령에서 값을 지우려면 `none`을 준다(`--due none`). 항목 인자는 빼지 않는다. 터미널이 아니면 고를 수 없어 종료 코드 2로 끝난다.
 6. 성적, GPA, 점수는 잠겨 있다. `gpa`, `transcript`, `score list`는 잠겨 있으면 사용자의 Mac에 Touch ID 창을 띄우고, 사용자가 풀지 않으면 종료 코드 5로 멈춘다. 다른 명령의 성적 칸은 `••`로 나온다. 사용자가 성적을 물었을 때만 이 명령을 쓴다. 성적을 여러 번 읽는 긴 작업이면 처음에 `folio unlock --for 1h`로 한 번 승인받는다.
 
@@ -54,6 +54,7 @@ folio assignment status EC4207/HW3 submitted --dry-run
 # 노트
 folio note add EC4207 "매칭 정리" --kind topic --dry-run
 folio note link "EC4207/매칭 정리" --kind topic --unit 매칭 --dry-run
+folio note edit EC4207/2주차-1 --old "non-adjacent" --new "서로 이웃하지 않는" --dry-run
 # 밀린 몇 회차를 복습 노트 하나로 복습했을 때. 회차 하나를 뗄 때는 note unlink-session
 folio note link-sessions "EC4207/9주차 정리" 9주차-1 9주차-2 --dry-run
 

@@ -30,7 +30,7 @@ func readText(_ source: String) throws -> String {
 struct NoteCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "note", abstract: String(localized: .noteAbstract),
-        subcommands: [List.self, Show.self, Add.self, Write.self, Link.self, Migrate.self, Retitle.self] + GeneratedCommands.note)
+        subcommands: [List.self, Show.self, Add.self, Write.self, Edit.self, Link.self, Migrate.self, Retitle.self] + GeneratedCommands.note)
 
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .noteListAbstract), discussion: String(localized: .noteListDiscussion))
@@ -164,6 +164,23 @@ struct NoteCommand: ParsableCommand {
                 expected = current
             }
             try perform(spec: NoteWrite(course: c.id, note: path, text: try readText(file), expected: expected), g, ctx: ctx)
+        }
+    }
+
+    struct Edit: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: String(localized: .noteEditAbstract), discussion: String(localized: .noteEditDiscussion))
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpNote), valueName: "note"), completion: Complete.notes) var note: String = ""
+        @Option(help: ArgumentHelp(String(localized: .noteEditHelpOld), valueName: "text")) var old: [String] = []
+        @Option(help: ArgumentHelp(String(localized: .noteEditHelpNew), valueName: "text")) var new: [String] = []
+        @Option(help: ArgumentHelp(String(localized: .noteEditHelpAppend), valueName: "text")) var append: String?
+
+        func run() throws {
+            guard old.count == new.count else { throw CLIError(exit: .usage, message: String(localized: .noteEditUnpaired(old.count, new.count))) }
+            let ctx = try CLI.context(g)
+            let (c, _, path) = try Resolver(ctx).notePath(note)
+            let replacements = zip(old, new).map { NoteEdit.Replacement(old: $0, new: $1) }
+            try perform(spec: NoteEdit(course: c.id, note: path, replacements: replacements, append: append), g, ctx: ctx)
         }
     }
 

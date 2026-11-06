@@ -4000,7 +4000,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "쓰기 액션을 실행하지 않고 미리 본 뒤 제안으로 돌려준다. 앱의 Claude 패널이 쓴다"
+            "value": "쓰기 액션을 실행하지 않고 미리 본 뒤 제안으로 돌려준다. 과목 대화에 쓰는 도구만 연다. 앱의 Claude 패널이 쓴다"
           }
         }
       }
@@ -4011,7 +4011,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "쓰기 도구는 바로 바꾸지 않고 미리보기와 제안만 만든다. 사용자가 패널에서 승인해야 실행된다. 같은 변경을 다시 부르지 말고, 무엇을 제안했는지 답에 짧게 적는다."
+            "value": "쓰기 도구는 바로 바꾸지 않고 미리보기와 제안만 만든다. 사용자가 패널에서 승인해야 실행된다. 같은 변경을 다시 부르지 말고, 무엇을 제안했는지 답에 짧게 적는다. 노트의 일부를 고치거나 끝에 덧붙일 때는 note_edit를 쓰고, note_write는 노트 전체를 새로 쓸 때만 쓴다."
           }
         }
       }
@@ -7708,6 +7708,72 @@
           "stringUnit": {
             "state": "translated",
             "value": "카드는 ID로 가리킨다. ID는 folio quiz list로 본다"
+          }
+        }
+      }
+    },
+    "note.edit.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 일부 고치기. 찾아 바꾸거나 끝에 붙인다"
+          }
+        }
+      }
+    },
+    "note.edit.discussion": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "--old와 --new를 짝지어 주면 순서대로 찾아 바꾼다. --old는 그때의 노트에 꼭 한 번 나와야 한다. 없으면 노트가 바뀐 것으로 보고 쓰지 않고 종료 코드 6으로 끝나고, 여러 번 나오면 앞뒤 글을 더 넣으라고 알린다. --append는 노트 끝의 새 줄에 붙인다.\n노트 전체를 보내지 않으니, 일부만 고칠 때는 note write 대신 이것을 쓴다.\n\n예시:\n  folio note edit EC4207/2주차-1 --old \"non-adjacent\" --new \"서로 이웃하지 않는\"\n  folio note edit EC4207/2주차-1 --append \"질문: 최대 매칭은 어떻게 찾나\""
+          }
+        }
+      }
+    },
+    "note.edit.help.append": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 끝에 붙일 글. 새 줄에서 시작한다"
+          }
+        }
+      }
+    },
+    "note.edit.help.new": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "--old 자리에 넣을 글. --old와 같은 수만큼 준다"
+          }
+        }
+      }
+    },
+    "note.edit.help.old": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "바꿀 원문. 노트에 꼭 한 번 나와야 한다. 여러 번 줄 수 있다"
+          }
+        }
+      }
+    },
+    "note.edit.unpaired": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "--old와 --new는 짝지어 줍니다. --old %1$lld개, --new %2$lld개입니다"
           }
         }
       }

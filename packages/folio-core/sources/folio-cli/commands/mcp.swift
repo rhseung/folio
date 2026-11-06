@@ -40,7 +40,21 @@ struct MCPServer {
     init(gist: String?, propose: Bool) {
         self.gist = gist
         self.propose = propose
-        tools = Self.writeTools(propose: propose) + Self.readTools()
+        let all = Self.writeTools(propose: propose) + Self.readTools()
+        tools = propose ? all.filter { Self.inPanel($0.command) } : all
+    }
+
+    /// What the app's Claude panel (`--propose`) opens: the tools for talking about one course. Every tool's
+    /// definition goes with every question, so imports, backups, cleanup, settings, the transcript and the like
+    /// would cost tokens on each one without being used there. The terminal's `folio mcp` keeps them all.
+    static let panelGroups: Set<String> = [
+        "note", "session", "unit", "exam", "assignment", "material", "quiz", "score", "component", "attendance", "review",
+        "problem-set", "search", "today",
+    ]
+    static let panelCommands: Set<String> = ["course show", "course list"]
+
+    static func inPanel(_ command: String) -> Bool {
+        panelCommands.contains(command) || command.split(separator: " ").first.map { panelGroups.contains(String($0)) } == true
     }
 
     /// One JSON-RPC line in, the reply line out; notifications get none.
@@ -89,7 +103,7 @@ struct MCPServer {
                 Folio.run(argv)
             }
         }
-        let text = (code == 0 ? out.lines("out") : out.lines("err") + out.lines("out")).joined(separator: "\n")
+        let text = Self.compact((code == 0 ? out.lines("out") : out.lines("err") + out.lines("out")).joined(separator: "\n"))
         var content: [JSONValue] = [["type": "text", "text": .string(text)]]
         // What the panel shows an approve button for: the action with every name already resolved to its UUID.
         if code == 0, tool.write, propose, let input = built.items.first(where: { $0.0 == tool.command })?.1 {
@@ -242,6 +256,31 @@ struct MCPServer {
         case .bool(let b): b ? "true" : "false"
         case .number(let n): n == n.rounded() && abs(n) < 1e15 ? String(Int64(n)) : String(n)
         default: string(v)
+        }
+    }
+
+    /// `--json` output as Claude reads it: one line, without the nulls and empty lists that made up most of a
+    /// pretty-printed `session list`. Text that isn't a JSON object or array, such as an error, stays as it is.
+    static func compact(_ text: String) -> String {
+        guard let first = text.first(where: { !$0.isWhitespace }), first == "{" || first == "[",
+              let value = try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8)) else { return text }
+        return string(pruned(value))
+    }
+
+    /// Drops object members that say nothing. Array elements stay even when empty, so positions keep their meaning.
+    static func pruned(_ v: JSONValue) -> JSONValue {
+        switch v {
+        case .object(let o):
+            return .object(o.compactMapValues { member in
+                switch pruned(member) {
+                case .null: nil
+                case .array(let a) where a.isEmpty: nil
+                case .object(let o) where o.isEmpty: nil
+                case let p: p
+                }
+            })
+        case .array(let a): return .array(a.map(pruned))
+        default: return v
         }
     }
 
