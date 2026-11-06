@@ -185,3 +185,53 @@ struct TabFitTests {
         }
     }
 }
+
+struct TabKeepTests {
+    let now = Date(timeIntervalSinceReferenceDate: 1_000_000)
+    let policy = TabKeep.Policy(limit: 2, idle: 600)
+
+    @Test func keepsTheMostRecentTabsBehindTheFront() {
+        let left = ["a": now - 30, "b": now - 10, "c": now - 20]
+        let kept = TabKeep.alive(selected: "d", alive: ["a", "b", "c", "d"], left: left, now: now, policy: policy)
+        #expect(kept == ["d", "b", "c"])
+    }
+
+    @Test func dropsATabBehindForTooLong() {
+        let left = ["a": now - 601, "b": now - 599]
+        #expect(TabKeep.alive(selected: "c", alive: ["a", "b", "c"], left: left, now: now, policy: policy) == ["b", "c"])
+    }
+
+    @Test func aDroppedTabStaysDroppedUntilInFront() {
+        // "a" was dropped; the policy has room for it, but it comes back only when it is in front.
+        let left = ["a": now - 5, "b": now - 10]
+        #expect(TabKeep.alive(selected: "c", alive: ["b", "c"], left: left, now: now, policy: policy) == ["b", "c"])
+        #expect(TabKeep.alive(selected: "a", alive: ["b", "c"], left: left, now: now, policy: policy) == ["a", "b", "c"])
+    }
+
+    @Test func memoryPressureKeepsOnlyTheFront() {
+        let left = ["a": now - 1, "b": now - 2]
+        #expect(TabKeep.alive(selected: "c", alive: ["a", "b", "c"], left: left, now: now, policy: policy, pressure: true) == ["c"])
+    }
+
+    @Test func aTabWithoutATimeCountsAsJustLeft() {
+        #expect(TabKeep.alive(selected: "b", alive: ["a", "b"], left: [:], now: now, policy: policy) == ["a", "b"])
+    }
+
+    @Test func holdsItsBounds() async {
+        await propertyCheck(input: Gen.int(in: 0...9).array(of: 0...12), Gen.int(in: 0...12), Gen.int(in: 0...4), Gen.bool) { ages, selected, limit, pressure in
+            let left = Dictionary(uniqueKeysWithValues: ages.enumerated().map { ($0.offset, now - Double($0.element) * 100) })
+            let alive = Set(left.keys)
+            let p = TabKeep.Policy(limit: limit, idle: 500)
+            let kept = TabKeep.alive(selected: selected, alive: alive, left: left, now: now, policy: p, pressure: pressure)
+            #expect(kept.contains(selected))
+            #expect(kept.subtracting([selected]).isSubset(of: alive))
+            #expect(kept.count <= (pressure ? 1 : limit + 1))
+            for id in kept where id != selected { #expect(now.timeIntervalSince(left[id]!) < 500) }
+            // Nothing kept is older than something dropped that was within the time.
+            let dropped = alive.subtracting(kept).subtracting([selected]).filter { now.timeIntervalSince(left[$0]!) < 500 }
+            if !pressure, let oldestKept = kept.subtracting([selected]).map({ left[$0]! }).min(), let newestDropped = dropped.map({ left[$0]! }).max() {
+                #expect(oldestKept >= newestDropped)
+            }
+        }
+    }
+}

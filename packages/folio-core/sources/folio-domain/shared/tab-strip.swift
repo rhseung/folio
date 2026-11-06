@@ -115,3 +115,38 @@ public enum TabFit {
         return Layout(iconsOnly: true, shown: shown, hidden: n - shown)
     }
 }
+
+/// Which tabs keep their screens alive behind the one in front, as Safari and Chrome keep recent tabs and let the rest
+/// go: a kept tab comes back as it was (scroll, open note and its mode, caret), a dropped one is drawn again from its
+/// address when it is next in front.
+public enum TabKeep {
+    public struct Policy: Equatable, Sendable {
+        /// Tabs kept behind the one in front, the most recently in front first.
+        public var limit: Int
+        /// A tab behind for longer than this is dropped.
+        public var idle: TimeInterval
+
+        public init(limit: Int, idle: TimeInterval) {
+            self.limit = limit
+            self.idle = idle
+        }
+    }
+
+    /// The tabs whose screens stay alive. The tab in front always does; behind it, only tabs alive already (a dropped
+    /// tab isn't brought back until it is in front), the `limit` most recently in front, each in front within `idle`.
+    /// Under memory pressure only the tab in front is kept.
+    ///
+    /// - Parameters:
+    ///   - alive: the tabs whose screens are alive now.
+    ///   - left: when each tab last went behind another. A tab alive without one is treated as just left.
+    public static func alive<ID: Hashable>(selected: ID, alive: Set<ID>, left: [ID: Date], now: Date, policy: Policy,
+                                          pressure: Bool = false) -> Set<ID> {
+        guard !pressure else { return [selected] }
+        let behind = alive.subtracting([selected])
+            .map { (id: $0, left: left[$0] ?? now) }
+            .filter { now.timeIntervalSince($0.left) < policy.idle }
+            .sorted { $0.left > $1.left }
+            .prefix(max(0, policy.limit))
+        return Set(behind.map(\.id)).union([selected])
+    }
+}
