@@ -131,6 +131,7 @@ extension SearchKind {
         case .note: String(localized: .searchKindNote)
         case .material: String(localized: .searchKindMaterial)
         case .assignment: String(localized: .searchKindAssignment)
+        case .exam: String(localized: .searchKindExam)
         // Recitations and labs are sessions too; the course pages call them all 회차.
         case .session: String(localized: .searchKindSession)
         case .unit: String(localized: .searchKindUnit)
@@ -143,6 +144,7 @@ extension SearchKind {
         case .note: "doc.text"
         case .material: "doc"
         case .assignment: "checklist"
+        case .exam: "pencil.and.list.clipboard"
         case .session: "calendar"
         case .unit: "list.bullet"
         case .quiz: "rectangle.on.rectangle"

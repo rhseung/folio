@@ -6469,6 +6469,39 @@
         }
       }
     },
+    "notes.assist.link-last-page": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마지막으로 본 쪽"
+          }
+        }
+      }
+    },
+    "notes.assist.link-new": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 노트 만들기: %@"
+          }
+        }
+      }
+    },
+    "notes.assist.link-page": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld쪽"
+          }
+        }
+      }
+    },
     "notes.assist.math": {
       "extractionState": "manual",
       "localizations": {
@@ -12163,6 +12196,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "과제"
+          }
+        }
+      }
+    },
+    "search.kind.exam": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험"
           }
         }
       }

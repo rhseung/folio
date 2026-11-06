@@ -571,6 +571,15 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         if let assisting, assisting.0 == assist, assisting.1 == syntax { return }
         assisting = (assist, syntax)
         catalog = assist.catalog(syntax: syntax)
+        if let links = assist.links {
+            completion.more = { [weak self] query in
+                guard let self else { return [] }
+                return await links.candidates(for: query, text: self.string)
+            }
+        } else {
+            completion.more = nil
+        }
+        completion.arrived = { [weak self] in self?.placeMenu() }
     }
 
     /// Opens, narrows or closes the menu for the text at the caret. Only typing opens it; a caret moved elsewhere
@@ -579,24 +588,40 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         guard !hasMarkedText() else { return }
         let selection = selectedRange()
         if selection.length == 0, let query = Completion.query(in: string as NSString, caret: selection.location, catalog: catalog),
-           opening || completion.query?.kind == query.kind {
+           opening || completion.query.map({ Self.sameKind($0.kind, query.kind) }) == true {
             let items = Completion.items(for: query, catalog: catalog)
-            if items.isEmpty { completion.hide() } else { completion.show(query, items) }
+            // A link's candidates all come late, from the app.
+            if items.isEmpty, completion.more == nil || !CompletionMenu.late(query) { completion.hide() } else { completion.show(query, items) }
         } else {
             completion.hide()
         }
         placeMenu()
     }
 
+    /// A link's parts are one kind of thing to keep the menu on, whatever is typed in them.
+    static func sameKind(_ a: CompletionQuery.Kind, _ b: CompletionQuery.Kind) -> Bool {
+        if case .link = a, case .link = b { return true }
+        return a == b
+    }
+
     func acceptCompletion(_ index: Int? = nil) {
         if let index { completion.selected = index }
-        guard let query = completion.query, let item = completion.current else { return }
+        guard var query = completion.query, var item = completion.current else { return }
         completion.hide()
+        if CompletionMenu.late(query), let links = assisting?.0.links {
+            guard let taken = links.take(item, for: query, text: string) else { return placeMenu() }
+            item = taken.item
+            // The ID a block of this very note gets goes in first; the link moves along when it was after the block.
+            if let own = taken.own {
+                apply(own, reveal: false)
+                if own.range.location <= query.range.location { query = query.shifted(by: own.text.utf16.count - own.range.length) }
+            }
+        }
         apply(Completion.edit(accepting: item, for: query, in: string as NSString))
         window?.makeFirstResponder(self)
-        // A block left open (`> [!`, a fence) opens the menu for what comes next in it; anything else would reopen
-        // the menu it just closed, as `\alpha` is still a command being typed.
-        if query.kind == .slash { refreshCompletion(opening: true) } else { placeMenu() }
+        // A block left open (`> [!`, a fence) opens the menu for what comes next in it, as a file's link does at its
+        // page; anything else would reopen the menu it just closed, as `\alpha` is still a command being typed.
+        if query.kind == .slash || item.continues { refreshCompletion(opening: true) } else { placeMenu() }
     }
 
     /// Under the line being completed, or over it where the screen ends first, in the scroll view so the menu isn't
@@ -965,7 +990,8 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
         setContentOffset(CGPoint(x: 0, y: min(bottom, max(0, top + textContainerInset.top - NoteLook.margin))), animated: false)
     }
 
-    /// The completion menu is Mac-only for now (#31); pairs, lists and snippets on Tab work here too.
+    /// The completion menu, and so link completion, is Mac-only for now (#31); pairs, lists and snippets on Tab work
+    /// here too.
     func setAssist(_ assist: NoteAssist, syntax: MathSyntax) {
         snippets = assist.snippets(syntax: syntax)
         asciiMath = syntax == .asciimath

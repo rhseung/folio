@@ -204,7 +204,7 @@ struct NoteAssistTests {
         try rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: dir).appending(path: "\(name).png"))
     }
 
-    @Test func renderMenu() throws {
+    @Test func renderMenu() async throws {
         for dark in [false, true] {
             let (view, window) = Self.editor("# 행렬\n\n고윳값은 ", syntax: .latex)
             window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
@@ -218,7 +218,63 @@ struct NoteAssistTests {
             third.appearance = window.appearance
             Self.type(ascii, "$la")
             try Self.writeWithMenu(ascii, "assist-asciimath-\(dark ? "dark" : "light")", dark: dark)
+            let (link, fourth) = Self.editor("# 행렬\n\n고윳값은 ", links: StubLinks())
+            fourth.appearance = window.appearance
+            Self.type(link, "[[")
+            try await Self.waitForMenu(link)
+            try Self.writeWithMenu(link, "assist-link-\(dark ? "dark" : "light")", dark: dark)
         }
+    }
+
+    // MARK: Links
+
+    static func editor(_ text: String, links: some NoteLinkSource) -> (SourceTextView, NSWindow) {
+        let (view, window) = NoteSourceTests.typing(text)
+        view.configure(accent: CourseAccent.presets[0].accent, syntax: .latex, dark: false)
+        view.setAssist(NoteAssist(links: links), syntax: .latex)
+        return (view, window)
+    }
+
+    /// A link's candidates come from the app a moment later.
+    static func waitForMenu(_ view: SourceTextView, until done: (CompletionMenu) -> Bool = { $0.visible }) async throws {
+        for _ in 0..<200 where !done(view.completion) { try await Task.sleep(for: .milliseconds(5)) }
+        #expect(done(view.completion))
+    }
+
+    @Test func aLinkFromTheMenuGoesInByID() async throws {
+        let (view, _) = Self.editor("앞 ", links: StubLinks())
+        Self.type(view, "[[")
+        #expect(view.string == "앞 [[]]")
+        try await Self.waitForMenu(view)
+        #expect(view.completion.items.map(\.id) == ["n", "m"])
+        Self.type(view, "매")
+        try await Self.waitForMenu(view) { $0.items.map(\.id) == ["n"] }
+        Self.enter(view)
+        #expect(Self.caretShown(view) == "앞 [[note:N|매칭 정리]]|" && !view.completion.visible)
+    }
+
+    @Test func aFilesLinkGoesOnToItsPage() async throws {
+        let (view, _) = Self.editor("", links: StubLinks())
+        Self.type(view, "[[sl")
+        try await Self.waitForMenu(view) { $0.current?.id == "m" }
+        Self.tab(view)
+        #expect(Self.caretShown(view) == "[[material:M#page=||slides.pdf]]")
+        try await Self.waitForMenu(view) { $0.current?.id == "p3" }
+        Self.enter(view)
+        #expect(Self.caretShown(view) == "[[material:M#page=3|slides.pdf]]|")
+    }
+
+    @Test func linksWaitForASyllableToBeDone() async throws {
+        let (view, _) = Self.editor("", links: StubLinks())
+        Self.type(view, "[[")
+        try await Self.waitForMenu(view)
+        let items = view.completion.items
+        view.setMarkedText("ㅁ", selectedRange: NSRange(location: 1, length: 0), replacementRange: Self.none)
+        view.setMarkedText("매", selectedRange: NSRange(location: 1, length: 0), replacementRange: Self.none)
+        try await Task.sleep(for: .milliseconds(50))
+        #expect(view.string == "[[매]]" && view.hasMarkedText() && view.completion.items == items)
+        view.insertText("매", replacementRange: Self.none)
+        try await Self.waitForMenu(view) { $0.items.map(\.id) == ["n"] }
     }
 
     // MARK: AsciiMath
@@ -245,5 +301,31 @@ struct NoteAssistTests {
         #expect(view.completion.query?.takesReturn == false)
         Self.tab(view)
         #expect(Self.caretShown(view) == "$sqrt(|)$")
+    }
+}
+
+/// Link candidates as the app would give them, without a GIST folder.
+@MainActor final class StubLinks: NoteLinkSource {
+    func candidates(for query: CompletionQuery, text: String) async -> [CompletionItem] {
+        guard case .link(let link) = query.kind else { return [] }
+        switch link.part {
+        case .target:
+            let note = "[[note:N|매칭 정리]]", pdf = "[[material:M#page=|slides.pdf]]"
+            return [CompletionItem(id: "n", title: "매칭 정리", symbol: "doc.text", body: note, caret: note.utf16.count),
+                    CompletionItem(id: "m", title: "slides.pdf", detail: "로봇공학", symbol: "doc", body: pdf,
+                                   caret: (pdf as NSString).range(of: "page=").upperBound, continues: true)]
+                .filter { query.text.isEmpty || $0.title.hasPrefix(query.text) }
+        case .page:
+            return [3, 1, 2].map { n in
+                let body = "[[material:M#page=\(n)|slides.pdf]]"
+                return CompletionItem(id: "p\(n)", title: "\(n)쪽", body: body, caret: body.utf16.count)
+            }
+        case .heading, .block:
+            return []
+        }
+    }
+
+    func take(_ item: CompletionItem, for query: CompletionQuery, text: String) -> (item: CompletionItem, own: SourceEditing.Edit?)? {
+        (item, nil)
     }
 }

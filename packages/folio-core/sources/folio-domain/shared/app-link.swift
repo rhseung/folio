@@ -192,6 +192,7 @@ extension AppLink {
         case .note: .note
         case .material: .material
         case .assignment: .assignment
+        case .exam: .exam
         case .session: .session
         case .unit: .unit
         case .quiz: .card

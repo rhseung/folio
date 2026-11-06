@@ -4,6 +4,7 @@ import FolioStorage
 import Foundation
 import GRDB
 import PDFKit
+import Synchronization
 
 /// The per-device search index: a cache in local SQLite, rebuilt from the course folders whenever
 /// they change, never written back to them.
@@ -28,13 +29,26 @@ public final class SearchStore: Sendable {
             // Text pulled out of a PDF, kept apart so editing course.json doesn't read every textbook again.
             try db.execute(sql: "CREATE TABLE pdf (path TEXT PRIMARY KEY, signature TEXT NOT NULL, text TEXT NOT NULL)")
         }
+        // Exams joined the index: forgetting what each course was read at reads them all again, PDFs from their cache.
+        migrator.registerMigration("v2-exams") { db in
+            try db.execute(sql: "DELETE FROM course")
+        }
         try migrator.migrate(db)
     }
 
-    /// The app's index for this device, outside the GIST folder so iCloud never syncs it.
+    private static let opened = Mutex<[URL: SearchStore]>([:])
+
+    /// The app's index for this device, outside the GIST folder so iCloud never syncs it. One per file, shared by the
+    /// search palette and the note editors: two connections writing one database would wait on each other's locks.
     public static func local(for gist: GISTStore, in folder: URL = URL.cachesDirectory) throws -> SearchStore {
         let name = Data(gist.url.standardizedFileURL.path.utf8).base64EncodedString().filter(\.isLetter).suffix(40)
-        return try SearchStore(url: folder.appending(path: "Folio/search-\(name).sqlite"))
+        let url = folder.appending(path: "Folio/search-\(name).sqlite")
+        return try opened.withLock { open in
+            if let store = open[url] { return store }
+            let store = try SearchStore(url: url)
+            open[url] = store
+            return store
+        }
     }
 
     /// `progress` gets (read so far, to read) before each course and once at the end, so a first build (minutes, with
@@ -116,6 +130,19 @@ public final class SearchStore: Sendable {
     static func stamp(_ url: URL) -> String {
         guard let v = try? url.resourceValues(forKeys: [.contentModificationDateKey, .fileSizeKey]) else { return "-" }
         return "\(v.contentModificationDate?.timeIntervalSince1970 ?? 0):\(v.fileSize ?? 0)"
+    }
+
+    /// Everything of `kinds` in `courses`, by title, for a query with nothing typed yet.
+    public func items(courses: Set<UUID>, kinds: Set<SearchKind>, limit: Int = 60) throws -> [SearchItem] {
+        guard !courses.isEmpty, !kinds.isEmpty else { return [] }
+        let sql = "SELECT kind, course, id, title FROM item WHERE course IN (\(courses.map { _ in "?" }.joined(separator: ",")))"
+            + " AND kind IN (\(kinds.map { _ in "?" }.joined(separator: ","))) ORDER BY title LIMIT ?"
+        let args: [any DatabaseValueConvertible] = courses.map(\.uuidString) + kinds.map(\.rawValue) + [limit]
+        let rows = try db.read { try Row.fetchAll($0, sql: sql, arguments: StatementArguments(args)) }
+        return rows.compactMap { row in
+            guard let kind = SearchKind(rawValue: row["kind"]), let course = UUID(uuidString: row["course"]), let id = UUID(uuidString: row["id"]) else { return nil }
+            return SearchItem(kind: kind, courseId: course, id: id, title: row["title"])
+        }
     }
 
     /// Every word must appear in the title or body; ranking and snippets are `SearchIndex`'s, run on the rows that match.

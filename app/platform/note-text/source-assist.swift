@@ -2,24 +2,43 @@ import FolioDomain
 import FolioMarkdown
 import SwiftUI
 
+/// Where link completion's candidates come from (the app's search index and files), and what taking one does beyond
+/// the text being edited.
+@MainActor protocol NoteLinkSource: AnyObject {
+    /// `text` is the note as the editor has it, which may be ahead of the file.
+    func candidates(for query: CompletionQuery, text: String) async -> [CompletionItem]
+    /// Does what a candidate needs before it goes in (a note made, an ID given to a block) and returns what to put in,
+    /// with an edit to make first to the note's own text when it is the note whose block gets the ID; nil when it
+    /// couldn't be done, and nothing goes in.
+    func take(_ item: CompletionItem, for query: CompletionQuery, text: String) -> (item: CompletionItem, own: SourceEditing.Edit?)?
+}
+
 /// What the edit view's typing help needs from the app beside the text: the snippets and the note templates, from
-/// settings.json.
+/// settings.json, and where link candidates come from.
 struct NoteAssist: Equatable {
     var snippets: [MathSnippet] = MathSnippet.defaults
     var asciiSnippets: [MathSnippet] = MathSnippet.asciiMathDefaults
     var templates: [NoteKind: [String]] = [:]
+    /// Nil where the note isn't one of a course's, as in tests; links then get no candidates.
+    var links: (any NoteLinkSource)?
 
     init(snippets: [MathSnippet] = MathSnippet.defaults, asciiSnippets: [MathSnippet] = MathSnippet.asciiMathDefaults,
-         templates: [NoteKind: [String]] = [:]) {
+         templates: [NoteKind: [String]] = [:], links: (any NoteLinkSource)? = nil) {
         self.snippets = snippets
         self.asciiSnippets = asciiSnippets
         self.templates = templates
+        self.links = links
     }
 
-    init(settings: FolioDomain.Settings) {
+    init(settings: FolioDomain.Settings, links: (any NoteLinkSource)? = nil) {
         snippets = settings.snippets
         asciiSnippets = settings.asciiSnippets
         templates = Dictionary(uniqueKeysWithValues: NoteAssist.templateKinds.map { ($0, settings.noteSections(for: $0)) })
+        self.links = links
+    }
+
+    static func == (a: NoteAssist, b: NoteAssist) -> Bool {
+        a.snippets == b.snippets && a.asciiSnippets == b.asciiSnippets && a.templates == b.templates && a.links === b.links
     }
 
     static let templateKinds: [NoteKind] = [.review, .examSummary, .topic]
@@ -76,31 +95,46 @@ struct NoteAssist: Equatable {
 }
 
 /// The completion menu's state: one query, its candidates and the one picked. Every completion in the edit view
-/// goes through it; candidates found later (a search the app runs) are added by `more` when they arrive.
+/// goes through it; candidates found later (a search the app runs) are added by `more` when they arrive, and
+/// `arrived` tells the view to fit the menu to them.
 @MainActor @Observable final class CompletionMenu {
     private(set) var query: CompletionQuery?
     private(set) var items: [CompletionItem] = []
     var selected = 0
     @ObservationIgnored var more: (@MainActor (CompletionQuery) async -> [CompletionItem])?
+    @ObservationIgnored var arrived: () -> Void = {}
     @ObservationIgnored private var pending: Task<Void, Never>?
 
     var visible: Bool { query != nil && !items.isEmpty }
     var current: CompletionItem? { items.indices.contains(selected) ? items[selected] : nil }
 
+    /// A query whose candidates all come late (a link's) keeps the rows of the query it narrows until they come, so
+    /// the menu doesn't blink empty on every key.
     func show(_ query: CompletionQuery, _ items: [CompletionItem]) {
         // The pick stays while the same query narrows; a new one starts at the top.
-        let same = self.query.map { $0.kind == query.kind && $0.range.location == query.range.location } ?? false
+        let same = self.query.map { query.continues($0) } ?? false
         let picked = same ? current?.id : nil
+        let waits = items.isEmpty && more != nil && Self.late(query)
         self.query = query
-        self.items = items
-        selected = picked.flatMap { id in items.firstIndex { $0.id == id } } ?? 0
+        if !(waits && same) {
+            self.items = items
+            selected = picked.flatMap { id in items.firstIndex { $0.id == id } } ?? 0
+        }
         pending?.cancel()
-        guard let more else { return }
+        guard let more, Self.late(query) else { return }
         pending = Task { [weak self] in
             let extra = await more(query)
             guard !Task.isCancelled, let self, self.query == query else { return }
-            self.items += extra
+            let picked = self.current?.id
+            self.items = items + extra
+            self.selected = picked.flatMap { id in self.items.firstIndex { $0.id == id } } ?? 0
+            self.arrived()
         }
+    }
+
+    /// Queries the text alone has no candidates for.
+    static func late(_ query: CompletionQuery?) -> Bool {
+        if case .link = query?.kind { true } else { false }
     }
 
     func hide() {
@@ -171,7 +205,8 @@ struct CompletionMenuView: View {
                     .frame(width: min(picture.size.width, Self.width / 3), height: min(picture.size.height, Self.rowHeight - Theme.Space.s))
                     .aspectRatio(contentMode: .fit)
             } else if let detail = item.detail {
-                Text(detail.replacingOccurrences(of: "\n", with: " ")).font(Theme.Typeface.caption).monospaced()
+                // A snippet's detail is what it writes; a link's is where the thing is, in words.
+                Text(detail.replacingOccurrences(of: "\n", with: " ")).font(Theme.Typeface.caption).monospaced(!CompletionMenu.late(menu.query))
                     .foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
             }
         }
@@ -187,6 +222,7 @@ struct CompletionMenuView: View {
         case .callout: "exclamationmark.bubble"
         case .codeLanguage: "chevron.left.forwardslash.chevron.right"
         case .texCommand, .texEnvironment, .asciiMath: "function"
+        case .link: "link"
         default: "text.insert"
         }
     }

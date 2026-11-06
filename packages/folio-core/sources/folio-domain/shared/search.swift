@@ -1,7 +1,7 @@
 import Foundation
 
 public enum SearchKind: String, CaseIterable, Sendable {
-    case note, material, assignment, session, unit, quiz
+    case note, material, assignment, exam, session, unit, quiz
 }
 
 /// One searchable thing in a course. `id` is the entity to open.
@@ -27,6 +27,11 @@ public struct SearchHit: Sendable, Hashable {
     public var item: SearchItem
     /// Body text around the first match, when the title alone didn't match.
     public var snippet: String?
+
+    public init(item: SearchItem, snippet: String? = nil) {
+        self.item = item
+        self.snippet = snippet
+    }
 }
 
 /// Ranking and snippets over the rows the SQLite index (FolioIndex `SearchStore`) found.
@@ -83,6 +88,7 @@ public struct SearchIndex: Sendable {
                 SearchItem(kind: .material, courseId: course, id: $0.id, title: ($0.path as NSString).lastPathComponent, body: $0.path)
             }
             + file.assignments.map { SearchItem(kind: .assignment, courseId: course, id: $0.id, title: $0.title, body: $0.memo) }
+            + file.exams.map { SearchItem(kind: .exam, courseId: course, id: $0.id, title: $0.title, body: $0.scopeText) }
             + file.sessions.map { SearchItem(kind: .session, courseId: course, id: $0.id, title: $0.topic.isEmpty ? $0.name(among: file.sessions) : "\($0.name(among: file.sessions)) · \($0.topic)") }
             + file.units.map { SearchItem(kind: .unit, courseId: course, id: $0.id, title: $0.title) }
             + cards.map { SearchItem(kind: .quiz, courseId: course, id: $0.id, title: $0.prompt, body: $0.answer) }

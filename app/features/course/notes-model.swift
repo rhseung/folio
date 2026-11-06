@@ -207,6 +207,7 @@ final class NoteEditorModel {
     var conflict = false
 
     let embeds: NoteEmbedSource
+    let links: NoteLinkCompletion
 
     init(workspace: Workspace, course: LoadedCourse, note: NoteFile) {
         self.workspace = workspace
@@ -214,6 +215,7 @@ final class NoteEditorModel {
         self.note = note
         meta = note.meta
         embeds = NoteEmbedSource(workspace: workspace, course: course, own: note.url)
+        links = NoteLinkCompletion(workspace: workspace, course: course.id, note: note)
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }

@@ -91,7 +91,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
 | 제안 | Claude가 내놓는 분류, 추출, 일정을 승인 화면으로 받는 공통 구조 | #90 |
 | 파일 보기 렌더러 | 형식 판단(`MaterialFormat`)과 형식별 보기(`FileView`) | #179 |
 | 단축키 | 명령마다 한 번 등록하고 메뉴, 설정, 팔레트가 읽는 표와 키 녹음 검사 | #116 |
-| 자동 완성 메뉴 `CompletionMenu` | 편집 보기의 모든 자동 완성(`/` 블록, 콜아웃 종류, 코드 언어, TeX 명령과 환경, 스니펫). 무엇을 완성할지는 `FolioMarkdown`의 `Completion`이 원문에서 읽고, 메뉴는 캐럿 옆에 하나만 뜬다. 늦게 오는 후보(앱이 FolioIndex에 묻는 링크)는 `more`로 더한다. 한글 조합 중에는 메뉴, 짝 기호, 목록 이어 쓰기가 끼어들지 않는다 | 있음(Mac). iPad 메뉴는 #31 |
+| 자동 완성 메뉴 `CompletionMenu` | 편집 보기의 모든 자동 완성(`/` 블록, 콜아웃 종류, 코드 언어, TeX 명령과 환경, AsciiMath 기호, 스니펫, 링크). 무엇을 완성할지는 `FolioMarkdown`의 `Completion`이 원문에서 읽고, 메뉴는 캐럿 옆에 하나만 뜬다. 늦게 오는 후보(링크)는 `more`로 더한다. 링크 후보는 `NoteLinkCompletion`이 FolioIndex 검색 색인과 파일에서 찾고, 보일 것과 순서는 `FolioDomain`의 `LinkCandidates`가 정한다. 한글 조합 중에는 메뉴, 짝 기호, 목록 이어 쓰기가 끼어들지 않는다 | 있음(Mac). iPad 메뉴는 #31 |
 | 라이브 시계 `LiveClock` | 화면이 그리는 지금 시각. 분이 바뀔 때, 앱이 앞으로 오거나 Mac이 깨어날 때 갱신한다. 분 단위로 바뀌는 뷰는 `TimelineView` 대신 `workspace.liveNow`나 `LiveTime`으로 읽는다. 초를 세는 타이머만 `TimelineView`를 쓴다 | 있음 |
 
 축을 새로 만들면 이 표에 적는다.
@@ -202,6 +202,7 @@ Me/GIST/
 - `Study`에는 직접 만든 파일을 둔다. 문제집, 모의고사, 요약 PDF와 `.tex` 원본, 노트를 빌드한 PDF(`Study/<제목>.pdf`)가 여기 온다. 어느 시험·단원용인지는 `material link-exam`, `material link-unit`으로 연결하고(앱에서는 자료 연결 편집기, 단원 페이지, 시험 카드), 시험 화면은 시험 폴더의 파일과 연결된 자료를 함께 센다. 어떤 자료가 회차, 단원, 시험에 딸리는지는 `CourseFile.routes(of:to:)` 하나가 정한다. 회차는 그 단원과 상위 단원의 자료를, 단원은 그 회차의 자료를 함께 본다. Folio 마크다운 노트는 `Notes`에 둔다.
 - 회차 노트는 수업 날짜와 주제로 이름을 짓는다(`Notes/11-05(목) Principles of reliable data transfer.md`, 복습 노트는 뒤에 ` 정리`). 규칙은 `CourseFile.noteTitle(for:kind:calendar:)` 하나다. 그 전에 `10주차-2`로 만든 노트는 저절로 바뀌지 않고, `note retitle`로 한 번에 바꾼다. `N주차-M`은 CLI의 회차 이름과 녹음 파일에 그대로 쓴다.
 - 노트 링크는 노트 ID로 건다: `[[note:<ID>|제목]]`, `[[note:<ID>#제목|표시]]`, `[[note:<ID>#^블록|표시]]`. 앱 링크 `folio://note/<ID>`로 열고 이름이 바뀌어도 깨지지 않는다. 손으로 쓴 `[[제목]]`은 과목 안에서 제목으로 찾고 ID 꼴로 바꾸지 않는다. 블록 ID는 원문의 `^id`라 같은 노트 안에서 옮긴 블록은 따라가고, 다른 노트로 옮기면 찾지 못한다.
+- 링크 자동 완성은 고른 항목을 ID 꼴로 넣고 이름을 `|` 뒤에 붙인다: 노트 `[[note:<ID>|제목]]`, 자료 `[[material:<ID>#page=N|파일 이름]]`, 그 밖은 앱 링크 종류 이름 그대로(`[[exam:<ID>|중간고사]]`). 이미 쓴 `|이름`은 그대로 둔다. ID가 없는 블록을 고르면 대상 노트 끝 줄에 `^id`를 붙이는데, 다른 노트면 `note write`(읽은 글과 다르면 거절)로, 쓰고 있는 노트면 편집 보기에서 쓴다.
 - 앱 밖의 파일은 복사해서 들여오고, 같은 이름이 있으면 ` 2`를 붙여 덮어쓰지 않는다.
 
 ## 실제 데이터 위치

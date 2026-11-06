@@ -5947,7 +5947,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 종류만. note, material, assignment, session, unit, quiz"
+            "value": "이 종류만. note, material, assignment, exam, session, unit, quiz"
           }
         }
       }

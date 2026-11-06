@@ -18,6 +18,9 @@ public struct CompletionQuery: Equatable, Sendable {
         case snippet
         /// A word in AsciiMath math: a symbol or function by its AsciiMath name, or a snippet.
         case asciiMath
+        /// Inside `[[` or `![[`: what the link points at, or the heading, block or page in it. The app finds the
+        /// candidates, which come late (`CompletionMenu.more`).
+        case link(LinkQuery)
     }
 
     public let kind: Kind
@@ -34,6 +37,42 @@ public struct CompletionQuery: Equatable, Sendable {
         case .codeLanguage: !text.isEmpty
         default: true
         }
+    }
+
+    /// The same query narrowed or widened by typing, for which the menu keeps its pick and, while late candidates are
+    /// on their way, its rows.
+    public func continues(_ other: CompletionQuery) -> Bool {
+        guard range.location == other.range.location else { return false }
+        if case .link(let a) = kind, case .link(let b) = other.kind { return a.part == b.part && a.target == b.target }
+        return kind == other.kind
+    }
+}
+
+/// The link being written around the caret, `[[target#fragment|alias]]`, as the text has it.
+public struct LinkQuery: Equatable, Sendable {
+    public enum Part: Equatable, Sendable {
+        /// What the link points at, being typed.
+        case target
+        /// After `#`: a heading of the note.
+        case heading
+        /// After `#^`: a block of the note.
+        case block
+        /// After `#page=`: a page of the file.
+        case page
+    }
+
+    public var part: Part
+    public var embed: Bool
+    /// A note's title or `<kind>:<ID>`, as written; empty for `.target`, whose typing is the query's text.
+    public var target: String
+    /// A name already written after `|`, which the link keeps.
+    public var alias: String?
+
+    public init(part: Part, embed: Bool = false, target: String = "", alias: String? = nil) {
+        self.part = part
+        self.embed = embed
+        self.target = target
+        self.alias = alias
     }
 }
 
@@ -52,9 +91,14 @@ public struct CompletionItem: Equatable, Sendable, Identifiable {
     public var body: String
     /// A block of its own, put on a new line when the `/` came after text.
     public var block: Bool
+    /// Where the caret goes in `body`, which then goes in as written: a link's title may hold `$1` of its own.
+    public var caret: Int?
+    /// Leaves the caret where another menu opens, as a file's link does at its page.
+    public var continues: Bool
 
     public init(id: String, title: String, detail: String? = nil, symbol: String? = nil, preview: String? = nil,
-                previewAsciiMath: Bool = false, keywords: [String] = [], body: String, block: Bool = false) {
+                previewAsciiMath: Bool = false, keywords: [String] = [], body: String, block: Bool = false,
+                caret: Int? = nil, continues: Bool = false) {
         self.id = id
         self.title = title
         self.detail = detail
@@ -64,6 +108,8 @@ public struct CompletionItem: Equatable, Sendable, Identifiable {
         self.keywords = keywords
         self.body = body
         self.block = block
+        self.caret = caret
+        self.continues = continues
     }
 }
 
@@ -100,6 +146,10 @@ public enum Completion {
 
         switch place {
         case .text:
+            // Inside a link nothing else is offered: a `/` or a snippet's trigger there is part of a name.
+            if let m = prefix.firstMatch(of: #/(!?)\[\[([^\[\]]*)$/#) {
+                return link(m.2, embed: m.1 == "!", start: caret - m.2.utf16.count - 2, caret: caret, rest: rest, place: place)
+            }
             if let m = prefix.wholeMatch(of: #/[ \t]*(?:>[ \t]?)+\[!([A-Za-z-]*)/#) {
                 return make(.callout, m.1, extra: next == 0x5D ? 1 : 0)
             }
@@ -157,6 +207,8 @@ public enum Completion {
             return snippets(catalog, trigger: query.text, inMath: query.place.isMath)
         case .asciiMath:
             return asciiMath(query.text, catalog: catalog)
+        case .link:
+            return []
         }
     }
 
@@ -170,6 +222,29 @@ public enum Completion {
     /// The snippets `word` triggers, then the symbols whose name starts with it.
     static func asciiMath(_ word: String, catalog: CompletionCatalog) -> [CompletionItem] {
         snippets(catalog, trigger: word, inMath: true) + filter(AsciiMathSymbols.items, word, prefixOnly: true)
+    }
+
+    /// The link around the caret. `start` is where its `[[` is and `inner` what is between that and the caret; the rest
+    /// of the link after the caret, up to its `]]`, is part of what a candidate replaces.
+    static func link(_ inner: Substring, embed: Bool, start: Int, caret: Int, rest: String, place: SourcePlace) -> CompletionQuery? {
+        // Past `|` is the name the writer gives the link, which nothing completes.
+        guard !inner.contains("|") else { return nil }
+        let tail = rest.prefixMatch(of: #/[^\[\]]*\]\]/#).map { String($0.0) }
+        let alias = tail.flatMap { t in t.firstIndex(of: "|").map { String(t[t.index(after: $0)...].dropLast(2)) } }
+        let range = NSRange(location: start, length: caret - start + (tail?.utf16.count ?? 0))
+        func make(_ part: LinkQuery.Part, target: String, typed: Substring) -> CompletionQuery {
+            CompletionQuery(kind: .link(LinkQuery(part: part, embed: embed, target: target, alias: alias)), text: String(typed), range: range, place: place)
+        }
+        guard let hash = inner.firstIndex(of: "#") else { return make(.target, target: "", typed: inner) }
+        let target = inner[..<hash].trimmingCharacters(in: .whitespaces)
+        let after = inner[inner.index(after: hash)...]
+        guard !target.isEmpty else { return nil }
+        if after.hasPrefix("^") { return make(.block, target: target, typed: after.dropFirst()) }
+        if after.hasPrefix("page=") {
+            let digits = after.dropFirst(5)
+            return digits.allSatisfy({ $0.isASCII && $0.isNumber }) ? make(.page, target: target, typed: digits) : nil
+        }
+        return make(.heading, target: target, typed: after)
     }
 
     /// Names that start with what's typed come first, then names that contain it; `prefixOnly` keeps only the first,
@@ -194,6 +269,9 @@ public enum Completion {
 
     /// The edit that puts `item` in place of what `query` covers.
     public static func edit(accepting item: CompletionItem, for query: CompletionQuery, in text: NSString) -> SourceEditing.Edit {
+        if let caret = item.caret {
+            return SourceEditing.Edit(range: query.range, text: item.body, caret: query.range.location + caret)
+        }
         var body = item.body
         var range = query.range
         switch query.kind {
@@ -219,7 +297,7 @@ public enum Completion {
                 range = NSRange(location: range.location - trailing, length: range.length + trailing)
                 body = "\n" + body
             }
-        case .texCommand, .snippet, .asciiMath:
+        case .texCommand, .snippet, .asciiMath, .link:
             break
         }
         return Snippet(trigger: "", body: body, inMath: false).edit(replacing: range)
@@ -244,5 +322,10 @@ extension CompletionQuery {
     /// The same query reaching `n` more characters back, over the `/` or `\` that started it.
     func widened(by n: Int) -> CompletionQuery {
         CompletionQuery(kind: kind, text: text, range: NSRange(location: range.location - n, length: range.length + n), place: place)
+    }
+
+    /// The same query after `n` characters went in (or out, when negative) before it.
+    public func shifted(by n: Int) -> CompletionQuery {
+        CompletionQuery(kind: kind, text: text, range: NSRange(location: range.location + n, length: range.length), place: place)
     }
 }

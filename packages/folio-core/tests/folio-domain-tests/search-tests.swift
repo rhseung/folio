@@ -53,14 +53,15 @@ struct SearchTests {
             Material(device: device, at: now, path: "junk.txt", status: .ignored),
         ]
         file.assignments = [Assignment(device: device, at: now, title: "HW3")]
+        file.exams = [Exam(device: device, at: now, title: "중간고사")]
         var session = Session(device: device, at: now, week: 2, date: now)
         session.topic = "Matchings"
         file.sessions = [session]
         file.units = [Unit(device: device, at: now, title: "Covers", order: 1)]
         let card = QuizCard(device: device, at: now, unitId: file.units[0].id, type: .free, category: .definition, prompt: "덮개의 정의", answer: "모든 꼭짓점을 덮는 변 집합")
         let items = SearchIndex.items(for: file, notes: [(UUID(), "2주차-1", "본문")], cards: [card])
-        #expect(items.map(\.kind) == [.note, .material, .assignment, .session, .unit, .quiz])
-        #expect(items.map(\.title) == ["2주차-1", "05_Matchings.pdf", "HW3", "2주차-1 · Matchings", "Covers", "덮개의 정의"])
+        #expect(items.map(\.kind) == [.note, .material, .assignment, .exam, .session, .unit, .quiz])
+        #expect(items.map(\.title) == ["2주차-1", "05_Matchings.pdf", "HW3", "중간고사", "2주차-1 · Matchings", "Covers", "덮개의 정의"])
         #expect(items.last?.body == "모든 꼭짓점을 덮는 변 집합")
     }
 }
