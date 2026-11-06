@@ -31,6 +31,9 @@ final class Workspace {
     /// Note and card lists read their files from disk, which observing `courses` alone would not catch.
     private(set) var notesRevision = 0
     private(set) var quizRevision = 0
+    /// Bumped by every reload and every action the app runs, so anything worked out from the folder (a dry run, a
+    /// note's text) knows when to work it out again. A note file written by an action changes nothing else observed.
+    private(set) var dataRevision = 0
     /// Grades stay hidden until the device owner unlocks them; never saved, so every launch starts locked.
     var gradesUnlocked = false
     @ObservationIgnored var gradeRelock: Task<Void, Never>?
@@ -138,6 +141,7 @@ final class Workspace {
         // A reload follows writes the app can't see into (an iCloud sync, the folio command), so every list re-reads.
         notesRevision += 1
         quizRevision += 1
+        dataRevision += 1
         recoverRecordings()
     }
 
@@ -226,6 +230,18 @@ final class Workspace {
         }
     }
 
+    /// The first of `actions` that would be refused when they run one after another, and why; nil when all would go
+    /// through. They share one dry run, so each is checked against course.json as the ones before it leave it. A
+    /// note's text is not carried over: a dry run writes no file, so an edit after a rewrite of the same note is
+    /// checked against the text on disk.
+    func refusal(_ actions: [any Action]) -> (index: Int, reason: String)? {
+        guard let ctx = checkContext() else { return actions.isEmpty ? nil : (0, String(localized: .workspaceNoGist)) }
+        for (i, action) in actions.enumerated() {
+            do { try action.run(ctx) } catch { return (i, "\(error)") }
+        }
+        return nil
+    }
+
     func can(_ action: some Action) -> Bool { refusal(action) == nil }
 
     /// The question to ask before running the action, as the CLI asks it; nil when it runs without asking.
@@ -263,6 +279,7 @@ final class Workspace {
 
     func show(_ ctx: ActionContext) {
         lastOwnWrite = .now
+        dataRevision += 1
         if ctx.changes.contains(where: \.touchesNotes) { notesRevision += 1 }
         if ctx.changes.contains(where: \.touchesQuizzes) { quizRevision += 1 }
         if ctx.needsReload {

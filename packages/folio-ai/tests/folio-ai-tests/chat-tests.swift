@@ -76,6 +76,27 @@ struct ChatTests {
         #expect(ClaudeClient.history(ChatMessage(role: .assistant, text: "그냥 답", at: now)) == "그냥 답")
     }
 
+    /// A proposal a later answer replaced reads as such, so Claude doesn't ask the user to approve the older one.
+    @Test func historySaysWhichProposalsWereSuperseded() async throws {
+        let first = ActionProposal(command: "note write", input: .object(["course": .string("c"), "note": .string("Notes/a.md"), "text": .string("1")]))
+        var second = first
+        second.input["text"] = .string("2")
+        let fake = FakeProvider(responses: [FakeProvider.reply("답")])
+        let chat = Chat(device: device, at: now, messages: [
+            ChatMessage(role: .user, text: "써 줘", at: now),
+            ChatMessage(role: .assistant, text: "하나", at: now, proposals: [first]),
+            ChatMessage(role: .user, text: "다시", at: now),
+            ChatMessage(role: .assistant, text: "둘", at: now, proposals: [second]),
+            ChatMessage(role: .user, text: "됐어?", at: now),
+        ])
+        _ = try await ClaudeClient(provider: fake).reply(to: chat, context: ContextBuilder.build([], budgetTokens: 10),
+                                                         targets: ["note write": ProposalTarget(arguments: ["course", "note"], effect: .replaces(covers: []))])
+        let r = try #require(await fake.requests.first)
+        func sent(_ i: Int) -> String { if case .text(let t, _)? = r.messages[i].content.first { t } else { "" } }
+        #expect(sent(1).hasSuffix(": not applied; superseded by a later proposal"))
+        #expect(sent(3).hasSuffix(": not applied; the user has not approved it"))
+    }
+
     @Test func replyNeedsAQuestion() async {
         let chat = Chat(device: device, at: now, messages: [ChatMessage(role: .assistant, text: "a", at: now)])
         await #expect(throws: ClaudeError.self) {
