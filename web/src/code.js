@@ -13,6 +13,8 @@ import { stex } from "@codemirror/legacy-modes/mode/stex";
 import { swift } from "@codemirror/legacy-modes/mode/swift";
 
 const byName = new Map();
+// The first name of each language, which the editor offers after an opening fence.
+export const languageNames = [];
 for (const [language, names] of [
   // The grammar tags only a decorator's `@`, so its name would read as a plain variable.
   [pythonLanguage.configure({ props: [styleTags({ "Decorator/VariableName Decorator/PropertyName": t.meta })] }), "python py"],
@@ -26,7 +28,10 @@ for (const [language, names] of [
   [StreamLanguage.define(shell), "bash sh shell zsh console"],
   [StreamLanguage.define(stex), "latex tex"],
   [StreamLanguage.define(swift), "swift"],
-]) for (const n of names.split(" ")) byName.set(n, language);
+]) {
+  languageNames.push(names.split(" ")[0]);
+  for (const n of names.split(" ")) byName.set(n, language);
+}
 
 // classHighlighter leaves called and defined functions and builtins as plain names, which leaves most of a line uncolored.
 export const highlighters = [classHighlighter, tagHighlighter([

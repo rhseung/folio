@@ -46,7 +46,7 @@ public enum TeXCommands {
             ("le leq ge geq neq ne approx equiv sim simeq cong propto ll gg subset subseteq supset supseteq subsetneq in notin ni mid nmid parallel perp", 0),
             ("to rightarrow leftarrow Rightarrow Leftarrow leftrightarrow Leftrightarrow iff implies impliedby mapsto longrightarrow longleftarrow longmapsto uparrow downarrow", 0),
             ("coprod bigcup bigcap bigoplus bigotimes bigvee bigwedge sup inf max min", 0),
-            ("det gcd lcm log ln lg exp sin cos tan sec csc cot arcsin arccos arctan sinh cosh tanh deg dim ker hom Pr arg", 0),
+            ("det gcd log ln lg exp sin cos tan sec csc cot arcsin arccos arctan sinh cosh tanh deg dim ker hom Pr arg", 0),
             ("infty partial nabla forall exists nexists emptyset varnothing neg lnot ldots cdots vdots ddots dots quad qquad prime angle triangle square Box aleph hbar ell Re Im wp top bot not bmod", 0),
             ("langle rangle lfloor rfloor lceil rceil lvert rvert lVert rVert vert Vert backslash checkmark", 0),
         ]

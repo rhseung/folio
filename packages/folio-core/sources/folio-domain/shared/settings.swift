@@ -17,6 +17,9 @@ public struct Settings: Codable, Sendable, Equatable {
     public var sidebar: SidebarOrder
     /// How long a class runs when nothing else says: no end on the session, no slot, and no class times on the course.
     public var classMinutes: Int
+    /// The note editor's snippets, or nil for `MathSnippet.defaults`. Left nil until changed, so the defaults can grow
+    /// with the app.
+    public var mathSnippets: [MathSnippet]?
 
     public static let defaultNoteRules = """
     - 정의는 전제, 조건, 결론 순서로 쓴다.
@@ -26,7 +29,8 @@ public struct Settings: Codable, Sendable, Equatable {
 
     public init(dayBoundaryMinutes: Int = 240, review: ReviewSettings = .init(), noteRules: String = Settings.defaultNoteRules,
                 notifications: NotificationSettings = .init(), backup: BackupSettings = .init(), noteTemplates: [String: [String]] = [:],
-                newNoteMath: MathSyntax = .asciimath, sidebar: SidebarOrder = .init(), classMinutes: Int = 75) {
+                newNoteMath: MathSyntax = .asciimath, sidebar: SidebarOrder = .init(), classMinutes: Int = 75,
+                mathSnippets: [MathSnippet]? = nil) {
         self.dayBoundaryMinutes = dayBoundaryMinutes
         self.review = review
         self.noteRules = noteRules
@@ -36,6 +40,7 @@ public struct Settings: Codable, Sendable, Equatable {
         self.newNoteMath = newNoteMath
         self.sidebar = sidebar
         self.classMinutes = classMinutes
+        self.mathSnippets = mathSnippets
     }
 
     public init(from decoder: any Decoder) throws {
@@ -50,7 +55,10 @@ public struct Settings: Codable, Sendable, Equatable {
         newNoteMath = try c.value(.newNoteMath, or: d.newNoteMath)
         sidebar = try c.value(.sidebar, or: d.sidebar)
         classMinutes = try c.value(.classMinutes, or: d.classMinutes)
+        mathSnippets = try c.decodeIfPresent([MathSnippet].self, forKey: .mathSnippets)
     }
+
+    public var snippets: [MathSnippet] { mathSnippets ?? MathSnippet.defaults }
 
     /// Blank headings are rows the editor keeps while they're being typed; a note never gets them.
     public func noteSections(for kind: NoteKind) -> [String] {

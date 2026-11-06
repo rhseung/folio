@@ -38,21 +38,22 @@ public enum SourcePlace: Equatable, Sendable {
             } else if let start = mathStart {
                 let closes = s.trimmingCharacters(in: .whitespaces).hasSuffix("$$")
                 if here {
-                    let end = closes ? content.location + (s as NSString).range(of: "$$", options: .backwards).location : NSMaxRange(content)
+                    let end = closes ? content.location + (s as NSString).range(of: "$$", options: .backwards).location : SourceLines.blockEnd(text, after: line)
                     if caret > end { return .text }
                     return .math(display: true, content: NSRange(location: start, length: max(0, end - start)))
                 }
                 if closes { mathStart = nil }
             } else if let open = Fence(s) {
-                if here { return inline(s, from: content.location, caret: caret) }
+                if here { return .text }
                 fence = open
             } else if let opener = SourceLines.displayOpener(s) {
                 let bodyStart = content.location + opener
                 let rest = (s as NSString).substring(from: opener).trimmingCharacters(in: .whitespaces)
                 let closed = rest.hasSuffix("$$")
                 if here {
-                    guard caret >= bodyStart else { return .text }
-                    guard closed else { return .math(display: true, content: NSRange(location: bodyStart, length: NSMaxRange(content) - bodyStart)) }
+                    // `$|$`: an empty inline pair at the line's start, not a block.
+                    guard caret >= bodyStart else { return inline(s, from: content.location, caret: caret) }
+                    guard closed else { return .math(display: true, content: NSRange(location: bodyStart, length: SourceLines.blockEnd(text, after: line) - bodyStart)) }
                     let end = content.location + (s as NSString).range(of: "$$", options: .backwards).location
                     return caret <= end ? .math(display: true, content: NSRange(location: bodyStart, length: end - bodyStart)) : .text
                 }
@@ -146,6 +147,22 @@ enum SourceLines {
         var length = line.length
         if length > 0, text.character(at: line.location + length - 1) == 0x0A { length -= 1 }
         return NSRange(location: line.location, length: length)
+    }
+
+    /// Where an open `$$` block's math ends: at the `$$` of the first line after `line` that ends in one, else at the
+    /// end of the text.
+    static func blockEnd(_ text: NSString, after line: NSRange) -> Int {
+        var at = NSMaxRange(line)
+        while at < text.length {
+            let next = text.lineRange(for: NSRange(location: at, length: 0))
+            let content = content(next, in: text)
+            let s = text.substring(with: content)
+            if s.trimmingCharacters(in: .whitespaces).hasSuffix("$$") {
+                return content.location + (s as NSString).range(of: "$$", options: .backwards).location
+            }
+            at = NSMaxRange(next)
+        }
+        return text.length
     }
 
     /// Where a `$$` block's math starts on its first line, after spaces, quote marks and the `$$`, or nil.
