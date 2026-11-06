@@ -197,6 +197,15 @@ private struct SourcePane: View {
     @State private var failed = false
 
     var body: some View {
+        if let note, note.format == .tex {
+            // The editor and PDF the notes tab opens. The window's breadcrumb behind the sheet keeps its own steps.
+            TextFileView(workspace: model.workspace, course: course, note: note).environment(nil as CrumbTrail?)
+        } else {
+            rendered
+        }
+    }
+
+    var rendered: some View {
         Group {
             if let pdf {
                 PDFKitView(controller: pdf)

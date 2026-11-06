@@ -85,6 +85,52 @@ struct TextFileModelTests {
         #expect(model.isHere(TexIssue(.error, file: "./Problems.tex", line: 1, message: "x")))
     }
 
+    /// A ⌘-click on the PDF goes to the line of this file that wrote there, but only with SyncTeX data from the build
+    /// that made the PDF on screen. The data is written by hand so the test runs without Tectonic.
+    @Test func aCommandClickOnThePDFShowsItsLine() throws {
+        let model = try model("Study/Problems.tex")
+        let shown = try #require(model.pdfURL)
+        let folder = TexEngine.outputFolder(for: model.fileURL)
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try FileManager.default.copyItem(at: shown, to: folder.appending(path: "Problems.pdf"))
+        let synctex = folder.appending(path: "Problems.synctex")
+        try """
+            SyncTeX Version:1
+            Input:1:\(model.fileURL.path)
+            Input:2:\(model.fileURL.deletingLastPathComponent().path)/part.tex
+            Magnification:1000
+            Unit:1
+            X Offset:0
+            Y Offset:0
+            Content:
+            {1
+            [1,9:8799519,44254495:22609920,36044800,0
+            (1,4:8799519,8865055:22609920,454820,7208
+            g1,3:11475354,8865055
+            )
+            (2,6:8799519,9651487:22609920,533465,135003
+            g2,5:12003574,9651487
+            )
+            ]
+            }1
+            """.write(to: synctex, atomically: true, encoding: .utf8)
+        let gzip = Process()
+        gzip.executableURL = URL(filePath: "/usr/bin/gzip")
+        gzip.arguments = ["-f", synctex.path]
+        try gzip.run()
+        gzip.waitUntilExit()
+
+        model.showSource(page: 0, at: CGPoint(x: 200, y: 145))
+        #expect(model.reveal == nil)  // part.tex's line, not open here
+        model.showSource(page: 0, at: CGPoint(x: 200, y: 132))
+        #expect(model.reveal == 3)
+
+        model.reveal = nil
+        try Data("%PDF-from another Mac".utf8).write(to: shown)
+        model.showSource(page: 0, at: CGPoint(x: 200, y: 132))
+        #expect(model.reveal == nil)
+    }
+
     /// An empty editor over a file that couldn't be read would look like an empty file, and saving would replace it.
     @Test func aFileThatCantBeReadDoesNotOpenEmpty() throws {
         try Data([0xC7, 0xD1, 0x0A]).write(to: course.store.fileURL("Study/Problems.tex"))

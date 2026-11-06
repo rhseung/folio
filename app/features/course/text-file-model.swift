@@ -147,6 +147,17 @@ final class TextFileModel {
         #endif
     }
 
+    #if os(macOS)
+    /// A ⌘-click on the PDF (page 0-based, point from the page's top-left corner) puts the caret on the line that wrote
+    /// there. Only this file's lines: an `\input` file is not open here.
+    func showSource(page: Int, at point: CGPoint) {
+        guard isTex, let shown = pdfURL, let sync = TexEngine.syncTeX(for: fileURL, showing: shown),
+              let place = sync.place(page: page + 1, x: point.x, y: point.y),
+              URL(filePath: place.file).resolvingSymlinksInPath() == fileURL.resolvingSymlinksInPath() else { return }
+        reveal = place.line
+    }
+    #endif
+
     func replace() {
         guard let held else { return }
         place(held, overwrite: true)

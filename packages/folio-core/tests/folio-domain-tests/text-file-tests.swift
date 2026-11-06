@@ -70,6 +70,45 @@ struct TexLogTests {
         #expect(TexLog.issues(output) == [TexIssue(.error, message: "failed to open input file \"missing.tex\"")])
     }
 
+    /// Tectonic with `-Z continue-on-errors`, as it printed it for a file with three mistakes and a missing package:
+    /// every error, then all of them again on the `.aux` rerun.
+    @Test func collectsEveryErrorOnce() {
+        let output = """
+            note: Running TeX ...
+            error: hw.tex:2: ! LaTeX Error: File `nonexistentpkgxyz.sty' not found.
+            error: hw.tex:3: Undefined control sequence
+            error: hw.tex:3: Undefined control sequence
+            error: hw.tex:2: LaTeX Error: The package . failed to load.
+
+            See the LaTeX manual or LaTeX Companion for explanation.
+            error: hw.tex:5: Missing $ inserted
+            note: Rerunning TeX because "hw.aux" changed ...
+            error: hw.tex:2: ! LaTeX Error: File `nonexistentpkgxyz.sty' not found.
+            error: hw.tex:3: Undefined control sequence
+            error: hw.tex:5: Missing $ inserted
+            warning: errors were issued by the TeX engine, but were ignored; use --print and/or --keep-logs for details.
+            note: Writing `out/hw.pdf` (6.9 KiB)
+            """
+        #expect(TexLog.issues(output) == [
+            TexIssue(.error, file: "hw.tex", line: 2, message: "LaTeX Error: File `nonexistentpkgxyz.sty' not found."),
+            TexIssue(.error, file: "hw.tex", line: 3, message: "Undefined control sequence"),
+            TexIssue(.error, file: "hw.tex", line: 2, message: "LaTeX Error: The package . failed to load."),
+            TexIssue(.error, file: "hw.tex", line: 5, message: "Missing $ inserted"),
+        ])
+    }
+
+    /// Errors ignored without an `error:` line of their own still fail the build.
+    @Test func ignoredErrorsAloneAreAnError() {
+        let output = """
+            note: Running TeX ...
+            warning: errors were issued by the TeX engine, but were ignored; use --print and/or --keep-logs for details.
+            note: Writing `out/hw.pdf` (6.9 KiB)
+            """
+        #expect(TexLog.issues(output) == [
+            TexIssue(.error, message: "errors were issued by the TeX engine, but were ignored; use --print and/or --keep-logs for details."),
+        ])
+    }
+
     @Test func aCleanBuildHasNoIssues() {
         #expect(TexLog.issues("note: Running TeX ...\nnote: Writing `hw.pdf` (21.5 KiB)\n").isEmpty)
     }

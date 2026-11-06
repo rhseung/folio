@@ -22,7 +22,7 @@ enum FormSnapshots {
             ("note-new", AnyView(NewNoteSheet(workspace: workspace, course: course, kind: .review) { _ in })),
             ("note-new-topic", AnyView(NewNoteSheet(workspace: workspace, course: course, kind: .topic) { _ in })),
             ("exam-new", AnyView(ExamEditor(workspace: workspace, course: course, exam: Exam(device: device, at: .now, title: "")))),
-            ("assignment", AnyView(AssignmentSheet(workspace: workspace, course: course, assignment: file.assignments.first ?? Assignment(device: device, at: .now, title: "")))),
+            ("assignment", AnyView(AssignmentSheet(workspace: workspace, course: course, assignment: file.assignments.first ?? Assignment(device: device, at: .now, title: "")) { _ in })),
             ("component", AnyView(ComponentSheet(workspace: workspace, course: course, component: component))),
             ("score", AnyView(ScoreEntrySheet(workspace: workspace, course: course, entry: file.scores.first ?? ScoreEntry(device: device, at: .now, componentId: component.id, title: "", score: 0, max: 10)))),
             ("policy", AnyView(PolicySheet(workspace: workspace, course: course))),

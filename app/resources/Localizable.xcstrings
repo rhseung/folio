@@ -397,6 +397,50 @@
         }
       }
     },
+    "assignments.open-unsaved": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고친 내용을 저장하고 열까요?"
+          }
+        }
+      }
+    },
+    "assignments.open-unsaved-message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일은 자료 탭의 편집기에서 열리고 이 창은 닫힙니다."
+          }
+        }
+      }
+    },
+    "assignments.open-save": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장하고 열기"
+          }
+        }
+      }
+    },
+    "assignments.open-discard": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "버리고 열기"
+          }
+        }
+      }
+    },
     "assignments.open-count": {
       "extractionState": "manual",
       "localizations": {
@@ -16343,6 +16387,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld번째 줄"
+          }
+        }
+      }
+    },
+    "text-file.pdf-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘-클릭하면 그 자리를 쓴 줄로 갑니다"
           }
         }
       }

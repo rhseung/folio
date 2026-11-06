@@ -189,7 +189,48 @@ final class AssignmentSheetModel {
         }
         target = assignment.componentGroup.map { .group($0) } ?? (assignment.componentId ?? own.first?.componentId).map { .component($0) } ?? .none
         loadedComponents = targetComponents.map(\.id)
+        loaded = draft
     }
+
+    private struct Draft: Equatable {
+        var title: String, hasDue: Bool, due: Date, status: AssignmentStatus, repeats: AssignmentRepeat?
+        var target: ScoreTarget, scores: [UUID: String], maxes: [UUID: String], memo: String
+    }
+
+    private var draft: Draft {
+        Draft(title: title, hasDue: hasDue, due: due, status: status, repeats: repeats, target: target, scores: scores, maxes: maxes, memo: memo)
+    }
+
+    /// The fields as `load()` filled them; any difference is an edit that closing the sheet would lose.
+    private var loaded: Draft?
+
+    var edited: Bool { loaded.map { $0 != draft } ?? false }
+
+    enum Opening: Equatable {
+        case elsewhere(URL)
+        case editor(UUID)
+        /// The sheet holds edits; `opening` waits for the user to save, drop them, or stay.
+        case asks
+    }
+
+    var opening: FolioDomain.Material?
+
+    /// A text file opens in the materials tab's editor, which closes this sheet; anything else in its own app, with the
+    /// sheet left open.
+    func open(_ m: FolioDomain.Material) -> Opening {
+        guard m.isText else { return .elsewhere(course.store.fileURL(m.path)) }
+        guard edited else { return .editor(m.id) }
+        opening = m
+        return .asks
+    }
+
+    /// False when saving failed (the workspace shows why); the sheet then stays, edits and all.
+    func saveAndOpen() -> Bool {
+        opening = nil
+        return apply()
+    }
+
+    func discardAndOpen() { opening = nil }
 
     /// The fields shown when the sheet opened; a score in one of them that the user moved the target away from goes,
     /// while one in a component the sheet never showed (moved there on the grades page) stays.

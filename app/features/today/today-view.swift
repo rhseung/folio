@@ -37,7 +37,11 @@ struct TodayView: View {
             StudyTimeBlock(workspace: model.workspace)
         }
         .navigationSubtitle(summary.studyDay.description)
-        .sheet(item: $model.editing) { AssignmentSheet(workspace: model.workspace, course: $0.course, assignment: $0.assignment) }
+        .sheet(item: $model.editing) { item in
+            AssignmentSheet(workspace: model.workspace, course: item.course, assignment: item.assignment) { id in
+                searchTarget.wrappedValue = SearchTarget(courseId: item.course.id, section: .materials, materialId: id)
+            }
+        }
         .confirming($model.pending)
     }
 
