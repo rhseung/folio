@@ -30,15 +30,43 @@ extension ClaudeClient {
     static let chatInstructions = """
     You are a study assistant inside Folio, a university student's course notebook. Use the course context you are \
     given and say so when the answer is not in it. Answer in Korean unless asked otherwise. Write math as LaTeX in $…$ \
-    and $$…$$, one display equation per block. When writing note content, follow the note-writing rules.
+    and $$…$$, one display equation per block. When writing note content, follow the note-writing rules. Your earlier \
+    answers end with the state of the changes they proposed; rely on it rather than guessing whether a change was made.
     """
+
+    /// An earlier answer as sent back: its text, then what became of each change it proposed. Without the second
+    /// part Claude can't tell a change the user never approved from one that failed.
+    static func history(_ message: ChatMessage) -> String {
+        guard let proposals = message.proposals, !proposals.isEmpty else { return message.text }
+        let lines = proposals.map { p in
+            let state = p.applied == true ? "applied"
+                : p.failure.map { "the user applied it and it failed: \($0)" } ?? "not applied; the user has not approved it"
+            return "- \(p.command) \(brief(p.input)): \(state)"
+        }
+        return message.text + "\n\n[Changes proposed in this answer]\n" + lines.joined(separator: "\n")
+    }
+
+    /// The proposal's input with long values such as a note's text cut short, so the history doesn't repeat them whole.
+    static func brief(_ input: JSONValue) -> String {
+        func cut(_ v: JSONValue) -> JSONValue {
+            switch v {
+            case .string(let s) where s.count > 80: .string(String(s.prefix(80)) + "… (\(s.count) characters)")
+            case .object(let o): .object(o.mapValues(cut))
+            case .array(let a): .array(a.map(cut))
+            default: v
+            }
+        }
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
+        return String(decoding: (try? encoder.encode(cut(input))) ?? Data(), as: UTF8.self)
+    }
 
     /// The context goes in the system prompt (stable part, cached) and in front
     /// of the newest question only; earlier turns are sent as plain text.
     public func reply(to chat: Chat, context: BuiltContext, onText: (@Sendable (String) -> Void)? = nil) async throws -> MessagesResponse {
         guard let last = chat.messages.last, last.role == .user else { throw ClaudeError.invalidOutput("no question to answer") }
         var messages = chat.messages.dropLast().map { m in
-            Message(role: m.role == .user ? .user : .assistant, content: [.text(m.text)])
+            Message(role: m.role == .user ? .user : .assistant, content: [.text(Self.history(m))])
         }
         messages.append(Message(role: .user, content: context.userBlocks + [.text(last.text)]))
         return try await text(.chat, system: [.text(Self.chatInstructions)] + context.system, messages: messages, onText: onText)

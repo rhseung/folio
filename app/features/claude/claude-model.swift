@@ -256,14 +256,21 @@ final class ClaudeModel {
             confirming = PendingProposal(message: message, index: index, question: question)
             return
         }
-        guard workspace.run(action) != nil else { return }
-        doc.model.messages[m].proposals?[index].applied = true
+        do {
+            _ = try workspace.runThrowing(action)
+            doc.model.messages[m].proposals?[index].applied = true
+            doc.model.messages[m].proposals?[index].failure = nil
+            status = String(localized: .claudeStatusApplied(workspace.summary(action)))
+        } catch {
+            // Saved with the chat, so the panel keeps showing why and the next question tells Claude.
+            doc.model.messages[m].proposals?[index].failure = "\(error)"
+            workspace.error = "\(error)"
+        }
         doc.model.touch(by: workspace.device, at: .now)
         let saved = doc
         // folio:not-an-action chat history is not an action
         workspace.perform { try course.store.save(saved) }
         replace(doc)
-        status = String(localized: .claudeStatusApplied(workspace.summary(action)))
     }
 
     /// A free note holding `text`, for an answer saved while no note is open.
@@ -307,12 +314,17 @@ final class ClaudeModel {
             case .assistant:
                 let cardLink = cards ? #"<a href="folio://action/card/\#(m.id)">\#(card)</a>"#
                     : #"<span class="off" title="\#(String(localized: .claudeAnswerCardOff))">\#(card)</span>"#
-                let proposals = (m.proposals ?? []).enumerated().map { i, p in
+                // The return type is spelled out: left to inference, the literals become GRDB's `SQL` (its extensions
+                // leak in through FolioIndex), whose `joined()` then prints `SQL(elements: …)` into the chat.
+                let proposals = (m.proposals ?? []).enumerated().map { i, p -> String in
                     let (text, refusal) = describe(p)
                     let button = p.applied == true ? #"<span class="done">\#(String(localized: .claudeProposalApplied))</span>"#
-                        : refusal.map { #"<span class="off" title="\#(escape($0))">\#(String(localized: .claudeProposalUnavailable))</span>"# }
+                        : refusal.map { _ in #"<span class="off">\#(String(localized: .claudeProposalUnavailable))</span>"# }
                         ?? #"<a href="folio://action/apply/\#(m.id)/\#(i)">\#(String(localized: .claudeProposalApply))</a>"#
-                    return #"<div class="proposal"><span>\#(escape(text))</span>\#(button)</div>"#
+                    // In the line, not a tooltip: a reason only shown on hover reads as a silent failure.
+                    let why = p.applied == true ? nil : refusal ?? p.failure
+                    let reason = why.map { #"<span class="why">\#(escape($0))</span>"# } ?? ""
+                    return #"<div class="proposal"><span>\#(escape(text))\#(reason)</span>\#(button)</div>"#
                 }.joined()
                 return #"""
                 <div class="msg assistant">\#(body)\#(proposals)<div class="actions">\#
@@ -334,6 +346,7 @@ final class ClaudeModel {
     .actions { display: flex; gap: 14px; margin-top: 8px; font-size: 12px; } .actions .off { color: var(--text-3); cursor: default; }
     .proposal { display: flex; align-items: baseline; gap: 12px; margin-top: 8px; padding: 8px 12px; border-radius: 12px; background: var(--fill); font-size: 13px; }
     .proposal > span:first-child { flex: 1; } .proposal .off, .proposal .done { color: var(--text-3); cursor: default; }
+    .proposal .why { display: block; margin-top: 4px; font-size: 12px; color: var(--text-3); }
     """
 
     static func escape(_ text: String) -> String {

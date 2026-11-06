@@ -57,6 +57,7 @@ struct ClaudeModelTests {
         #expect(ClaudeModel.html(chat, cards: false).contains(#"<span class="off""#))
         #expect(ClaudeModel.html(chat, cards: true).contains("folio://action/card/"))
         #expect(ClaudeModel.html(chat, partial: "쓰는 중").contains("쓰는 중"))
+        #expect(!ClaudeModel.html(chat).contains("SQL("))
     }
 
     /// A proposal runs only when the user applies it, once, and the chat file remembers it was applied.
@@ -74,7 +75,10 @@ struct ClaudeModelTests {
         chat.messages = [answer]
         model.replace(StoredDocument(new: chat))
         model.select(chat.id)
-        #expect(ClaudeModel.html(chat, describe: model.describe).contains("folio://action/apply/\(answer.id)/0"))
+        let page = ClaudeModel.html(chat, describe: model.describe)
+        #expect(page.contains(#"<div class="proposal"><span>"#))
+        #expect(page.contains(#"<a href="folio://action/apply/\#(answer.id)/0">"#))
+        #expect(!page.contains("SQL("))
 
         model.apply(message: answer.id, index: 0, course: course, confirmed: false)
         model.apply(message: answer.id, index: 0, course: course, confirmed: false)
@@ -87,6 +91,27 @@ struct ClaudeModelTests {
         #expect(workspace.course(graphTheory)?.file.exams.count == 1)
         model.apply(message: answer.id, index: 1, course: course, confirmed: true)
         #expect(workspace.course(graphTheory)?.file.exams.isEmpty == true)
+    }
+
+    /// A proposal that fails when applied keeps why, in the chat file and in its line, instead of only a passing banner.
+    @Test func aFailedProposalKeepsItsReason() throws {
+        let workspace = try fixtureWorkspace()
+        let model = ClaudeModel(workspace: workspace)
+        let course = try #require(workspace.course(graphTheory))
+        model.load(course)
+        let gone = ActionProposal(command: ExamRemove.command, input: try JSONValue(ExamRemove(course: graphTheory, exam: UUID())))
+        var chat = Chat(device: workspace.device, at: .now)
+        let answer = ChatMessage(role: .assistant, text: "제안했습니다", at: .now, proposals: [gone])
+        chat.messages = [answer]
+        model.replace(StoredDocument(new: chat))
+        model.select(chat.id)
+
+        model.apply(message: answer.id, index: 0, course: course, confirmed: true)
+        let failure = try #require(model.chat?.messages[0].proposals?[0].failure)
+        #expect(model.chat?.messages[0].proposals?[0].applied != true)
+        #expect(try course.store.chats().first?.model.messages[0].proposals?[0].failure == failure)
+        let page = ClaudeModel.html(try #require(model.chat), describe: model.describe)
+        #expect(page.contains(#"<span class="why">"#))
     }
 
     /// The note list and a unit's notes re-read on the revision, so an answer saved as a note must bump it like the new-note sheet does.
