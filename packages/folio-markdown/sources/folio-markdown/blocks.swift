@@ -29,22 +29,30 @@ public struct CBTable: Codable, Equatable, Sendable {
 
     static let alignments: Set<String> = ["left", "center", "right"]
 
-    /// `draw` draws a cell's markdown, so its footnotes, embeds and references are drawn as the note's are.
+    /// `draw` draws a cell's markdown, so its footnotes, embeds and references are drawn as the note's are. Laid out
+    /// as the table editor lays it out (`TableSource.grid`), so a cell's column, which its alignment and the header
+    /// column go by, counts the cells merged down into its row from above.
     static func render(json: String, draw: (String) -> String) -> String {
-        guard let table = try? JSONDecoder().decode(CBTable.self, from: Data(json.utf8)) else {
+        guard let node = JSONNode.parse(json), let (grid, _) = TableSource.grid(node) else {
             return "<pre class=\"invalid-block\">\(HTMLRenderer.escape(json))</pre>\n"
         }
-        let columns = table.columns ?? []
-        let cols = columns.map { c in "<col\(c.width.map { " style=\"width:\(Int($0))px\"" } ?? "")>" }.joined()
-        let rows = table.rows.map { row in
-            var column = 0
-            let cells = row.cells.enumerated().map { i, cell in
-                let isHeader = row.header == true || (table.headerColumn == true && i == 0)
-                let tag = isHeader ? "th" : "td"
-                let align = column < columns.count ? columns[column].align.flatMap { alignments.contains($0) ? " style=\"text-align:\($0)\"" : nil } ?? "" : ""
-                let span = (cell.colspan.map { $0 > 1 ? " colspan=\"\($0)\"" : "" } ?? "") + (cell.rowspan.map { $0 > 1 ? " rowspan=\"\($0)\"" : "" } ?? "")
-                column += cell.colspan ?? 1
-                return "<\(tag)\(span)\(align)>\(draw(cell.text))</\(tag)>"
+        let widths = grid.columns.map(\.width)
+        let cols = widths.contains { $0 != nil } ? widths.map { w in "<col\(w.map { " style=\"width:\(JSONNode.number($0))px\"" } ?? "")>" }.joined() : ""
+        let rows = grid.rows.enumerated().map { r, row in
+            var first = true
+            let cells = row.cells.enumerated().compactMap { c, slot -> String? in
+                guard let cell = slot else { return nil }
+                let tag = row.header || (grid.headerColumn == true && c == 0) ? "th" : "td"
+                let align = grid.columns[c].align.flatMap { alignments.contains($0) ? " style=\"text-align:\($0)\"" : nil } ?? ""
+                let span = (cell.colspan > 1 ? " colspan=\"\(cell.colspan)\"" : "") + (cell.rowspan > 1 ? " rowspan=\"\(cell.rowspan)\"" : "")
+                // The stylesheet draws lines between sibling cells and none under the last row; a cell merged down
+                // from above leaves the next one first in its row, and a merged cell can end on the last row.
+                var classes: [String] = []
+                if first, c > 0 { classes.append("after-merged") }
+                if r + cell.rowspan == grid.height, r < grid.height - 1 { classes.append("to-end") }
+                first = false
+                let cls = classes.isEmpty ? "" : " class=\"\(classes.joined(separator: " "))\""
+                return "<\(tag)\(cls)\(span)\(align)>\(draw(cell.text))</\(tag)>"
             }.joined()
             return "<tr>\(cells)</tr>"
         }.joined()

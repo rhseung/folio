@@ -96,6 +96,11 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note tr:last-child td { border-bottom: 0; }
 .note tbody tr:hover td { background: color-mix(in srgb, var(--fill) 55%, transparent); }
 .note td + td, .note th + th { border-left: 1px solid var(--line-soft); }
+/* A cb-table cell holds blocks: the last one's margin would leave the cell taller than its text. Lines where a merged
+   cell breaks the sibling rules above (the renderer marks those cells). */
+.note table.cb-table :is(td, th) > :last-child { margin-bottom: 0; }
+.note table.cb-table :is(td, th) + :is(td, th), .note table.cb-table .after-merged { border-left: 1px solid var(--line-soft); }
+.note table.cb-table .to-end { border-bottom: 0; }
 
 /* Math */
 .note .math { font-size: 1.04em; }
