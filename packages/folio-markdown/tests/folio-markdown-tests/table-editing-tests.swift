@@ -59,6 +59,12 @@ struct TableEditingTests {
     @Test func noTableNoCommand() {
         #expect(Self.run(.rowBelow, "그냥 ‸문단") == nil)
         #expect(Self.run(.rowBelow, "```\n| a |\n|---|\n| ‸1 |\n```") == nil)
+        // Blank lines after a table, in a quote or a list item too, are not in it.
+        #expect(Self.run(.rowBelow, "| a | b |\n|---|---|\n| 1 | 2 |\n‸\n뒤") == nil)
+        #expect(Self.run(.rowBelow, "| a | b |\n|---|---|\n| 1 | 2 |\n\n‸") == nil)
+        #expect(Self.run(.rowBelow, "> | a | b |\n> |---|---|\n> | 1 | 2 |\n>‸\n> 뒤") == nil)
+        #expect(Self.run(.rowBelow, "- | a | b |\n  |---|---|\n  | 1 | 2 |\n‸\n  뒤") == nil)
+        #expect(Self.run(.rowBelow, "- | a | b |\n  |---|---|\n  | 1 | 2 |\n  ‸\n- 둘") == nil)
     }
 
     // MARK: Merging

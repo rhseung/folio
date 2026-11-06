@@ -81,6 +81,8 @@ public struct TableSource {
         var last = found.last
         // A table's range can run on over blank lines after it.
         while last > found.first, text.substring(with: lines[last]).trimmingCharacters(in: .whitespaces).isEmpty { last -= 1 }
+        // A caret on such a line is outside the table; its rows below would not reach that far.
+        guard caretLine <= last else { return nil }
         let first = lines[found.first]
         let firstPrefix = text.substring(with: NSRange(location: first.location, length: min(found.column, first.length)))
         self.firstPrefix = firstPrefix
