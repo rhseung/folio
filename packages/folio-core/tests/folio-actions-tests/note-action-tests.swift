@@ -284,6 +284,30 @@ struct NoteActionTests {
         #expect(try ["Notes/2주차-1.md", "Notes/9주차-1 정리.md", "Notes/모음.md"].map(text) == before)
     }
 
+    /// A link by ID keeps reaching the note whatever its name; the name it shows follows a rename while it is still the
+    /// old title, in any course, and an undo turns it back. A name the writer chose stays.
+    @Test func retitlingFollowsTheNamesOfLinksByID() throws {
+        let session = UUID(), mine = UUID(), elsewhere = UUID()
+        let robotics = UUID(uuidString: "C0000000-0000-4000-8000-000000000003")!
+        let id = Self.note.uuidString
+        try run(SessionAdd(id: session, course: Self.graphTheory, date: now, topic: "Matchings"))
+        try run(NoteLink(course: Self.graphTheory, note: Self.note, kind: .rough, session: session))
+        let body = "[[note:\(id)|2주차-1]], [[note:\(id)#^c1|2주차-1]], [[note:\(id)|첫 수업]], [[note:\(id)]]\n"
+        try run(NoteAdd(id: mine, course: Self.graphTheory, title: "모음", body: body))
+        try run(NoteAdd(id: elsewhere, course: robotics, title: "참고", body: "![[note:\(id)#정의|2주차-1]]\n"))
+        let roboticsStore = try ActionContext(gist: gist, device: device).store(robotics)
+        let other = { try String(contentsOf: roboticsStore.fileURL("Notes/참고.md"), encoding: .utf8) }
+
+        let batch = try #require(try run(NoteRetitleSessions(course: Self.graphTheory)).made)
+        let rough = try #require(try file().notes.first { $0.id == Self.note }).path.dropFirst("Notes/".count).dropLast(".md".count)
+        #expect(try text("Notes/모음.md") == "[[note:\(id)|\(rough)]], [[note:\(id)#^c1|\(rough)]], [[note:\(id)|첫 수업]], [[note:\(id)]]\n")
+        #expect(try other() == "![[note:\(id)#정의|\(rough)]]\n")
+
+        try run(CleanupUndo(batch: batch))
+        #expect(try text("Notes/모음.md") == body)
+        #expect(try other() == "![[note:\(id)#정의|2주차-1]]\n")
+    }
+
     /// A class note's units are its session's as they are now, so unlinking the class from a unit takes the note off it.
     @Test func aSessionNotesUnitsFollowTheSession() throws {
         let session = UUID(), unit = UUID(), note = UUID()

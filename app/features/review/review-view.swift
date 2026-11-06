@@ -227,7 +227,7 @@ private struct SourcePane: View {
         switch source.id {
         case .note:
             guard let note else { failed = true; return }
-            embeds = NoteEmbedSource(store: course.store, own: note.url)
+            embeds = NoteEmbedSource(workspace: model.workspace, course: course, own: note.url)
             text = model.body(of: note, in: course)
         case .lecture:
             guard let document = await model.document(source, in: course) else { failed = true; return }

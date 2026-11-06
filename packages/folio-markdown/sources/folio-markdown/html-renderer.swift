@@ -275,12 +275,23 @@ public struct HTMLRenderer {
         s.replacing(WikiLink.pattern) { m in
             let link = WikiLink(m)
             let href = link.href
-            let text = link.alias ?? (link.target + (link.fragment.map { " › " + $0 } ?? ""))
+            // The link was read from rendered HTML, so its target and alias are escaped already; a found title is not.
+            let found = noteTitle(link)
+            let text = link.alias ?? ((found.title.map(Self.escape) ?? link.target) + (link.fragment.map { " › " + $0 } ?? ""))
             return link.isEmbed
                 // A link, not a block: it stands inside the paragraph the embed was written in, with other text.
                 ? "<a class=\"embed\" href=\"\(href)\">\(text)</a>"
-                : "<a class=\"wikilink\" href=\"\(href)\">\(text)</a>" + preview(link)
+                : "<a class=\"wikilink\(found.missing ? " missing" : "")\" href=\"\(href)\">\(text)</a>" + preview(link)
         }
+    }
+
+    /// For a link by ID, the title of the note it names, which a link without its own name shows. `missing` when no
+    /// note has the ID, which only a page drawing embeds can tell; elsewhere (the Claude panel, PDF export) the link
+    /// shows its target.
+    func noteTitle(_ link: WikiLink) -> (title: String?, missing: Bool) {
+        guard let id = link.noteID, let embeds else { return (nil, false) }
+        let title = embeds.title(id)
+        return (title, title == nil)
     }
 
     // MARK: Embeds and references
@@ -305,7 +316,8 @@ public struct HTMLRenderer {
     /// The part of another note an embed points at, drawn under its name, which opens the note. One that can't be
     /// drawn (missing, inside itself, too deep) says why in its place.
     func embed(_ link: WikiLink) -> String {
-        let name = Self.escape(link.alias ?? (link.target + (link.blockID.map { " › ^" + $0 } ?? link.fragment.map { " › " + $0 } ?? "")))
+        let part = link.blockID.map { " › ^" + $0 } ?? link.fragment.map { " › " + $0 } ?? ""
+        let name = Self.escape(link.alias ?? ((noteTitle(link).title ?? link.target) + part))
         let head = "<a class=\"embed-title\" href=\"\(Self.escape(link.href))\">\(name)</a>"
         let empty = { (why: String) in "<div class=\"embed embed-empty\">\(head)<p class=\"embed-note\">\(Self.escape(why))</p></div>\n" }
         guard let embeds else { return "<p>\(head)</p>\n" }

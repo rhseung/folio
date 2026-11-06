@@ -1,4 +1,5 @@
 import AppKit
+import FolioActions
 import FolioDomain
 import FolioFixtures
 import FolioStorage
@@ -313,6 +314,24 @@ struct NoteEmbedPreviewTests {
         rig.show(rig.text)
         await rig.settle()
         #expect((try await rig.js(embed) as? String)?.contains("바뀐 내용") == true)
+    }
+
+    /// A link by ID finds its note in any course, whatever the note is named now; one to no note is drawn broken.
+    @Test func aLinkByIDFindsItsNoteInAnyCourse() async throws {
+        let gist = GISTStore(url: try Fixture.standard.copyToTemp())
+        let stores = try gist.courseStores()
+        let here = try #require(stores.first { $0.url.lastPathComponent == "EC4207 그래프 이론" })
+        let there = try #require(stores.first { $0.url != here.url })
+        let id = UUID(), gone = UUID()
+        try NoteAdd(id: id, course: try there.load().model.course.id, title: "다른 과목 노트", body: "위\n\n정의할 것 ^c1\n")
+            .run(ActionContext(gist: gist, device: UUID()))
+        let text = "[[note:\(id.uuidString)]] [[note:\(gone.uuidString)|옛 노트]]\n\n![[note:\(id.uuidString)#^c1]]"
+        let rig = PreviewRig(text, embeds: NoteEmbedSource(store: here, others: [there], own: nil))
+        defer { rig.close() }
+        await rig.settle()
+        #expect(try await rig.js("return document.querySelector('a.wikilink:not(.missing)')?.textContent") as? String == "다른 과목 노트")
+        #expect(try await rig.js("return document.querySelector('a.wikilink.missing')?.textContent") as? String == "옛 노트")
+        #expect((try await rig.js("return document.querySelector('div.embed .embed-body')?.textContent ?? ''") as? String)?.contains("정의할 것") == true)
     }
 
     /// Resting on a block reference shows its block in a card; moving off takes it away.

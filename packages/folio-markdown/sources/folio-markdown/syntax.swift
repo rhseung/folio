@@ -1,7 +1,8 @@
 import Foundation
 
 /// `[[target#heading|alias]]`, `[[target#^block]]`, `![[target]]` (embed), or an app object link
-/// such as `[[material:<ID>#page=12]]`.
+/// such as `[[material:<ID>#page=12]]`. A note is named by its title, or by its ID so a rename doesn't break the link:
+/// `[[note:<ID>#heading|title]]`.
 public struct WikiLink: Hashable, Sendable {
     public var target: String
     /// Text after `#` that is not a block reference: a heading, or `page=12` for object links.
@@ -10,7 +11,7 @@ public struct WikiLink: Hashable, Sendable {
     public var alias: String?
     public var isEmbed: Bool
 
-    /// The app object's kind (`material`, `exam`, …), named as in a `folio://` link; nil for notes.
+    /// The app object's kind (`note`, `material`, `exam`, …), named as in a `folio://` link; nil for a note named by title.
     public var objectKind: String? {
         guard let colon = target.firstIndex(of: ":") else { return nil }
         let kind = String(target[..<colon])
@@ -21,9 +22,11 @@ public struct WikiLink: Hashable, Sendable {
         objectKind.flatMap { UUID(uuidString: String(target.dropFirst($0.count + 1))) }
     }
 
+    public var noteID: UUID? { objectKind == "note" ? objectID : nil }
+
     /// The kinds of `folio://<kind>/<ID>` (FolioDomain's `AppLink`) that a note can link by ID. FolioMarkdown depends on no
     /// other Folio module, so the names are repeated here; `AppLinkWikiTests` checks they still parse as links.
-    public static let objectKinds: Set<String> = ["course", "session", "unit", "material", "assignment", "exam", "card", "problem-set"]
+    public static let objectKinds: Set<String> = ["note", "course", "session", "unit", "material", "assignment", "exam", "card", "problem-set"]
 
     public static var pattern: Regex<(Substring, Substring, Substring, Substring?, Substring?, Substring?)> {
         #/(!?)\[\[([^\]\|#]+)(?:#(\^?)([^\]\|]*))?(?:\|([^\]]*))?\]\]/#
@@ -60,6 +63,16 @@ public struct WikiLink: Hashable, Sendable {
             guard target.caseInsensitiveCompare(old) == .orderedSame else { return String(m.0) }
             let fragment = m.4.map { "#\(m.3 ?? "")\($0)" } ?? ""
             return "\(m.1)[[\(new)\(fragment)\(m.5.map { "|\($0)" } ?? "")]]"
+        }
+    }
+
+    /// `text` with links to the note `id` that still show its old title showing the new one. A name the writer chose
+    /// instead of the title is theirs and stays.
+    public static func retitled(_ text: String, note id: UUID, from old: String, to new: String) -> String {
+        text.replacing(pattern) { m in
+            guard WikiLink(m).noteID == id, let alias = m.5, alias.trimmingCharacters(in: .whitespaces) == old else { return String(m.0) }
+            let fragment = m.4.map { "#\(m.3 ?? "")\($0)" } ?? ""
+            return "\(m.1)[[\(m.2)\(fragment)|\(new)]]"
         }
     }
 }

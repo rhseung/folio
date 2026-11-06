@@ -53,6 +53,26 @@ struct NoteSourceTests {
         return (view, window)
     }
 
+    /// ⌘-click anywhere on a link opens what it points at, the ID and block included, though its brackets and ID are
+    /// styled apart from its name. The ID is dimmed like the brackets.
+    @Test func aCommandClickOpensALinkByID() throws {
+        let id = UUID()
+        let text = "앞 [[note:\(id.uuidString)#^c1|매칭 정리]] 뒤 [[material:\(id.uuidString)#page=3]]"
+        let (view, _) = Self.editor(text)
+        var opened: [AppLink] = []
+        view.linkOpener = OpenLinkAction { link, _, _ in opened.append(link) }
+        let click = try #require(NSEvent.mouseEvent(with: .leftMouseDown, location: .zero, modifierFlags: .command, timestamp: 0,
+                                                    windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
+        let ns = text as NSString
+        for word in ["매칭", "note:", "[[note", "page=3"] {
+            #expect(view.openLink(at: ns.range(of: word).location + 1, event: click), "\(word)")
+        }
+        let note = AppLink(.note, id, anchor: .block("c1"))
+        #expect(opened == [note, note, note, AppLink(.material, id, anchor: .page(3))])
+        let color = { (i: Int) in view.textStorage?.attribute(.foregroundColor, at: i, effectiveRange: nil) as? NSColor }
+        #expect(color(ns.range(of: id.uuidString).location) == NoteLook.text3 && color(ns.range(of: "매칭").location) != NoteLook.text3)
+    }
+
     static func size(_ view: NSTextView, at i: Int) -> CGFloat? {
         (view.textStorage?.attribute(.font, at: i, effectiveRange: nil) as? NSFont)?.pointSize
     }
