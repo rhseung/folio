@@ -7712,6 +7712,72 @@
         }
       }
     },
+    "note.edit.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 일부 고치기. 찾아 바꾸거나 끝에 붙인다"
+          }
+        }
+      }
+    },
+    "note.edit.discussion": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "--old와 --new를 짝지어 주면 순서대로 찾아 바꾼다. --old는 그때의 노트에 꼭 한 번 나와야 한다. 없으면 노트가 바뀐 것으로 보고 쓰지 않고 종료 코드 6으로 끝나고, 여러 번 나오면 앞뒤 글을 더 넣으라고 알린다. --append는 노트 끝의 새 줄에 붙인다.\n노트 전체를 보내지 않으니, 일부만 고칠 때는 note write 대신 이것을 쓴다.\n\n예시:\n  folio note edit EC4207/2주차-1 --old \"non-adjacent\" --new \"서로 이웃하지 않는\"\n  folio note edit EC4207/2주차-1 --append \"질문: 최대 매칭은 어떻게 찾나\""
+          }
+        }
+      }
+    },
+    "note.edit.help.append": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 끝에 붙일 글. 새 줄에서 시작한다"
+          }
+        }
+      }
+    },
+    "note.edit.help.new": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "--old 자리에 넣을 글. --old와 같은 수만큼 준다"
+          }
+        }
+      }
+    },
+    "note.edit.help.old": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "바꿀 원문. 노트에 꼭 한 번 나와야 한다. 여러 번 줄 수 있다"
+          }
+        }
+      }
+    },
+    "note.edit.unpaired": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "--old와 --new는 짝지어 줍니다. --old %1$lld개, --new %2$lld개입니다"
+          }
+        }
+      }
+    },
     "open.abstract": {
       "extractionState": "manual",
       "localizations": {

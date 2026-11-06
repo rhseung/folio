@@ -254,6 +254,17 @@ struct MaterialNoteStudyTests {
         }
     }
 
+    @Test func noteEdit() throws {
+        try h.expectSame(["note", "edit", "EC4207/2주차-1", "--old", "Matching", "--new", "매칭", "--old", "pairwise", "--new", "서로",
+                          "--append", "질문"]) { _ in
+            NoteEdit(course: course, note: "Notes/2주차-1.md",
+                     replacements: [.init(old: "Matching", new: "매칭"), .init(old: "pairwise", new: "서로")], append: "질문")
+        }
+        let gist = try Harness.fixtureCopy()
+        #expect(h.cli(["note", "edit", "EC4207/2주차-1", "--old", "Matching"], gist: gist).code == Exit.usage.rawValue)
+        #expect(h.cli(["note", "edit", "EC4207/2주차-1", "--old", "없는 글", "--new", "x"], gist: gist).code == Exit.conflict.rawValue)
+    }
+
     /// Writes a note file straight into Notes/, as another editor would, so it has no entry in course.json.
     func drop(_ gist: URL, _ name: String, _ text: String) throws {
         let store = try ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now).store(course)
