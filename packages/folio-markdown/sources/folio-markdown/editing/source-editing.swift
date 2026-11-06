@@ -100,13 +100,14 @@ public enum SourceEditing {
     }
 
     /// What Tab does: expand a snippet whose trigger is just before the caret, move to a formula's next argument, or
-    /// indent. Shift-Tab steps back through the arguments, or outdents.
-    public static func tab(_ text: NSString, _ selection: NSRange, back: Bool, snippets: [Snippet] = []) -> Edit {
+    /// indent. Shift-Tab steps back through the arguments, or outdents. AsciiMath puts arguments in brackets, as
+    /// `frac(a)(b)`, where TeX uses braces.
+    public static func tab(_ text: NSString, _ selection: NSRange, back: Bool, snippets: [Snippet] = [], asciiMath: Bool = false) -> Edit {
         let place = SourcePlace.at(selection.location, in: text)
         if !back, selection.length == 0, let (snippet, range) = Snippet.match(snippets, in: text, caret: selection.location, place: place) {
             return snippet.edit(replacing: range)
         }
-        if case .math(_, let content) = place, let slot = slot(text, from: selection.location, in: content, back: back) {
+        if case .math(_, let content) = place, let slot = slot(text, from: selection.location, in: content, back: back, opener: asciiMath ? 0x28 : 0x7B) {
             return Edit(range: NSRange(location: slot, length: 0), text: "", caret: slot)
         }
         // Lines in a code block are code: `1.` there is not a list to number again.
@@ -114,14 +115,14 @@ public enum SourceEditing {
         return indent(text, selection, out: back)
     }
 
-    /// The next argument slot of the formula the caret is in: just inside the next `{`, else just past the formula's
-    /// closing delimiter. Back: just inside the `{` before the one the caret is in, else the formula's start. Read from
-    /// the text, not remembered, so slots still line up after anything typed into them.
-    static func slot(_ text: NSString, from caret: Int, in content: NSRange, back: Bool) -> Int? {
+    /// The next argument slot of the formula the caret is in: just inside the next `opener`, else just past the
+    /// formula's closing delimiter. Back: just inside the `opener` before the one the caret is in, else the formula's
+    /// start. Read from the text, not remembered, so slots still line up after anything typed into them.
+    static func slot(_ text: NSString, from caret: Int, in content: NSRange, back: Bool, opener: UInt16 = 0x7B) -> Int? {
         var starts: [Int] = []
         var i = content.location
         while i < NSMaxRange(content) {
-            if text.character(at: i) == 0x7B, i == 0 || text.character(at: i - 1) != 0x5C { starts.append(i + 1) }
+            if text.character(at: i) == opener, i == 0 || text.character(at: i - 1) != 0x5C { starts.append(i + 1) }
             i += 1
         }
         if back {

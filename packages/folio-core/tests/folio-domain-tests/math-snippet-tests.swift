@@ -18,5 +18,18 @@ struct MathSnippetTests {
     @Test func defaultTriggersAreDistinctWherever() {
         let keys = MathSnippet.defaults.map { "\($0.inMath) \($0.trigger)" }
         #expect(Set(keys).count == keys.count)
+        let ascii = MathSnippet.asciiMathDefaults.map(\.trigger)
+        #expect(Set(ascii).count == ascii.count)
+    }
+
+    /// AsciiMath snippets are formula snippets only: those outside formulas are the same in either syntax.
+    @Test func asciiMathSnippetsAreKeptApart() throws {
+        let s = try JSONDecoder().decode(Settings.self, from: Data(#"{"mathSnippets": []}"#.utf8))
+        #expect(s.asciiMathSnippets == nil && s.asciiSnippets == MathSnippet.asciiMathDefaults)
+        #expect(MathSnippet.asciiMathDefaults.allSatisfy { $0.inMath })
+        let mine = [MathSnippet(trigger: "rr", body: "RR", inMath: true)]
+        let data = try JSONEncoder().encode(Settings(asciiMathSnippets: mine))
+        let back = try JSONDecoder().decode(Settings.self, from: data)
+        #expect(back.asciiSnippets == mine && back.snippets == MathSnippet.defaults)
     }
 }

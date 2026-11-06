@@ -78,6 +78,7 @@ struct AppLinkTests {
         let course = UUID()
         #expect(AppLink(SearchItem(kind: .quiz, courseId: course, id: id, title: "")) == AppLink(.card, id))
         #expect(AppLink(SearchItem(kind: .note, courseId: course, id: id, title: "")) == AppLink(.note, id))
+        #expect(AppLink(SearchItem(kind: .exam, courseId: course, id: id, title: "")) == AppLink(.exam, id))
     }
 
     @Test func findsTheCourseThatHoldsATarget() {

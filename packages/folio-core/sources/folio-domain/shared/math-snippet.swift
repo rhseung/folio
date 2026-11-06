@@ -37,4 +37,21 @@ public struct MathSnippet: Codable, Sendable, Equatable, Hashable {
         MathSnippet(trigger: "@l", body: "\\lambda", inMath: true),
         MathSnippet(trigger: "@e", body: "\\varepsilon", inMath: true),
     ]
+
+    /// The formula snippets of an AsciiMath note, where these take the place of the TeX ones above; the snippets
+    /// outside formulas (`mk`, `dm`) come from `defaults` in either. Arguments go in brackets, which Tab moves through.
+    /// Only what AsciiMath has no short form for: `->`, `<=`, `oo` and the Greek names are written as they are.
+    public static let asciiMathDefaults: [MathSnippet] = [
+        MathSnippet(trigger: "//", body: "frac($1)($2)", inMath: true),
+        MathSnippet(trigger: "sr", body: "^2", inMath: true),
+        MathSnippet(trigger: "cb", body: "^3", inMath: true),
+        MathSnippet(trigger: "rd", body: "^($1)", inMath: true),
+        MathSnippet(trigger: "sq", body: "sqrt($1)", inMath: true),
+        MathSnippet(trigger: "sum", body: "sum_($1)^($2)", inMath: true),
+        MathSnippet(trigger: "lim", body: "lim_($1->$2)", inMath: true),
+        MathSnippet(trigger: "int", body: "int_($1)^($2)", inMath: true),
+        MathSnippet(trigger: "pmat", body: "(($1, ), (, ))", inMath: true),
+        MathSnippet(trigger: "bmat", body: "[($1, ), (, )]", inMath: true),
+        MathSnippet(trigger: "case", body: "{($1, if $2), (, if ):}", inMath: true),
+    ]
 }

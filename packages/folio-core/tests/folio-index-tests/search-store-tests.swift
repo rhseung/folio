@@ -98,6 +98,26 @@ struct SearchStoreTests {
         try index.refresh(gist)
         #expect(try index.search("1주차", courses: [robotics]).isEmpty)
     }
+
+    /// What link completion offers before anything is typed, and exams, which it links to as well.
+    @Test func listsACoursesItemsAndFindsExams() throws {
+        let gist = try fixture()
+        let ctx = ActionContext(gist: gist, device: UUID(), now: .now)
+        let exam = UUID()
+        try ExamAdd(id: exam, course: graphTheory, title: "기말고사").run(ctx)
+        let index = try SearchStore(url: nil)
+        try index.refresh(gist)
+        let notes = try index.items(courses: [graphTheory], kinds: [.note])
+        #expect(!notes.isEmpty && notes.allSatisfy { $0.kind == .note && $0.courseId == graphTheory })
+        #expect(notes.map(\.title) == notes.map(\.title).sorted())
+        #expect(try index.search("기말").first?.item.id == exam)
+    }
+
+    @Test func oneIndexPerFile() throws {
+        let gist = try fixture()
+        let folder = gist.url.deletingLastPathComponent().appending(path: "cache")
+        #expect(try SearchStore.local(for: gist, in: folder) === SearchStore.local(for: gist, in: folder))
+    }
 }
 
 struct SearchProgressTests {

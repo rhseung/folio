@@ -6469,6 +6469,39 @@
         }
       }
     },
+    "notes.assist.link-last-page": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마지막으로 본 쪽"
+          }
+        }
+      }
+    },
+    "notes.assist.link-new": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 노트 만들기: %@"
+          }
+        }
+      }
+    },
+    "notes.assist.link-page": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld쪽"
+          }
+        }
+      }
+    },
     "notes.assist.math": {
       "extractionState": "manual",
       "localizations": {
@@ -12167,6 +12200,17 @@
         }
       }
     },
+    "search.kind.exam": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험"
+          }
+        }
+      }
+    },
     "search.kind.material": {
       "extractionState": "manual",
       "localizations": {
@@ -14488,13 +14532,35 @@
         }
       }
     },
+    "settings.snippets-asciimath": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AsciiMath 스니펫"
+          }
+        }
+      }
+    },
+    "settings.snippets-asciimath-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AsciiMath 노트의 수식 안에서 트리거를 치고 Tab을 누르면 펼칩니다. 인자는 괄호 안에 쓰고 Tab으로 다음 괄호로 옮겨 갑니다. 수식 밖 스니펫(mk, dm)은 위 목록을 함께 씁니다."
+          }
+        }
+      }
+    },
     "settings.snippets-note": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "노트 편집 보기에서 트리거를 치고 Tab을 누르면 펼칩니다. $1, $2는 커서가 갈 자리이고, 수식 안 스니펫은 LaTeX 노트의 수식에서만 펼칩니다."
+            "value": "노트 편집 보기에서 트리거를 치고 Tab을 누르면 펼칩니다. $1, $2는 커서가 갈 자리입니다. 수식 안 스니펫은 LaTeX 노트의 수식에서 펼치고, AsciiMath 노트의 수식에는 아래 목록을 씁니다."
           }
         }
       }

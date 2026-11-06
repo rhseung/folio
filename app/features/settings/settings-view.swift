@@ -272,6 +272,11 @@ private struct NoteSettingsForm: View {
             // Stored only once changed, so a note editor keeps getting the app's defaults until then.
             SnippetList(snippets: Binding(get: { settings.snippets }, set: { settings.mathSnippets = $0 == MathSnippet.defaults ? nil : $0 }))
         }
+        Block(String(localized: .settingsSnippetsAsciimath), note: String(localized: .settingsSnippetsAsciimathNote)) {
+            SnippetList(snippets: Binding(get: { settings.asciiSnippets },
+                                          set: { settings.asciiMathSnippets = $0 == MathSnippet.asciiMathDefaults ? nil : $0 }),
+                        defaults: MathSnippet.asciiMathDefaults, placed: false)
+        }
         FormTextArea(label: String(localized: .settingsNoteRules), detail: String(localized: .settingsNoteRulesDetail), text: $settings.noteRules, height: 160)
     }
 
@@ -432,6 +437,9 @@ struct IntListField: View {
 
 struct SnippetList: View {
     @Binding var snippets: [MathSnippet]
+    var defaults = MathSnippet.defaults
+    /// Whether each snippet says if it expands in text or in formulas; AsciiMath's are all formula snippets.
+    var placed = true
 
     var body: some View {
         Card {
@@ -443,8 +451,10 @@ struct SnippetList: View {
                     TextField(String(localized: .settingsSnippetBody), text: field(i, \.body), axis: .vertical)
                         .textFieldStyle(.plain)
                         .font(Theme.Typeface.mono)
-                    ChoiceMenu(selection: field(i, \.inMath), options: [(false, String(localized: .settingsSnippetInText)),
-                                                                          (true, String(localized: .settingsSnippetInMath))])
+                    if placed {
+                        ChoiceMenu(selection: field(i, \.inMath), options: [(false, String(localized: .settingsSnippetInText)),
+                                                                              (true, String(localized: .settingsSnippetInMath))])
+                    }
                     Button { snippets.remove(at: i) } label: {
                         Image(systemName: "minus.circle").foregroundStyle(Theme.Palette.textTertiary)
                     }
@@ -459,9 +469,9 @@ struct SnippetList: View {
                 }
                 .buttonStyle(.pointing(.plain))
                 Spacer()
-                Button(.settingsSnippetReset) { snippets = MathSnippet.defaults }
+                Button(.settingsSnippetReset) { snippets = defaults }
                     .buttonStyle(.ghost)
-                    .disabled(snippets == MathSnippet.defaults)
+                    .disabled(snippets == defaults)
             }
         }
     }
