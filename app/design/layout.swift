@@ -98,6 +98,7 @@ struct ColumnSplit<Column: View, Bar: View, Content: View>: View {
                     column
                         .frame(width: narrow ? nil : width)
                         .frame(maxWidth: narrow ? .infinity : nil, maxHeight: .infinity)
+                        .environment(\.columnFolded, narrow)
                 }
                 if !narrow { ColumnDivider() }
                 if showsPage {
@@ -117,8 +118,18 @@ struct ColumnSplit<Column: View, Bar: View, Content: View>: View {
 extension EnvironmentValues {
     /// Set by the screen fit check only: pages that would clip what doesn't fit them push their window out instead.
     @Entry var revealsOverflow = false
-    /// The page a `ColumnSplit` folded its column away from, for what the column held that the page now shows.
+    /// Inside a `ColumnSplit` that shows its column or its page alone: what each held for the other now has to be in it.
     @Entry var columnFolded = false
+}
+
+/// What only a folded `ColumnSplit` needs, such as a way from the column back to a page it hides.
+struct FoldedOnly<Content: View>: View {
+    @Environment(\.columnFolded) private var folded
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        if folded { content }
+    }
 }
 
 /// One step of the window's breadcrumb. A step with an action goes back to it; the last step is where the window is,

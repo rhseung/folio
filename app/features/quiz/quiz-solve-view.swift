@@ -114,6 +114,14 @@ struct QuizSolveView: View {
             VStack(alignment: .leading, spacing: Theme.Space.s) {
                 Text(model.footer(pane))
                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(2)
+                // Folded, the pane hides the round; without this the only way back to it was restarting it.
+                if model.started {
+                    FoldedOnly {
+                        Button(.quizSolveResume) { choosingScope = false }
+                            .buttonStyle(.pointing(.bordered))
+                            .frame(maxWidth: .infinity)
+                    }
+                }
                 Button(model.started ? .quizSolveRestart : .quizSolveStart) { model.start(label: String(localized: .quizSolvePickedScope), course: course) }
                     .buttonStyle(.pointing(.borderedProminent))
                     .frame(maxWidth: .infinity)
