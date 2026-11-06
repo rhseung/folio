@@ -97,6 +97,18 @@ struct TexLogTests {
         ])
     }
 
+    /// Errors ignored without an `error:` line of their own still fail the build.
+    @Test func ignoredErrorsAloneAreAnError() {
+        let output = """
+            note: Running TeX ...
+            warning: errors were issued by the TeX engine, but were ignored; use --print and/or --keep-logs for details.
+            note: Writing `out/hw.pdf` (6.9 KiB)
+            """
+        #expect(TexLog.issues(output) == [
+            TexIssue(.error, message: "errors were issued by the TeX engine, but were ignored; use --print and/or --keep-logs for details."),
+        ])
+    }
+
     @Test func aCleanBuildHasNoIssues() {
         #expect(TexLog.issues("note: Running TeX ...\nnote: Writing `hw.pdf` (21.5 KiB)\n").isEmpty)
     }

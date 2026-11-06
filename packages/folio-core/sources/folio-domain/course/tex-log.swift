@@ -46,7 +46,11 @@ public enum TexLog {
             } else {
                 continue
             }
-            if let issue = parseLocated(severity, rest) {
+            // Tectonic's own note that it went past errors. Kept as one, so a build whose errors didn't print as
+            // `error:` lines still counts as failed and its PDF, with parts left out, is not placed.
+            if severity == .warning, rest.hasPrefix("errors were issued by the TeX engine") {
+                general.append(TexIssue(.error, message: String(rest)))
+            } else if let issue = parseLocated(severity, rest) {
                 located.append(issue)
             } else if severity == .error {
                 general.append(TexIssue(.error, message: String(rest)))
