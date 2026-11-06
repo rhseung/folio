@@ -83,7 +83,7 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 
 /* No backdrop behind images: transparent SVGs carry their own dark-mode palette, and a light card under them hides their light ink. */
 /* A width from `|300` stays a cap, not a minimum. */
-.note img:not(.cm-widgetBuffer) { display: block; box-sizing: border-box; max-width: 100%; height: auto; margin: 22px auto; border-radius: 10px; }
+.note img:not(.cm-widgetBuffer) { display: block; max-width: 100%; height: auto; margin: 22px auto; border-radius: 10px; }
 .note p > img:only-child { margin: 22px auto; }
 
 /* Tables: rounded frame, tinted header, hover row. */
