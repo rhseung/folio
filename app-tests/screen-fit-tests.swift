@@ -59,7 +59,9 @@ struct ScreenFitTests {
         }
         for (name, width, drawn) in drawn {
             if Self.unfolded.contains(where: { name.hasPrefix($0.name) && width < $0.below }) {
-                withKnownIssue { #expect(drawn <= width + 0.5, "\(name) at \(Int(width)) is \(drawn) wide") }
+                // Intermittent: how far an unfolded page overflows goes by the Mac's fonts, and on the CI runner some
+                // tabs fit at 390, where a strict known issue failed for not being recorded.
+                withKnownIssue(isIntermittent: true) { #expect(drawn <= width + 0.5, "\(name) at \(Int(width)) is \(drawn) wide") }
             } else {
                 #expect(drawn <= width + 0.5, "\(name) at \(Int(width)) is \(drawn) wide")
             }
