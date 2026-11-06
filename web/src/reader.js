@@ -6,9 +6,11 @@ import { renderDiagrams } from "./mermaid.js";
 import { preview } from "./preview.js";
 
 // Typesets what `root` holds. The preview typesets blocks before they go into the page, so `root` may be detached.
+// An embedded note keeps its own math syntax on its box, which may differ from the page's.
 export function typeset(root) {
-  const syntax = document.body.dataset.math ?? "latex";
+  const page = document.body.dataset.math ?? "latex";
   for (const el of root.querySelectorAll(".math")) {
+    const syntax = el.closest("[data-math]:not(body)")?.dataset.math ?? page;
     el.innerHTML = renderMath(el.textContent, el.classList.contains("display"), syntax);
   }
   renderDiagrams(root);

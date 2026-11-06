@@ -40,13 +40,58 @@ export function preview({ typeset, redraw }) {
   // the pointer), and the menu doesn't say what it was opened on.
   document.addEventListener("contextmenu", (event) => {
     const at = (selector) => event.target.closest?.(selector);
+    // A heading drawn from another note (an embed, a reference's preview) is not one of this note's.
+    const own = !at(".embed, .ref-popover");
     post({
       type: "menu",
       href: at("a[href]")?.getAttribute("href") ?? null,
-      heading: at("h1, h2, h3, h4, h5, h6")?.textContent ?? null,
+      heading: own ? at("h1, h2, h3, h4, h5, h6")?.textContent ?? null : null,
       block: at("[id^='^']")?.id.slice(1) ?? null,
     });
   }, true);
+
+  // A block reference shows the block it names while the pointer rests on it. The renderer puts the block in a
+  // template right after the link; the card stays while the pointer moves onto it, so its links can be clicked.
+  let card = null, cardFor = null, showing = 0, hiding = 0;
+  const hideCard = () => {
+    clearTimeout(showing);
+    clearTimeout(hiding);
+    card?.remove();
+    card = cardFor = null;
+  };
+  const showCard = (link, template) => {
+    hideCard();
+    const box = document.createElement("div");
+    box.className = "ref-popover";
+    if (template.dataset.math) box.dataset.math = template.dataset.math;
+    box.append(template.content.cloneNode(true));
+    typeset(box);
+    document.body.append(box);
+    const r = link.getBoundingClientRect();
+    const gap = 8;
+    const left = Math.max(gap, Math.min(r.left, innerWidth - box.offsetWidth - gap));
+    let y = r.bottom + gap / 2;
+    if (y + box.offsetHeight > innerHeight - gap && r.top - box.offsetHeight - gap / 2 > gap) y = r.top - box.offsetHeight - gap / 2;
+    box.style.left = `${left + scrollX}px`;
+    box.style.top = `${y + scrollY}px`;
+    card = box;
+    cardFor = link;
+  };
+  document.addEventListener("mouseover", (event) => {
+    const link = event.target.closest?.("a.wikilink");
+    if (card && (card.contains(event.target) || link === cardFor)) return clearTimeout(hiding);
+    clearTimeout(showing);
+    const template = link?.nextElementSibling?.matches("template.ref-preview") ? link.nextElementSibling : null;
+    if (template) showing = setTimeout(() => showCard(link, template), 300);
+    if (card) {
+      clearTimeout(hiding);
+      hiding = setTimeout(hideCard, 200);
+    }
+  });
+  document.documentElement.addEventListener("mouseleave", () => {
+    clearTimeout(showing);
+    if (card) hiding = setTimeout(hideCard, 200);
+  });
 
   function make(html) {
     const box = document.createElement("div");
@@ -116,6 +161,7 @@ export function preview({ typeset, redraw }) {
       prepare(made.flatMap((b) => b.nodes));
       shown = [...shown.slice(0, head), ...middle, ...shown.slice(shown.length - tail)];
       if (editable) prepare(shown.flatMap((b) => b.nodes));
+      if (cardFor && !cardFor.isConnected) hideCard();
       // Lines move with every edit above a block, which leaves its HTML as it was.
       shown.forEach((block, i) => {
         block.line = blocks[i].line;
@@ -142,6 +188,7 @@ export function preview({ typeset, redraw }) {
 
     // The page is handed to another note: nothing of this one stays.
     reset() {
+      hideCard();
       for (const block of shown) for (const node of block.nodes) node.remove();
       shown = [];
       options = {};
