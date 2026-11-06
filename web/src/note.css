@@ -81,12 +81,10 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note hr { border: 0; height: 24px; margin: 28px 0; text-align: center; }
 .note hr::before { content: "· · ·"; color: var(--text-3); letter-spacing: .6em; font-size: 14px; }
 
-/* Images sit on the page with a soft edge; SVG diagrams get a light card so dark mode keeps them readable. */
-/* Border-box: an SVG's padding otherwise widened it past the text column. A width from `|300` stays a cap, not a minimum. */
+/* No backdrop behind images: transparent SVGs carry their own dark-mode palette, and a light card under them hides their light ink. */
+/* A width from `|300` stays a cap, not a minimum. */
 .note img:not(.cm-widgetBuffer) { display: block; box-sizing: border-box; max-width: 100%; height: auto; margin: 22px auto; border-radius: 10px; }
 .note p > img:only-child { margin: 22px auto; }
-.note img[src$=".svg"] { background: #fff; padding: 14px; box-shadow: 0 0 0 1px var(--line-soft); }
-@media (prefers-color-scheme: dark) { .note img[src$=".svg"] { background: #f4f2ee; } }
 
 /* Tables: rounded frame, tinted header, hover row. */
 .note table { border-collapse: separate; border-spacing: 0; margin: var(--block-gap) 0; font-size: 14.5px; line-height: 1.6; max-width: 100%;
