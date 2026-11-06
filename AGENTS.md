@@ -86,7 +86,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
 | --- | --- | --- |
 | 액션 `@Action` | 데이터를 바꾸는 모든 동작. 앱, CLI, MCP가 같은 선언을 쓴다 | 있음 |
 | 표준 구조 `standard-layout.swift` | 폴더와 파일 이름 | 있음 |
-| 앱 링크(Route) | 앱 안의 모든 대상을 가리키는 주소. 알림, 위젯, 단축어, 멀티뷰, 기록이 쓴다 | #43 |
+| 앱 링크 `AppLink` | 앱 안의 모든 대상을 가리키는 `folio://<종류>/<ID>[#page=N\|#^블록\|#제목]` 주소. 앱은 `\.openLink`(여는 위치는 여기·옆 칸·새 탭·새 창)로만 열고, 창마다 `Navigator`가 뒤로·앞으로 기록을 둔다. 사이드바, 검색, 노트와 파일의 링크, 바깥에서 온 `folio://`, `folio open`이 쓴다 | 있음 |
 | 화면 계약 | 모든 화면이 주소 하나를 그리고 전체·칸·좁은 폭에서 동작 | #43 |
 | 제안 | Claude가 내놓는 분류, 추출, 일정을 승인 화면으로 받는 공통 구조 | #90 |
 | 파일 보기 렌더러 | 형식 판단(`MaterialFormat`)과 형식별 보기(`FileView`) | #179 |
@@ -103,6 +103,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
 - **뷰**: 모델을 읽고 배치만 한다. `body`에서 묶기, 거르기, 세기를 하지 않고 `workspace`를 직접 부르지 않는다. 뷰는 `@State private var model`을 `init(workspace:)`에서 만들고, `@State`는 시트, 마우스 올림, 포커스 같은 화면 상태에만 쓴다.
 - **Workspace**: 폴더 읽기, 파일 감시, 액션 실행, `can`/`refusal`/`confirmation`만 맡는다. 한 기능만 쓰는 함수는 그 기능의 모델에 둔다.
 - `course.json` 밖의 파일을 읽는 목록(노트, 퀴즈 카드)은 `workspace.notesRevision`과 `quizRevision`이 바뀔 때 다시 읽는다. 두 값은 `Workspace`가 액션 결과의 `changes`(`touchesNotes`, `touchesQuizzes`)와 폴더 전체 다시 읽기로만 올린다. 화면이 직접 올리지 않으므로, 어느 화면이나 Claude 패널, CLI로 써도 열린 목록에 나타난다.
+- 다른 화면이나 항목으로 옮길 때는 `@Environment(\.openLink)`에 `AppLink`를 넘긴다. 화면이 목적지를 직접 고르거나 링크 여는 법을 따로 구현하지 않는다. 그래야 모든 이동이 창의 기록 하나에 들어간다. 화면은 창이 지금 가리키는 곳을 `\.place`로 받아 따라가고, 자기 안에서 연 것(파일, 단원, 노트)은 다시 링크로 알린다(`CourseModel.place`).
 - 파생 계산 중 데이터의 규칙(주차 묶기, 빠진 복습 노트 판단)은 `FolioDomain`에 두고 `swift test`로 검사한다. 화면에만 필요한 계산은 모델에 둔다.
 - 모델 테스트는 `app-tests/<화면>-model-tests.swift`에 Swift Testing으로 쓰고, `fixtureWorkspace()`로 가짜 GIST 폴더를 연다.
 
@@ -260,6 +261,7 @@ Me/GIST/
 - 예전 회차 노트 이름: `note retitle [<과목>]`. 회차에 연결된 노트 중 이름이 `10주차-2`, `10주차-2 정리`인 것만 날짜와 주제 이름으로 바꾸고, 템플릿이 쓴 첫 제목과 과목 노트의 위키링크도 따라 바꾼다. 이동은 `moves.jsonl`의 한 묶음이고 `cleanup undo`가 이름, 제목, 링크를 함께 되돌린다
 - 폴더 없는 과목 옮기기: `transcript move`. 스키마 1의 `transcript.json`에 있던 과목을 같은 ID로 과목 폴더에 옮긴다. 인정학기 과목이 있으면 먼저 `semester source <학기> <출처>`로 출처를 정한다. `cleanup undo`로 되돌린다
 - 학기별 학점과 GPA: `gpa`
+- 앱 링크: `link <종류> [<대상>] [--page N | --heading <제목> | --block <ID> | --section <구역>]`이 `folio://` 주소를 쓰고, `open`이 같은 인자로 앱에서 연다. 노트, `.tex`의 `\href{…}`, 다른 앱에 붙여 쓴다
 
 작업을 끝냈다고 보고하기 전에 관련 테스트와 빌드가 통과하는지 확인한다.
 
