@@ -123,22 +123,24 @@ struct CompletionMenuView: View {
 
     var body: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                VStack(spacing: 0) {
-                    ForEach(Array(menu.items.enumerated()), id: \.element.id) { i, item in
-                        row(item, selected: i == menu.selected)
-                            .id(i)
-                            .contentShape(.rect)
-                            .onTapGesture { pick(i) }
-                    }
-                }
-                .padding(Self.inset)
-            }
-            .scrollIndicators(.never)
-            .onChange(of: menu.selected) { _, i in proxy.scrollTo(i) }
+            ScrollView { rows }
+                .scrollIndicators(.never)
+                .onChange(of: menu.selected) { _, i in proxy.scrollTo(i) }
         }
         .frame(width: Self.width, height: Self.height(rows: menu.items.count))
         .floatingGlass()
+    }
+
+    var rows: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(menu.items.enumerated()), id: \.element.id) { i, item in
+                row(item, selected: i == menu.selected)
+                    .id(i)
+                    .contentShape(.rect)
+                    .onTapGesture { pick(i) }
+            }
+        }
+        .padding(Self.inset)
     }
 
     func row(_ item: CompletionItem, selected: Bool) -> some View {

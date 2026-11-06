@@ -307,7 +307,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     let completion = CompletionMenu()
     private(set) var catalog = CompletionCatalog()
     private var assisting: (NoteAssist, MathSyntax)?
-    private var menuHost: NSHostingView<AnyView>?
+    private(set) var menuHost: NSHostingView<AnyView>?
     private var accent = CourseAccent.gray
 
     func configure(accent: CourseAccent, syntax: MathSyntax, dark: Bool) {
