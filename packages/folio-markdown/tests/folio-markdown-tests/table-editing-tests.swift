@@ -86,6 +86,13 @@ struct TableEditingTests {
         #expect(Self.run(.unmerge, merged) == "| a   | b   |\n| --- | :-: |\n| 1‸   | 2   |\n| 3   | 4   |")
     }
 
+    /// A cb-table left with nothing GFM can't hold goes back to GFM on the next edit, not only the one that split it.
+    @Test func aPlainCBTableTurnsBackOnAnyEdit() {
+        let cb = "```cb-table\n{\"rows\": [{\"cells\": [{\"text\": \"x‸\"}]}, {\"header\": true, \"cells\": [{\"text\": \"a\"}]}, {\"cells\": [{\"text\": \"1\"}]}]}\n```"
+        #expect(Self.run(.format, cb)?.hasPrefix("```cb-table\n") == true)
+        #expect(Self.run(.deleteRow, cb) == "| a‸   |\n| --- |\n| 1   |")
+    }
+
     @Test func aSelectionAcrossCellsMergesThemAll() {
         let out = Self.run(.merge, "| a | b | c |\n|---|---|---|\n| ‸1 | 2 | 3 |\n| 4 | 5‸ | 6 |")
         #expect(out?.contains(#"{"cells": [{"text": "1\n2\n4\n5‸", "colspan": 2, "rowspan": 2}, {"text": "3"}]},"#) == true)

@@ -213,7 +213,7 @@ public struct TableSource {
         if kind == .gfm {
             for i in grid.rows.indices { grid.rows[i].header = i == 0 }
         }
-        let gfm = kind == .gfm ? !grid.hasMerged : (self.grid.hasMerged && Self.fitsGFM(grid))
+        let gfm = kind == .gfm ? !grid.hasMerged : Self.fitsGFM(grid)
         let written = gfm ? Self.gfm(grid, first: firstPrefix, rest: restPrefix)
             : Self.cbTable(grid, open: fences?.open ?? "\(firstPrefix)```\(CBTable.language)", close: fences?.close ?? "\(restPrefix)```", prefix: restPrefix)
         let origin = grid.origin(min(target.row, grid.height - 1), min(target.column, grid.width - 1))
