@@ -1,0 +1,113 @@
+import Foundation
+
+/// The tabs of one window, in order, and the one in front. A value, so the window's tabs can be saved and restored
+/// (#46); what each tab shows is kept by the window under the tab's ID.
+public struct TabStrip<ID: Hashable & Sendable>: Equatable, Sendable {
+    public private(set) var tabs: [ID]
+    public private(set) var selected: ID
+
+    public init(_ first: ID) {
+        tabs = [first]
+        selected = first
+    }
+
+    /// Nil when `selected` isn't one of `tabs`, or a tab is there twice.
+    public init?(tabs: [ID], selected: ID) {
+        guard tabs.contains(selected), Set(tabs).count == tabs.count else { return nil }
+        self.tabs = tabs
+        self.selected = selected
+    }
+
+    public var selectedIndex: Int { tabs.firstIndex(of: selected) ?? 0 }
+
+    /// A new tab goes last and comes to the front, wherever it was opened from.
+    public mutating func open(_ id: ID) {
+        guard !tabs.contains(id) else { return select(id) }
+        tabs.append(id)
+        selected = id
+    }
+
+    public mutating func select(_ id: ID) {
+        if tabs.contains(id) { selected = id }
+    }
+
+    /// ⌘1 to ⌘9: the tab at that place from the left; past the last tab, nothing.
+    public mutating func select(number n: Int) {
+        if tabs.indices.contains(n - 1) { selected = tabs[n - 1] }
+    }
+
+    /// ⌃Tab and ⌃⇧Tab, around from the last tab to the first.
+    public mutating func selectNext() { selected = tabs[(selectedIndex + 1) % tabs.count] }
+    public mutating func selectPrevious() { selected = tabs[(selectedIndex + tabs.count - 1) % tabs.count] }
+
+    /// False, and nothing closed, for the last tab: closing it closes the window. Closing the tab in front brings the
+    /// one after it forward, or the one before when it was last, so the tab under the pointer is the next to close.
+    @discardableResult
+    public mutating func close(_ id: ID) -> Bool {
+        guard tabs.count > 1, let i = tabs.firstIndex(of: id) else { return false }
+        tabs.remove(at: i)
+        if selected == id { selected = tabs[min(i, tabs.count - 1)] }
+        return true
+    }
+
+    /// Keeps `id` alone, in front.
+    public mutating func closeOthers(than id: ID) {
+        guard tabs.contains(id) else { return }
+        tabs = [id]
+        selected = id
+    }
+
+    /// Puts `id` at `index` among the tabs, as a drag drops it there.
+    public mutating func move(_ id: ID, to index: Int) {
+        guard let i = tabs.firstIndex(of: id) else { return }
+        tabs.remove(at: i)
+        tabs.insert(id, at: max(0, min(index, tabs.count)))
+    }
+}
+
+/// How the tabs share the toolbar row. The tab in front shows the whole place it is at and is never narrowed for the
+/// others: they give way first, down to their icons, and then into a "탭 n개 더" menu at the row's end.
+public enum TabFit {
+    public struct Layout: Equatable, Sendable {
+        /// The other tabs show only their icons.
+        public var iconsOnly: Bool
+        /// How many of the other tabs, from the left, are in the row; the rest are in the menu.
+        public var shown: Int
+        public var hidden: Int
+
+        public init(iconsOnly: Bool, shown: Int, hidden: Int) {
+            self.iconsOnly = iconsOnly
+            self.shown = shown
+            self.hidden = hidden
+        }
+    }
+
+    /// The space before the first tab, after the buttons ending at `after`, so the tabs start at `trailStart` (`Space.l`
+    /// in from the content panel's corner) as the breadcrumb did. When the corner is under the buttons (the sidebar
+    /// folded), the tabs keep `gap` after them instead.
+    public static func lead(trailStart: Double, after: Double, gap: Double) -> Double {
+        max(gap, trailStart - after)
+    }
+
+    /// - Parameters:
+    ///   - room: the row's width for the tabs and the menu.
+    ///   - selected: the tab in front, at its full width.
+    ///   - others: every other tab at its full width, left to right.
+    ///   - icon: an other tab with only its icon.
+    ///   - gap: between two neighbors in the row.
+    ///   - more: the menu of the tabs that don't fit.
+    public static func layout(room: Double, selected: Double, others: [Double], icon: Double, gap: Double, more: Double) -> Layout {
+        let n = others.count
+        guard n > 0 else { return Layout(iconsOnly: false, shown: 0, hidden: 0) }
+        func width(_ tabs: Double, count: Int, menu: Bool) -> Double {
+            let items = 1 + count + (menu ? 1 : 0)
+            return selected + tabs + (menu ? more : 0) + gap * Double(items - 1)
+        }
+        if width(others.reduce(0, +), count: n, menu: false) <= room { return Layout(iconsOnly: false, shown: n, hidden: 0) }
+        if width(icon * Double(n), count: n, menu: false) <= room { return Layout(iconsOnly: true, shown: n, hidden: 0) }
+        // The menu stays even when no icon fits beside the tab in front, which then folds its own trail.
+        var shown = n - 1
+        while shown > 0, width(icon * Double(shown), count: shown, menu: true) > room { shown -= 1 }
+        return Layout(iconsOnly: true, shown: shown, hidden: n - shown)
+    }
+}
