@@ -271,6 +271,24 @@ struct NotePreviewTests {
         #expect(abs(top) < 80)
     }
 
+    /// A footnote's number goes down to the note's list, and the list's arrow back up to where it was referenced.
+    @Test func footnotesLinkToTheListAndBack() async throws {
+        let filler = (1...60).map { "Paragraph \($0)" }.joined(separator: "\n\n")
+        let rig = PreviewRig("Claim[^src].\n\n\(filler)\n\n[^src]: Where it comes from")
+        defer { rig.close() }
+        await rig.settle()
+        #expect(try await rig.js("return document.querySelector('section.footnotes li')?.textContent") as? String == "Where it comes from ↩\u{FE0E}")
+        func top(_ id: String) async throws -> Double {
+            try #require(try await rig.js("return document.getElementById(id).getBoundingClientRect().top", ["id": id]) as? Double)
+        }
+        _ = try await rig.js("document.querySelector('sup.footnote-ref a').click()")
+        for _ in 0..<40 { if abs(try await top("fn-1")) < 80 { break }; try? await Task.sleep(for: .milliseconds(50)) }
+        #expect(abs(try await top("fn-1")) < 80)
+        _ = try await rig.js("document.querySelector('a.footnote-back').click()")
+        for _ in 0..<40 { if abs(try await top("fnref-1")) < 80 { break }; try? await Task.sleep(for: .milliseconds(50)) }
+        #expect(abs(try await top("fnref-1")) < 80)
+    }
+
     @Test func aRecycledPageStartsEmpty() async throws {
         let rig = PreviewRig("# One")
         await rig.settle()

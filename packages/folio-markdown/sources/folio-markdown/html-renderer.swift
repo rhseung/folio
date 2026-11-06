@@ -6,8 +6,7 @@ import Markdown
 /// - Raw HTML in notes is escaped, not executed; notes come from many sources and the viewer is not a sandbox.
 public struct HTMLRenderer {
     public static func render(_ note: ParsedNote) -> String {
-        var r = HTMLRenderer()
-        return r.blocks(Array(note.document.children))
+        blocks(note, embeds: nil, lines: false).map(\.html).joined()
     }
 
     public static func render(markdown: String) -> String {
@@ -23,11 +22,24 @@ public struct HTMLRenderer {
     /// The note block by block, so a page can redraw only the blocks that changed and follow an editor by line. Task
     /// boxes carry their item's body line as `data-line`, so a tick can be written back to the source.
     public static func blocks(_ note: ParsedNote, embeds: NoteEmbeds? = nil) -> [Block] {
+        blocks(note, embeds: embeds, lines: true)
+    }
+
+    static func blocks(_ note: ParsedNote, embeds: NoteEmbeds?, lines: Bool) -> [Block] {
         var r = HTMLRenderer()
-        r.note = note
+        if lines { r.note = note }
         r.embeds = embeds
         r.trail = embeds?.key.map { [$0] } ?? []
-        return r.rendered(Array(note.document.children)).map { Block(html: $0.html, lines: note.lines(of: $0.node)) }
+        let book = FootnoteBook(note.document)
+        r.footnotes = book
+        var out = r.rendered(Array(note.document.children)).map { Block(html: $0.html, lines: note.lines(of: $0.node)) }
+        let section = r.footnoteSection()
+        guard !section.isEmpty else { return out }
+        // The list follows the editor from its last definition, unless a block below that is drawn above the list.
+        let definitions = note.document.children.compactMap { ($0 as? Paragraph).flatMap { book.isDefinition($0) ? note.lines(of: $0) : nil } }
+        let last = out.filter { !$0.html.isEmpty }.compactMap(\.lines?.lowerBound).max() ?? 0
+        out.append(Block(html: section, lines: definitions.last.flatMap { $0.lowerBound >= last ? $0 : nil }))
+        return out
     }
 
     var counters: [String: Int] = [:]
@@ -41,6 +53,8 @@ public struct HTMLRenderer {
     var nested = false
     /// Inside a reference's preview, whose own references get no preview: it would hold the next one, and so on.
     var previewing = false
+    /// The note's footnotes, numbered as references to them are drawn.
+    var footnotes: FootnoteBook?
 
     /// A renderer for part of this note's page (a table cell, an embed) that draws embeds and references as it does.
     func inner() -> HTMLRenderer {
@@ -49,6 +63,7 @@ public struct HTMLRenderer {
         r.trail = trail
         r.nested = nested
         r.previewing = previewing
+        r.footnotes = footnotes
         return r
     }
 
@@ -78,6 +93,8 @@ public struct HTMLRenderer {
     mutating func block(_ node: Markup) -> String {
         switch node {
         case let p as Paragraph:
+            // A definition is drawn in the list at the note's end, not where it was written.
+            if footnotes?.isDefinition(p) == true { return "" }
             if embeds != nil, let links = Self.embedsOnly(p) { return links.map { embed($0) }.joined() }
             let (html, id) = Self.splitBlockID(inlines(Array(p.inlineChildren)))
             return "<p\(idAttribute(id))>\(html)</p>\n"
@@ -128,7 +145,11 @@ public struct HTMLRenderer {
         case MathProtection.blockLanguage:
             return "<div class=\"math display\">\(Self.escape(code))</div>\n"
         case CBTable.language:
-            return CBTable.render(json: code)
+            let r = inner()
+            return CBTable.render(json: code) { text in
+                var cell = r
+                return cell.blocks(Array(ParsedNote(text).document.children))
+            }
         case CBWidget.language:
             return CBWidget.render(json: code)
         case let language?:
@@ -216,12 +237,20 @@ public struct HTMLRenderer {
     mutating func inlines(_ nodes: [Markup]) -> String {
         var out = ""
         for node in nodes { out += inline(node) }
-        return linkWikiLinks(out)
+        return linkFootnotes(linkWikiLinks(out))
     }
 
     mutating func inline(_ node: Markup) -> String {
         switch node {
         case let t as Markdown.Text:
+            // Only a footnote definition's first text starts with the marker. Its label is the list's; where the
+            // definition isn't drawn as one, it shows as written.
+            if t.string.first == Footnotes.marker {
+                guard footnotes != nil, let m = t.string.prefixMatch(of: Footnotes.maskedStart) else {
+                    return Self.escape("[" + t.string.dropFirst())
+                }
+                return Self.escape(String(t.string[m.range.upperBound...]))
+            }
             return Self.escape(t.string)
         case let e as Emphasis:
             return "<em>\(inlines(Array(e.inlineChildren)))</em>"
@@ -269,6 +298,55 @@ public struct HTMLRenderer {
             cursor = m.range.upperBound
         }
         return out + replaceWikiLinks(String(html[cursor...]))
+    }
+
+    /// Turns `[^label]` in rendered inline HTML into the footnote's number, outside `<code>` and math spans. A label
+    /// nothing defines stays as written, as in GFM.
+    func linkFootnotes(_ html: String) -> String {
+        guard let footnotes, html.contains("[^") else { return html }
+        let protected = /(<code>.*?<\/code>|<span class="math">.*?<\/span>)/
+        let nested = nested
+        let replace = { (s: Substring) -> String in
+            String(s.replacing(Footnotes.reference) { m in
+                guard let (n, use) = footnotes.use(Self.unescape(String(m.1))) else { return String(m.0) }
+                // Inside an embed or a preview, ids would repeat the page's own.
+                if nested { return "<sup class=\"footnote-ref\">\(n)</sup>" }
+                return "<sup class=\"footnote-ref\"><a href=\"#fn-\(n)\" id=\"\(Self.footnoteRef(n, use))\">\(n)</a></sup>"
+            })
+        }
+        var out = ""
+        var cursor = html.startIndex
+        for m in html.matches(of: protected) {
+            out += replace(html[cursor..<m.range.lowerBound]) + html[m.range]
+            cursor = m.range.upperBound
+        }
+        return out + replace(html[cursor...])
+    }
+
+    static func footnoteRef(_ n: Int, _ use: Int) -> String { use == 1 ? "fnref-\(n)" : "fnref-\(n)-\(use)" }
+
+    /// The footnotes referenced so far, in their numbers' order, each with links back to where it was referenced.
+    /// Drawing one can number another, which then comes after it.
+    mutating func footnoteSection() -> String {
+        guard let footnotes else { return "" }
+        var items = ""
+        var i = 0
+        while i < footnotes.numbered.count {
+            let key = footnotes.numbered[i]
+            let n = i + 1
+            i += 1
+            guard let definition = footnotes.definitions[key] else { continue }
+            let body = Self.splitBlockID(inlines(definition)).html
+            if nested {
+                items += "<li><p>\(body)</p></li>\n"
+                continue
+            }
+            let back = (1...max(1, footnotes.uses(of: key))).map { use in
+                "<a class=\"footnote-back\" href=\"#\(Self.footnoteRef(n, use))\">↩\u{FE0E}\(use == 1 ? "" : "<sup>\(use)</sup>")</a>"
+            }.joined(separator: " ")
+            items += "<li id=\"fn-\(n)\"><p>\(body) \(back)</p></li>\n"
+        }
+        return items.isEmpty ? "" : "<section class=\"footnotes\"><ol>\n\(items)</ol></section>\n"
     }
 
     func replaceWikiLinks(_ s: String) -> String {
@@ -335,7 +413,9 @@ public struct HTMLRenderer {
         var child = inner()
         child.trail = trail + [key]
         child.nested = true
-        let body = child.blocks(Array(ParsedNote(section).document.children))
+        // The part shown may reference footnotes defined elsewhere in its note, usually at the end.
+        child.footnotes = FootnoteBook(ParsedNote(found.text).document)
+        let body = child.blocks(Array(ParsedNote(section).document.children)) + child.footnoteSection()
         return "<div class=\"embed\"\(Self.mathAttribute(found.math))>\(head)<div class=\"embed-body\">\n\(body)</div></div>\n"
     }
 
@@ -376,7 +456,9 @@ public struct HTMLRenderer {
         child.trail = trail + [link.key(in: found.key)]
         child.nested = true
         child.previewing = true
-        return ReferenceCard(html: child.blocks(Array(ParsedNote(section).document.children)), math: found.math)
+        child.footnotes = FootnoteBook(ParsedNote(found.text).document)
+        let body = child.blocks(Array(ParsedNote(section).document.children)) + child.footnoteSection()
+        return ReferenceCard(html: body, math: found.math)
     }
 
     static func mathAttribute(_ math: String?) -> String {

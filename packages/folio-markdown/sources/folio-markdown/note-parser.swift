@@ -14,7 +14,7 @@ public struct ParsedNote {
     public init(_ text: String) {
         (frontmatter, body) = Frontmatter.split(text)
         let protected = MathProtection.protectMapped(body)
-        document = Document(parsing: DraftItem.mask(protected.text))
+        document = Document(parsing: Footnotes.mask(DraftItem.mask(protected.text)))
         sourceLine = protected.origin
         bodyLines = body.split(separator: "\n", omittingEmptySubsequences: false)
         links = WikiLink.all(in: body)
