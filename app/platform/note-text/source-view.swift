@@ -14,6 +14,7 @@ struct MarkdownEditor {
     var openNote: (String) -> Void
     /// The editor's top line and how far into it the view is scrolled, for a preview to follow.
     var onScroll: @MainActor (Int, Double) -> Void = { _, _ in }
+    var assist = NoteAssist()
 
     @MainActor func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -41,6 +42,7 @@ struct MarkdownEditor {
         view.linkOpener = openLink
         view.onScroll = onScroll
         view.configure(accent: accent, syntax: math, dark: dark)
+        view.setAssist(assist, syntax: math)
         // The binding hasn't the syllable being composed yet, so swapping the text in then would delete it under the
         // input method, which then types each next jamo over a gap.
         if view.string != text, !view.hasMarkedText() { view.replace(with: text) }
@@ -302,9 +304,15 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     private var observer: NSObjectProtocol?
     private var held: (index: Int, y: CGFloat)?
     private static let promiseQueue = OperationQueue()
+    let completion = CompletionMenu()
+    private(set) var catalog = CompletionCatalog()
+    private var assisting: (NoteAssist, MathSyntax)?
+    private(set) var menuHost: NSHostingView<AnyView>?
+    private var accent = CourseAccent.gray
 
     func configure(accent: CourseAccent, syntax: MathSyntax, dark: Bool) {
         accentColors(accent)
+        self.accent = accent
         let next = SourceStyler(accent: accent, syntax: syntax, baseURL: baseURL, dark: dark)
         let changed = styler.map { $0.accent != accent || $0.syntax != syntax || $0.dark != dark || $0.baseURL != baseURL } ?? true
         styler = next
@@ -380,10 +388,13 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     }
 
     func apply(_ edit: SourceEditing.Edit, reveal: Bool = true) {
-        guard shouldChangeText(in: edit.range, replacementString: edit.text) else { return }
-        textStorage?.replaceCharacters(in: edit.range, with: edit.text)
-        didChangeText()
-        setSelectedRange(NSRange(location: edit.caret, length: 0))
+        // Stepping over a closer changes no text, and an empty change would still be an undo step.
+        if edit.range.length > 0 || !edit.text.isEmpty {
+            guard shouldChangeText(in: edit.range, replacementString: edit.text) else { return }
+            textStorage?.replaceCharacters(in: edit.range, with: edit.text)
+            didChangeText()
+        }
+        setSelectedRange(edit.selection)
         if reveal { scrollRangeToVisible(selectedRange()) }
     }
 
@@ -397,7 +408,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     }
 
     func textViewDidChangeSelection(_ notification: Notification) {
-        if !hasMarkedText() { matchTyping() }
+        if !hasMarkedText() {
+            matchTyping()
+            refreshCompletion(opening: false)
+        }
         updateBubble()
     }
 
@@ -410,6 +424,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
                 guard let self else { return }
                 let top = self.topLine(lineStarts: self.lineStarts)
                 self.onScroll(top.line, top.frac)
+                self.placeMenu()
             }
         }
     }
@@ -426,8 +441,116 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         super.insertNewline(sender)
     }
 
-    override func insertTab(_ sender: Any?) { apply(SourceEditing.indent(string as NSString, selectedRange(), out: false)) }
-    override func insertBacktab(_ sender: Any?) { apply(SourceEditing.indent(string as NSString, selectedRange(), out: true)) }
+    override func insertTab(_ sender: Any?) {
+        apply(SourceEditing.tab(string as NSString, selectedRange(), back: false, snippets: catalog.snippets))
+    }
+
+    override func insertBacktab(_ sender: Any?) {
+        apply(SourceEditing.tab(string as NSString, selectedRange(), back: true, snippets: catalog.snippets))
+    }
+
+    // Nothing here acts while a syllable is being composed: the input method owns those keys, and a pair closed or a
+    // menu item taken under it would split the syllable or eat the key that finishes it.
+
+    override func insertText(_ text: Any, replacementRange: NSRange) {
+        let typed = (text as? String) ?? (text as? NSAttributedString)?.string
+        if !hasMarkedText(), let typed, replacementRange.location == NSNotFound || replacementRange == selectedRange(),
+           let edit = SourceEditing.typed(typed, in: string as NSString, selection: selectedRange()) {
+            apply(edit)
+        } else {
+            super.insertText(text, replacementRange: replacementRange)
+        }
+        refreshCompletion(opening: true)
+    }
+
+    override func deleteBackward(_ sender: Any?) {
+        if !hasMarkedText(), let edit = SourceEditing.deleteBackward(in: string as NSString, selection: selectedRange()) {
+            apply(edit)
+        } else {
+            super.deleteBackward(sender)
+        }
+        refreshCompletion(opening: false)
+    }
+
+    override func doCommand(by selector: Selector) {
+        if completion.visible, !hasMarkedText() {
+            switch selector {
+            case #selector(moveUp(_:)): return completion.move(-1)
+            case #selector(moveDown(_:)): return completion.move(1)
+            case #selector(insertTab(_:)): return acceptCompletion()
+            case #selector(insertNewline(_:)):
+                if completion.query?.takesReturn == true { return acceptCompletion() }
+                completion.hide()
+                placeMenu()
+            case #selector(cancelOperation(_:)):
+                completion.hide()
+                return placeMenu()
+            default: break
+            }
+        }
+        super.doCommand(by: selector)
+    }
+
+    // MARK: Completion
+
+    func setAssist(_ assist: NoteAssist, syntax: MathSyntax) {
+        if let assisting, assisting.0 == assist, assisting.1 == syntax { return }
+        assisting = (assist, syntax)
+        catalog = assist.catalog(syntax: syntax)
+    }
+
+    /// Opens, narrows or closes the menu for the text at the caret. Only typing opens it; a caret moved elsewhere
+    /// keeps it only while it is still on the same kind of thing.
+    func refreshCompletion(opening: Bool) {
+        guard !hasMarkedText() else { return }
+        let selection = selectedRange()
+        if selection.length == 0, let query = Completion.query(in: string as NSString, caret: selection.location, catalog: catalog),
+           opening || completion.query?.kind == query.kind {
+            let items = Completion.items(for: query, catalog: catalog)
+            if items.isEmpty { completion.hide() } else { completion.show(query, items) }
+        } else {
+            completion.hide()
+        }
+        placeMenu()
+    }
+
+    func acceptCompletion(_ index: Int? = nil) {
+        if let index { completion.selected = index }
+        guard let query = completion.query, let item = completion.current else { return }
+        completion.hide()
+        apply(Completion.edit(accepting: item, for: query, in: string as NSString))
+        window?.makeFirstResponder(self)
+        // A block left open (`> [!`, a fence) opens the menu for what comes next in it; anything else would reopen
+        // the menu it just closed, as `\alpha` is still a command being typed.
+        if query.kind == .slash { refreshCompletion(opening: true) } else { placeMenu() }
+    }
+
+    /// Under the line being completed, or over it where the screen ends first, in the scroll view so the menu isn't
+    /// clipped to the text column.
+    func placeMenu() {
+        guard completion.visible, let query = completion.query, let scroll = enclosingScrollView, let window else {
+            menuHost?.isHidden = true
+            return
+        }
+        let host = menuHost ?? {
+            let host = NSHostingView(rootView: AnyView(EmptyView()))
+            scroll.addSubview(host)
+            menuHost = host
+            return host
+        }()
+        if host.superview !== scroll { scroll.addSubview(host) }
+        host.rootView = AnyView(CompletionMenuView(menu: completion) { [weak self] i in self?.acceptCompletion(i) }.environment(\.accent, accent))
+        let size = CGSize(width: CompletionMenuView.width, height: CompletionMenuView.height(rows: completion.items.count))
+        let screen = firstRect(forCharacterRange: NSRange(location: query.range.location, length: 0), actualRange: nil)
+        let line = scroll.convert(window.convertFromScreen(screen), from: nil)
+        let x = max(Theme.Space.s, min(line.minX - Theme.Space.m, scroll.bounds.maxX - size.width - Theme.Space.s))
+        let gap = Theme.Space.xs
+        let down = scroll.isFlipped ? line.maxY + gap : line.minY - gap - size.height
+        let up = scroll.isFlipped ? line.minY - gap - size.height : line.maxY + gap
+        let fits = scroll.isFlipped ? down + size.height <= scroll.bounds.maxY : down >= scroll.bounds.minY
+        host.frame = NSRect(x: x, y: fits ? down : up, width: size.width, height: size.height)
+        host.isHidden = false
+    }
 
     // MARK: Clicks
 
@@ -453,7 +576,12 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     // MARK: Rendering bubble
 
     override func resignFirstResponder() -> Bool {
-        defer { bubble?.removeFromSuperview(); bubble = nil }
+        defer {
+            bubble?.removeFromSuperview()
+            bubble = nil
+            completion.hide()
+            placeMenu()
+        }
         return super.resignFirstResponder()
     }
 
@@ -725,6 +853,7 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
     var saveFile: (String, Data) -> String? = { _, _ in nil }
     private var styler: SourceStyler?
     private var lineStarts: [Int] = [0]
+    private var snippets: [Snippet] = []
 
     override init() {
         super.init()
@@ -739,6 +868,11 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
         let changed = styler.map { $0.accent != accent || $0.syntax != syntax || $0.dark != dark || $0.baseURL != baseURL } ?? true
         styler = next
         if changed { restyle() }
+    }
+
+    /// The completion menu is Mac-only for now (#31); pairs, lists and snippets on Tab work here too.
+    func setAssist(_ assist: NoteAssist, syntax: MathSyntax) {
+        snippets = assist.snippets.filter { syntax == .latex || !$0.inMath }.map { Snippet(trigger: $0.trigger, body: $0.body, inMath: $0.inMath) }
     }
 
     func restyle() {
@@ -773,7 +907,7 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
 
     func apply(_ edit: SourceEditing.Edit) {
         textStorage.replaceCharacters(in: edit.range, with: edit.text)
-        selectedRange = NSRange(location: edit.caret, length: 0)
+        selectedRange = edit.selection
         restyle()
         onChange()
         scrollRangeToVisible(selectedRange)
@@ -790,8 +924,18 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
             apply(edit)
             return false
         }
+        let source = textStorage.string as NSString
         if text == "\t" {
-            apply(SourceEditing.indent(textStorage.string as NSString, range, out: false))
+            apply(SourceEditing.tab(source, range, back: false, snippets: snippets))
+            return false
+        }
+        if text.isEmpty, range.length == 1, selectedRange.length == 0,
+           let edit = SourceEditing.deleteBackward(in: source, selection: NSRange(location: NSMaxRange(range), length: 0)) {
+            apply(edit)
+            return false
+        }
+        if let edit = SourceEditing.typed(text, in: source, selection: range) {
+            apply(edit)
             return false
         }
         return true

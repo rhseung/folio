@@ -6359,6 +6359,160 @@
         }
       }
     },
+    "notes.assist.bullets": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "글머리 목록"
+          }
+        }
+      }
+    },
+    "notes.assist.callout": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "콜아웃"
+          }
+        }
+      }
+    },
+    "notes.assist.code": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "코드 블록"
+          }
+        }
+      }
+    },
+    "notes.assist.divider": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구분선"
+          }
+        }
+      }
+    },
+    "notes.assist.heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제목 %lld"
+          }
+        }
+      }
+    },
+    "notes.assist.inline-math": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인라인 수식"
+          }
+        }
+      }
+    },
+    "notes.assist.math": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수식 블록"
+          }
+        }
+      }
+    },
+    "notes.assist.merged-table": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "칸을 합친 표"
+          }
+        }
+      }
+    },
+    "notes.assist.numbers": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "번호 목록"
+          }
+        }
+      }
+    },
+    "notes.assist.quote": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인용"
+          }
+        }
+      }
+    },
+    "notes.assist.table": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표"
+          }
+        }
+      }
+    },
+    "notes.assist.tasks": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "할 일 목록"
+          }
+        }
+      }
+    },
+    "notes.assist.template": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 템플릿"
+          }
+        }
+      }
+    },
+    "notes.assist.widget": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위젯"
+          }
+        }
+      }
+    },
     "notes.choose": {
       "extractionState": "manual",
       "localizations": {
@@ -14209,6 +14363,94 @@
           "stringUnit": {
             "state": "translated",
             "value": "화면"
+          }
+        }
+      }
+    },
+    "settings.snippet-add": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스니펫 추가"
+          }
+        }
+      }
+    },
+    "settings.snippet-body": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "펼칠 글"
+          }
+        }
+      }
+    },
+    "settings.snippet-in-math": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수식 안"
+          }
+        }
+      }
+    },
+    "settings.snippet-in-text": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "본문"
+          }
+        }
+      }
+    },
+    "settings.snippet-reset": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본값으로"
+          }
+        }
+      }
+    },
+    "settings.snippet-trigger": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "트리거"
+          }
+        }
+      }
+    },
+    "settings.snippets": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스니펫"
+          }
+        }
+      }
+    },
+    "settings.snippets-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 편집 보기에서 트리거를 치고 Tab을 누르면 펼칩니다. $1, $2는 커서가 갈 자리이고, 수식 안 스니펫은 LaTeX 노트의 수식에서만 펼칩니다."
           }
         }
       }
