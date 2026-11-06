@@ -329,10 +329,41 @@ public struct NoteRetitleSessions {
     }
 }
 
+/// Renames a note or moves it to another folder of Notes/ as `note retitle` renames: one `moves.jsonl` batch (`made`)
+/// that `cleanup undo` turns back, with its entry's path, its heading and the links to it following. `to` is
+/// Notes-relative; a name another note of the course has gets ` 2`, so the app passes the name it showed. The
+/// command prints how to undo the move, so it is written by hand.
+@Action("note mv", "노트 이름 바꾸기나 Notes 안의 다른 폴더로 옮기기. 노트의 첫 제목과 다른 노트의 링크도 따라 바뀐다", effect: .moves,
+        confirm: "노트 {note}을(를) Notes/{to}(으)로 옮깁니다.", done: "노트 {note}을(를) Notes/{to}(으)로 옮겼습니다",
+        phrases: ["노트 이름 바꾸기", "노트 이름 변경", "노트 옮기기", "노트 폴더로"], cli: .manual)
+public struct NoteMove {
+    @Arg var course: Course.ID
+    @Arg var note: Note.Path
+    /// Notes-relative, with or without the note's extension: `정리/증명`.
+    @Arg var to: String
+
+    public func run(_ ctx: ActionContext) throws {
+        let store = try ctx.store(course)
+        let source = try FolioActions.note(ctx, course: course, path: note)
+        let name = ((to as NSString).lastPathComponent as NSString).deletingPathExtension.trimmingCharacters(in: .whitespaces)
+        guard !name.isEmpty else { throw ActionError.rule(String(localized: .errorNoteTitleEmpty)) }
+        guard let target = store.movedNoteURL(source, to: to, in: try ctx.file(course)) else {
+            throw ActionError.rule(String(localized: .errorNoteMovePlace(to)))
+        }
+        guard target.standardizedFileURL != source.url.standardizedFileURL else { return }
+        let move = PlannedMove(from: ctx.relative(source.url), to: ctx.relative(target))
+        ctx.record(Change(.moved, move.from, to: move.to))
+        if let batch = try NoteTitles.follow([move], ctx, move: { try MoveJournal.apply([move], in: ctx.gist.url, device: ctx.device, now: ctx.now) }) {
+            ctx.made(batch)
+        }
+    }
+}
+
 /// A note's title is its file name, so moving a note's file renames it.
 enum NoteTitles {
     /// Runs `move` (`moves` are GIST-relative, as `moves.jsonl` keeps them) and carries each moved note's title
-    /// over: its entry's path, the heading its template wrote, the links to it by title from the course's notes, and
+    /// over: its entry's path, the heading its template wrote, its own links to files relative to its folder (a note
+    /// moved to another folder), the links to it by title from the course's notes, and
     /// the shown title of links to it by ID (`[[note:<ID>|title]]`) from every course's notes, since an ID reaches
     /// across courses. Moves of other files pass through. The texts are read before `move`, so a dry run reports them
     /// from where they are. Returns what `move` returned; nothing on a dry run.
@@ -356,6 +387,7 @@ enum NoteTitles {
         }
         guard !renamed.isEmpty else { return ctx.dryRun ? nil : try move() }
         let title = { (path: String) in ((path as NSString).lastPathComponent as NSString).deletingPathExtension }
+        let folder = { (path: String) in (path as NSString).deletingLastPathComponent }
         let everywhere = renamed.values.flatMap { $0 }
         for (course, store) in courses {
             let notes = renamed[course] ?? []
@@ -364,7 +396,10 @@ enum NoteTitles {
                 let own = notes.first { $0.from == path }
                 var text = try store.read(n)
                 let before = text
-                if let own { text = NoteTemplate.retitled(text, from: title(own.from), to: title(own.to), format: n.format) }
+                if let own {
+                    text = NoteTemplate.retitled(text, from: title(own.from), to: title(own.to), format: n.format)
+                    text = NoteTemplate.rebased(text, from: folder(own.from), to: folder(own.to), format: n.format)
+                }
                 if n.format == .markdown {
                     for r in notes { text = WikiLink.retargeted(text, from: title(r.from), to: title(r.to)) }
                     for r in everywhere { text = WikiLink.retitled(text, note: r.note, from: title(r.from), to: title(r.to)) }

@@ -155,6 +155,52 @@ public enum NoteTemplate {
         return lines.joined(separator: "\n")
     }
 
+    /// `text` of a note moved from the folder `old` to `new` (paths in the course folder), with the paths it gives
+    /// relative to its own folder still reaching the same files: `![](assets/a.png)` written in `Notes` reads
+    /// `![](../assets/a.png)` in `Notes/정리`. The preview and TeX resolve them from the note's folder, so a move would
+    /// otherwise break every picture. Links with a scheme, absolute paths, anchors, and paths that climb out of the
+    /// course stay as written.
+    public static func rebased(_ text: String, from old: String, to new: String, format: NoteFormat) -> String {
+        guard old != new else { return text }
+        func rebase(_ path: String) -> String? {
+            guard !path.isEmpty, !path.hasPrefix("/"), !path.hasPrefix("#"), !path.contains("://"),
+                  path.firstIndex(of: ":").map({ colon in !path[..<colon].contains("/") }) != true else { return nil }
+            let cut = path.firstIndex { $0 == "#" || $0 == "?" } ?? path.endIndex
+            var target = old.split(separator: "/").map(String.init)
+            for part in path[..<cut].split(separator: "/") {
+                switch part {
+                case ".": continue
+                case "..":
+                    guard !target.isEmpty else { return nil }
+                    target.removeLast()
+                default: target.append(String(part))
+                }
+            }
+            let base = new.split(separator: "/").map(String.init)
+            let shared = zip(base, target).prefix { $0 == $1 }.count
+            let parts = Array(repeating: "..", count: base.count - shared) + target.dropFirst(shared)
+            return parts.joined(separator: "/") + path[cut...]
+        }
+        switch format {
+        case .markdown:
+            return text.replacing(/(!?\[[^\]\n]*\]\()(<[^>\n]*>|[^)\s]+)/) { m in
+                let written = String(m.2)
+                let bracketed = written.hasPrefix("<")
+                let raw = bracketed ? String(written.dropFirst().dropLast()) : written
+                let decoded = raw.removingPercentEncoding ?? raw
+                guard let moved = rebase(decoded) else { return String(m.0) }
+                // Written encoded, or a space a bare destination can't hold: encoded as the editor writes links.
+                let out = bracketed || (raw == decoded && !moved.contains(" "))
+                    ? moved : moved.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed.union(["#", "?"])) ?? moved
+                return "\(m.1)\(bracketed ? "<\(out)>" : out)"
+            }
+        case .tex:
+            return text.replacing(/(\\(?:includegraphics|input|include|includepdf)\*?(?:\[[^\]]*\])?\{)([^}\n]+)\}/) { m in
+                rebase(String(m.2)).map { "\(m.1)\($0)}" } ?? String(m.0)
+            }
+        }
+    }
+
     /// A title is plain text, so TeX's special characters in it are written as themselves.
     static func texEscaped(_ text: String) -> String {
         text.map { c -> String in

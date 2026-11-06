@@ -61,6 +61,23 @@ struct NoteStoreTests {
         #expect(store.newNoteURL(title: "a/b:c", format: .markdown).lastPathComponent == "a-b-c.md")
     }
 
+    /// A moved note avoids every other note's title in the course, whatever its folder, case or Unicode form (macOS
+    /// hands back decomposed Hangul), and keeps its own.
+    @Test func aMovedNoteAvoidsOtherNotesTitles() throws {
+        let store = try store()
+        let folder = store.url.appending(path: "Notes/정리")
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        try store.createNote(at: folder.appending(path: "증명".decomposedStringWithCanonicalMapping + ".tex"), text: "")
+        let file = try store.load().model
+        let note = try #require(try store.note(at: "Notes/2주차-1.md"))
+        let moved = { (to: String) in store.movedNoteURL(note, to: to, in: file).flatMap { store.coursePath(of: $0) } }
+        #expect(moved("증명") == "Notes/증명 2.md")
+        #expect(moved("정리/2주차-1.md") == "Notes/정리/2주차-1.md")
+        #expect(moved("2주차-1") == "Notes/2주차-1.md")
+        #expect(moved("정리/assets/x") == nil && moved("x.tex") == nil && moved("Exports/x") == nil)
+        #expect(store.noteFolders() == ["", "정리"])
+    }
+
     @Test func writingLeavesTheTextAsGiven() throws {
         let store = try store()
         let note = try #require(try store.notes().first)

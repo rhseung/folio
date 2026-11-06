@@ -694,6 +694,17 @@
         }
       }
     },
+    "error.note.move-place": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트는 Notes 안의 폴더로만 옮기고 형식(.md, .tex)은 바꾸지 않습니다: %@"
+          }
+        }
+      }
+    },
     "error.note.session-has-review": {
       "extractionState": "manual",
       "localizations": {
