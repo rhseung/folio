@@ -39,7 +39,7 @@ struct TodayView: View {
         .navigationSubtitle(summary.studyDay.description)
         .sheet(item: $model.editing) { item in
             AssignmentSheet(workspace: model.workspace, course: item.course, assignment: item.assignment) { id in
-                searchTarget.wrappedValue = SearchTarget(courseId: item.course.id, section: .materials, materialId: id)
+                openLink(AppLink(.material, id), course: item.course.id)
             }
         }
         .confirming($model.pending)

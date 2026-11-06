@@ -3,7 +3,7 @@ import SwiftUI
 
 struct AssignmentsView: View {
     @State private var model: AssignmentsModel
-    @Environment(\.searchTarget) private var searchTarget
+    @Environment(\.openLink) private var openLink
 
     init(workspace: Workspace, course: LoadedCourse) {
         _model = State(initialValue: AssignmentsModel(workspace: workspace, course: course))
@@ -42,7 +42,7 @@ struct AssignmentsView: View {
         // The jump is taken here, outside the sheet, where the course screen's target is.
         .sheet(item: $model.editing) {
             AssignmentSheet(workspace: model.workspace, course: model.course, assignment: $0) { id in
-                searchTarget.wrappedValue = SearchTarget(courseId: model.course.id, section: .materials, materialId: id)
+                openLink(AppLink(.material, id), course: model.course.id)
             }
         }
         .confirming($model.pending)
