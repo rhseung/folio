@@ -27,6 +27,9 @@ public enum TexLog {
     /// The TeX log itself is not read: its `l.5` lines don't say which `\input` file they belong to.
     /// An unlocated error is kept only when no located one came, because Tectonic follows every real error
     /// with generic ones ("the XeTeX engine had an unrecoverable error").
+    ///
+    /// Builds keep going past errors so all of them show at once, which repeats them: TeX runs again when the `.aux`
+    /// changed, and one broken line (a missing package) can raise the same error dozens of times. Each is kept once.
     public static func issues(_ output: String) -> [TexIssue] {
         var located: [TexIssue] = []
         var general: [TexIssue] = []
@@ -49,6 +52,7 @@ public enum TexLog {
                 general.append(TexIssue(.error, message: String(rest)))
             }
         }
+        located = located.uniqued()
         let errors = located.filter { $0.severity == .error }
         return errors.isEmpty ? general.prefix(1) + located : located
     }
@@ -60,11 +64,21 @@ public enum TexLog {
         for i in 1..<(parts.count - 1) {
             if let n = Int(parts[i]), n > 0 {
                 let file = parts[..<i].joined(separator: ":")
-                let message = parts[(i + 1)...].joined(separator: ":").trimmingCharacters(in: .whitespaces)
+                // TeX's own `! LaTeX Error:` keeps its bang when Tectonic passes it on.
+                var message = parts[(i + 1)...].joined(separator: ":").trimmingCharacters(in: .whitespaces)
+                if message.hasPrefix("! ") { message.removeFirst(2) }
                 guard !file.isEmpty, !message.isEmpty else { return nil }
                 return TexIssue(severity, file: file, line: n, message: message)
             }
         }
         return nil
+    }
+}
+
+private extension Array where Element == TexIssue {
+    func uniqued() -> [TexIssue] {
+        var seen: [TexIssue] = []
+        for issue in self where !seen.contains(issue) { seen.append(issue) }
+        return seen
     }
 }

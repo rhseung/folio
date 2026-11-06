@@ -169,6 +169,37 @@ struct TextFileActionTests {
         }
         #expect(!FileManager.default.fileExists(atPath: store.fileURL("Assignments/HW03/hw.pdf").path))
     }
+
+    /// One build lists every mistake, and the PDF Tectonic still writes past them is not placed.
+    @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
+    func aBrokenDocumentNamesEveryError() throws {
+        try store.writeText("Assignments/HW03/hw.tex", text: "\\documentclass{article}\n\\begin{document}\n\\foo\n\nA \\qux.\n\n\\baz\n\\end{document}\n")
+        try run(MaterialTrack(course: Self.course))
+        let tex = try material("Assignments/HW03/hw.tex")
+        #expect(throws: ActionError.rule("PDF를 만들지 못했습니다.\nhw.tex:3: Undefined control sequence\nhw.tex:5: Undefined control sequence\nhw.tex:7: Undefined control sequence")) {
+            try run(MaterialBuild(course: Self.course, material: tex.id))
+        }
+        #expect(!FileManager.default.fileExists(atPath: store.fileURL("Assignments/HW03/hw.pdf").path))
+    }
+
+    /// The SyncTeX data stays in the build folder, and a click on the placed PDF finds the line that wrote there.
+    @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
+    func aBuildKeepsSyncTeXOutOfTheCourseFolder() throws {
+        try store.writeText("Assignments/HW03/hw.tex", text: "\\documentclass{article}\n\\begin{document}\nHello world.\n\\end{document}\n")
+        try run(MaterialTrack(course: Self.course))
+        try run(MaterialBuild(course: Self.course, material: try material("Assignments/HW03/hw.tex").id))
+        let source = store.fileURL("Assignments/HW03/hw.tex")
+        #expect(FileManager.default.fileExists(atPath: TexEngine.synctex(for: source).path))
+        let beside = try FileManager.default.contentsOfDirectory(atPath: source.deletingLastPathComponent().path)
+        #expect(!beside.contains { $0.contains("synctex") })
+        let sync = try #require(TexEngine.syncTeX(for: source, showing: store.fileURL("Assignments/HW03/hw.pdf")))
+        let place = try #require(sync.place(page: 1, x: 200, y: 132))
+        #expect(URL(filePath: place.file).resolvingSymlinksInPath() == source.resolvingSymlinksInPath())
+        #expect(place.line == 3)
+        // Another PDF on screen, say one built on another device, is not what this data describes.
+        try Data("%PDF-other".utf8).write(to: store.fileURL("Assignments/HW03/hw.pdf"))
+        #expect(TexEngine.syncTeX(for: source, showing: store.fileURL("Assignments/HW03/hw.pdf")) == nil)
+    }
 }
 
 struct MaterialNewTests {
