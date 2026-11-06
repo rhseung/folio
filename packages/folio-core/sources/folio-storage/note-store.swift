@@ -15,6 +15,14 @@ public struct NoteFile: Equatable, Sendable {
     }
 }
 
+extension Array where Element == NoteFile {
+    /// The note a link names by its title (Obsidian style): written as it is, or else ignoring case, as Obsidian
+    /// also matches.
+    public func titled(_ title: String) -> NoteFile? {
+        first { $0.title == title } ?? first { $0.title.caseInsensitiveCompare(title) == .orderedSame }
+    }
+}
+
 extension NoteMeta {
     /// Folio's keys in a note's frontmatter, from before the properties moved to course.json. Only the one-time
     /// `note migrate` reads them.

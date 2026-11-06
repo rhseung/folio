@@ -20,6 +20,17 @@ struct NoteStoreTests {
         #expect(try store().read(#require(notes.first)).hasPrefix("# 2주차-1"))
     }
 
+    /// A link's title finds its note as written first, and otherwise ignoring case.
+    @Test func aLinkFindsItsNoteByTitle() throws {
+        let store = try store()
+        try store.createNote(at: store.newNoteURL(title: "Matching", format: .markdown), text: "")
+        let notes = try store.notes()
+        #expect(notes.titled("Matching")?.url.lastPathComponent == "Matching.md")
+        #expect(notes.titled("MATCHING")?.url.lastPathComponent == "Matching.md")
+        #expect(notes.titled("2주차-1")?.meta.id != nil)
+        #expect(notes.titled("없음") == nil)
+    }
+
     @Test func aFileWithoutAnEntryHasNoIDAndATexFileIsANote() throws {
         let store = try store()
         try store.createNote(at: store.newNoteURL(title: "밖에서", format: .markdown), text: "# 밖에서\n")

@@ -6458,6 +6458,39 @@
         }
       }
     },
+    "notes.embed-loop": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 노트 안에 다시 들어가는 임베드라 그리지 않았습니다"
+          }
+        }
+      }
+    },
+    "notes.embed-missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트나 그 안의 제목, 블록을 찾지 못했습니다"
+          }
+        }
+      }
+    },
+    "notes.embed-too-deep": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "임베드가 너무 깊이 겹쳐 그리지 않았습니다"
+          }
+        }
+      }
+    },
     "notes.empty": {
       "extractionState": "manual",
       "localizations": {

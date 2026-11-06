@@ -200,7 +200,8 @@ struct NoteEditor: View {
                 if shown != .write {
                     NotePreview(text: model.body, baseURL: model.baseURL, math: model.meta.math, openNote: openNote, anchor: anchor,
                                 noteLink: model.note.meta.id.map { AppLink(.note, $0) }, edit: model.replaceLines,
-                                link: shown == .split ? preview : nil, toggleMode: toggleMode)
+                                link: shown == .split ? preview : nil, toggleMode: toggleMode, embeds: model.embeds,
+                                revision: model.workspace.notesRevision)
                 }
             }
         }

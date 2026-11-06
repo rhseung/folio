@@ -21,6 +21,10 @@ struct NotePreview {
     var link: PreviewLink?
     /// What ⌘E does while the preview has the keyboard. The web view would otherwise take the key for itself.
     var toggleMode: (@MainActor () -> Void)?
+    /// The notes embeds and block references draw; without it they show only their links.
+    var embeds: NoteEmbedSource?
+    /// The workspace's `notesRevision`: when another note changes, what this one embeds is drawn again.
+    var revision = 0
 
     @MainActor final class Coordinator {
         let page = NotePreviewPage.take()
@@ -34,9 +38,10 @@ struct NotePreview {
         page.noteLink = noteLink
         page.edit = edit
         page.toggleMode = toggleMode
+        page.embeds = embeds
         if link?.page !== page { link?.page = page }
         page.link = link
-        page.show(text, baseURL: baseURL, math: math, accent: accent, dark: dark)
+        page.show(text, baseURL: baseURL, math: math, accent: accent, dark: dark, revision: revision)
         page.reveal(anchor)
     }
 }
@@ -100,6 +105,7 @@ extension NotePreview: UIViewRepresentable {
     var openNote: (String) -> Void = { _ in }
     var openLink = OpenLinkAction()
     var noteLink: AppLink?
+    var embeds: NoteEmbedSource?
     /// What the pointer was on when the page's menu was asked for: a link, which the menu's own items open, and the
     /// heading or block, which they link to.
     fileprivate(set) var menuHref: String?
@@ -133,6 +139,7 @@ extension NotePreview: UIViewRepresentable {
         var math: MathSyntax
         var accent: CourseAccent
         var editable: Bool
+        var revision: Int
     }
 
     // MARK: Pool
@@ -156,6 +163,7 @@ extension NotePreview: UIViewRepresentable {
         menuHref = nil
         menuAnchor = nil
         noteLink = nil
+        embeds = nil
         revealed = nil
         revealing = nil
         edit = nil
@@ -227,7 +235,7 @@ extension NotePreview: UIViewRepresentable {
 
     // MARK: Showing
 
-    func show(_ text: String, baseURL: URL?, math: MathSyntax, accent: CourseAccent, dark: Bool) {
+    func show(_ text: String, baseURL: URL?, math: MathSyntax, accent: CourseAccent, dark: Bool, revision: Int = 0) {
         #if os(macOS)
         let appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         if view.appearance?.name != appearance?.name { view.appearance = appearance }
@@ -235,7 +243,7 @@ extension NotePreview: UIViewRepresentable {
         let style: UIUserInterfaceStyle = dark ? .dark : .light
         if view.overrideUserInterfaceStyle != style { view.overrideUserInterfaceStyle = style }
         #endif
-        wanted = Shown(text: text, baseURL: baseURL, math: math, accent: accent, editable: edit != nil)
+        wanted = Shown(text: text, baseURL: baseURL, math: math, accent: accent, editable: edit != nil, revision: revision)
         render()
     }
 
@@ -246,7 +254,8 @@ extension NotePreview: UIViewRepresentable {
         offset = max(0, lines.count - note.body.split(separator: "\n", omittingEmptySubsequences: false).count)
         files.root = LocalFileScheme.root(for: wanted.baseURL)
         widgets.begin(folder: wanted.baseURL, accent: wanted.accent)
-        let blocks: [[String: Any]] = HTMLRenderer.blocks(note).map { block in
+        let embeds = embeds?.embeds(revision: wanted.revision, text: wanted.text)
+        let blocks: [[String: Any]] = HTMLRenderer.blocks(note, embeds: embeds).map { block in
             var out: [String: Any] = ["html": widgets.frame(for: block.html) ?? block.html, "line": NSNull()]
             if let lines = block.lines { out["line"] = lines.lowerBound + offset }
             return out
