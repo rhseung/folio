@@ -156,6 +156,11 @@ struct TabBar: View {
         .coordinateSpace(.named(Self.space))
         .frame(width: max(0, room), alignment: .leading)
         .background { measures(others) }
+        .onChange(of: tabs.ids) { _, ids in
+            let open = Set(ids)
+            widths = widths.filter { open.contains($0.key) }
+            frames = frames.filter { open.contains($0.key) }
+        }
         .animation(.snappy(duration: 0.25), value: tabs.ids)
         .animation(.snappy(duration: 0.25), value: fit)
     }
