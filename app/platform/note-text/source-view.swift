@@ -17,6 +17,10 @@ struct MarkdownEditor {
     var assist = NoteAssist()
     /// Where a link opened the note at: the caret goes to that heading or block once for each new one.
     var anchor: AppLink.Anchor?
+    /// The notes block references' cards draw from, as the preview's; without it references show none.
+    var embeds: NoteEmbedSource?
+    /// The workspace's `notesRevision`.
+    var revision = 0
 
     @MainActor func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -46,6 +50,11 @@ struct MarkdownEditor {
         view.onScroll = onScroll
         view.configure(accent: accent, syntax: math, dark: dark)
         view.setAssist(assist, syntax: math)
+        #if os(macOS)
+        // The iPad's card comes on a long press, left for later (#35).
+        view.cards = embeds
+        view.cardsRevision = revision
+        #endif
         // The binding hasn't the syllable being composed yet, so swapping the text in then would delete it under the
         // input method, which then types each next jamo over a gap.
         if view.string != text, !view.hasMarkedText() { view.replace(with: text) }
@@ -236,15 +245,7 @@ class NoteTextView: NSTextView {
         guard event.modifierFlags.contains(.command), let storage = textStorage else { return false }
         let attributes = storage.attributes(at: i, effectiveRange: nil)
         if attributes[.noteWiki] is String {
-            // The attribute holds the target alone; the page or block of `[[material:…#page=12]]` is read from the text.
-            // From the line rather than the attribute's run: the brackets and an ID are styled apart from the name, so
-            // the run under the pointer is only part of the link.
-            let text = storage.string as NSString
-            let line = text.paragraphRange(for: NSRange(location: i, length: 0))
-            let written = text.substring(with: line)
-            if let m = written.matches(of: WikiLink.pattern).first(where: { NSRange($0.range, in: written).contains(i - line.location) }) {
-                NoteLinks.open(WikiLink(m).href, base: nil, openNote: openNote, openLink: linkOpener)
-            }
+            if let found = wikiLink(at: i) { NoteLinks.open(found.link.href, base: nil, openNote: openNote, openLink: linkOpener) }
             return true
         }
         if let href = attributes[.noteHref] as? String {
@@ -257,6 +258,19 @@ class NoteTextView: NSTextView {
             return true
         }
         return false
+    }
+
+    /// The wikilink the character at `i` is in. The attribute holds the target alone, so the link (with the page or
+    /// block of `[[material:…#page=12]]`) is read from the line; and from the line rather than the attribute's run,
+    /// since the brackets and an ID are styled apart from the name and the run under the pointer is only part of it.
+    func wikiLink(at i: Int) -> (link: WikiLink, range: NSRange)? {
+        guard let storage = textStorage, i < storage.length, storage.attribute(.noteWiki, at: i, effectiveRange: nil) is String else { return nil }
+        let text = storage.string as NSString
+        let line = text.paragraphRange(for: NSRange(location: i, length: 0))
+        let written = text.substring(with: line)
+        guard let m = written.matches(of: WikiLink.pattern).first(where: { NSRange($0.range, in: written).contains(i - line.location) }) else { return nil }
+        let r = NSRange(m.range, in: written)
+        return (WikiLink(m), NSRange(location: line.location + r.location, length: r.length))
     }
 
     /// The first line of the view's top and how far into it the view is scrolled.
@@ -331,6 +345,15 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     /// above out again (the scroller coming in narrows the column, the look changing restyles the text) moves them
     /// under a scroll left as it was, and the line slid off the screen.
     private var keeping: Int?
+    /// The notes a block reference's card draws from, as the preview's do; without it references show no card.
+    var cards: NoteEmbedSource?
+    /// The workspace's `notesRevision`, so a card shows the other note as it is now.
+    var cardsRevision = 0
+    private(set) var card: ReferenceCardPage?
+    /// The block reference the pointer rests on, and the wait before its card shows.
+    private var hovered: NSRange?
+    private var hovering: Task<Void, Never>?
+    private var hoverArea: NSTrackingArea?
 
     func configure(accent: CourseAccent, syntax: MathSyntax, dark: Bool) {
         accentColors(accent)
@@ -390,6 +413,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
     override func keyDown(with event: NSEvent) {
         keeping = nil
+        hideCard()
         super.keyDown(with: event)
     }
 
@@ -412,6 +436,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
     override func didChangeText() {
         keeping = nil
+        hideCard()
         restyle()
         if let held {
             self.held = nil
@@ -499,6 +524,8 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
                 let top = self.topLine(lineStarts: self.lineStarts)
                 self.onScroll(top.line, top.frac)
                 self.placeMenu()
+                // The link moves away from the pointer resting on it.
+                self.hideCard()
             }
         }
     }
@@ -595,6 +622,8 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         } else {
             completion.hide()
         }
+        // The menu and a card would both float by the line; the menu, being typed into, wins.
+        if completion.visible { hideCard() }
         placeMenu()
     }
 
@@ -655,6 +684,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
     override func mouseDown(with event: NSEvent) {
         keeping = nil
+        hideCard()
         let point = convert(event.locationInWindow, from: nil)
         if let i = characterIndex(at: point) {
             if openLink(at: i, event: event) { return }
@@ -671,6 +701,97 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         apply(SourceEditing.Edit(range: NSRange(location: box.location + 1, length: 1), text: done ? " " : "x", caret: selection.location), reveal: false)
         setSelectedRange(selection)
         return true
+    }
+
+    // MARK: Block reference card
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        if let hoverArea { removeTrackingArea(hoverArea) }
+        let area = NSTrackingArea(rect: .zero, options: [.mouseMoved, .mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self, userInfo: nil)
+        addTrackingArea(area)
+        hoverArea = area
+    }
+
+    override func mouseMoved(with event: NSEvent) {
+        super.mouseMoved(with: event)
+        hover(at: convert(event.locationInWindow, from: nil))
+    }
+
+    override func mouseExited(with event: NSEvent) {
+        super.mouseExited(with: event)
+        hideCard()
+    }
+
+    // A syllable being composed is the input method's: a card over it would cover the candidates it lists.
+    override func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
+        hideCard()
+        super.setMarkedText(string, selectedRange: selectedRange, replacementRange: replacementRange)
+    }
+
+    override func viewWillMove(toWindow newWindow: NSWindow?) {
+        if newWindow == nil { hideCard() }
+        super.viewWillMove(toWindow: newWindow)
+    }
+
+    /// The pointer resting on a block reference shows its card after a moment, as in the preview; moving onto other
+    /// text takes it away. Never while a syllable is composed or the completion menu is open.
+    func hover(at point: NSPoint) {
+        let found = reference(at: point)
+        if let found, found.range == hovered { return }
+        hideCard()
+        guard let found, cards != nil, !hasMarkedText(), !completion.visible else { return }
+        hovered = found.range
+        hovering = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(300))
+            guard !Task.isCancelled else { return }
+            self?.showCard(found.link, range: found.range)
+        }
+    }
+
+    func hideCard() {
+        hovering?.cancel()
+        hovering = nil
+        hovered = nil
+        card?.hide()
+    }
+
+    /// The block reference under the point. `characterIndex` gives the nearest character, also past a line's end or
+    /// beside the column, so the point must be on that character's own box.
+    private func reference(at point: NSPoint) -> (link: WikiLink, range: NSRange)? {
+        guard let window, let i = characterIndex(at: point), let found = wikiLink(at: i), found.link.blockID != nil else { return nil }
+        let box = convert(window.convertFromScreen(firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil)
+        return box.insetBy(dx: -Theme.Space.xxs, dy: -Theme.Space.xxs).contains(point) ? found : nil
+    }
+
+    private func showCard(_ link: WikiLink, range: NSRange) {
+        guard let cards, let styler, hovered == range, !hasMarkedText(), !completion.visible, let scroll = enclosingScrollView,
+              let content = HTMLRenderer.referenceCard(link, embeds: cards.embeds(revision: cardsRevision, text: string)) else { return }
+        let page = card ?? ReferenceCardPage()
+        card = page
+        if page.host.superview !== scroll { scroll.addSubview(page.host) }
+        let width = min(columnWidth, scroll.bounds.width - 2 * Theme.Space.s)
+        page.load(content, math: styler.syntax.rawValue, accent: accent, baseURL: baseURL, width: width) { [weak self] height in
+            guard let self, self.hovered == range, !self.hasMarkedText(), !self.completion.visible else { return }
+            self.placeCard(page, range: range, size: CGSize(width: width, height: min(height, (scroll.bounds.height / 2).rounded())))
+        }
+    }
+
+    /// Under the link, or over it where the screen ends first, in the scroll view so the card isn't clipped to the
+    /// text column, as the completion menu is placed.
+    private func placeCard(_ page: ReferenceCardPage, range: NSRange, size: CGSize) {
+        guard let scroll = enclosingScrollView, let window else { return }
+        let rect = { (i: Int) in scroll.convert(window.convertFromScreen(self.firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil) }
+        let first = rect(range.location), last = rect(NSMaxRange(range) - 1)
+        let x = max(Theme.Space.s, min(first.minX - Theme.Space.m, scroll.bounds.maxX - size.width - Theme.Space.s))
+        let gap = Theme.Space.xs
+        let top = min(first.minY, last.minY), bottom = max(first.maxY, last.maxY)
+        let down = scroll.isFlipped ? bottom + gap : top - gap - size.height
+        let up = scroll.isFlipped ? top - gap - size.height : bottom + gap
+        let fits = scroll.isFlipped ? down + size.height <= scroll.bounds.maxY : down >= scroll.bounds.minY
+        page.host.resize(size)
+        page.host.setFrameOrigin(NSPoint(x: x, y: fits ? down : up))
+        page.host.isHidden = false
     }
 
     // MARK: Rendering bubble

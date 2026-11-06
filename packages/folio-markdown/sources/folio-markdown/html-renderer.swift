@@ -342,20 +342,41 @@ public struct HTMLRenderer {
     /// A block reference carries the block it names, which the page shows while the pointer rests on the link. A
     /// template holds it: its content is inert and may stand inside the paragraph, where a block element can't.
     func preview(_ link: WikiLink) -> String {
-        guard let embeds, !previewing, let block = link.blockID, link.namesNote else { return "" }
+        guard !previewing else { return "" }
         // The link was read from rendered HTML, so its target is escaped there.
         var named = link
         named.target = Self.unescape(link.target)
-        guard trail.count <= NoteEmbeds.depth, let found = embeds.find(named),
+        guard let card = card(named) else { return "" }
+        return "<template class=\"ref-preview\"\(Self.mathAttribute(card.math))>\(card.html)</template>"
+    }
+
+    /// What a block reference's card shows: the block's HTML and the math syntax of the note it is in.
+    public struct ReferenceCard: Equatable, Sendable {
+        public var html: String
+        public var math: String?
+    }
+
+    /// The card a block reference (`[[노트#^블록]]`, as written in the source) shows in the preview, for a view that
+    /// shows the source and floats the card itself. Nil for any other link.
+    public static func referenceCard(_ link: WikiLink, embeds: NoteEmbeds) -> ReferenceCard? {
+        var r = HTMLRenderer()
+        r.embeds = embeds
+        r.trail = embeds.key.map { [$0] } ?? []
+        return r.card(link)
+    }
+
+    /// The block a reference names, or why it can't be shown. Its own references get no card.
+    func card(_ link: WikiLink) -> ReferenceCard? {
+        guard let embeds, let block = link.blockID, link.namesNote else { return nil }
+        guard trail.count <= NoteEmbeds.depth, let found = embeds.find(link),
               let section = ParsedNote(found.text).section(heading: nil, block: block) else {
-            return "<template class=\"ref-preview\"><p class=\"embed-note\">\(Self.escape(embeds.labels.missing))</p></template>"
+            return ReferenceCard(html: "<p class=\"embed-note\">\(Self.escape(embeds.labels.missing))</p>", math: nil)
         }
         var child = inner()
-        child.trail = trail + [named.key(in: found.key)]
+        child.trail = trail + [link.key(in: found.key)]
         child.nested = true
         child.previewing = true
-        let body = child.blocks(Array(ParsedNote(section).document.children))
-        return "<template class=\"ref-preview\"\(Self.mathAttribute(found.math))>\(body)</template>"
+        return ReferenceCard(html: child.blocks(Array(ParsedNote(section).document.children)), math: found.math)
     }
 
     static func mathAttribute(_ math: String?) -> String {
