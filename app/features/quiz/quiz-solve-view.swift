@@ -6,6 +6,8 @@ struct QuizSolveView: View {
     let course: LoadedCourse
     let showCards: () -> Void
     @State private var model: QuizSolveModel
+    // Not a step in the window's history: the pane and the cards are one screen, and the scope isn't an address.
+    @State private var choosingScope = false
 
     init(course: LoadedCourse, quiz: QuizModel, showCards: @escaping () -> Void) {
         _model = State(initialValue: QuizSolveModel(quiz: quiz))
@@ -16,11 +18,15 @@ struct QuizSolveView: View {
     var body: some View {
         // Two panes, not three: the card's history and the round tally sit under the card, so the card keeps its width
         // when the Claude inspector opens. The pane and divider run up under the toolbar like the course column.
-        HStack(spacing: 0) {
-            scopePane.frame(width: 250).background(Theme.Palette.window.ignoresSafeArea())
-            ColumnDivider()
-            center.frame(maxWidth: .infinity, maxHeight: .infinity)
+        ColumnSplit(width: 250, fold: .stack(showingPage: model.started && !choosingScope)) {
+            scopePane.background(Theme.Palette.window.ignoresSafeArea())
+        } bar: {
+            Button(.quizSolveScope, systemImage: "chevron.left") { choosingScope = true }
+        } content: {
+            center
         }
+        // Each start, from the pane or a shortcut, goes on to the cards where the pane and the cards don't fit side by side.
+        .onChange(of: model.runs) { choosingScope = false }
         .scrollEdgeEffectHidden(true, for: .top)
         .onAppear { model.prepare(course) }
         #if DEBUG && os(macOS)
@@ -108,6 +114,14 @@ struct QuizSolveView: View {
             VStack(alignment: .leading, spacing: Theme.Space.s) {
                 Text(model.footer(pane))
                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).lineLimit(2)
+                // Folded, the pane hides the round; without this the only way back to it was restarting it.
+                if model.started {
+                    FoldedOnly {
+                        Button(.quizSolveResume) { choosingScope = false }
+                            .buttonStyle(.pointing(.bordered))
+                            .frame(maxWidth: .infinity)
+                    }
+                }
                 Button(model.started ? .quizSolveRestart : .quizSolveStart) { model.start(label: String(localized: .quizSolvePickedScope), course: course) }
                     .buttonStyle(.pointing(.borderedProminent))
                     .frame(maxWidth: .infinity)

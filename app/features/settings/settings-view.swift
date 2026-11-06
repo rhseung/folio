@@ -39,9 +39,18 @@ struct SettingsView: View {
 
     var body: some View {
         // A column of sections beside the page, like a course's column, instead of a separate window with tabs.
-        HStack(spacing: 0) {
-            column.frame(width: Theme.Size.courseColumn)
-            ColumnDivider()
+        ColumnSplit {
+            column
+        } bar: {
+            Menu {
+                ForEach(SettingsTab.allCases) { t in
+                    Toggle(isOn: Binding(get: { tab == t }, set: { if $0 { tab = t } })) { Label(t.label, systemImage: t.symbol) }
+                }
+            } label: {
+                Label(tab.label, systemImage: tab.symbol)
+            }
+            .fixedSize()
+        } content: {
             Page(maxWidth: 640) {
                 PageHeader(title: tab.label)
                 content(tab)
@@ -392,7 +401,8 @@ struct IntListField: View {
     @State private var draft = 1
 
     var body: some View {
-        HStack(spacing: Theme.Space.tight) {
+        // Wrapping, not a row: five intervals and the add button ran past an iPhone's width.
+        FlowLayout(spacing: Theme.Space.tight, centered: true) {
             ForEach(values, id: \.self) { v in
                 HStack(spacing: Theme.Space.xs) {
                     Text("\(v)\(unit)").monospacedDigit()

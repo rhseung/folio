@@ -132,6 +132,17 @@ struct QuizSolveModelTests {
         #expect(solve.unitDetail(tally) == "4장")
         #expect(solve.unitHelp(tally) == "진도 25% · 푼 카드 1 / 4")
     }
+
+    /// The folded screen goes on to the cards at each start, a restart over the same deck included.
+    @Test func everyStartCountsAsARun() throws {
+        let f = try QuizFixture()
+        let solve = QuizSolveModel(quiz: f.model)
+        solve.prepare(f.course)
+        solve.solveOnlyWrong(f.course)
+        let first = solve.deck.map(\.id)
+        solve.solveOnlyWrong(f.course)
+        #expect(solve.deck.map(\.id) == first && solve.runs == 2)
+    }
 }
 
 @MainActor

@@ -9,24 +9,44 @@ struct CatalogEditor: View {
         CatalogEditing { $catalog in
             // No block title: the tab already says 평어. The header row names the columns instead.
             VStack(alignment: .leading, spacing: Theme.Space.s) {
-                EntityRows(items: $catalog.letterGrades, name: \.symbol,
-                           make: { LetterGrade(device: device, at: .now, symbol: "", points: nil, countsInGpa: true, countsInCredits: true) }) {
-                    Caption(String(localized: .letterGradesSymbol)).frame(width: Self.symbolWidth)
-                    Caption(String(localized: .letterGradesPoints)).padding(.trailing, Theme.Space.m).frame(width: Self.pointsWidth, alignment: .trailing)
-                    Caption(String(localized: .letterGradesCountsIn)).padding(.leading, Theme.Space.xs).frame(width: Self.flagsWidth, alignment: .leading)
-                    Caption(String(localized: .courseEditGrading))
-                } row: { $g in
-                    TextField(String(localized: .letterGradesSymbol), text: $g.symbol).pill(width: Self.symbolWidth, alignment: .center)
-                    TextField("—", value: $g.points, format: .number).pill(width: Self.pointsWidth)
-                    HStack(spacing: Theme.Space.tight) {
-                        ToggleChip("GPA", isOn: $g.countsInGpa)
-                        ToggleChip(String(localized: .letterGradesCredits), isOn: $g.countsInCredits)
-                        ToggleChip(String(localized: .letterGradesGraduation), isOn: Binding(get: { g.earnsCredits }, set: { g.countsTowardGraduation = $0 }))
-                    }
-                    .frame(width: Self.flagsWidth, alignment: .leading)
-                    ChoiceMenu(selection: Binding(get: { Self.canonical(g.modes) }, set: { g.modes = $0 }), options: Self.modeOptions(g.modes))
+                // The flags under the rest of the row where the row doesn't fit, beside a course column at 720 and
+                // on an iPhone; one table for both, so the header and the rows always fold together.
+                ViewThatFits(in: .horizontal) {
+                    table($catalog.letterGrades, device: device, wide: true)
+                    table($catalog.letterGrades, device: device, wide: false)
                 }
                 Footnote(String(localized: .letterGradesFootnote))
+            }
+        }
+    }
+
+    func table(_ grades: Binding<[LetterGrade]>, device: DeviceID, wide: Bool) -> some View {
+        EntityRows(items: grades, name: \.symbol,
+                   make: { LetterGrade(device: device, at: .now, symbol: "", points: nil, countsInGpa: true, countsInCredits: true) }) {
+            Caption(String(localized: .letterGradesSymbol)).frame(width: Self.symbolWidth)
+            Caption(String(localized: .letterGradesPoints)).padding(.trailing, Theme.Space.m).frame(width: Self.pointsWidth, alignment: .trailing)
+            if wide { Caption(String(localized: .letterGradesCountsIn)).padding(.leading, Theme.Space.xs).frame(width: Self.flagsWidth, alignment: .leading) }
+            Caption(String(localized: .courseEditGrading))
+        } row: { $g in
+            let flags = HStack(spacing: Theme.Space.tight) {
+                ToggleChip("GPA", isOn: $g.countsInGpa)
+                ToggleChip(String(localized: .letterGradesCredits), isOn: $g.countsInCredits)
+                ToggleChip(String(localized: .letterGradesGraduation), isOn: Binding(get: { g.earnsCredits }, set: { g.countsTowardGraduation = $0 }))
+            }
+            let fields = Group {
+                TextField(String(localized: .letterGradesSymbol), text: $g.symbol).pill(width: Self.symbolWidth, alignment: .center)
+                TextField("—", value: $g.points, format: .number).pill(width: Self.pointsWidth)
+            }
+            let modes = ChoiceMenu(selection: Binding(get: { Self.canonical(g.modes) }, set: { g.modes = $0 }), options: Self.modeOptions(g.modes))
+            if wide {
+                fields
+                flags.frame(width: Self.flagsWidth, alignment: .leading)
+                modes
+            } else {
+                VStack(alignment: .leading, spacing: Theme.Space.s) {
+                    HStack(spacing: Theme.Space.s) { fields; modes }
+                    flags
+                }
             }
         }
     }

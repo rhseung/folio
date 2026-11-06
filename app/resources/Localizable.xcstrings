@@ -9725,6 +9725,17 @@
         }
       }
     },
+    "quiz.solve.resume": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "풀던 카드로"
+          }
+        }
+      }
+    },
     "quiz.solve.review-detail": {
       "extractionState": "manual",
       "localizations": {
@@ -9765,6 +9776,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "채점 기준 %1$lld개 중 %2$lld개 충족"
+          }
+        }
+      }
+    },
+    "quiz.solve.scope": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "범위"
           }
         }
       }

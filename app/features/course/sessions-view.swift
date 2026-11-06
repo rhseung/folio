@@ -584,6 +584,9 @@ struct SessionCard: View {
     @State private var playing: Recording?
     @State private var editing = false
 
+    /// The day line and its units, which the pills must leave beside them.
+    static let linesRoom: CGFloat = 240
+
     var body: some View {
         let file = course.file
         let expected = session.expectedEnd(schedule: file.course.schedule, classMinutes: model.workspace.settings.classMinutes, calendar: model.calendar)
@@ -597,8 +600,19 @@ struct SessionCard: View {
                                ink: live ? accent.ink : Theme.Palette.text, monthInk: live ? accent.ink : Theme.Palette.textTertiary,
                                fill: live ? accent.tint : Theme.Palette.page)
                     .opacity(cancelled ? Theme.Opacity.ended : 1)
-                lines(file, live: live).opacity(cancelled ? Theme.Opacity.ended : 1)
-                trailing(file, live: live, expected: expected).opacity(cancelled ? Theme.Opacity.ended : 1)
+                // The pills under the lines where both don't fit: beside them on an iPhone, the units picker broke a
+                // letter a line and the row ran out of its card. The lines' ideal is pinned, so a long topic in a full
+                // window truncates as before rather than folding the row.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: Theme.Space.l) {
+                        lines(file, live: live).frame(idealWidth: Self.linesRoom).opacity(cancelled ? Theme.Opacity.ended : 1)
+                        trailing(file, live: live, expected: expected).opacity(cancelled ? Theme.Opacity.ended : 1)
+                    }
+                    VStack(alignment: .leading, spacing: Theme.Space.s) {
+                        lines(file, live: live).opacity(cancelled ? Theme.Opacity.ended : 1)
+                        trailing(file, live: live, expected: expected).opacity(cancelled ? Theme.Opacity.ended : 1)
+                    }
+                }
                 ClassCard.MenuButton(help: String(localized: .sessionsMenuHelp)) { menuItems }
             }
             if starts { actions(file) }
@@ -680,17 +694,22 @@ struct SessionCard: View {
 
     /// On the class's day: joining, recording and the rough note, a click each.
     func actions(_ file: CourseFile) -> some View {
-        let recorder = model.workspace.recorder
-        return HStack(spacing: Theme.Space.s) {
-            if let link = model.link(of: session, in: file) { JoinOnlineButton(url: link, prominent: true) }
-            if !recorder.isActive {
-                Button(.sessionsRecord, systemImage: "record.circle") { model.menu.record(session) }.buttonStyle(.pointing(.bordered))
-                    .help(Text(.sessionsRecordHelp))
-            }
-            Button(String(localized: session.roughNoteId == nil ? .sessionsRoughNote : .sessionsOpenRoughNote), systemImage: "doc.text") { open(.rough) }
-                .buttonStyle(.pointing(.bordered))
+        // Under the lines where they fit, from the card's edge where they don't: indented on an iPhone they ran past it.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Theme.Space.s) { actionButtons(file) }.padding(.leading, ClassCard.tile + Theme.Space.l)
+            HStack(spacing: Theme.Space.s) { actionButtons(file) }
+            VStack(alignment: .leading, spacing: Theme.Space.s) { actionButtons(file) }
         }
-        .padding(.leading, ClassCard.tile + Theme.Space.l)
+    }
+
+    @ViewBuilder func actionButtons(_ file: CourseFile) -> some View {
+        if let link = model.link(of: session, in: file) { JoinOnlineButton(url: link, prominent: true) }
+        if !model.workspace.recorder.isActive {
+            Button(.sessionsRecord, systemImage: "record.circle") { model.menu.record(session) }.buttonStyle(.pointing(.bordered))
+                .help(Text(.sessionsRecordHelp))
+        }
+        Button(String(localized: session.roughNoteId == nil ? .sessionsRoughNote : .sessionsOpenRoughNote), systemImage: "doc.text") { open(.rough) }
+            .buttonStyle(.pointing(.bordered))
     }
 
     var menuItems: some View {

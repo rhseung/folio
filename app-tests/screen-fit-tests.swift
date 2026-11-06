@@ -40,15 +40,12 @@ struct ScreenFitTests {
         #expect(Screen(Navigator.Entry(link: AppLink(.exam, UUID()))) == .missing)
     }
 
-    /// Screens not folded yet, and the width they still need: the people and settings pages have a list column beside
-    /// the page with no narrow form yet (how it folds is still to decide, #43), and the catalog editor's table is wider
-    /// than a pane. A course's column doesn't push the window out (its page may shrink to nothing, so AppKit can't loop
-    /// on constraints), so this check can't see a course page clip; renders at 390 show it.
-    static let unfolded: [(name: String, below: CGFloat)] = [("people", 720), ("settings-", 720), ("settings-catalog", 1440)]
-
     @Test func everyScreenFitsTheWidthItIsGiven() async throws {
         let workspace = try Workspace.scenario(.busyDay)
-        let screens = ScreenCatalog.entries(workspace).filter { $0.name != "settings" }
+        var screens = ScreenCatalog.entries(workspace).filter { $0.name != "settings" }
+        // Folded, the people list and a person are drawn one at a time, so each is checked.
+        let person = try #require(workspace.catalog.people.first)
+        screens.append(("person", Navigator.Entry(link: AppLink(.person, person.id))))
         var drawn = try await measure(screens, workspace)
         // The settings page shows the tab last chosen, kept app-wide, so each tab is drawn on its own.
         let savedTab = UserDefaults.standard.string(forKey: SettingsTab.storageKey)
@@ -58,20 +55,17 @@ struct ScreenFitTests {
             drawn += try await measure([("settings-\(tab)", Navigator.Entry(link: .place(.settings)))], workspace)
         }
         for (name, width, drawn) in drawn {
-            if Self.unfolded.contains(where: { name.hasPrefix($0.name) && width < $0.below }) {
-                // Intermittent: how far an unfolded page overflows goes by the Mac's fonts, and on the CI runner some
-                // tabs fit at 390, where a strict known issue failed for not being recorded.
-                withKnownIssue(isIntermittent: true) { #expect(drawn <= width + 0.5, "\(name) at \(Int(width)) is \(drawn) wide") }
-            } else {
-                #expect(drawn <= width + 0.5, "\(name) at \(Int(width)) is \(drawn) wide")
-            }
+            #expect(drawn <= width + 0.5, "\(name) at \(Int(width)) is \(drawn) wide")
         }
     }
 
     func measure(_ screens: [(name: String, entry: Navigator.Entry)], _ workspace: Workspace) async throws -> [(String, CGFloat, CGFloat)] {
         let jobs = screens.flatMap { name, entry in
             Self.widths.map { width in
-                RenderJob(name: name, view: AnyView(ScreenView(workspace: workspace, entry: entry).environment(workspace)), width: width, height: nil, scheme: .light)
+                // A page beside a column clips what it can't fit rather than push the window out; lifted here, so an
+                // overflowing page grows the window this measures.
+                let screen = ScreenView(workspace: workspace, entry: entry).environment(workspace).environment(\.revealsOverflow, true)
+                return RenderJob(name: name, view: AnyView(screen), width: width, height: nil, scheme: .light)
             }
         }
         let drawn = try await measureOffscreen(jobs)
