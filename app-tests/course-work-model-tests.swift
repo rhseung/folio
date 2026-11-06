@@ -374,3 +374,39 @@ struct NotesModelTests {
         #expect(editor.body.hasSuffix("\n\n바뀐 문단\n"))
     }
 }
+
+/// 그래프 이론's HW03 holds PDFs; a `.tex` is made beside them.
+@MainActor
+struct AssignmentSheetOpenTests {
+    @Test func aTextFileOpensInTheEditorAndAsksAboutEdits() throws {
+        let workspace = try fixtureWorkspace()
+        workspace.run(MaterialTrack(course: graphTheory))
+        let assignment = try #require(workspace.course(graphTheory)?.file.assignments.first { AssignmentFiles.path(of: $0) == "Assignments/HW03" })
+        workspace.run(MaterialNew(course: graphTheory, folder: "Assignments/HW03", name: "hw3.tex"))
+        let course = try #require(workspace.course(graphTheory))
+        let sheet = AssignmentSheetModel(workspace: workspace, course: course, assignment: assignment)
+        sheet.load()
+        let tex = try #require(sheet.files.first { $0.path == "Assignments/HW03/hw3.tex" })
+        let pdf = try #require(sheet.files.first { $0.isPDF })
+        let memo = { workspace.course(graphTheory)?.file.assignments.first { $0.id == assignment.id }?.memo }
+
+        #expect(!sheet.edited)
+        #expect(sheet.open(pdf) == .elsewhere(course.store.fileURL(pdf.path)))
+        #expect(sheet.open(tex) == .editor(tex.id))
+        #expect(sheet.opening == nil)
+
+        sheet.memo = "풀이 방향 메모"
+        #expect(sheet.edited)
+        // A file opened in its own app leaves the sheet up, so the edits aren't at stake.
+        #expect(sheet.open(pdf) == .elsewhere(course.store.fileURL(pdf.path)))
+        #expect(sheet.open(tex) == .asks && sheet.opening?.id == tex.id)
+        sheet.discardAndOpen()
+        #expect(sheet.opening == nil)
+        #expect(memo() == assignment.memo)
+
+        #expect(sheet.open(tex) == .asks)
+        #expect(sheet.saveAndOpen())
+        #expect(sheet.opening == nil)
+        #expect(memo() == "풀이 방향 메모")
+    }
+}

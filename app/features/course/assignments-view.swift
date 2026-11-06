@@ -3,6 +3,7 @@ import SwiftUI
 
 struct AssignmentsView: View {
     @State private var model: AssignmentsModel
+    @Environment(\.searchTarget) private var searchTarget
 
     init(workspace: Workspace, course: LoadedCourse) {
         _model = State(initialValue: AssignmentsModel(workspace: workspace, course: course))
@@ -37,7 +38,12 @@ struct AssignmentsView: View {
                 }
             }
         }
-        .sheet(item: $model.editing) { AssignmentSheet(workspace: model.workspace, course: model.course, assignment: $0) }
+        // The jump is taken here, outside the sheet, where the course screen's target is.
+        .sheet(item: $model.editing) {
+            AssignmentSheet(workspace: model.workspace, course: model.course, assignment: $0) { id in
+                searchTarget.wrappedValue = SearchTarget(courseId: model.course.id, section: .materials, materialId: id)
+            }
+        }
         .confirming($model.pending)
     }
 
@@ -105,9 +111,11 @@ struct AssignmentSheet: View {
     @State private var model: AssignmentSheetModel
     @Environment(\.dismiss) private var dismiss
     @State private var pickingFiles = false
+    let openInEditor: (UUID) -> Void
 
-    init(workspace: Workspace, course: LoadedCourse, assignment: Assignment) {
+    init(workspace: Workspace, course: LoadedCourse, assignment: Assignment, openInEditor: @escaping (UUID) -> Void) {
         _model = State(initialValue: AssignmentSheetModel(workspace: workspace, course: course, assignment: assignment))
+        self.openInEditor = openInEditor
     }
 
     var body: some View {
@@ -177,12 +185,12 @@ struct AssignmentSheet: View {
                             Spacer()
                             ChoiceMenu(selection: Binding(get: { kind }, set: { model.setKind(m, $0) }), options: model.kindOptions)
                             #if os(macOS)
-                            Button(.assignmentsOpen) { NSWorkspace.shared.open(store.fileURL(m.path)) }.buttonStyle(.ghost)
+                            Button(.assignmentsOpen) { open(m) }.buttonStyle(.ghost)
                             #endif
                         }
                         #if os(macOS)
                         .contentShape(.rect)
-                        .contextMenu { Button(.assignmentsOpen) { NSWorkspace.shared.open(store.fileURL(m.path)) } }
+                        .contextMenu { Button(.assignmentsOpen) { open(m) } }
                         #endif
                     }
                 }
@@ -192,6 +200,35 @@ struct AssignmentSheet: View {
             if model.apply() { dismiss() }
         }
         .confirming($model.pending)
+        .confirmationDialog(String(localized: .assignmentsOpenUnsaved), isPresented: asking, titleVisibility: .visible, presenting: model.opening) { m in
+            Button(.assignmentsOpenSave) { if model.saveAndOpen() { show(m.id) } }
+            Button(.assignmentsOpenDiscard, role: .destructive) {
+                model.discardAndOpen()
+                show(m.id)
+            }
+            Button(.commonCancel, role: .cancel) { model.opening = nil }
+        } message: { _ in
+            Text(.assignmentsOpenUnsavedMessage)
+        }
         .onAppear { model.load() }
+    }
+
+    var asking: Binding<Bool> {
+        Binding(get: { model.opening != nil }, set: { if !$0 { model.opening = nil } })
+    }
+
+    #if os(macOS)
+    func open(_ m: FolioDomain.Material) {
+        switch model.open(m) {
+        case .elsewhere(let url): NSWorkspace.shared.open(url)
+        case .editor(let id): show(id)
+        case .asks: break
+        }
+    }
+    #endif
+
+    func show(_ id: UUID) {
+        dismiss()
+        openInEditor(id)
     }
 }
