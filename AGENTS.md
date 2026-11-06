@@ -55,7 +55,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
 | --- | --- | --- | --- |
 | `FolioDomain` | `packages/folio-core` | 엔티티, 값 타입, 표준 구조 규칙, 성적·GPA·복습 계산. 디스크에서 읽은 내용은 `FolderTree` 같은 값으로 받는다 | 파일 입출력(`FileManager`, `NSFileCoordinator`), UI, 네트워크 |
 | `FolioStorage` | `packages/folio-core` | GIST 폴더 읽기와 쓰기, JSON 스키마 버전과 마이그레이션, 원자적 쓰기, 기기별 로그, 파일 추적 | 규칙 판단. 판단은 Domain에 맡긴다 |
-| `FolioMarkdown` | `packages/folio-markdown` | 마크다운 파서와 확장 문법, frontmatter, HTML 렌더러. `swift-markdown` 기반 | 다른 Folio 모듈에 의존 |
+| `FolioMarkdown` | `packages/folio-markdown` | 마크다운 파서와 확장 문법, frontmatter, HTML 렌더러. `swift-markdown` 기반. 임베드와 블록 참조는 링크가 가리키는 부분(제목 아래, 블록)을 잘라 그리고, 고리와 깊이를 막는다. 노트는 앱이 찾아 준다(`NoteEmbeds`) | 다른 Folio 모듈에 의존 |
 | `FolioAI` | `packages/folio-ai` | Claude API 호출(Swift SDK가 없어 문서화된 HTTP 형식 그대로), 작업별 모델과 effort 표, 맥락 구성, 구조화된 응답 스키마, 사용량과 비용 | 파일 쓰기. 결과는 제안으로만 돌려준다 |
 | `FolioActions` | `packages/folio-core` | 데이터를 바꾸는 모든 동작. Domain의 변환과 Storage의 쓰기, 폴더 생성, 로그를 한 액션으로 묶는다. 액션 목록의 단일 출처 | UI, 출력 형식. 앱과 CLI가 같은 구현을 부른다 |
 | `FolioIndex` | `packages/folio-core` | 기기별 로컬 SQLite 검색 색인(GRDB, FTS5 trigram). 바뀐 과목만 다시 읽고 PDF 본문을 뽑아 둔다. 캐시 폴더에 두며 지워도 다시 만든다 | GIST 폴더에 쓰기. 순위와 발췌는 Domain의 `SearchIndex`에 맡긴다 |
@@ -63,7 +63,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
 | `FolioMacros` | `packages/folio-core` | `@Action`과 필드 표시(`@Arg`, `@New`, `@Off`, `@Hidden`). 선언에서 입력 형식, init, 코딩, `spec`을 만들고 실수(맨 `UUID`, 없는 `{필드}`, 확인 문구 없는 삭제)를 컴파일 오류로 막는다 | 실행 코드. 앱과 CLI에 링크되지 않는다 |
 | `FolioGen` | `packages/folio-core` | `@Action` 액션의 `spec`에서 `folio-cli/generated/commands.swift`를 만든다. 결과는 커밋한다 | FolioCLI에 의존. 생성 파일이 깨져도 다시 만들 수 있게 한다 |
 | `FolioFixtures` | `packages/folio-core` | 테스트와 개발 실행에 쓰는 가짜 GIST 폴더. 파일을 코드에 두고 쓸 때 디스크에 펼친다. 공개 저장소에 과목 파일 폴더를 두지 않기 위해서다. 화면 확인용 상황(`Scenario`)은 표준 폴더에 고정된 시각 기준으로 액션을 돌려 만든다 | CLI에 링크되지 않는다. 앱에서는 `#if DEBUG`의 `Workspace.scenario`(미리보기와 화면 밖 렌더)만 쓴다 |
-| App | `app/` | 화면. `app/`(진입점과 탐색), `design/`(디자인 토큰과 공용 구성 요소), `features/<화면>/`, `platform/`(PencilKit, PDFKit, WKWebView 연결, `note-preview.swift`의 노트 미리보기와 `note-text/`의 TextKit 2 편집 보기. 편집 보기는 원문에 글꼴과 색만 입히고, 그림·수식·콜아웃과 코드의 상자는 미리보기만 그린다), `resources/` | 파일 시스템 직접 접근과 `course.json` 값의 직접 변경. 반드시 `FolioActions`를 거친다 |
+| App | `app/` | 화면. `app/`(진입점과 탐색), `design/`(디자인 토큰과 공용 구성 요소), `features/<화면>/`, `platform/`(PencilKit, PDFKit, WKWebView 연결, `note-preview.swift`의 노트 미리보기와 `note-text/`의 TextKit 2 편집 보기. 편집 보기는 원문에 글꼴과 색만 입히고, 그림·수식·콜아웃·임베드와 코드의 상자는 미리보기만 그린다), `resources/` | 파일 시스템 직접 접근과 `course.json` 값의 직접 변경. 반드시 `FolioActions`를 거친다 |
 
 - 앱에 새 데이터 조작을 넣을 때는 `FolioActions`에 `@Action`으로 액션을 선언하고, 같은 변경에서 테스트를 함께 넣는다. 액션에 CLI 명령이 없으면 테스트가 실패한다.
     - 필드의 형식이 입력을 정한다. 가리키는 항목은 `Exam.ID`처럼 종류의 ID로 쓰고(경로로 가리키는 노트는 `Note.Path`), `set`의 필드는 `Patch<T>`(빠지면 그대로, `T?`면 `none`/`null`로 지운다), 새 항목의 ID는 `@New`, 위치 인자는 `@Arg`로 쓴다. `///` 주석이 도움말이다.
@@ -224,7 +224,7 @@ Me/GIST/
     - `NoteClickGridTests`: 연 직후와 스크롤한 뒤 격자의 모든 점이 노트(또는 그 자리의 위젯, 가로 스크롤 블록)에 닿는지, 편집 보기에서는 클릭한 자리에 캐럿이 놓이는지 본다.
     - `NoteHangulTests`: 조합 중인 글자가 SwiftUI 갱신과 저장을 견디고, 조합이 끝난 글자가 노트 파일에 들어가는지 본다. iPad 편집 보기는 `app-tests/ipad`의 `NoteHangulPadTests`가 iPad 시뮬레이터에서 같은 입력을 본다(`mise run test-ipad`).
     - 검사는 보기를 `NoteBench`(`app-tests/note-bench.swift`)로만 다룬다. 그린 픽셀, 히트한 뷰, 캐럿 위치, 스크롤 범위만 보고 TextKit이나 웹 페이지의 내부는 보지 않는다. 미리보기는 `WKWebView`라서 스냅숏을 웹 프로세스에서 받는다. 편집 보기의 구현을 바꿀 때(#267처럼)는 이 파일과 기준 이미지만 바꾸고, 배치, 클릭, 한글 검사는 그대로 통과해야 한다.
-    - 미리보기의 동작(블록 단위 갱신, 할 일 체크, 콜아웃 접기 유지, 편집 보기 따라가기, 위젯 iframe의 격리와 높이)은 `NotePreviewTests`와 `NoteWidgetTests`가 페이지에 스크립트를 돌려 본다.
+    - 미리보기의 동작(블록 단위 갱신, 할 일 체크, 콜아웃 접기 유지, 편집 보기 따라가기, 위젯 iframe의 격리와 높이, 임베드와 블록 참조 카드)은 `NotePreviewTests`, `NoteWidgetTests`, `NoteEmbedPreviewTests`가 페이지에 스크립트를 돌려 본다.
 - 노트 보기 기준 이미지(`app-tests/references/notes`)는 CI 러너가 그린 것만 커밋한다. 글꼴 렌더가 macOS마다 달라서 비교는 이미지를 그린 macOS(`machine.txt`)에서만 하고, 다른 Mac에서는 건너뛴다. CI는 `FOLIO_NOTE_SCREENS_STRICT`를 켜서 러너의 macOS가 바뀌면 건너뛰지 않고 실패한다. 기준 이미지를 바꾸는 PR은 본문에 이전과 이후 이미지를 붙인다.
 - 테스트, 미리보기, 화면 밖 렌더는 이 Mac의 `Application Support/Folio`(녹음 복구, Whisper 모델)를 쓰지 않는다. 그 폴더는 앱의 `LocalFolders`로만 얻고 패키지는 쓰지 않으며(`mise run check-local-folders`가 `app`, `app-tests`, `packages`를 검사한다), 테스트와 미리보기에서 얻으려 하면 실행이 멈춘다. 화면 모델 테스트는 `fixtureWorkspace()`, 미리보기와 렌더는 `Workspace.scenario`가 임시 폴더를 준다. `FOLIO_GIST`로 가짜 폴더를 연 앱 실행(창 스냅숏 포함)은 녹음 폴더를 그 GIST 폴더마다 따로 임시 폴더에 둔다.
 
