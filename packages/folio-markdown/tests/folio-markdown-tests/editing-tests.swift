@@ -163,6 +163,12 @@ struct ListEditingTests {
         #expect(tab("- 하나\n- 둘|") == "- 하나\n    - 둘|")
     }
 
+    @Test func tabInCodeOnlyIndents() {
+        #expect(tab("```markdown\n1. a\n1. b|\n1. c\n```") == "```markdown\n1. a\n    1. b|\n1. c\n```")
+        // A list right against a code block is numbered on its own.
+        #expect(tab("1. a\n2. b|\n```\n1. x\n```") == "1. a\n    1. b|\n```\n1. x\n```")
+    }
+
     @Test func renumberingKeepsAListsStartAndSkipsOtherLists() {
         let text = "5. a\n7. b\n\n1. c\n1. d" as NSString
         let changes = SourceEditing.renumber(text, around: NSRange(location: 0, length: 0))
@@ -244,6 +250,21 @@ struct CompletionTests {
         #expect(accept("$$\n\\begin{pm|}\n$$") == "$$\n\\begin{pmatrix}\n|\n\\end{pmatrix}\n$$")
         #expect(accept("$\\begin{pm|}$") == "$\\begin{pmatrix} | \\end{pmatrix}$")
         #expect(accept("값 mk|") == "값 $|$")
+    }
+
+    @Test func returnIsALineBreakUnderAMenuNobodyAskedFor() {
+        #expect(query("```|")?.takesReturn == false)
+        #expect(query("```py|")?.takesReturn == true)
+        #expect(query("값 mk|")?.takesReturn == false)
+        #expect(query("/|")?.takesReturn == true)
+    }
+
+    @Test func snippetsSharingATriggerKeepDistinctIDs() {
+        var catalog = catalog
+        catalog.snippets += [Snippet(trigger: "mk", body: "$$$1$$", inMath: false)]
+        let items = Completion.items(for: query("값 mk|")!, catalog: catalog)
+        #expect(items.count == 2)
+        #expect(Set(items.map(\.id)).count == 2)
     }
 
     @Test func everyTeXCommandIsOfferedOnce() {

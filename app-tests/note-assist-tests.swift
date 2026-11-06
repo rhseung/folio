@@ -70,6 +70,18 @@ struct NoteAssistTests {
         #expect(Self.caretShown(view) == "```swift\n|\n```")
     }
 
+    @Test func returnUnderAMenuThatOpenedByItselfBreaksTheLine() {
+        let (view, _) = Self.editor("")
+        Self.type(view, "```")
+        Self.enter(view)
+        #expect(view.string.hasPrefix("```\n") && !view.string.contains("python") && !view.completion.visible)
+        let (text, _) = Self.editor("")
+        Self.type(text, "값 dm")
+        #expect(text.completion.query?.kind == .snippet)
+        Self.enter(text)
+        #expect(Self.caretShown(text) == "값 dm\n|")
+    }
+
     @Test func texCommandsTakeTabThroughTheirArguments() {
         let (view, _) = Self.editor("")
         Self.type(view, "$\\fr")

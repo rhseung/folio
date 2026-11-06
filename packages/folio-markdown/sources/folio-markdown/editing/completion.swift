@@ -22,6 +22,17 @@ public struct CompletionQuery: Equatable, Sendable {
     public let text: String
     public let range: NSRange
     public let place: SourcePlace
+
+    /// Whether Return takes the picked candidate. A menu that opened by itself, on a bare fence or a snippet's
+    /// trigger, leaves Return a line break, else a fence without a language or a line ending in `->` couldn't be
+    /// ended; Tab still takes it.
+    public var takesReturn: Bool {
+        switch kind {
+        case .snippet: false
+        case .codeLanguage: !text.isEmpty
+        default: true
+        }
+    }
 }
 
 /// One candidate in the completion menu. `body` is inserted as a snippet's is: `$1` … mark the caret.
@@ -129,8 +140,9 @@ public enum Completion {
         case .texEnvironment:
             return filter(TeXCommands.environments.map { CompletionItem(id: "env.\($0)", title: $0, body: $0) }, query.text, prefixOnly: true)
         case .snippet:
-            return catalog.snippets.filter { $0.trigger == query.text && $0.inMath == query.place.isMath }.map { s in
-                CompletionItem(id: "snippet.\(s.trigger)", title: s.trigger, detail: s.expanded.text, symbol: "text.insert", body: s.body)
+            // Numbered, since settings don't stop two snippets sharing a trigger and the menu needs distinct ids.
+            return catalog.snippets.enumerated().filter { $0.element.trigger == query.text && $0.element.inMath == query.place.isMath }.map { i, s in
+                CompletionItem(id: "snippet.\(i).\(s.trigger)", title: s.trigger, detail: s.expanded.text, symbol: "text.insert", body: s.body)
             }
         }
     }

@@ -79,7 +79,7 @@ public enum SourceEditing {
 
     /// Tab and Shift-Tab on lines: every line the selection touches moves by one indent, and numbered lists the lines
     /// are in are numbered again, so an item moved into a sublist starts it at 1 and the items after it close the gap.
-    public static func indent(_ text: NSString, _ selection: NSRange, out: Bool) -> Edit {
+    public static func indent(_ text: NSString, _ selection: NSRange, out: Bool, renumbering: Bool = true) -> Edit {
         let lines = text.lineRange(for: selection)
         var result = ""
         var shift = 0
@@ -95,7 +95,8 @@ public enum SourceEditing {
             }
             result += text.substring(with: NSRange(location: NSMaxRange(line), length: NSMaxRange(enclosing) - NSMaxRange(line)))
         }
-        return renumbered(text, Edit(range: lines, text: result, caret: max(lines.location, selection.location + shift)))
+        let edit = Edit(range: lines, text: result, caret: max(lines.location, selection.location + shift))
+        return renumbering ? renumbered(text, edit) : edit
     }
 
     /// What Tab does: expand a snippet whose trigger is just before the caret, move to a formula's next argument, or
@@ -108,6 +109,8 @@ public enum SourceEditing {
         if case .math(_, let content) = place, let slot = slot(text, from: selection.location, in: content, back: back) {
             return Edit(range: NSRange(location: slot, length: 0), text: "", caret: slot)
         }
+        // Lines in a code block are code: `1.` there is not a list to number again.
+        if case .code = place { return indent(text, selection, out: back, renumbering: false) }
         return indent(text, selection, out: back)
     }
 
@@ -251,9 +254,10 @@ public enum SourceEditing {
             lines.append(line)
         }
         guard let hit = lines.firstIndex(where: { NSLocationInRange(range.location, $0) || NSMaxRange($0) == range.location }) else { return [] }
+        // A fence ends the block too: a list right before or after a code block isn't numbered across it.
         let inList = { (i: Int) -> Bool in
             let s = text.substring(with: lines[i])
-            return !s.trimmingCharacters(in: .whitespaces).isEmpty
+            return !s.trimmingCharacters(in: .whitespaces).isEmpty && Fence(String(s.drop { $0 == " " || $0 == "\t" })) == nil
         }
         guard inList(hit) else { return [] }
         var first = hit, last = hit

@@ -477,7 +477,11 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             switch selector {
             case #selector(moveUp(_:)): return completion.move(-1)
             case #selector(moveDown(_:)): return completion.move(1)
-            case #selector(insertNewline(_:)), #selector(insertTab(_:)): return acceptCompletion()
+            case #selector(insertTab(_:)): return acceptCompletion()
+            case #selector(insertNewline(_:)):
+                if completion.query?.takesReturn == true { return acceptCompletion() }
+                completion.hide()
+                placeMenu()
             case #selector(cancelOperation(_:)):
                 completion.hide()
                 return placeMenu()
