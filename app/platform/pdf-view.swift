@@ -95,31 +95,34 @@ final class PDFController {
 
 #if os(macOS)
 /// Reports a ⌘-click as a page index and a point in PDF points from that page's top-left corner, where TeX measures.
+///
+/// Watched as a local event monitor rather than a gesture recognizer: recognizers on a PDFView never sent their action
+/// for a ⌘-press, as PDFKit tracks the press itself. Taken on the press and not passed on, so PDFKit doesn't also treat
+/// it as a ⌘-click that extends the selection; a press without ⌘, or outside this view, goes through untouched.
 @MainActor
-private final class CommandClick: NSObject, NSGestureRecognizerDelegate {
-    private weak var view: PDFView?
-    private let handler: @MainActor (Int, CGPoint) -> Void
+private final class CommandClick {
+    private var monitor: Any?
 
     init(view: PDFView, handler: @escaping @MainActor (Int, CGPoint) -> Void) {
-        self.view = view
-        self.handler = handler
-        super.init()
-        let click = NSClickGestureRecognizer(target: self, action: #selector(clicked(_:)))
-        click.delegate = self
-        view.addGestureRecognizer(click)
+        monitor = NSEvent.addLocalMonitorForEvents(matching: .leftMouseDown) { [weak view] event in
+            let taken = MainActor.assumeIsolated {
+                guard let view, event.modifierFlags.contains(.command), let window = view.window, event.window === window,
+                      let document = view.document,
+                      // The press must land on the PDF itself, not on a popover or sheet over it.
+                      window.contentView?.hitTest(event.locationInWindow)?.isDescendant(of: view) == true else { return false }
+                let location = view.convert(event.locationInWindow, from: nil)
+                guard let page = view.page(for: location, nearest: true) else { return false }
+                let point = view.convert(location, to: page)
+                let box = page.bounds(for: .mediaBox)
+                handler(document.index(for: page), CGPoint(x: point.x - box.minX, y: box.maxY - point.y))
+                return true
+            }
+            return taken ? nil : event
+        }
     }
 
-    func gestureRecognizerShouldBegin(_ gestureRecognizer: NSGestureRecognizer) -> Bool {
-        NSEvent.modifierFlags.contains(.command)
-    }
-
-    @objc private func clicked(_ click: NSClickGestureRecognizer) {
-        guard let view, let document = view.document else { return }
-        let location = click.location(in: view)
-        guard let page = view.page(for: location, nearest: true) else { return }
-        let point = view.convert(location, to: page)
-        let box = page.bounds(for: .mediaBox)
-        handler(document.index(for: page), CGPoint(x: point.x - box.minX, y: box.maxY - point.y))
+    isolated deinit {
+        if let monitor { NSEvent.removeMonitor(monitor) }
     }
 }
 
