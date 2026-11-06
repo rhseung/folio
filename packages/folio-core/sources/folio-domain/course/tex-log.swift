@@ -22,6 +22,16 @@ public struct TexIssue: Equatable, Sendable, Codable {
     }
 }
 
+/// The time a TeX build stamps into its PDF and `\today`, given to Tectonic as `SOURCE_DATE_EPOCH` (#41). Midnight
+/// of the calendar day, not the moment: a rebuild of unchanged text the same day gives the same bytes, so iCloud has
+/// nothing new to sync, while `\today` still prints the day it was built. It is the calendar day rather than the
+/// study day, because `\today` prints a calendar date.
+public enum TexBuildTime {
+    public static func sourceDateEpoch(at now: Date, calendar: Calendar) -> Int {
+        Int(calendar.startOfDay(for: now).timeIntervalSince1970)
+    }
+}
+
 public enum TexLog {
     /// Reads Tectonic's console output, which names each problem as `error: hw.tex:5: Undefined control sequence`.
     /// The TeX log itself is not read: its `l.5` lines don't say which `\input` file they belong to.

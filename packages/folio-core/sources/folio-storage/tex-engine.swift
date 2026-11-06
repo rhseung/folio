@@ -30,15 +30,16 @@ public struct TexEngine: Sendable {
 
     /// Blocks until Tectonic exits, which can take minutes the first time a package is fetched; the app calls it
     /// off the main thread.
-    public func compile(_ source: URL, into outDir: URL) throws -> Build {
+    public func compile(_ source: URL, into outDir: URL, at now: Date, calendar: Calendar) throws -> Build {
+        let epoch = TexBuildTime.sourceDateEpoch(at: now, calendar: calendar)
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
         let pdf = outDir.appending(path: source.deletingPathExtension().lastPathComponent + ".pdf")
         // Online, Tectonic checks its package bundle on every build, which took a homework from half a second to
         // nine. Packages it already fetched are enough for most rebuilds; only a missing one needs the network.
-        var run = try run(source, outDir: outDir, pdf: pdf, cachedOnly: true)
+        var run = try run(source, outDir: outDir, pdf: pdf, epoch: epoch, cachedOnly: true)
         var issues = TexLog.issues(run.output)
         if !run.made || Self.hasErrors(issues), Self.missesAFile(run.output) {
-            run = try self.run(source, outDir: outDir, pdf: pdf, cachedOnly: false)
+            run = try self.run(source, outDir: outDir, pdf: pdf, epoch: epoch, cachedOnly: false)
             issues = TexLog.issues(run.output)
         }
         if !run.made, !Self.hasErrors(issues) {
@@ -63,19 +64,19 @@ public struct TexEngine: Sendable {
         output.contains("not found") || output.contains("failed to open input file")
     }
 
-    private func run(_ source: URL, outDir: URL, pdf: URL, cachedOnly: Bool) throws -> (output: String, made: Bool) {
+    private func run(_ source: URL, outDir: URL, pdf: URL, epoch: Int, cachedOnly: Bool) throws -> (output: String, made: Bool) {
         try? FileManager.default.removeItem(at: pdf)
         // A build that dies before writing its own would otherwise leave the last one, made for other text.
         try? FileManager.default.removeItem(at: pdf.deletingPathExtension().appendingPathExtension("synctex.gz"))
         let process = Process()
         process.executableURL = executable
-        // A fixed build time keeps the PDF's bytes the same for an unchanged source, so there is nothing new for iCloud
-        // to sync or for `course.json` to rehash. It is set through the environment rather than `-Z deterministic-mode`,
+        // A build time fixed to the day (`TexBuildTime`) keeps the PDF's bytes the same for an unchanged source, so
+        // there is nothing new for iCloud to sync or for `course.json` to rehash. It is set through the environment rather than `-Z deterministic-mode`,
         // which gives the same PDF but blanks the file names in the SyncTeX data, leaving no way to tell which file a
         // clicked line is in. Errors don't stop the build, so one build lists all of them.
         process.arguments = ["-X", "compile", "-Z", "continue-on-errors", "--synctex"] + (cachedOnly ? ["--only-cached"] : [])
             + ["--outdir", outDir.path, source.lastPathComponent]
-        process.environment = ProcessInfo.processInfo.environment.merging(["SOURCE_DATE_EPOCH": "0"]) { _, fixed in fixed }
+        process.environment = ProcessInfo.processInfo.environment.merging(["SOURCE_DATE_EPOCH": String(epoch)]) { _, fixed in fixed }
         // `\input` and `\includegraphics` paths are relative to the document's folder.
         process.currentDirectoryURL = source.deletingLastPathComponent()
         let output = Pipe()

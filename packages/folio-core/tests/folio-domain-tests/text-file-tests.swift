@@ -33,6 +33,43 @@ struct MaterialFormatTests {
     }
 }
 
+struct TexBuildTimeTests {
+    static func calendar(_ zone: String) throws -> Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = try #require(TimeZone(identifier: zone))
+        return calendar
+    }
+
+    static func at(day: Int, _ hour: Int, _ minute: Int, _ calendar: Calendar) throws -> Date {
+        try #require(calendar.date(from: DateComponents(year: 2026, month: 11, day: day, hour: hour, minute: minute)))
+    }
+
+    // 2026-11-05 00:00 in Seoul (UTC+9), worked out by hand as 2026-11-04 15:00 UTC.
+    static let nov5Seoul = 1_793_804_400
+
+    @Test func aBuildIsStampedWithMidnightOfItsDay() throws {
+        let seoul = try Self.calendar("Asia/Seoul")
+        #expect(TexBuildTime.sourceDateEpoch(at: try Self.at(day: 5, 0, 0, seoul), calendar: seoul) == Self.nov5Seoul)
+        #expect(TexBuildTime.sourceDateEpoch(at: try Self.at(day: 5, 13, 30, seoul), calendar: seoul) == Self.nov5Seoul)
+        #expect(TexBuildTime.sourceDateEpoch(at: try Self.at(day: 5, 23, 59, seoul), calendar: seoul) == Self.nov5Seoul)
+        #expect(TexBuildTime.sourceDateEpoch(at: try Self.at(day: 6, 0, 0, seoul), calendar: seoul) == Self.nov5Seoul + 86_400)
+    }
+
+    /// `\today` prints a calendar date, so 01:00 is already the new day though the study day (04:00 boundary) isn't.
+    @Test func theDayTurnsAtMidnightNotAtTheStudyDayBoundary() throws {
+        let seoul = try Self.calendar("Asia/Seoul")
+        #expect(TexBuildTime.sourceDateEpoch(at: try Self.at(day: 6, 1, 0, seoul), calendar: seoul) == Self.nov5Seoul + 86_400)
+    }
+
+    @Test func theDayIsTheCalendarTimeZones() throws {
+        let seoul = try Self.calendar("Asia/Seoul")
+        let utc = try Self.calendar("UTC")
+        let moment = try Self.at(day: 5, 8, 0, seoul)  // 2026-11-04 23:00 UTC
+        #expect(TexBuildTime.sourceDateEpoch(at: moment, calendar: seoul) == Self.nov5Seoul)
+        #expect(TexBuildTime.sourceDateEpoch(at: moment, calendar: utc) == Self.nov5Seoul + 9 * 3600 - 86_400)
+    }
+}
+
 struct TexLogTests {
     // Tectonic's console output for a file with `\foo` on line 5, as it printed it.
     static let undefined = """
