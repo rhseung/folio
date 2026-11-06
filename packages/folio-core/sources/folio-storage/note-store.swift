@@ -21,6 +21,12 @@ extension Array where Element == NoteFile {
     public func titled(_ title: String) -> NoteFile? {
         first { $0.title == title } ?? first { $0.title.caseInsensitiveCompare(title) == .orderedSame }
     }
+
+    /// The note a link by title (`[[제목]]`, `[[제목.md]]`) opens. Opening the link, drawing what it embeds and drawing
+    /// it broken all ask this one rule, so a link never opens a note the preview says isn't there.
+    public func linked(_ target: String) -> NoteFile? {
+        titled(target.hasSuffix(".md") ? String(target.dropLast(3)) : target)
+    }
 }
 
 extension NoteMeta {

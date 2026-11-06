@@ -66,3 +66,22 @@ struct NoteEditorRefreshTests {
         #expect(try onDisk.hasSuffix("\n여기서 쓴 글\n"))
     }
 }
+
+/// A link by title opens what the preview draws whole: the same note, found by `[NoteFile].linked`.
+@MainActor
+struct NoteLinkOpenTests {
+    @Test func aLinkByTitleOpensTheNoteThePreviewFinds() throws {
+        let workspace = try fixtureWorkspace()
+        let made = try #require(workspace.run(NoteAdd(course: graphTheory, title: "매칭 정리", kind: .free))?.made)
+        let course = try #require(workspace.course(graphTheory))
+        // A note moved in from an old folder has no ID yet; opening its link gives it one, as opening it from the list does.
+        try course.store.createNote(at: course.store.newNoteURL(title: "옛 노트", format: .markdown), text: "")
+        let model = NotesModel(workspace: workspace, course: course)
+        let embeds = NoteEmbedSource(workspace: workspace, course: course, own: nil).embeds(revision: workspace.notesRevision, text: "")
+        for title in ["매칭 정리", "매칭 정리.md", "매칭 정리 ", "옛 노트", "없는 노트"] {
+            #expect(embeds.hasNote(title) == (model.noteId(titled: title) != nil), "\(title)")
+        }
+        #expect(model.noteId(titled: "매칭 정리.md") == made)
+        #expect(try course.store.notes().linked("옛 노트")?.meta.id != nil)
+    }
+}
