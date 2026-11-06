@@ -12,13 +12,21 @@ struct PeopleView: View {
 
     func openCourse(_ id: UUID) { openLink(.course(id)) }
 
+    /// Cleared here too: a person just added isn't saved yet, so the window is still on the list and the link alone
+    /// wouldn't move.
+    func backToList() {
+        model.selection = nil
+        openLink(.place(.people))
+    }
+
     var body: some View {
         CatalogEditing { $catalog in
             let shown = model.shown(in: catalog)
-            HStack(spacing: 0) {
+            ColumnSplit(fold: .stack(showingPage: model.selection != nil)) {
                 list($catalog, shown: shown)
-                    .frame(width: Theme.Size.courseColumn)
-                ColumnDivider()
+            } bar: {
+                Button(.peopleTitle, systemImage: "chevron.left", action: backToList)
+            } content: {
                 if let i = catalog.people.firstIndex(where: { $0.id == shown }) {
                     detail(catalog.people[i], person: $catalog.people.element(id: catalog.people[i].id, fallback: catalog.people[i]))
                 } else {
@@ -36,8 +44,12 @@ struct PeopleView: View {
             }
         }
         .navigationTitle(.peopleTitle)
+        // The window's link is the selection, so picking a person, and going back to the list where the list and a
+        // person don't fit side by side, are steps in the window's history.
         .onChange(of: place, initial: true) { _, entry in
-            if let entry, entry.link.kind == .person, let id = entry.link.id { model.selection = id }
+            guard let entry else { return }
+            if entry.link.kind == .person, let id = entry.link.id { model.selection = id }
+            if entry.link.kind == .people { model.selection = nil }
         }
     }
 
@@ -58,7 +70,7 @@ struct PeopleView: View {
                             .padding(.horizontal, Theme.Space.s).padding(.top, role == groups.first?.role ? 0 : Theme.Space.m).padding(.bottom, Theme.Space.xs)
                         ForEach(people) { p in
                             let chosen = shown == p.id
-                            Button { model.selection = p.id } label: {
+                            Button { openLink(AppLink(.person, p.id)) } label: {
                                 HStack(spacing: Theme.Space.s + 2) {
                                     Avatar(name: p.name, id: p.id)
                                     Text(model.name(p)).fontWeight(chosen ? .semibold : .regular).lineLimit(1)

@@ -162,6 +162,8 @@ struct PolicySheet: View {
 
 struct FlowLayout: Layout {
     var spacing: CGFloat = 6
+    /// Each item on its row's middle rather than its top, for items of different heights (chips and a bare button).
+    var centered = false
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         let rows = arrange(subviews, width: proposal.width ?? .infinity)
@@ -173,7 +175,8 @@ struct FlowLayout: Layout {
             var x = bounds.minX
             for i in row.items {
                 let size = subviews[i].sizeThatFits(.unspecified)
-                subviews[i].place(at: CGPoint(x: x, y: bounds.minY + row.y), proposal: .unspecified)
+                let y = bounds.minY + row.y + (centered ? (row.height - size.height) / 2 : 0)
+                subviews[i].place(at: CGPoint(x: x, y: y), proposal: .unspecified)
                 x += size.width + spacing
             }
         }

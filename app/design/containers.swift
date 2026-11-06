@@ -111,7 +111,8 @@ struct FoldingRow<Title: View, Control: View>: View {
             }
             VStack(alignment: .leading, spacing: Theme.Space.s) {
                 title.frame(maxWidth: .infinity, alignment: .leading)
-                control
+                // Still a row: a control of several parts (a field, its unit and a switch) put each on a line of its own.
+                HStack(spacing: Theme.Space.m) { control }
             }
         }
     }

@@ -135,15 +135,14 @@ struct CourseView: View {
     var body: some View {
         if let course = model.course {
             let workspace = model.workspace
-            HStack(spacing: 0) {
+            ColumnSplit {
                 CourseColumn(model: model, course: course)
-                    .frame(width: Theme.Size.courseColumn)
-                    // Back to the section's first screen from a file or unit opened in it.
-                    .crumb(model.section.title, level: 1, symbol: model.section.tab.symbol) {
-                        model.resetPage()
-                        pageReset += 1
-                    }
-                ColumnDivider()
+            } bar: {
+                CourseSectionMenu(model: model)
+                if model.section == .notes, model.openNote != nil {
+                    Button(.courseTabNotes, systemImage: "chevron.left") { model.openNote = nil }
+                }
+            } content: {
                 Group {
                     switch model.section {
                     case .overview: CourseOverview(model: model, course: course)
@@ -153,9 +152,7 @@ struct CourseView: View {
                             model.openUnit = id
                             model.moved(id.map { AppLink(.unit, $0) })
                         }
-                    case .notes:
-                        NotesView(workspace: workspace, course: course, selection: model.openNote, anchor: model.noteAnchor, insert: $model.noteInsert,
-                                  moves: model.noteMoves) { model.openNote = $0 }
+                    case .notes: CourseNotesPage(model: model, course: course)
                     // One branch for every quiz page, so the quiz model and a pending solve request survive switching pages.
                     case .quizSolve, .quizCards, .quizStats, .quizProblems: QuizView(workspace: model.workspace, course: course, section: $model.section)
                     case .materials: MaterialsView(workspace: workspace, course: course, place: model.place, moved: model.moved)
@@ -166,13 +163,16 @@ struct CourseView: View {
                 }
                 // A new identity drops what the page opened (a file, a unit), which is all its section crumb asks for.
                 .id(pageReset)
-                // minWidth 0: a page's fixed-width rows must never set the column's minimum. When that minimum plus a
-                // side column exceeds the window, AppKit loops on constraints and kills the app.
-                .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity)
                 .paperList()
                 // Over the page, not beside it: a sidebar (or the iPad's inspector) squeezed the page to a strip in a
                 // narrow window.
                 .overlay(alignment: .bottomTrailing) { claudeFloat(course) }
+            }
+            // On the split, not the column: folded, the column is gone and the section still heads the trail.
+            // Back to the section's first screen from a file or unit opened in it.
+            .crumb(model.section.title, level: 1, symbol: model.section.tab.symbol) {
+                model.resetPage()
+                pageReset += 1
             }
             .animation(.snappy(duration: 0.25), value: showClaude)
             .environment(\.accent, model.accent)
@@ -278,6 +278,53 @@ struct CourseColumn: View {
         .font(Theme.Typeface.body)
         .foregroundStyle(Theme.Palette.text)
         .background(Theme.Palette.window)
+    }
+}
+
+/// The course's sections where its column is folded away, in the order and with the pages the column lists.
+struct CourseSectionMenu: View {
+    @Bindable var model: CourseModel
+
+    var body: some View {
+        Menu {
+            ForEach(CourseTab.allCases) { tab in
+                if tab.pages.count > 1 {
+                    Menu {
+                        ForEach(tab.pages) { page in
+                            Toggle(page.title, isOn: Binding(get: { model.section == page }, set: { if $0 { model.section = page } }))
+                        }
+                    } label: { Label(tab.title, systemImage: tab.symbol) }
+                } else {
+                    Toggle(isOn: Binding(get: { model.section.tab == tab }, set: { if $0 { model.section = tab.pages[0] } })) {
+                        Label(tab.title, systemImage: tab.symbol)
+                    }
+                }
+            }
+        } label: {
+            Label(model.section.title, systemImage: model.section.tab.symbol)
+        }
+        .fixedSize()
+    }
+}
+
+/// Folded, the notes section is the column's list until a note is opened: the list grows with the course, so it is a
+/// page of its own, not a menu.
+struct CourseNotesPage: View {
+    @Bindable var model: CourseModel
+    let course: LoadedCourse
+    @Environment(\.columnFolded) private var folded
+
+    var body: some View {
+        if folded, model.openNote == nil {
+            ScrollView {
+                NoteList(workspace: model.workspace, course: course, selection: $model.openNote, moves: model.noteMoves)
+                    .padding(.horizontal, Theme.Inset.panel)
+                    .padding(.vertical, Theme.Space.l)
+            }
+        } else {
+            NotesView(workspace: model.workspace, course: course, selection: model.openNote, anchor: model.noteAnchor, insert: $model.noteInsert,
+                      moves: model.noteMoves) { model.openNote = $0 }
+        }
     }
 }
 

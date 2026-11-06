@@ -60,6 +60,67 @@ struct ColumnDivider: View {
     var body: some View { Theme.Palette.line.frame(width: 1).ignoresSafeArea() }
 }
 
+/// How a list column beside a page folds where both don't fit (#43): a column of a few fixed sections (a course's,
+/// settings') turns into a menu in a `PageBar` over the page; a list that grows (people, a quiz's scope) shows either
+/// the list or the page, the page with a way back to the list in its bar.
+enum ColumnFold: Equatable {
+    case menu
+    case stack(showingPage: Bool)
+}
+
+/// A list column, its divider and a page, folded by `ColumnFold` below `pageRoom` for the page. The bar is what the
+/// folded page shows above it: the section menu, or the way back to the list.
+struct ColumnSplit<Column: View, Bar: View, Content: View>: View {
+    var width: CGFloat = Theme.Size.courseColumn
+    var fold: ColumnFold = .menu
+    @ViewBuilder var column: Column
+    @ViewBuilder var bar: Bar
+    @ViewBuilder var content: Content
+    @Environment(\.revealsOverflow) private var revealsOverflow
+    // Measured, unlike `Fold`: the side-by-side form can't push a pane out (the page goes down to nothing), so its
+    // first pass at the old width costs nothing, and only the width the page is left decides.
+    @State private var narrow = false
+
+    /// What a page needs beside the column; less, and the column folds.
+    static var pageRoom: CGFloat { 440 }
+
+    var showsPage: Bool { if case .stack(false) = fold { !narrow } else { true } }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            if narrow && showsPage {
+                // Named, not just a glyph: the bar stands in for a column whose rows said where they lead.
+                PageBar { bar.buttonStyle(.ghost) } trailing: { EmptyView() }
+                    .background(Theme.Palette.page)
+            }
+            HStack(spacing: 0) {
+                if !narrow || !showsPage {
+                    column
+                        .frame(width: narrow ? nil : width)
+                        .frame(maxWidth: narrow ? .infinity : nil, maxHeight: .infinity)
+                }
+                if !narrow { ColumnDivider() }
+                if showsPage {
+                    content
+                        // minWidth 0: a page's fixed-width rows must never set the column's minimum. When that
+                        // minimum plus a side column exceeds the window, AppKit loops on constraints and kills the
+                        // app. A fit check lifts it to see the page overflow, which this otherwise clips.
+                        .frame(minWidth: revealsOverflow ? nil : 0, maxWidth: .infinity, maxHeight: .infinity)
+                        .environment(\.columnFolded, narrow)
+                }
+            }
+        }
+        .onGeometryChange(for: Bool.self) { $0.size.width < width + 1 + Self.pageRoom } action: { narrow = $0 }
+    }
+}
+
+extension EnvironmentValues {
+    /// Set by the screen fit check only: pages that would clip what doesn't fit them push their window out instead.
+    @Entry var revealsOverflow = false
+    /// The page a `ColumnSplit` folded its column away from, for what the column held that the page now shows.
+    @Entry var columnFolded = false
+}
+
 /// One step of the window's breadcrumb. A step with an action goes back to it; the last step is where the window is,
 /// and one with `rename` (an open note) renames what is open when clicked, as a document's title does.
 struct Crumb {

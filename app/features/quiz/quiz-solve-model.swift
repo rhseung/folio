@@ -32,6 +32,8 @@ final class QuizSolveModel {
     var deck: [QuizCard] = []
     var index = 0
     var started = false
+    /// Counts starts, so a restart over the same deck still reads as one.
+    private(set) var runs = 0
     var round: [Verdict] = []
     var answer = ""
     var revealed = false
@@ -167,6 +169,7 @@ final class QuizSolveModel {
         index = 0
         round = []
         started = true
+        runs += 1
         resetAnswer()
     }
 

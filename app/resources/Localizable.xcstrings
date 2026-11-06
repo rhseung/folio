@@ -9769,6 +9769,17 @@
         }
       }
     },
+    "quiz.solve.scope": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "범위"
+          }
+        }
+      }
+    },
     "quiz.solve.select-all": {
       "extractionState": "manual",
       "localizations": {
