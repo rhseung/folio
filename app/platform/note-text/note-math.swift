@@ -17,6 +17,9 @@ import UIKit
     }()
     private static var texCache: [String: String] = [:]
 
+    /// The code block languages the highlighter knows, by the name each is offered under.
+    static let languages: [String] = helpers?.objectForKeyedSubscript("languages").call(withArguments: [])?.toArray()?.compactMap { $0 as? String } ?? []
+
     static func tex(fromAsciiMath source: String) -> String {
         if let tex = texCache[source] { return tex }
         let tex = helpers?.objectForKeyedSubscript("toTeX").call(withArguments: [source])?.toString() ?? source

@@ -268,6 +268,10 @@ private struct NoteSettingsForm: View {
                 }
             }
         }
+        Block(String(localized: .settingsSnippets), note: String(localized: .settingsSnippetsNote)) {
+            // Stored only once changed, so a note editor keeps getting the app's defaults until then.
+            SnippetList(snippets: Binding(get: { settings.snippets }, set: { settings.mathSnippets = $0 == MathSnippet.defaults ? nil : $0 }))
+        }
         FormTextArea(label: String(localized: .settingsNoteRules), detail: String(localized: .settingsNoteRulesDetail), text: $settings.noteRules, height: 160)
     }
 
@@ -423,6 +427,49 @@ struct IntListField: View {
     func add() {
         values = Array(Set(values + [draft])).sorted()
         adding = false
+    }
+}
+
+struct SnippetList: View {
+    @Binding var snippets: [MathSnippet]
+
+    var body: some View {
+        Card {
+            ForEach(snippets.indices, id: \.self) { i in
+                CardRow {
+                    TextField(String(localized: .settingsSnippetTrigger), text: field(i, \.trigger))
+                        .font(Theme.Typeface.mono)
+                        .pill(width: 72, alignment: .leading)
+                    TextField(String(localized: .settingsSnippetBody), text: field(i, \.body), axis: .vertical)
+                        .textFieldStyle(.plain)
+                        .font(Theme.Typeface.mono)
+                    ChoiceMenu(selection: field(i, \.inMath), options: [(false, String(localized: .settingsSnippetInText)),
+                                                                          (true, String(localized: .settingsSnippetInMath))])
+                    Button { snippets.remove(at: i) } label: {
+                        Image(systemName: "minus.circle").foregroundStyle(Theme.Palette.textTertiary)
+                    }
+                    .buttonStyle(.pointing(.plain))
+                    .help(Text(.commonDelete))
+                }
+                .contextMenu { Button(.commonDelete, role: .destructive) { if snippets.indices.contains(i) { snippets.remove(at: i) } } }
+            }
+            CardRow(last: true) {
+                Button { snippets.append(MathSnippet(trigger: "", body: "", inMath: true)) } label: {
+                    Label(.settingsSnippetAdd, systemImage: "plus").foregroundStyle(Theme.Palette.textSecondary)
+                }
+                .buttonStyle(.pointing(.plain))
+                Spacer()
+                Button(.settingsSnippetReset) { snippets = MathSnippet.defaults }
+                    .buttonStyle(.ghost)
+                    .disabled(snippets == MathSnippet.defaults)
+            }
+        }
+    }
+
+    /// Guarded: a removed row can still be asked for its value once while the list redraws.
+    func field<T>(_ i: Int, _ key: WritableKeyPath<MathSnippet, T>) -> Binding<T> {
+        Binding(get: { snippets.indices.contains(i) ? snippets[i][keyPath: key] : MathSnippet(trigger: "", body: "", inMath: true)[keyPath: key] },
+                set: { if snippets.indices.contains(i) { snippets[i][keyPath: key] = $0 } })
     }
 }
 
