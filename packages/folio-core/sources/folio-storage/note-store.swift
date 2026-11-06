@@ -15,6 +15,13 @@ public struct NoteFile: Equatable, Sendable {
     }
 }
 
+/// Course paths. `blocked`: another file already has the new name, so the PDF stays where it is.
+public struct BuiltPDFMove: Equatable, Sendable {
+    public var from: String
+    public var to: String
+    public var blocked: Bool
+}
+
 extension Array where Element == NoteFile {
     /// The note a link names by its title (Obsidian style): written as it is, or else ignoring case, as Obsidian
     /// also matches.
@@ -134,8 +141,7 @@ extension CourseStore {
     /// in any folder: a link names a note by its title alone (`[[증명]]`), so two of one title would share their links.
     public func movedNoteURL(_ note: NoteFile, to path: String, in file: CourseFile) -> URL? {
         var parts = path.split(separator: "/").map { $0.trimmingCharacters(in: .whitespaces) }
-        guard var name = parts.popLast(),
-              parts.allSatisfy({ !$0.isEmpty && !$0.hasPrefix(".") && !Self.nonNoteFolders.contains($0) }) else { return nil }
+        guard var name = parts.popLast(), parts.allSatisfy({ StandardLayout.noteFolderProblem($0) == nil }) else { return nil }
         if let format = NoteFormat(path: name) {
             guard format == note.format else { return nil }
             name = (name as NSString).deletingPathExtension
@@ -173,6 +179,23 @@ extension CourseStore {
     /// Notes/ keeps only notes, and a PDF there would be listed as neither a note nor a material.
     public func exportPath(of note: NoteFile) -> String {
         "\(CourseFolder.study.rawValue)/\(note.title).pdf"
+    }
+
+    /// The PDF `note build` wrote for a `.tex` note, while it is still that build's: at `exportPath` with the hash the
+    /// note's entry kept. A PDF there with another hash is someone else's export of the same name.
+    public func builtPDF(of note: NoteFile, in file: CourseFile) -> String? {
+        guard note.format == .tex, let id = note.meta.id, let made = file.notes.first(where: { $0.id == id })?.builtHash else { return nil }
+        let path = exportPath(of: note)
+        return (try? hash(path)) == made ? path : nil
+    }
+
+    /// Where the note's built PDF goes when the note moves to `url`: `exportPath` under the new title. Nil without a
+    /// built PDF or when the title stays (a move to another folder).
+    public func builtPDFMove(of note: NoteFile, to url: URL, in file: CourseFile) -> BuiltPDFMove? {
+        guard let from = builtPDF(of: note, in: file) else { return nil }
+        let to = exportPath(of: NoteFile(url: url, meta: note.meta))
+        guard to != from else { return nil }
+        return BuiltPDFMove(from: from, to: to, blocked: FileManager.default.fileExists(atPath: fileURL(to).path))
     }
 
     /// Creates the file only; the caller adds its entry to course.json.

@@ -74,7 +74,7 @@ struct NoteStoreTests {
         #expect(moved("증명") == "Notes/증명 2.md")
         #expect(moved("정리/2주차-1.md") == "Notes/정리/2주차-1.md")
         #expect(moved("2주차-1") == "Notes/2주차-1.md")
-        #expect(moved("정리/assets/x") == nil && moved("x.tex") == nil && moved("Exports/x") == nil)
+        #expect(moved("정리/assets/x") == nil && moved("x.tex") == nil && moved("Exports/x") == nil && moved("Assets/x") == nil)
         #expect(store.noteFolders() == ["", "정리"])
     }
 

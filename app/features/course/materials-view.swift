@@ -86,9 +86,7 @@ struct MaterialsView: View {
                     .help(Text(.materialsNewFileHelp))
                 Button(.materialsTrack) { model.track() }
                     .help(Text(.materialsTrackHelp))
-                if model.lastBatch != nil {
-                    Button(.materialsUndoMove) { model.undo() }
-                }
+                UndoMoveButton(moves: model.moves) { model.undo() }
             }
             // On the header row, not the page: two file importers on one view leave only the last one working.
             .fileImporter(isPresented: $picking, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in

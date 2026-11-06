@@ -22,6 +22,8 @@ final class CourseModel {
     private var following = false
     /// An answer the Claude panel puts at the end of the open note; the editor takes it and clears it.
     var noteInsert: String?
+    /// The notes section's last move, made from the list or the open note's name, which the list offers to undo.
+    let noteMoves = MoveUndo()
 
     init(workspace: Workspace, courseId: UUID) {
         self.workspace = workspace

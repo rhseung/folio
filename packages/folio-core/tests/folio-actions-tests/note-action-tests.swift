@@ -368,17 +368,62 @@ struct NoteActionTests {
         #expect(try text("Notes/그림.md") == "# 그림\n\n![](assets/a.png)\n" && text("Notes/모음.md") == "[[그림]]\n")
     }
 
-    /// A `.tex` note renames as a markdown note does; the PDF built from it keeps its name.
-    @Test func renamingATexNoteLeavesItsPDF() throws {
+    /// Builds the `.tex` note at `path` from `text`, as the app hands `note build` the PDF Tectonic wrote.
+    func build(_ path: String, _ text: String) throws {
+        let folder = TexEngine.outputFolder(for: try store().fileURL(path))
+        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let url = folder.appending(path: "\(UUID().uuidString).pdf")
+        try Data(text.utf8).write(to: url)
+        try run(NoteBuild(course: Self.graphTheory, note: path, pdf: url.path))
+    }
+
+    /// A `.tex` note renames as a markdown note does, and the PDF its build wrote takes the new title in the same batch,
+    /// tracked under its new path, so the next build replaces it without asking. One undo puts both back.
+    @Test func renamingATexNoteTakesItsBuiltPDFAlong() throws {
         let id = UUID()
         try run(NoteAdd(id: id, course: Self.graphTheory, title: "증명", format: .tex))
-        let study = try store().fileURL("Study")
-        try FileManager.default.createDirectory(at: study, withIntermediateDirectories: true)
-        try Data("%PDF".utf8).write(to: study.appending(path: "증명.pdf"))
-        try run(NoteMove(course: Self.graphTheory, note: "Notes/증명.tex", to: "정리/귀류법"))
+        try build("Notes/증명.tex", "%PDF mine")
+        let material = try #require(try file().materials.first { $0.path == "Study/증명.pdf" }?.id)
+
+        let dry = ActionContext(gist: gist, device: device, now: now, dryRun: true)
+        try NoteMove(course: Self.graphTheory, note: "Notes/증명.tex", to: "정리/귀류법").run(dry)
+        #expect(dry.changes.contains(Change(.moved, "2026-3/EC4207 그래프 이론/Study/증명.pdf", to: "2026-3/EC4207 그래프 이론/Study/귀류법.pdf")))
+        #expect(try text("Study/증명.pdf") == "%PDF mine")
+
+        let batch = try #require(try run(NoteMove(course: Self.graphTheory, note: "Notes/증명.tex", to: "정리/귀류법")).made)
         #expect(try file().notes.first { $0.id == id }?.path == "Notes/정리/귀류법.tex")
         #expect(try text("Notes/정리/귀류법.tex").contains("\\section*{귀류법}"))
-        #expect(try text("Study/증명.pdf") == "%PDF")
+        #expect(try text("Study/귀류법.pdf") == "%PDF mine" && !FileManager.default.fileExists(atPath: try store().fileURL("Study/증명.pdf").path))
+        #expect(try file().materials.first { $0.id == material }?.path == "Study/귀류법.pdf")
+        try build("Notes/정리/귀류법.tex", "%PDF again")
+        #expect(try text("Study/귀류법.pdf") == "%PDF again")
+
+        try run(CleanupUndo(batch: batch, course: Self.graphTheory))
+        #expect(try file().notes.first { $0.id == id }?.path == "Notes/증명.tex")
+        #expect(try text("Study/증명.pdf") == "%PDF again")
+        #expect(try file().materials.first { $0.id == material }?.path == "Study/증명.pdf")
+    }
+
+    /// A PDF of the old title that Folio didn't build stays, and so does the built PDF when the new title's PDF is
+    /// already there: nothing is overwritten.
+    @Test func aPDFNotBuiltHereOrWithNowhereToGoStays() throws {
+        try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "증명", format: .tex))
+        let study = try store().fileURL("Study")
+        try FileManager.default.createDirectory(at: study, withIntermediateDirectories: true)
+        try Data("%PDF theirs".utf8).write(to: study.appending(path: "증명.pdf"))
+        let note = try #require(try store().note(at: "Notes/증명.tex"))
+        #expect(try store().builtPDF(of: note, in: file()) == nil)
+        try run(NoteMove(course: Self.graphTheory, note: "Notes/증명.tex", to: "귀류법"))
+        #expect(try text("Study/증명.pdf") == "%PDF theirs" && !FileManager.default.fileExists(atPath: study.appending(path: "귀류법.pdf").path))
+
+        try build("Notes/귀류법.tex", "%PDF mine")
+        try Data("%PDF other".utf8).write(to: study.appending(path: "대우.pdf"))
+        let renamed = try #require(try store().note(at: "Notes/귀류법.tex"))
+        let pdf = try #require(try store().builtPDFMove(of: renamed, to: store().fileURL("Notes/대우.tex"), in: file()))
+        #expect(pdf.from == "Study/귀류법.pdf" && pdf.to == "Study/대우.pdf" && pdf.blocked)
+        try run(NoteMove(course: Self.graphTheory, note: "Notes/귀류법.tex", to: "대우"))
+        #expect(try text("Notes/대우.tex").contains("\\section*{대우}"))
+        #expect(try text("Study/귀류법.pdf") == "%PDF mine" && text("Study/대우.pdf") == "%PDF other")
     }
 
     @Test func aNoteStaysInNotesAndKeepsItsFormat() throws {

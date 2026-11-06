@@ -10,6 +10,7 @@ struct TextFileView: View {
     @State private var links: NoteEditorModel?
     @State private var controller: PDFController?
     @State private var renaming = false
+    private var moves: MoveUndo?
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
 
@@ -17,7 +18,8 @@ struct TextFileView: View {
         _model = State(initialValue: TextFileModel(workspace: workspace, course: course, material: material))
     }
 
-    init(workspace: Workspace, course: LoadedCourse, note: NoteFile) {
+    init(workspace: Workspace, course: LoadedCourse, note: NoteFile, moves: MoveUndo? = nil) {
+        self.moves = moves
         _model = State(initialValue: TextFileModel(workspace: workspace, course: course, source: .note(note)))
         _links = State(initialValue: NoteEditorModel(workspace: workspace, course: course, note: note))
     }
@@ -59,7 +61,7 @@ struct TextFileView: View {
             renaming = true
         } })
         .sheet(isPresented: $renaming) {
-            if let links { NoteRenameSheet(workspace: links.workspace, course: links.course, note: links.note) }
+            if let links { NoteRenameSheet(workspace: links.workspace, course: links.course, note: links.note, moves: moves) }
         }
         .onAppear(perform: model.load)
         // Saved a moment after typing stops, and whenever the file goes away, as notes are.

@@ -1,6 +1,7 @@
 import FolioActions
 import FolioDomain
 import FolioMarkdown
+import FolioStorage
 import Foundation
 import Testing
 @testable import Folio
@@ -238,10 +239,10 @@ struct MaterialsModelTests {
         model.move(m, into: place)
         let pending = try #require(model.pending)
         #expect(pending.question.hasSuffix("(으)로 옮깁니다.") && pending.question.contains(place) && pending.refusal == nil)
-        #expect(model.materials.first { $0.id == m.id }?.path == m.path && model.lastBatch == nil)
+        #expect(model.materials.first { $0.id == m.id }?.path == m.path && model.moves.batch == nil)
         pending.perform()
         let moved = try #require(model.materials.first { $0.id == m.id })
-        #expect(moved.path.hasPrefix(place + "/") && model.lastBatch != nil)
+        #expect(moved.path.hasPrefix(place + "/") && model.moves.batch != nil)
 
         model.pending = nil
         model.startRenaming(moved)
@@ -303,6 +304,23 @@ struct NotesModelTests {
         #expect(notes.note(id)?.title == "a-b")
     }
 
+    /// A `.tex` note's sheet shows its built PDF taking the new name, which the rename then does.
+    @Test func renamingATexNoteShowsItsBuiltPDF() throws {
+        let (workspace, course) = try fixtureCourse()
+        let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "증명", format: .tex))?.made)
+        let note = try #require(try course.store.note(id: id))
+        let output = TexEngine.outputFolder(for: note.url)
+        try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        try Data("%PDF".utf8).write(to: output.appending(path: "built.pdf"))
+        try #require(workspace.run(NoteBuild(course: linearAlgebra, note: "Notes/증명.tex", pdf: output.appending(path: "built.pdf").path)))
+        let sheet = NoteRenameModel(workspace: workspace, course: course, note: note)
+        #expect(sheet.pdfName == nil)
+        sheet.name = "귀류법"
+        #expect(sheet.pdfName == "Study/귀류법.pdf" && sheet.pdfDetail == "Folio가 빌드한 Study/증명.pdf도 이름을 따라 바꿉니다")
+        #expect(sheet.rename())
+        #expect(FileManager.default.fileExists(atPath: course.store.fileURL("Study/귀류법.pdf").path))
+    }
+
     /// Moving asks first, with the name the note will have in the folder.
     @Test func movingIntoAFolderAsksWithTheNewPath() throws {
         let (workspace, course) = try fixtureCourse()
@@ -318,6 +336,54 @@ struct NotesModelTests {
         pending.perform()
         let moved = try #require(model.notes.first { $0.meta.id == id })
         #expect(course.store.coursePath(of: moved.url) == "Notes/정리/행렬식.md" && model.moveTargets(moved) == [""])
+    }
+
+    /// With no folder in Notes/ yet, a note still moves into a new one; the sheet names the folder it makes and refuses
+    /// names a note can't be in.
+    @Test func movingIntoANewFolderMakesIt() throws {
+        let (workspace, course) = try fixtureCourse()
+        let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
+        let note = try #require(try course.store.note(id: id))
+        let sheet = NoteFolderModel(workspace: workspace, course: course, note: note)
+        #expect(!sheet.canSave && sheet.message == "새 폴더 이름을 적습니다.")
+        for name in ["assets", "Exports", ".숨김", "정리/증명"] {
+            sheet.name = name
+            #expect(!sheet.canSave, "\(name)")
+        }
+        sheet.name = " 중간 대비 "
+        #expect(sheet.target == "중간 대비/행렬식.md" && sheet.message == "폴더 Notes/중간 대비을(를) 만들고 Notes/중간 대비/행렬식.md(으)로 옮깁니다.")
+        #expect(sheet.move())
+        let list = NoteListModel(workspace: workspace, course: course)
+        list.reload()
+        let moved = try #require(list.notes.first { $0.meta.id == id })
+        #expect(course.store.coursePath(of: moved.url) == "Notes/중간 대비/행렬식.md" && list.folders == ["", "중간 대비"])
+        let again = NoteFolderModel(workspace: workspace, course: course, note: moved)
+        again.name = "중간 대비"
+        #expect(!again.canSave && again.message == "노트가 이미 이 폴더에 있습니다.")
+    }
+
+    /// A rename from the open note's sheet lands in the list's undo, which asks with `cleanup undo`'s words and puts the
+    /// note's name back; the list's own moves land there too.
+    @Test func theListUndoesTheLastNoteMove() throws {
+        let (workspace, course) = try fixtureCourse()
+        let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
+        let moves = MoveUndo()
+        let list = NoteListModel(workspace: workspace, course: course, moves: moves)
+        list.reload()
+        let sheet = NoteRenameModel(workspace: workspace, course: course, note: try #require(try course.store.note(id: id)), moves: moves)
+        sheet.name = "고윳값"
+        #expect(moves.batch == nil && sheet.rename() && moves.batch != nil)
+
+        list.undoMove()
+        let pending = try #require(list.pending)
+        #expect(pending.question.hasSuffix("의 이동을 되돌립니다.") && pending.refusal == nil)
+        pending.perform()
+        #expect(moves.batch == nil && list.notes.first { $0.meta.id == id }?.title == "행렬식")
+
+        let note = try #require(list.notes.first { $0.meta.id == id })
+        let folder = NoteFolderModel(workspace: workspace, course: course, note: note, moves: moves)
+        folder.name = "정리"
+        #expect(folder.move() && moves.batch != nil)
     }
 
     @Test func editorNamesItsLinkAndFindsNotesByTitle() throws {

@@ -7,8 +7,8 @@ struct NoteList: View {
     @Environment(\.accent) private var accent
     @Binding var selection: UUID?
 
-    init(workspace: Workspace, course: LoadedCourse, selection: Binding<UUID?>) {
-        _model = State(initialValue: NoteListModel(workspace: workspace, course: course))
+    init(workspace: Workspace, course: LoadedCourse, selection: Binding<UUID?>, moves: MoveUndo) {
+        _model = State(initialValue: NoteListModel(workspace: workspace, course: course, moves: moves))
         _selection = selection
     }
 
@@ -26,6 +26,9 @@ struct NoteList: View {
             }
             .padding(.horizontal, Theme.Space.s)
             .padding(.bottom, Theme.Space.xs)
+            UndoMoveButton(moves: model.moves) { model.undoMove() }
+                .padding(.horizontal, Theme.Space.s)
+                .padding(.bottom, Theme.Space.xs)
             if shown.isEmpty {
                 Text(model.emptyLine)
                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
@@ -48,7 +51,10 @@ struct NoteList: View {
             }
         }
         .sheet(isPresented: Binding(get: { model.renaming != nil }, set: { if !$0 { model.renaming = nil } })) {
-            if let note = model.renaming { NoteRenameSheet(workspace: model.workspace, course: model.course, note: note) }
+            if let note = model.renaming { NoteRenameSheet(workspace: model.workspace, course: model.course, note: note, moves: model.moves) }
+        }
+        .sheet(isPresented: Binding(get: { model.newFolder != nil }, set: { if !$0 { model.newFolder = nil } })) {
+            if let note = model.newFolder { NoteFolderSheet(workspace: model.workspace, course: model.course, note: note, moves: model.moves) }
         }
         .confirming($model.pending)
         // Notes made elsewhere (the Claude panel, a session's rough note) and links changed in the editor show up here too.
@@ -84,11 +90,12 @@ struct NoteList: View {
             if let id = note.meta.id { LinkMenu(link: AppLink(.note, id), course: model.course.id, trailing: true) }
             Divider()
             Button(.notesRenameEllipsis) { model.renaming = note }
-            let targets = model.moveTargets(note)
-            if !targets.isEmpty {
-                Menu(String(localized: .notesMoveTo)) {
-                    ForEach(targets, id: \.self) { folder in Button(model.folderLabel(folder)) { model.move(note, into: folder) } }
-                }
+            // Shown with no folder yet too: a new folder is where the first one comes from.
+            Menu(String(localized: .notesMoveTo)) {
+                let targets = model.moveTargets(note)
+                ForEach(targets, id: \.self) { folder in Button(model.folderLabel(folder)) { model.move(note, into: folder) } }
+                if !targets.isEmpty { Divider() }
+                Button(.notesFolderNewEllipsis) { model.newFolder = note }
             }
             Divider()
             Button(.notesDeleteEllipsis, systemImage: "trash", role: .destructive) {
@@ -107,11 +114,13 @@ struct NotesView: View {
     let selection: UUID?
     var anchor: AppLink.Anchor?
     var insert: Binding<String?> = .constant(nil)
+    let moves: MoveUndo
     let open: (UUID) -> Void
 
     init(workspace: Workspace, course: LoadedCourse, selection: UUID?, anchor: AppLink.Anchor? = nil, insert: Binding<String?> = .constant(nil),
-         open: @escaping (UUID) -> Void) {
+         moves: MoveUndo, open: @escaping (UUID) -> Void) {
         _model = State(initialValue: NotesModel(workspace: workspace, course: course))
+        self.moves = moves
         self.selection = selection
         self.anchor = anchor
         self.insert = insert
@@ -121,9 +130,9 @@ struct NotesView: View {
     var body: some View {
         if let note = model.note(selection) {
             if note.format == .tex {
-                TextFileView(workspace: model.workspace, course: model.course, note: note).id(note.url)
+                TextFileView(workspace: model.workspace, course: model.course, note: note, moves: moves).id(note.url)
             } else {
-                NoteEditor(workspace: model.workspace, course: model.course, note: note, anchor: anchor, insert: insert) { title in
+                NoteEditor(workspace: model.workspace, course: model.course, note: note, anchor: anchor, insert: insert, moves: moves) { title in
                     if let id = model.noteId(titled: title) { open(id) }
                 }
                 .id(note.url)
@@ -151,10 +160,12 @@ struct NoteEditor: View {
     @State private var preview = PreviewLink()
     @State private var showsAssets = false
     @State private var renaming = false
+    let moves: MoveUndo?
 
     init(workspace: Workspace, course: LoadedCourse, note: NoteFile, anchor: AppLink.Anchor? = nil, insert: Binding<String?> = .constant(nil),
-         openNote: @escaping (String) -> Void) {
+         moves: MoveUndo? = nil, openNote: @escaping (String) -> Void) {
         _model = State(initialValue: NoteEditorModel(workspace: workspace, course: course, note: note))
+        self.moves = moves
         self.anchor = anchor
         self.insert = insert
         self.openNote = openNote
@@ -231,7 +242,7 @@ struct NoteEditor: View {
             model.saveIfDirty()
             renaming = true
         })
-        .sheet(isPresented: $renaming) { NoteRenameSheet(workspace: model.workspace, course: model.course, note: model.note) }
+        .sheet(isPresented: $renaming) { NoteRenameSheet(workspace: model.workspace, course: model.course, note: model.note, moves: moves) }
         .onAppear(perform: model.load)
         // Saved a moment after typing stops, and whenever the note goes away: switching notes or courses, closing the
         // window or quitting would otherwise drop the edits.
