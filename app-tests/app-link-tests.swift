@@ -35,6 +35,19 @@ struct NavigatorTests {
         #expect(navigator.destination == .course(graphTheory))
     }
 
+    @Test func aLinkFromOutsideOpensInANewTabUnlessTheWindowWasMadeForIt() {
+        let fresh = Navigator()
+        #expect(fresh.outsidePlacement(windowAge: 0.3) == .here)
+        // The same Today, but a window the user has had open for a while: what it shows stays.
+        #expect(fresh.outsidePlacement(windowAge: Navigator.freshWindow + 1) == .tab)
+        let moved = Navigator()
+        moved.go(Navigator.Entry(link: .place(.grades)))
+        moved.back()
+        #expect(moved.outsidePlacement(windowAge: 0.3) == .tab)
+        let linked = Navigator(Navigator.Entry(link: .course(graphTheory), course: graphTheory))
+        #expect(linked.outsidePlacement(windowAge: 0.3) == .tab)
+    }
+
     @Test func aPersonOpensOnThePeoplePage() {
         let navigator = Navigator(Navigator.Entry(link: AppLink(.person, UUID())))
         #expect(navigator.destination == .people)

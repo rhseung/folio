@@ -75,8 +75,10 @@ import WebKit
 
     private struct WeakWindow { weak var window: NSWindow? }
 
-    static func remember(_ request: WindowRequest) {
-        openers[request.id] = WeakWindow(window: NSApp.keyWindow)
+    /// `opener` is the window the link was in. The key window stands in for it only when that isn't known yet: a link
+    /// from outside can arrive while another app is in front and no window of this one is key.
+    static func remember(_ request: WindowRequest, opener: NSWindow?) {
+        openers[request.id] = WeakWindow(window: opener ?? NSApp.keyWindow)
     }
 
     static func attach(_ window: NSWindow, for request: WindowRequest) {
@@ -85,6 +87,11 @@ import WebKit
         opener.addTabbedWindow(window, ordered: .above)
         window.makeKeyAndOrderFront(nil)
     }
+}
+
+/// The window a view is in, kept weakly: the window owns the view.
+@MainActor final class WindowHost {
+    weak var window: NSWindow?
 }
 
 /// Finds the window a view is in once it has one.

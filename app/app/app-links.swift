@@ -1,4 +1,5 @@
 import FolioDomain
+import FolioMarkdown
 import FolioStorage
 import Observation
 import PDFKit
@@ -110,6 +111,19 @@ final class Navigator {
     /// Nearest first, for the list a held button shows.
     var backList: [Entry] { history.back.reversed() }
     var forwardList: [Entry] { history.forward }
+
+    /// Where a `folio://` link from outside the app (a calendar note, Obsidian, `folio open`) opens, `age` after this
+    /// window was made: in a new tab, so the page the window shows stays as it was. A window made a moment ago that
+    /// hasn't moved is the one the system made to receive the link, there being none open, and shows it itself; a tab
+    /// would leave an empty Today behind it.
+    func outsidePlacement(windowAge age: TimeInterval) -> LinkPlacement {
+        let untouched = !history.canGoBack && !history.canGoForward && current == Entry(link: .place(.today))
+        return untouched && age < Self.freshWindow ? .here : .tab
+    }
+
+    /// The system shows a window it makes for a link and hands it the link within a moment; nobody follows a link
+    /// from another app that soon after opening a window themselves.
+    static let freshWindow: TimeInterval = 2
 }
 
 extension Workspace {
@@ -179,6 +193,15 @@ extension Workspace {
 extension AppLink.Anchor {
     var isBlock: Bool {
         if case .block = self { true } else { false }
+    }
+
+    /// Where this heading or block starts in a note's text, for the editor's caret; nil when the note has none.
+    func location(in text: String) -> Int? {
+        switch self {
+        case .heading(let heading): ParsedNote.location(in: text, heading: heading, block: nil)
+        case .block(let block): ParsedNote.location(in: text, heading: nil, block: block)
+        case .page: nil
+        }
     }
 }
 

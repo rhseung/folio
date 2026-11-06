@@ -38,6 +38,11 @@ struct RootView: View {
     @State private var trail = CrumbTrail()
     @Environment(\.colorScheme) private var colorScheme
     @State private var windowWidth: CGFloat = 1200
+    #if os(macOS)
+    /// When this window was made, which tells a window made for a link from outside from one already in use.
+    @State private var madeAt = Date.now
+    @State private var host = WindowHost()
+    #endif
 
     init(request: WindowRequest? = nil) {
         self.request = request
@@ -63,12 +68,22 @@ struct RootView: View {
         // Beside is a tab until panes (#62). The iPad has no window tabs, so a tab there is a window of its own.
         let request = WindowRequest(link: entry.link, course: entry.course, tab: placement != .window)
         #if os(macOS)
-        if request.tab { WindowTabs.remember(request) }
+        if request.tab { WindowTabs.remember(request, opener: host.window) }
         #endif
         openWindow(id: FolioApp.mainWindow, value: request)
     }
 
     var openLink: OpenLinkAction { OpenLinkAction { link, placement, course in open(link, in: placement, course: course) } }
+
+    func openFromOutside(_ link: AppLink) {
+        #if os(macOS)
+        open(link, in: navigator.outsidePlacement(windowAge: Date.now.timeIntervalSince(madeAt)))
+        #else
+        // The iPad has no window tabs: a tab there is a window of its own, which would put the link's page in another
+        // scene beside this one rather than in the one the user is looking at.
+        open(link)
+        #endif
+    }
 
     var body: some View {
         Group {
@@ -122,7 +137,10 @@ struct RootView: View {
                 #if os(macOS)
                 .background { SwipeNavigation(back: { navigator.back() }, forward: { navigator.forward() }) }
                 .background {
-                    WindowReader { window in if let request { WindowTabs.attach(window, for: request) } }
+                    WindowReader { window in
+                        host.window = window
+                        if let request { WindowTabs.attach(window, for: request) }
+                    }
                 }
                 #endif
                 #if DEBUG && os(macOS)
@@ -130,8 +148,9 @@ struct RootView: View {
                 #endif
             }
         }
-        // A folio:// link from outside (a calendar note, Obsidian, `folio open`) opens in the window in front, not a new one.
-        .onOpenURL { url in if let link = AppLink(url: url) { open(link) } }
+        // A folio:// link from outside (a calendar note, Obsidian, `folio open`) comes to the window in front, which opens
+        // it in a new tab of its own.
+        .onOpenURL { url in if let link = AppLink(url: url) { openFromOutside(link) } }
         .handlesExternalEvents(preferring: ["*"], allowing: ["*"])
         .fileImporter(isPresented: $pickingFolder, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result { workspace.open(url) }

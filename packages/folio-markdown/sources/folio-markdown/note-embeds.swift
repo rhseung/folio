@@ -76,15 +76,10 @@ extension ParsedNote {
         return body
     }
 
-    /// Headings match as Obsidian matches them: by their text, ignoring case.
     func headingSection(_ heading: String) -> String? {
-        let wanted = heading.trimmingCharacters(in: .whitespaces)
         let tops = Array(document.children)
-        guard let i = tops.firstIndex(where: { node in
-            guard let h = node as? Heading else { return false }
-            let text = h.children.map(HTMLRenderer.sourceText).joined().trimmingCharacters(in: .whitespaces)
-            return text.caseInsensitiveCompare(wanted) == .orderedSame || HTMLRenderer.slug(text) == HTMLRenderer.slug(wanted)
-        }), let level = (tops[i] as? Heading)?.level, let start = lines(of: tops[i])?.lowerBound else { return nil }
+        guard let i = headingIndex(heading, in: tops), let level = (tops[i] as? Heading)?.level,
+              let start = lines(of: tops[i])?.lowerBound else { return nil }
         let next = tops[(i + 1)...].first { ($0 as? Heading).map { $0.level <= level } ?? false }
         var end = next.flatMap { lines(of: $0)?.lowerBound }.map { $0 - 1 } ?? bodyLines.count
         while end > start, bodyLines[end - 1].allSatisfy(\.isWhitespace) { end -= 1 }
@@ -94,13 +89,29 @@ extension ParsedNote {
     /// A list item is the item with its sublists, written as a list of one; anything else is the whole top-level block
     /// (a block ID on a callout's last paragraph names the callout, as the renderer reads it).
     func blockSource(_ id: String) -> String? {
-        guard let line = bodyLines.firstIndex(where: { $0.firstMatch(of: BlockID.pattern).map { String($0.1) } == id }).map({ $0 + 1 }),
-              let top = document.children.first(where: { lines(of: $0)?.contains(line) ?? false }),
-              let range = lines(of: top) else { return nil }
-        guard let item = deepestItem(in: top, holding: line), let lines = lines(of: item) else { return source(range) }
+        guard let (range, item) = blockLines(id) else { return nil }
+        guard let lines = item else { return source(range) }
         let rows = bodyLines[(lines.lowerBound - 1)...(lines.upperBound - 1)]
         let indent = rows.first?.prefix(while: { $0 == " " || $0 == "\t" }).count ?? 0
         return rows.map { String($0.dropFirst(min(indent, $0.prefix(while: { $0 == " " || $0 == "\t" }).count))) }.joined(separator: "\n")
+    }
+
+    /// Headings match as Obsidian matches them: by their text, ignoring case.
+    func headingIndex(_ heading: String, in tops: [Markup]) -> Int? {
+        let wanted = heading.trimmingCharacters(in: .whitespaces)
+        return tops.firstIndex { node in
+            guard let h = node as? Heading else { return false }
+            let text = h.children.map(HTMLRenderer.sourceText).joined().trimmingCharacters(in: .whitespaces)
+            return text.caseInsensitiveCompare(wanted) == .orderedSame || HTMLRenderer.slug(text) == HTMLRenderer.slug(wanted)
+        }
+    }
+
+    /// The top-level block holding a block ID and, when it is in a list, the deepest item holding it.
+    func blockLines(_ id: String) -> (top: ClosedRange<Int>, item: ClosedRange<Int>?)? {
+        guard let line = bodyLines.firstIndex(where: { $0.firstMatch(of: BlockID.pattern).map { String($0.1) } == id }).map({ $0 + 1 }),
+              let top = document.children.first(where: { lines(of: $0)?.contains(line) ?? false }),
+              let range = lines(of: top) else { return nil }
+        return (range, deepestItem(in: top, holding: line).flatMap { lines(of: $0) })
     }
 
     private func deepestItem(in node: Markup, holding line: Int) -> ListItem? {
