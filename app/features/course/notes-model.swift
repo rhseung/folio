@@ -122,20 +122,28 @@ final class NotesModel {
     }
 }
 
-/// The notes a note's preview draws in its embeds and block references' previews, found by title in its course.
+/// The notes a note's preview draws in its embeds and block references' previews and names in its links: by title in
+/// its course, or by ID in any course (`[[note:<ID>]]`).
 /// Read once for each `revision` (the workspace's `notesRevision`), not on every keystroke the preview redraws for.
 final class NoteEmbedSource {
     private let store: CourseStore
+    private let others: [CourseStore]
     private let own: URL?
     private var revision: Int?
     private var notes: [NoteFile]?
+    private var elsewhere: [NoteFile]?
     private var texts: [URL: String] = [:]
     /// The note's text as the editor has it, which may not be saved yet: a reference to its own block shows that.
     private var current: String?
 
-    init(store: CourseStore, own: URL?) {
+    init(store: CourseStore, others: [CourseStore] = [], own: URL?) {
         self.store = store
+        self.others = others
         self.own = own
+    }
+
+    @MainActor convenience init(workspace: Workspace, course: LoadedCourse, own: URL?) {
+        self.init(store: course.store, others: workspace.courses.filter { $0.id != course.id }.map(\.store), own: own)
     }
 
     func embeds(revision: Int, text: String) -> NoteEmbeds {
@@ -143,18 +151,29 @@ final class NoteEmbedSource {
         if revision != self.revision {
             self.revision = revision
             notes = nil
+            elsewhere = nil
             texts = [:]
         }
         let labels = NoteEmbeds.Labels(missing: String(localized: .notesEmbedMissing), loop: String(localized: .notesEmbedLoop),
                                        tooDeep: String(localized: .notesEmbedTooDeep))
-        return NoteEmbeds(key: own?.standardizedFileURL.path, labels: labels) { [self] link in find(link) }
+        return NoteEmbeds(key: own?.standardizedFileURL.path, labels: labels, title: { [self] id in noteFile(id: id)?.title }) { [self] link in find(link) }
+    }
+
+    /// The course's own notes first; the others are listed only for an ID that isn't here, which a link copied from
+    /// another course's note has.
+    private func noteFile(id: UUID) -> NoteFile? {
+        if notes == nil { notes = (try? store.notes()) ?? [] }
+        if let found = notes?.first(where: { $0.meta.id == id }) { return found }
+        if elsewhere == nil { elsewhere = others.flatMap { (try? $0.notes()) ?? [] } }
+        return elsewhere?.first { $0.meta.id == id }
     }
 
     private func find(_ link: WikiLink) -> NoteEmbeds.Note? {
         // Listed only once a note embeds or references another, so notes without any pay nothing.
         if notes == nil { notes = (try? store.notes()) ?? [] }
         let title = link.target.hasSuffix(".md") ? String(link.target.dropLast(3)) : link.target
-        guard let note = notes?.titled(title), note.format == .markdown else { return nil }
+        let named: NoteFile? = if let id = link.noteID { noteFile(id: id) } else { notes?.titled(title) }
+        guard let note = named, note.format == .markdown else { return nil }
         if note.url.standardizedFileURL == own?.standardizedFileURL, let current {
             return NoteEmbeds.Note(key: note.url.standardizedFileURL.path, text: current, math: note.meta.math.rawValue)
         }
@@ -194,7 +213,7 @@ final class NoteEditorModel {
         initial = course
         self.note = note
         meta = note.meta
-        embeds = NoteEmbedSource(store: course.store, own: note.url)
+        embeds = NoteEmbedSource(workspace: workspace, course: course, own: note.url)
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }

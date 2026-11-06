@@ -93,6 +93,11 @@ extension NSAttributedString.Key {
                       .underlineColor: accent.native.withAlphaComponent(0.4)])
             w.marks.append(NSRange(location: r.location, length: open))
             w.marks.append(NSRange(location: NSMaxRange(r) - 2, length: 2))
+            // An ID is for Folio to find the note by, not to read: it and the `|` before the name go with the brackets.
+            if WikiLink(m).noteID != nil {
+                w.marks.append(NSRange(m.2.startIndex..<m.2.endIndex, in: text))
+                if let alias = m.5 { w.marks.append(NSRange(text.index(before: alias.startIndex)..<alias.startIndex, in: text)) }
+            }
         }
 
         for span in math.inline {

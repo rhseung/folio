@@ -222,12 +222,15 @@ class NoteTextView: NSTextView {
     /// ⌘-click opens a link; a plain click places the caret, as anywhere else in the text.
     func openLink(at i: Int, event: NSEvent) -> Bool {
         guard event.modifierFlags.contains(.command), let storage = textStorage else { return false }
-        var range = NSRange()
-        let attributes = storage.attributes(at: i, effectiveRange: &range)
+        let attributes = storage.attributes(at: i, effectiveRange: nil)
         if attributes[.noteWiki] is String {
             // The attribute holds the target alone; the page or block of `[[material:…#page=12]]` is read from the text.
-            let written = (storage.string as NSString).substring(with: range)
-            if let m = written.firstMatch(of: WikiLink.pattern) {
+            // From the line rather than the attribute's run: the brackets and an ID are styled apart from the name, so
+            // the run under the pointer is only part of the link.
+            let text = storage.string as NSString
+            let line = text.paragraphRange(for: NSRange(location: i, length: 0))
+            let written = text.substring(with: line)
+            if let m = written.matches(of: WikiLink.pattern).first(where: { NSRange($0.range, in: written).contains(i - line.location) }) {
                 NoteLinks.open(WikiLink(m).href, base: nil, openNote: openNote, openLink: linkOpener)
             }
             return true

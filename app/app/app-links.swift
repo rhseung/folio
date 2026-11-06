@@ -227,7 +227,7 @@ extension CourseSection {
         }
         guard let url = URL(string: href, relativeTo: base) ?? URL(string: href.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed) ?? "") else { return }
         switch url.scheme {
-        // `[[노트 제목]]` names a note by its title until links keep the note's ID (#35).
+        // `[[노트 제목]]` written by hand names a note by its title; a link by ID (`[[note:<ID>]]`) is an app link above.
         case "folio" where url.host == "note":
             openNote(String(url.path.dropFirst()))
         case "file" where url.pathExtension == "md":
