@@ -353,6 +353,21 @@ struct NoteActionTests {
         #expect(try file().notes.first { $0.id == picture }?.path == "Notes/그림 노트.md")
     }
 
+    /// A note moved in from an old folder has no entry until it is opened; its heading, pictures and the links to it
+    /// follow all the same, and it still has no entry afterwards.
+    @Test func aNoteWithoutAnEntryMovesWithItsLinks() throws {
+        let notes = try store().url.appending(path: "Notes")
+        try "# 그림\n\n![](assets/a.png)\n".write(to: notes.appending(path: "그림.md"), atomically: true, encoding: .utf8)
+        try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "모음", body: "[[그림]]\n"))
+        let entries = try file().notes
+        let batch = try #require(try run(NoteMove(course: Self.graphTheory, note: "Notes/그림.md", to: "정리/도식")).made)
+        #expect(try text("Notes/정리/도식.md") == "# 도식\n\n![](../assets/a.png)\n")
+        #expect(try text("Notes/모음.md") == "[[도식]]\n")
+        #expect(try file().notes == entries)
+        try run(CleanupUndo(batch: batch))
+        #expect(try text("Notes/그림.md") == "# 그림\n\n![](assets/a.png)\n" && text("Notes/모음.md") == "[[그림]]\n")
+    }
+
     /// A `.tex` note renames as a markdown note does; the PDF built from it keeps its name.
     @Test func renamingATexNoteLeavesItsPDF() throws {
         let id = UUID()

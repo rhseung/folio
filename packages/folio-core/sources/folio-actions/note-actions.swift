@@ -371,7 +371,9 @@ enum NoteTitles {
         // Loading every course is only worth it when a note moved; an undo of a folder cleanup shouldn't fail on one.
         guard moves.contains(where: { NoteFormat(path: $0.from) != nil }) else { return ctx.dryRun ? nil : try move() }
         struct Edit { var store: CourseStore, url: URL, text: String }
-        typealias Rename = (note: UUID, from: String, to: String)
+        // `note` is nil for a note file without an entry yet (moved in from an old folder, not opened): its heading,
+        // pictures and the links to it by title follow all the same.
+        typealias Rename = (note: UUID?, from: String, to: String)
         var renamed: [UUID: [Rename]] = [:]
         var edits: [Edit] = []
         var courses: [(id: UUID, store: CourseStore)] = []
@@ -382,7 +384,11 @@ enum NoteTitles {
             let prefix = ctx.relative(store.url) + "/"
             let byPath = Dictionary(moves.filter { $0.from.hasPrefix(prefix) && $0.to.hasPrefix(prefix) }.map { (String($0.from.dropFirst(prefix.count)), String($0.to.dropFirst(prefix.count))) },
                                     uniquingKeysWith: { a, _ in a })
-            let notes = file.notes.compactMap { e in byPath[e.path].map { (note: e.id, from: e.path, to: $0) } }
+            let entries = Set(file.notes.map(\.path))
+            let bare: [Rename] = byPath.filter { from, _ in
+                !entries.contains(from) && from.hasPrefix(CourseFolder.notes.rawValue + "/") && NoteFormat(path: from) != nil
+            }.map { (note: nil, from: $0.key, to: $0.value) }
+            let notes: [Rename] = file.notes.compactMap { e in byPath[e.path].map { (note: e.id, from: e.path, to: $0) } } + bare
             if !notes.isEmpty { renamed[course] = notes }
         }
         guard !renamed.isEmpty else { return ctx.dryRun ? nil : try move() }
@@ -402,13 +408,13 @@ enum NoteTitles {
                 }
                 if n.format == .markdown {
                     for r in notes { text = WikiLink.retargeted(text, from: title(r.from), to: title(r.to)) }
-                    for r in everywhere { text = WikiLink.retitled(text, note: r.note, from: title(r.from), to: title(r.to)) }
+                    for r in everywhere { if let id = r.note { text = WikiLink.retitled(text, note: id, from: title(r.from), to: title(r.to)) } }
                 }
                 if text != before { edits.append(Edit(store: store, url: own.map { store.fileURL($0.to) } ?? n.url, text: text)) }
             }
         }
         let batch = ctx.dryRun ? nil : try move()
-        for (course, notes) in renamed {
+        for (course, notes) in renamed where notes.contains(where: { $0.note != nil }) {
             try ctx.edit(course) { f in
                 for n in notes { if let i = f.notes.firstIndex(where: { $0.id == n.note }) { f.notes[i].path = n.to } }
             }
