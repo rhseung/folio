@@ -223,6 +223,7 @@ struct NoteEditor: View {
             if !Task.isCancelled { model.saveNow(force: false) }
         }
         .onChange(of: model.meta.math) { model.saveMath() }
+        .onChange(of: model.workspace.notesRevision) { model.refresh() }
         .onChange(of: scenePhase) { _, phase in if phase != .active { model.saveIfDirty() } }
         .onDisappear { model.saveIfDirty() }
         #if os(macOS)

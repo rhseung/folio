@@ -54,6 +54,32 @@ struct TextFileModelTests {
         #expect(try course.store.readText("Study/Problems.tex") == "여기서 고침\n")
     }
 
+    /// A write from the Claude panel or the CLI shows without asking when nothing here is unsaved, asks when something
+    /// is, and the screen's own save reads nothing again.
+    @Test func aWriteElsewhereReloadsOnlyWhatIsSaved() throws {
+        let model = try model("Study/Problems.tex")
+        let id = try #require(course.file.materials.first { $0.path == "Study/Problems.tex" }).id
+        var revision = model.outsideRevision
+        workspace.run(MaterialWrite(course: graphTheory, material: id, text: "바깥에서 고침\n"))
+        #expect(model.outsideRevision != revision)
+        model.refresh()
+        #expect(model.text == "바깥에서 고침\n" && !model.dirty && !model.conflict)
+
+        model.text = "여기서 고침\n"
+        model.saveNow(force: false)
+        revision = model.outsideRevision
+        model.refresh()
+        #expect(model.text == "여기서 고침\n" && !model.conflict)
+
+        model.text = "다시 고치는 중\n"
+        workspace.run(MaterialWrite(course: graphTheory, material: id, text: "또 바깥에서\n"))
+        #expect(model.outsideRevision != revision)
+        model.refresh()
+        #expect(model.conflict && model.text == "다시 고치는 중\n")
+        model.saveIfDirty()
+        #expect(try course.store.readText("Study/Problems.tex") == "또 바깥에서\n")
+    }
+
     /// A `.tex` note saves through `note write` and keeps its PDF in Study, not among the notes.
     @Test func aTexNoteOpensAsAFile() throws {
         let id = try #require(workspace.run(NoteAdd(course: graphTheory, title: "증명", format: .tex))?.made)

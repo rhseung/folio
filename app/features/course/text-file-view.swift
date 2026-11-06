@@ -61,6 +61,10 @@ struct TextFileView: View {
             if !Task.isCancelled { model.saveNow(force: false) }
         }
         .task(id: "\(model.pdfRevision) \(model.pdfURL?.path ?? "")") { openPDF() }
+        .onChange(of: model.outsideRevision) {
+            model.refresh()
+            links?.reloadMeta()
+        }
         .onChange(of: scenePhase) { _, phase in if phase != .active { model.saveIfDirty() } }
         #if os(macOS)
         .onChange(of: colorScheme) { _, scheme in controller?.darken(scheme == .dark) }
