@@ -34,7 +34,7 @@ final class SnapshotDriver {
     var openPDF = false
     var searchQuery: String?
 
-    func run(select: (Destination) -> Void, courses: [UUID], semester: UUID?) async {
+    func run(select: (Screen) -> Void, courses: [UUID], semester: UUID?) async {
         guard let directory = Self.directory else { return }
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -44,7 +44,7 @@ final class SnapshotDriver {
             window.center()
         }
 
-        var plan: [(String, Destination, CourseSection?)] = [("today", .today, nil), ("grades", .grades, nil), ("requirements", .requirements, nil), ("people", .people, nil), ("codes", .codes, nil)]
+        var plan: [(String, Screen, CourseSection?)] = [("today", .today, nil), ("grades", .grades, nil), ("requirements", .requirements, nil), ("people", .people, nil), ("codes", .codes, nil)]
         if let semester { plan.append(("semester", .semester(semester), nil)) }
         if let first = courses.first {
             plan += CourseSection.allCases.map { ("course-\($0)", .course(first), $0) }

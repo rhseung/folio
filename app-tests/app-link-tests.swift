@@ -13,13 +13,13 @@ struct NavigatorTests {
         let grades = Navigator.Entry(link: .place(.grades))
         navigator.go(course)
         navigator.go(grades)
-        #expect(navigator.destination == .grades)
+        #expect(navigator.screen == .grades)
         #expect(navigator.backList.map(\.link) == [.course(graphTheory), .place(.today)])
         navigator.back(2)
-        #expect(navigator.destination == .today)
+        #expect(navigator.screen == .today)
         #expect(navigator.forwardList.map(\.link) == [.course(graphTheory), .place(.grades)])
         navigator.forward()
-        #expect(navigator.destination == .course(graphTheory))
+        #expect(navigator.screen == .course(graphTheory))
         // A new move drops what was ahead, as in a browser.
         navigator.go(Navigator.Entry(link: .place(.people)))
         #expect(navigator.forwardList.isEmpty)
@@ -32,7 +32,7 @@ struct NavigatorTests {
         navigator.go(Navigator.Entry(link: file.with(.page(12)), course: graphTheory))
         #expect(navigator.current.link == file.with(.page(12)))
         #expect(navigator.backList.count == 1)
-        #expect(navigator.destination == .course(graphTheory))
+        #expect(navigator.screen == .course(graphTheory))
     }
 
     @Test func aLinkFromOutsideOpensInANewTabUnlessTheWindowWasMadeForIt() {
@@ -50,7 +50,7 @@ struct NavigatorTests {
 
     @Test func aPersonOpensOnThePeoplePage() {
         let navigator = Navigator(Navigator.Entry(link: AppLink(.person, UUID())))
-        #expect(navigator.destination == .people)
+        #expect(navigator.screen == .people)
     }
 }
 

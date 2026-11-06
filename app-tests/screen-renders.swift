@@ -1,4 +1,5 @@
 import AppKit
+import FolioDomain
 import FolioFixtures
 import SwiftUI
 import Testing
@@ -72,20 +73,40 @@ struct ScreenRenders {
     }
 
     func batches(_ workspace: Workspace) -> [Batch] {
-        var plain = Batch(pages: [
-            ("today", { AnyView(TodayView(workspace: workspace)) }),
-            ("grades", { AnyView(GradesView(workspace: workspace)) }),
-            ("requirements", { AnyView(RequirementsView(workspace: workspace) { _ in }) }),
-            ("people", { AnyView(PeopleView(workspace: workspace) { _ in }) }),
-            ("codes", { AnyView(CodesView(workspace: workspace)) }),
-        ])
-        if let semester = workspace.currentSemester {
-            plain.pages.append(("semester", { AnyView(SemesterView(workspace: workspace, semesterID: semester.id) { _ in }) }))
-        }
+        // Each page is drawn from its link, as a window draws it, so a course page needs no app-wide switch to show.
+        var plain = Batch(pages: ScreenCatalog.entries(workspace).filter { $0.name != "settings" }.map { name, entry in
+            (name, { AnyView(ScreenView(workspace: workspace, entry: entry)) })
+        })
         plain.sheets = FormSnapshots.forms(workspace).map { name, view in ("form-\(name)", { view }) }
         var batches = [plain]
+        for tab in SettingsTab.allCases {
+            batches.append(Batch(setup: { UserDefaults.standard.set(tab.rawValue, forKey: SettingsTab.storageKey) },
+                                 pages: [("settings-\(tab)", { AnyView(ScreenView(workspace: workspace, entry: Navigator.Entry(link: .place(.settings)))) })]))
+        }
+        for (name, query) in [("search-empty", ""), ("search", "매칭")] {
+            batches.append(Batch(setup: { SnapshotDriver.shared.searchQuery = query },
+                                 sheets: [(name, { AnyView(SearchPalette(workspace: workspace, close: {}, choose: { _, _ in })) })]))
+        }
+        return batches
+    }
+}
 
-        // The course in class at the scenario's moment, so the sessions page shows a class under way; else the busiest.
+/// A link for every screen, at one that gives it something to show: the places, the current term, and each page of
+/// the course in class at the scenario's moment (so the sessions page shows a class under way; else the busiest),
+/// with its first unit open.
+@MainActor enum ScreenCatalog {
+    static func entries(_ workspace: Workspace) -> [(name: String, entry: Navigator.Entry)] {
+        var entries: [(String, Navigator.Entry)] = [
+            ("today", Navigator.Entry(link: .place(.today))),
+            ("grades", Navigator.Entry(link: .place(.grades))),
+            ("requirements", Navigator.Entry(link: .place(.requirements))),
+            ("people", Navigator.Entry(link: .place(.people))),
+            ("codes", Navigator.Entry(link: .place(.codes))),
+            ("settings", Navigator.Entry(link: .place(.settings))),
+        ]
+        if let semester = workspace.currentSemester {
+            entries.append(("semester", Navigator.Entry(link: AppLink(.semester, semester.id))))
+        }
         let now = workspace.now
         let live = workspace.currentCourses.first { c in
             let model = SessionsModel(workspace: workspace, courseId: c.id)
@@ -94,23 +115,14 @@ struct ScreenRenders {
             }
         }
         if let course = live ?? workspace.currentCourses.max(by: { $0.file.sessions.count < $1.file.sessions.count }) {
-            let page = { AnyView(CourseView(workspace: workspace, courseID: course.id)) }
             for section in CourseSection.allCases {
-                batches.append(Batch(setup: { SnapshotDriver.shared.section = section; SnapshotDriver.shared.unitStep = nil },
-                                     pages: [("course-\(section)", page)]))
+                entries.append(("course-\(section)", Navigator.Entry(link: .course(course.id, page: section.page), course: course.id)))
             }
-            batches.append(Batch(setup: { SnapshotDriver.shared.section = .units; SnapshotDriver.shared.unitStep = "detail" },
-                                 pages: [("course-units-detail", page)]))
+            if let unit = UnitTree.outline(course.file.units).first?.unit {
+                entries.append(("course-units-detail", Navigator.Entry(link: AppLink(.unit, unit.id), course: course.id)))
+            }
         }
-        for tab in SettingsTab.allCases {
-            batches.append(Batch(setup: { UserDefaults.standard.set(tab.rawValue, forKey: SettingsTab.storageKey) },
-                                 pages: [("settings-\(tab)", { AnyView(SettingsView(workspace: workspace)) })]))
-        }
-        for (name, query) in [("search-empty", ""), ("search", "매칭")] {
-            batches.append(Batch(setup: { SnapshotDriver.shared.searchQuery = query },
-                                 sheets: [(name, { AnyView(SearchPalette(workspace: workspace, close: {}, choose: { _, _ in })) })]))
-        }
-        return batches
+        return entries
     }
 }
 
@@ -132,6 +144,24 @@ struct RenderJob {
 /// batch are open together so they settle in one wait, which is most of the time a render takes.
 @MainActor
 func renderOffscreen(_ jobs: [RenderJob]) async throws -> [(String, Data)] {
+    try await withOffscreenWindows(jobs) { open in
+        try open.map { job, host in
+            let rep = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
+            host.cacheDisplay(in: host.bounds, to: rep)
+            return (job.name, try #require(rep.representation(using: .png, properties: [:])))
+        }
+    }
+}
+
+/// The width each job's view was drawn at. A screen whose rows or columns won't shrink to the job's width grows its
+/// hosting view past it, as it would push a window or a pane out.
+@MainActor
+func measureOffscreen(_ jobs: [RenderJob]) async throws -> [CGFloat] {
+    try await withOffscreenWindows(jobs) { open in open.map { $0.1.bounds.width } }
+}
+
+@MainActor
+private func withOffscreenWindows<T>(_ jobs: [RenderJob], _ body: ([(RenderJob, NSView)]) throws -> T) async throws -> T {
     let open = jobs.map { job in
         let host = NSHostingView(rootView: job.view.environment(\.colorScheme, job.scheme))
         let fitting = host.fittingSize
@@ -165,11 +195,17 @@ func renderOffscreen(_ jobs: [RenderJob]) async throws -> [(String, Data)] {
         guard grew else { break }
         try await settle()
     }
-    return try open.map { job, _, host in
-        let rep = try #require(host.bitmapImageRepForCachingDisplay(in: host.bounds))
-        host.cacheDisplay(in: host.bounds, to: rep)
-        return (job.name, try #require(rep.representation(using: .png, properties: [:])))
+    // Back to the job's width, once the content has settled: a window grows to fit its view's minimum at every
+    // moment, a first pass before its data loaded included, and doesn't shrink back by itself.
+    var narrowed = false
+    for (job, window, _) in open {
+        if let width = job.width, window.frame.width > width {
+            window.setContentSize(CGSize(width: width, height: window.frame.height))
+            narrowed = true
+        }
     }
+    if narrowed { try await settle() }
+    return try body(open.map { job, _, host in (job, host as NSView) })
 }
 
 /// Lets layout, `.task` and `onGeometryChange` settle before drawing. A sleep, not a nested run loop: the loop would run

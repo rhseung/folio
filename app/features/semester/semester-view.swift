@@ -4,16 +4,16 @@ import SwiftUI
 
 struct SemesterView: View {
     @State private var model: SemesterModel
-    let openCourse: (UUID) -> Void
     @Environment(\.openLink) private var openLink
     @State private var addingCourse = false
     @State private var confirmingTrim = false
     @State private var confirmingSource = false
 
-    init(workspace: Workspace, semesterID: UUID, openCourse: @escaping (UUID) -> Void) {
+    init(workspace: Workspace, semesterID: UUID) {
         _model = State(initialValue: SemesterModel(workspace: workspace, semesterID: semesterID))
-        self.openCourse = openCourse
     }
+
+    func openCourse(_ id: UUID) { openLink(.course(id)) }
 
     var body: some View {
         if let semester = model.semester {
@@ -30,12 +30,15 @@ struct SemesterView: View {
                         if courses.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .semesterCoursesEmpty)) } }
                         ForEach(Array(courses.enumerated()), id: \.element.id) { i, course in
                             CardRow(last: i == courses.count - 1) {
-                                Button { openCourse(course.id) } label: {
-                                    courseLabel(mark: CourseMark(icon: course.file.course.icon, color: model.workspace.accent(course.id).color, font: Theme.Glyph.lineTitle, duotone: true),
-                                                title: course.title, detail: model.detail(course))
+                                FoldingRow {
+                                    Button { openCourse(course.id) } label: {
+                                        courseLabel(mark: CourseMark(icon: course.file.course.icon, color: model.workspace.accent(course.id).color, font: Theme.Glyph.lineTitle, duotone: true),
+                                                    title: course.title, detail: model.detail(course))
+                                    }
+                                    .buttonStyle(.pointing(.plain))
+                                } control: {
+                                    gradeMenu(course.file.course)
                                 }
-                                .buttonStyle(.pointing(.plain))
-                                gradeMenu(course.file.course)
                             }
                             .contextMenu { courseMenu(course) }
                         }
@@ -50,8 +53,8 @@ struct SemesterView: View {
                     }
 
                     // Short lists of equal weight, side by side when there's room, as on Today.
-                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: Theme.Space.xl, alignment: .top)], alignment: .leading, spacing: Theme.Space.xl) {
-                        examsBlock(courses)
+                    Fold(wideFrom: 704, stackSpacing: Theme.Space.xl) {
+                        examsBlock(courses).frame(maxWidth: .infinity, alignment: .topLeading)
                         Block(String(localized: .semesterPeriod)) {
                             Card {
                                 FormRow(label: String(localized: .semesterStart)) { dateChip(semester, \.start) }
@@ -62,6 +65,7 @@ struct SemesterView: View {
                                 FormRow(label: String(localized: .semesterFinalWeek), last: true) { examWeek(semester, \.finalWeek, fallback: semester.defaultExamWeeks?.final) }
                             }
                         }
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
                     }
                 }
 

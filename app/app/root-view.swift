@@ -1,17 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-enum Destination: Hashable {
-    case today
-    case course(UUID)
-    case semester(UUID)
-    case grades
-    case requirements
-    case people
-    case codes
-    case settings
-}
-
 struct RootView: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.scenePhase) private var scenePhase
@@ -49,12 +38,12 @@ struct RootView: View {
         _navigator = State(initialValue: Navigator(request.map { Navigator.Entry(link: $0.link, course: $0.course) } ?? Navigator.Entry(link: .place(.today))))
     }
 
-    var selection: Destination? { navigator.destination }
+    var selection: Screen? { navigator.screen }
 
-    /// The sidebar's rows pick a destination; choosing the one already shown keeps the page open inside it.
-    var selectionBinding: Binding<Destination?> {
-        Binding { navigator.destination } set: { new in
-            if let new, new != navigator.destination { open(new.link) }
+    /// The sidebar's rows pick a screen; choosing the one already shown keeps the page open inside it.
+    var selectionBinding: Binding<Screen?> {
+        Binding { navigator.screen } set: { new in
+            if let new, new != navigator.screen, let link = new.link { open(link) }
         }
     }
 
@@ -100,7 +89,6 @@ struct RootView: View {
                     detail
                         // Roomier buttons and segmented controls, as in Alcove; text sizes stay with the tokens.
                         .controlSize(.large)
-                        .environment(\.place, navigator.current)
                         .environment(\.showSettings) { showSettings($0) }
                         .environment(trail)
                         // No toolbar band: columns (course, quiz scope, inspector) run to the window top, and a band over them
@@ -165,7 +153,7 @@ struct RootView: View {
                                          paused: SnapshotDriver.recordingPaused, level: SnapshotDriver.recordingLevel)
             }
             let ids = workspace.currentCourses.map(\.id)
-            await SnapshotDriver.shared.run(select: { open($0.link) }, courses: ids, semester: workspace.currentSemester?.id)
+            await SnapshotDriver.shared.run(select: { if let link = $0.link { open(link) } }, courses: ids, semester: workspace.currentSemester?.id)
         }
         #endif
         .environment(\.gradesLocked, !workspace.gradesUnlocked)
@@ -183,7 +171,7 @@ struct RootView: View {
     }
 
     /// The Mac's rows select themselves (see `sidebarRow`), so the list's own selection stays empty there.
-    var listSelection: Binding<Destination?> {
+    var listSelection: Binding<Screen?> {
         #if os(macOS)
         .constant(nil)
         #else
@@ -381,6 +369,8 @@ struct RootView: View {
         case .people: Crumb(title: String(localized: .rootNavPeople), symbol: "person")
         case .codes: Crumb(title: String(localized: .rootNavCodes), symbol: "number")
         case .settings: Crumb(title: String(localized: .rootNavSettings), symbol: "gearshape")
+        // The address itself, as the page says it can't be found: not today's, which the page no longer shows.
+        case .missing: Crumb(title: navigator.current.link.string, symbol: "questionmark.folder")
         case .today, nil: Crumb(title: String(localized: .rootNavToday), symbol: "house")
         }
         let start = (sidebarOpen ? Theme.Size.sidebar : Theme.Size.panelInset) + Theme.Space.l
@@ -506,7 +496,7 @@ struct RootView: View {
         .sidebarRow(.semester(semester.id), selectionBinding, guide: .stem, guideShown: open)
     }
 
-    func sidebarIcon(_ symbol: String, _ destination: Destination) -> some View {
+    func sidebarIcon(_ symbol: String, _ destination: Screen) -> some View {
         LineIcon(symbol: symbol, filled: selection == destination, duotone: true)
             .foregroundStyle(selection == destination ? Theme.Palette.chromeSelected : Theme.Palette.chromeIcon)
     }
@@ -578,19 +568,8 @@ struct RootView: View {
         }
     }
 
-    @ViewBuilder var detail: some View {
-        switch selection {
-        case .today, nil: TodayView(workspace: workspace)
-        case .course(let id): CourseView(workspace: workspace, courseID: id).id(id)
-        case .semester(let id): SemesterView(workspace: workspace, semesterID: id) { open(.course($0)) }.id(id)
-        case .grades: GradesView(workspace: workspace)
-        case .requirements:
-            RequirementsView(workspace: workspace) { open(.course($0.id)) }
-        case .people: PeopleView(workspace: workspace) { open(.course($0)) }
-        case .codes: CodesView(workspace: workspace)
-        case .settings: SettingsView(workspace: workspace)
-        }
-    }
+    /// The window's panel draws its link as anything else that holds a screen does.
+    var detail: some View { ScreenView(workspace: workspace, entry: navigator.current) }
 
     /// Nil keeps the section last open.
     func showSettings(_ tab: SettingsTab?) {
@@ -727,7 +706,7 @@ private extension View {
     /// spacing, so the segments join without overlapping (a see-through line darkens where segments overlap).
     /// `guideShown` fades the line rather than leaving it out: the Mac list doesn't redraw a row background whose views
     /// come and go, only one whose values change, and rebuilding the row instead made it jump as it opened.
-    @ViewBuilder func sidebarRow(_ destination: Destination, _ selection: Binding<Destination?>, fill: Color = Theme.Palette.sidebarSelection, guide: SidebarGuide? = nil, guideShown: Bool = true, progress: Double? = nil) -> some View {
+    @ViewBuilder func sidebarRow(_ destination: Screen, _ selection: Binding<Screen?>, fill: Color = Theme.Palette.sidebarSelection, guide: SidebarGuide? = nil, guideShown: Bool = true, progress: Double? = nil) -> some View {
         let line = guide.map { GuideSegment(guide: $0).stroke(Theme.Palette.chromeLine, lineWidth: 1).frame(width: SidebarGuide.reach + 1) }
         #if os(macOS)
         let chosen = selection.wrappedValue == destination
@@ -757,10 +736,10 @@ private extension View {
         )
         .accessibilityAddTraits(chosen ? [.isButton, .isSelected] : .isButton)
         .accessibilityAction { selection.wrappedValue = destination }
-        .contextMenu { LinkMenu(link: destination.link) }
+        .contextMenu { if let link = destination.link { LinkMenu(link: link) } }
         #else
         tag(destination)
-            .contextMenu { LinkMenu(link: destination.link) }
+            .contextMenu { if let link = destination.link { LinkMenu(link: link) } }
             .background(alignment: .leading) {
                 if guide != .stem, let line { line.padding(.vertical, -Theme.Space.xs).padding(.leading, Theme.Size.tile / 2) }
             }

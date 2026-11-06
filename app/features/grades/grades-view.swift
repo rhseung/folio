@@ -20,14 +20,17 @@ struct GradesView: View {
 
             UnfiledCoursesNotice(workspace: model.workspace)
 
-            HStack(alignment: .top, spacing: Theme.Space.l + 2) {
+            // The goal keeps its width; the trend beside it needs room for a few semesters' bars.
+            Fold(wideFrom: 620, spacing: Theme.Space.l + 2, stackSpacing: Theme.Space.section) {
                 Block(String(localized: .gradesTrend)) {
                     Card(padding: Theme.Space.l) {
                         trend(model.points)
                     }
                     .sensitive(.block)
                 }
+                // First to the room: beside it the goal keeps only its minimum, stacked both fill the page.
                 .frame(maxWidth: .infinity)
+                .layoutPriority(1)
 
                 Block(String(localized: .gradesGoal)) {
                     Card {
@@ -48,7 +51,7 @@ struct GradesView: View {
                     }
                     .sensitive(.block)
                 }
-                .frame(width: 320)
+                .frame(minWidth: 320, maxWidth: .infinity)
             }
 
             Block(String(localized: .gradesBySemester)) {
@@ -72,8 +75,17 @@ struct GradesView: View {
                                         .font(Theme.Glyph.small)
                                         .foregroundStyle(Theme.Palette.textTertiary)
                                         .rotationEffect(.degrees(open ? 90 : 0))
-                                    Text(s.title).fontWeight(.semibold)
-                                    if inProgress { Chip(String(localized: .gradesEnrolled)) }
+                                    // The chip under the name where both don't fit: beside it, the name broke a letter a line.
+                                    ViewThatFits(in: .horizontal) {
+                                        HStack(spacing: Theme.Space.s) {
+                                            Text(s.title).fontWeight(.semibold)
+                                            if inProgress { Chip(String(localized: .gradesEnrolled)) }
+                                        }
+                                        VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                                            Text(s.title).fontWeight(.semibold)
+                                            if inProgress { Chip(String(localized: .gradesEnrolled)) }
+                                        }
+                                    }
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 column(inProgress ? row.enrolled.formatted() : sum.totalCredits.formatted(), muted: inProgress)
@@ -267,6 +279,8 @@ struct GradesView: View {
             .fontWeight(strong ? .semibold : nil)
             .foregroundStyle(muted ? Theme.Palette.textTertiary : Theme.Palette.text)
             .monospacedDigit()
-            .frame(width: 64, alignment: .trailing)
+            // As wide as "4.000" needs and no wider: on an iPhone three 64pt columns left a term in class too little room
+            // for its name and its chip.
+            .frame(width: 56, alignment: .trailing)
     }
 }

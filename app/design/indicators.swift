@@ -25,7 +25,25 @@ struct StatStrip: View {
 
     let items: [Item]
 
+    /// The width an item needs before its figure is cut short: narrower than this for all of them, the strip folds into
+    /// rows of two. Pinned rather than measured from the text, so a long value doesn't fold a strip in a full window.
+    static let itemRoom: CGFloat = 128
+
     var body: some View {
+        ViewThatFits(in: .horizontal) {
+            row(items).frame(idealWidth: CGFloat(items.count) * Self.itemRoom)
+            VStack(spacing: 0) {
+                ForEach(Array(stride(from: 0, to: items.count, by: 2)), id: \.self) { start in
+                    if start > 0 { Theme.Palette.lineSoft.frame(height: 1) }
+                    row(Array(items[start..<min(start + 2, items.count)]))
+                }
+            }
+        }
+        .surface(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.card))
+        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.card).strokeBorder(Theme.Palette.lineSoft))
+    }
+
+    func row(_ items: [Item]) -> some View {
         HStack(spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                 if index > 0 { Theme.Palette.lineSoft.frame(width: 1) }
@@ -46,8 +64,6 @@ struct StatStrip: View {
             }
         }
         .fixedSize(horizontal: false, vertical: true)
-        .surface(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.card))
-        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.card).strokeBorder(Theme.Palette.lineSoft))
     }
 }
 

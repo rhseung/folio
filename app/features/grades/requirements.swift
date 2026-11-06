@@ -3,13 +3,14 @@ import SwiftUI
 
 struct RequirementsView: View {
     @State private var model: RequirementsModel
-    let openCourse: (Course) -> Void
+    @Environment(\.openLink) private var openLink
     @State private var editingProfile = false
 
-    init(workspace: Workspace, openCourse: @escaping (Course) -> Void) {
+    init(workspace: Workspace) {
         _model = State(initialValue: RequirementsModel(workspace: workspace))
-        self.openCourse = openCourse
     }
+
+    func openCourse(_ course: Course) { openLink(.course(course.id)) }
 
     var body: some View {
         let audit = model.audit

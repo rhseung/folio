@@ -49,21 +49,6 @@ extension EnvironmentValues {
     @Entry var place: Navigator.Entry?
 }
 
-extension Destination {
-    var link: AppLink {
-        switch self {
-        case .today: .place(.today)
-        case .grades: .place(.grades)
-        case .requirements: .place(.requirements)
-        case .people: .place(.people)
-        case .codes: .place(.codes)
-        case .settings: .place(.settings)
-        case .semester(let id): AppLink(.semester, id)
-        case .course(let id): .course(id)
-        }
-    }
-}
-
 /// One window's place and where it has been. Moves only go through `go`, `back` and `forward`.
 @MainActor @Observable
 final class Navigator {
@@ -81,19 +66,7 @@ final class Navigator {
 
     var current: Entry { history.current }
 
-    var destination: Destination {
-        let link = current.link
-        switch link.kind {
-        case .today: return .today
-        case .grades: return .grades
-        case .requirements: return .requirements
-        case .people, .person: return .people
-        case .codes: return .codes
-        case .settings: return .settings
-        case .semester: return link.id.map(Destination.semester) ?? .today
-        default: return current.course.map(Destination.course) ?? .today
-        }
-    }
+    var screen: Screen { Screen(current) }
 
     /// The same target with another page or heading takes the step it is on rather than a new one: a PDF opened at
     /// one page and then another is still one visit.
