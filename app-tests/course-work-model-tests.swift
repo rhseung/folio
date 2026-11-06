@@ -1,6 +1,7 @@
 import FolioActions
 import FolioDomain
 import FolioMarkdown
+import FolioStorage
 import Foundation
 import Testing
 @testable import Folio
@@ -301,6 +302,23 @@ struct NotesModelTests {
         #expect(workspace.notesRevision > revision)
         let notes = NotesModel(workspace: workspace, course: course)
         #expect(notes.note(id)?.title == "a-b")
+    }
+
+    /// A `.tex` note's sheet shows its built PDF taking the new name, which the rename then does.
+    @Test func renamingATexNoteShowsItsBuiltPDF() throws {
+        let (workspace, course) = try fixtureCourse()
+        let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "증명", format: .tex))?.made)
+        let note = try #require(try course.store.note(id: id))
+        let output = TexEngine.outputFolder(for: note.url)
+        try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
+        try Data("%PDF".utf8).write(to: output.appending(path: "built.pdf"))
+        try #require(workspace.run(NoteBuild(course: linearAlgebra, note: "Notes/증명.tex", pdf: output.appending(path: "built.pdf").path)))
+        let sheet = NoteRenameModel(workspace: workspace, course: course, note: note)
+        #expect(sheet.pdfName == nil)
+        sheet.name = "귀류법"
+        #expect(sheet.pdfName == "Study/귀류법.pdf" && sheet.pdfDetail == "Folio가 빌드한 Study/증명.pdf도 이름을 따라 바꿉니다")
+        #expect(sheet.rename())
+        #expect(FileManager.default.fileExists(atPath: course.store.fileURL("Study/귀류법.pdf").path))
     }
 
     /// Moving asks first, with the name the note will have in the folder.

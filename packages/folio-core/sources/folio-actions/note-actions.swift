@@ -353,8 +353,21 @@ public struct NoteMove {
         guard target.standardizedFileURL != source.url.standardizedFileURL else { return }
         let move = PlannedMove(from: ctx.relative(source.url), to: ctx.relative(target))
         ctx.record(Change(.moved, move.from, to: move.to))
-        if let batch = try NoteTitles.follow([move], ctx, move: { try MoveJournal.apply([move], in: ctx.gist.url, device: ctx.device, now: ctx.now) }) {
-            ctx.made(batch)
+        // The PDF this note's build wrote takes the new title in the same batch, so the next build finds it and one undo
+        // puts both back. Another file at the new name stays and the PDF keeps its own: nothing is overwritten.
+        let file = try ctx.file(course)
+        let built = store.builtPDFMove(of: source, to: target, in: file).flatMap { $0.blocked ? nil : $0 }
+        let pdf = try built.map { PlannedMove(from: try ctx.relative(course, $0.from), to: try ctx.relative(course, $0.to)) }
+        if let pdf { ctx.record(Change(.moved, pdf.from, to: pdf.to)) }
+        let moves = [move] + (pdf.map { [$0] } ?? [])
+        guard let batch = try NoteTitles.follow(moves, ctx, move: { try MoveJournal.apply(moves, in: ctx.gist.url, device: ctx.device, now: ctx.now) })
+        else { return }
+        ctx.made(batch)
+        if let built, let material = file.materials.first(where: { $0.path == built.from }) {
+            try ctx.edit(course) { f in
+                let url = store.fileURL(built.to)
+                f.relinkMaterial(material.id, to: built.to, hash: material.hash, size: material.size, bookmark: try? url.bookmarkData(), device: ctx.device, now: ctx.now)
+            }
         }
     }
 }

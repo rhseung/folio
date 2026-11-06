@@ -7316,6 +7316,39 @@
         }
       }
     },
+    "notes.rename-pdf": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빌드한 PDF"
+          }
+        }
+      }
+    },
+    "notes.rename-pdf-follows": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folio가 빌드한 %@도 이름을 따라 바꿉니다"
+          }
+        }
+      }
+    },
+    "notes.rename-pdf-stays": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@이(가) 이미 있어 PDF는 그대로 둡니다"
+          }
+        }
+      }
+    },
     "notes.rename-to": {
       "extractionState": "manual",
       "localizations": {
