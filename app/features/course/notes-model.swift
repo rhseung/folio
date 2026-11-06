@@ -206,8 +206,25 @@ final class NoteEditorModel {
         onDisk = (try? store.read(note)) ?? ""
         (frontmatter, body) = Frontmatter.split(onDisk)
         saved = body
-        meta = note.meta
+        conflict = false
+        reloadMeta()
+    }
+
+    /// From course.json as it is now: `note` is the entry as it was when the editor opened, which `note link` from the
+    /// Claude panel or the CLI may have changed since.
+    func reloadMeta() {
+        let current = (store.note(at: store.notePath(of: note.url), in: course.file) ?? note).meta
+        // Every write to any note lands here; the bar and the preview redraw only when this note's links moved.
+        if current != meta { meta = current }
         savedMath = meta.math
+    }
+
+    /// After a write elsewhere (`notesRevision`). The editor's own save left `onDisk` as the file is, so it reads
+    /// nothing again; unsaved edits are never replaced and ask as a refused save would.
+    func refresh() {
+        reloadMeta()
+        guard let disk = try? store.read(note), disk != onDisk else { return }
+        if dirty { conflict = true } else { load() }
     }
 
     func saveMath() {

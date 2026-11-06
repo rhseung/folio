@@ -104,6 +104,24 @@ final class TextFileModel {
         }
     }
 
+    /// A material written elsewhere in the app moves only its hash in course.json; a note, or anything written outside
+    /// the app (another device, the CLI), moves `notesRevision`.
+    var outsideRevision: String {
+        let hash = if case let .material(id) = source { course.file.materials.first { $0.id == id }?.hash } else { String?.none }
+        return "\(workspace.notesRevision) \(hash ?? "")"
+    }
+
+    /// As the note editor does: this screen's own save left `onDisk` as the file is, and unsaved edits ask instead.
+    func refresh() {
+        guard loaded, let disk = try? course.store.readText(path), disk != onDisk else { return }
+        if dirty {
+            conflict = true
+        } else {
+            onDisk = disk
+            text = disk
+        }
+    }
+
     func saveNow(force: Bool) {
         guard loaded, !conflict || force else { return }
         let writing = text
