@@ -32,4 +32,48 @@ public struct ActionProposal: Codable, Hashable, Sendable {
               let p = try? JSONDecoder().decode(Self.self, from: Data(text.dropFirst(Self.marker.count).utf8)) else { return nil }
         self = p
     }
+
+    /// The item the change is about: the values of `arguments` (the action's `@Arg` fields) in its input. Nil without
+    /// arguments, so such a change is never taken for another.
+    public func target(_ arguments: [String]) -> JSONValue? {
+        guard !arguments.isEmpty else { return nil }
+        return .object(Dictionary(uniqueKeysWithValues: arguments.map { ($0, input[$0] ?? .null) }))
+    }
+}
+
+/// One proposal in a chat: the answer it came with and its place among that answer's proposals.
+public struct ProposalRef: Hashable, Sendable {
+    public var message: UUID
+    public var index: Int
+
+    public init(message: UUID, index: Int) {
+        self.message = message
+        self.index = index
+    }
+}
+
+extension Chat {
+    /// Pending proposals that a later answer proposed again for the same item with the same command. Applying the
+    /// older one after the newer would undo or repeat it, so only the newest is offered. `arguments` maps a command to
+    /// the fields that pick its item; a command missing from it is never superseded.
+    public func supersededProposals(arguments: [String: [String]]) -> Set<ProposalRef> {
+        struct Key: Hashable {
+            var command: String
+            var target: JSONValue
+        }
+        func key(_ p: ActionProposal) -> Key? {
+            arguments[p.command].flatMap { p.target($0) }.map { Key(command: p.command, target: $0) }
+        }
+        var later = Set<Key>()
+        var superseded = Set<ProposalRef>()
+        for message in messages.reversed() {
+            let proposals = message.proposals ?? []
+            for (i, p) in proposals.enumerated() where p.applied != true {
+                if let k = key(p), later.contains(k) { superseded.insert(ProposalRef(message: message.id, index: i)) }
+            }
+            // Added after the check: the proposals of one answer are separate changes, not versions of each other.
+            later.formUnion(proposals.compactMap(key))
+        }
+        return superseded
+    }
 }

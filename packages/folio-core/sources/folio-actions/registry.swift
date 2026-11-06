@@ -18,6 +18,16 @@ public enum Actions {
         ImportNotion.self, ImportNotes.self, ImportCalendar.self, ImportExams.self, ImportUnits.self, ImportRequirements.self, ImportHandbook.self,
     ]
 
+    /// Each command's `@Arg` fields, which pick the item a proposal is about (`Chat.supersededProposals`). A log entry
+    /// adds to the ones before it, and an item made from its course alone (a session, a score) is a new one each
+    /// time, so neither stands in for an earlier proposal.
+    public static let targets: [String: [String]] = Dictionary(all.compactMap { type -> (String, [String])? in
+        let spec = type.spec
+        let arguments = spec.fields.filter { $0.role == .argument }
+        guard spec.effect != .logs, spec.effect != .creates || arguments.contains(where: { $0.ref == nil }) else { return nil }
+        return (spec.command, arguments.map(\.name))
+    }, uniquingKeysWith: { a, _ in a })
+
     /// Backups shell out to ditto and live on the Mac only.
     #if os(macOS)
     static let platform: [any Action.Type] = [BackupCreate.self, BackupRestore.self]

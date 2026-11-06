@@ -41,11 +41,13 @@ extension ClaudeClient {
 
     /// An earlier answer as sent back: its text, then what became of each change it proposed. Without the second
     /// part Claude can't tell a change the user never approved from one that failed.
-    static func history(_ message: ChatMessage) -> String {
+    /// `superseded` holds the positions of proposals a later answer replaced, which the panel no longer offers.
+    static func history(_ message: ChatMessage, superseded: Set<Int> = []) -> String {
         guard let proposals = message.proposals, !proposals.isEmpty else { return message.text }
-        let lines = proposals.map { p in
+        let lines = proposals.enumerated().map { i, p in
             let state = p.applied == true ? "applied"
-                : p.failure.map { "the user applied it and it failed: \($0)" } ?? "not applied; the user has not approved it"
+                : p.failure.map { "the user applied it and it failed: \($0)" }
+                ?? (superseded.contains(i) ? "not applied; superseded by a later proposal" : "not applied; the user has not approved it")
             return "- \(p.command) \(brief(p.input)): \(state)"
         }
         return message.text + "\n\n[Changes proposed in this answer]\n" + lines.joined(separator: "\n")
@@ -67,11 +69,15 @@ extension ClaudeClient {
     }
 
     /// The context goes in the system prompt (stable part, cached) and in front
-    /// of the newest question only; earlier turns are sent as plain text.
-    public func reply(to chat: Chat, context: BuiltContext, onEvent: (@Sendable (StreamEvent) -> Void)? = nil) async throws -> MessagesResponse {
+    /// of the newest question only; earlier turns are sent as plain text. `targets` is `Chat.supersededProposals`'s map
+    /// of the fields that pick each command's item.
+    public func reply(to chat: Chat, context: BuiltContext, targets: [String: [String]] = [:],
+                      onEvent: (@Sendable (StreamEvent) -> Void)? = nil) async throws -> MessagesResponse {
         guard let last = chat.messages.last, last.role == .user else { throw ClaudeError.invalidOutput("no question to answer") }
+        let superseded = chat.supersededProposals(arguments: targets)
         var messages = chat.messages.dropLast().map { m in
-            Message(role: m.role == .user ? .user : .assistant, content: [.text(Self.history(m))])
+            let replaced = Set(superseded.filter { $0.message == m.id }.map(\.index))
+            return Message(role: m.role == .user ? .user : .assistant, content: [.text(Self.history(m, superseded: replaced))])
         }
         messages.append(Message(role: .user, content: context.userBlocks + [.text(last.text)]))
         return try await text(.chat, system: [.text(Self.chatInstructions)] + context.system, messages: messages, onEvent: onEvent)

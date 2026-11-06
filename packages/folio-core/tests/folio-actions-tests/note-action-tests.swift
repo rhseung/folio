@@ -345,4 +345,16 @@ struct NoteActionTests {
         let s = try #require(try file().sessions.first { $0.reviewNoteId == note })
         #expect(try meta(note).kind == .review && meta(note).sessionId == s.id)
     }
+
+    /// A proposal stands in for an earlier one by these fields. A second session or score made from the course
+    /// alone is another item, and a log entry adds to the last.
+    @Test func proposalTargetsAreTheArgumentsOfChangesThatPickAnItem() {
+        #expect(Actions.targets[NoteWrite.command] == ["course", "note"])
+        #expect(Actions.targets[NoteEdit.command] == ["course", "note"])
+        #expect(Actions.targets[NoteAdd.command] == ["course", "title"])
+        #expect(Actions.targets[MaterialTrack.command] == ["course"])
+        #expect(Actions.targets[SessionAdd.command] == nil)
+        #expect(Actions.targets[ScoreAdd.command] == nil)
+        #expect(Actions.targets[QuizRecord.command] == nil)
+    }
 }
