@@ -11,7 +11,7 @@ final class MaterialsModel {
     let workspace: Workspace
     private let initial: LoadedCourse
     private(set) var suggestions: [PlannedMove]?
-    var lastBatch: UUID?
+    let moves = MoveUndo()
     private var assignmentFolders: [String] = []
     var viewing: UUID?
     /// The 0-based page a link asked the viewer for, taken once by it.
@@ -123,11 +123,7 @@ final class MaterialsModel {
     }
 
     func undo() {
-        guard let batch = lastBatch else { return }
-        pending = workspace.ask(CleanupUndo(batch: batch, course: course.id)) { [weak self] _ in
-            self?.lastBatch = nil
-            Task { await self?.load() }
-        }
+        pending = moves.undo(workspace, course: course.id) { [weak self] in Task { await self?.load() } }
     }
 
     func acceptsNewFile(_ folder: PathTree<FolioDomain.Material>) -> Bool {
@@ -171,16 +167,12 @@ final class MaterialsModel {
         let name = ext.isEmpty ? base : "\(base).\(ext)"
         guard !base.isEmpty, name != (m.path as NSString).lastPathComponent else { return }
         // The rename alert shows the new name, so pressing it is the approval; asking again would ask twice.
-        if let batch = workspace.run(MaterialMove(course: course.id, material: m.id, to: (dir(m.path) as NSString).appendingPathComponent(name)))?.made {
-            lastBatch = batch
-        }
+        moves.keep(workspace.run(MaterialMove(course: course.id, material: m.id, to: (dir(m.path) as NSString).appendingPathComponent(name))))
     }
 
     func move(_ m: FolioDomain.Material, into place: String) {
         let action = MaterialMove(course: course.id, material: m.id, to: "\(place)/\((m.path as NSString).lastPathComponent)")
-        pending = workspace.ask(action) { [weak self] ctx in
-            if let batch = ctx.made { self?.lastBatch = batch }
-        }
+        pending = workspace.ask(action) { [weak self] ctx in self?.moves.keep(ctx) }
     }
 
     func relink(to file: URL) {
@@ -335,7 +327,7 @@ final class MaterialsModel {
 
     /// Moves files only after the user approved this exact move; the batch goes to `moves.jsonl` so it can be undone.
     func approve(_ moves: [PlannedMove]) {
-        if let batch = workspace.run(CleanupApply(moves: moves, course: course.id))?.made { lastBatch = batch }
+        self.moves.keep(workspace.run(CleanupApply(moves: moves, course: course.id)))
         Task { await load() }
     }
 

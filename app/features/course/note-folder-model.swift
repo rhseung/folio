@@ -12,11 +12,13 @@ final class NoteFolderModel {
     private let initial: LoadedCourse
     let note: NoteFile
     var name = ""
+    private let moves: MoveUndo?
 
-    init(workspace: Workspace, course: LoadedCourse, note: NoteFile) {
+    init(workspace: Workspace, course: LoadedCourse, note: NoteFile, moves: MoveUndo? = nil) {
         self.workspace = workspace
         initial = course
         self.note = note
+        self.moves = moves
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
@@ -50,6 +52,8 @@ final class NoteFolderModel {
 
     func move() -> Bool {
         guard canSave, let target, let path = course.store.coursePath(of: note.url) else { return false }
-        return workspace.run(NoteMove(course: course.id, note: path, to: target)) != nil
+        let ran = workspace.run(NoteMove(course: course.id, note: path, to: target))
+        moves?.keep(ran)
+        return ran != nil
     }
 }

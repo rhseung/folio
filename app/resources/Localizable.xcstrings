@@ -1794,6 +1794,17 @@
         }
       }
     },
+    "common.undo-move": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "방금 옮긴 것 되돌리기"
+          }
+        }
+      }
+    },
     "common.unlock-grades": {
       "extractionState": "manual",
       "localizations": {
@@ -6234,17 +6245,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "미분류 %lld개"
-          }
-        }
-      }
-    },
-    "materials.undo-move": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "방금 옮긴 것 되돌리기"
           }
         }
       }

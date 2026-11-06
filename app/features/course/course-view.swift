@@ -154,7 +154,8 @@ struct CourseView: View {
                             model.moved(id.map { AppLink(.unit, $0) })
                         }
                     case .notes:
-                        NotesView(workspace: workspace, course: course, selection: model.openNote, anchor: model.noteAnchor, insert: $model.noteInsert) { model.openNote = $0 }
+                        NotesView(workspace: workspace, course: course, selection: model.openNote, anchor: model.noteAnchor, insert: $model.noteInsert,
+                                  moves: model.noteMoves) { model.openNote = $0 }
                     // One branch for every quiz page, so the quiz model and a pending solve request survive switching pages.
                     case .quizSolve, .quizCards, .quizStats, .quizProblems: QuizView(workspace: model.workspace, course: course, section: $model.section)
                     case .materials: MaterialsView(workspace: workspace, course: course, place: model.place, moved: model.moved)
@@ -247,7 +248,7 @@ struct CourseColumn: View {
                 }
 
                 if model.section == .notes {
-                    NoteList(workspace: model.workspace, course: course, selection: $model.openNote)
+                    NoteList(workspace: model.workspace, course: course, selection: $model.openNote, moves: model.noteMoves)
                 } else if !recent.isEmpty {
                     VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                         Caption(String(localized: .courseRecent)).padding(.horizontal, Theme.Space.s).padding(.bottom, Theme.Space.tight)

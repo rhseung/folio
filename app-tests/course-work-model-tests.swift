@@ -239,10 +239,10 @@ struct MaterialsModelTests {
         model.move(m, into: place)
         let pending = try #require(model.pending)
         #expect(pending.question.hasSuffix("(으)로 옮깁니다.") && pending.question.contains(place) && pending.refusal == nil)
-        #expect(model.materials.first { $0.id == m.id }?.path == m.path && model.lastBatch == nil)
+        #expect(model.materials.first { $0.id == m.id }?.path == m.path && model.moves.batch == nil)
         pending.perform()
         let moved = try #require(model.materials.first { $0.id == m.id })
-        #expect(moved.path.hasPrefix(place + "/") && model.lastBatch != nil)
+        #expect(moved.path.hasPrefix(place + "/") && model.moves.batch != nil)
 
         model.pending = nil
         model.startRenaming(moved)
@@ -360,6 +360,30 @@ struct NotesModelTests {
         let again = NoteFolderModel(workspace: workspace, course: course, note: moved)
         again.name = "중간 대비"
         #expect(!again.canSave && again.message == "노트가 이미 이 폴더에 있습니다.")
+    }
+
+    /// A rename from the open note's sheet lands in the list's undo, which asks with `cleanup undo`'s words and puts the
+    /// note's name back; the list's own moves land there too.
+    @Test func theListUndoesTheLastNoteMove() throws {
+        let (workspace, course) = try fixtureCourse()
+        let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
+        let moves = MoveUndo()
+        let list = NoteListModel(workspace: workspace, course: course, moves: moves)
+        list.reload()
+        let sheet = NoteRenameModel(workspace: workspace, course: course, note: try #require(try course.store.note(id: id)), moves: moves)
+        sheet.name = "고윳값"
+        #expect(moves.batch == nil && sheet.rename() && moves.batch != nil)
+
+        list.undoMove()
+        let pending = try #require(list.pending)
+        #expect(pending.question.hasSuffix("의 이동을 되돌립니다.") && pending.refusal == nil)
+        pending.perform()
+        #expect(moves.batch == nil && list.notes.first { $0.meta.id == id }?.title == "행렬식")
+
+        let note = try #require(list.notes.first { $0.meta.id == id })
+        let folder = NoteFolderModel(workspace: workspace, course: course, note: note, moves: moves)
+        folder.name = "정리"
+        #expect(folder.move() && moves.batch != nil)
     }
 
     @Test func editorNamesItsLinkAndFindsNotesByTitle() throws {

@@ -18,10 +18,13 @@ final class NoteListModel {
     var renaming: NoteFile?
     var newFolder: NoteFile?
     var pending: PendingAction?
+    /// The notes section's, shared with the open note: its rename sheet moves a note too.
+    let moves: MoveUndo
 
-    init(workspace: Workspace, course: LoadedCourse) {
+    init(workspace: Workspace, course: LoadedCourse, moves: MoveUndo = MoveUndo()) {
         self.workspace = workspace
         initial = course
+        self.moves = moves
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
@@ -128,7 +131,14 @@ final class NoteListModel {
         let path = (folder.isEmpty ? "" : folder + "/") + note.url.lastPathComponent
         guard let source = store.coursePath(of: note.url), let url = store.movedNoteURL(note, to: path, in: course.file),
               let target = Self.notesPath(of: url, in: store) else { return }
-        pending = workspace.ask(NoteMove(course: course.id, note: source, to: target)) { [weak self] _ in self?.reload() }
+        pending = workspace.ask(NoteMove(course: course.id, note: source, to: target)) { [weak self] ctx in
+            self?.moves.keep(ctx)
+            self?.reload()
+        }
+    }
+
+    func undoMove() {
+        pending = moves.undo(workspace, course: course.id) { [weak self] in self?.reload() }
     }
 
     /// Sessions let go of the note first: a note left behind by a failed trash is harmless, a link to nothing is not.
