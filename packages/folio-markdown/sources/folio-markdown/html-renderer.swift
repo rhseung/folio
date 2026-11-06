@@ -22,14 +22,35 @@ public struct HTMLRenderer {
 
     /// The note block by block, so a page can redraw only the blocks that changed and follow an editor by line. Task
     /// boxes carry their item's body line as `data-line`, so a tick can be written back to the source.
-    public static func blocks(_ note: ParsedNote) -> [Block] {
+    public static func blocks(_ note: ParsedNote, embeds: NoteEmbeds? = nil) -> [Block] {
         var r = HTMLRenderer()
         r.note = note
+        r.embeds = embeds
+        r.trail = embeds?.key.map { [$0] } ?? []
         return r.rendered(Array(note.document.children)).map { Block(html: $0.html, lines: note.lines(of: $0.node)) }
     }
 
     var counters: [String: Int] = [:]
     var note: ParsedNote?
+    /// Without it embeds and block references show only their links, as in the Claude panel and PDF export.
+    var embeds: NoteEmbeds?
+    /// The notes (and parts of them) this one is drawn inside, outermost first.
+    var trail: [String] = []
+    /// Inside an embed or a reference's preview, where an `id` would repeat the other note's: a link to a heading
+    /// or block scrolls to the first element with its id.
+    var nested = false
+    /// Inside a reference's preview, whose own references get no preview: it would hold the next one, and so on.
+    var previewing = false
+
+    /// A renderer for part of this note's page (a table cell, an embed) that draws embeds and references as it does.
+    func inner() -> HTMLRenderer {
+        var r = HTMLRenderer()
+        r.embeds = embeds
+        r.trail = trail
+        r.nested = nested
+        r.previewing = previewing
+        return r
+    }
 
     // MARK: Blocks
 
@@ -57,11 +78,13 @@ public struct HTMLRenderer {
     mutating func block(_ node: Markup) -> String {
         switch node {
         case let p as Paragraph:
+            if embeds != nil, let links = Self.embedsOnly(p) { return links.map { embed($0) }.joined() }
             let (html, id) = Self.splitBlockID(inlines(Array(p.inlineChildren)))
-            return "<p\(Self.idAttribute(id))>\(html)</p>\n"
+            return "<p\(idAttribute(id))>\(html)</p>\n"
         case let h as Heading:
             let html = inlines(Array(h.inlineChildren))
-            return "<h\(h.level) id=\"\(Self.escape(Self.slug(h.plainText)))\">\(html)</h\(h.level)>\n"
+            let id = nested ? "" : " id=\"\(Self.escape(Self.slug(h.plainText)))\""
+            return "<h\(h.level)\(id)>\(html)</h\(h.level)>\n"
         case let q as BlockQuote:
             return "<blockquote>\n\(blocks(Array(q.children)))</blockquote>\n"
         case let c as CodeBlock:
@@ -94,7 +117,7 @@ public struct HTMLRenderer {
         // The item's own text renders without <p>, also above a sublist; a <p> there would add a paragraph margin.
         if let p = item.child(at: 0) as? Paragraph {
             let (html, id) = Self.splitBlockID(inlines(Array(p.inlineChildren)))
-            return "<li\(Self.idAttribute(id))>\(box)\(html)\(blocks(Array(item.children.dropFirst())))</li>\n"
+            return "<li\(idAttribute(id))>\(box)\(html)\(blocks(Array(item.children.dropFirst())))</li>\n"
         }
         return "<li>\(box)\(blocks(Array(item.children)))</li>\n"
     }
@@ -120,7 +143,7 @@ public struct HTMLRenderer {
         func cells(_ row: some Markup, tag: String) -> String {
             row.children.enumerated().map { i, cell in
                 let align = i < aligns.count ? aligns[i].map { " style=\"text-align:\($0)\"" } ?? "" : ""
-                var r = HTMLRenderer()
+                var r = inner()
                 return "<\(tag)\(align)>\(r.inlines(Array((cell as! Markdown.Table.Cell).inlineChildren)))</\(tag)>"
             }.joined()
         }
@@ -179,7 +202,7 @@ public struct HTMLRenderer {
         let open = attached ? false : !header.folded
         let classes = "callout callout-\(header.type)" + (attached ? " attached" : "")
         let titleHTML = title.isEmpty ? "" : " <span class=\"callout-title\">\(inlineMarkdown(title))</span>"
-        return "<details class=\"\(classes)\"\(Self.idAttribute(id))\(open ? " open" : "")>"
+        return "<details class=\"\(classes)\"\(idAttribute(id))\(open ? " open" : "")>"
             + "<summary><span class=\"callout-label\">\(Self.escape(label))</span>\(titleHTML)</summary>\n\(body)</details>\n"
     }
 
@@ -193,7 +216,7 @@ public struct HTMLRenderer {
     mutating func inlines(_ nodes: [Markup]) -> String {
         var out = ""
         for node in nodes { out += inline(node) }
-        return Self.linkWikiLinks(out)
+        return linkWikiLinks(out)
     }
 
     mutating func inline(_ node: Markup) -> String {
@@ -236,7 +259,7 @@ public struct HTMLRenderer {
     // MARK: Helpers
 
     /// Turns `[[...]]` in rendered inline HTML into links, outside `<code>` and math spans.
-    static func linkWikiLinks(_ html: String) -> String {
+    func linkWikiLinks(_ html: String) -> String {
         guard html.contains("[[") else { return html }
         let protected = /(<code>.*?<\/code>|<span class="math">.*?<\/span>)/
         var out = ""
@@ -248,16 +271,78 @@ public struct HTMLRenderer {
         return out + replaceWikiLinks(String(html[cursor...]))
     }
 
-    static func replaceWikiLinks(_ s: String) -> String {
+    func replaceWikiLinks(_ s: String) -> String {
         s.replacing(WikiLink.pattern) { m in
             let link = WikiLink(m)
             let href = link.href
             let text = link.alias ?? (link.target + (link.fragment.map { " › " + $0 } ?? ""))
             return link.isEmbed
-                // A link, not a block: it stands inside the paragraph the embed was written in.
+                // A link, not a block: it stands inside the paragraph the embed was written in, with other text.
                 ? "<a class=\"embed\" href=\"\(href)\">\(text)</a>"
-                : "<a class=\"wikilink\" href=\"\(href)\">\(text)</a>"
+                : "<a class=\"wikilink\" href=\"\(href)\">\(text)</a>" + preview(link)
         }
+    }
+
+    // MARK: Embeds and references
+
+    /// The links of a paragraph holding nothing but note embeds, each of which is drawn as a block in its place. An
+    /// embed beside other text stays a link: a block can't stand inside a paragraph.
+    static func embedsOnly(_ p: Paragraph) -> [WikiLink]? {
+        var text = ""
+        for child in p.inlineChildren {
+            switch child {
+            case let t as Markdown.Text: text += t.string
+            case is SoftBreak, is LineBreak: text += "\n"
+            default: return nil
+            }
+        }
+        let links = WikiLink.all(in: text)
+        guard !links.isEmpty, links.allSatisfy({ $0.isEmbed && $0.namesNote }),
+              text.replacing(WikiLink.pattern, with: "").allSatisfy(\.isWhitespace) else { return nil }
+        return links
+    }
+
+    /// The part of another note an embed points at, drawn under its name, which opens the note. One that can't be
+    /// drawn (missing, inside itself, too deep) says why in its place.
+    func embed(_ link: WikiLink) -> String {
+        let name = Self.escape(link.alias ?? (link.target + (link.blockID.map { " › ^" + $0 } ?? link.fragment.map { " › " + $0 } ?? "")))
+        let head = "<a class=\"embed-title\" href=\"\(Self.escape(link.href))\">\(name)</a>"
+        let empty = { (why: String) in "<div class=\"embed embed-empty\">\(head)<p class=\"embed-note\">\(Self.escape(why))</p></div>\n" }
+        guard let embeds else { return "<p>\(head)</p>\n" }
+        guard trail.count <= NoteEmbeds.depth else { return empty(embeds.labels.tooDeep) }
+        guard let found = embeds.find(link), let section = ParsedNote(found.text).section(heading: link.fragment, block: link.blockID) else {
+            return empty(embeds.labels.missing)
+        }
+        let key = link.key(in: found.key)
+        guard !trail.contains(key) else { return empty(embeds.labels.loop) }
+        var child = inner()
+        child.trail = trail + [key]
+        child.nested = true
+        let body = child.blocks(Array(ParsedNote(section).document.children))
+        return "<div class=\"embed\"\(Self.mathAttribute(found.math))>\(head)<div class=\"embed-body\">\n\(body)</div></div>\n"
+    }
+
+    /// A block reference carries the block it names, which the page shows while the pointer rests on the link. A
+    /// template holds it: its content is inert and may stand inside the paragraph, where a block element can't.
+    func preview(_ link: WikiLink) -> String {
+        guard let embeds, !previewing, let block = link.blockID, link.namesNote else { return "" }
+        // The link was read from rendered HTML, so its target is escaped there.
+        var named = link
+        named.target = Self.unescape(link.target)
+        guard trail.count <= NoteEmbeds.depth, let found = embeds.find(named),
+              let section = ParsedNote(found.text).section(heading: nil, block: block) else {
+            return "<template class=\"ref-preview\"><p class=\"embed-note\">\(Self.escape(embeds.labels.missing))</p></template>"
+        }
+        var child = inner()
+        child.trail = trail + [named.key(in: found.key)]
+        child.nested = true
+        child.previewing = true
+        let body = child.blocks(Array(ParsedNote(section).document.children))
+        return "<template class=\"ref-preview\"\(Self.mathAttribute(found.math))>\(body)</template>"
+    }
+
+    static func mathAttribute(_ math: String?) -> String {
+        math.map { " data-math=\"\(escape($0))\"" } ?? ""
     }
 
     static func splitBlockID(_ html: String) -> (html: String, id: String?) {
@@ -265,13 +350,17 @@ public struct HTMLRenderer {
         return (text, id)
     }
 
-    static func idAttribute(_ id: String?) -> String {
-        id.map { " id=\"^\(escape($0))\"" } ?? ""
+    func idAttribute(_ id: String?) -> String {
+        nested ? "" : id.map { " id=\"^\(Self.escape($0))\"" } ?? ""
     }
 
     /// A heading's `id`, which a link to the heading scrolls to.
     public static func slug(_ text: String) -> String {
         text.lowercased().split(whereSeparator: { $0.isWhitespace }).joined(separator: "-")
+    }
+
+    static func unescape(_ s: String) -> String {
+        s.replacing("&quot;", with: "\"").replacing("&lt;", with: "<").replacing("&gt;", with: ">").replacing("&amp;", with: "&")
     }
 
     static func escape(_ s: String) -> String {

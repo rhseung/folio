@@ -1,5 +1,7 @@
 import AppKit
 import FolioDomain
+import FolioFixtures
+import FolioStorage
 import Foundation
 import Testing
 import WebKit
@@ -13,9 +15,12 @@ import WebKit
     var text: String
     var baseURL: URL?
     var accent = CourseAccent.presets[0].accent
+    /// Stands for the workspace's `notesRevision`, which another note's change bumps.
+    var revision = 0
 
-    init(_ text: String, baseURL: URL? = nil, editable: Bool = false, height: CGFloat = 600) {
+    init(_ text: String, baseURL: URL? = nil, editable: Bool = false, height: CGFloat = 600, embeds: NoteEmbedSource? = nil) {
         page = NotePreviewPage.take()
+        page.embeds = embeds
         window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: 900, height: height), styleMask: [.borderless], backing: .buffered, defer: false)
         window.appearance = NSAppearance(named: .aqua)
         page.view.frame = window.contentView!.bounds
@@ -50,7 +55,7 @@ import WebKit
 
     func show(_ text: String) {
         self.text = text
-        page.show(text, baseURL: baseURL, math: .latex, accent: accent, dark: false)
+        page.show(text, baseURL: baseURL, math: .latex, accent: accent, dark: false, revision: revision)
     }
 
     func close() {
@@ -272,5 +277,58 @@ struct NotePreviewTests {
         rig.close()
         try await Task.sleep(for: .milliseconds(100))
         #expect(try await page.view.callAsyncJavaScript("return document.body.children.length", contentWorld: .defaultClient) as? Int == 0)
+    }
+}
+
+/// Embeds and block references draw the other notes of the course, found by title.
+@MainActor @Suite(.serialized, .timeLimit(.minutes(2)))
+struct NoteEmbedPreviewTests {
+    func course() throws -> CourseStore {
+        let gist = GISTStore(url: try Fixture.standard.copyToTemp())
+        return try #require(try gist.courseStores().first { $0.url.lastPathComponent == "EC4207 그래프 이론" })
+    }
+
+    func write(_ store: CourseStore, _ title: String, _ text: String) throws -> URL {
+        let url = store.newNoteURL(title: title, format: .markdown)
+        try store.createNote(at: url, text: text)
+        return url
+    }
+
+    /// The part under the heading is drawn and typeset; the note changing elsewhere draws it again.
+    @Test func anEmbedDrawsTheOtherNoteAndFollowsIt() async throws {
+        let store = try course()
+        let other = try write(store, "정의 모음", "# 정의\n\n그래프는 $G=(V,E)$이다.\n\n# 다른 것\n\n빠짐")
+        let rig = PreviewRig("앞\n\n![[정의 모음#정의]]\n\n![[없는 노트]]", embeds: NoteEmbedSource(store: store, own: nil))
+        defer { rig.close() }
+        await rig.settle()
+        let embed = "return document.querySelector('div.embed:not(.embed-empty) .embed-body')?.textContent ?? ''"
+        #expect((try await rig.js(embed) as? String)?.contains("그래프는") == true)
+        #expect(try await rig.js("return document.querySelectorAll('div.embed .katex').length") as? Int == 1)
+        #expect(try await rig.js("return document.body.textContent.includes('빠짐')") as? Bool == false)
+        #expect(try await rig.js("return document.querySelector('div.embed-empty .embed-note')?.textContent") as? String
+                == String(localized: .notesEmbedMissing))
+
+        try store.write(NoteFile(url: other, meta: NoteMeta(id: nil)), text: "# 정의\n\n바뀐 내용")
+        rig.revision += 1
+        rig.show(rig.text)
+        await rig.settle()
+        #expect((try await rig.js(embed) as? String)?.contains("바뀐 내용") == true)
+    }
+
+    /// Resting on a block reference shows its block in a card; moving off takes it away.
+    @Test func aBlockReferenceShowsItsBlockOnHover() async throws {
+        let store = try course()
+        _ = try write(store, "보조정리", "위\n\n증명할 것 $x^2$ ^c1\n\n아래")
+        let rig = PreviewRig("본문 [[보조정리#^c1|그 식]] 끝", embeds: NoteEmbedSource(store: store, own: nil))
+        defer { rig.close() }
+        await rig.settle()
+        _ = try await rig.js("document.querySelector('a.wikilink').dispatchEvent(new MouseEvent('mouseover', {bubbles: true}))")
+        try await Task.sleep(for: .milliseconds(600))
+        #expect((try await rig.js("return document.querySelector('.ref-popover')?.textContent ?? ''") as? String)?.hasPrefix("증명할 것") == true)
+        #expect(try await rig.js("return document.querySelector('.ref-popover').textContent.includes('아래')") as? Bool == false)
+        #expect(try await rig.js("return document.querySelectorAll('.ref-popover .katex').length") as? Int == 1)
+        _ = try await rig.js("document.querySelector('p').dispatchEvent(new MouseEvent('mouseover', {bubbles: true}))")
+        try await Task.sleep(for: .milliseconds(500))
+        #expect(try await rig.js("return document.querySelector('.ref-popover') == null") as? Bool == true)
     }
 }

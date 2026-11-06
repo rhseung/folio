@@ -130,10 +130,26 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 
 /* Wikilinks and embeds */
 .note a.wikilink { font-weight: 550; }
-.note .embed { display: block; margin: 16px 0; padding: 10px 14px; border: 1px dashed var(--line); border-radius: 10px; color: var(--text-3);
+/* An embed beside other text is a link to the note; one on its own line draws the note (or the part it names). */
+.note a.embed { display: block; margin: 16px 0; padding: 10px 14px; border: 1px dashed var(--line); border-radius: 10px; color: var(--text-3);
   font-size: 14px; background-image: none; }
-.note .embed:hover { border-color: var(--accent); background-image: none; }
-.note .embed::before { content: "↪ "; }
+.note a.embed:hover { border-color: var(--accent); background-image: none; }
+.note a.embed::before { content: "↪ "; }
+.note div.embed { margin: var(--block-gap) 0; padding: 12px 20px; border: 1px solid var(--line-soft); border-left: 3px solid var(--line); border-radius: var(--radius); }
+.note div.embed-empty { border-style: dashed; border-left-width: 1px; }
+.note .embed-title { display: inline-block; margin-bottom: 8px; font-size: var(--label-size); font-weight: 600; color: var(--text-3); background-image: none; }
+.note .embed-title::before { content: "↪ "; }
+.note .embed-title:hover { color: var(--accent-ink); }
+.note .embed-body > :first-child { margin-top: 0; }
+.note .embed-body > :last-child { margin-bottom: 0; }
+.note .embed-note { margin: 0; font-size: var(--label-size); color: var(--text-3); }
+
+/* A block reference's card, shown while the pointer rests on the link: the block on the card color, above the page. */
+.ref-popover { position: absolute; z-index: 10; box-sizing: border-box; width: min(calc(var(--measure) - 2 * var(--margin)), calc(100vw - 16px));
+  max-height: 50vh; overflow: auto; padding: 12px 16px; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 16%, transparent); font-size: .94em; }
+.ref-popover > :first-child { margin-top: 0; }
+.ref-popover > :last-child { margin-bottom: 0; }
 .note .cb-widget { border: 1px dashed var(--line); border-radius: var(--radius); }
 /* A widget runs in a frame of its own, as tall as its page says, up to most of the screen; past that it scrolls. */
 .note iframe.cb-widget { display: block; box-sizing: border-box; width: 100%; max-height: 80vh; margin: var(--block-gap) 0; border: 0; border-radius: 0; }

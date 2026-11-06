@@ -117,10 +117,50 @@ final class NotesModel {
 
     func note(_ id: UUID?) -> NoteFile? { id.flatMap { try? course.store.note(id: $0) } }
 
-    /// Links name a note by its title (Obsidian style); Obsidian also matches case-insensitively.
     func noteId(titled title: String) -> UUID? {
-        let notes = (try? course.store.notes()) ?? []
-        return (notes.first { $0.title == title } ?? notes.first { $0.title.caseInsensitiveCompare(title) == .orderedSame })?.meta.id
+        ((try? course.store.notes()) ?? []).titled(title)?.meta.id
+    }
+}
+
+/// The notes a note's preview draws in its embeds and block references' previews, found by title in its course.
+/// Read once for each `revision` (the workspace's `notesRevision`), not on every keystroke the preview redraws for.
+final class NoteEmbedSource {
+    private let store: CourseStore
+    private let own: URL?
+    private var revision: Int?
+    private var notes: [NoteFile]?
+    private var texts: [URL: String] = [:]
+    /// The note's text as the editor has it, which may not be saved yet: a reference to its own block shows that.
+    private var current: String?
+
+    init(store: CourseStore, own: URL?) {
+        self.store = store
+        self.own = own
+    }
+
+    func embeds(revision: Int, text: String) -> NoteEmbeds {
+        current = text
+        if revision != self.revision {
+            self.revision = revision
+            notes = nil
+            texts = [:]
+        }
+        let labels = NoteEmbeds.Labels(missing: String(localized: .notesEmbedMissing), loop: String(localized: .notesEmbedLoop),
+                                       tooDeep: String(localized: .notesEmbedTooDeep))
+        return NoteEmbeds(key: own?.standardizedFileURL.path, labels: labels) { [self] link in find(link) }
+    }
+
+    private func find(_ link: WikiLink) -> NoteEmbeds.Note? {
+        // Listed only once a note embeds or references another, so notes without any pay nothing.
+        if notes == nil { notes = (try? store.notes()) ?? [] }
+        let title = link.target.hasSuffix(".md") ? String(link.target.dropLast(3)) : link.target
+        guard let note = notes?.titled(title), note.format == .markdown else { return nil }
+        if note.url.standardizedFileURL == own?.standardizedFileURL, let current {
+            return NoteEmbeds.Note(key: note.url.standardizedFileURL.path, text: current, math: note.meta.math.rawValue)
+        }
+        guard let text = texts[note.url] ?? (try? store.read(note)) else { return nil }
+        texts[note.url] = text
+        return NoteEmbeds.Note(key: note.url.standardizedFileURL.path, text: text, math: note.meta.math.rawValue)
     }
 }
 
@@ -147,11 +187,14 @@ final class NoteEditorModel {
     private var onDisk = ""
     var conflict = false
 
+    let embeds: NoteEmbedSource
+
     init(workspace: Workspace, course: LoadedCourse, note: NoteFile) {
         self.workspace = workspace
         initial = course
         self.note = note
         meta = note.meta
+        embeds = NoteEmbedSource(store: course.store, own: note.url)
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }

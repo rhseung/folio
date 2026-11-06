@@ -195,6 +195,7 @@ private struct SourcePane: View {
     @State private var text: String?
     @State private var pdf: PDFController?
     @State private var failed = false
+    @State private var embeds: NoteEmbedSource?
 
     var body: some View {
         if let note, note.format == .tex {
@@ -210,7 +211,8 @@ private struct SourcePane: View {
             if let pdf {
                 PDFKitView(controller: pdf)
             } else if let text {
-                NotePreview(text: text, baseURL: note?.url.deletingLastPathComponent(), math: note?.meta.math ?? .latex)
+                NotePreview(text: text, baseURL: note?.url.deletingLastPathComponent(), math: note?.meta.math ?? .latex, embeds: embeds,
+                            revision: model.workspace.notesRevision)
             } else if failed {
                 ContentUnavailableView(String(localized: .reviewSourceFailed), systemImage: "doc.questionmark", description: Text(source.title))
             } else {
@@ -225,6 +227,7 @@ private struct SourcePane: View {
         switch source.id {
         case .note:
             guard let note else { failed = true; return }
+            embeds = NoteEmbedSource(store: course.store, own: note.url)
             text = model.body(of: note, in: course)
         case .lecture:
             guard let document = await model.document(source, in: course) else { failed = true; return }
