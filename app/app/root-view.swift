@@ -369,7 +369,9 @@ struct RootView: View {
         case .people: Crumb(title: String(localized: .rootNavPeople), symbol: "person")
         case .codes: Crumb(title: String(localized: .rootNavCodes), symbol: "number")
         case .settings: Crumb(title: String(localized: .rootNavSettings), symbol: "gearshape")
-        case .today, .missing, nil: Crumb(title: String(localized: .rootNavToday), symbol: "house")
+        // The address itself, as the page says it can't be found: not today's, which the page no longer shows.
+        case .missing: Crumb(title: navigator.current.link.string, symbol: "questionmark.folder")
+        case .today, nil: Crumb(title: String(localized: .rootNavToday), symbol: "house")
         }
         let start = (sidebarOpen ? Theme.Size.sidebar : Theme.Size.panelInset) + Theme.Space.l
         // Folds before where a window-centered search field would begin, so the trail doesn't push it aside; truncates
