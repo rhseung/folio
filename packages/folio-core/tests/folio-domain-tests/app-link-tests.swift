@@ -44,6 +44,18 @@ struct AppLinkTests {
         #expect(AppLink(string: "folio://course/\(id.uuidString)/overview") == .course(id))
     }
 
+    @Test func settingsTabsArePathsLikeACoursesPages() {
+        #expect(AppLink.settings(.claude).string == "folio://settings/claude")
+        #expect(AppLink.settings(nil) == .place(.settings))
+        #expect(AppLink(string: "folio://Settings/Letters") == .settings(.letters))
+        #expect(AppLink(string: "folio://settings/letters#x") == .settings(.letters))
+        // Another tab is another step in a window's history.
+        #expect(AppLink.settings(.claude).withoutAnchor != AppLink.settings(.general).withoutAnchor)
+        #expect(AppLink.settings(.claude).with(.heading("x")) == .settings(.claude))
+        #expect(AppLink(string: "folio://settings/nowhere") == nil)
+        #expect(AppLink(string: "folio://grades/claude") == nil)
+    }
+
     @Test func dropsWhatTheKindHasNoUseFor() {
         #expect(AppLink(string: "folio://session/\(id.uuidString)#page=3") == AppLink(.session, id))
         #expect(AppLink(string: "folio://material/\(id.uuidString)#^block") == AppLink(.material, id))
@@ -118,6 +130,10 @@ struct AppLinkPropertyTests {
     static let anchor = Gen.int(in: 0...3).map { i -> Int in i }
 
     static func link(_ kind: AppLink.Kind, _ id: UUID, _ page: AppLink.CoursePage, _ choice: Int, _ n: Int, _ text: String) -> AppLink {
+        if kind == .settings {
+            let tabs: [AppLink.SettingsPage?] = [nil] + AppLink.SettingsPage.allCases
+            return .settings(tabs[n % tabs.count])
+        }
         if kind.isPlace { return .place(kind) }
         if kind == .course { return .course(id, page: page) }
         let anchor: AppLink.Anchor? = switch choice {

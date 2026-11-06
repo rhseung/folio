@@ -44,6 +44,10 @@ struct LinkCommandTests {
         #expect(h.cli(["link", "today"], gist: gist).out == "folio://today")
         #expect(h.cli(["link", "today", "EC4207"], gist: gist).code == Exit.usage.rawValue)
         #expect(h.cli(["link", "course", "EC4207", "--page", "3"], gist: gist).code == Exit.usage.rawValue)
+        #expect(h.cli(["link", "settings", "--section", "claude"], gist: gist).out == "folio://settings/claude")
+        #expect(h.cli(["link", "settings", "--section", "materials"], gist: gist).code == Exit.usage.rawValue)
+        #expect(h.cli(["link", "course", "EC4207", "--section", "claude"], gist: gist).code == Exit.usage.rawValue)
+        #expect(h.cli(["link", "grades", "--section", "claude"], gist: gist).code == Exit.usage.rawValue)
         #expect(h.cli(["link", "card", "not-an-id"], gist: gist).code == Exit.usage.rawValue)
         #expect(h.cli(["link", "card", UUID().uuidString], gist: gist).code == Exit.notFound.rawValue)
     }

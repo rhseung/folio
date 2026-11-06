@@ -42,19 +42,11 @@ struct ScreenFitTests {
 
     @Test func everyScreenFitsTheWidthItIsGiven() async throws {
         let workspace = try Workspace.scenario(.busyDay)
-        var screens = ScreenCatalog.entries(workspace).filter { $0.name != "settings" }
+        var screens = ScreenCatalog.entries(workspace)
         // Folded, the people list and a person are drawn one at a time, so each is checked.
         let person = try #require(workspace.catalog.people.first)
         screens.append(("person", Navigator.Entry(link: AppLink(.person, person.id))))
-        var drawn = try await measure(screens, workspace)
-        // The settings page shows the tab last chosen, kept app-wide, so each tab is drawn on its own.
-        let savedTab = UserDefaults.standard.string(forKey: SettingsTab.storageKey)
-        defer { UserDefaults.standard.set(savedTab, forKey: SettingsTab.storageKey) }
-        for tab in SettingsTab.allCases {
-            UserDefaults.standard.set(tab.rawValue, forKey: SettingsTab.storageKey)
-            drawn += try await measure([("settings-\(tab)", Navigator.Entry(link: .place(.settings)))], workspace)
-        }
-        for (name, width, drawn) in drawn {
+        for (name, width, drawn) in try await measure(screens, workspace) {
             #expect(drawn <= width + 0.5, "\(name) at \(Int(width)) is \(drawn) wide")
         }
     }

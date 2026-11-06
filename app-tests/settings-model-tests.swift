@@ -33,6 +33,16 @@ struct SettingsModelTests {
         #expect(model.settings.backup.folder == sibling.path)
     }
 
+    @Test func showsTheTabTheLinkNames() throws {
+        let model = SettingsModel(workspace: try fixtureWorkspace(), tab: .notes)
+        model.follow(.settings(.letters))
+        #expect(model.tab == .catalog)
+        // A link naming no tab, or another screen's, leaves the tab as it was.
+        model.follow(.place(.settings))
+        model.follow(.place(.grades))
+        #expect(model.tab == .catalog)
+    }
+
     @Test func tabLabelsKeepTheStoredNames() {
         #expect(SettingsTab.allCases.allSatisfy { $0.label == $0.rawValue })
     }

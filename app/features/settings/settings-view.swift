@@ -33,9 +33,20 @@ extension FocusedValues {
 
 struct SettingsView: View {
     @State private var model: SettingsModel
-    @AppStorage(SettingsTab.storageKey) private var tab: SettingsTab = .general
+    @AppStorage(SettingsTab.storageKey) private var remembered: SettingsTab = .general
+    @Environment(\.place) private var place
+    @Environment(\.openLink) private var openLink
 
-    init(workspace: Workspace) { _model = State(initialValue: SettingsModel(workspace: workspace)) }
+    init(workspace: Workspace) { _model = State(initialValue: SettingsModel(workspace: workspace, tab: .remembered)) }
+
+    var tab: SettingsTab { model.tab }
+
+    /// A step in the window's history, like a course's sections. Remembered only when picked, so a link or a step
+    /// back to a tab doesn't change what the sidebar opens next.
+    func pick(_ t: SettingsTab) {
+        remembered = t
+        openLink(.settings(t.page))
+    }
 
     var body: some View {
         // A column of sections beside the page, like a course's column, instead of a separate window with tabs.
@@ -44,7 +55,7 @@ struct SettingsView: View {
         } bar: {
             Menu {
                 ForEach(SettingsTab.allCases) { t in
-                    Toggle(isOn: Binding(get: { tab == t }, set: { if $0 { tab = t } })) { Label(t.label, systemImage: t.symbol) }
+                    Toggle(isOn: Binding(get: { tab == t }, set: { if $0 { pick(t) } })) { Label(t.label, systemImage: t.symbol) }
                 }
             } label: {
                 Label(tab.label, systemImage: tab.symbol)
@@ -58,6 +69,7 @@ struct SettingsView: View {
             // Each section starts at its top, not at the scroll position of the one before.
             .id(tab)
         }
+        .onChange(of: place, initial: true) { _, entry in if let entry { model.follow(entry.link) } }
         .onAppear(perform: model.load)
         .onChange(of: model.workspace.settings) { _, new in model.reloaded(new) }
         .task(id: model.settings) { await model.saveAfterPause() }
@@ -72,7 +84,7 @@ struct SettingsView: View {
                 VStack(spacing: Theme.Space.xxs) {
                     ForEach(SettingsTab.allCases) { t in
                         let chosen = tab == t
-                        Button { tab = t } label: { ColumnRow(title: t.label, symbol: t.symbol, chosen: chosen) }
+                        Button { pick(t) } label: { ColumnRow(title: t.label, symbol: t.symbol, chosen: chosen) }
                         .buttonStyle(.pointing(.plain))
                     }
                 }

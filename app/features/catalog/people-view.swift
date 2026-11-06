@@ -16,7 +16,7 @@ struct PeopleView: View {
     /// wouldn't move.
     func backToList() {
         model.selection = nil
-        openLink(.place(.people))
+        openLink.up(to: .place(.people))
     }
 
     var body: some View {

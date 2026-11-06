@@ -7608,7 +7608,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "과목, 회차, 단원, 노트(제목·블록), 자료(쪽), 과제, 시험, 카드, 문제 묶음, 학기, 교수, 앱의 페이지를 folio:// 주소 하나로 가리킨다.\n이 링크를 노트나 답에 넣으면 누를 때 Folio에서 그 항목이 열린다. 노트에서는 [글](링크), .tex에서는 \\href{링크}{글}로 쓴다.\n\n예시:\n  folio link course EC4207\n  folio link course EC4207 --section materials\n  folio link exam EC4207/중간고사\n  folio link assignment EC4207/HW3\n  folio link material EC4207/05_Matchings.pdf --page 12\n  folio link note \"EC4207/매칭 정리\" --heading 정의\n  folio link today --json"
+            "value": "과목, 회차, 단원, 노트(제목·블록), 자료(쪽), 과제, 시험, 카드, 문제 묶음, 학기, 교수, 앱의 페이지를 folio:// 주소 하나로 가리킨다.\n이 링크를 노트나 답에 넣으면 누를 때 Folio에서 그 항목이 열린다. 노트에서는 [글](링크), .tex에서는 \\href{링크}{글}로 쓴다.\n\n예시:\n  folio link course EC4207\n  folio link course EC4207 --section materials\n  folio link settings --section claude\n  folio link exam EC4207/중간고사\n  folio link assignment EC4207/HW3\n  folio link material EC4207/05_Matchings.pdf --page 12\n  folio link note \"EC4207/매칭 정리\" --heading 정의\n  folio link today --json"
           }
         }
       }
@@ -7674,7 +7674,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "과목의 페이지. sessions, units, notes, materials, quiz, cards, stats, problems, assignments, exams, grades"
+            "value": "과목의 페이지(sessions, units, notes, materials, quiz, cards, stats, problems, assignments, exams, grades)나 설정의 탭(profile, general, notifications, backup, letters, notes, recording, claude)"
           }
         }
       }
@@ -7707,7 +7707,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "--section은 과목(course)에만 쓴다"
+            "value": "--section은 과목(course)과 설정(settings)에만 쓴다"
           }
         }
       }
@@ -7730,6 +7730,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "쪽은 1 이상, 블록 ID는 영문·숫자·-로만 쓴다"
+          }
+        }
+      }
+    },
+    "link.bad-section": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구역 '%1$@'이 없다. 쓸 수 있는 구역: %2$@"
           }
         }
       }

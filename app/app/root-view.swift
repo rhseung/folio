@@ -20,7 +20,6 @@ struct RootView: View {
     @State private var navHeight: CGFloat?
     /// Whether the terms run on past the top and the bottom of their space, where the list fades out.
     @State private var searching = false
-    @AppStorage(SettingsTab.storageKey) private var settingsTab: SettingsTab = .general
     @AppStorage("sidebarOpen") private var sidebarOpen = true
     @State private var showingRecording = false
     @State private var quickAdding = false
@@ -62,7 +61,11 @@ struct RootView: View {
         openWindow(id: FolioApp.mainWindow, value: request)
     }
 
-    var openLink: OpenLinkAction { OpenLinkAction { link, placement, course in open(link, in: placement, course: course) } }
+    var openLink: OpenLinkAction {
+        OpenLinkAction { link, placement, course in open(link, in: placement, course: course) } upHandler: { link in
+            if let entry = workspace.entry(for: link) { navigator.up(to: entry) }
+        }
+    }
 
     func openFromOutside(_ link: AppLink) {
         #if os(macOS)
@@ -571,10 +574,9 @@ struct RootView: View {
     /// The window's panel draws its link as anything else that holds a screen does.
     var detail: some View { ScreenView(workspace: workspace, entry: navigator.current) }
 
-    /// Nil keeps the section last open.
+    /// Nil opens the tab last picked.
     func showSettings(_ tab: SettingsTab?) {
-        if let tab { settingsTab = tab }
-        open(.place(.settings))
+        open(.settings(tab?.page))
     }
 }
 
