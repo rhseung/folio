@@ -271,6 +271,19 @@ struct NotePreviewTests {
         #expect(abs(top) < 80)
     }
 
+    /// A `cb-table`'s columns are as wide as its `columns` say, text wrapping inside them; a column without a width
+    /// takes what its text needs.
+    @Test func aCBTableDrawsItsColumnsAtTheirWidths() async throws {
+        let long = String(repeating: "긴 글 ", count: 30)
+        let rig = PreviewRig("```cb-table\n{\"columns\": [{\"width\": 240}, {\"width\": 96}, {}], \"rows\": [{\"header\": true, \"cells\": [{\"text\": \"A\"}, {\"text\": \"B\"}, {\"text\": \"C\"}]}, {\"cells\": [{\"text\": \"\(long)\"}, {\"text\": \"x\"}, {\"text\": \"y\"}]}]}\n```")
+        defer { rig.close() }
+        await rig.settle()
+        let widths = try #require(try await rig.js("return [...document.querySelectorAll('table.cb-table th')].map(c => c.getBoundingClientRect().width)") as? [Double])
+        #expect(widths.count == 3)
+        #expect(abs(widths[0] - 240) <= 1 && abs(widths[1] - 96) <= 1, "\(widths)")
+        #expect(widths[2] < 96, "\(widths)")
+    }
+
     /// A footnote's number goes down to the note's list, and the list's arrow back up to where it was referenced.
     @Test func footnotesLinkToTheListAndBack() async throws {
         let filler = (1...60).map { "Paragraph \($0)" }.joined(separator: "\n\n")

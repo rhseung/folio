@@ -680,6 +680,35 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         host.isHidden = false
     }
 
+    // MARK: Tables
+
+    /// A table key acts only with the caret in a table, where it is taken even when it can't be done (a move past the
+    /// edge): falling through, ⌘ and an arrow would move the caret to the line's end instead.
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if window?.firstResponder === self, !hasMarkedText(), let shortcut = TableCommands.shortcut(of: event),
+           let command = TableCommands.command(for: shortcut), let table = TableEditing.table(in: string as NSString, selection: selectedRange()) {
+            if let edit = table.edit(command) { apply(edit) } else { NSSound.beep() }
+            return true
+        }
+        return super.performKeyEquivalent(with: event)
+    }
+
+    /// With the caret in a table, its commands come first. A right-click outside the selection puts the caret there
+    /// first, so the commands act on the cell clicked.
+    override func menu(for event: NSEvent) -> NSMenu? {
+        let menu = super.menu(for: event)
+        if let i = characterIndex(at: convert(event.locationInWindow, from: nil)), !NSLocationInRange(i, selectedRange()) {
+            setSelectedRange(NSRange(location: i, length: 0))
+        }
+        guard let menu, let table = TableEditing.table(in: string as NSString, selection: selectedRange()) else { return menu }
+        menu.insertItem(TableCommands.menu(for: table) { [weak self] edit in
+            self?.apply(edit)
+            self?.window?.makeFirstResponder(self)
+        }, at: 0)
+        menu.insertItem(.separator(), at: 1)
+        return menu
+    }
+
     // MARK: Clicks
 
     override func mouseDown(with event: NSEvent) {
@@ -1202,6 +1231,27 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
     func scrollViewDidScroll(_ scrollView: UIScrollView) {
         let top = topLine(lineStarts: lineStarts)
         onScroll(top.line, top.frac)
+    }
+
+    // MARK: Tables
+
+    override var keyCommands: [UIKeyCommand]? {
+        (super.keyCommands ?? []) + TableCommands.keyCommands(action: #selector(runTableCommand(_:)))
+    }
+
+    /// A table key outside a table, or one that can't be done there, is left to the text view.
+    override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+        guard action == #selector(runTableCommand(_:)) else { return super.canPerformAction(action, withSender: sender) }
+        return markedTextRange == nil && tableEdit(sender) != nil
+    }
+
+    private func tableEdit(_ sender: Any?) -> SourceEditing.Edit? {
+        guard let raw = (sender as? UIKeyCommand)?.propertyList as? String, let command = TableCommand(rawValue: raw) else { return nil }
+        return TableEditing.edit(command, in: textStorage.string as NSString, selection: selectedRange)
+    }
+
+    @objc func runTableCommand(_ sender: UIKeyCommand) {
+        if let edit = tableEdit(sender) { apply(edit) }
     }
 }
 #endif

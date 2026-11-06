@@ -7151,6 +7151,182 @@
         }
       }
     },
+    "notes.table.column-left": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "왼쪽에 열 추가"
+          }
+        }
+      }
+    },
+    "notes.table.column-right": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오른쪽에 열 추가"
+          }
+        }
+      }
+    },
+    "notes.table.delete-column": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "열 삭제"
+          }
+        }
+      }
+    },
+    "notes.table.delete-row": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "행 삭제"
+          }
+        }
+      }
+    },
+    "notes.table.format": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표 정리"
+          }
+        }
+      }
+    },
+    "notes.table.menu": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표"
+          }
+        }
+      }
+    },
+    "notes.table.merge": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고른 칸 합치기"
+          }
+        }
+      }
+    },
+    "notes.table.merge-down": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아래 칸과 합치기"
+          }
+        }
+      }
+    },
+    "notes.table.merge-right": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오른쪽 칸과 합치기"
+          }
+        }
+      }
+    },
+    "notes.table.move-column-left": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "열을 왼쪽으로"
+          }
+        }
+      }
+    },
+    "notes.table.move-column-right": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "열을 오른쪽으로"
+          }
+        }
+      }
+    },
+    "notes.table.move-row-down": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "행을 아래로"
+          }
+        }
+      }
+    },
+    "notes.table.move-row-up": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "행을 위로"
+          }
+        }
+      }
+    },
+    "notes.table.row-above": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위에 행 추가"
+          }
+        }
+      }
+    },
+    "notes.table.row-below": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아래에 행 추가"
+          }
+        }
+      }
+    },
+    "notes.table.unmerge": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "합친 칸 나누기"
+          }
+        }
+      }
+    },
     "notes.trash": {
       "extractionState": "manual",
       "localizations": {
