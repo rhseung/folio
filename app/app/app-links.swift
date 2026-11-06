@@ -1,4 +1,5 @@
 import FolioDomain
+import FolioMarkdown
 import FolioStorage
 import Observation
 import PDFKit
@@ -179,6 +180,15 @@ extension Workspace {
 extension AppLink.Anchor {
     var isBlock: Bool {
         if case .block = self { true } else { false }
+    }
+
+    /// Where this heading or block starts in a note's text, for the editor's caret; nil when the note has none.
+    func location(in text: String) -> Int? {
+        switch self {
+        case .heading(let heading): ParsedNote.location(in: text, heading: heading, block: nil)
+        case .block(let block): ParsedNote.location(in: text, heading: nil, block: block)
+        case .page: nil
+        }
     }
 }
 

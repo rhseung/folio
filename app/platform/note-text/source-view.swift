@@ -15,6 +15,8 @@ struct MarkdownEditor {
     /// The editor's top line and how far into it the view is scrolled, for a preview to follow.
     var onScroll: @MainActor (Int, Double) -> Void = { _, _ in }
     var assist = NoteAssist()
+    /// Where a link opened the note at: the caret goes to that heading or block once for each new one.
+    var anchor: AppLink.Anchor?
 
     @MainActor func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -23,6 +25,7 @@ struct MarkdownEditor {
         weak var view: SourceTextView?
         /// Set while SwiftUI updates the view: an edit made then is the binding's own text coming in.
         var updating = false
+        var revealed: AppLink.Anchor?
 
         init(_ parent: MarkdownEditor) { self.parent = parent }
 
@@ -46,6 +49,12 @@ struct MarkdownEditor {
         // The binding hasn't the syllable being composed yet, so swapping the text in then would delete it under the
         // input method, which then types each next jamo over a gap.
         if view.string != text, !view.hasMarkedText() { view.replace(with: text) }
+        // Not before the note's text has come in: the model loads it after the view is made, and an anchor looked for
+        // in the empty text would be given up on.
+        if let anchor, anchor != coordinator.revealed, !text.isEmpty, view.string == text {
+            coordinator.revealed = anchor
+            if let location = anchor.location(in: text) { view.reveal(location) }
+        }
         if let insert {
             view.insertAtCaret(insert)
             DispatchQueue.main.async { self.insert = nil }
@@ -309,6 +318,9 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     private var assisting: (NoteAssist, MathSyntax)?
     private(set) var menuHost: NSHostingView<AnyView>?
     private var accent = CourseAccent.gray
+    /// Where a link opened the note at, kept until the view is on screen and sized: placed before, the line lands
+    /// wherever TextKit's first height estimate put it.
+    private var revealing: Int?
 
     func configure(accent: CourseAccent, syntax: MathSyntax, dark: Bool) {
         accentColors(accent)
@@ -320,6 +332,26 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     }
 
     override func columnChanged() { updateBubble() }
+
+    /// Puts the caret at `location` and its line near the top of the screen, as the preview shows a heading or block.
+    func reveal(_ location: Int) {
+        revealing = location
+        DispatchQueue.main.async { [weak self] in self?.runReveal() }
+    }
+
+    private func runReveal() {
+        guard let at = revealing, let window, let clip = enclosingScrollView?.contentView, clip.bounds.height > 0 else { return }
+        revealing = nil
+        let i = min(at, (string as NSString).length)
+        setSelectedRange(NSRange(location: i, length: 0))
+        place(i, at: NoteLook.margin)
+        window.makeFirstResponder(self)
+    }
+
+    override func setFrameSize(_ size: NSSize) {
+        super.setFrameSize(size)
+        if revealing != nil { DispatchQueue.main.async { [weak self] in self?.runReveal() } }
+    }
 
     /// Everything shown comes from styling the text as it now stands, after every change, composing ones included; a
     /// change left unstyled even for a moment shows in plain text's 12-point font.
@@ -854,6 +886,7 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
     private var styler: SourceStyler?
     private var lineStarts: [Int] = [0]
     private var snippets: [Snippet] = []
+    private var revealing: Int?
 
     override init() {
         super.init()
@@ -868,6 +901,24 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
         let changed = styler.map { $0.accent != accent || $0.syntax != syntax || $0.dark != dark || $0.baseURL != baseURL } ?? true
         styler = next
         if changed { restyle() }
+    }
+
+    /// Scrolls the line holding `location` near the top and puts the selection there, without taking focus: on the
+    /// iPad that would bring up the keyboard over the note just opened.
+    func reveal(_ location: Int) {
+        revealing = location
+        setNeedsLayout()
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        guard let at = revealing, window != nil, bounds.height > 0 else { return }
+        revealing = nil
+        let i = min(at, textStorage.length)
+        selectedRange = NSRange(location: i, length: 0)
+        guard textStorage.length > 0, let top = textLayoutManager?.top(of: min(i, textStorage.length - 1)) else { return }
+        let bottom = max(0, contentSize.height + contentInset.bottom - bounds.height)
+        setContentOffset(CGPoint(x: 0, y: min(bottom, max(0, top + textContainerInset.top - NoteLook.margin))), animated: false)
     }
 
     /// The completion menu is Mac-only for now (#31); pairs, lists and snippets on Tab work here too.

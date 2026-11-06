@@ -36,6 +36,7 @@ import WebKit
         let baseURL: URL?
         let dark: Bool
         let pulse: Pulse
+        let anchor: AppLink.Anchor?
         @State private var insert: String?
 
         var body: some View {
@@ -46,9 +47,10 @@ import WebKit
                 switch kind {
                 case .edit:
                     // `saveFile` names the update it came with, so `update()` can tell SwiftUI handed it to the view.
-                    MarkdownEditor(text: text, baseURL: baseURL, math: .latex, insert: $insert, saveFile: { _, _ in "update \(count)" }, openNote: { _ in })
+                    MarkdownEditor(text: text, baseURL: baseURL, math: .latex, insert: $insert, saveFile: { _, _ in "update \(count)" }, openNote: { _ in },
+                                   anchor: anchor)
                 case .preview:
-                    NotePreview(text: note, baseURL: baseURL, math: .latex)
+                    NotePreview(text: note, baseURL: baseURL, math: .latex, anchor: anchor)
                 }
             }
             .environment(\.accent, CourseAccent.presets[0].accent)
@@ -63,18 +65,20 @@ import WebKit
     let pulse: Pulse
     private var note: Note?
 
-    init(_ kind: Kind, text: Binding<String>, width: CGFloat = 900, height: CGFloat = 720, dark: Bool = false, baseURL: URL? = NoteBench.notes) {
+    /// `anchor` is the heading or block a link opened the note at.
+    init(_ kind: Kind, text: Binding<String>, width: CGFloat = 900, height: CGFloat = 720, dark: Bool = false, baseURL: URL? = NoteBench.notes,
+         anchor: AppLink.Anchor? = nil) {
         let window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: width, height: height), styleMask: [.borderless], backing: .buffered, defer: false)
         window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
         let pulse = Pulse()
-        let host = NSHostingView(rootView: Rig(kind: kind, text: text, baseURL: baseURL, dark: dark, pulse: pulse))
+        let host = NSHostingView(rootView: Rig(kind: kind, text: text, baseURL: baseURL, dark: dark, pulse: pulse, anchor: anchor))
         window.contentView = host
         (self.kind, self.dark, self.window, self.host, self.pulse) = (kind, dark, window, host, pulse)
     }
 
-    convenience init(_ kind: Kind, _ text: String, width: CGFloat = 900, height: CGFloat = 720, dark: Bool = false) {
+    convenience init(_ kind: Kind, _ text: String, width: CGFloat = 900, height: CGFloat = 720, dark: Bool = false, anchor: AppLink.Anchor? = nil) {
         let note = Note(text)
-        self.init(kind, text: Binding(get: { note.text }, set: { note.text = $0 }), width: width, height: height, dark: dark)
+        self.init(kind, text: Binding(get: { note.text }, set: { note.text = $0 }), width: width, height: height, dark: dark, anchor: anchor)
         self.note = note
     }
 
