@@ -30,18 +30,25 @@ struct TodayHeader: View {
     func heading(now: Date) -> some View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             Text(model.heading(summary, now: now)).font(Theme.Typeface.pageTitle)
-            HStack(spacing: Theme.Space.m) {
-                let pieces = model.summaryLine(classes: classes, summary: summary, reviews: reviews, now: now)
-                ForEach(Array(pieces.enumerated()), id: \.offset) { i, piece in
-                    if i > 0 { CourseDot(color: Theme.Palette.lineStrong, size: Theme.Space.xs) }
-                    Text(Self.counts(piece.text, urgent: piece.urgent))
+            let pieces = model.summaryLine(classes: classes, summary: summary, reviews: reviews, now: now)
+            // One count a line where the line doesn't fit: cut short, it dropped the counts at its end.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Theme.Space.m) {
+                    ForEach(Array(pieces.enumerated()), id: \.offset) { i, piece in
+                        if i > 0 { CourseDot(color: Theme.Palette.lineStrong, size: Theme.Space.xs) }
+                        Text(Self.counts(piece.text, urgent: piece.urgent))
+                    }
+                }
+                VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+                    ForEach(Array(pieces.enumerated()), id: \.offset) { _, piece in Text(Self.counts(piece.text, urgent: piece.urgent)) }
                 }
             }
             .font(Theme.Typeface.bodyLarge)
             .foregroundStyle(Theme.Palette.textSecondary)
             .lineLimit(1)
         }
-        .fixedSize()
+        // Only its height: fixed in width too, the counts line could never fold and pushed a narrow pane out.
+        .fixedSize(horizontal: false, vertical: true)
     }
 
     /// The bold runs of a count line in full text color, or danger when the count needs doing today.
@@ -149,7 +156,9 @@ struct DayRibbonCard: View {
                     .offset(x: first ? at : last ? at - 80 : at - 40, y: trackTop + Self.track + Theme.Space.xs)
             }
         }
-        .frame(width: width, alignment: .topLeading)
+        // As wide as it is given, never as wide as it was drawn: `width` is measured from this frame, so a fixed width
+        // held a width the card once had and kept a narrowed pane from shrinking it.
+        .frame(minWidth: 0, maxWidth: .infinity, alignment: .topLeading)
     }
 
     /// `오전 9 · 12 · 오후 3 · 6 · 9 · 자정`: am/pm on the first tick and where it turns, as on a timetable. Noon reads

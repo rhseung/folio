@@ -17,7 +17,8 @@ struct StudyTimeBlock: View {
                 EmptyCard(symbol: "clock", title: String(localized: .todayStudyEmpty))
             } else {
                 Card(padding: Theme.Space.xl) {
-                    HStack(alignment: .top, spacing: Theme.Space.xxl) {
+                    // The chart beside the totals while it keeps a bar's width per day, else under them.
+                    Fold(wideFrom: 480, spacing: Theme.Space.xxl, stackSpacing: Theme.Space.xl) {
                         totals(chart).frame(width: 200, alignment: .leading)
                         Chart {
                         ForEach(chart.segments) { s in

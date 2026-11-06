@@ -68,7 +68,8 @@ struct CardRow<Content: View>: View {
     }
 }
 
-/// Settings-style row: label (and optional detail) on the left, the control on the right.
+/// Settings-style row: label (and optional detail) on the left, the control on the right, or under the label where
+/// the two don't fit on one line.
 struct FormRow<Control: View>: View {
     let label: String
     var detail: String?
@@ -77,12 +78,61 @@ struct FormRow<Control: View>: View {
 
     var body: some View {
         CardRow(last: last) {
-            VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                Text(label)
-                if let detail { Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary) }
+            FoldingRow {
+                VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+                    Text(label)
+                    if let detail { Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary) }
+                }
+            } control: {
+                control
             }
-            Spacer(minLength: Theme.Space.m)
-            control
+        }
+    }
+}
+
+/// A row's name and its control side by side, or the control under the name when the row is too narrow for both: in
+/// a pane or on an iPhone a fixed-width control (a grade track) otherwise squeezed the name to nothing.
+struct FoldingRow<Title: View, Control: View>: View {
+    /// What the name keeps beside the control before the control moves under it.
+    static var labelRoom: CGFloat { 120 }
+
+    @ViewBuilder var title: Title
+    @ViewBuilder var control: Control
+
+    var body: some View {
+        // ViewThatFits goes by ideal widths; the name's is its whole line, which would fold a row with a long
+        // detail even in a full window. Its ideal is pinned to the room it needs, so only the control's width counts.
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: Theme.Space.m) {
+                // Not stretched: a stretched name took the room a control's own text (색's "자동") needed.
+                title.frame(idealWidth: Self.labelRoom, alignment: .leading)
+                Spacer(minLength: Theme.Space.m)
+                control
+            }
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                title.frame(maxWidth: .infinity, alignment: .leading)
+                control
+            }
+        }
+    }
+}
+
+/// Side by side from `wideFrom` points up, one under the other below it: how blocks that share a row fold in a pane
+/// or on an iPhone. Not a width measured into a flag: a flag starts wide, and its first, side-by-side pass pushed a
+/// narrow pane out by the pair's minimum width.
+struct Fold<Content: View>: View {
+    /// At least what the blocks need side by side, so they never squeeze past their own minimums.
+    let wideFrom: CGFloat
+    var spacing: CGFloat = Theme.Space.xl
+    var stackSpacing: CGFloat = Theme.Space.section
+    @ViewBuilder var content: Content
+
+    var body: some View {
+        ViewThatFits(in: .horizontal) {
+            // The pair's ideal width is pinned to `wideFrom`: left to the blocks, whole lines of text decided instead.
+            HStack(alignment: .top, spacing: spacing) { content }
+                .frame(idealWidth: wideFrom)
+            VStack(alignment: .leading, spacing: stackSpacing) { content }
         }
     }
 }

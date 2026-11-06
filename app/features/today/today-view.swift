@@ -6,7 +6,6 @@ import SwiftUI
 struct TodayView: View {
     @State private var model: TodayModel
     @Environment(\.openLink) private var openLink
-    @State private var wide = true
     @State private var hoveredNote: UUID?
 
     init(workspace: Workspace) {
@@ -45,6 +44,9 @@ struct TodayView: View {
         .confirming($model.pending)
     }
 
+    /// Two lists side by side from here: a deadline's chips need about half of it.
+    static let pairWidth: CGFloat = 704
+
     // MARK: Exams and deadlines
 
     /// Exams and deadlines side by side, the two things with a date on them. Both empty, they say so once.
@@ -53,21 +55,11 @@ struct TodayView: View {
             EmptyCard(symbol: "checkmark", tone: .success, title: String(localized: .todayAgendaEmpty),
                       detail: String(localized: .todayAgendaEmptyDetail(TodaySummary.examHorizon)))
         } else {
-            Group {
-                if wide {
-                    HStack(alignment: .top, spacing: Theme.Space.xl) {
-                        examsBlock(summary).frame(maxWidth: .infinity, alignment: .topLeading)
-                        deadlinesBlock(summary).frame(maxWidth: .infinity, alignment: .topLeading)
-                    }
-                } else {
-                    VStack(alignment: .leading, spacing: Theme.Space.section) {
-                        examsBlock(summary)
-                        deadlinesBlock(summary)
-                    }
-                }
-            }
             // Below this a half column cuts a course name off after a word.
-            .onGeometryChange(for: Bool.self) { $0.size.width >= 640 } action: { wide = $0 }
+            Fold(wideFrom: Self.pairWidth) {
+                examsBlock(summary).frame(maxWidth: .infinity, alignment: .topLeading)
+                deadlinesBlock(summary).frame(maxWidth: .infinity, alignment: .topLeading)
+            }
         }
     }
 
@@ -211,20 +203,10 @@ struct TodayView: View {
             } else {
                 // Two lists, like exams and deadlines above: writing a class's note and reviewing units are different
                 // jobs, and in one card their rows read as one kind of thing.
-                Group {
-                    if wide {
-                        HStack(alignment: .top, spacing: Theme.Space.xl) {
-                            notesList(notes, today: today).frame(maxWidth: .infinity, alignment: .topLeading)
-                            unitsList(queue).frame(maxWidth: .infinity, alignment: .topLeading)
-                        }
-                    } else {
-                        VStack(alignment: .leading, spacing: Theme.Space.section) {
-                            notesList(notes, today: today)
-                            unitsList(queue)
-                        }
-                    }
+                Fold(wideFrom: Self.pairWidth) {
+                    notesList(notes, today: today).frame(maxWidth: .infinity, alignment: .topLeading)
+                    unitsList(queue).frame(maxWidth: .infinity, alignment: .topLeading)
                 }
-                .onGeometryChange(for: Bool.self) { $0.size.width >= 640 } action: { wide = $0 }
             }
             deferredList(reviews.deferred)
         }

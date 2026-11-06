@@ -3,13 +3,14 @@ import SwiftUI
 
 struct PeopleView: View {
     @State private var model: PeopleModel
-    let openCourse: (UUID) -> Void
     @Environment(\.place) private var place
+    @Environment(\.openLink) private var openLink
 
-    init(workspace: Workspace, openCourse: @escaping (UUID) -> Void) {
+    init(workspace: Workspace) {
         _model = State(initialValue: PeopleModel(workspace: workspace))
-        self.openCourse = openCourse
     }
+
+    func openCourse(_ id: UUID) { openLink(.course(id)) }
 
     var body: some View {
         CatalogEditing { $catalog in
