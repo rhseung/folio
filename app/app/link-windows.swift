@@ -67,6 +67,7 @@ struct NavigationCommands: Commands {
 
 #if os(macOS)
 import AppKit
+import WebKit
 
 /// Joins a window a link asked to open as a tab to the window the link was in.
 @MainActor enum WindowTabs {
@@ -110,7 +111,9 @@ struct WindowReader: NSViewRepresentable {
 }
 
 /// A two-finger swipe on the trackpad goes back or forward, as in Safari and Finder. Only where nothing under the
-/// pointer scrolls sideways itself: a wide PDF or a table would otherwise lose its own horizontal scroll.
+/// pointer scrolls sideways itself: a wide PDF or a table would otherwise lose its own horizontal scroll. A web view
+/// (the note preview, the Claude panel) scrolls its wide tables and code inside the page, out of AppKit's sight, so
+/// over one the swipe is left to it.
 struct SwipeNavigation: NSViewRepresentable {
     let back: @MainActor () -> Void
     let forward: @MainActor () -> Void
@@ -176,6 +179,11 @@ struct SwipeNavigation: NSViewRepresentable {
         private func scrollsSideways(_ event: NSEvent) -> Bool {
             guard let content = window?.contentView,
                   var view = content.hitTest(content.convert(event.locationInWindow, from: nil)) else { return false }
+            var ancestor: NSView? = view
+            while let a = ancestor {
+                if a is WKWebView { return true }
+                ancestor = a.superview
+            }
             while let scroll = view.enclosingScrollView {
                 if let document = scroll.documentView, document.frame.width > scroll.contentView.bounds.width + 1 { return true }
                 view = scroll

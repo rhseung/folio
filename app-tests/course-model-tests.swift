@@ -31,6 +31,11 @@ struct CourseModelTests {
         model.section = .notes
         model.openNote = note
         #expect(model.place == AppLink(.note, note))
+        // A heading a link opened at doesn't follow to the next note picked by hand.
+        model.follow(Navigator.Entry(link: AppLink(.note, note, anchor: .heading("요약")), course: graphTheory))
+        #expect(model.noteAnchor == .heading("요약"))
+        model.openNote = UUID()
+        #expect(model.noteAnchor == nil)
         model.section = .materials
         let file = AppLink(.material, UUID())
         model.moved(file)

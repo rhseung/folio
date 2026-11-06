@@ -77,6 +77,8 @@ final class CourseModel {
 
     private func settle() {
         guard !following else { return }
+        // A note picked by hand opens at its top, not at the heading the last link pointed to.
+        noteAnchor = nil
         if section == .notes, let openNote {
             place = AppLink(.note, openNote)
         } else {
