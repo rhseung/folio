@@ -1,4 +1,5 @@
 import FolioDomain
+import FolioMarkdown
 import SwiftUI
 
 /// The write view: the note's markdown source in a TextKit 2 text view, styled in place by `SourceStyler`.
@@ -30,13 +31,14 @@ struct MarkdownEditor {
         }
     }
 
-    @MainActor func update(_ view: SourceTextView, _ coordinator: Coordinator, accent: CourseAccent, dark: Bool) {
+    @MainActor func update(_ view: SourceTextView, _ coordinator: Coordinator, accent: CourseAccent, dark: Bool, openLink: OpenLinkAction = OpenLinkAction()) {
         coordinator.parent = self
         coordinator.updating = true
         defer { coordinator.updating = false }
         view.baseURL = baseURL
         view.saveFile = saveFile
         view.openNote = openNote
+        view.linkOpener = openLink
         view.onScroll = onScroll
         view.configure(accent: accent, syntax: math, dark: dark)
         // The binding hasn't the syllable being composed yet, so swapping the text in then would delete it under the
@@ -45,27 +47,6 @@ struct MarkdownEditor {
         if let insert {
             view.insertAtCaret(insert)
             DispatchQueue.main.async { self.insert = nil }
-        }
-    }
-}
-
-/// Where a click on a note's link goes, from either view.
-@MainActor enum NoteLinks {
-    static func open(_ href: String, base: URL?, openNote: (String) -> Void) {
-        guard let url = URL(string: href, relativeTo: base) ?? URL(string: href.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed) ?? "") else { return }
-        switch url.scheme {
-        case "folio" where url.host == "note":
-            openNote(String(url.path.dropFirst()))
-        case "file" where url.pathExtension == "md":
-            openNote(url.deletingPathExtension().lastPathComponent)
-        case "http", "https", "obsidian", "mailto":
-            #if os(macOS)
-            NSWorkspace.shared.open(url)
-            #else
-            UIApplication.shared.open(url)
-            #endif
-        default:
-            break
         }
     }
 }
@@ -85,13 +66,15 @@ extension MarkdownEditor: NSViewRepresentable {
         context.coordinator.view = view
         let scroll = NoteScrollView(document: view)
         view.load(text)
-        update(view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark)
+        update(view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+               openLink: context.environment.openLink)
         return scroll
     }
 
     func updateNSView(_ scroll: NSScrollView, context: Context) {
         guard let view = scroll.documentView as? SourceTextView else { return }
-        update(view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark)
+        update(view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+               openLink: context.environment.openLink)
     }
 }
 
@@ -152,6 +135,7 @@ class NoteTextView: NSTextView {
     private let content = NSTextContentStorage()
     var baseURL: URL?
     var openNote: (String) -> Void = { _ in }
+    var linkOpener = OpenLinkAction()
     /// The note's shortcuts, taken by key code so the Korean input source doesn't change them.
     var shortcut: ((Character) -> Bool)?
     private var caretObserver: NSObjectProtocol?
@@ -236,13 +220,23 @@ class NoteTextView: NSTextView {
     /// ⌘-click opens a link; a plain click places the caret, as anywhere else in the text.
     func openLink(at i: Int, event: NSEvent) -> Bool {
         guard event.modifierFlags.contains(.command), let storage = textStorage else { return false }
-        let attributes = storage.attributes(at: i, effectiveRange: nil)
-        if let wiki = attributes[.noteWiki] as? String {
-            openNote(wiki)
+        var range = NSRange()
+        let attributes = storage.attributes(at: i, effectiveRange: &range)
+        if attributes[.noteWiki] is String {
+            // The attribute holds the target alone; the page or block of `[[material:…#page=12]]` is read from the text.
+            let written = (storage.string as NSString).substring(with: range)
+            if let m = written.firstMatch(of: WikiLink.pattern) {
+                NoteLinks.open(WikiLink(m).href, base: nil, openNote: openNote, openLink: linkOpener)
+            }
             return true
         }
         if let href = attributes[.noteHref] as? String {
-            NoteLinks.open(href, base: baseURL, openNote: openNote)
+            NoteLinks.open(href, base: baseURL, openNote: openNote, openLink: linkOpener)
+            return true
+        }
+        // A bare folio:// address, which markdown doesn't make a link of.
+        if let found = AppLink.link(in: storage.string, at: i) {
+            linkOpener(found)
             return true
         }
         return false
@@ -634,12 +628,14 @@ extension MarkdownEditor: UIViewRepresentable {
         view.onChange = { [weak coordinator = context.coordinator] in coordinator?.changed() }
         context.coordinator.view = view
         view.load(text)
-        update(view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark)
+        update(view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+               openLink: context.environment.openLink)
         return view
     }
 
     func updateUIView(_ view: SourceTextView, context: Context) {
-        update(view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark)
+        update(view, context.coordinator, accent: context.environment.accent, dark: context.environment.colorScheme == .dark,
+               openLink: context.environment.openLink)
     }
 }
 
@@ -648,6 +644,7 @@ class NoteTextView: UITextView {
     private let content = NSTextContentStorage()
     var baseURL: URL?
     var openNote: (String) -> Void = { _ in }
+    var linkOpener = OpenLinkAction()
     private var column: CGFloat = 0
 
     init() {

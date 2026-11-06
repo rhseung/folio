@@ -10,7 +10,7 @@ public struct WikiLink: Hashable, Sendable {
     public var alias: String?
     public var isEmbed: Bool
 
-    /// `material`, `unit`, `session`, `card`, `assignment` for app objects; nil for notes.
+    /// The app object's kind (`material`, `exam`, …), named as in a `folio://` link; nil for notes.
     public var objectKind: String? {
         guard let colon = target.firstIndex(of: ":") else { return nil }
         let kind = String(target[..<colon])
@@ -21,7 +21,9 @@ public struct WikiLink: Hashable, Sendable {
         objectKind.flatMap { UUID(uuidString: String(target.dropFirst($0.count + 1))) }
     }
 
-    public static let objectKinds: Set<String> = ["material", "unit", "session", "card", "assignment"]
+    /// The kinds of `folio://<kind>/<ID>` (FolioDomain's `AppLink`) that a note can link by ID. FolioMarkdown depends on no
+    /// other Folio module, so the names are repeated here; `AppLinkWikiTests` checks they still parse as links.
+    public static let objectKinds: Set<String> = ["course", "session", "unit", "material", "assignment", "exam", "card", "problem-set"]
 
     public static var pattern: Regex<(Substring, Substring, Substring, Substring?, Substring?, Substring?)> {
         #/(!?)\[\[([^\]\|#]+)(?:#(\^?)([^\]\|]*))?(?:\|([^\]]*))?\]\]/#
@@ -34,6 +36,16 @@ public struct WikiLink: Hashable, Sendable {
         fragment = isBlock ? nil : m.4.map(String.init)
         alias = m.5.map(String.init)
         isEmbed = m.1 == "!"
+    }
+
+    /// Where the link goes: `folio://<kind>/<ID>` for an app object, `folio://note/<title>` for a note, with the
+    /// heading, block or page after `#`.
+    public var href: String {
+        let fragment = blockID.map { "#^" + $0 } ?? fragment.map { "#" + $0 } ?? ""
+        if let kind = objectKind {
+            return "folio://\(kind)/\(target.dropFirst(kind.count + 1))\(fragment)"
+        }
+        return "folio://note/\(target.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? target)\(fragment)"
     }
 
     public static func all(in text: String) -> [WikiLink] {

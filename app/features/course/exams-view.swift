@@ -5,7 +5,7 @@ import SwiftUI
 struct ExamsView: View {
     @State private var model: ExamsModel
     @Environment(\.accent) private var accent
-    @Environment(\.searchTarget) private var searchTarget
+    @Environment(\.openLink) private var openLink
     let openNote: (UUID) -> Void
 
     static let dateColumn: CGFloat = 104
@@ -186,7 +186,7 @@ struct ExamsView: View {
     }
 
     func openMaterial(_ m: FolioDomain.Material) {
-        searchTarget.wrappedValue = SearchTarget(courseId: model.course.id, section: .materials, materialId: m.id)
+        openLink(AppLink(.material, m.id), course: model.course.id)
     }
 
     func openSummary(_ exam: Exam) {
@@ -197,6 +197,7 @@ struct ExamsView: View {
     @ViewBuilder func actions(_ exam: Exam) -> some View {
         Button(model.summaryTitle(exam)) { openSummary(exam) }
         Button(.commonEditEllipsis) { model.editing = exam }
+        LinkMenu(link: AppLink(.exam, exam.id), course: model.course.id, trailing: true)
         Divider()
         Button(.commonDeleteEllipsis, role: .destructive) { model.remove(exam) }
     }

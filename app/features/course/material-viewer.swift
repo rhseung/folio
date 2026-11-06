@@ -38,6 +38,10 @@ struct MaterialViewer: View {
         .onChange(of: controller?.page) { _, page in if let page { model.showing(page + 1, of: material) } }
         // A page already open when recording starts doesn't change, so it is told then.
         .onChange(of: model.recording) { _, recording in if recording != nil, let page = controller?.page { model.showing(page + 1, of: material) } }
+        // Another link to this file at another page, while it is open.
+        .onChange(of: model.requestedPage) { _, page in
+            if page != nil, let controller, let page = model.takeRequestedPage() { controller.go(to: page) }
+        }
         .onDisappear {
             if let controller, controller.page != openedAt { model.recordPage(controller.page, of: material) }
             model.showing(nil, of: material)
@@ -77,6 +81,7 @@ struct MaterialViewer: View {
             return
         }
         openedAt = pdf.page
-        controller = PDFController(document: document, page: openedAt)
+        let page = model.takeRequestedPage().map { min($0, document.pageCount - 1) } ?? openedAt
+        controller = PDFController(document: document, page: page)
     }
 }

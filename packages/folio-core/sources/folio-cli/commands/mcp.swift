@@ -150,7 +150,7 @@ struct MCPServer {
     }
 
     /// Commands that only read, and are about the GIST data rather than the tool itself.
-    static let notTools: Set<String> = ["actions", "run", "skill", "completion", "mcp", "unlock", "lock", "cleanup plan", "help"]
+    static let notTools: Set<String> = ["actions", "run", "skill", "completion", "mcp", "unlock", "lock", "cleanup plan", "help", "open"]
     static let globalOptions: Set<String> = ["gist", "json", "dry-run", "yes", "no-pick", "help", "version"]
 
     struct Help: Decodable {

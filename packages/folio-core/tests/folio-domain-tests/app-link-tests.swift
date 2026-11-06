@@ -1,0 +1,200 @@
+import FolioDomain
+import Foundation
+import PropertyBased
+import Testing
+
+struct AppLinkTests {
+    let id = UUID(uuidString: "6F9619FF-8B86-D011-B42D-00C04FC964FF")!
+
+    @Test func writesTheIssuesShape() {
+        #expect(AppLink(.assignment, id).string == "folio://assignment/6F9619FF-8B86-D011-B42D-00C04FC964FF")
+        #expect(AppLink(.material, id, anchor: .page(12)).string == "folio://material/6F9619FF-8B86-D011-B42D-00C04FC964FF#page=12")
+        #expect(AppLink(.note, id, anchor: .block("eq-1")).string.hasSuffix("#^eq-1"))
+        #expect(AppLink.place(.today).string == "folio://today")
+        #expect(AppLink.course(id, page: .materials).string == "folio://course/6F9619FF-8B86-D011-B42D-00C04FC964FF/materials")
+        #expect(AppLink(.problemSet, id).string.hasPrefix("folio://problem-set/"))
+    }
+
+    @Test func headingsAreEscapedSoTheyEndWhereLinksInTextEnd() {
+        let link = AppLink(.note, id, anchor: .heading("매칭 (정의)"))
+        #expect(!link.string.contains(" ") && !link.string.contains("(") && !link.string.contains(")"))
+        #expect(AppLink(string: link.string) == link)
+        // A heading that reads like a block or a page stays a heading.
+        for heading in ["^x", "page=3", "100%", "a#b"] {
+            let l = AppLink(.note, id, anchor: .heading(heading))
+            #expect(AppLink(string: l.string)?.anchor == .heading(heading))
+        }
+    }
+
+    /// Foundation escapes a block's `^` in the URL; the block comes back a block, not a heading.
+    @Test func aBlockSurvivesTheURL() throws {
+        let link = AppLink(.note, UUID(), anchor: .block("proof"))
+        #expect(link.url.absoluteString.hasSuffix("#%5Eproof"))
+        #expect(AppLink(url: link.url) == link)
+        let heading = AppLink(.note, UUID(), anchor: .heading("증명 끝"))
+        #expect(AppLink(url: heading.url) == heading)
+    }
+
+    @Test func readsWhatTheNotePreviewHandsIt() {
+        // The renderer writes a wiki link's heading raw; a lower-case ID is still the ID.
+        let raw = "folio://note/\(id.uuidString.lowercased())#정의 1"
+        #expect(AppLink(string: raw) == AppLink(.note, id, anchor: .heading("정의 1")))
+        #expect(AppLink(string: "FOLIO://Material/\(id.uuidString)#page=3") == AppLink(.material, id, anchor: .page(3)))
+        #expect(AppLink(string: "folio://today/") == .place(.today))
+        #expect(AppLink(string: "folio://course/\(id.uuidString)/overview") == .course(id))
+    }
+
+    @Test func dropsWhatTheKindHasNoUseFor() {
+        #expect(AppLink(string: "folio://session/\(id.uuidString)#page=3") == AppLink(.session, id))
+        #expect(AppLink(string: "folio://material/\(id.uuidString)#^block") == AppLink(.material, id))
+        #expect(AppLink(string: "folio://material/\(id.uuidString)#page=0") == AppLink(.material, id))
+        #expect(AppLink(string: "folio://grades#x") == .place(.grades))
+        #expect(AppLink(string: "folio://note/\(id.uuidString)#^not a block") == AppLink(.note, id))
+    }
+
+    @Test func refusesWhatIsNotALink() {
+        for bad in ["", "folio://", "folio:/today", "https://today", "folio://nothing", "folio://today/\(id.uuidString)",
+                    "folio://note/매칭 정리", "folio://note", "folio://exam/\(id.uuidString)/more", "folio://course/\(id.uuidString)/nowhere",
+                    "obsidian://open?vault=Brain"] {
+            #expect(AppLink(string: bad) == nil, "\(bad)")
+        }
+    }
+
+    @Test func findsLinksWrittenInText() {
+        let link = AppLink(.material, id, anchor: .page(4))
+        let tex = "See \\href{\(link.string)}{the slides} and folio://grades."
+        #expect(AppLink.links(in: tex).map(\.link) == [link])
+        let at = (tex as NSString).range(of: "folio://material").location + 3
+        #expect(AppLink.link(in: tex, at: at) == link)
+        #expect(AppLink.link(in: tex, at: 1) == nil)
+        let md = "[슬라이드](\(link.string)) 한글 folio://today"
+        #expect(AppLink.links(in: md).map(\.link) == [link, .place(.today)])
+        // Offsets count UTF-16 units, as text views do: the Hangul before the link shifts it by one unit each.
+        let range = AppLink.links(in: md)[0].range
+        #expect((md as NSString).substring(with: range) == link.string)
+    }
+
+    @Test func searchResultsOpenTheirItem() {
+        let course = UUID()
+        #expect(AppLink(SearchItem(kind: .quiz, courseId: course, id: id, title: "")) == AppLink(.card, id))
+        #expect(AppLink(SearchItem(kind: .note, courseId: course, id: id, title: "")) == AppLink(.note, id))
+    }
+
+    @Test func findsTheCourseThatHoldsATarget() {
+        let device = UUID(), now = Date(timeIntervalSince1970: 1_790_000_000)
+        var a = CourseFile(course: Course(device: device, at: now, title: "A"))
+        let b = CourseFile(course: Course(device: device, at: now, title: "B"))
+        let exam = Exam(device: device, at: now, title: "중간고사")
+        a.exams.append(exam)
+        let note = UUID()
+        a.notes.append(NoteEntry(id: note, device: device, at: now, path: "Notes/매칭.md", meta: NoteMeta(id: note)))
+        #expect(AppLink(.note, note).course(in: [b, a]) == a.course.id)
+        #expect(AppLink(.exam, exam.id).course(in: [b, a]) == a.course.id)
+        #expect(AppLink.course(b.course.id).course(in: [a, b]) == b.course.id)
+        #expect(AppLink(.exam, UUID()).course(in: [a, b]) == nil)
+        #expect(AppLink(.card, UUID()).course(in: [a, b]) == nil)
+    }
+
+    @Test func codesAsItsAddress() throws {
+        let link = AppLink(.note, id, anchor: .heading("증명"))
+        let data = try JSONEncoder().encode([link])
+        #expect(try JSONDecoder().decode([AppLink].self, from: data) == [link])
+    }
+}
+
+/// What any link must keep, whatever it points at.
+struct AppLinkPropertyTests {
+    static let kind = Gen.element(of: AppLink.Kind.allCases).map { $0! }
+    static let page = Gen.element(of: AppLink.CoursePage.allCases).map { $0! }
+    static let uuid = Gen.uint64().array(of: 2).map { w -> UUID in
+        var bytes = [UInt8](repeating: 0, count: 16)
+        for i in 0..<8 { bytes[i] = UInt8(truncatingIfNeeded: w[0] >> (i * 8)); bytes[8 + i] = UInt8(truncatingIfNeeded: w[1] >> (i * 8)) }
+        return UUID(uuid: (bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+                           bytes[8], bytes[9], bytes[10], bytes[11], bytes[12], bytes[13], bytes[14], bytes[15]))
+    }
+    /// Hangul, Latin, digits, the characters links stop at, and the ones that mean block or page.
+    static let text = Gen.oneOf(Gen.character(in: "가"..."힣"), Gen.character(in: " "..."~")).string(of: 0...12)
+    static let anchor = Gen.int(in: 0...3).map { i -> Int in i }
+
+    static func link(_ kind: AppLink.Kind, _ id: UUID, _ page: AppLink.CoursePage, _ choice: Int, _ n: Int, _ text: String) -> AppLink {
+        if kind.isPlace { return .place(kind) }
+        if kind == .course { return .course(id, page: page) }
+        let anchor: AppLink.Anchor? = switch choice {
+        case 1: .page(n)
+        case 2: .block(text.filter { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") })
+        // A heading starting with `^` would read as a block from a URL (see `init(url:)`).
+        case 3: .heading(text.hasPrefix("^") ? "x" + text : text)
+        default: nil
+        }
+        return AppLink(kind, id, anchor: anchor)
+    }
+
+    @Test func roundTripsThroughItsText() async {
+        await propertyCheck(input: Self.kind, Self.uuid, Self.page, Self.anchor, Gen.int(in: 0...999), Self.text) { kind, id, page, choice, n, text in
+            let link = Self.link(kind, id, page, choice, n, text)
+            #expect(AppLink(string: link.string) == link)
+            #expect(AppLink(url: link.url) == link)
+        }
+    }
+
+    @Test func isFoundWholeInTheTextAroundIt() async {
+        await propertyCheck(input: Self.kind, Self.uuid, Self.anchor, Gen.int(in: 1...999), Self.text, Self.text) { kind, id, choice, n, text, before in
+            let link = Self.link(kind, id, .notes, choice, n, text)
+            for written in ["[\(before)](\(link.string))", "\\href{\(link.string)}{\(before)}", "\(before) \(link.string)\n"] {
+                #expect(AppLink.links(in: written).last?.link == link, "\(written)")
+            }
+        }
+    }
+}
+
+struct LinkHistoryTests {
+    @Test func goesBackAndForwardLikeABrowser() {
+        var h = LinkHistory("a")
+        h.visit("b")
+        h.visit("c")
+        let back = h.goBack()
+        #expect(back && h.current == "b" && h.forward == ["c"])
+        h.visit("d")
+        #expect(h.back == ["a", "b"] && h.forward.isEmpty)
+        let twice = h.goBack(2)
+        #expect(twice && h.current == "a" && h.forward == ["b", "d"])
+        let past = h.goBack()
+        #expect(!past)
+        let ahead = h.goForward(2)
+        #expect(ahead && h.current == "d")
+    }
+
+    @Test func theSamePlaceAgainIsNoStep() {
+        var h = LinkHistory("a")
+        h.visit("a")
+        #expect(!h.canGoBack)
+        h.replace("a2")
+        #expect(!h.canGoBack && h.current == "a2")
+    }
+
+    @Test func keepsOnlyTheNewestSteps() {
+        var h = LinkHistory(0, limit: 3)
+        for i in 1...10 { h.visit(i) }
+        #expect(h.back == [7, 8, 9])
+    }
+
+    static let steps = Gen.int(in: 0...20).array(of: 0...40)
+
+    @Test func backThenForwardReturns() async {
+        await propertyCheck(input: Self.steps, Gen.int(in: 0...40)) { visits, k in
+            var h = LinkHistory(-1, limit: 16)
+            for v in visits { h.visit(v) }
+            let before = h
+            let n = min(k, h.back.count)
+            let wentBack = h.goBack(n)
+            #expect(wentBack == (n >= 1))
+            if n >= 1 {
+                let wentForward = h.goForward(n)
+                #expect(wentForward)
+            }
+            #expect(h.current == before.current && h.back == before.back)
+            #expect(h.back.count <= 16)
+            #expect(zip(h.back, h.back.dropFirst() + [h.current]).allSatisfy { $0 != $1 })
+        }
+    }
+}

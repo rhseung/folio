@@ -251,13 +251,7 @@ public struct HTMLRenderer {
     static func replaceWikiLinks(_ s: String) -> String {
         s.replacing(WikiLink.pattern) { m in
             let link = WikiLink(m)
-            let fragment = link.blockID.map { "#^" + $0 } ?? link.fragment.map { "#" + $0 } ?? ""
-            let href: String
-            if let kind = link.objectKind {
-                href = "folio://\(kind)/\(link.target.dropFirst(kind.count + 1))\(fragment)"
-            } else {
-                href = "folio://note/\(link.target.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? link.target)\(fragment)"
-            }
+            let href = link.href
             let text = link.alias ?? (link.target + (link.fragment.map { " › " + $0 } ?? ""))
             return link.isEmbed
                 // A link, not a block: it stands inside the paragraph the embed was written in.
@@ -275,7 +269,8 @@ public struct HTMLRenderer {
         id.map { " id=\"^\(escape($0))\"" } ?? ""
     }
 
-    static func slug(_ text: String) -> String {
+    /// A heading's `id`, which a link to the heading scrolls to.
+    public static func slug(_ text: String) -> String {
         text.lowercased().split(whereSeparator: { $0.isWhitespace }).joined(separator: "-")
     }
 

@@ -9,16 +9,24 @@ final class CourseModel {
     let workspace: Workspace
     var pending: PendingAction?
     let courseId: UUID
-    var section: CourseSection = .overview
-    var openNote: UUID?
+    /// Every change of section or note is a move the window's history keeps (`place`), unless it came from following
+    /// the history itself.
+    var section: CourseSection = .overview { didSet { if section != oldValue { settle() } } }
+    var openNote: UUID? { didSet { if openNote != oldValue { settle() } } }
+    /// The heading or block the open note was linked at, for the preview to scroll to.
+    private(set) var noteAnchor: AppLink.Anchor?
     /// The unit the units page has open, reported by it, so a card made in the Claude panel goes there.
     var openUnit: UUID?
+    /// Where the page is, as a link: the section, or what is open in it. The view hands each new one to the window.
+    private(set) var place: AppLink
+    private var following = false
     /// An answer the Claude panel puts at the end of the open note; the editor takes it and clears it.
     var noteInsert: String?
 
     init(workspace: Workspace, courseId: UUID) {
         self.workspace = workspace
         self.courseId = courseId
+        place = .course(courseId)
     }
 
     var course: LoadedCourse? { workspace.course(courseId) }
@@ -29,13 +37,53 @@ final class CourseModel {
         section = .notes
     }
 
-    /// Takes a search result meant for this course. Returns whether it is used up; a material target is left for
-    /// MaterialsView, which opens the file and then clears it.
-    func follow(_ target: SearchTarget) -> Bool {
-        guard target.courseId == courseId else { return false }
-        section = target.section
-        if let note = target.noteId { openNote = note }
-        return target.materialId == nil
+    /// Shows what the window's link names. A material or a unit opens on its own page, which reads `place`.
+    func follow(_ entry: Navigator.Entry) {
+        guard entry.course == courseId, entry.link != place else { return }
+        let link = entry.link
+        following = true
+        defer { following = false }
+        place = link
+        noteAnchor = nil
+        switch link.kind {
+        case .course: section = CourseSection(link.page ?? .overview)
+        case .note:
+            openNote = link.id
+            noteAnchor = link.anchor
+            section = .notes
+        case .session: section = .sessions
+        case .unit: section = .units
+        case .material: section = .materials
+        case .assignment: section = .assignments
+        case .exam: section = .exams
+        case .card: section = .quizCards
+        case .problemSet: section = .quizProblems
+        default: break
+        }
+    }
+
+    /// A page opened something of its own (a file, a unit) or closed it, which is a move too. The same item at
+    /// another page or heading is the same place.
+    func moved(_ link: AppLink?) {
+        guard !following else { return }
+        guard let link else { return settle() }
+        if link.withoutAnchor != place.withoutAnchor { place = link }
+    }
+
+    /// The section's first screen again, for its crumb: what the section had open is closed.
+    func resetPage() {
+        settle()
+    }
+
+    private func settle() {
+        guard !following else { return }
+        // A note picked by hand opens at its top, not at the heading the last link pointed to.
+        noteAnchor = nil
+        if section == .notes, let openNote {
+            place = AppLink(.note, openNote)
+        } else {
+            place = .course(courseId, page: section.page)
+        }
     }
 
     // MARK: Course column

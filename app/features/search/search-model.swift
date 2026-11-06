@@ -70,13 +70,6 @@ final class SearchModel {
         selected = min(max(selected + delta, 0), max(flat.count - 1, 0))
     }
 
-    /// Where the chosen hit opens: its course's section, and the note or file itself.
-    func target(_ hit: SearchHit) -> SearchTarget {
-        let item = hit.item
-        return SearchTarget(courseId: item.courseId, section: item.kind.section,
-                            noteId: item.kind == .note ? item.id : nil, materialId: item.kind == .material ? item.id : nil)
-    }
-
     /// What is already indexed answers at once; changed courses are read again behind it, then the results follow.
     func start() async {
         guard let gist = workspace.gist, let store = try? SearchStore.local(for: gist) else { return }
@@ -153,17 +146,6 @@ extension SearchKind {
         case .session: "calendar"
         case .unit: "list.bullet"
         case .quiz: "rectangle.on.rectangle"
-        }
-    }
-
-    var section: CourseSection {
-        switch self {
-        case .note: .notes
-        case .material: .materials
-        case .assignment: .assignments
-        case .session: .sessions
-        case .unit: .units
-        case .quiz: .quizCards
         }
     }
 }

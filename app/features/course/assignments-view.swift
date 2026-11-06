@@ -29,6 +29,7 @@ struct AssignmentsView: View {
                                 .contextMenu {
                                     Button(.commonEditEllipsis) { model.editing = a }
                                     Menu(String(localized: .assignmentsStatus)) { statusItems(a) }
+                                    LinkMenu(link: AppLink(.assignment, a.id), course: model.course.id, trailing: true)
                                     Divider()
                                     Button(.commonDeleteEllipsis, role: .destructive) { model.remove(a) }
                                 }

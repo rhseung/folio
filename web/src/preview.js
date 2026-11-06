@@ -36,6 +36,18 @@ export function preview({ typeset, redraw }) {
     if (options.editable) post({ type: "task", line: Number(box.dataset.line) });
   }, true);
 
+  // The app adds its own items to the page's menu (open a link in a tab, copy a link to the heading or block under
+  // the pointer), and the menu doesn't say what it was opened on.
+  document.addEventListener("contextmenu", (event) => {
+    const at = (selector) => event.target.closest?.(selector);
+    post({
+      type: "menu",
+      href: at("a[href]")?.getAttribute("href") ?? null,
+      heading: at("h1, h2, h3, h4, h5, h6")?.textContent ?? null,
+      block: at("[id^='^']")?.id.slice(1) ?? null,
+    });
+  }, true);
+
   function make(html) {
     const box = document.createElement("div");
     box.innerHTML = html;

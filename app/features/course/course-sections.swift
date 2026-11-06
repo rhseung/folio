@@ -23,7 +23,7 @@ extension ReviewReason {
 /// People, the grading rules as written, the memo and the folder, at the bottom of the overview.
 struct InfoBlocks: View {
     @Environment(\.accent) private var accent
-    @Environment(\.personTarget) private var personTarget
+    @Environment(\.openLink) private var openLink
     @Environment(\.openURL) private var openURL
     let course: LoadedCourse
     @State private var model: CourseInfoModel
@@ -43,7 +43,7 @@ struct InfoBlocks: View {
                     ForEach(Array(people.enumerated()), id: \.element.id) { i, p in
                         CardRow(last: i == people.count - 1) {
                             // The name and its details open the person; the address beside them still writes mail.
-                            Button { personTarget.wrappedValue = p.id } label: {
+                            Button { openLink(AppLink(.person, p.id)) } label: {
                                 HStack {
                                     VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                                         Text(p.name)
@@ -63,7 +63,7 @@ struct InfoBlocks: View {
                             }
                         }
                         .contextMenu {
-                            Button(.courseInfoOpenPerson(p.name), systemImage: "person") { personTarget.wrappedValue = p.id }
+                            Button(.courseInfoOpenPerson(p.name), systemImage: "person") { openLink(AppLink(.person, p.id)) }
                             if let url = model.mailURL(p) {
                                 Button(.courseInfoWriteMail, systemImage: "envelope") { openURL(url) }
                             }

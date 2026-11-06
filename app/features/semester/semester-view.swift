@@ -5,7 +5,7 @@ import SwiftUI
 struct SemesterView: View {
     @State private var model: SemesterModel
     let openCourse: (UUID) -> Void
-    @Environment(\.searchTarget) private var searchTarget
+    @Environment(\.openLink) private var openLink
     @State private var addingCourse = false
     @State private var confirmingTrim = false
     @State private var confirmingSource = false
@@ -114,6 +114,8 @@ struct SemesterView: View {
 
     @ViewBuilder func courseMenu(_ course: LoadedCourse) -> some View {
         Button(.commonOpen, systemImage: "arrow.right.circle") { openCourse(course.id) }
+        LinkMenu(link: .course(course.id), course: course.id, trailing: true)
+        Divider()
         #if os(macOS)
         Button(.commonShowInFinder, systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([course.store.url]) }
         #endif
@@ -140,9 +142,8 @@ struct SemesterView: View {
         if let loaded = model.folderCourse(course) { courseMenu(loaded) }
     }
 
-    /// RootView turns a search target into the course's selection, so this reaches its exams page from here.
     func showExams(_ course: UUID) {
-        searchTarget.wrappedValue = SearchTarget(courseId: course, section: .exams)
+        openLink(.course(course, page: .exams), course: course)
     }
 
     /// Offered once the semester is over; the audio goes only once the user agrees, and only to the Trash.

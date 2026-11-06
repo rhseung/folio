@@ -67,6 +67,7 @@ enum Finder {
         "problem-set list": ["문제 목록", "연습 문제"],
         "material list": ["자료 목록", "강의자료 보기", "파일 목록"], "material show": ["자료 정보"],
         "note list": ["노트 목록"], "note show": ["노트 보기", "노트 읽기"], "search": ["어디", "찾아", "찾기", "어디 있지", "검색", "내용 찾기"],
+        "link": ["링크 만들기", "링크 복사", "앱 링크", "folio 링크", "주소"], "open": ["앱에서 열기", "앱으로 열기", "화면 열기"],
         "semester list": ["학기 목록"], "semester show": ["이번 학기 정보", "개강일"],
         "course list": ["과목 목록", "수강 과목"], "course show": ["과목 정보", "과목 시간표"],
         "catalog show": ["카탈로그", "과목 코드 목록", "교수 목록"],

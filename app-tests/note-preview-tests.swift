@@ -220,6 +220,51 @@ struct NotePreviewTests {
     }
 
     /// A page handed to another note keeps nothing of the last one.
+    /// A link into the app opens through the window's one opener, whether a wiki link or a markdown link.
+    @Test func aClickOnALinkIntoTheAppOpensIt() async throws {
+        let material = UUID()
+        let exam = UUID()
+        let rig = PreviewRig("See [[material:\(material)#page=12|slides]] and [the exam](folio://exam/\(exam)).")
+        defer { rig.close() }
+        var opened: [AppLink] = []
+        rig.page.openLink = OpenLinkAction { link, _, _ in opened.append(link) }
+        await rig.settle()
+        _ = try await rig.js("document.querySelector('a.wikilink').click()")
+        for _ in 0..<40 where opened.isEmpty { try? await Task.sleep(for: .milliseconds(50)) }
+        _ = try await rig.js("document.querySelectorAll('a')[1].click()")
+        for _ in 0..<40 where opened.count < 2 { try? await Task.sleep(for: .milliseconds(50)) }
+        #expect(opened == [AppLink(.material, material, anchor: .page(12)), AppLink(.exam, exam)])
+    }
+
+    /// The page's menu is told what it was opened on: the link, and the heading or block under the pointer.
+    @Test func theMenuKnowsTheLinkAndHeadingUnderThePointer() async throws {
+        let rig = PreviewRig("# Matchings\n\nA [link](folio://course/\(graphTheory)).\n\nKept ^proof")
+        defer { rig.close() }
+        await rig.settle()
+        func menu(on selector: String) async throws {
+            _ = try await rig.js("document.querySelector(s).dispatchEvent(new MouseEvent('contextmenu', {bubbles: true}))", ["s": selector])
+            try? await Task.sleep(for: .milliseconds(150))
+        }
+        try await menu(on: "h1")
+        #expect(rig.page.menuAnchor == .heading("Matchings") && rig.page.menuHref == nil)
+        try await menu(on: "a")
+        #expect(rig.page.menuHref == "folio://course/\(graphTheory)")
+        try await menu(on: "[id='^proof']")
+        #expect(rig.page.menuAnchor == .block("proof"))
+    }
+
+    /// Opened at a heading, the page shows the heading at its top.
+    @Test func aLinkToAHeadingScrollsToIt() async throws {
+        let filler = (1...60).map { "Paragraph \($0)" }.joined(separator: "\n\n")
+        let rig = PreviewRig("# Top\n\n\(filler)\n\n## Far down\n\nEnd")
+        defer { rig.close() }
+        await rig.settle()
+        rig.page.reveal(.heading("Far down"))
+        try? await Task.sleep(for: .milliseconds(300))
+        let top = try #require(try await rig.number("return document.getElementById('far-down').getBoundingClientRect().top"))
+        #expect(abs(top) < 80)
+    }
+
     @Test func aRecycledPageStartsEmpty() async throws {
         let rig = PreviewRig("# One")
         await rig.settle()

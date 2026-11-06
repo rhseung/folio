@@ -5,6 +5,7 @@ struct FolioApp: App {
     @State private var workspace = Workspace()
     /// Under tests the app is only their host: no window of its own and no focus taken from what the user is doing.
     private static let hostingTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
+    static let mainWindow = "main"
 
     init() {
         #if os(macOS)
@@ -15,8 +16,9 @@ struct FolioApp: App {
     var body: some Scene {
         // The id names the saved window frame. Without it the name is the content's type, which holds the addresses of
         // private types and so changes with every build: each new build forgot the window and opened it afresh.
-        WindowGroup(id: "main") {
-            RootView()
+        // A window opened by a link carries the link; the first window, and one opened from the menu, carries none.
+        WindowGroup(id: Self.mainWindow, for: WindowRequest.self) { $request in
+            RootView(request: request)
                 #if os(macOS)
                 .frame(minWidth: Theme.Size.windowMin.width, minHeight: Theme.Size.windowMin.height)
                 #endif
@@ -35,7 +37,10 @@ struct FolioApp: App {
         // The compact row keeps the frame around the content panel thin.
         .windowToolbarStyle(.unifiedCompact(showsTitle: false))
         #endif
-        .commands { SettingsCommands() }
+        .commands {
+            SettingsCommands()
+            NavigationCommands()
+        }
     }
 }
 
