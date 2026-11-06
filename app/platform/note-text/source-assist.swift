@@ -80,8 +80,6 @@ struct NoteAssist: Equatable {
             // Left open at the fence: the language comes next, from its menu.
             item("code", String(localized: .notesAssistCode), "chevron.left.forwardslash.chevron.right", "code fence", fence),
             item("table", String(localized: .notesAssistTable), "tablecells", "table", "| $1 |  |\n| --- | --- |\n|  |  |"),
-            item("cb-table", String(localized: .notesAssistMergedTable), "rectangle.split.3x3", "table merged cb-table",
-                 fence + "cb-table\n{\"rows\": [{\"cells\": [{\"text\": \"$1\"}, {\"text\": \"\"}]}]}\n" + fence),
             item("widget", String(localized: .notesAssistWidget), "square.on.square", "widget cb-widget",
                  fence + "cb-widget\n{\"id\": \"$1\", \"height\": 320}\n" + fence),
             item("divider", String(localized: .notesAssistDivider), "minus", "divider rule hr", "---\n"),

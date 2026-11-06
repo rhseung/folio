@@ -164,5 +164,14 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note .raw-html { color: var(--text-3); }
 
 /* Footnotes and block IDs */
+/* A reference is a small raised number; line-height 0 keeps it from opening up its line. */
+.note sup.footnote-ref { font-size: .72em; line-height: 0; vertical-align: super; font-variant-numeric: tabular-nums; }
+.note sup.footnote-ref a { font-weight: 650; padding: 0 1px; background-image: none; }
+.note section.footnotes { margin-top: calc(2 * var(--block-gap)); padding-top: var(--paragraph-gap); border-top: 1px solid var(--line-soft);
+  font-size: .9em; color: var(--text-2); }
+.note section.footnotes ol { margin: 0; }
+.note section.footnotes li > p { margin: 0; }
+.note a.footnote-back { margin-left: 2px; color: var(--text-3); background-image: none; }
+.note a.footnote-back:hover { color: var(--accent-ink); }
 .note [id^="^"]:target { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 6px; transition: background 1s; }
 

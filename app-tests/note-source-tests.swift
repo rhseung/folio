@@ -94,6 +94,24 @@ struct NoteSourceTests {
         #expect(odd.isEmpty, "\(odd.prefix(5))")
     }
 
+    /// A footnote's label takes the accent and its brackets are dimmed, in a reference and in a definition; a definition
+    /// holding an address stays a footnote, not a link definition that turns every reference into a link.
+    @Test func footnotesAreColoredAndNeverLinks() throws {
+        let text = "주장[^src] 끝\n\n[^src]: https://example.com"
+        let styler = SourceStyler(accent: CourseAccent.presets[0].accent, syntax: .latex, baseURL: nil, dark: false)
+        let storage = styler.styled(text)
+        let ns = text as NSString
+        let color = { (i: Int) in storage.attribute(.foregroundColor, at: i, effectiveRange: nil) as? NSColor }
+        let reference = ns.range(of: "[^src]")
+        let definition = ns.range(of: "[^src]:", options: .backwards)
+        for range in [reference, definition] {
+            #expect(NoteAttributes.same(color(range.location + 2), CourseAccent.presets[0].accent.inkNative))
+            #expect(NoteAttributes.same(color(range.location), NoteLook.text3))
+            #expect(NoteAttributes.same(color(range.location + 5), NoteLook.text3))
+        }
+        #expect(storage.attribute(.noteHref, at: reference.location + 2, effectiveRange: nil) == nil)
+    }
+
     @Test func hangulBeingComposedIsBodySized() throws {
         for text in ["- 하나", "본문", "## 제목"] {
             let (view, _) = Self.typing(text)

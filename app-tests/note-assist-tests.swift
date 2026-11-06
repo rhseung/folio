@@ -64,7 +64,8 @@ struct NoteAssistTests {
         let (view, _) = Self.editor("")
         Self.type(view, "```")
         #expect(view.string == "```" && view.completion.query?.kind == .codeLanguage)
-        #expect(view.completion.items.contains { $0.title == "python" } && view.completion.items.contains { $0.title == "cb-table" })
+        #expect(view.completion.items.contains { $0.title == "python" } && view.completion.items.contains { $0.title == "cb-widget" }
+            && !view.completion.items.contains { $0.title == "cb-table" })
         Self.type(view, "sw")
         Self.enter(view)
         #expect(Self.caretShown(view) == "```swift\n|\n```")

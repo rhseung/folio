@@ -29,7 +29,8 @@ public struct CBTable: Codable, Equatable, Sendable {
 
     static let alignments: Set<String> = ["left", "center", "right"]
 
-    static func render(json: String) -> String {
+    /// `draw` draws a cell's markdown, so its footnotes, embeds and references are drawn as the note's are.
+    static func render(json: String, draw: (String) -> String) -> String {
         guard let table = try? JSONDecoder().decode(CBTable.self, from: Data(json.utf8)) else {
             return "<pre class=\"invalid-block\">\(HTMLRenderer.escape(json))</pre>\n"
         }
@@ -43,7 +44,7 @@ public struct CBTable: Codable, Equatable, Sendable {
                 let align = column < columns.count ? columns[column].align.flatMap { alignments.contains($0) ? " style=\"text-align:\($0)\"" : nil } ?? "" : ""
                 let span = (cell.colspan.map { $0 > 1 ? " colspan=\"\($0)\"" : "" } ?? "") + (cell.rowspan.map { $0 > 1 ? " rowspan=\"\($0)\"" : "" } ?? "")
                 column += cell.colspan ?? 1
-                return "<\(tag)\(span)\(align)>\(HTMLRenderer.render(markdown: cell.text))</\(tag)>"
+                return "<\(tag)\(span)\(align)>\(draw(cell.text))</\(tag)>"
             }.joined()
             return "<tr>\(cells)</tr>"
         }.joined()

@@ -65,7 +65,7 @@ extension NSAttributedString.Key {
         let all = NSRange(location: 0, length: storage.length)
         let lines = Self.lines(text)
         let math = MathScan(text: text, lines: lines)
-        let masked = DraftItem.mask(math.masked(text))
+        let masked = Footnotes.mask(DraftItem.mask(math.masked(text)))
         let document = Document(parsing: masked)
         var w = Writer(storage: storage, columns: Columns(masked), text: text as NSString)
 
@@ -98,6 +98,11 @@ extension NSAttributedString.Key {
                 w.marks.append(NSRange(m.2.startIndex..<m.2.endIndex, in: text))
                 if let alias = m.5 { w.marks.append(NSRange(text.index(before: alias.startIndex)..<alias.startIndex, in: text)) }
             }
+        }
+        for mark in Footnotes.marks(in: text) where !w.inCode(mark.range) && !math.covers(mark.range) {
+            w.set(mark.label, [.foregroundColor: accent.inkNative, Self.weight: (mark.definition ? PlatformFont.Weight.semibold : .medium).rawValue])
+            w.marks.append(NSRange(location: mark.range.location, length: mark.label.location - mark.range.location))
+            w.marks.append(NSRange(location: NSMaxRange(mark.label), length: NSMaxRange(mark.range) - NSMaxRange(mark.label)))
         }
 
         for span in math.inline {

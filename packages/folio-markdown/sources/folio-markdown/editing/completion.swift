@@ -197,7 +197,7 @@ public enum Completion {
         case .callout:
             return filter(CalloutHeader.known.map { CompletionItem(id: "callout.\($0)", title: $0, body: $0) }, query.text)
         case .codeLanguage:
-            let names = catalog.languages + [CBTable.language, CBWidget.language]
+            let names = catalog.languages + [CBWidget.language]
             return filter(names.map { CompletionItem(id: "language.\($0)", title: $0, body: $0) }, query.text)
         case .texCommand:
             return filter(TeXCommands.all.map(\.item), query.text, prefixOnly: true)
