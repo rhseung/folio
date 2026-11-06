@@ -187,6 +187,8 @@ struct Breadcrumb: View {
     let crumbs: [Crumb]
     let foldWidth: CGFloat
     let maxWidth: CGFloat
+    /// Below this the trail folds anyway and its last step truncates.
+    static let minWidth: CGFloat = 160
     @State private var fullWidth: CGFloat = 0
     @State private var showsHidden = false
 

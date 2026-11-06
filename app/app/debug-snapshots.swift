@@ -21,6 +21,8 @@ final class SnapshotDriver {
     static let recordingLevel = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_RECORDING"].flatMap(Float.init) ?? 0.6
     /// A narrower window (e.g. `1100`) to catch labels that wrap or truncate once the columns squeeze.
     static let width = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_WIDTH"].flatMap(Double.init) ?? 1440
+    /// How many tabs the window opens before the walk (`4`), to see the toolbar's tabs share and give up the row.
+    static let tabs = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_TABS"].flatMap(Int.init) ?? 1
 
     var section: CourseSection?
     /// Inside the units section: `detail` opens the first unit, `review` also opens its review sheet.
