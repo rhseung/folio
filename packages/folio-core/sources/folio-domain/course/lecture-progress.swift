@@ -129,6 +129,54 @@ extension CourseFile {
         return spans
     }
 
+    /// Each class's pages of `material` as a bracket beside the file's thumbnails, read off `lectureProgress` so a
+    /// range past the count is cut the same way, and laid out in lanes (`ProgressBracket.lay`).
+    public func progressBrackets(of material: UUID, pageCount: Int?) -> [ProgressBracket] {
+        var ranges: [(session: UUID, pages: ClosedRange<Int>)] = []
+        for span in lectureProgress(of: material, pageCount: pageCount) {
+            for session in span.sessions {
+                if let i = ranges.firstIndex(where: { $0.session == session }) {
+                    ranges[i].pages = ranges[i].pages.lowerBound...span.lastPage
+                } else {
+                    ranges.append((session, span.firstPage...span.lastPage))
+                }
+            }
+        }
+        return ProgressBracket.lay(ranges)
+    }
+}
+
+/// One class's pages of a lecture file, drawn as a bracket beside the thumbnails. `lane` 0 is next to them; a range
+/// that overlaps another goes out to a further lane.
+public struct ProgressBracket: Equatable, Sendable {
+    public var session: UUID
+    public var pages: ClosedRange<Int>
+    public var lane: Int
+
+    public init(session: UUID, pages: ClosedRange<Int>, lane: Int) {
+        self.session = session
+        self.pages = pages
+        self.lane = lane
+    }
+
+    /// Each range in the nearest lane free at its first page, taken in page order (the given order on a tie, which is
+    /// class order). Taken in page order, a lane is reused as soon as the range in it ends, so the lanes are as few as
+    /// the most ranges sharing one page: a bracket pushed out further than that would leave a gap no range explains.
+    public static func lay(_ ranges: [(session: UUID, pages: ClosedRange<Int>)]) -> [ProgressBracket] {
+        let order = ranges.indices.sorted { (ranges[$0].pages.lowerBound, $0) < (ranges[$1].pages.lowerBound, $1) }
+        var ends: [Int] = []
+        var laid = [ProgressBracket?](repeating: nil, count: ranges.count)
+        for i in order {
+            let range = ranges[i]
+            let lane = ends.firstIndex { $0 < range.pages.lowerBound } ?? ends.count
+            if lane == ends.count { ends.append(range.pages.upperBound) } else { ends[lane] = range.pages.upperBound }
+            laid[i] = ProgressBracket(session: range.session, pages: range.pages, lane: lane)
+        }
+        return laid.compactMap { $0 }
+    }
+}
+
+extension CourseFile {
     /// The pages each other class took through `material`, in class order: what a page bar lays under the class being
     /// edited.
     public func pagesTaught(in material: UUID, besides session: UUID) -> [(session: Session, pages: ClosedRange<Int>)] {

@@ -156,7 +156,7 @@ extension MaterialIntake {
         let today = settings.studyDay(of: now, calendar: calendar)
         let isToday = { (s: Session) in settings.studyDay(of: s.date, calendar: calendar) == today }
         let held = sessions.filter { !$0.isCancelled }.sorted(by: Session.inOrder)
-        let latest = { (among: [Session]) in among.last { $0.date <= now || isToday($0) } }
+        let latest = { (among: [Session]) in Session.latest(among: among, now: now, settings: settings, calendar: calendar) }
         if let week {
             // A week with no class (an old deck, a week not set up yet) gets none: today's class would take its week
             // in front of a name that says another.
@@ -165,5 +165,19 @@ extension MaterialIntake {
         }
         guard let s = latest(held) else { return (nil, nil) }
         return (s.id, isToday(s) ? .today : .latest)
+    }
+}
+
+extension Session {
+    /// Today's class (by the study day, so one later today counts), else the last one before `now`: the class a file
+    /// or a range of its pages just taken most likely belongs to. Cancelled classes are the caller's to leave out.
+    public static func latest(among sessions: [Session], now: Date, settings: Settings, calendar: Calendar) -> Session? {
+        held(among: sessions, now: now, settings: settings, calendar: calendar).last
+    }
+
+    /// The classes up to today's, in class order: those a range of pages can have been taught in.
+    public static func held(among sessions: [Session], now: Date, settings: Settings, calendar: Calendar) -> [Session] {
+        let today = settings.studyDay(of: now, calendar: calendar)
+        return sessions.sorted(by: inOrder).filter { $0.date <= now || settings.studyDay(of: $0.date, calendar: calendar) == today }
     }
 }

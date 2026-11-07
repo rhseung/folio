@@ -84,6 +84,57 @@ struct LectureProgressTests {
         }
     }
 
+    // MARK: Brackets beside the thumbnails
+
+    @Test func overlappingRangesTakeAnotherLane() {
+        let (a, b, c, d) = (UUID(), UUID(), UUID(), UUID())
+        #expect(ProgressBracket.lay([(a, 1...7), (b, 5...10), (c, 8...13), (d, 11...11)]) == [
+            ProgressBracket(session: a, pages: 1...7, lane: 0),
+            ProgressBracket(session: b, pages: 5...10, lane: 1),
+            // Lane 0 is free again after page 7.
+            ProgressBracket(session: c, pages: 8...13, lane: 0),
+            ProgressBracket(session: d, pages: 11...11, lane: 1),
+        ])
+        // Touching ranges share a page, so they overlap; ranges that only meet end to end share a lane.
+        #expect(ProgressBracket.lay([(a, 1...5), (b, 5...9), (c, 10...12)]).map(\.lane) == [0, 1, 0])
+        // Given out of page order (a later class went back over the start), each still takes the nearest free lane,
+        // and the result keeps the order given.
+        #expect(ProgressBracket.lay([(a, 6...10), (b, 1...4), (c, 3...8)]).map(\.lane) == [0, 0, 1])
+        #expect(ProgressBracket.lay([]).isEmpty)
+    }
+
+    @Test func bracketsComeFromTheFilesProgress() {
+        var f = course()
+        let m = matchings(f)
+        f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 7)
+        f.linkMaterial(m, session: f.sessions[1].id, firstPage: 5, lastPage: 40)
+        f.sessions[2].isCancelled = true
+        f.linkMaterial(m, session: f.sessions[2].id, firstPage: 1, lastPage: 3)
+        // Cut at the count as the progress is, and a cancelled class has none.
+        #expect(f.progressBrackets(of: m, pageCount: 24) == [
+            ProgressBracket(session: f.sessions[0].id, pages: 1...7, lane: 0),
+            ProgressBracket(session: f.sessions[1].id, pages: 5...24, lane: 1),
+        ])
+        #expect(course().progressBrackets(of: m, pageCount: 24).isEmpty)
+    }
+
+    /// No two brackets in a lane share a page, every bracket keeps its range, and there are only as many lanes as the
+    /// most ranges holding one page.
+    @Test func lanesNeverOverlapAndAreFew() async {
+        let ranges = zip(Gen.int(in: 1...30), Gen.int(in: 0...10)).array(of: 0...8)
+        await propertyCheck(input: ranges) { ranges in
+            let given = ranges.map { (session: UUID(), pages: $0...($0 + $1)) }
+            let laid = ProgressBracket.lay(given)
+            #expect(laid.map(\.session) == given.map(\.session))
+            #expect(laid.map(\.pages) == given.map(\.pages))
+            for (i, x) in laid.enumerated() {
+                for y in laid[(i + 1)...] where x.lane == y.lane { #expect(!x.pages.overlaps(y.pages)) }
+            }
+            let deepest = (1...40).map { page in given.count { $0.pages.contains(page) } }.max() ?? 0
+            #expect(Set(laid.map(\.lane)) == Set(0..<deepest))
+        }
+    }
+
     // MARK: The end-of-class prompt
 
     @Test func theNextClassPicksUpAfterTheLastOne() {
