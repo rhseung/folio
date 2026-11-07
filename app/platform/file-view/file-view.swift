@@ -187,8 +187,11 @@ struct PDFContent: View {
                                                                      set: { if model.splitting != nil { model.splitting = $0 } }),
                              units: course.file.units, note: model.splitNote, save: model.saveSplit, cancel: model.cancelSplit)
                 .environment(\.accent, model.workspace.accent(course.id))
+        } else if let course = model.course {
+            PDFPane(controller: controller, thumbnails: thumbnails, workspace: model.workspace, course: course.id, material: model.material?.id)
+                .environment(\.accent, model.workspace.accent(course.id))
         } else {
-            PDFPane(controller: controller, thumbnails: thumbnails)
+            PDFPane(controller: controller, thumbnails: thumbnails, workspace: model.workspace)
         }
     }
 }

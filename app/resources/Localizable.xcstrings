@@ -19833,6 +19833,116 @@
           }
         }
       }
+    },
+    "file-view.progress.take": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이번 진도로"
+          }
+        }
+      }
+    },
+    "file-view.progress.clear": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고른 쪽 지우기"
+          }
+        }
+      }
+    },
+    "file-view.progress.pick-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "눌러서 이 쪽으로 가고, ⇧-클릭하면 앞서 누른 쪽부터 여기까지 고릅니다"
+          }
+        }
+      }
+    },
+    "file-view.progress.widen": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끝 쪽을 눌러 넓힙니다"
+          }
+        }
+      }
+    },
+    "file-view.progress.which-class": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "어느 수업의 진도인가요"
+          }
+        }
+      }
+    },
+    "file-view.progress.no-classes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 지난 수업이 없습니다"
+          }
+        }
+      }
+    },
+    "file-view.progress.replaces": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 수업에 적어 둔 %@을 바꿉니다"
+          }
+        }
+      }
+    },
+    "file-view.progress.open-class": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 수업 열기 · %2$@"
+          }
+        }
+      }
+    },
+    "file-view.progress.page": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld쪽"
+          }
+        }
+      }
+    },
+    "file-view.progress.pages": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld–%2$lld쪽"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
