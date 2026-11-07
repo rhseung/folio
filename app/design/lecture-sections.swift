@@ -184,6 +184,7 @@ struct SectionBar: View {
                 let r = rect(i, w)
                 Color.clear
                     .frame(width: r.width, height: r.height)
+                    .overlay(alignment: .leading) { text(i, width: r.width) }
                     .contentShape(.rect)
                     .help(tip(i))
                     .position(x: r.midX, y: r.midY)
@@ -262,7 +263,6 @@ struct SectionBar: View {
             } else if selected == i {
                 context.stroke(shape(i).inset(by: 0.5).path(in: r), with: .color(accent.color.opacity(Theme.Opacity.liveEdge)), lineWidth: 1)
             }
-            text(context, i, in: r)
         }
         if let page, page >= 1, page <= split.pageCount {
             let px = x(page - 1, w) + x(1, w) / 2
@@ -270,24 +270,24 @@ struct SectionBar: View {
         }
     }
 
-    /// The name and, where there's room, the pages; a zone too narrow for its name shows it only on hover.
-    private func text(_ context: GraphicsContext, _ i: Int, in r: CGRect) {
-        let s = split.sections[i]
-        let room = r.insetBy(dx: Theme.Space.s, dy: 0)
-        guard room.width > 12 else { return }
-        let name = label(i)
-        let ink = s.unit == nil ? Theme.Palette.textTertiary : accent.ink
-        let pages = context.resolve(Text(pagesText(s)).font(Theme.Typeface.label.weight(.regular)).foregroundStyle(Theme.Palette.textTertiary))
-        let pagesSize = pages.measure(in: room.size)
-        let title = context.resolve(Text(name).font(Theme.Typeface.label).foregroundStyle(ink))
-        let titleSize = title.measure(in: CGSize(width: .infinity, height: room.height))
-        if titleSize.width + Theme.Space.xs + pagesSize.width <= room.width {
-            context.draw(title, at: CGPoint(x: room.minX, y: room.midY), anchor: .leading)
-            context.draw(pages, at: CGPoint(x: room.minX + titleSize.width + Theme.Space.xs, y: room.midY), anchor: .leading)
-        } else if !name.isEmpty {
-            context.draw(context.resolve(Text(name).font(Theme.Typeface.label).foregroundStyle(ink)), in: room)
-        } else if pagesSize.width <= room.width {
-            context.draw(pages, at: CGPoint(x: room.minX, y: room.midY), anchor: .leading)
+    /// The name and, where there's room, the pages. A zone too narrow for both cuts its name short on one line, and the
+    /// tile's tooltip has it whole: wrapped in the Canvas, a name filled the tile two lines tall.
+    @ViewBuilder private func text(_ i: Int, width: CGFloat) -> some View {
+        let room = width - 2 * Theme.Space.s
+        if room > 12, split.sections.indices.contains(i) {
+            let s = split.sections[i]
+            let name = label(i)
+            let title = Text(name).font(Theme.Typeface.label).foregroundStyle(s.unit == nil ? Theme.Palette.textTertiary : accent.ink)
+            let pages = Text(pagesText(s)).font(Theme.Typeface.label.weight(.regular)).foregroundStyle(Theme.Palette.textTertiary)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Theme.Space.xs) { title; pages }.fixedSize()
+                // Pages cut short read as other pages: left out, as on a zone too narrow for anything.
+                if name.isEmpty { pages.fixedSize(); Color.clear } else { title.lineLimit(1).truncationMode(.tail) }
+            }
+            .frame(width: room, alignment: .leading)
+            .clipped()
+            .padding(.horizontal, Theme.Space.s)
+            .allowsHitTesting(false)
         }
     }
 
