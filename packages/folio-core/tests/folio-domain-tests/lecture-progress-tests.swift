@@ -239,6 +239,16 @@ struct LectureProgressTests {
         #expect(range.tapping(40, pages: 20) == PageRange(first: 7, last: 20))
     }
 
+    @Test func aLoneEndOpensTheRangeEitherWay() {
+        let start = PageRange(first: 7)
+        #expect(start.lone == .first && PageRange(last: 3).lone == .last)
+        #expect(PageRange().lone == nil && PageRange(first: 1, last: 2).lone == nil)
+        #expect(start.tapping(7, pages: 20) == PageRange(first: 7, last: 7))
+        #expect(start.tapping(8, pages: 20) == PageRange(first: 7, last: 8))
+        #expect(start.tapping(6, pages: 20) == PageRange(first: 6, last: 7))
+        #expect(start.tapping(40, pages: 20).lone == nil)
+    }
+
     @Test func aShiftKeepsTheLengthAndStopsAtTheEnds() {
         let range = PageRange(first: 7, last: 11)
         #expect(range.shifted(by: 3, pages: 20) == PageRange(first: 10, last: 14))

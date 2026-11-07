@@ -174,19 +174,25 @@ struct FlowLayout: Layout {
         for row in arrange(subviews, width: bounds.width) {
             var x = bounds.minX
             for i in row.items {
-                let size = subviews[i].sizeThatFits(.unspecified)
+                let size = subviews[i].sizeThatFits(fit(bounds.width))
                 let y = bounds.minY + row.y + (centered ? (row.height - size.height) / 2 : 0)
-                subviews[i].place(at: CGPoint(x: x, y: y), proposal: .unspecified)
+                subviews[i].place(at: CGPoint(x: x, y: y), proposal: fit(bounds.width))
                 x += size.width + spacing
             }
         }
+    }
+
+    /// At most the row's width, so an item longer than a row wraps inside itself instead of running past the edge; an
+    /// item shorter than that still takes its own width.
+    private func fit(_ width: CGFloat) -> ProposedViewSize {
+        ProposedViewSize(width: width.isFinite ? width : nil, height: nil)
     }
 
     private func arrange(_ subviews: Subviews, width: CGFloat) -> [(items: [Int], y: CGFloat, width: CGFloat, height: CGFloat)] {
         var rows: [(items: [Int], y: CGFloat, width: CGFloat, height: CGFloat)] = []
         var current: (items: [Int], y: CGFloat, width: CGFloat, height: CGFloat) = ([], 0, 0, 0)
         for i in subviews.indices {
-            let size = subviews[i].sizeThatFits(.unspecified)
+            let size = subviews[i].sizeThatFits(fit(width))
             let added = current.items.isEmpty ? size.width : current.width + spacing + size.width
             if added > width, !current.items.isEmpty {
                 rows.append(current)

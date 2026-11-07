@@ -86,7 +86,7 @@ struct ClassWrapUpModelTests {
         // Opened, the same row asks for its pages.
         let again = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
         again.reopen(.progress)
-        #expect(again.refusal == String(localized: .sessionsProgressMissingPages("Problems.pdf")))
+        #expect(again.refusal == String(localized: .sessionsProgressMissingLast("Problems.pdf")))
     }
 
     /// The case the review found: no lecture files, so progress isn't asked, but the class links an exercise sheet
@@ -150,5 +150,64 @@ struct ClassWrapUpModelTests {
         #expect(model.leftGaps(file.sessions.first { $0.id == run.sessions[0] }!, in: file).isEmpty)
         for _ in 1..<left.count { model.wrappedUpOne() }
         #expect(model.wrapUpRun?.id == nil)
+    }
+
+    // MARK: Fixes from using it (2026-11-08)
+
+    /// A file with only a start asks for the end it lacks, by the bar it is picked on, and a one-page range saves.
+    @Test func aStartAloneAsksForTheEndAndOnePageSaves() throws {
+        let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
+        model.add(slides.id)
+        #expect(model.rows.first?.range.lone == .first)
+        #expect(model.refusal == String(localized: .sessionsProgressMissingLast("05_Matchings.pdf")))
+        model.setRange(slides.id, PageRange(first: 1).tapping(1, pages: 20))
+        #expect(model.refusal == nil)
+        #expect(model.wrapUp())
+        #expect(saved.materials == [SessionMaterial(materialId: slides.id, firstPage: 1, lastPage: 1)])
+    }
+
+    /// No unit is put forward, not even the last class's: the list is the whole outline and the class has what it was given.
+    @Test func unitsArePickedFromTheWholeOutlineAndRemovedOneByOne() throws {
+        let earlier = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now.addingTimeInterval(-2 * 86400)))?.made)
+        workspace.run(UnitLink(course: graphTheory, unit: unit, sessions: [earlier], linked: true))
+        let flows = try #require(workspace.run(UnitAdd(course: graphTheory, title: "네트워크 흐름"))?.made)
+        let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
+        #expect(model.units.isEmpty && model.linkedUnits.isEmpty)
+        let outline = UnitTree.outline(file.units).map(\.unit.id)
+        #expect(model.unitOptions.map(\.id) == outline)
+        model.pick(flows)
+        model.pick(unit)
+        // Chips follow the outline, not the order of picking.
+        #expect(model.linkedUnits.map(\.id) == outline.filter { [unit, flows].contains($0) })
+        model.removeUnit(flows)
+        #expect(model.units == [unit])
+        model.wrapUp()
+        #expect(saved.unitIds == [unit])
+    }
+
+    @Test func theLinkedNoteCanBeSwappedUnlinkedOrMadeAnew() throws {
+        let older = try #require(workspace.run(NoteAdd(course: graphTheory, title: "예전 필기"))?.made)
+        let newer = try #require(workspace.run(NoteAdd(course: graphTheory, title: "새 필기"))?.made)
+        let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
+        let choices = model.noteChoices.map(\.id)
+        #expect(try #require(choices.firstIndex(of: newer)) < #require(choices.firstIndex(of: older)))
+
+        model.linkNote(older)
+        #expect(model.linkedNote?.id == older && saved.roughNoteId == older)
+        #expect(!model.noteChoices.contains { $0.id == older })
+        model.linkNote(newer)
+        #expect(saved.roughNoteId == newer && model.noteChoices.contains { $0.id == older })
+
+        model.unlinkNote()
+        #expect(model.linkedNote == nil && saved.roughNoteId == nil && !model.makesNote)
+        // The note stays in the course, free to link again.
+        #expect(model.noteChoices.contains { $0.id == newer })
+
+        model.linkNote(newer)
+        model.makeNewNote()
+        #expect(model.linkedNote == nil && model.makesNote)
+        model.wrapUp()
+        let made = try #require(saved.roughNoteId)
+        #expect(made != newer && made != older)
     }
 }
