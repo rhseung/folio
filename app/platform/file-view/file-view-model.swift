@@ -1,7 +1,13 @@
+import FolioAI
 import FolioDomain
 import FolioMarkdown
 import FolioStorage
 import Foundation
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 import Observation
 import PDFKit
 import QuickLookThumbnailing
@@ -192,6 +198,32 @@ final class FileViewModel {
             workspace.perform { try store.log.append(MaterialViewEvent(materialId: m.id, page: page), device: workspace.device, at: .now) }
         }
         workspace.showing(page: nil, of: m, course: course.id)
+    }
+
+    /// `page` is 0-based; the link names it 1-based, as `#page=N` does everywhere.
+    func pageLink(_ page: Int) -> AppLink? {
+        material.map { AppLink(.material, $0.id, anchor: .page(page + 1)) }
+    }
+
+    /// The page's text and picture for the Claude panel. Nil off a course material: the panel belongs to a course.
+    func pageContext(_ page: Int, in controller: PDFController) -> ContextItem? {
+        guard let m = material, let pdfPage = controller.view.document?.page(at: page) else { return nil }
+        let name = "\((m.path as NSString).lastPathComponent) p\(page + 1).jpg"
+        return ContextBuilder.materialPage(id: m.id, path: m.path, page: page + 1, text: pdfPage.string ?? "",
+                                           image: Self.jpeg(of: pdfPage).map { ContextItem.Image(name: name, data: $0) })
+    }
+
+    /// 1568px on the long edge, as the panel sends a note's pictures: Claude scales anything larger down to that.
+    private static func jpeg(of page: PDFPage) -> Data? {
+        let bounds = page.bounds(for: .mediaBox)
+        let scale = 1568 / max(bounds.width, bounds.height, 1)
+        let image = page.thumbnail(of: CGSize(width: bounds.width * scale, height: bounds.height * scale), for: .mediaBox)
+        #if os(macOS)
+        guard let tiff = image.tiffRepresentation, let rep = NSBitmapImageRep(data: tiff) else { return nil }
+        return rep.representation(using: .jpeg, properties: [.compressionFactor: 0.8])
+        #else
+        return image.jpegData(compressionQuality: 0.8)
+        #endif
     }
 
     var recording: UUID? { workspace.recorder.capturing }

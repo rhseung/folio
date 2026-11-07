@@ -150,4 +150,22 @@ extension [Material] {
         guard let pdf = MaterialFormat.builtPDF(of: source.path)?.lowercased() else { return nil }
         return first { $0.path.lowercased() == pdf }
     }
+
+    /// A `.tex` and the PDF built from it are one item in a list (#109): the PDF goes, and its `.tex` stands for both.
+    /// Only a PDF whose `.tex` is in the same list goes, so a list split by role never loses a PDF to a source it
+    /// doesn't show. A missing PDF stays: its row is where it gets re-pointed or dropped.
+    public func withoutBuiltPDFs() -> [Material] {
+        let hidden = Set(builtPDFsHidden().values.map(\.id))
+        return filter { !hidden.contains($0.id) }
+    }
+
+    /// The PDFs `withoutBuiltPDFs` leaves out, by the `.tex` whose row stands for them there. That row is the only way
+    /// left to the PDF's own links, renaming and trashing, so it reaches exactly these and no PDF shown in its own row.
+    public func builtPDFsHidden() -> [Material.ID: Material] {
+        var hidden: [Material.ID: Material] = [:]
+        for source in self {
+            if let pdf = builtPDF(of: source), pdf.status != .missing { hidden[source.id] = pdf }
+        }
+        return hidden
+    }
 }

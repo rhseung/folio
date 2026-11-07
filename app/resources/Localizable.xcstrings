@@ -18019,6 +18019,17 @@
         }
       }
     },
+    "file-view.ask-claude": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 쪽으로 Claude에게 묻기"
+          }
+        }
+      }
+    },
     "file-view.cannot-read": {
       "extractionState": "manual",
       "localizations": {
@@ -18052,6 +18063,28 @@
         }
       }
     },
+    "file-view.copy-page-link": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 쪽 링크 복사"
+          }
+        }
+      }
+    },
+    "file-view.open-in-editor": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "편집기로 열기"
+          }
+        }
+      }
+    },
     "file-view.share": {
       "extractionState": "manual",
       "localizations": {
@@ -18059,6 +18092,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "다른 앱으로 보내기"
+          }
+        }
+      }
+    },
+    "materials.open-pdf": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF 열기"
+          }
+        }
+      }
+    },
+    "materials.paired-pdf": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF"
+          }
+        }
+      }
+    },
+    "materials.paired-pdf-links": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF: %@"
           }
         }
       }

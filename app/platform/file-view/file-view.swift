@@ -14,6 +14,7 @@ struct FileView: View {
     @Binding private var shownPage: Int?
     @State private var thumbnails = true
     @State private var query = ""
+    @Environment(\.askClaude) private var askClaude
 
     init(workspace: Workspace, course: LoadedCourse, material: UUID, requestedPage: Binding<Int?> = .constant(nil),
          shownPage: Binding<Int?> = .constant(nil), remembersPage: Bool = true) {
@@ -70,6 +71,11 @@ struct FileView: View {
             if page != nil, let pdf, let page = takeRequestedPage() { pdf.go(to: page) }
         }
         .onDisappear { model.closed(at: pdf?.page) }
+        #if DEBUG && os(macOS)
+        .onChange(of: SnapshotDriver.shared.askPage) { _, ask in
+            if ask, let c = pdf, let item = model.pageContext(c.page, in: c) { askClaude?(item) }
+        }
+        #endif
     }
 
     @ViewBuilder var content: some View {
@@ -131,6 +137,15 @@ struct FileView: View {
                     }
                 }
                 .toolbarField()
+                if let link = model.pageLink(c.page) {
+                    Button(.fileViewCopyPageLink, systemImage: "link") { copyLink(link) }.help(Text(.fileViewCopyPageLink))
+                }
+                if let askClaude, model.material != nil {
+                    Button(.fileViewAskClaude, systemImage: "sparkle") {
+                        if let item = model.pageContext(c.page, in: c) { askClaude(item) }
+                    }
+                    .help(Text(.fileViewAskClaude))
+                }
             }
             if model.opensElsewhere { OpenElsewhereButton(url: model.url) }
         }

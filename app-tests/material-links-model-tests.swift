@@ -23,6 +23,19 @@ struct MaterialLinksModelTests {
     func material(_ path: String) throws -> FolioDomain.Material { try #require(file.materials.first { $0.path == path }) }
     func theUnit() throws -> FolioDomain.Unit { try #require(file.units.first { $0.id == unit }) }
 
+    /// The list shows `Study/Problems.pdf` only through `Problems.tex` (#109), so that row is where its links show.
+    @Test func aTexRowCarriesItsHiddenPDFsLinks() throws {
+        let tex = try material("Study/Problems.tex")
+        let pdf = try material("Study/Problems.pdf")
+        workspace.run(MaterialLinkUnit(course: graphTheory, material: pdf.id, unit: unit))
+        let model = MaterialsModel(workspace: workspace, course: try #require(workspace.course(graphTheory)))
+        let section = try #require(model.sections().first { $0.rows.contains { $0.id == tex.id.uuidString } })
+        #expect(section.pdfs[tex.id]?.id == pdf.id)
+        #expect(!section.rows.contains { $0.id == pdf.id.uuidString })
+        #expect(model.linkLine(tex, pdf: section.pdfs[tex.id]) == "PDF: 단원: 매칭")
+        #expect(model.linkLine(tex, pdf: nil) == "")
+    }
+
     @Test func aUnitsClassFileIsMarkedAndLinkingItMakesItTheUnits() throws {
         let slides = try material("Lectures/05_Matchings.pdf")
         workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: 3, lastPage: 8))

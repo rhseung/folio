@@ -102,14 +102,15 @@ struct MaterialsView: View {
                                 case .folder(let folder, let depth): folderRow(folder, depth: depth)
                                 case .file(let m, let name, let depth):
                                     // One stack, so the indent moves the row once rather than padding each of its parts.
-                                    HStack(spacing: Theme.Space.m) { fileRow(m, name: name) }.padding(.leading, CGFloat(depth) * Self.indent)
+                                    HStack(spacing: Theme.Space.m) { fileRow(m, name: name, pdf: section.pdfs[m.id]) }
+                                        .padding(.leading, CGFloat(depth) * Self.indent)
                                 }
                             }
                             .contentShape(.rect)
                             .contextMenu {
                                 switch row {
                                 case .folder(let folder, _): folderMenu(folder)
-                                case .file(let m, _, _): fileContextMenu(m)
+                                case .file(let m, _, _): fileContextMenu(m, pdf: section.pdfs[m.id])
                                 }
                             }
                         }
@@ -173,7 +174,7 @@ struct MaterialsView: View {
         #endif
     }
 
-    @ViewBuilder func fileContextMenu(_ m: FolioDomain.Material) -> some View {
+    @ViewBuilder func fileContextMenu(_ m: FolioDomain.Material, pdf: FolioDomain.Material?) -> some View {
         if m.status == .missing {
             Button(.materialsRelinkEllipsis) { model.relinking = m.id }
             Divider()
@@ -188,6 +189,21 @@ struct MaterialsView: View {
             if !m.isFolder { LinkMenu(link: AppLink(.material, m.id), course: model.course.id, trailing: true) }
             Divider()
             fileMenuItems(m)
+            if let pdf { pdfMenu(pdf) }
+        }
+    }
+
+    /// Everything the PDF's own row had, since the list shows it only through its `.tex` (#109): links that exams and
+    /// units count, renaming, and trashing a bad build.
+    @ViewBuilder func pdfMenu(_ pdf: FolioDomain.Material) -> some View {
+        Divider()
+        // Titled by the file name, which is data rather than a phrase to translate.
+        Menu((pdf.path as NSString).lastPathComponent) {
+            Button(.materialsOpen) { model.open(pdf) }
+            Button(.materialsLinkEllipsis) { model.linking = pdf.id }
+            LinkMenu(link: AppLink(.material, pdf.id), course: model.course.id, trailing: true)
+            Divider()
+            fileMenuItems(pdf)
         }
     }
 
@@ -196,6 +212,7 @@ struct MaterialsView: View {
         // A folder's own app is Finder, which "Finder에서 열기" already is.
         if !m.isFolder { Button(.materialsOpenWithDefault) { NSWorkspace.shared.open(model.fileURL(m.path)) } }
         Button(.materialsShowInFinder) { NSWorkspace.shared.activateFileViewerSelecting([model.fileURL(m.path)]) }
+        if m.isFolder { EditorMenu(url: model.fileURL(m.path)) }
         Divider()
         #endif
         Button(.materialsRenameEllipsis) { model.startRenaming(m) }
@@ -208,13 +225,13 @@ struct MaterialsView: View {
         Button(.materialsTrashEllipsis, role: .destructive) { model.trash(m) }
     }
 
-    @ViewBuilder func fileRow(_ m: FolioDomain.Material, name: String) -> some View {
+    @ViewBuilder func fileRow(_ m: FolioDomain.Material, name: String, pdf: FolioDomain.Material?) -> some View {
         let missing = m.status == .missing
         Image(systemName: m.isFolder ? "folder" : missing ? "exclamationmark.triangle" : m.isPDF ? "doc.richtext" : "doc")
             .foregroundStyle(missing ? Theme.Palette.danger : Theme.Palette.textSecondary)
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
             Text(name).lineLimit(1).help(m.path)
-            let links = model.linkLine(m)
+            let links = model.linkLine(m, pdf: pdf)
             if !links.isEmpty { Text(links).font(Theme.Typeface.caption).foregroundStyle(accent.ink).lineLimit(1) }
         }
         .fileDrag(model.fileURL(m.path))
@@ -226,16 +243,25 @@ struct MaterialsView: View {
         } else {
             Button(.materialsLink) { model.linking = m.id }
                 .buttonStyle(.ghost)
-                .popover(isPresented: Binding(get: { model.linking == m.id }, set: { if !$0 { model.linking = nil } })) {
-                    MaterialLinksEditor(model: model, materialId: m.id)
+                // The hidden PDF's links are edited from its `.tex` row, the only place left to anchor them.
+                .popover(isPresented: Binding(get: { model.linking == m.id || model.linking != nil && model.linking == pdf?.id },
+                                              set: { if !$0 { model.linking = nil } })) {
+                    MaterialLinksEditor(model: model, materialId: model.linking ?? m.id)
                 }
+            // The list shows a `.tex` and its PDF as one row (#109); the PDF opens from here.
+            if let pdf {
+                Button(.materialsPairedPdf) { model.open(pdf) }.buttonStyle(.ghost).help(Text(.materialsOpenPdf))
+            }
             #if os(macOS)
             Button(m.isFolder ? "Finder" : String(localized: .materialsOpen)) { open(m) }.buttonStyle(.ghost)
             #else
             // iPadOS has no Finder to hand a folder to.
             if !m.isFolder { Button(.materialsOpen) { open(m) }.buttonStyle(.ghost) }
             #endif
-            Menu { fileMenuItems(m) } label: {
+            Menu {
+                fileMenuItems(m)
+                if let pdf { pdfMenu(pdf) }
+            } label: {
                 Image(systemName: "ellipsis")
             }
             .menuStyle(.button)

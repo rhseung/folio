@@ -189,7 +189,10 @@ struct AssignmentSheet: View {
                             if model.opens(m) { Button(.assignmentsOpen) { open(m) }.buttonStyle(.ghost) }
                         }
                         .contentShape(.rect)
-                        .contextMenu { if model.opens(m) { Button(.assignmentsOpen) { open(m) } } }
+                        .contextMenu {
+                            if model.opens(m) { Button(.assignmentsOpen) { open(m) } }
+                            if m.isFolder { EditorMenu(url: store.fileURL(m.path)) }
+                        }
                     }
                 }
                 .fileDrop { model.importFiles($0) }

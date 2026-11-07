@@ -20,6 +20,13 @@ extension ContextBuilder {
         ContextItem(id: "material:\(path)", title: "자료: \(path)", tier: .related, text: text)
     }
 
+    /// One page of a PDF the user is looking at, asked about from the file view (#120). `page` is 1-based, as the user
+    /// and the app link (`#page=N`) count it. The picture goes too: a slide's text alone loses its figures and formulas.
+    public static func materialPage(id: UUID, path: String, page: Int, text: String, image: ContextItem.Image?) -> ContextItem {
+        ContextItem(id: "material:\(path)#page=\(page)", title: "자료: \(path) \(page)쪽", tier: .focus,
+                    text: "경로: \(path)\nID: \(id.uuidString)\n쪽: \(page)\n\n\(text)", images: image.map { [$0] } ?? [])
+    }
+
     public static func chatItems(course: CourseFile, rules: String, openNote: ContextItem?, added: [ContextItem],
                                  removed: Set<String>, now: Date) -> [ContextItem] {
         var items = [courseSummary(course, now: now), Self.rules(rules)]
