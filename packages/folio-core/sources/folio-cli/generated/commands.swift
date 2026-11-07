@@ -20,6 +20,7 @@ enum GeneratedCommands {
     static let session: [any ParsableCommand.Type] = [SessionAdd.self, SessionSet.self, SessionNote.self, SessionLinkViewed.self]
     static let transcript: [any ParsableCommand.Type] = [TranscriptAdd.self, TranscriptMove.self]
     static let unit: [any ParsableCommand.Type] = [UnitAdd.self, UnitRemove.self, UnitSet.self, UnitLink.self]
+    static let unitPages: [any ParsableCommand.Type] = [UnitPagesAdd.self, UnitPagesSet.self, UnitPagesRemove.self]
 
     struct SemesterAdd: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "add", abstract: "학기 추가. 학기 폴더를 만든다. 인정학기는 출처 이름으로 _Credited/<출처> 폴더를 만든다", discussion: """
@@ -385,6 +386,82 @@ enum GeneratedCommands {
                 unit: try r.id("Unit", unitName, in: c),
                 sessions: try sessions.map { try r.id("Session", $0, in: c) },
                 linked: !off
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct UnitPagesAdd: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "add", abstract: "단원에 렉처 파일의 쪽 구간 더하기. 한 단원이 여러 파일에, 한 파일이 여러 단원에 걸칠 수 있다", discussion: """
+            예시:
+              folio unit pages add EC4207/매칭 05_Matchings.pdf --first 1 --last 4
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref("Unit")) var unit: String
+        @Argument(help: ArgumentHelp("렉처 자료", valueName: "material"), completion: Complete.ref("Material")) var material: String = ""
+        @Option(help: "첫 쪽") var first: Int
+        @Option(help: "끝 쪽") var last: Int
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, unitName) = try r.split(unit)
+            let action = FolioActions.UnitPagesAdd(
+                course: c.id,
+                unit: try r.id("Unit", unitName, in: c),
+                material: try r.id("Material", material, in: c),
+                first: first,
+                last: last
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct UnitPagesSet: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "set", abstract: "단원의 렉처 쪽 구간 고치기. 그 파일에서 단원이 가진 구간을 이 구간 하나로 바꾼다", discussion: """
+            예시:
+              folio unit pages set EC4207/매칭 05_Matchings.pdf --first 1 --last 6
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref("Unit")) var unit: String
+        @Argument(help: ArgumentHelp("렉처 자료", valueName: "material"), completion: Complete.ref("Material")) var material: String = ""
+        @Option(help: "첫 쪽") var first: Int
+        @Option(help: "끝 쪽") var last: Int
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, unitName) = try r.split(unit)
+            let action = FolioActions.UnitPagesSet(
+                course: c.id,
+                unit: try r.id("Unit", unitName, in: c),
+                material: try r.id("Material", material, in: c),
+                first: first,
+                last: last
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct UnitPagesRemove: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "rm", abstract: "단원에서 렉처 파일의 쪽 구간 빼기. 파일과 단원은 그대로 둔다", discussion: """
+            실행하기 전에 확인을 받는다.
+
+            예시:
+              folio unit pages rm EC4207/매칭 05_Matchings.pdf --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref("Unit")) var unit: String
+        @Argument(help: ArgumentHelp("렉처 자료", valueName: "material"), completion: Complete.ref("Material")) var material: String = ""
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, unitName) = try r.split(unit)
+            let action = FolioActions.UnitPagesRemove(
+                course: c.id,
+                unit: try r.id("Unit", unitName, in: c),
+                material: try r.id("Material", material, in: c)
             )
             try perform(spec: action, g, ctx: ctx)
         }
