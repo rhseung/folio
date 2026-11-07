@@ -222,6 +222,87 @@ struct NoteActionTests {
         #expect(try file().notes == after.notes)
     }
 
+    /// A note with frontmatter that already has an entry (adopted, or linked in the app).
+    func entryWithFrontmatter(_ frontmatter: String, body: String, tags: [String] = [], exam: UUID? = nil) throws -> UUID {
+        let id = UUID()
+        try run(NoteAdd(id: id, course: Self.graphTheory, title: "기출", kind: .examSummary, exam: exam))
+        try ActionContext(gist: gist, device: device, now: now).edit(Self.graphTheory) { f in
+            f.notes[try #require(f.notes.firstIndex { $0.id == id })].tags = tags
+        }
+        try "---\n\(frontmatter)---\n\(body)".write(to: try store().fileURL("Notes/기출.md"), atomically: true, encoding: .utf8)
+        return id
+    }
+
+    func entry(_ id: UUID) throws -> NoteEntry { try #require(try file().notes.first { $0.id == id }) }
+
+    /// The real case: an entry with no tags and two in the frontmatter. A dry run shows the merge and writes nothing.
+    @Test func migrationMergesTagsIntoAnExistingEntry() throws {
+        let id = try entryWithFrontmatter("tags:\n  - math/graph-theory\n  - type/exam\ndate: 2026-09-21\n", body: "\n# 기출\n")
+        let preview = ActionContext(gist: gist, device: device, now: now, dryRun: true)
+        try NoteMigrate(course: Self.graphTheory).run(preview)
+        let field = preview.changes.compactMap { $0.fields?.first { $0.name == "tags" } }.first
+        let tags = try #require(field)
+        #expect(tags.before == .array([]) && tags.after == .array([.string("math/graph-theory"), .string("type/exam")]))
+        #expect(try entry(id).tags == [] && text("Notes/기출.md").hasPrefix("---\ntags:"))
+
+        try run(NoteMigrate(course: Self.graphTheory))
+        #expect(try entry(id).tags == ["math/graph-theory", "type/exam"])
+        #expect(try text("Notes/기출.md") == "---\ndate: 2026-09-21\n---\n\n# 기출\n")
+        let after = try file()
+        try run(NoteMigrate(course: Self.graphTheory))
+        #expect(try file().notes == after.notes)
+    }
+
+    /// The entry wins where it holds a value: tags are joined in its order, and its kind, exam and math stay.
+    @Test func migrationKeepsTheEntrysValues() throws {
+        let exam = UUID(), other = UUID()
+        try run(ExamAdd(id: exam, course: Self.graphTheory, title: "모의고사"))
+        try run(ExamAdd(id: other, course: Self.graphTheory, title: "기말"))
+        let id = try entryWithFrontmatter("kind: review\nexamId: \(other)\ntags: [type/exam, math/graph]\nmath: latex\n",
+                                          body: "\n# 기출\n", tags: ["mine", "type/exam"], exam: exam)
+        let before = try entry(id)
+        try run(NoteMigrate(course: Self.graphTheory))
+        let merged = try entry(id)
+        #expect(merged.tags == ["mine", "type/exam", "math/graph"])
+        #expect(merged.kind == .examSummary && merged.examId == exam && merged.math == before.math && before.math == .asciimath)
+    }
+
+    /// An empty link the entry's kind reads is filled in.
+    @Test func migrationFillsAnEmptyExam() throws {
+        let exam = UUID()
+        try run(ExamAdd(id: exam, course: Self.graphTheory, title: "모의고사"))
+        let id = try entryWithFrontmatter("examId: \(exam)\n", body: "\n# 기출\n")
+        try run(NoteMigrate(course: Self.graphTheory))
+        #expect(try entry(id).examId == exam)
+    }
+
+    /// A frontmatter id other than the entry's goes; the entry's stays. Only when something points at the old one
+    /// is the person told, since that link would now break.
+    @Test func migrationKeepsTheEntrysID() throws {
+        let old = UUID()
+        let id = try entryWithFrontmatter("id: \(old)\ntags: [a]\n", body: "\n# 기출\n")
+        let quiet = ActionContext(gist: gist, device: device, now: now, dryRun: true)
+        try NoteMigrate(course: Self.graphTheory).run(quiet)
+        #expect(quiet.notes.isEmpty)
+
+        try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "모음", body: "[[note:\(old.uuidString.lowercased())|기출]]\n"))
+        let preview = ActionContext(gist: gist, device: device, now: now, dryRun: true)
+        try NoteMigrate(course: Self.graphTheory).run(preview)
+        #expect(preview.notes == ["Notes/기출.md: frontmatter의 id \(old.uuidString) 대신 course.json 항목의 ID를 둡니다. 옛 ID를 가리키는 곳 1개(회차, 노트)는 손으로 고칩니다"])
+
+        try run(NoteMigrate(course: Self.graphTheory))
+        #expect(try entry(id).id == id && !file().notes.contains { $0.id == old })
+        #expect(try text("Notes/기출.md") == "\n# 기출\n")
+    }
+
+    /// Only the frontmatter's Folio keys go; every byte after the block stays, and so do the keys Folio never wrote.
+    @Test func migrationLeavesTheBodyAsItIs() throws {
+        let body = "\n# 기출\n\n- [ ] 문제 $x^2$ ^q1\n\n```\n---\nid: not frontmatter\n```\n\n끝  \n\n"
+        _ = try entryWithFrontmatter("tags: [a]\nscope: \"HW1, 기초\"\ndate: 2026-09-21\n", body: body)
+        try run(NoteMigrate(course: Self.graphTheory))
+        #expect(try text("Notes/기출.md") == "---\nscope: \"HW1, 기초\"\ndate: 2026-09-21\n---\n" + body)
+    }
+
     /// Before #206 a note that lost its session kept it in its frontmatter, so two notes may claim one session.
     @Test func migrationKeepsOneReviewNotePerSession() throws {
         let session = UUID()

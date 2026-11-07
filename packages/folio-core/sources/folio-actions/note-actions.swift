@@ -251,8 +251,8 @@ public struct NoteUnlinkSession {
 }
 
 /// Moves Folio's properties out of the notes' frontmatter into course.json, once, for notes from before #206. The
-/// entries are saved before any file is touched, and a note that already has one is only cleaned, so a run that stops
-/// halfway is finished by running it again. A link to a session, unit or exam that is gone is dropped, as is a second
+/// entries are saved before any file is touched, so a run that stops halfway is finished by running it again. A note
+/// that already has an entry gives it what the entry lacks (`merge`) before its frontmatter goes. A link to a session, unit or exam that is gone is dropped, as is a second
 /// note of one kind on a session: the model would refuse the whole file for either. The course may be left out, which generated commands can't take, so the command is
 /// written by hand.
 @Action("note migrate", "노트 frontmatter의 프로퍼티를 course.json으로 옮기고 파일에서 지우기. 예전 노트를 한 번 정리한다",
@@ -267,8 +267,13 @@ public struct NoteMigrate {
             let store = try ctx.store(course)
             let notes = try store.frontmatterNotes()
             guard !notes.isEmpty else { continue }
+            try reportOldIDs(notes, course: course, store: store, ctx)
             try ctx.edit(course) { f in
-                for n in notes where !f.notes.contains(where: { $0.path == store.notePath(of: n.url) }) {
+                for n in notes {
+                    if let i = f.notes.firstIndex(where: { $0.path == store.notePath(of: n.url) }) {
+                        Self.merge(n.meta, into: i, of: &f, ctx)
+                        continue
+                    }
                     var meta = n.meta
                     meta.sessionId = meta.sessionId.flatMap { id in f.sessions.contains { $0.id == id } ? id : nil }
                     meta.examId = meta.examId.flatMap { id in f.exams.contains { $0.id == id } ? id : nil }
@@ -288,6 +293,49 @@ public struct NoteMigrate {
             for n in notes {
                 try ctx.io(Change(.changed, ctx.relative(n.url))) { try store.write(NoteFile(url: n.url, meta: NoteMeta(id: nil)), text: n.text) }
             }
+        }
+    }
+
+    /// The entry may have been made or edited after the frontmatter was last written (adopted, linked in the app), so
+    /// it wins wherever it holds a value: tags are joined, and the rest is filled only where the entry is empty. Kind
+    /// and math always hold one. A link the entry's kind doesn't read (`CourseFile.meta(of:)`) is not filled in.
+    static func merge(_ meta: NoteMeta, into i: Int, of f: inout CourseFile, _ ctx: ActionContext) {
+        let before = f.notes[i]
+        var e = before
+        for tag in meta.tags where !e.tags.contains(tag) { e.tags.append(tag) }
+        if e.kind == .examSummary, e.examId == nil, let exam = meta.examId, f.exams.contains(where: { $0.id == exam }) { e.examId = exam }
+        if e.kind == .unit, e.unitIds.isEmpty { e.unitIds = meta.unitIds.filter { id in f.units.contains { $0.id == id } } }
+        if e != before {
+            e.touch(by: ctx.device, at: ctx.now)
+            f.notes[i] = e
+        }
+        // A session already holding another note of this kind keeps it, as for a note without an entry.
+        if e.kind == .rough || e.kind == .review, f.sessions(pointingAt: e.id).isEmpty,
+           let s = f.sessions.first(where: { $0.id == meta.sessionId }), s.note(of: e.kind) == nil {
+            f.linkNote(e.id, to: s.id, as: e.kind)
+        }
+    }
+
+    /// The entry's id stays, since sessions and links by ID already point at it. Links to the frontmatter's other id
+    /// would break, so those are named for the person to fix by hand; an id nothing points at goes quietly.
+    func reportOldIDs(_ notes: [FrontmatterNote], course: UUID, store: CourseStore, _ ctx: ActionContext) throws {
+        let file = try ctx.file(course)
+        let replaced = notes.compactMap { n -> (path: String, id: UUID)? in
+            let path = store.notePath(of: n.url)
+            // An id another entry has (a copy made in Finder) is that note's, and links to it are right.
+            guard let old = n.meta.id, let entry = file.notes.first(where: { $0.path == path }), entry.id != old,
+                  !file.notes.contains(where: { $0.id == old }) else { return nil }
+            return (path, old)
+        }
+        guard !replaced.isEmpty else { return }
+        // The frontmatter notes are read without their own `id:` line, which names the old id but isn't a link.
+        let stripped = Dictionary(notes.map { ($0.url.standardizedFileURL, $0.text) }, uniquingKeysWith: { a, _ in a })
+        let texts = try ctx.notes(course).map { n in try stripped[n.url.standardizedFileURL] ?? store.read(n) }
+        for r in replaced {
+            let key = r.id.uuidString.lowercased()
+            let places = file.sessions.count { $0.roughNoteId == r.id || $0.reviewNoteId == r.id }
+                + texts.count { $0.lowercased().contains(key) }
+            if places > 0 { ctx.note(String(localized: .noteMigrateOldId(r.path, r.id.uuidString, places))) }
         }
     }
 }
