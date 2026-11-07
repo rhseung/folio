@@ -68,20 +68,79 @@ public struct TabStrip<ID: Hashable & Sendable>: Equatable, Sendable {
     }
 }
 
-/// How the tabs share the toolbar row. The tab in front shows the whole place it is at and is never narrowed for the
-/// others: they give way first, down to their icons, and then into a "+n" menu at the row's end.
+/// How the tabs share the toolbar row (#304, #62). The tab in front shows the whole place its focused pane is at and is
+/// the last to give way. As the row runs out, in this order (each step keeps the ones before it):
+/// 1. the other tabs drop their names (a single pane's, a layout's preset) and keep their icons;
+/// 2. another tab of several panes stacks them into its first pane's icon and "+n";
+/// 3. the tab in front's segments other than the focused one keep only their icons;
+/// 4. the tabs that still don't fit go into the "+n" menu at the row's end;
+/// 5. the focused segment's trail folds its middle (`trail`).
 public enum TabFit {
+    /// A tab behind the one in front, at each width it can take.
+    public struct Other: Equatable, Sendable {
+        /// Its icons and its name.
+        public var full: Double
+        /// Its panes' icons alone, joined.
+        public var icons: Double
+        /// Its first pane's icon and "+n"; a tab of one pane stays at its icon.
+        public var stacked: Double
+
+        public init(full: Double, icons: Double, stacked: Double) {
+            self.full = full
+            self.icons = icons
+            self.stacked = stacked
+        }
+
+        /// A tab of one pane: its icon and name, or its icon.
+        public init(single full: Double, icon: Double) {
+            self.init(full: full, icons: icon, stacked: icon)
+        }
+    }
+
+    /// The tab in front: its trail, and the rest of its capsule around it (the close button, and with several panes
+    /// the other panes' segments), those segments named or as icons (`compactChrome`).
+    public struct Front: Equatable, Sendable {
+        public var trail: Double
+        public var chrome: Double
+        public var compactChrome: Double
+
+        public init(trail: Double, chrome: Double, compactChrome: Double? = nil) {
+            self.trail = trail
+            self.chrome = chrome
+            self.compactChrome = compactChrome ?? chrome
+        }
+
+        public func chrome(compact: Bool) -> Double { compact ? compactChrome : chrome }
+        public func width(compact: Bool) -> Double { trail + chrome(compact: compact) }
+    }
+
     public struct Layout: Equatable, Sendable {
-        /// The other tabs show only their icons.
+        /// Step 1: the other tabs show only their icons.
         public var iconsOnly: Bool
-        /// How many of the other tabs, from the left, are in the row; the rest are in the menu.
+        /// Step 2: the other tabs of several panes show their first icon and "+n".
+        public var stacked: Bool
+        /// Step 3: the tab in front's other segments show only their icons.
+        public var compactFront: Bool
+        /// How many of the other tabs, from the left, are in the row; the rest are in the menu (step 4).
         public var shown: Int
         public var hidden: Int
 
-        public init(iconsOnly: Bool, shown: Int, hidden: Int) {
+        public init(iconsOnly: Bool, stacked: Bool = false, compactFront: Bool = false, shown: Int, hidden: Int) {
             self.iconsOnly = iconsOnly
+            self.stacked = stacked
+            self.compactFront = compactFront
             self.shown = shown
             self.hidden = hidden
+        }
+
+        /// How many of steps 1 to 4 the row has taken.
+        public var step: Int {
+            hidden > 0 ? 4 : compactFront ? 3 : stacked ? 2 : iconsOnly ? 1 : 0
+        }
+
+        /// What an other tab takes in this layout.
+        public func width(of tab: Other) -> Double {
+            !iconsOnly ? tab.full : stacked ? tab.stacked : tab.icons
         }
     }
 
@@ -93,51 +152,52 @@ public enum TabFit {
         max(gap, panelEdge - after)
     }
 
+    /// The first of steps 0 to 4 whose row fits in `room`.
     /// - Parameters:
     ///   - room: the row's width for the tabs and the menu.
-    ///   - selected: the tab in front, at its full width.
-    ///   - others: every other tab at its full width, left to right.
-    ///   - icon: an other tab with only its icon.
+    ///   - front: the tab in front with its whole trail.
+    ///   - others: every other tab, left to right.
     ///   - gap: between two neighbors in the row.
     ///   - more: the menu of the tabs that don't fit.
-    public static func layout(room: Double, selected: Double, others: [Double], icon: Double, gap: Double, more: Double) -> Layout {
+    public static func layout(room: Double, front: Front, others: [Other], gap: Double, more: Double) -> Layout {
         let n = others.count
-        guard n > 0 else { return Layout(iconsOnly: false, shown: 0, hidden: 0) }
-        func width(_ tabs: Double, count: Int, menu: Bool) -> Double {
-            let items = 1 + count + (menu ? 1 : 0)
-            return selected + tabs + (menu ? more : 0) + gap * Double(items - 1)
+        let steps = [Layout(iconsOnly: false, shown: n, hidden: 0),
+                     Layout(iconsOnly: true, shown: n, hidden: 0),
+                     Layout(iconsOnly: true, stacked: true, shown: n, hidden: 0),
+                     Layout(iconsOnly: true, stacked: true, compactFront: true, shown: n, hidden: 0)]
+        for step in steps where front.width(compact: step.compactFront) + beside(others, layout: step, gap: gap, more: more) <= room {
+            return step
         }
-        if width(others.reduce(0, +), count: n, menu: false) <= room { return Layout(iconsOnly: false, shown: n, hidden: 0) }
-        if width(icon * Double(n), count: n, menu: false) <= room { return Layout(iconsOnly: true, shown: n, hidden: 0) }
+        guard n > 0 else { return steps[3] }
         // The menu stays even when no icon fits beside the tab in front, which then folds its own trail.
-        var shown = n - 1
-        while shown > 0, width(icon * Double(shown), count: shown, menu: true) > room { shown -= 1 }
-        return Layout(iconsOnly: true, shown: shown, hidden: n - shown)
+        var fit = Layout(iconsOnly: true, stacked: true, compactFront: true, shown: n - 1, hidden: 1)
+        while fit.shown > 0, front.width(compact: true) + beside(others, layout: fit, gap: gap, more: more) > room {
+            fit.shown -= 1
+            fit.hidden += 1
+        }
+        return fit
     }
 
-    /// The width the tab in front's trail is held to, or nil while the tab fits at its own width (`selected`, its
-    /// `chrome` included). Nil for every width with room to spare, so a window resized there leaves the tabs alone.
-    /// Held, it takes what the row leaves, however little: a strip wider than the row pushes the toolbar's own items
-    /// (the search field and the buttons) into its overflow menu.
-    public static func trail(room: Double, selected: Double, others: [Double], layout: Layout, icon: Double, gap: Double,
-                             more: Double, chrome: Double) -> Double? {
-        let rest = room - beside(others, layout: layout, icon: icon, gap: gap, more: more) - chrome
-        return selected <= rest + chrome ? nil : max(0, rest)
+    /// The width the tab in front's trail is held to, or nil while the tab fits with its own trail. Nil for every
+    /// width with room to spare, so a window resized there leaves the tabs alone. Held, it takes what the row leaves,
+    /// however little: a strip wider than the row pushes the toolbar's own items (the search field and the buttons)
+    /// into its overflow menu.
+    public static func trail(room: Double, front: Front, others: [Other], layout: Layout, gap: Double, more: Double) -> Double? {
+        let rest = room - beside(others, layout: layout, gap: gap, more: more) - front.chrome(compact: layout.compactFront)
+        return front.trail <= rest ? nil : max(0, rest)
     }
 
-    /// What the strip takes: the tab in front (held to `trail` with its `chrome`, else at its own width), the tabs
-    /// shown beside it and the menu, with the gaps between them. No more than `room` whenever the tab in front's
-    /// capsule and the menu fit in it at all.
-    public static func width(selected: Double, others: [Double], layout: Layout, trail: Double?, icon: Double, gap: Double,
-                             more: Double, chrome: Double) -> Double {
-        (trail.map { $0 + chrome } ?? selected) + beside(others, layout: layout, icon: icon, gap: gap, more: more)
+    /// What the strip takes: the tab in front (its trail held to `trail`, else its own), the tabs shown beside it and
+    /// the menu, with the gaps between them. No more than `room` whenever the tab in front's capsule and the menu fit
+    /// in it at all.
+    public static func width(front: Front, others: [Other], layout: Layout, trail: Double?, gap: Double, more: Double) -> Double {
+        (trail ?? front.trail) + front.chrome(compact: layout.compactFront) + beside(others, layout: layout, gap: gap, more: more)
     }
 
     /// The tabs beside the one in front and the menu, each with the gap before it.
-    private static func beside(_ others: [Double], layout: Layout, icon: Double, gap: Double, more: Double) -> Double {
+    private static func beside(_ others: [Other], layout: Layout, gap: Double, more: Double) -> Double {
         let shown = others.prefix(layout.shown)
-        let tabs = layout.iconsOnly ? icon * Double(shown.count) : shown.reduce(0, +)
-        return tabs + gap * Double(shown.count) + (layout.hidden > 0 ? more + gap : 0)
+        return shown.map(layout.width(of:)).reduce(0, +) + gap * Double(shown.count) + (layout.hidden > 0 ? more + gap : 0)
     }
 }
 
