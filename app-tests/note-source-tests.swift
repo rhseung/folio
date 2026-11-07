@@ -73,6 +73,27 @@ struct NoteSourceTests {
         #expect(color(ns.range(of: id.uuidString).location) == NoteLook.text3 && color(ns.range(of: "매칭").location) != NoteLook.text3)
     }
 
+    /// A copied address between brackets is the same link (#347), and a bare one opens without the sentence's full stop.
+    @Test func aCommandClickOpensACopiedAddress() throws {
+        let id = UUID()
+        let text = "앞 [[folio://material/\(id.uuidString)#page=2]] 뒤 folio://exam/\(id.uuidString). 끝"
+        let (view, _) = Self.editor(text)
+        var opened: [AppLink] = []
+        view.linkOpener = OpenLinkAction { link, _, _ in opened.append(link) }
+        let click = try #require(NSEvent.mouseEvent(with: .leftMouseDown, location: .zero, modifierFlags: .command, timestamp: 0,
+                                                    windowNumber: 0, context: nil, eventNumber: 0, clickCount: 1, pressure: 1))
+        let ns = text as NSString
+        for word in ["[[folio", "material/", "page=2", "exam/"] {
+            #expect(view.openLink(at: ns.range(of: word).location + 1, event: click), "\(word)")
+        }
+        let page = AppLink(.material, id, anchor: .page(2))
+        #expect(opened == [page, page, page, AppLink(.exam, id)])
+        // The bare address reads as a link, as the preview draws it, without the full stop after it.
+        let href = { (i: Int) in view.textStorage?.attribute(.noteHref, at: i, effectiveRange: nil) as? String }
+        let exam = ns.range(of: "folio://exam/")
+        #expect(href(exam.location) == AppLink(.exam, id).string && href(exam.location + AppLink(.exam, id).string.utf16.count) == nil)
+    }
+
     static func size(_ view: NSTextView, at i: Int) -> CGFloat? {
         (view.textStorage?.attribute(.font, at: i, effectiveRange: nil) as? NSFont)?.pointSize
     }

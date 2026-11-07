@@ -223,7 +223,7 @@ public struct AppLink: Hashable, Sendable {
     }
 
     /// `12:30`, `1:02:03`: how a player shows the moment, so the address reads like it.
-    static func clock(_ seconds: Int) -> String {
+    public static func clock(_ seconds: Int) -> String {
         seconds >= 3600 ? String(format: "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60)
             : String(format: "%d:%02d", seconds / 60, seconds % 60)
     }
@@ -244,8 +244,10 @@ public struct AppLink: Hashable, Sendable {
     public static func links(in text: String) -> [(range: NSRange, link: AppLink)] {
         let ns = text as NSString
         return text.matches(of: Self.pattern).compactMap { m in
-            guard let link = AppLink(string: String(m.0)) else { return nil }
-            return (NSRange(m.range, in: text), link)
+            let written = trimmed(String(m.0))
+            guard let link = AppLink(string: written) else { return nil }
+            let range = NSRange(m.range, in: text)
+            return (NSRange(location: range.location, length: written.utf16.count), link)
         }
         .filter { $0.range.location != NSNotFound && NSMaxRange($0.range) <= ns.length }
     }
@@ -257,6 +259,13 @@ public struct AppLink: Hashable, Sendable {
 
     /// Ends where a link written in text ends: whitespace, quotes, a closing bracket, or TeX's backslash.
     static var pattern: Regex<Substring> { #/[Ff][Oo][Ll][Ii][Oo]://[^\s<>"'`(){}\[\]\\|]+/# }
+
+    /// Punctuation closing the sentence an address ends is not part of it (`시험은 folio://exam/<ID>.`), except after
+    /// `#`, where a heading may end with it. A note's preview links a bare address by the same rule (FolioMarkdown's
+    /// `HTMLRenderer.linkAddresses`).
+    static func trimmed(_ written: String) -> String {
+        written.contains("#") ? written : String(written.reversed().drop { ".,;:!?".contains($0) }.reversed())
+    }
 }
 
 extension AppLink: Codable {

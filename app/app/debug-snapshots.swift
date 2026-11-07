@@ -26,6 +26,9 @@ final class SnapshotDriver {
     static let tabs = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_TABS"].flatMap(Int.init) ?? 1
     /// How many panes the first two tabs hold (`2`, `3`), a lecture file and a quiz beside the page the walk moves (#62).
     static let panes = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_PANES"].flatMap(Int.init) ?? 1
+    /// A note (its ID) to open, whose preview's first app link is then clicked as a user would, drawing where it went
+    /// (`link-note-before`, `link-note`).
+    static let noteLink = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_NOTE_LINK"].flatMap(UUID.init(uuidString:))
 
     var section: CourseSection?
     /// Inside the units section: `detail` opens the first unit, `review` also opens its review sheet.
@@ -144,6 +147,15 @@ final class SnapshotDriver {
             open(link)
             try? await Task.sleep(for: .seconds(1.5))
             capture(to: directory.appending(path: "\(name).png"))
+        }
+        if let note = Self.noteLink {
+            open(AppLink(.note, note))
+            try? await Task.sleep(for: .seconds(2.5))
+            capture(to: directory.appending(path: "link-note-before.png"))
+            await captureWebViews(to: directory, name: "link-note-before")
+            await clickAppLink()
+            try? await Task.sleep(for: .seconds(2))
+            capture(to: directory.appending(path: "link-note.png"))
         }
         // The panel's first app link, clicked as a user would, from a course with a chat (`FOLIO_SNAPSHOT_CLAUDE`).
         if claudePanel, let first = courses.first {

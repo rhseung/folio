@@ -189,14 +189,22 @@ final class NoteEmbedSource {
     /// The note's text as the editor has it, which may not be saved yet: a reference to its own block shows that.
     private var current: String?
 
-    init(store: CourseStore, others: [CourseStore] = [], own: URL?) {
+    /// The name of what a link into the app points at (`Workspace.name(of:)`), which the preview shows on a link
+    /// without its own and a pasted address is written with.
+    let name: (AppLink) -> String?
+
+    init(store: CourseStore, others: [CourseStore] = [], own: URL?, name: @escaping (AppLink) -> String? = { _ in nil }) {
         self.store = store
         self.others = others
         self.own = own
+        self.name = name
     }
 
     @MainActor convenience init(workspace: Workspace, course: LoadedCourse, own: URL?) {
-        self.init(store: course.store, others: workspace.courses.filter { $0.id != course.id }.map(\.store), own: own)
+        // The preview and the editor read it on the main actor, where the workspace is.
+        self.init(store: course.store, others: workspace.courses.filter { $0.id != course.id }.map(\.store), own: own) { [weak workspace] link in
+            MainActor.assumeIsolated { workspace?.name(of: link) }
+        }
     }
 
     func embeds(revision: Int, text: String) -> NoteEmbeds {
@@ -210,7 +218,8 @@ final class NoteEmbedSource {
         let labels = NoteEmbeds.Labels(missing: String(localized: .notesEmbedMissing), loop: String(localized: .notesEmbedLoop),
                                        tooDeep: String(localized: .notesEmbedTooDeep))
         return NoteEmbeds(key: own?.standardizedFileURL.path, labels: labels, title: { [self] id in noteFile(id: id)?.title },
-                          hasNote: { [self] title in note(titled: title) != nil }) { [self] link in find(link) }
+                          hasNote: { [self] title in note(titled: title) != nil },
+                          name: { [name] href in AppLink(string: href).flatMap { link in name(link).map(link.label) } }) { [self] link in find(link) }
     }
 
     private func note(titled title: String) -> NoteFile? {

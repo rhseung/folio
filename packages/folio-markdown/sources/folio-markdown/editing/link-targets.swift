@@ -6,11 +6,29 @@ extension WikiLink {
     /// is what goes after `#` (a heading, `^block`, `page=12`). Brackets and `|` would end the link early, so they
     /// don't go into the alias.
     public static func written(_ kind: String, _ id: UUID, fragment: String? = nil, alias: String? = nil, embed: Bool = false) -> String {
+        let part = fragment.map { "#" + $0 } ?? ""
+        return (embed ? "!" : "") + "[[\(kind):\(id.uuidString)\(part)\(aliasPart(alias))]]"
+    }
+
+    /// A link by its `folio://` address, for what has no `<kind>:<ID>` form (a place, a course's page).
+    public static func written(address: String, alias: String? = nil) -> String {
+        "[[\(address)\(aliasPart(alias))]]"
+    }
+
+    static func aliasPart(_ alias: String?) -> String {
         let name = alias.map { a in
             a.split(whereSeparator: { "[]|".contains($0) || $0.isWhitespace }).joined(separator: " ")
         }
-        let part = fragment.map { "#" + $0 } ?? ""
-        return (embed ? "!" : "") + "[[\(kind):\(id.uuidString)\(part)\(name.flatMap { $0.isEmpty ? nil : "|" + $0 } ?? "")]]"
+        return name.flatMap { $0.isEmpty ? nil : "|" + $0 } ?? ""
+    }
+
+    /// Whether an app link pasted at `caret` goes in as a link of its own (`[[material:<ID>#page=2|이름]]`). Not inside
+    /// a link being written (`[[…`, `](…`, `<…`), whose target the address is, nor in code or math, where it is text.
+    public static func pastesAsLink(in text: NSString, at caret: Int) -> Bool {
+        guard SourcePlace.at(caret, in: text) == .text else { return false }
+        let line = text.lineRange(for: NSRange(location: caret, length: 0))
+        let prefix = text.substring(with: NSRange(location: line.location, length: caret - line.location))
+        return prefix.firstMatch(of: #/\[\[[^\]]*$/#) == nil && prefix.firstMatch(of: #/\]\([^)\s]*$/#) == nil && !prefix.hasSuffix("<")
     }
 
     /// Whether `heading` can follow `#` in a link: `]` and `|` would end it.
