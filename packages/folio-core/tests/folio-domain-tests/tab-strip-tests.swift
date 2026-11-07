@@ -163,6 +163,45 @@ struct TabFitTests {
         #expect(TabFit.lead(panelEdge: 4, after: 189, gap: 8) == 8)
     }
 
+    func trail(_ room: Double, selected: Double = 300, others: [Double]) -> Double? {
+        let fit = layout(room, selected: selected, others: others)
+        return TabFit.trail(room: room, selected: selected, others: others, layout: fit, icon: 32, gap: 8, more: 80, chrome: 40)
+    }
+
+    @Test func theFrontTrailIsFreeWhileItFits() {
+        // Room to spare at any width: nothing the window's width changes, so a resize there redraws nothing.
+        #expect(trail(516, others: [100, 100]) == nil)
+        #expect(trail(2000, others: [100, 100]) == nil)
+        // Icons only, 300 + 32 + 32 + 2 gaps = 380 still fits.
+        #expect(trail(380, others: [100, 100]) == nil)
+    }
+
+    @Test func theFrontTrailIsHeldWhenTheRowRunsOut() {
+        // The menu alone at 200: 200 - (80 + 8) - 40 = 72, however short, so the strip stays inside the row.
+        #expect(trail(200, others: [100, 100]) == 72)
+        // A front tab of 400 (a trail of 360) beside one icon in 460: 460 - 32 - 8 - 40 = 380 still holds it.
+        #expect(trail(460, selected: 400, others: [100]) == nil)
+        // In 400 the other tab goes to the menu: 400 - (80 + 8) - 40 = 272 for a trail that needs 360.
+        #expect(trail(400, selected: 400, others: [100]) == 272)
+    }
+
+    @Test func theStripNeverOutgrowsTheRow() async {
+        // Wider than the row, the strip pushes the toolbar's search field and buttons into its overflow menu (#310).
+        // It may only when not even the front tab's capsule and the menu fit.
+        await propertyCheck(input: Gen.int(in: 32...200).array(of: 0...20), Gen.int(in: 0...2000), Gen.int(in: 60...600)) { others, room, selected in
+            let o = others.map(Double.init)
+            let r = Double(room)
+            let fit = TabFit.layout(room: r, selected: Double(selected), others: o, icon: 32, gap: 8, more: 80)
+            let trail = TabFit.trail(room: r, selected: Double(selected), others: o, layout: fit, icon: 32, gap: 8, more: 80, chrome: 40)
+            let width = TabFit.width(selected: Double(selected), others: o, layout: fit, trail: trail, icon: 32, gap: 8, more: 80, chrome: 40)
+            let least = 40 + (fit.hidden > 0 ? 88 : 0)
+            #expect(width <= r || r < Double(least))
+        }
+        // By hand: the menu alone beside a front tab held to 200 - 88 - 40 = 72, which with its capsule fills the row.
+        let fit = TabFit.layout(room: 200, selected: 300, others: [100, 100], icon: 32, gap: 8, more: 80)
+        #expect(TabFit.width(selected: 300, others: [100, 100], layout: fit, trail: 72, icon: 32, gap: 8, more: 80, chrome: 40) == 200)
+    }
+
     @Test func aLoneTabNeverNeedsTheMenu() {
         #expect(layout(100, others: []) == TabFit.Layout(iconsOnly: false, shown: 0, hidden: 0))
     }

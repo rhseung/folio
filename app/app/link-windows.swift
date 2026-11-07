@@ -123,19 +123,20 @@ struct TabCommands: Commands {
 
 /// Where a toolbar item begins across its window. The row places its items itself: the first after the window's
 /// buttons (gone in full screen), the last pushed to the end by a flexible space. Nil while the item is out of the
-/// window, dropped into the row's overflow menu.
+/// window, dropped into the row's overflow menu. With the window's width at the same moment, for an item placed from
+/// the window's trailing edge.
 struct WindowOffset: NSViewRepresentable {
-    let changed: @MainActor (CGFloat?) -> Void
+    let changed: @MainActor (_ x: CGFloat?, _ windowWidth: CGFloat) -> Void
 
     func makeNSView(context: Context) -> Probe { Probe(changed: changed) }
     func updateNSView(_ view: Probe, context: Context) { view.changed = changed }
 
     final class Probe: NSView {
-        var changed: @MainActor (CGFloat?) -> Void
+        var changed: @MainActor (CGFloat?, CGFloat) -> Void
         private var reported: CGFloat??
         private var observers: [NSObjectProtocol] = []
 
-        init(changed: @escaping @MainActor (CGFloat?) -> Void) {
+        init(changed: @escaping @MainActor (CGFloat?, CGFloat) -> Void) {
             self.changed = changed
             super.init(frame: .zero)
         }
@@ -171,8 +172,77 @@ struct WindowOffset: NSViewRepresentable {
                 let x = window.map { _ in convert(NSPoint.zero, to: nil).x }
                 guard reported != .some(x) else { return }
                 reported = .some(x)
-                changed(x)
+                changed(x, window?.frame.width ?? 0)
             }
+        }
+    }
+}
+
+/// The window's width, told as the window resizes and before it lays out again: what is fitted to it moves in the same
+/// frame as the window. Measured from the laid-out content instead, it arrived after the toolbar row had laid out.
+struct WindowWidth: NSViewRepresentable {
+    let changed: @MainActor (CGFloat) -> Void
+
+    func makeNSView(context: Context) -> Probe { Probe(changed: changed) }
+    func updateNSView(_ view: Probe, context: Context) { view.changed = changed }
+
+    final class Probe: NSView {
+        var changed: @MainActor (CGFloat) -> Void
+        private var observer: NSObjectProtocol?
+
+        init(changed: @escaping @MainActor (CGFloat) -> Void) {
+            self.changed = changed
+            super.init(frame: .zero)
+        }
+
+        required init?(coder: NSCoder) { nil }
+
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            if let observer { NotificationCenter.default.removeObserver(observer) }
+            observer = nil
+            guard let window else { return }
+            // No queue: run while the window posts it, inside the frame change and before the window lays out. On a
+            // queue it would wait for the next turn.
+            observer = NotificationCenter.default.addObserver(forName: NSWindow.didResizeNotification, object: window, queue: nil) { [weak self] _ in
+                MainActor.assumeIsolated {
+                    guard let self, let window = self.window else { return }
+                    self.changed(window.frame.width)
+                }
+            }
+            // Joining the window happens while SwiftUI updates its views, which mustn't change what they read.
+            Task { @MainActor [weak self] in self?.changed(window.frame.width) }
+        }
+    }
+}
+
+/// Whether the view is in a window. The toolbar draws each item a second time for its menu form, out of any window,
+/// where measures go stale; this tells the copy in the row from that one.
+struct InWindow: NSViewRepresentable {
+    let changed: @MainActor (Bool) -> Void
+
+    func makeNSView(context: Context) -> Probe { Probe(changed: changed) }
+    func updateNSView(_ view: Probe, context: Context) { view.changed = changed }
+
+    final class Probe: NSView {
+        var changed: @MainActor (Bool) -> Void
+
+        init(changed: @escaping @MainActor (Bool) -> Void) {
+            self.changed = changed
+            super.init(frame: .zero)
+        }
+
+        required init?(coder: NSCoder) { nil }
+
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+        override func viewDidMoveToWindow() {
+            super.viewDidMoveToWindow()
+            let inWindow = window != nil
+            // Joining the window happens while SwiftUI updates its views, which mustn't change what they read.
+            Task { @MainActor [weak self] in self?.changed(inWindow) }
         }
     }
 }
