@@ -11,13 +11,17 @@ extension Workspace {
         return try await Task.detached { try store.download(material) }.value
     }
 
-    /// Copies files in from outside into `folder`, registers them, and links them to `session`.
-    /// `week` puts the week in front of the name, as `Lectures` asks. A file already in this course is linked where it is.
-    func importFiles(_ urls: [URL], into folder: String, week: Int? = nil, session: UUID? = nil, course id: UUID) {
-        let files = urls.filter(\.isFileURL)
+    /// Copies files in from outside, each into its folder, registers them, and links each to its session. A lecture
+    /// takes its session's week in front of its name. A file already in this course is linked where it is.
+    func importFiles(_ files: [(url: URL, folder: String, session: UUID?)], course id: UUID) {
+        let files = files.filter(\.url.isFileURL)
         // Files handed over from outside the sandbox stay readable only inside this scope.
-        let scoped = files.filter { $0.startAccessingSecurityScopedResource() }
+        let scoped = files.map(\.url).filter { $0.startAccessingSecurityScopedResource() }
         defer { for url in scoped { url.stopAccessingSecurityScopedResource() } }
-        run(MaterialImport(course: id, files: files.map { $0.path(percentEncoded: false) }, folder: folder, week: week, session: session))
+        run(MaterialImport(course: id, items: files.map { ImportItem(file: $0.url.path(percentEncoded: false), folder: $0.folder, session: $0.session) }))
+    }
+
+    func importFiles(_ urls: [URL], into folder: String, session: UUID? = nil, course id: UUID) {
+        importFiles(urls.map { ($0, folder, session) }, course: id)
     }
 }

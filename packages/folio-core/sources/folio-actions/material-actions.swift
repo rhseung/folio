@@ -168,36 +168,55 @@ public struct MaterialTrack {
     }
 }
 
-/// Copies files in from outside into `folder`, registers them, and links them to `session`.
-/// `week` puts the week in front of the name, as `Lectures` asks. A file already in this course is linked where it is.
-@Action("material import", "바깥 파일을 과목 폴더로 복사해 등록하고 회차에 연결", effect: .creates, done: "파일을 {folder}(으)로 가져왔습니다",
+/// One file for `material import`: where it goes, and the class it is for.
+public struct ImportItem: Codable, Sendable, Hashable {
+    /// Absolute path.
+    public var file: String
+    /// Course-relative.
+    public var folder: String
+    public var session: Session.ID?
+
+    public init(file: String, folder: String, session: Session.ID? = nil) {
+        (self.file, self.folder, self.session) = (file, folder, session)
+    }
+}
+
+/// Copies files in from outside, each into its own folder, registers them, and links each to its session. A file put
+/// in `Lectures` for a session takes the session's week in front of its name. A file already in this course is linked
+/// where it is. Every item is checked before the first copy, so one that can't go in stops them all.
+@Action("material import", "바깥 파일을 과목 폴더로 복사해 등록하고 회차에 연결", effect: .creates, done: "파일 {items}을(를) 가져왔습니다",
         phrases: ["파일 가져오기", "다운로드한 자료 넣기", "외부 파일 복사"], cli: .manual)
 public struct MaterialImport {
     @Arg var course: Course.ID
-    /// Absolute paths.
-    @Arg var files: [String]
-    var folder: String
-    var week: Int?
-    var session: Session.ID?
+    var items: [ImportItem]
 
     public func run(_ ctx: ActionContext) throws {
         let store = try ctx.store(course)
-        guard store.contains(folder) else { throw ActionError.rule(String(localized: .errorMaterialImportOutside(folder))) }
-        var paths: [String] = []
-        for file in files {
-            let url = URL(filePath: file)
+        let file = try ctx.file(course)
+        for item in items {
+            guard store.contains(item.folder) else { throw ActionError.rule(String(localized: .errorMaterialImportOutside(item.folder))) }
+            guard FileManager.default.fileExists(atPath: item.file) else {
+                throw ActionError.notFound(String(localized: .errorMaterialImportMissing(item.file)))
+            }
+            if let session = item.session { _ = try index(session, in: file.sessions, .valueSession) }
+        }
+        var linked: [(path: String, session: Session.ID?)] = []
+        for item in items {
+            let url = URL(filePath: item.file)
             if let inside = store.coursePath(of: url) {
-                paths.append(inside)
+                linked.append((inside, item.session))
                 continue
             }
-            let name = week.map { MaterialIntake.lectureName(url.lastPathComponent, week: $0) }
-            let planned = try ctx.relative(course, "\(folder)/\(name ?? url.lastPathComponent)")
-            if let path = try ctx.io(Change(.added, planned), { try store.importFile(url, into: folder, name: name) }) { paths.append(path) }
+            let name = MaterialIntake.name(url.lastPathComponent, in: item.folder, session: file.sessions.first { $0.id == item.session })
+            let planned = try ctx.relative(course, "\(item.folder)/\(name)")
+            if let path = try ctx.io(Change(.added, planned), { try store.importFile(url, into: item.folder, name: name) }) {
+                linked.append((path, item.session))
+            }
         }
         try ctx.edit(course) { f in
             try store.refreshMaterials(in: &f, device: ctx.device, now: ctx.now)
-            if let session {
-                for m in f.materials where paths.contains(m.path) { f.linkMaterial(m.id, session: session) }
+            for (path, session) in linked {
+                if let session, let m = f.materials.first(where: { $0.path == path }) { f.linkMaterial(m.id, session: session) }
             }
         }
     }

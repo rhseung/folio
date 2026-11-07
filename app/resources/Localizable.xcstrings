@@ -5776,6 +5776,50 @@
         }
       }
     },
+    "materials.import-confirm-many": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld개 넣기"
+          }
+        }
+      }
+    },
+    "materials.import-guessed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "추측: %@"
+          }
+        }
+      }
+    },
+    "materials.import-keys": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⇧ 또는 ⌘로 여러 줄 고르기 · 1–9 종류 · ⏎ 넣기"
+          }
+        }
+      }
+    },
+    "materials.import-kind": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "종류"
+          }
+        }
+      }
+    },
     "materials.import-many": {
       "extractionState": "manual",
       "localizations": {
@@ -5809,6 +5853,17 @@
         }
       }
     },
+    "materials.import-numbered": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 이름이 있어 뒤에 %@를 붙입니다"
+          }
+        }
+      }
+    },
     "materials.import-one": {
       "extractionState": "manual",
       "localizations": {
@@ -5827,6 +5882,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "회차"
+          }
+        }
+      }
+    },
+    "materials.import-today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 오늘"
+          }
+        }
+      }
+    },
+    "materials.import-today-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
+          }
+        }
+      }
+    },
+    "materials.import-upcoming": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예정"
+          }
+        }
+      }
+    },
+    "materials.import-week-prefix": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차의 주차로 앞에 %@를 붙입니다"
           }
         }
       }
