@@ -2,6 +2,9 @@
 # Use Xcode's toolchain in this repo only; the global xcode-select points at Command Line Tools,
 # which has no iPadOS SDK.
 DEVELOPER_DIR = "/Applications/Xcode.app/Contents/Developer"
+# Every xcodebuild builds into the checkout instead of ~/Library/Developer/Xcode/DerivedData, whose folder is keyed
+# by the project path: each agent worktree would leave a few GB there that nothing reuses once the worktree is gone.
+FOLIO_DERIVED_DATA = "{{config_root}}/.build/DerivedData"
 
 [tools]
 xcodegen = "2.46.0"
@@ -64,7 +67,7 @@ run = [
 [tasks.build-mac]
 description = "Build the app for macOS"
 depends = ["generate"]
-run = "xcodebuild -scheme Folio -destination 'platform=macOS' build -quiet -skipMacroValidation"
+run = "xcodebuild -scheme Folio -destination 'platform=macOS' build -quiet -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation"
 
 [tasks.test-app]
 description = "Run the app's tests on macOS: screen models, and the note views against their reference screens"
@@ -80,7 +83,7 @@ if [ -d "$out" ]; then find "$out" -maxdepth 1 -type f -name '*.png' -delete; rm
 rm -rf .build/test-app.xcresult
 status=0
 TEST_RUNNER_FOLIO_NOTE_SCREENS="$out" TEST_RUNNER_FOLIO_NOTE_SCREENS_STRICT="${FOLIO_NOTE_SCREENS_STRICT:-}" \
-xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -quiet -skipMacroValidation || status=$?
+xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation || status=$?
 # -quiet leaves out why a test failed; the summary has each failure's message.
 if [ "$status" -ne 0 ] && [ -d .build/test-app.xcresult ]; then
   xcrun xcresulttool get test-results summary --path .build/test-app.xcresult --compact
@@ -95,7 +98,7 @@ run = """
 id=$(xcrun simctl list devices available | grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}')
 [ -n "$id" ] || { echo "no available iPad simulator" >&2; exit 1; }
 rm -rf .build/test-ipad.xcresult
-xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test -quiet -skipMacroValidation
+xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
 # -quiet leaves out the tests themselves; the count shows they ran.
 xcrun xcresulttool get test-results summary --path .build/test-ipad.xcresult --compact
 """
@@ -115,7 +118,7 @@ case "$dir" in /*) ;; *) dir="$PWD/$dir" ;; esac
 TEST_RUNNER_FOLIO_RENDER_DIR="$dir" TEST_RUNNER_TZ=Asia/Seoul \
 TEST_RUNNER_FOLIO_RENDER_SIZES="${FOLIO_RENDER_SIZES:-}" TEST_RUNNER_FOLIO_RENDER_SCREENS="${FOLIO_RENDER_SCREENS:-}" \
 TEST_RUNNER_FOLIO_RENDER_SCENARIOS="${FOLIO_RENDER_SCENARIOS:-}" \
-xcodebuild -scheme Folio -destination 'platform=macOS,arch=arm64' test -quiet -skipMacroValidation \
+xcodebuild -scheme Folio -destination 'platform=macOS,arch=arm64' test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation \
   -only-testing:FolioTests/ScreenRenders -testLanguage ko -testRegion KR
 echo "$dir"
 """
@@ -123,19 +126,19 @@ echo "$dir"
 [tasks.install-mac]
 description = "Build a Release app and install it to /Applications"
 depends = ["generate"]
-# A fixed build folder so the copy step knows where the app lands; a running copy is quit first so it is replaced whole.
+# A running copy is quit first so it is replaced whole.
 run = """
-xcodebuild -scheme Folio -configuration Release -destination 'platform=macOS' -derivedDataPath .build/xcode build -quiet -skipMacroValidation
+xcodebuild -scheme Folio -configuration Release -destination 'platform=macOS' build -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
 osascript -e 'quit app "Folio"' 2>/dev/null || true
 # The app was Coursebook.app before it was renamed; the old copy goes so only one remains.
 rm -rf /Applications/Coursebook.app /Applications/Folio.app
-ditto .build/xcode/Build/Products/Release/Folio.app /Applications/Folio.app
+ditto "$FOLIO_DERIVED_DATA/Build/Products/Release/Folio.app" /Applications/Folio.app
 """
 
 [tasks.build-ipad]
 description = "Build the app for the iPad simulator (FOLIO_CONFIGURATION=Release for a Release build)"
 depends = ["generate"]
-run = "xcodebuild -scheme Folio -configuration \"${FOLIO_CONFIGURATION:-Debug}\" -destination 'generic/platform=iOS Simulator' build -quiet -skipMacroValidation"
+run = "xcodebuild -scheme Folio -configuration \"${FOLIO_CONFIGURATION:-Debug}\" -destination 'generic/platform=iOS Simulator' build -quiet -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation"
 
 [tasks.build-web]
 description = "Bundle AsciiMath conversion, code highlighting and the Claude panel math into app/resources/web"
