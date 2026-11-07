@@ -105,6 +105,7 @@ struct TabScreens: View {
     let tabs: WindowTabs
     let workspace: Workspace
     let openLink: (Navigator) -> OpenLinkAction
+    @State private var sizes = ScreenSizes()
 
     var body: some View {
         ZStack {
@@ -112,9 +113,19 @@ struct TabScreens: View {
             ForEach(tabs.ids.filter { tabs.alive.contains($0) }, id: \.self) { id in
                 if let navigator = tabs.navigator(id) {
                     let front = id == tabs.selected
+                    // A screen behind keeps the size it last had in front, so resizing the window lays out only the
+                    // one in front: a note's text and preview page reflowing out of sight made each frame of a live
+                    // resize wait on every kept tab. It takes the window's size again when it comes back.
+                    let kept = front ? nil : sizes[id]
                     TabScreen(workspace: workspace, navigator: navigator)
                         .environment(tabs.trail(id))
                         .environment(\.openLink, openLink(navigator))
+                        .onGeometryChange(for: CGSize.self, of: \.size) { sizes[id] = $0 }
+                        .frame(width: kept?.width, height: kept?.height, alignment: .topLeading)
+                        // The window's size whatever the screen inside: with no least size given, a screen behind
+                        // sized the stack to itself and pushed the one in front past the window's edge.
+                        .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity,
+                               alignment: kept == nil ? .center : .topLeading)
                         .opacity(front ? 1 : 0)
                         .allowsHitTesting(front)
                         .disabled(!front)
@@ -123,7 +134,30 @@ struct TabScreens: View {
                 }
             }
         }
+        .onChange(of: tabs.alive) { _, alive in sizes.keep(alive) }
     }
+}
+
+/// The tabs at full width, as `TabBar` measures them. Not observed: nothing draws from them, they only feed `ToolbarRow`.
+@MainActor final class TabSizes {
+    var front: CGFloat = 0
+    var more: CGFloat = 0
+    var others: [UUID: CGFloat] = [:]
+    /// False in the toolbar's menu-form copy of the row.
+    var inWindow = false
+}
+
+/// The size each kept screen was last laid out at. Not observed: it changes every frame of a resize, which would redraw
+/// the stack each frame; it is read only when a screen goes behind.
+@MainActor final class ScreenSizes {
+    private var sizes: [UUID: CGSize] = [:]
+
+    subscript(id: UUID) -> CGSize? {
+        get { sizes[id] }
+        set { sizes[id] = newValue }
+    }
+
+    func keep(_ ids: Set<UUID>) { sizes = sizes.filter { ids.contains($0.key) } }
 }
 
 /// One tab's screen. Its own view, so a move in one tab redraws only that tab's screen.
@@ -204,13 +238,10 @@ struct TabBar: View {
     let workspace: Workspace
     /// The tab in front's whole trail: its screen, then what the screen added.
     let crumbs: [Crumb]
-    /// The row's width for everything here, the + included.
-    let room: CGFloat
+    /// Where the row has room for the tabs, worked out there as the window resizes.
+    let toolbar: ToolbarRow
     let moveToWindow: (UUID) -> Void
-    /// The other tabs at full width, measured.
-    @State private var widths: [UUID: CGFloat] = [:]
-    @State private var frontWidth: CGFloat = 0
-    @State private var moreWidth: CGFloat = 0
+    @State private var sizes = TabSizes()
     @State private var frames: [UUID: CGRect] = [:]
     @State private var dragged: (id: UUID, start: CGFloat)?
     @State private var dragOffset: CGFloat = 0
@@ -220,32 +251,33 @@ struct TabBar: View {
 
     var body: some View {
         let others = tabs.ids.filter { $0 != tabs.selected }
-        let space = room - Theme.Size.toolbarButton - Self.gap
-        let fit = TabFit.layout(room: space, selected: frontWidth, others: others.map { widths[$0] ?? Self.icon },
-                                icon: Self.icon, gap: Self.gap, more: moreWidth)
+        // Changes only as the fit or the front tab's trail does, not with every width the window passes through: each
+        // redraw of the tabs makes the toolbar rebuild its items' menu form, images and all, and done on every frame
+        // of a live resize it held the window to a few frames a second.
+        let placement = toolbar.placement
+        let fit = placement.fit
         let shown = Array(others.prefix(fit.shown))
         let hidden = Array(others.dropFirst(fit.shown))
         let row = tabs.ids.filter { $0 == tabs.selected || shown.contains($0) }
-        let othersWidth = shown.reduce(0) { $0 + (fit.iconsOnly ? Self.icon : widths[$1] ?? Self.icon) }
-        let menuWidth = hidden.isEmpty ? 0 : moreWidth + Self.gap
-        let crumbRoom = space - othersWidth - Self.gap * CGFloat(shown.count) - menuWidth - frontChrome
         HStack(spacing: Self.gap) {
             ForEach(row, id: \.self) { id in
                 Group {
                     if id == tabs.selected {
-                        let trail = max(Breadcrumb.minWidth, crumbRoom)
                         // Its own width while it fits: offered the row, the trail's frame would take all of it, and
                         // held to its measured width a fraction short, it cut the course's name.
-                        if frontWidth <= trail + frontChrome {
-                            front(crumbRoom: trail).fixedSize()
-                        } else {
+                        if let trail = placement.trail {
                             front(crumbRoom: trail).frame(width: trail + frontChrome)
+                        } else {
+                            front(crumbRoom: .infinity).fixedSize()
                         }
                     } else {
                         // At their measured width: `TabFit` already made room, and squeezed they'd cut their names.
                         tab(id, iconOnly: fit.iconsOnly).fixedSize()
                     }
                 }
+                #if DEBUG || RESIZE_PROBE
+                .background { if id == row.first { ResizeMarker(name: "firstTab") } }
+                #endif
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { frames[id] = $0 }
                 .offset(x: dragged?.id == id ? dragOffset : 0)
                 .zIndex(dragged?.id == id ? 1 : 0)
@@ -257,20 +289,41 @@ struct TabBar: View {
                 .labelStyle(.iconOnly)
                 .buttonStyle(.toolbar)
                 .help(Text(.tabsNewHelp))
+                #if DEBUG || RESIZE_PROBE
+                .background { ResizeMarker(name: "newTab") }
+                #endif
         }
         .coordinateSpace(.named(Self.space))
-        .frame(width: max(0, room), alignment: .leading)
         .background { measures(others) }
+        .background { InWindow { sizes.inWindow = $0; report() } }
+        .onChange(of: tabs.selected) { report() }
         .onChange(of: tabs.ids) { _, ids in
             let open = Set(ids)
-            widths = widths.filter { open.contains($0.key) }
+            sizes.others = sizes.others.filter { open.contains($0.key) }
+            report()
             frames = frames.filter { open.contains($0.key) }
         }
         .animation(.snappy(duration: 0.25), value: tabs.ids)
-        .animation(.snappy(duration: 0.25), value: fit)
+        // A new fit (names to icons, into the menu) comes at once, not animated: it comes mid-resize, and animated the
+        // strip slid in from the width it had, the first tab off the panel's edge by as much for a quarter second.
+        // Never wider than the row leaves it: wider, the toolbar put the search field and the buttons in its overflow.
+        .frame(width: placement.width, alignment: .leading)
+        .padding(.leading, placement.lead)
     }
 
     static let space = "tabs"
+
+    /// Tells the row what the tabs take, straight from the measures: state set in a measure's callback reached the
+    /// body late or not at all, and the row held the front tab to a width it had long outgrown, running the strip
+    /// over the search field. Only the row in the window: the toolbar's menu-form copy measures what it showed when
+    /// the toolbar last drew it.
+    func report() {
+        guard sizes.inWindow else { return }
+        let others = tabs.ids.filter { $0 != tabs.selected }
+        let measures = ToolbarRow.Measures(front: sizes.front, others: others.map { Double(sizes.others[$0] ?? Self.icon) },
+                                           more: sizes.more, chrome: frontChrome)
+        if measures != toolbar.measures { toolbar.measures = measures }
+    }
 
     /// The front tab's capsule around its trail: the leading inset and the close button with its gap.
     var frontChrome: CGFloat {
@@ -358,17 +411,17 @@ struct TabBar: View {
         .buttonStyle(.pointing(.plain))
         .menuIndicator(.hidden)
         .fixedSize()
-        .help(Text(.tabsMoreHelp))
+        .help(Text(.tabsMore(hidden.count)))
+        .accessibilityLabel(Text(.tabsMore(hidden.count)))
     }
 
+    /// "+n" alone: the room it leaves goes to the tabs. Its hover and VoiceOver say what it holds.
     func moreLabel(_ n: Int) -> some View {
-        HStack(spacing: Theme.Space.tight) {
-            Text(.tabsMore(n))
-            Image(systemName: "chevron.down").font(Theme.Glyph.small)
-        }
-        .font(Theme.Typeface.body)
-        .foregroundStyle(Theme.Palette.chromeText)
-        .toolbarField()
+        Text(.tabsMoreCount(n))
+            .monospacedDigit()
+            .font(Theme.Typeface.body)
+            .foregroundStyle(Theme.Palette.chromeText)
+            .toolbarField()
     }
 
     func menu(_ id: UUID) -> some View {
@@ -385,15 +438,15 @@ struct TabBar: View {
     func measures(_ others: [UUID]) -> some View {
         ZStack {
             front(crumbRoom: .infinity).fixedSize()
-                .onGeometryChange(for: CGFloat.self, of: \.size.width) { frontWidth = $0 }
+                .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.front = $0; report() }
             ForEach(others, id: \.self) { id in
                 let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
                 label(entry, title: workspace.tabTitle(of: entry)).fixedSize()
-                    .onGeometryChange(for: CGFloat.self, of: \.size.width) { widths[id] = $0 }
+                    .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.others[id] = $0; report() }
             }
             // Two digits: the menu's width hardly changes with its count.
             moreLabel(max(others.count, 10)).fixedSize()
-                .onGeometryChange(for: CGFloat.self, of: \.size.width) { moreWidth = $0 }
+                .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.more = $0; report() }
         }
         .hidden()
         .allowsHitTesting(false)
@@ -423,6 +476,101 @@ struct TabBar: View {
                 }
             }
     }
+}
+
+/// Where the toolbar row's items sit across the window, and so where the tabs between them go and how many fit. Only
+/// `placement` is watched: what it is worked out from changes with every frame of a live resize, and as the root
+/// view's state it redrew the sidebar, every kept tab's screen and the tabs on each one.
+@MainActor @Observable final class ToolbarRow {
+    /// The tabs at full width, as `TabBar` measured them.
+    struct Measures: Equatable {
+        var front: CGFloat = 0
+        var others: [Double] = []
+        var more: CGFloat = 0
+        /// The front tab's capsule around its trail.
+        var chrome: CGFloat = 0
+    }
+
+    struct Placement: Equatable {
+        /// From the back and forward buttons to the first tab.
+        var lead: CGFloat
+        var fit: TabFit.Layout
+        /// The width the front tab's trail is held to; nil while it fits at its own (`TabFit.trail`).
+        var trail: CGFloat?
+        /// The strip's whole width, the + included.
+        var width: CGFloat
+    }
+
+    private(set) var placement = Placement(lead: 0, fit: TabFit.Layout(iconsOnly: false, shown: 0, hidden: 0), trail: nil, width: 0)
+
+    /// Set as the window resizes, before the row lays out (`WindowWidth`): the tabs fit the new width in the same frame.
+    @ObservationIgnored var windowWidth: CGFloat = 1200 { didSet { settle() } }
+    /// Where the row put its first item (the sidebar button), across the window.
+    @ObservationIgnored var leadingX: CGFloat? { didSet { settle() } }
+    /// The search field and the buttons after it, measured, until the row has placed them.
+    @ObservationIgnored var trailingWidth = ToolbarRow.trailingEstimate { didSet { settle() } }
+    /// The content panel's leading edge across the window, where the first tab's capsule lines up.
+    @ObservationIgnored var panelEdge: CGFloat = Theme.Size.sidebar { didSet { settle() } }
+    @ObservationIgnored var measures = Measures() { didSet { settle() } }
+    /// From the end of the search field and its buttons to the window's trailing edge, as the row put them. It holds as
+    /// the window's width changes, the group pinned to the end, so the tabs' room follows the width at once. The
+    /// group's place itself is known only a turn after the row laid out (`WindowOffset`): fitted to it, the tabs ran a
+    /// frame behind the window, and a strip too wide for the row pushed the first tab off the panel's edge. Not the
+    /// whole inset: the group widens without the window (a course's timer, a recording's clock), and a held inset
+    /// kept the tabs' room while the group went into the overflow menu, where it has no place to correct it.
+    @ObservationIgnored private var trailingGap: CGFloat?
+
+    init() { settle() }
+
+    /// The search field's place, as the row reports it, with the window's width at the time.
+    func placeTrailing(_ x: CGFloat?, in width: CGFloat) {
+        // Dropped into the overflow menu, the field has no place; the last one still says where it belongs. Forgetting
+        // it fell back to an estimate, which could push the field out again.
+        guard let x else { return }
+        let gap = width - x - trailingWidth
+        guard gap != trailingGap else { return }
+        trailingGap = gap
+        settle()
+    }
+
+    /// Where the back and forward buttons end across the window, the tabs' item placed where the row put it.
+    var historyEnd: CGFloat { (leadingX ?? Self.leadingEstimate) + Theme.Size.toolbarButton + RootView.historyGap + HistoryButtons.width }
+
+    /// From the back and forward buttons over to the panel's edge; with the sidebar folded the edge is under the
+    /// buttons, and the tabs keep a gap after them instead.
+    var lead: CGFloat { TabFit.lead(panelEdge: panelEdge, after: historyEnd, gap: Theme.Space.s) }
+
+    /// From the tabs' start to the search field, less a gap before it: the tabs, the menu and the +.
+    var room: CGFloat {
+        let end = windowWidth - trailingWidth - (trailingGap ?? Self.toolbarGaps)
+        return end - historyEnd - lead - Theme.Space.s
+    }
+
+    private func settle() {
+        let space = room - Theme.Size.toolbarButton - TabBar.gap
+        let m = measures
+        let fit = TabFit.layout(room: space, selected: m.front, others: m.others, icon: TabBar.icon, gap: TabBar.gap, more: m.more)
+        // Whole points, down: a held trail follows the width anyway, fractions would only redraw it more often, and
+        // rounded up the strip could outgrow the row by one.
+        let trail = TabFit.trail(room: space, selected: m.front, others: m.others, layout: fit, icon: TabBar.icon, gap: TabBar.gap,
+                                 more: m.more, chrome: m.chrome).map { $0.rounded(.down) }
+        let width = TabFit.width(selected: m.front, others: m.others, layout: fit, trail: trail, icon: TabBar.icon, gap: TabBar.gap,
+                                 more: m.more, chrome: m.chrome) + TabBar.gap + Theme.Size.toolbarButton
+        // The item whole points wide, the lead and the strip together: half a point over, the toolbar moved the item
+        // by half a point, the row reported the new place, the lead took up the half, and the item went back, every
+        // few frames of a resize.
+        let whole = (lead + width).rounded(.down) - lead
+        let new = Placement(lead: lead, fit: fit, trail: trail.map { CGFloat($0) }, width: whole)
+        if new != placement { placement = new }
+    }
+
+    /// The sidebar button's place when the row hasn't said yet: after the window's buttons, measured.
+    static let leadingEstimate: CGFloat = 84
+    /// Between the items and after the last to the window's edge, measured in a window snapshot.
+    static let toolbarGaps: CGFloat = 32
+    /// The search field and five buttons, until the item is measured. Not zero: the tabs then took the whole row and
+    /// pushed the search field into the toolbar's overflow menu, where it was never measured.
+    static let trailingEstimate = Theme.Size.searchField + Theme.Space.s + Theme.Size.toolbarButton * 5 + Theme.Space.xxs * 4
 }
 
 /// A short name: its own width up to `width`, cut there. Not `frame(maxWidth:)`, which under `fixedSize` lets the

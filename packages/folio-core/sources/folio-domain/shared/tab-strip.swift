@@ -69,7 +69,7 @@ public struct TabStrip<ID: Hashable & Sendable>: Equatable, Sendable {
 }
 
 /// How the tabs share the toolbar row. The tab in front shows the whole place it is at and is never narrowed for the
-/// others: they give way first, down to their icons, and then into a "탭 n개 더" menu at the row's end.
+/// others: they give way first, down to their icons, and then into a "+n" menu at the row's end.
 public enum TabFit {
     public struct Layout: Equatable, Sendable {
         /// The other tabs show only their icons.
@@ -113,6 +113,31 @@ public enum TabFit {
         var shown = n - 1
         while shown > 0, width(icon * Double(shown), count: shown, menu: true) > room { shown -= 1 }
         return Layout(iconsOnly: true, shown: shown, hidden: n - shown)
+    }
+
+    /// The width the tab in front's trail is held to, or nil while the tab fits at its own width (`selected`, its
+    /// `chrome` included). Nil for every width with room to spare, so a window resized there leaves the tabs alone.
+    /// Held, it takes what the row leaves, however little: a strip wider than the row pushes the toolbar's own items
+    /// (the search field and the buttons) into its overflow menu.
+    public static func trail(room: Double, selected: Double, others: [Double], layout: Layout, icon: Double, gap: Double,
+                             more: Double, chrome: Double) -> Double? {
+        let rest = room - beside(others, layout: layout, icon: icon, gap: gap, more: more) - chrome
+        return selected <= rest + chrome ? nil : max(0, rest)
+    }
+
+    /// What the strip takes: the tab in front (held to `trail` with its `chrome`, else at its own width), the tabs
+    /// shown beside it and the menu, with the gaps between them. No more than `room` whenever the tab in front's
+    /// capsule and the menu fit in it at all.
+    public static func width(selected: Double, others: [Double], layout: Layout, trail: Double?, icon: Double, gap: Double,
+                             more: Double, chrome: Double) -> Double {
+        (trail.map { $0 + chrome } ?? selected) + beside(others, layout: layout, icon: icon, gap: gap, more: more)
+    }
+
+    /// The tabs beside the one in front and the menu, each with the gap before it.
+    private static func beside(_ others: [Double], layout: Layout, icon: Double, gap: Double, more: Double) -> Double {
+        let shown = others.prefix(layout.shown)
+        let tabs = layout.iconsOnly ? icon * Double(shown.count) : shown.reduce(0, +)
+        return tabs + gap * Double(shown.count) + (layout.hidden > 0 ? more + gap : 0)
     }
 }
 
