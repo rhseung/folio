@@ -98,6 +98,10 @@ extension CourseFile: Document {
             Ref(\.parentId, to: Unit.self, as: String(localized: .modelLabelParentUnit), onDelete: .reparent)
             Refs(\.sessionIds, to: Session.self, onDelete: .nullify)
             Refs(\.examIds, to: Exam.self, onDelete: .nullify)
+            Refs(\.lectureMaterialIds, to: Material.self, onDelete: .nullify)
+            Check("Unit.pages", String(localized: .ruleUnitPages)) { u, _ in
+                u.lecturePages.allSatisfy { $0.firstPage >= 1 && $0.firstPage <= $0.lastPage }
+            }
         }
         Items(\.sessions, noun: String(localized: .modelNounSession), name: { s, f in f.title(of: s, calendar: .current) }) {
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)

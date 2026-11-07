@@ -1430,6 +1430,17 @@
           }
         }
       }
+    },
+    "rule.unit.pages": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 '{name}'의 렉처 쪽 구간이 잘못되었습니다: 1쪽부터이고 끝 쪽이 시작 쪽보다 앞설 수 없습니다"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
