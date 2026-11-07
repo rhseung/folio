@@ -79,6 +79,39 @@ struct StoredDocumentTests {
         #expect(sessions.first?["topic"] == .string("매칭 보강") && sessions.first?["cancelled"] == .bool(true))
     }
 
+    /// A session's kind (#338) is two flags written only when set: a file from before it reads as a lecture, and
+    /// changing the kind swaps the flags without touching fields the app doesn't know.
+    @Test func aSessionKindRoundTripsAsItsFlags() throws {
+        let session = """
+          "sessions": [{
+            "id": "5E000000-0000-4000-8000-000000000001",
+            "createdAt": "2026-09-01T00:00:00.000Z", "updatedAt": "2026-09-01T00:00:00.000Z",
+            "updatedBy": "D0000000-0000-4000-8000-000000000001",
+            "week": 1, "date": "2026-09-01T01:00:00.000Z", "futureSessionField": "keep me",
+            "unitIds": [], "inkIds": [], "materials": []
+          }],
+        """
+        try writeRaw(courseJSON.replacingOccurrences(of: "  \"materials\": [", with: session + "\n  \"materials\": ["))
+        func raw() throws -> JSONValue? {
+            guard case .array(let sessions)? = try readRaw()["sessions"] else { return nil }
+            return sessions.first
+        }
+        var doc = try StoredDocument<CourseFile>.read(from: url)
+        #expect(doc.model.sessions[0].kind == .lecture && !doc.model.sessions[0].isCancelled)
+
+        for kind in [Session.Kind.makeup, .cancelled, .makeup, .lecture] {
+            doc.model.sessions[0].kind = kind
+            try doc.write(to: url)
+            let s = try raw()
+            #expect(s?["makeup"] == (kind == .makeup ? .bool(true) : nil))
+            #expect(s?["cancelled"] == (kind == .cancelled ? .bool(true) : nil))
+            #expect(s?["kind"] == nil)
+            #expect(s?["futureSessionField"] == .string("keep me"))
+            doc = try StoredDocument<CourseFile>.read(from: url)
+            #expect(doc.model.sessions[0].kind == kind)
+        }
+    }
+
     @Test func removedArrayElementsStayRemoved() throws {
         try writeRaw(courseJSON)
         var doc = try StoredDocument<CourseFile>.read(from: url)

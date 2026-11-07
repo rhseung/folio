@@ -180,7 +180,12 @@ struct DayRibbonCard: View {
         let label = VStack(alignment: .leading, spacing: Theme.Space.xxs) {
             Text(model.title(item.courseId)).font(Theme.Typeface.caption.weight(.semibold)).foregroundStyle(accent.ink)
             // The axis below already says 오전 or 오후; with it the time no longer fits an hour-wide block.
-            Text(item.start.formatted(.dateTime.hour(.defaultDigits(amPM: .omitted)).minute())).font(Theme.Typeface.label.weight(.regular)).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
+            // 보강 after the time, not a chip: a chip's inset doesn't fit an hour-wide block.
+            HStack(spacing: Theme.Space.xxs) {
+                Text(item.start.formatted(.dateTime.hour(.defaultDigits(amPM: .omitted)).minute())).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
+                if item.isMakeup { Text(.sessionsMakeup).foregroundStyle(accent.ink) }
+            }
+            .font(Theme.Typeface.label.weight(.regular))
         }
         .lineLimit(1)
         .padding(Theme.Space.tight)

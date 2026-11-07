@@ -3,6 +3,15 @@ import FolioActions
 import FolioDomain
 import Foundation
 
+/// A lecture, the usual kind, goes unsaid.
+private func kindLabel(_ s: Session) -> String? {
+    switch s.kind {
+    case .lecture: nil
+    case .cancelled: String(localized: .sessionListCancelled)
+    case .makeup: String(localized: .sessionListMakeup)
+    }
+}
+
 struct SessionCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "session", abstract: String(localized: .sessionAbstract),
@@ -22,14 +31,14 @@ struct SessionCommand: ParsableCommand {
             let sessions = f.sessions.sorted { $0.date < $1.date }.filter { all || !$0.isCancelled }
             if g.json { return try printJSON(sessions) }
             if lines {
-                for s in sessions { line(["\(c.code)/\(f.reference(of: s, calendar: r.ctx.calendar))", s.date.formatted(date: .numeric, time: .shortened), s.isCancelled ? String(localized: .sessionListCancelled) : "", f.subject(of: s) ?? ""]) }
+                for s in sessions { line(["\(c.code)/\(f.reference(of: s, calendar: r.ctx.calendar))", s.date.formatted(date: .numeric, time: .shortened), kindLabel(s) ?? "", f.subject(of: s) ?? ""]) }
                 return
             }
             courseHeader(c, catalog: try? r.ctx.catalog())
-            var t = Table(header: [String(localized: .sessionListHeaderSession), String(localized: .sessionListHeaderDate), String(localized: .sessionListCancelled), String(localized: .sessionListHeaderUnits), String(localized: .sessionListHeaderNotes)], shrink: [3])
+            var t = Table(header: [String(localized: .sessionListHeaderSession), String(localized: .sessionListHeaderDate), String(localized: .sessionListHeaderKind), String(localized: .sessionListHeaderUnits), String(localized: .sessionListHeaderNotes)], shrink: [3])
             for s in sessions {
                 let notes = [s.roughNoteId.map { _ in String(localized: .sessionListRough) }, s.reviewNoteId.map { _ in s.reviewNoteUnfinished == true ? String(localized: .sessionListReviewUnfinished) : String(localized: .sessionListReview) }].compactMap { $0 }
-                let cells = [f.reference(of: s, calendar: r.ctx.calendar), when(s.date, now: r.ctx.now, time: true), s.isCancelled ? String(localized: .sessionListCancelled).toned : "", f.subject(of: s) ?? "", notes.joined(separator: " · ")]
+                let cells = [f.reference(of: s, calendar: r.ctx.calendar), when(s.date, now: r.ctx.now, time: true), kindLabel(s).map { s.isCancelled ? $0.toned : $0 } ?? "", f.subject(of: s) ?? "", notes.joined(separator: " · ")]
                 t.rows.append(s.date < r.ctx.now ? cells.map { $0.styled(.dim) } : cells)
             }
             t.print()
@@ -51,7 +60,11 @@ struct SessionCommand: ParsableCommand {
             courseHeader(c, catalog: try? r.ctx.catalog())
             say(f.title(of: s, calendar: r.ctx.calendar).styled(.bold))
             say(String(localized: .sessionShowDate(when(s.date, now: r.ctx.now, time: true))))
-            if s.isCancelled { say(String(localized: .sessionShowCancelled)) }
+            switch s.kind {
+            case .cancelled: say(String(localized: .sessionShowCancelled))
+            case .makeup: say(String(localized: .sessionShowMakeup))
+            case .lecture: break
+            }
             if let end = s.end(schedule: f.course.schedule, calendar: r.ctx.calendar) {
                 say(String(localized: .sessionShowEnd(end.formatted(date: .omitted, time: .shortened))))
             }

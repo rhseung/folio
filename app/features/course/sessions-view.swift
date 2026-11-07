@@ -394,6 +394,20 @@ struct SuggestedSessionActions: View {
     }
 }
 
+/// 휴강 or 보강 beside a class's name. A lecture, the usual kind, goes unmarked. A makeup is held, so it takes the
+/// course color rather than a warning.
+struct SessionKindChip: View {
+    let kind: Session.Kind
+
+    var body: some View {
+        switch kind {
+        case .cancelled: Chip(String(localized: .sessionsCancelled))
+        case .makeup: Chip(String(localized: .sessionsMakeup), tone: .accent)
+        case .lecture: EmptyView()
+        }
+    }
+}
+
 /// Adds a session, or edits one when given: off-timetable classes (a makeup, a recitation) need their own end, and an
 /// online one its meeting link.
 struct SessionFormSheet: View {
@@ -408,11 +422,11 @@ struct SessionFormSheet: View {
         SheetForm(title: model.title, confirm: model.confirm, disabled: model.disabled, note: model.note) {
             FormRow(label: String(localized: .sessionsDate)) { DateChip(date: Binding(get: { model.start }, set: { model.setStart($0) })) }
             FormRow(label: String(localized: .sessionsEnd)) { TimeMenu(minute: Binding(get: { model.endMinute }, set: { model.setEnd($0) })) }
-            FormRow(label: String(localized: .sessionsLink), detail: String(localized: .sessionsLinkDetail), last: model.session != nil) {
+            FormRow(label: String(localized: .sessionsLink), detail: String(localized: .sessionsLinkDetail)) {
                 InlineField(String(localized: .sessionsLinkPrompt), text: $model.link)
             }
-            if model.session == nil {
-                FormRow(label: String(localized: .sessionsCancelled), last: true) { Switch(isOn: $model.cancelled) }
+            FormRow(label: String(localized: .sessionsKind), last: true) {
+                Segmented(selection: Binding(get: { model.kind }, set: { model.setKind($0) }), options: model.kindOptions)
             }
         } onConfirm: {
             model.submit()
@@ -694,7 +708,7 @@ struct SessionCard: View {
                     .help(file.title(of: session, calendar: model.calendar))
                     // The accent border and tile are the only visible mark, so VoiceOver needs the word.
                     .accessibilityValue(live ? String(localized: .sessionsNow) : "")
-                if cancelled { Chip(String(localized: .sessionsCancelled)) }
+                SessionKindChip(kind: session.kind)
                 if let late { Chip(late.label, tone: late.value == .late ? .warning : late.value == .absent ? .danger : .plain) }
                 let gaps = model.leftGaps(session, in: file, now: now)
                 if !gaps.isEmpty {

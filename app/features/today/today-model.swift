@@ -232,6 +232,7 @@ final class TodayModel {
         var name: String
         var sessionId: UUID?
         var suggested: Workspace.SuggestedSession?
+        var isMakeup = false
         var id: String { "\(courseId)-\(start.timeIntervalSinceReferenceDate)" }
     }
 
@@ -241,7 +242,8 @@ final class TodayModel {
             RibbonClass(courseId: item.courseId, start: item.session.date,
                         end: item.session.expectedEnd(schedule: workspace.course(item.courseId)?.file.course.schedule ?? [],
                                                       classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar),
-                        name: workspace.course(item.courseId)?.file.subject(of: item.session) ?? "", sessionId: item.session.id)
+                        name: workspace.course(item.courseId)?.file.subject(of: item.session) ?? "", sessionId: item.session.id,
+                        isMakeup: item.session.kind == .makeup)
         }
         let planned = suggested(now: now, on: summary.studyDay).map {
             RibbonClass(courseId: $0.courseId, start: $0.suggestion.date, end: $0.suggestion.end, name: "", suggested: $0)
@@ -251,7 +253,8 @@ final class TodayModel {
 
     /// A planned class, or one with no unit yet, has no name; its part is left out rather than left blank.
     func ribbonHelp(_ item: RibbonClass) -> String {
-        [title(item.courseId), item.name, "\(time(item.start)) – \(time(item.end))"].filter { !$0.isEmpty }.joined(separator: " · ")
+        [title(item.courseId), item.isMakeup ? String(localized: .sessionsMakeup) : "", item.name, "\(time(item.start)) – \(time(item.end))"]
+            .filter { !$0.isEmpty }.joined(separator: " · ")
     }
 
     func ribbon(_ classes: [RibbonClass], on day: LocalDate) -> DayRibbon {

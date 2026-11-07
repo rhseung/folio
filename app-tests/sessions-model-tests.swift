@@ -81,7 +81,7 @@ struct SessionsModelTests {
         #expect(plan.allSatisfy { workspace.calendar.isoWeekday(of: $0.suggestion.date) == 2 })
 
         let second = plan[1]
-        model.menu.make(second, cancelled: true)
+        model.menu.make(second, kind: .cancelled)
         let saved = try #require(workspace.course(graphTheory)?.file.sessions.first { $0.date == second.suggestion.date })
         #expect(saved.isCancelled && saved.week == second.draft.week)
         #expect(try planned().map(\.suggestion.date) == plan.map(\.suggestion.date).filter { $0 != second.suggestion.date })

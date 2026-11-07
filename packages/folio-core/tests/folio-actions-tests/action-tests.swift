@@ -94,7 +94,7 @@ struct ActionTests {
 
         let before = try file().sessions.count
         #expect(throws: ActionError.self) {
-            try run(SessionAdd(course: Self.graphTheory, date: now.addingTimeInterval(86_400), cancelled: true, attendance: .absent))
+            try run(SessionAdd(course: Self.graphTheory, date: now.addingTimeInterval(86_400), kind: .cancelled, attendance: .absent))
         }
         #expect(try file().sessions.count == before)
 

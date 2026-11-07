@@ -14,7 +14,10 @@ final class SessionFormModel {
     /// Minutes from the start day's midnight: a class ends on the day it starts. The view sets it through `setEnd`.
     var endMinute: Int
     var link: String
-    var cancelled = false
+    /// While adding, follows the start until picked: a class off the timetable is most likely a makeup. Editing keeps
+    /// the session's own kind until the user changes it.
+    private(set) var kind: Session.Kind
+    private var kindPicked = false
     /// The end is stored only when the user picks it or a class moves off the timetable; otherwise the slot keeps
     /// giving it, so editing the class times later still moves it.
     private var endPicked = false
@@ -32,6 +35,23 @@ final class SessionFormModel {
         self.start = start
         endMinute = Self.minute(of: end, from: start, calendar: calendar)
         link = session?.link ?? ""
+        kind = session?.kind ?? .lecture
+        if session == nil { kind = guessedKind(at: start) }
+    }
+
+    var kindOptions: [(Session.Kind, String)] {
+        [(.lecture, String(localized: .sessionsLecture)), (.cancelled, String(localized: .sessionsCancelled)),
+         (.makeup, String(localized: .sessionsMakeup))]
+    }
+
+    func setKind(_ kind: Session.Kind) {
+        self.kind = kind
+        kindPicked = true
+    }
+
+    /// A course without a timetable has no time off it, so nothing there reads as a makeup.
+    private func guessedKind(at date: Date) -> Session.Kind {
+        !schedule.isEmpty && slot(at: date) == nil ? .makeup : .lecture
     }
 
     var title: String {
@@ -56,6 +76,7 @@ final class SessionFormModel {
     func setStart(_ date: Date) {
         let length = end.timeIntervalSince(start)
         start = date
+        if session == nil && !kindPicked { kind = guessedKind(at: date) }
         if !endPicked, let slot = slot(at: date) {
             endMinute = slot.endMinute
         } else {
@@ -89,7 +110,7 @@ final class SessionFormModel {
     private var storedLink: String? { OnlineLink.stored(link) }
 
     private var add: SessionAdd {
-        SessionAdd(course: courseId, date: start, end: end, link: storedLink, cancelled: cancelled)
+        SessionAdd(course: courseId, date: start, end: end, link: storedLink, kind: kind)
     }
 
     /// Only what changed; nil while adding.
@@ -98,7 +119,8 @@ final class SessionFormModel {
         return SessionSet(course: courseId, session: session.id,
                           date: start == session.date ? .keep : .set(start),
                           end: endPatch(session),
-                          link: storedLink == session.link ? .keep : .set(storedLink))
+                          link: storedLink == session.link ? .keep : .set(storedLink),
+                          kind: kind == session.kind ? .keep : .set(kind))
     }
 
     /// Saves the end the form shows. Unmoved and unpicked, the end stays as it is. Moved, the form's end goes to the

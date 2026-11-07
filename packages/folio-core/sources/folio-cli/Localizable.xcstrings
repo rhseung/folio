@@ -1453,6 +1453,17 @@
         }
       }
     },
+    "completion.makeup": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보강"
+          }
+        }
+      }
+    },
     "completion.discussion": {
       "extractionState": "manual",
       "localizations": {
@@ -6282,6 +6293,17 @@
         }
       }
     },
+    "session.list.header.kind": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "종류"
+          }
+        }
+      }
+    },
     "session.list.header.notes": {
       "extractionState": "manual",
       "localizations": {
@@ -6348,6 +6370,17 @@
         }
       }
     },
+    "session.list.makeup": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보강"
+          }
+        }
+      }
+    },
     "session.list.review": {
       "extractionState": "manual",
       "localizations": {
@@ -6398,7 +6431,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "노트, 녹음, 출석, 자료, 단원이 연결된 회차는 지우지 않는다(종료 코드 4). 수업이 없던 날이면 --cancelled true로 휴강 표시한다.\n확인을 받는다.\n\n예시:\n  folio session rm EC4207/10-30 --dry-run"
+            "value": "노트, 녹음, 출석, 자료, 단원이 연결된 회차는 지우지 않는다(종료 코드 4). 수업이 없던 날이면 session set --kind cancelled로 휴강 표시한다.\n확인을 받는다.\n\n예시:\n  folio session rm EC4207/10-30 --dry-run"
           }
         }
       }
@@ -6443,6 +6476,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "  휴강"
+          }
+        }
+      }
+    },
+    "session.show.makeup": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "  보강"
           }
         }
       }

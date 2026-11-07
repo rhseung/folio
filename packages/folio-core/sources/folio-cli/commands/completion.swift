@@ -61,7 +61,7 @@ enum Complete {
     }
 
     static let sessions = items { r, c in
-        c.file.sessions.map { s in (c.file.reference(of: s, calendar: r.ctx.calendar), joined(day(s.date, r), s.isCancelled ? String(localized: .completionCancelled) : c.file.subject(of: s) ?? "")) }
+        c.file.sessions.map { s in (c.file.reference(of: s, calendar: r.ctx.calendar), joined(day(s.date, r), s.isCancelled ? String(localized: .completionCancelled) : joined(s.kind == .makeup ? String(localized: .completionMakeup) : "", c.file.subject(of: s) ?? ""))) }
     }
     static let exams = items { r, c in c.file.exams.map { ($0.title, day($0.start, r)) } }
     static let units = items { _, c in c.file.units.map { ($0.title, "") } }

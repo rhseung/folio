@@ -358,8 +358,12 @@ struct CourseOverview: View {
                             }
                             .frame(width: 34)
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                                Text(model.recentTitle(s, in: file)).font(Theme.Typeface.bodyStrong).lineLimit(1)
-                                    .strikethrough(s.isCancelled)
+                                // 휴강 is the line under it; a makeup still has its review to tell there.
+                                HStack(spacing: Theme.Space.s) {
+                                    Text(model.recentTitle(s, in: file)).font(Theme.Typeface.bodyStrong).lineLimit(1)
+                                        .strikethrough(s.isCancelled)
+                                    if s.kind == .makeup { SessionKindChip(kind: s.kind) }
+                                }
                                 Text(model.weekStatus(s, in: file, now: now))
                                     .font(Theme.Typeface.caption)
                                     .foregroundStyle(file.needsReviewNote(s, at: now) ? Theme.Palette.danger : Theme.Palette.textTertiary)

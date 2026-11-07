@@ -378,7 +378,13 @@ struct UnitDetail: View {
         let file = course.file
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
             Text(s.date.formatted(.dateTime.month().day())).font(Theme.Typeface.bodyStrong).monospacedDigit()
-            Text(s.date.formatted(.dateTime.weekday())).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+            // 보강 under the date, not as a chip by the title: at phone width the row had no room left for one.
+            // The title's strikethrough already says 휴강.
+            HStack(spacing: Theme.Space.xs) {
+                Text(s.date.formatted(.dateTime.weekday())).foregroundStyle(Theme.Palette.textTertiary)
+                if s.kind == .makeup { Text(.sessionsMakeup).fontWeight(.semibold).foregroundStyle(accent.ink) }
+            }
+            .font(Theme.Typeface.caption)
         }
         .frame(width: 84, alignment: .leading)
         let title = model.classTitle(s, besides: unit, in: file)

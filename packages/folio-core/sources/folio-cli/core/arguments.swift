@@ -17,6 +17,18 @@ extension GradingMode: ExpressibleByArgument {}
 extension Term: ExpressibleByArgument {}
 extension ReviewResult: ExpressibleByArgument {}
 
+/// `lecture`, `cancelled`, `makeup`, and the Korean the app shows, as `Toggle` reads it.
+extension Session.Kind: ExpressibleByArgument {
+    public init?(argument: String) {
+        switch argument {
+        case "강의": self = .lecture
+        case "휴강": self = .cancelled
+        case "보강": self = .makeup
+        default: self.init(rawValue: argument.lowercased())
+        }
+    }
+}
+
 /// `2026-10-28`, `2026-10-28 14:30`, `2026-10-28T14:30`, or full ISO 8601, in local time unless it says otherwise.
 struct DateArg: ExpressibleByArgument {
     var date: Date
