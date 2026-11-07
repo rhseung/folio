@@ -12,7 +12,7 @@ public enum Actions {
         ScoreAdd.self, ScoreSet.self, ScoreRemove.self, ComponentAdd.self, ComponentSet.self, ComponentRemove.self, ComponentMove.self, PolicySet.self,
         MaterialLinkSession.self, MaterialLinkUnit.self, MaterialLinkExam.self, MaterialStatusSet.self, MaterialKindSet.self, MaterialRelink.self, MaterialUntrack.self,
         MaterialTrack.self, MaterialImport.self, MaterialMove.self, MaterialTrash.self, MaterialWrite.self, MaterialNew.self, MaterialBuild.self, CleanupApply.self, CleanupUndo.self,
-        RecordingTrim.self,
+        RecordingTrim.self, RecordingRetitleLegacy.self,
         NoteAdd.self, NoteWrite.self, NoteEdit.self, NoteAdopt.self, NoteLink.self, NoteLinkSessions.self, NoteUnlinkSession.self, NoteRemove.self, NoteMigrate.self, NoteRetitleSessions.self, NoteMove.self, NoteBuild.self,
         QuizCardSave.self, QuizCardRemove.self, QuizRecord.self,
         ProblemSetSave.self, ProblemSetRemove.self, ProblemLinkUnit.self, ProblemRecord.self,

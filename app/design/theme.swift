@@ -216,7 +216,9 @@ enum Theme {
         /// Round check buttons.
         static let check = Font.system(size: 16)
         /// A window toolbar button.
-        static let toolbar = Font.system(size: 15)
+        static let toolbar = Font.system(size: toolbarSize)
+        /// `toolbar`'s point size, for measuring a toolbar symbol's ink (`TabBar.plusInk`).
+        static let toolbarSize: CGFloat = 15 // design: one-off. A type size, which the grid leaves out.
         /// A `LineIcon`: every list and sidebar symbol at one size, so their strokes match.
         static let line = Font.system(size: lineSize)
         /// `line`'s point size, for icons drawn by hand to match its symbols (`FolderIcon`).

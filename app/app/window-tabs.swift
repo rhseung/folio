@@ -19,6 +19,11 @@ final class WindowTabs {
     private(set) var alive: Set<UUID>
     /// When each tab last went behind another.
     @ObservationIgnored private var left: [UUID: Date] = [:]
+    /// The tabs playing a recording. `TabKeep` keeps them alive: dropping the screen would stop the audio.
+    private(set) var playing: Set<UUID> = []
+    /// The panes playing, which the strip marks, each with how to pause it.
+    private(set) var playingPanes: Set<UUID> = []
+    @ObservationIgnored private var pauses: [UUID: @MainActor () -> Void] = [:]
     /// Closing the last tab closes the window, which the window hands over once it has one.
     @ObservationIgnored var closeWindow: @MainActor () -> Void = {}
     @ObservationIgnored var now: @MainActor () -> Date = { .now }
@@ -76,6 +81,28 @@ final class WindowTabs {
 
     func closeSelected() { close(selected) }
 
+    /// A pane's screen saying it plays (with how to pause it) or has stopped (nil); without a pane, the tab's first.
+    func play(_ id: UUID, pane: UUID? = nil, pause: (@MainActor () -> Void)?) {
+        if let pane = pane ?? tabs[id]?.ids.first {
+            pauses[pane] = pause
+            let on = pause != nil && strip.tabs.contains(id)
+            if on != playingPanes.contains(pane) { if on { playingPanes.insert(pane) } else { playingPanes.remove(pane) } }
+        }
+        // From the tabs still open: a closed tab's screen says it stopped only once the tab is gone.
+        let open = Set(strip.tabs.flatMap { tabs[$0]?.ids ?? [] })
+        let panes = playingPanes.intersection(open)
+        if panes != playingPanes { playingPanes = panes }
+        let tabs = Set(strip.tabs.filter { self.tabs[$0]?.ids.contains(where: panes.contains) == true })
+        if tabs != playing { playing = tabs }
+    }
+
+    /// Every pane of the tab that plays.
+    func pause(_ id: UUID) {
+        for pane in tabs[id]?.ids ?? [] where playingPanes.contains(pane) { pauses[pane]?() }
+    }
+
+    func pause(pane: UUID) { pauses[pane]?() }
+
     func closeOthers(than id: UUID) {
         strip.closeOthers(than: id)
         tabs = tabs.filter { $0.key == id }
@@ -97,7 +124,7 @@ final class WindowTabs {
     private func settle(pressure: Bool = false) {
         left = left.filter { strip.tabs.contains($0.key) }
         let kept = TabKeep.alive(selected: strip.selected, alive: alive.intersection(strip.tabs), left: left, now: now(), policy: policy,
-                                 pressure: pressure)
+                                 pressure: pressure, playing: playing)
         if kept != alive { alive = kept }
     }
 }
@@ -122,7 +149,9 @@ struct TabScreens: View {
                     // one in front: a note's text and preview page reflowing out of sight made each frame of a live
                     // resize wait on every kept tab. It takes the window's size again when it comes back.
                     let kept = front ? nil : sizes[id]
-                    PaneRow(workspace: workspace, panes: panes, front: front, openLink: openLink)
+                    PaneRow(workspace: workspace, panes: panes, front: front, openLink: openLink) { [tabs] pane, pause in
+                        tabs.play(id, pane: pane, pause: pause)
+                    }
                         .onGeometryChange(for: CGSize.self, of: \.size) { sizes[id] = $0 }
                         .frame(width: kept?.width, height: kept?.height, alignment: .topLeading)
                         // The window's size whatever the screen inside: with no least size given, a screen behind
@@ -139,6 +168,11 @@ struct TabScreens: View {
         }
         .onChange(of: tabs.alive) { _, alive in sizes.keep(alive) }
     }
+}
+
+extension EnvironmentValues {
+    /// Where a screen says it is playing a recording, so its tab is kept and its pane marked behind the front one.
+    @Entry var tabPlaying: @MainActor ((@MainActor () -> Void)?) -> Void = { _ in }
 }
 
 #if os(macOS)
@@ -264,6 +298,31 @@ struct TabBar: View {
 
     static let gap = Theme.Space.s
     static let icon = Theme.Size.toolbarButton
+    static let plus = "plus"
+    /// The new-tab glyph's ink, which sets it one gap after the last capsule (`TabFit.newTabSpacing`). Not its image's
+    /// width: that has the symbol's side bearings in it, 2 points a side, and the + still sat further off than the
+    /// capsules from each other.
+    static let plusInk = inkWidth(of: plus, size: Theme.Glyph.toolbarSize)
+
+    static func inkWidth(of symbol: String, size: CGFloat) -> CGFloat {
+        guard let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: size, weight: .regular)) else { return size }
+        let scale = 4
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(image.size.width) * scale,
+                                         pixelsHigh: Int(image.size.height) * scale, bitsPerSample: 8, samplesPerPixel: 4,
+                                         hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
+        else { return size }
+        rep.size = image.size
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        image.draw(in: NSRect(origin: .zero, size: image.size))
+        NSGraphicsContext.restoreGraphicsState()
+        let inked = (0..<rep.pixelsWide).filter { x in
+            (0..<rep.pixelsHigh).contains { (rep.colorAt(x: x, y: $0)?.alphaComponent ?? 0) > 0.5 }
+        }
+        guard let first = inked.first, let last = inked.last else { return size }
+        return CGFloat(last + 1 - first) / CGFloat(scale)
+    }
 
     var body: some View {
         let others = tabs.ids.filter { $0 != tabs.selected }
@@ -302,10 +361,11 @@ struct TabBar: View {
                 .contextMenu { menu(id) }
             }
             if !hidden.isEmpty { more(hidden) }
-            Button(.tabsNew, systemImage: "plus") { tabs.open() }
+            Button(.tabsNew, systemImage: Self.plus) { tabs.open() }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.toolbar)
                 .help(Text(.tabsNewHelp))
+                .padding(.leading, placement.newTabSpacing - Self.gap)
                 #if DEBUG || RESIZE_PROBE
                 .background { ResizeMarker(name: "newTab") }
                 #endif
@@ -389,34 +449,67 @@ struct TabBar: View {
         .accessibilityLabel(Text(.tabsClose))
     }
 
-    func tab(_ id: UUID, form: TabForm) -> some View {
+    @ViewBuilder func tab(_ id: UUID, form: TabForm) -> some View {
         let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
         let title = workspace.tabTitle(of: entry)
         let name = tabs.panes(id).flatMap(workspace.presetName(of:)) ?? title ?? workspace.placeCrumb(of: entry).title
-        return Button { tabs.select(id) } label: {
+        if let panes = tabs.panes(id), panes.count > 1 {
+            // Not one button: the playing pane's speaker is a button of its own, and inside the tab's label it would
+            // select the tab.
             label(id, form: form)
+                .help(name)
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(name)
+        } else {
+            let playing = tabs.playing.contains(id)
+            Button { tabs.select(id) } label: {
+                label(entry, title: form == .full ? title : nil, playing: playing)
+            }
+            .buttonStyle(.pointing(.plain))
+            // Its own button over the room the label leaves it: a button inside the tab's label would select the tab.
+            .overlay(alignment: .trailing) { if playing && form == .full { speaker(id) } }
+            .help(name)
+            .accessibilityLabel(name)
         }
-        .buttonStyle(.pointing(.plain))
-        .help(name)
-        .accessibilityLabel(name)
     }
 
     /// A tab behind the front one. One pane: its icon, and its name unless it has none or the row is short. Several:
-    /// their icons joined, with the preset's name the layout is, or the first icon and "+n" (`TabFit`'s step 2).
+    /// their icons joined, with the preset's name the layout is, or the first icon and "+n" (`TabFit`'s step 2). The
+    /// playing pane's icon is a speaker that pauses it; stacked into one icon, the tab shows the speaker there and
+    /// selects, as a tab of one pane does at an icon.
     @ViewBuilder func label(_ id: UUID, form: TabForm) -> some View {
         if let panes = tabs.panes(id), panes.count > 1 {
             let marks = zip(panes.navigators, panes.trails).map { workspace.paneMark(of: $0.current, trail: $1) }
+            let playing = panes.ids.map { tabs.playingPanes.contains($0) }
             HStack(spacing: 0) {
                 if form == .stacked {
-                    PlaceIcon(place: marks[0]).padding(.trailing, Theme.Space.xxs)
-                    Text(.panesMoreCount(marks.count - 1)).font(Theme.Typeface.caption).monospacedDigit()
+                    Button { tabs.select(id) } label: {
+                        HStack(spacing: Theme.Space.xxs) {
+                            if playing.contains(true) { speakerIcon } else { PlaceIcon(place: marks[0]) }
+                            Text(.panesMoreCount(marks.count - 1)).font(Theme.Typeface.caption).monospacedDigit()
+                        }
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.pointing(.plain))
                 } else {
                     ForEach(marks.indices, id: \.self) { i in
                         if i > 0 { SegmentRule() }
-                        PlaceIcon(place: marks[i]).padding(.horizontal, Theme.Space.xs)
+                        Group {
+                            if playing[i] {
+                                Button { tabs.pause(pane: panes.ids[i]) } label: { speakerIcon.contentShape(.rect) }
+                                    .help(Text(.tabsPause))
+                                    .accessibilityLabel(Text(.tabsPause))
+                            } else {
+                                Button { tabs.select(id) } label: { PlaceIcon(place: marks[i]).contentShape(.rect) }
+                                    .accessibilityLabel(marks[i].title)
+                            }
+                        }
+                        .buttonStyle(.pointing(.plain))
+                        .padding(.horizontal, Theme.Space.xs)
                     }
                     if form == .full, let preset = workspace.presetName(of: panes) {
-                        CappedWidth(width: Theme.Size.tabName) { Text(preset).lineLimit(1) }
+                        Button { tabs.select(id) } label: { CappedWidth(width: Theme.Size.tabName) { Text(preset).lineLimit(1) } }
+                            .buttonStyle(.pointing(.plain))
                             .padding(.leading, Theme.Space.xxs)
                             .padding(.trailing, Theme.Space.xs)
                     }
@@ -428,14 +521,18 @@ struct TabBar: View {
             .frame(height: Theme.Size.toolbarButton)
             .tabSurface(front: false)
             .contentShape(.capsule)
+            // The room between the icons selects the tab too; the buttons in it take their own presses first.
+            .onTapGesture { tabs.select(id) }
         } else {
             let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
-            label(entry, title: form == .full ? workspace.tabTitle(of: entry) : nil)
+            label(entry, title: form == .full ? workspace.tabTitle(of: entry) : nil, playing: tabs.playing.contains(id))
         }
     }
 
-    /// A tab of one pane behind the front one: its icon, and its name unless it has none or the row is short.
-    @ViewBuilder func label(_ entry: Navigator.Entry, title: String?) -> some View {
+    /// A tab of one pane behind the front one: its icon, and its name unless it has none or the row is short. Playing
+    /// a recording, it leaves room at its end for the speaker, set as the front tab sets its close button, or shows the
+    /// speaker in place of its icon when the row is short.
+    @ViewBuilder func label(_ entry: Navigator.Entry, title: String?, playing: Bool = false) -> some View {
         let place = workspace.placeCrumb(of: entry)
         Group {
             if let title {
@@ -444,7 +541,9 @@ struct TabBar: View {
                     CappedWidth(width: Theme.Size.tabName) { Text(title).lineLimit(1) }
                 }
                 .padding(.leading, Theme.Space.s)
-                .padding(.trailing, Theme.Space.m)
+                .padding(.trailing, playing ? Theme.Space.xs + Self.closeSize + Theme.Space.xs : Theme.Space.m)
+            } else if playing {
+                speakerIcon.frame(width: Self.icon)
             } else {
                 PlaceIcon(place: place).frame(width: Self.icon)
             }
@@ -456,19 +555,41 @@ struct TabBar: View {
         .contentShape(.capsule)
     }
 
+    static let speakerSymbol = "speaker.wave.2.fill"
+
+    var speakerIcon: some View { LineIcon(symbol: Self.speakerSymbol).foregroundStyle(Theme.Palette.chromeIcon) }
+
+    func speaker(_ id: UUID) -> some View {
+        Button { tabs.pause(id) } label: {
+            Image(systemName: Self.speakerSymbol).font(Theme.Glyph.small)
+                .frame(width: Self.closeSize, height: Self.closeSize)
+                .contentShape(.circle)
+        }
+        .buttonStyle(.pointing(.plain))
+        .foregroundStyle(Theme.Palette.chromeText)
+        .padding(.trailing, Theme.Space.xs)
+        .help(Text(.tabsPause))
+        .accessibilityLabel(Text(.tabsPause))
+    }
+
     func more(_ hidden: [UUID]) -> some View {
         Menu {
             ForEach(hidden, id: \.self) { id in
                 let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
                 let place = workspace.placeCrumb(of: entry)
                 let name = tabs.panes(id).flatMap(workspace.presetName(of:)) ?? workspace.tabTitle(of: entry) ?? place.title
-                Button(name, systemImage: place.symbol ?? CourseMark.defaultIcon) { tabs.select(id) }
+                Button(name, systemImage: tabs.playing.contains(id) ? Self.speakerSymbol : place.symbol ?? CourseMark.defaultIcon) {
+                    tabs.select(id)
+                }
             }
         } label: {
             moreLabel(hidden.count)
         }
         .menuStyle(.button)
-        .buttonStyle(.pointing(.plain))
+        // Plain, not `.pointing(.plain)`: a custom style turns the menu back into a pop-up button, whose own margins
+        // drew the capsule wider than measured and set it further from its neighbors than they are from each other.
+        .buttonStyle(.plain)
+        .pointingHand()
         .menuIndicator(.hidden)
         .fixedSize()
         .help(Text(.tabsMore(hidden.count)))
@@ -486,6 +607,7 @@ struct TabBar: View {
 
     func menu(_ id: UUID) -> some View {
         Group {
+            if tabs.playing.contains(id) { Button(.tabsPause) { tabs.pause(id) }; Divider() }
             Button(.tabsClose) { tabs.close(id) }
             Button(.tabsCloseOthers) { tabs.closeOthers(than: id) }.disabled(tabs.count < 2)
             Divider()
@@ -638,9 +760,12 @@ private struct SegmentRule: View {
         var trail: CGFloat?
         /// The strip's whole width, the + included.
         var width: CGFloat
+        /// Before the new-tab button (`TabFit.newTabSpacing`).
+        var newTabSpacing: CGFloat
     }
 
-    private(set) var placement = Placement(lead: 0, fit: TabFit.Layout(iconsOnly: false, shown: 0, hidden: 0), trail: nil, width: 0)
+    private(set) var placement = Placement(lead: 0, fit: TabFit.Layout(iconsOnly: false, shown: 0, hidden: 0), trail: nil, width: 0,
+                                           newTabSpacing: TabBar.gap)
 
     /// Set as the window resizes, before the row lays out (`WindowWidth`): the tabs fit the new width in the same frame.
     @ObservationIgnored var windowWidth: CGFloat = 1200 { didSet { settle() } }
@@ -686,20 +811,21 @@ private struct SegmentRule: View {
     }
 
     private func settle() {
-        let space = room - Theme.Size.toolbarButton - TabBar.gap
         let m = measures
+        let plus = CGFloat(TabFit.newTabSpacing(gap: TabBar.gap, button: Theme.Size.toolbarButton, glyph: TabBar.plusInk))
+        let space = room - Theme.Size.toolbarButton - plus
         let fit = TabFit.layout(room: space, front: m.front, others: m.others, gap: TabBar.gap, more: m.more)
         // Whole points, down: a held trail follows the width anyway, fractions would only redraw it more often, and
         // rounded up the strip could outgrow the row by one.
         let trail = TabFit.trail(room: space, front: m.front, others: m.others, layout: fit, gap: TabBar.gap, more: m.more)
             .map { $0.rounded(.down) }
         let width = TabFit.width(front: m.front, others: m.others, layout: fit, trail: trail, gap: TabBar.gap, more: m.more)
-            + TabBar.gap + Theme.Size.toolbarButton
+            + plus + Theme.Size.toolbarButton
         // The item whole points wide, the lead and the strip together: half a point over, the toolbar moved the item
         // by half a point, the row reported the new place, the lead took up the half, and the item went back, every
         // few frames of a resize.
         let whole = (lead + width).rounded(.down) - lead
-        let new = Placement(lead: lead, fit: fit, trail: trail.map { CGFloat($0) }, width: whole)
+        let new = Placement(lead: lead, fit: fit, trail: trail.map { CGFloat($0) }, width: whole, newTabSpacing: plus)
         if new != placement { placement = new }
     }
 

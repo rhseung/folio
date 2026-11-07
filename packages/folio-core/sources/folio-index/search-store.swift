@@ -35,6 +35,11 @@ public final class SearchStore: Sendable {
             try db.execute(sql: "DELETE FROM course")
             try db.execute(sql: "DELETE FROM item")
         }
+        // Classes are found by day and topic now, not `9주차-1`: same emptying, so no course keeps the old titles.
+        migrator.registerMigration("v3-session-days") { db in
+            try db.execute(sql: "DELETE FROM course")
+            try db.execute(sql: "DELETE FROM item")
+        }
         try migrator.migrate(db)
     }
 

@@ -80,7 +80,7 @@ struct MCPTests {
     @Test func aProposedNoteEditCarriesOnlyTheChange() throws {
         let (a, b) = (try Harness.fixtureCopy(), try Harness.fixtureCopy())
         let before = try Harness.files(a)
-        let input: JSONValue = ["course": "EC4207", "note": "2주차-1", "replacements": .array([["old": "Matching", "new": "매칭"]]), "append": "질문"]
+        let input: JSONValue = ["course": "EC4207", "note": "09-08", "replacements": .array([["old": "Matching", "new": "매칭"]]), "append": "질문"]
         let (failed, texts) = try call(MCPServer(gist: nil, propose: true), a, "note_edit", input)
         #expect(!failed, "\(texts)")
         #expect(try Harness.files(a) == before)
@@ -89,9 +89,9 @@ struct MCPTests {
         #expect(proposal.command == "note edit")
         let type = try #require(Actions.all.first { $0.command == proposal.command })
         try h.direct(try type.decode(JSONEncoder().encode(proposal.input)), gist: b)
-        let r = h.cli(["note", "show", "EC4207/2주차-1"], gist: b)
+        let r = h.cli(["note", "show", "EC4207/09-08"], gist: b)
         #expect(r.out.contains("> [!definition] 매칭") && r.out.contains("edges.\n질문"), "\(r.out)")
-        let missing = try call(MCPServer(gist: nil, propose: true), a, "note_edit", ["course": "EC4207", "note": "2주차-1", "append": ""])
+        let missing = try call(MCPServer(gist: nil, propose: true), a, "note_edit", ["course": "EC4207", "note": "09-08", "append": ""])
         #expect(missing.0)
     }
 

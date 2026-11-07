@@ -33,7 +33,7 @@ struct HelpExampleTests {
         ["material", "track", "EC4207"],
         ["note", "add", "EC4207", "매칭 정리", "--kind", "topic"],
         ["note", "add", "EC4207", "시험 메모"],
-        ["note", "add", "EC4207", "9주차 정리", "--kind", "review", "--session", "9주차-1"],
+        ["note", "add", "EC4207", "10-26(월) 정리", "--kind", "review", "--session", "10-26"],
         ["exam", "plan", "add", "EC4207/중간고사", "--day", "2026-10-18", "트리 단원 복습"],
         ["unit", "add", "EC4321", "기구학"],
     ]
@@ -67,9 +67,9 @@ struct HelpExampleTests {
         // A recording is the recorder's, not a command's, so it is written as the app writes it.
         let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
         let file = try ctx.file(Harness.graphTheory)
-        let session = try #require(file.sessions.first { file.name(of: $0) == "9주차-1" })
+        let session = try #require(file.sessions(matching: "10-26", calendar: ctx.calendar).first)
         try ctx.edit(Harness.graphTheory) {
-            $0.recordings.append(Recording(device: h.device, at: h.now, sessionId: session.id, file: "Recordings/9주차-1.m4a", duration: 4500))
+            $0.recordings.append(Recording(device: h.device, at: h.now, sessionId: session.id, file: "Recordings/10-26(월).m4a", duration: 4500))
         }
     }
 

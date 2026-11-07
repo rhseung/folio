@@ -49,7 +49,7 @@ struct UnitCommand: ParsableCommand {
             if let parent = u.parentId.flatMap({ id in f.units.first { $0.id == id } }) { say(String(localized: .unitShowParent(parent.title))) }
             let children = f.units.filter { $0.parentId == u.id }.sorted { $0.order < $1.order }
             for (title, names) in [(String(localized: .unitShowChildren), children.map(\.title)),
-                                   (String(localized: .unitShowSessions), u.sessionIds.compactMap { id in f.sessions.first { $0.id == id }.map { f.name(of: $0) } }),
+                                   (String(localized: .unitShowSessions), u.sessionIds.compactMap { id in f.sessions.first { $0.id == id }.map { f.reference(of: $0, calendar: r.ctx.calendar) } }),
                                    (String(localized: .unitShowExams), u.examIds.compactMap { id in f.exams.first { $0.id == id }?.title })] where !names.isEmpty {
                 say("  \(title)")
                 for n in names { say("    \(n)") }

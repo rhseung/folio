@@ -85,6 +85,46 @@ struct WindowTabsTests {
         #expect(tabs.alive == [tabs.selected])
     }
 
+    @Test func aPlayingTabStaysBehindAndPausesFromTheStrip() {
+        let tabs = WindowTabs(Navigator())
+        let player = tabs.selected
+        var paused = false
+        tabs.play(player, pause: { paused = true })
+        tabs.open()
+        tabs.dropBackground()
+        #expect(tabs.alive == [tabs.selected, player])
+        tabs.pause(player)
+        #expect(paused)
+        // Stopped, it is kept no longer than any other tab.
+        tabs.play(player, pause: nil)
+        tabs.dropBackground()
+        #expect(tabs.alive == [tabs.selected] && tabs.playing.isEmpty)
+        // A closed tab's screen saying it stopped leaves nothing behind.
+        tabs.play(player, pause: {})
+        tabs.close(player)
+        tabs.play(player, pause: nil)
+        #expect(tabs.playing.isEmpty)
+    }
+
+    /// The strip marks the pane that plays, not the tab's first, and pauses that one from its icon.
+    @Test func aPlayingPaneIsTheOneMarked() throws {
+        let tabs = WindowTabs(Navigator())
+        let player = tabs.selected
+        let panes = try #require(tabs.panes(player))
+        panes.openBeside(Navigator.Entry(link: .course(graphTheory), course: graphTheory))
+        let second = panes.ids[1]
+        var paused = false
+        tabs.play(player, pane: second, pause: { paused = true })
+        #expect(tabs.playingPanes == [second] && tabs.playing == [player])
+        tabs.pause(pane: panes.ids[0])
+        #expect(!paused)
+        tabs.pause(player)
+        #expect(paused)
+        // The pane closed, its screen says it stopped and the tab plays no longer.
+        tabs.play(player, pane: second, pause: nil)
+        #expect(tabs.playingPanes.isEmpty && tabs.playing.isEmpty)
+    }
+
     @Test func eachTabHasItsOwnTrail() {
         let tabs = WindowTabs(Navigator())
         let first = tabs.selected
@@ -136,17 +176,26 @@ struct ToolbarRowTests {
         #expect(row.placement == wide)
     }
 
-    @Test func itFollowsTheWidthAtOnceWhenTheRowRunsOut() {
+    @Test func itFollowsTheWidthAtOnceWhenTheRowRunsOut() throws {
         let row = row(width: 1400)
         // The search field stays where the row put it from the trailing edge, so the narrower width counts now, not
         // a turn later when the row reports the field's new place.
         row.windowWidth = 1180
         #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, shown: 3, hidden: 0))
-        // 276 for the tabs: the menu alone beside the tab in front, whose trail is held to 276 - 68 - 44 = 164.
+        // The + takes its 32 and the spacing that sets its glyph one gap after the menu; the rest is the tabs': the
+        // menu alone beside the tab in front, whose trail is held to what is left after the menu, its gap and the chrome.
         row.windowWidth = 900
         #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, stacked: true, compactFront: true, shown: 0, hidden: 3))
-        #expect(row.placement.trail == 164)
+        let spacing = TabFit.newTabSpacing(gap: TabBar.gap, button: Theme.Size.toolbarButton, glyph: TabBar.plusInk)
+        #expect(row.placement.newTabSpacing == CGFloat(spacing))
+        let held: CGFloat = (row.room - Theme.Size.toolbarButton - CGFloat(spacing) - 68 - 44).rounded(.down)
+        #expect(try #require(row.placement.trail) == held)
         #expect(row.placement.lead == CGFloat(TabFit.lead(panelEdge: Theme.Size.sidebar, after: row.historyEnd, gap: Theme.Space.s)))
+    }
+
+    @Test func theNewTabGlyphIsMeasuredByItsInk() {
+        // The plus's image is about 17 wide at the toolbar's size; its ink is about 13.
+        #expect((11...14).contains(TabBar.plusInk))
     }
 
     @Test func theStripNeverTakesTheSearchFieldsRoom() {

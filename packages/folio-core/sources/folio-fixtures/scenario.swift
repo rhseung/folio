@@ -228,7 +228,7 @@ private struct Builder {
         })
         let pages = [(0, 2), (230, 4), (600, 6), (1150, 9), (1690, 12), (2370, 15)].map { PageVisit(at: TimeInterval($0.0), materialId: slides.id, page: $0.1) }
         let recording = Recording(id: UUID(uuidString: "B0000000-0000-4000-8000-000000000001")!, device: device, at: start, sessionId: session,
-                                  file: "Recordings/9주차-1.m4a", duration: 4500, bookmarks: [1700, 2610], pages: pages)
+                                  file: "Recordings/11-02(월).m4a", duration: 4500, bookmarks: [1700, 2610], pages: pages)
         try FileManager.default.createDirectory(at: store.recordingsURL, withIntermediateDirectories: true)
         try store.saveTranscript(transcript, of: recording)
         try ctx.edit(course) { $0.recordings.append(recording) }

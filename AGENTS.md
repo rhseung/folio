@@ -186,7 +186,7 @@ Me/GIST/
       Notes/                   # Folio 노트(마크다운 .md, LaTeX .tex)
         assets/                # 노트에 넣은 그림과 파일
       Ink/                     # PencilKit 필기 (.drawing)
-      Recordings/              # 강의 녹음(.m4a)과 받아쓰기(.transcript.json). 2주차-1.m4a
+      Recordings/              # 강의 녹음(.m4a)과 받아쓰기(.transcript.json). 11-03(화).m4a
       Archive/                 # 이전 필기 (노타빌리티 PDF, 예전 노트 폴더)
       .folio/
         course.json            # 과목 정보, 단원, 강의 회차, 평가 기준, 과제, 파일 연결
@@ -208,7 +208,9 @@ Me/GIST/
 - `Inherited`에는 선배와 이전 학기에서 받은 자료를 종류와 상관없이 원래 이름으로 둔다. 출처별 하위 폴더(`Inherited/관훈 선배 리포트/`)는 써도 되고, 낱개 파일은 `Inherited`에 바로 둔다. 족보 시험지(해설 포함)인지는 이름이 아니라 `course.json`의 자료 종류(`pastExam`)로 표시하고, 시험에 쓸 자료는 그 시험에 연결한다(`material link-exam`). `Exams/Past`는 없앴다.
 - `Exercises`에는 교수가 준 채점 없는 연습 문제만 둔다.
 - `Study`에는 직접 만든 파일을 둔다. 문제집, 모의고사, 요약 PDF와 `.tex` 원본, 노트를 빌드한 PDF(`Study/<제목>.pdf`)가 여기 온다. 어느 시험·단원용인지는 `material link-exam`, `material link-unit`으로 연결하고(앱에서는 자료 연결 편집기, 단원 페이지, 시험 카드), 시험 화면은 시험 폴더의 파일과 연결된 자료를 함께 센다. 어떤 자료가 회차, 단원, 시험에 딸리는지는 `CourseFile.routes(of:to:)` 하나가 정한다. 회차는 그 단원과 상위 단원의 자료를, 단원은 그 회차의 자료를 함께 본다. Folio 마크다운 노트는 `Notes`에 둔다.
-- 회차 노트는 수업 날짜와 주제로 이름을 짓는다(`Notes/11-05(목) Principles of reliable data transfer.md`, 복습 노트는 뒤에 ` 정리`). 규칙은 `CourseFile.noteTitle(for:kind:calendar:)` 하나다. 그 전에 `10주차-2`로 만든 노트는 저절로 바뀌지 않고, `note retitle`로 한 번에 바꾼다. `N주차-M`은 CLI의 회차 이름과 녹음 파일에 그대로 쓴다.
+- 회차 노트는 수업 날짜와 주제로 이름을 짓는다(`Notes/11-05(목) Principles of reliable data transfer.md`, 복습 노트는 뒤에 ` 정리`). 규칙은 `CourseFile.noteTitle(for:kind:calendar:)` 하나다. 그 전에 `10주차-2`로 만든 노트는 저절로 바뀌지 않고, `note retitle`로 한 번에 바꾼다.
+- 회차는 `N주차-M`으로 부르지 않는다. 화면에 보이는 이름은 `CourseFile.title(of:calendar:)`(`11/3(화): 주제`) 하나이고, CLI가 회차를 가리키고 출력하는 이름은 `CourseFile.reference(of:calendar:)`(`EC4207/11-03`, 하루에 수업이 둘이면 `11-03 14:00`)다. 날짜(`11/3`, `2026-11-03`)와 주제로도 찾는다(`references`). 날짜는 공부일이 아니라 달력 날짜라 노트 파일 이름의 날짜와 같다. 학기의 주차(`Lectures`의 `05_`, "지금 9주차", 시험 주차, 회차 목록의 주차 묶음)는 회차 이름이 아니라 그대로 쓴다.
+- 녹음 파일은 수업 날짜로 이름을 짓는다(`Recordings/11-03(화).m4a`, 같은 날 둘째는 ` 2`). 그 전의 `2주차-1.m4a`는 저절로 바뀌지 않고, `recording retitle`로 한 번에 바꾼다. 예전 이름(`10주차-2`)을 알아보는 규칙은 이 두 이름 바꾸기 도구에만 둔다.
 - 노트 링크는 노트 ID로 건다: `[[note:<ID>|제목]]`, `[[note:<ID>#제목|표시]]`, `[[note:<ID>#^블록|표시]]`. 앱 링크 `folio://note/<ID>`로 열고 이름이 바뀌어도 깨지지 않는다. 손으로 쓴 `[[제목]]`은 과목 안에서 제목으로 찾고 ID 꼴로 바꾸지 않는다. 링크를 열 때와 미리보기가 그 노트를 그리거나 깨진 링크로 그릴 때 모두 `[NoteFile].linked` 하나로 찾는다. 블록 ID는 원문의 `^id`라 같은 노트 안에서 옮긴 블록은 따라가고, 다른 노트로 옮기면 찾지 못한다.
 - 링크 자동 완성은 고른 항목을 ID 꼴로 넣고 이름을 `|` 뒤에 붙인다: 노트 `[[note:<ID>|제목]]`, 자료 `[[material:<ID>#page=N|파일 이름]]`, 그 밖은 앱 링크 종류 이름 그대로(`[[exam:<ID>|중간고사]]`). 이미 쓴 `|이름`은 그대로 둔다. ID가 없는 블록을 고르면 대상 노트 끝 줄에 `^id`를 붙이는데, 다른 노트면 `note write`(읽은 글과 다르면 거절)로, 쓰고 있는 노트면 편집 보기에서 쓴다.
 - 앱 밖의 파일은 복사해서 들여오고, 같은 이름이 있으면 ` 2`를 붙여 덮어쓰지 않는다.
@@ -267,7 +269,8 @@ Me/GIST/
 - 노션 강의 정리와 점수: `import notes <덤프 폴더>`. 덤프 폴더는 과목마다 `<노션 페이지 ID>/index.json`, `notes/`, `assets/`를 가진다(`NotionCourseDump`). 노트 ID는 노션 페이지 ID라 다시 실행해도 중복되지 않고, 기존 항목은 덧붙이기만 한다
 - 자료 등록과 과제 폴더 반영: `material track [<과목>]`. 과목을 빼면 모든 과목의 파일을 추적 목록에 넣고, `Assignments/` 폴더 중 과제가 없는 것에 과제를 만든다
 - 시험 일정: `import exams <exams.json>`. `exams.json`은 구글 캘린더 "시험" 캘린더에서 읽은 `CalendarExam` 목록이며 저장소에 넣지 않는다. 같은 날 시험은 빈 칸만 채우고, 다른 날이면 바꾸지 않고 알린다
-- 단원: `import units <units.json>...`. 과목마다 `{"course": <과목 폴더 이름>, "units": [{"title", "sessions": ["3주차-1"], "children"}]}`. 제목으로 맞춰 없는 단원만 더하고 회차 연결은 더하기만 한다
+- 단원: `import units <units.json>...`. 과목마다 `{"course": <과목 폴더 이름>, "units": [{"title", "sessions": ["11-03"], "children"}]}`. 제목으로 맞춰 없는 단원만 더하고 회차 연결은 더하기만 한다
+- 예전 녹음 이름: `recording retitle [<과목>]`. 회차에 연결된 녹음 중 파일 이름이 `3주차-1.m4a`인 것만 수업 날짜(`11-03(화).m4a`)로 바꾸고 받아쓰기도 함께 옮긴다. 이동은 `moves.jsonl`의 한 묶음이고 `cleanup undo`가 파일과 `course.json`의 녹음 경로를 함께 되돌린다. 실제 GIST 폴더에는 사용자 승인 뒤에만 돌린다
 - 렉처 진도: `session progress <과목>/<회차> <자료>:<시작>-<끝>...`. 적은 자료의 쪽을 한 번에 회차에 연결하고 나머지 연결은 그대로 둔다. 앱은 녹음을 멈출 때 지난 수업이 끝난 다음 쪽부터 녹음 중 본 가장 뒤 쪽까지로 미리 채워 묻는다(`CourseFile.suggestedProgress`)
 - 시험 범위: `exam scope <과목>/<시험> --taught`. 그 시험 전에 지난 회차에 연결된 단원(과 상위 단원)을 범위에 더한다. 빼지는 않는다
 - 졸업 요건과 학생 정보: `import requirements <requirements.json>`. 학사편람 분류 표: `import handbook <handbook.json> [--accept]`. 두 파일 모두 실제 학업 데이터라 저장소에 넣지 않는다

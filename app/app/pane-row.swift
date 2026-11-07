@@ -10,6 +10,9 @@ struct PaneRow: View {
     /// The tab in front: only its panes take a press.
     let front: Bool
     let openLink: (Navigator) -> OpenLinkAction
+    /// A pane's screen saying it plays a recording (with how to pause it) or has stopped, by the pane's id: the tab
+    /// marks the playing pane's icon (`WindowTabs.play`).
+    var play: (UUID, (@MainActor () -> Void)?) -> Void = { _, _ in }
     /// How many panes stay open at this width with two panes and with three. It changes only where the width crosses
     /// a count, so a live resize sets it a few times, not every frame.
     @State private var open = [2, 3]
@@ -58,6 +61,7 @@ struct PaneRow: View {
             PaneScreen(workspace: workspace, navigator: navigator)
                 .environment(panes.trails[i])
                 .environment(\.openLink, openLink(navigator))
+                .environment(\.tabPlaying) { [play] pause in play(id, pause) }
                 .frame(width: kept, alignment: .topLeading)
                 .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { width in

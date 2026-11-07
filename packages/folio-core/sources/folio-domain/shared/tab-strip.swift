@@ -194,6 +194,14 @@ public enum TabFit {
         (trail ?? front.trail) + front.chrome(compact: layout.compactFront) + beside(others, layout: layout, gap: gap, more: more)
     }
 
+    /// Before the new-tab button after the last capsule: its bare glyph, centered in a button `button` wide, sits
+    /// `gap` after it, as the capsules sit among themselves. At the plain gap the button's margin around the glyph
+    /// read as a wider gap. Negative when that margin is wider than `gap`: the button's hit area then reaches under
+    /// the capsule's edge.
+    public static func newTabSpacing(gap: Double, button: Double, glyph: Double) -> Double {
+        gap - (button - glyph) / 2
+    }
+
     /// The tabs beside the one in front and the menu, each with the gap before it.
     private static func beside(_ others: [Other], layout: Layout, gap: Double, more: Double) -> Double {
         let shown = others.prefix(layout.shown)
@@ -219,19 +227,22 @@ public enum TabKeep {
 
     /// The tabs whose screens stay alive. The tab in front always does; behind it, only tabs alive already (a dropped
     /// tab isn't brought back until it is in front), the `limit` most recently in front, each in front within `idle`.
-    /// Under memory pressure only the tab in front is kept.
+    /// Under memory pressure only the tab in front is kept, and the playing ones.
     ///
     /// - Parameters:
     ///   - alive: the tabs whose screens are alive now.
     ///   - left: when each tab last went behind another. A tab alive without one is treated as just left.
+    ///   - playing: tabs playing a recording. Dropping one would stop what is being listened to, so they stay however
+    ///     long or under whatever pressure, outside the `limit` the others share (#317).
     public static func alive<ID: Hashable>(selected: ID, alive: Set<ID>, left: [ID: Date], now: Date, policy: Policy,
-                                          pressure: Bool = false) -> Set<ID> {
-        guard !pressure else { return [selected] }
-        let behind = alive.subtracting([selected])
+                                          pressure: Bool = false, playing: Set<ID> = []) -> Set<ID> {
+        let playing = playing.intersection(alive).union([selected])
+        guard !pressure else { return playing }
+        let behind = alive.subtracting(playing)
             .map { (id: $0, left: left[$0] ?? now) }
             .filter { now.timeIntervalSince($0.left) < policy.idle }
             .sorted { $0.left > $1.left }
             .prefix(max(0, policy.limit))
-        return Set(behind.map(\.id)).union([selected])
+        return Set(behind.map(\.id)).union(playing)
     }
 }

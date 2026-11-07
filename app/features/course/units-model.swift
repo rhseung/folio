@@ -196,6 +196,9 @@ final class UnitsModel {
         workspace.run(UnitMove(course: courseId, unit: unit.id, target: .parent(parent)))
     }
 
+    /// A class in a unit's list goes by its own topic: the unit it would otherwise borrow is the page it is on.
+    func classTitle(_ s: Session) -> String? { s.topic.isEmpty ? nil : s.topic }
+
     func linkMenu(_ unit: FolioDomain.Unit, in file: CourseFile) -> [(id: UUID, label: String, on: Bool)] {
         file.linkableSessions { unit.sessionIds.contains($0.id) }.reversed().map {
             (id: $0.id, label: file.title(of: $0, calendar: workspace.calendar), on: unit.sessionIds.contains($0.id))

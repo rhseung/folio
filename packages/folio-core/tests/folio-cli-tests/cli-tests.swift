@@ -25,7 +25,7 @@ struct SessionCommandTests {
     }
 
     @Test func set() throws {
-        try h.expectSame(["session", "set", "EC4207/9주차-1", "--cancelled", "true"], setup: [Self.add]) { _ in
+        try h.expectSame(["session", "set", "EC4207/10-28", "--cancelled", "true"], setup: [Self.add]) { _ in
             SessionSet(course: Harness.graphTheory, session: Self.id, cancelled: .set(true))
         }
     }
@@ -46,39 +46,39 @@ struct SessionCommandTests {
     }
 
     @Test func setTopicAndLink() throws {
-        try h.expectSame(["session", "set", "EC4207/9주차-1", "--topic", "매칭", "--link", "none"], setup: [Self.add]) { _ in
+        try h.expectSame(["session", "set", "EC4207/10-28", "--topic", "매칭", "--link", "none"], setup: [Self.add]) { _ in
             SessionSet(course: Harness.graphTheory, session: Self.id, topic: .set("매칭"), link: .set(nil))
         }
     }
 
     @Test func remove() throws {
-        try h.expectSame(["session", "rm", "EC4207/9주차-1", "--yes"], setup: [Self.add]) { _ in
+        try h.expectSame(["session", "rm", "EC4207/10-28", "--yes"], setup: [Self.add]) { _ in
             SessionRemove(course: Harness.graphTheory, sessions: [Self.id])
         }
     }
 
     @Test func note() throws {
         let note = UUID(uuidString: "A0000000-0000-4000-8000-000000000002")!
-        try h.expectSame(["session", "note", "EC4207/9주차-1", "review", "--id", note.uuidString], setup: [Self.add]) { _ in
+        try h.expectSame(["session", "note", "EC4207/10-28", "review", "--id", note.uuidString], setup: [Self.add]) { _ in
             SessionNote(id: note, course: Harness.graphTheory, session: Self.id, kind: .review)
         }
     }
 
     @Test func attendance() throws {
-        try h.expectSame(["attendance", "set", "EC4207/9주차-1", "absent"], setup: [Self.add]) { _ in
+        try h.expectSame(["attendance", "set", "EC4207/10-28", "absent"], setup: [Self.add]) { _ in
             AttendanceSet(course: Harness.graphTheory, session: Self.id, state: .absent)
         }
     }
 
     @Test func runTakesNamesLikeTheCommands() throws {
-        try h.expectSame(["run", "session", "set", "--input", #"{"course":"EC4207","session":"9주차-1","cancelled":true}"#], setup: [Self.add]) { _ in
+        try h.expectSame(["run", "session", "set", "--input", #"{"course":"EC4207","session":"10-28","cancelled":true}"#], setup: [Self.add]) { _ in
             SessionSet(course: Harness.graphTheory, session: Self.id, cancelled: .set(true))
         }
     }
 
     @Test func errorsHaveTheirExitCodes() throws {
         let gist = try Harness.fixtureCopy()
-        #expect(h.cli(["session", "show", "XX/1주차-1"], gist: gist).code == Exit.notFound.rawValue)
+        #expect(h.cli(["session", "show", "XX/10-28"], gist: gist).code == Exit.notFound.rawValue)
         #expect(h.cli(["session", "ad"], gist: gist).code == Exit.usage.rawValue)
         #expect(h.cli(["run", "session", "set", "--input", #"{"course":"EC4207"}"#], gist: gist).code == Exit.usage.rawValue)
         let json = h.cli(["session", "show", "EC4207/없음", "--json"], gist: gist)

@@ -95,7 +95,7 @@ extension Fixture {
                   "id" : "0B9E7A51-3C2D-4E8F-A6B4-1D5C9F2E7A83",
                   "kind" : "rough",
                   "math" : "latex",
-                  "path" : "Notes/1주차-1.md",
+                  "path" : "Notes/03-03(화).md",
                   "tags" : [],
                   "unitIds" : [],
                   "updatedAt" : "2026-08-25T09:00:00.000Z",
@@ -113,8 +113,8 @@ extension Fixture {
         ("2026-1/MA2001 선형대수학/Lectures/01_Vectors.pdf", nil),
         ("2026-1/MA2001 선형대수학/Lectures/05-1_Determinants.pdf", nil),
         ("2026-1/MA2001 선형대수학/Lectures/05-2_Cofactors.pdf", nil),
-        ("2026-1/MA2001 선형대수학/Notes/1주차-1.md", #"""
-            # 1주차-1
+        ("2026-1/MA2001 선형대수학/Notes/03-03(화).md", #"""
+            # 03-03(화)
 
             """#),
         ("2026-1/MA2001 선형대수학/Syllabus/Syllabus.pdf", nil),
@@ -147,7 +147,7 @@ extension Fixture {
                   "id" : "6F1D2C4E-8A3B-4F5E-9C1D-2B7A8E0F3D41",
                   "kind" : "rough",
                   "math" : "latex",
-                  "path" : "Notes/2주차-1.md",
+                  "path" : "Notes/09-08(화) 매칭.md",
                   "tags" : [],
                   "unitIds" : [],
                   "updatedAt" : "2026-08-25T09:00:00.000Z",
@@ -169,8 +169,8 @@ extension Fixture {
         ("2026-3/EC4207 그래프 이론/Lectures/05_Matchings.pdf", nil),
         ("2026-3/EC4207 그래프 이론/Study/Problems.pdf", nil),
         ("2026-3/EC4207 그래프 이론/Study/Problems.tex", nil),
-        ("2026-3/EC4207 그래프 이론/Notes/2주차-1.md", #"""
-            # 2주차-1
+        ("2026-3/EC4207 그래프 이론/Notes/09-08(화) 매칭.md", #"""
+            # 09-08(화) 매칭
 
             > [!definition] Matching
             > A set of pairwise non-adjacent edges.
@@ -206,7 +206,7 @@ extension Fixture {
                   "id" : "9A4C1E7B-5D3F-4B2A-8E6C-7F0D2B9A1C55",
                   "kind" : "rough",
                   "math" : "latex",
-                  "path" : "Notes/1주차-1.md",
+                  "path" : "Notes/09-02(수).md",
                   "tags" : [],
                   "unitIds" : [],
                   "updatedAt" : "2026-08-25T09:00:00.000Z",
@@ -223,8 +223,8 @@ extension Fixture {
         ("2026-3/EC4321 로봇공학/Assignments/Project01/robot/main.py", nil),
         ("2026-3/EC4321 로봇공학/Inherited/2025 Final.pdf", nil),
         ("2026-3/EC4321 로봇공학/Lectures/01_Intro.pdf", nil),
-        ("2026-3/EC4321 로봇공학/Notes/1주차-1.md", #"""
-            # 1주차-1
+        ("2026-3/EC4321 로봇공학/Notes/09-02(수).md", #"""
+            # 09-02(수)
 
             """#),
         ("2026-3/EC4321 로봇공학/Syllabus/Syllabus.pdf", nil),

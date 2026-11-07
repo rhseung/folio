@@ -231,6 +231,17 @@ struct TabFitTests {
         #expect(trail(400, front: long, others: [100]) == 272)
     }
 
+    @Test func theNewTabGlyphSitsOneGapAfterTheLastCapsule() {
+        // A 12-point plus centered in a 32-point button has 10 on each side: the button starts 2 under the capsule.
+        #expect(TabFit.newTabSpacing(gap: 8, button: 32, glyph: 12) == -2)
+        #expect(TabFit.newTabSpacing(gap: 8, button: 32, glyph: 16) == 0)
+        // The glyph's own start, wherever the button puts it.
+        for glyph in stride(from: 8.0, through: 32, by: 2) {
+            let spacing = TabFit.newTabSpacing(gap: 8, button: 32, glyph: glyph)
+            #expect(spacing + (32 - glyph) / 2 == 8)
+        }
+    }
+
     @Test func theStripNeverOutgrowsTheRow() async {
         // Wider than the row, the strip pushes the toolbar's search field and buttons into its overflow menu (#310).
         // It may only when not even the front tab's capsule and the menu fit.
@@ -300,23 +311,36 @@ struct TabKeepTests {
         #expect(TabKeep.alive(selected: "c", alive: ["a", "b", "c"], left: left, now: now, policy: policy, pressure: true) == ["c"])
     }
 
+    /// A tab playing a recording stays past the limit, the idle time and memory pressure, and takes no other tab's room.
+    @Test func aPlayingTabIsNeverDropped() {
+        let left = ["a": now - 30, "b": now - 10, "c": now - 20, "p": now - 9_000]
+        let kept = TabKeep.alive(selected: "d", alive: ["a", "b", "c", "d", "p"], left: left, now: now, policy: policy, playing: ["p"])
+        #expect(kept == ["d", "b", "c", "p"])
+        #expect(TabKeep.alive(selected: "d", alive: ["a", "d", "p"], left: left, now: now, policy: policy, pressure: true, playing: ["p"]) == ["d", "p"])
+        // Playing doesn't bring back a tab already dropped: its screen, and so its audio, is gone.
+        #expect(TabKeep.alive(selected: "d", alive: ["d"], left: left, now: now, policy: policy, playing: ["p"]) == ["d"])
+    }
+
     @Test func aTabWithoutATimeCountsAsJustLeft() {
         #expect(TabKeep.alive(selected: "b", alive: ["a", "b"], left: [:], now: now, policy: policy) == ["a", "b"])
     }
 
     @Test func holdsItsBounds() async {
-        await propertyCheck(input: Gen.int(in: 0...9).array(of: 0...12), Gen.int(in: 0...12), Gen.int(in: 0...4), Gen.bool) { ages, selected, limit, pressure in
+        await propertyCheck(input: Gen.int(in: 0...9).array(of: 0...12), Gen.int(in: 0...12), Gen.int(in: 0...4), Gen.bool,
+                            Gen.int(in: 0...12).array(of: 0...3)) { ages, selected, limit, pressure, played in
             let left = Dictionary(uniqueKeysWithValues: ages.enumerated().map { ($0.offset, now - Double($0.element) * 100) })
             let alive = Set(left.keys)
             let p = TabKeep.Policy(limit: limit, idle: 500)
-            let kept = TabKeep.alive(selected: selected, alive: alive, left: left, now: now, policy: p, pressure: pressure)
-            #expect(kept.contains(selected))
+            let playing = Set(played)
+            let kept = TabKeep.alive(selected: selected, alive: alive, left: left, now: now, policy: p, pressure: pressure, playing: playing)
+            let held = playing.intersection(alive).union([selected])
+            #expect(held.isSubset(of: kept))
             #expect(kept.subtracting([selected]).isSubset(of: alive))
-            #expect(kept.count <= (pressure ? 1 : limit + 1))
-            for id in kept where id != selected { #expect(now.timeIntervalSince(left[id]!) < 500) }
+            #expect(kept.subtracting(held).count <= (pressure ? 0 : limit))
+            for id in kept.subtracting(held) { #expect(now.timeIntervalSince(left[id]!) < 500) }
             // Nothing kept is older than something dropped that was within the time.
-            let dropped = alive.subtracting(kept).subtracting([selected]).filter { now.timeIntervalSince(left[$0]!) < 500 }
-            if !pressure, let oldestKept = kept.subtracting([selected]).map({ left[$0]! }).min(), let newestDropped = dropped.map({ left[$0]! }).max() {
+            let dropped = alive.subtracting(kept).filter { now.timeIntervalSince(left[$0]!) < 500 }
+            if !pressure, let oldestKept = kept.subtracting(held).map({ left[$0]! }).min(), let newestDropped = dropped.map({ left[$0]! }).max() {
                 #expect(oldestKept >= newestDropped)
             }
         }

@@ -11,6 +11,8 @@ func courseIDs(_ ctx: ActionContext) throws -> [String: UUID] {
 }
 
 func shortTime(_ d: Date?) -> String { d?.formatted(.dateTime.month().day().weekday().hour().minute()) ?? "-" }
+/// After a class's reference (`11-03`), which already says the day.
+func weekdayTime(_ d: Date) -> String { d.formatted(.dateTime.weekday().hour().minute()) }
 
 /// Writes transcript.json, catalog.json and the course.json of every matched folder. Never overwrites: refuses when
 /// transcript.json or catalog.json exists, and skips folders that already have a course.json.
@@ -126,15 +128,15 @@ public struct ImportCalendar {
             for s in r.added {
                 // A lab's unit title already holds its topic.
                 let label = r.file.units(of: s).first?.title ?? s.topic
-                ctx.note("+ \(s.name(among: r.file.sessions)) \(shortTime(s.date))\(label.isEmpty ? "" : " · \(label)")")
+                ctx.note("+ \(r.file.reference(of: s, calendar: ctx.calendar)) \(weekdayTime(s.date))\(label.isEmpty ? "" : " · \(label)")")
             }
-            for s in r.filled { ctx.note("~ \(s.name(among: r.file.sessions)) \(shortTime(s.date))\(s.topic.isEmpty ? "" : " · \(s.topic)")") }
-            for s in r.cancelled { ctx.note(String(localized: .noteImportCalendarCancelled(s.name(among: r.file.sessions), shortTime(s.date)))) }
+            for s in r.filled { ctx.note("~ \(r.file.reference(of: s, calendar: ctx.calendar)) \(weekdayTime(s.date))\(s.topic.isEmpty ? "" : " · \(s.topic)")") }
+            for s in r.cancelled { ctx.note(String(localized: .noteImportCalendarCancelled(r.file.reference(of: s, calendar: ctx.calendar), weekdayTime(s.date)))) }
             var result = r.file
             for l in links {
                 guard let note = notes.first(where: { $0.meta.id == l.note }), let n = result.notes.firstIndex(where: { $0.id == l.note }),
                       let i = result.sessions.firstIndex(where: { $0.id == l.session }) else { continue }
-                ctx.note(String(localized: .noteImportCalendarNoteLink(result.sessions[i].name(among: result.sessions), note.title)))
+                ctx.note(String(localized: .noteImportCalendarNoteLink(result.reference(of: result.sessions[i], calendar: ctx.calendar), note.title)))
                 result.notes[n].kind = .review
                 result.notes[n].touch(by: ctx.device, at: ctx.now)
                 result.sessions[i].reviewNoteId = l.note
@@ -180,7 +182,7 @@ public struct ImportUnits {
                 ctx.note(String(localized: .noteImportNoFolder(units.course)))
                 continue
             }
-            let r = UnitImporter.merge(units.units, into: try ctx.file(id), device: ctx.device, now: ctx.now)
+            let r = UnitImporter.merge(units.units, into: try ctx.file(id), calendar: ctx.calendar, device: ctx.device, now: ctx.now)
             ctx.note(String(localized: .noteImportUnitsCourse(units.course, r.added.count, r.linked.count)))
             for title in r.added { ctx.note("+ \(title)") }
             if !r.unknownSessions.isEmpty { ctx.note(String(localized: .noteImportUnitsUnknownSessions(units.course, r.unknownSessions.joined(separator: ", ")))) }
