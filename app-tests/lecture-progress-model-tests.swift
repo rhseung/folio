@@ -70,7 +70,7 @@ struct LectureProgressModelTests {
         #expect(model.addable.map(\.id) == [slides.id])
         model.add(slides.id)
         #expect(model.rows == [.init(id: slides.id, first: 1, last: nil)])
-        #expect(model.refusal == String(localized: .sessionsProgressMissingPages("05_Matchings.pdf")))
+        #expect(model.refusal == String(localized: .sessionsProgressMissingLast("05_Matchings.pdf")))
         model.setRange(slides.id, PageRange(first: 1, last: 4))
         #expect(model.refusal == nil)
         model.toggle(slides.id)

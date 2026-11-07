@@ -94,6 +94,12 @@ struct PageRangeField: View {
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
             GeometryReader { proxy in track(width: proxy.size.width) }
                 .frame(height: Self.pillRow + Self.hitRow)
+            if !compact, let lone = shown.lone {
+                Text(lone == .first ? .designPageRangeOpenLast : .designPageRangeOpenFirst)
+                    .font(Theme.Typeface.caption)
+                    .foregroundStyle(accent.ink)
+                    .padding(.horizontal, Self.inset)
+            }
             if let seen {
                 GeometryReader { proxy in ghost(seen, width: proxy.size.width) }
                     .frame(height: Self.ghostRow)
@@ -455,7 +461,11 @@ struct PageRangeField: View {
                     let e = edge(at: g.location.x, w)
                     let settled = settle(e)
                     let p = end == .first ? Int(settled.rounded()) + 1 : Int(settled.rounded())
-                    change(to: from.moving(end, to: min(max(p, 1), extent), pages: pages), end: end)
+                    // The only handle on the bar opens the range toward the pointer, as a tap there would: it is the
+                    // one thing in sight to grab, and moving it instead left the missing end unset.
+                    let next = from.lone == end ? from.tapping(page(at: g.location.x, w), pages: pages)
+                        : from.moving(end, to: min(max(p, 1), extent), pages: pages)
+                    change(to: next, end: end)
                     // Past the file's first or last page the handle gives a little, less the further it goes.
                     let (lo, hi): (CGFloat, CGFloat) = end == .first ? (0, CGFloat(extent - 1)) : (1, CGFloat(extent))
                     rubber = stretch((e < lo ? e - lo : e > hi ? e - hi : 0) * u)
@@ -546,7 +556,7 @@ struct PageRangeField: View {
 
     private func nudge(_ end: PageRange.End, by step: Int) {
         guard let value = range[end] else { return }
-        let next = range.moving(end, to: value + step, pages: pages)
+        let next = range.lone == end ? range.tapping(value + step, pages: pages) : range.moving(end, to: value + step, pages: pages)
         guard next != range else {
             // At the file's edge: the handle leans out and springs back.
             bumps += 1

@@ -152,19 +152,29 @@ struct ClassWrapUpSheet: View {
 
     // MARK: Units
 
+    /// The class's units as chips that wrap, so a long title is read whole, and "+ 단원" for the course's whole outline.
+    /// Nothing is put forward: which unit the class covered is the user's call (#147).
     @ViewBuilder var units: some View {
         let options = model.unitOptions
         if !options.isEmpty {
             CardRow {
-                SearchMultiSelect(selection: $model.units, options: options, placeholder: String(localized: .wrapUpUnitsPick),
-                                  summary: model.units.isEmpty ? nil : model.unitTitles(model.units))
-                // The last class's units, a press away but not chosen: whether a unit is done is the user's call.
-                ForEach(model.recentUnits) { u in
-                    Button { model.pick(u.id) } label: { Label(u.title, systemImage: "plus") }
-                        .buttonStyle(.ghost)
-                        .help(Text(.wrapUpUnitsRecentHelp))
+                let linked = model.linkedUnits
+                Group {
+                    if linked.isEmpty {
+                        EmptyLine(String(localized: .wrapUpUnitsNone))
+                    } else {
+                        FlowLayout(spacing: Theme.Space.tight, centered: true) {
+                            ForEach(linked) { unitChip($0) }
+                        }
+                    }
                 }
-                Spacer(minLength: 0)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                // Outside the chips, at the row's end: placed after them it moved with every pick, and the open
+                // popover, anchored to it, jumped away from the pointer.
+                SearchPicker(options: options, isSelected: { model.units.contains($0) }, pick: { model.pick($0) }, multiple: true,
+                             prompt: String(localized: .wrapUpUnitsSearch)) {
+                    Label(.wrapUpUnitsAdd, systemImage: "plus").labelStyle(GhostLabelStyle()).foregroundStyle(.tint)
+                }
             }
         }
         CardRow(last: true) {
@@ -176,19 +186,33 @@ struct ClassWrapUpSheet: View {
         }
     }
 
+    private func unitChip(_ unit: FolioDomain.Unit) -> some View {
+        HStack(spacing: Theme.Space.xs) {
+            // Wraps within the row instead of truncating: unit titles run long ("Walk, Trail, Path, Cycle, Girth").
+            Text(unit.title).fixedSize(horizontal: false, vertical: true)
+            Button { model.removeUnit(unit.id) } label: {
+                Image(systemName: "xmark").font(Theme.Glyph.tiny).foregroundStyle(Theme.Palette.textTertiary)
+            }
+            .buttonStyle(.pointing(.plain))
+            .help(Text(.commonRemove))
+            .accessibilityLabel(Text(.wrapUpUnitsRemove(unit.title)))
+        }
+        .chip()
+        .contextMenu { Button(.commonRemove, role: .destructive) { model.removeUnit(unit.id) } }
+    }
+
     // MARK: Note
 
     var note: some View {
         CardRow(last: true) {
-            if model.hasNote {
-                Text(model.summary(.note)).lineLimit(1)
-                Spacer()
+            if let linked = model.linkedNote {
+                noteMenu(linked)
             } else {
                 CheckCircle(on: model.makesNote) { model.makesNote.toggle() }
                 Text(.wrapUpNoteMake).foregroundStyle(model.makesNote ? Theme.Palette.text : Theme.Palette.textSecondary)
                     .onTapGesture { model.makesNote.toggle() }
                 Spacer(minLength: Theme.Space.s)
-                let notes = model.unlinkedNotes
+                let notes = model.noteChoices
                 if !notes.isEmpty {
                     Menu {
                         ForEach(notes) { n in Button(model.noteName(n)) { model.linkNote(n.id) } }
@@ -199,6 +223,31 @@ struct ClassWrapUpSheet: View {
                 }
             }
         }
+    }
+
+    /// The linked note is the menu's label, so the whole row opens it, by click or by keyboard as any menu button.
+    private func noteMenu(_ linked: NoteEntry) -> some View {
+        Menu {
+            let notes = model.noteChoices
+            Menu(String(localized: .wrapUpNoteOther)) {
+                ForEach(notes) { n in Button(model.noteName(n)) { model.linkNote(n.id) } }
+                if notes.isEmpty { Text(.wrapUpNoteNone) }
+            }
+            Button(.wrapUpNoteNew, systemImage: "plus") { model.makeNewNote() }
+            Divider()
+            Button(.wrapUpNoteUnlink, systemImage: "link.badge.minus", role: .destructive) { model.unlinkNote() }
+        } label: {
+            HStack(spacing: Theme.Space.s) {
+                Image(systemName: "doc.text").foregroundStyle(Theme.Palette.textTertiary)
+                Text(model.noteName(linked)).lineLimit(1).truncationMode(.middle).foregroundStyle(Theme.Palette.text)
+                Spacer(minLength: Theme.Space.s)
+                Image(systemName: "chevron.up.chevron.down").font(Theme.Glyph.small).foregroundStyle(Theme.Palette.textTertiary)
+            }
+            .contentShape(.rect)
+        }
+        .menuStyle(.button)
+        .buttonStyle(.pointing(.plain))
+        .menuIndicator(.hidden)
     }
 
     // MARK: Announcements
