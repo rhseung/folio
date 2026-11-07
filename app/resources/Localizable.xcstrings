@@ -18316,6 +18316,17 @@
         }
       }
     },
+    "tabs.pause": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일시정지"
+          }
+        }
+      }
+    },
     "tabs.pick": {
       "extractionState": "manual",
       "localizations": {

@@ -22,6 +22,10 @@ final class WindowTabs {
     private(set) var alive: Set<UUID>
     /// When each tab last went behind another.
     @ObservationIgnored private var left: [UUID: Date] = [:]
+    /// The tabs playing a recording, each with how to pause it from the strip. `TabKeep` keeps them alive: dropping the
+    /// screen would stop the audio.
+    private(set) var playing: Set<UUID> = []
+    @ObservationIgnored private var pauses: [UUID: @MainActor () -> Void] = [:]
     /// Closing the last tab closes the window, which the window hands over once it has one.
     @ObservationIgnored var closeWindow: @MainActor () -> Void = {}
     @ObservationIgnored var now: @MainActor () -> Date = { .now }
@@ -70,6 +74,15 @@ final class WindowTabs {
 
     func closeSelected() { close(selected) }
 
+    /// A tab's screen saying it plays (with how to pause it) or has stopped (nil).
+    func play(_ id: UUID, pause: (@MainActor () -> Void)?) {
+        pauses[id] = pause
+        let on = pause != nil && strip.tabs.contains(id)
+        if on != playing.contains(id) { if on { playing.insert(id) } else { playing.remove(id) } }
+    }
+
+    func pause(_ id: UUID) { pauses[id]?() }
+
     func closeOthers(than id: UUID) {
         strip.closeOthers(than: id)
         navigators = navigators.filter { $0.key == id }
@@ -93,7 +106,7 @@ final class WindowTabs {
     private func settle(pressure: Bool = false) {
         left = left.filter { strip.tabs.contains($0.key) }
         let kept = TabKeep.alive(selected: strip.selected, alive: alive.intersection(strip.tabs), left: left, now: now(), policy: policy,
-                                 pressure: pressure)
+                                 pressure: pressure, playing: playing)
         if kept != alive { alive = kept }
     }
 }
@@ -119,6 +132,7 @@ struct TabScreens: View {
                     let kept = front ? nil : sizes[id]
                     TabScreen(workspace: workspace, navigator: navigator)
                         .environment(tabs.trail(id))
+                        .environment(\.tabPlaying) { [tabs] pause in tabs.play(id, pause: pause) }
                         .environment(\.openLink, openLink(navigator))
                         .onGeometryChange(for: CGSize.self, of: \.size) { sizes[id] = $0 }
                         .frame(width: kept?.width, height: kept?.height, alignment: .topLeading)
@@ -136,6 +150,11 @@ struct TabScreens: View {
         }
         .onChange(of: tabs.alive) { _, alive in sizes.keep(alive) }
     }
+}
+
+extension EnvironmentValues {
+    /// Where a screen says it is playing a recording, so its tab is kept and marked behind the front one.
+    @Entry var tabPlaying: @MainActor ((@MainActor () -> Void)?) -> Void = { _ in }
 }
 
 /// The tabs at full width, as `TabBar` measures them. Not observed: nothing draws from them, they only feed `ToolbarRow`.
@@ -385,16 +404,21 @@ struct TabBar: View {
     func tab(_ id: UUID, iconOnly: Bool) -> some View {
         let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
         let title = workspace.tabTitle(of: entry)
+        let playing = tabs.playing.contains(id)
         return Button { tabs.select(id) } label: {
-            label(entry, title: iconOnly ? nil : title)
+            label(entry, title: iconOnly ? nil : title, playing: playing)
         }
         .buttonStyle(.pointing(.plain))
+        // Its own button over the room the label leaves it: a button inside the tab's label would select the tab.
+        .overlay(alignment: .trailing) { if playing && !iconOnly { speaker(id) } }
         .help(title ?? workspace.placeCrumb(of: entry).title)
         .accessibilityLabel(title ?? workspace.placeCrumb(of: entry).title)
     }
 
-    /// A tab behind the front one: its icon, and its name unless it has none or the row is short.
-    @ViewBuilder func label(_ entry: Navigator.Entry, title: String?) -> some View {
+    /// A tab behind the front one: its icon, and its name unless it has none or the row is short. Playing a recording,
+    /// it leaves room at its end for the speaker, set as the front tab sets its close button, or shows the speaker in
+    /// place of its icon when the row is short.
+    @ViewBuilder func label(_ entry: Navigator.Entry, title: String?, playing: Bool = false) -> some View {
         let place = workspace.placeCrumb(of: entry)
         Group {
             if let title {
@@ -403,7 +427,9 @@ struct TabBar: View {
                     CappedWidth(width: Theme.Size.tabName) { Text(title).lineLimit(1) }
                 }
                 .padding(.leading, Theme.Space.s)
-                .padding(.trailing, Theme.Space.m)
+                .padding(.trailing, playing ? Theme.Space.xs + Self.closeSize + Theme.Space.xs : Theme.Space.m)
+            } else if playing {
+                LineIcon(symbol: Self.speakerSymbol).foregroundStyle(Theme.Palette.chromeIcon).frame(width: Self.icon)
             } else {
                 icon(place).frame(width: Self.icon)
             }
@@ -423,12 +449,28 @@ struct TabBar: View {
         }
     }
 
+    static let speakerSymbol = "speaker.wave.2.fill"
+
+    func speaker(_ id: UUID) -> some View {
+        Button { tabs.pause(id) } label: {
+            Image(systemName: Self.speakerSymbol).font(Theme.Glyph.small)
+                .frame(width: Self.closeSize, height: Self.closeSize)
+                .contentShape(.circle)
+        }
+        .buttonStyle(.pointing(.plain))
+        .foregroundStyle(Theme.Palette.chromeText)
+        .padding(.trailing, Theme.Space.xs)
+        .help(Text(.tabsPause))
+        .accessibilityLabel(Text(.tabsPause))
+    }
+
     func more(_ hidden: [UUID]) -> some View {
         Menu {
             ForEach(hidden, id: \.self) { id in
                 let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
                 let place = workspace.placeCrumb(of: entry)
-                Button(workspace.tabTitle(of: entry) ?? place.title, systemImage: place.symbol ?? CourseMark.defaultIcon) { tabs.select(id) }
+                Button(workspace.tabTitle(of: entry) ?? place.title,
+                       systemImage: tabs.playing.contains(id) ? Self.speakerSymbol : place.symbol ?? CourseMark.defaultIcon) { tabs.select(id) }
             }
         } label: {
             moreLabel(hidden.count)
@@ -455,6 +497,7 @@ struct TabBar: View {
 
     func menu(_ id: UUID) -> some View {
         Group {
+            if tabs.playing.contains(id) { Button(.tabsPause) { tabs.pause(id) }; Divider() }
             Button(.tabsClose) { tabs.close(id) }
             Button(.tabsCloseOthers) { tabs.closeOthers(than: id) }.disabled(tabs.count < 2)
             Divider()
@@ -470,7 +513,7 @@ struct TabBar: View {
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.front = $0; report() }
             ForEach(others, id: \.self) { id in
                 let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
-                label(entry, title: workspace.tabTitle(of: entry)).fixedSize()
+                label(entry, title: workspace.tabTitle(of: entry), playing: tabs.playing.contains(id)).fixedSize()
                     .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.others[id] = $0; report() }
             }
             // Two digits: the menu's width hardly changes with its count.
