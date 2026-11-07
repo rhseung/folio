@@ -5,7 +5,10 @@ import SwiftUI
 /// has folds into one line each under "채운 것" to confirm. Announcements made in class can be added below, or skipped.
 struct ClassWrapUpSheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.openLink) private var openLink
+    @Environment(\.supportsMultipleWindows) private var multipleWindows
     @State private var model: ClassWrapUpModel
+    @State private var splitting: UUID?
     var step: String?
     /// Set in a run through several classes, which moves on to the next instead of closing.
     var saved: (() -> Void)?
@@ -45,6 +48,17 @@ struct ClassWrapUpSheet: View {
             if let saved { saved() } else { dismiss() }
         }
         .task { await model.load() }
+        .confirmationDialog(String(localized: .assignmentsOpenUnsaved), isPresented: Binding(get: { splitting != nil }, set: { if !$0 { splitting = nil } }),
+                            titleVisibility: .visible, presenting: splitting) { id in
+            Button(.assignmentsOpenSave) {
+                guard model.wrapUp() else { return }
+                leave(for: id)
+            }
+            Button(.assignmentsOpenDiscard, role: .destructive) { leave(for: id) }
+            Button(.commonCancel, role: .cancel) { splitting = nil }
+        } message: { _ in
+            Text(.sessionsProgressSplitUnsaved)
+        }
         .environment(\.accent, model.accent)
         .sheet(item: $model.addingExam, onDismiss: nil) { exam in
             if let course = model.course {
@@ -52,6 +66,24 @@ struct ClassWrapUpSheet: View {
                     .onDisappear { model.examClosed(exam) }
             }
         }
+    }
+
+    /// To the file's split screen (#321). With nothing changed here the sheet closes and the file opens in this tab;
+    /// with changes the sheet stays and the file opens in a new window, or where there is no other window, it asks.
+    private func split(_ id: UUID) {
+        if !model.changed { return leave(for: id) }
+        if multipleWindows {
+            model.workspace.splitAsk = id
+            openLink(AppLink(.material, id), in: .window, course: model.courseId)
+        } else {
+            splitting = id
+        }
+    }
+
+    private func leave(for id: UUID) {
+        model.workspace.splitAsk = id
+        dismiss()
+        openLink(AppLink(.material, id), course: model.courseId)
     }
 
     @ViewBuilder func open(_ item: WrapUpItem) -> some View {
@@ -96,7 +128,8 @@ struct ClassWrapUpSheet: View {
                 .opacity(row.included ? 1 : Theme.Opacity.ended)
                 Spacer(minLength: Theme.Space.s)
                 PageRangeField(range: row.range, pages: model.pageCounts[row.id], taught: model.taught(row.id),
-                               seen: model.seen(row.id), resume: model.resume(row.id)) { model.setRange(row.id, $0) }
+                               seen: model.seen(row.id), resume: model.resume(row.id), sections: model.sections(row.id),
+                               reads: model.reads(row.id), split: { split(row.id) }) { model.setRange(row.id, $0) }
                     .opacity(row.included ? 1 : Theme.Opacity.ended)
             }
         }

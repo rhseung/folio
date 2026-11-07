@@ -12,6 +12,13 @@ struct ImportPlaceSheet: View {
         _model = State(initialValue: ImportPlaceModel(workspace: workspace, course: course, files: files, places: places))
     }
 
+    #if DEBUG
+    /// A model set up beforehand: the form renders show a proposal without reading a file.
+    init(model: ImportPlaceModel) {
+        _model = State(initialValue: model)
+    }
+    #endif
+
     var body: some View {
         let placements = model.placements
         let kinds = model.kinds
@@ -20,6 +27,7 @@ struct ImportPlaceSheet: View {
                 ForEach(model.rows) { row in
                     ImportRow(model: model, row: row, placement: placements[row.id], kinds: kinds, selected: model.selection.contains(row.id))
                         .opens { click(row.id) }
+                    if model.sections(of: row) != nil { ImportSections(model: model, row: row) }
                     if row.id < model.rows.count - 1 { Theme.Palette.lineSoft.frame(height: 1).padding(.leading, Theme.Space.l) }
                 }
             }
@@ -168,6 +176,60 @@ private struct ImportRow: View {
             Text(label)
             if let detail { Text(detail) }
         }
+    }
+}
+
+/// A lecture row's proposed units (#321): a line saying what was found, and under it, when opened, the section bar
+/// and its rows to fix before the file comes in. Nothing is written until the sheet's own button.
+private struct ImportSections: View {
+    let model: ImportPlaceModel
+    let row: ImportPlaceModel.Row
+    @Environment(\.accent) private var accent
+
+    /// Under the row's name, past its thumbnail.
+    static let indent = Theme.Space.l + FileThumbnail.size.width + Theme.Space.m
+
+    var body: some View {
+        let state = model.sections(of: row)
+        let open = model.opened.contains(row.id)
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            HStack(spacing: Theme.Space.s) {
+                Button { model.toggleOpen(row.id) } label: {
+                    HStack(spacing: Theme.Space.tight) {
+                        Image(systemName: "chevron.right").font(Theme.Glyph.small)
+                            .rotationEffect(.degrees(open ? 90 : 0))
+                            .foregroundStyle(Theme.Palette.textTertiary)
+                        Text(model.sectionsLine(row) ?? "").foregroundStyle(Theme.Palette.textSecondary)
+                    }
+                    .contentShape(.rect)
+                }
+                .buttonStyle(.pointing(.plain))
+                .help(Text(.materialsImportSectionsHelp))
+                if case .reading(let done, let total)? = state, total > 0 {
+                    ProgressView(value: Double(done), total: Double(total)).progressViewStyle(.linear).frame(width: 80).tint(accent.color)
+                }
+                Spacer()
+                switch state {
+                case .nothing?:
+                    Button(String(localized: .materialsImportSectionsSplit)) { model.splitByHand(row.id) }.buttonStyle(.ghost)
+                    Button(String(localized: .materialsImportSectionsPutOff)) { model.later(row.id) }.buttonStyle(.ghost)
+                case .proposed? where open:
+                    Button(String(localized: .materialsImportSectionsPutOff)) { model.later(row.id) }.buttonStyle(.ghost)
+                case .later?:
+                    Button(String(localized: .materialsImportSectionsTakeBack)) { model.takeBack(row.id) }.buttonStyle(.ghost)
+                default:
+                    EmptyView()
+                }
+            }
+            .font(Theme.Typeface.caption)
+            if open, let split = model.edit(row.id) {
+                SectionEditor(split: Binding(get: { model.edit(row.id) ?? split }, set: { model.setSplit($0, of: row.id) }),
+                              units: model.course.file.units)
+                    .transition(.opacity)
+            }
+        }
+        .padding(EdgeInsets(top: 0, leading: Self.indent, bottom: Theme.Space.m, trailing: Theme.Space.m))
+        .animation(.snappy(duration: 0.2), value: open)
     }
 }
 

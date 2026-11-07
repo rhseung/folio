@@ -484,8 +484,13 @@ struct SessionUnitsPicker: View {
                     HStack(spacing: Theme.Space.xs) {
                         Image(systemName: missing ? "exclamationmark.triangle.fill" : linked.isEmpty ? "plus" : "link")
                         if !compact {
-                            Text(shown.isEmpty ? String(localized: missing ? .sessionsUnitsNeeded : .sessionsUnitsLink) : shown.map(\.title).joined(separator: " · "))
-                                .lineLimit(1).truncationMode(.tail)
+                            ViewThatFits(in: .horizontal) {
+                                if !shown.isEmpty, let progress = file.splitProgress(of: session) {
+                                    SectionProgress(file: file, material: progress.material, range: progress.pages)
+                                }
+                                Text(shown.isEmpty ? String(localized: missing ? .sessionsUnitsNeeded : .sessionsUnitsLink) : shown.map(\.title).joined(separator: " · "))
+                                    .lineLimit(1).truncationMode(.tail)
+                            }
                         }
                     }
                     .font(Theme.Typeface.caption.weight(missing ? .semibold : .regular))
@@ -503,7 +508,20 @@ struct SessionUnitsPicker: View {
             // The title names the units already, so only the icon is left to click and it needs no separator.
             if !(compact && !shown.isEmpty) { Text("·") }
             if !shown.isEmpty {
-                if !compact { Text(shown.map(\.title).joined(separator: " · ")).lineLimit(1).truncationMode(.tail) } else { Image(systemName: "link") }
+                // The strip has a fixed width, so a narrow row (a pane, an iPad in a split) falls back to the plain form.
+                ViewThatFits(in: .horizontal) {
+                    if let progress = course.file.splitProgress(of: session) {
+                        HStack(spacing: Theme.Space.tight) {
+                            if compact { Image(systemName: "link") }
+                            SectionProgress(file: course.file, material: progress.material, range: progress.pages, labeled: !compact)
+                        }
+                    }
+                    if compact {
+                        Image(systemName: "link")
+                    } else {
+                        Text(shown.map(\.title).joined(separator: " · ")).lineLimit(1).truncationMode(.tail)
+                    }
+                }
             } else if missing {
                 Label(.sessionsUnitsAdd, systemImage: "plus").labelStyle(.titleAndIcon).fontWeight(.semibold).foregroundStyle(accent.ink)
             } else {

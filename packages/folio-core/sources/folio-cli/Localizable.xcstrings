@@ -7998,35 +7998,68 @@
         }
       }
     },
-    "session.wrap-up.abstract": {
+    "material.split.abstract": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "수업 정리: 회차의 렉처 진도, 단원, 주제, 출결을 한 번에 적고 정리했다고 표시한다"
+            "value": "렉처 파일을 단원 구간으로 나누기. 그 파일의 단원 구간을 모두 이 목록으로 바꾼다"
           }
         }
       }
     },
-    "session.wrap-up.discussion": {
+    "material.split.discussion": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "렉처 파일은 <자료>:<시작>-<끝>으로 쓴다. 주지 않은 것은 그대로 두고, 정리했다고 표시해 오늘 화면의 수업 정리에서 뺀다.\n\n예시:\n  folio session wrap-up EC4207/10-26 05_Matchings.pdf:7-11 --unit 매칭 --topic \"홀의 정리\"\n  folio session wrap-up EC4207/10-26 --attendance late --dry-run"
+            "value": "구간마다 <시작>-<끝>:<단원>으로 쓴다. 한 쪽이면 <쪽>:<단원>. 그 제목의 단원이 없으면 새로 만든다. 적지 않은 쪽은 어느 단원에도 들지 않는다. 구간을 하나도 적지 않으면 그 파일의 단원 구간을 모두 지운다.\n\n예시:\n  folio material split EC4207/05_Matchings.pdf 1-4:매칭 5-8:König 9-13:\"Hall의 결혼 정리\"\n  folio material split EC4207/05_Matchings.pdf 14-24:\"Augmenting paths\" --dry-run"
           }
         }
       }
     },
-    "session.wrap-up.help.unit": {
+    "material.split.help-sections": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "단원. 여러 번 쓸 수 있고, 주면 회차의 단원이 이것으로 바뀐다"
+            "value": "쪽과 단원. 예: 5-8:König"
+          }
+        }
+      }
+    },
+    "material.split.format": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구간은 <시작>-<끝>:<단원>으로 씁니다: %@"
+          }
+        }
+      }
+    },
+    "unit.pages.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원의 렉처 쪽 구간 넣기, 고치기, 지우기"
+          }
+        }
+      }
+    },
+    "unit.show.pages": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "렉처 쪽"
           }
         }
       }
@@ -8049,6 +8082,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "출결"
+          }
+        }
+      }
+    },
+    "session.wrap-up.discussion": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "렉처 파일은 <자료>:<시작>-<끝>으로 쓴다. 주지 않은 것은 그대로 두고, 정리했다고 표시해 오늘 화면의 수업 정리에서 뺀다.\n\n예시:\n  folio session wrap-up EC4207/10-26 05_Matchings.pdf:7-11 --unit 매칭 --topic \"홀의 정리\"\n  folio session wrap-up EC4207/10-26 --attendance late --dry-run"
+          }
+        }
+      }
+    },
+    "session.wrap-up.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 정리: 회차의 렉처 진도, 단원, 주제, 출결을 한 번에 적고 정리했다고 표시한다"
+          }
+        }
+      }
+    },
+    "session.wrap-up.help.unit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원. 여러 번 쓸 수 있고, 주면 회차의 단원이 이것으로 바뀐다"
           }
         }
       }

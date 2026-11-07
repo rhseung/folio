@@ -6,7 +6,7 @@ public enum Actions {
         SemesterAdd.self, SemesterSet.self, SemesterSource.self, TranscriptAdd.self, TranscriptMove.self, CourseAdd.self, CourseRename.self, CourseSet.self, GraduationSet.self, RequirementAccept.self, CatalogSet.self,
         SettingsSet.self,
         SessionAdd.self, SessionRemove.self, SessionSet.self, SessionNote.self, SessionProgress.self, SessionWrapUp.self, SessionLinkViewed.self, AttendanceSet.self,
-        UnitAdd.self, UnitRemove.self, UnitSet.self, UnitMove.self, UnitLink.self,
+        UnitAdd.self, UnitRemove.self, UnitSet.self, UnitMove.self, UnitLink.self, UnitPagesAdd.self, UnitPagesSet.self, UnitPagesRemove.self, MaterialSplit.self,
         ExamAdd.self, ExamSet.self, ExamRemove.self, ExamScope.self, ExamScopeTaught.self, ExamPlanAdd.self, ExamPlanRemove.self, ExamPlanCheck.self, ExamSummary.self,
         AssignmentAdd.self, AssignmentSave.self, AssignmentStatusSet.self, AssignmentRemove.self,
         ScoreAdd.self, ScoreSet.self, ScoreRemove.self, ComponentAdd.self, ComponentSet.self, ComponentRemove.self, ComponentMove.self, PolicySet.self,

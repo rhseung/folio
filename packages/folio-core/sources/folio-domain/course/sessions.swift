@@ -12,6 +12,15 @@ public struct Unit: Entity {
     public var parentId: UUID?
     public var sessionIds: [UUID]
     public var examIds: [UUID]
+    // Optional so course.json files from before it decode, and left out of the file while the unit has none.
+    private var lectures: [UnitPages]?
+
+    /// Pages of lecture files that belong to the unit (#321). Kept on the unit, not the file: a unit runs across
+    /// several lecture files and a file holds several units.
+    public var lecturePages: [UnitPages] {
+        get { lectures ?? [] }
+        set { lectures = newValue.isEmpty ? nil : newValue }
+    }
 
     public init(id: UUID = UUID(), device: DeviceID, at date: Date, title: String, order: Int, parentId: UUID? = nil) {
         self.id = id

@@ -273,7 +273,13 @@ struct UnitDetail: View {
                                 .foregroundStyle(missing ? Theme.Palette.danger : Theme.Palette.textSecondary)
                             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                                 Text((m.path as NSString).lastPathComponent).lineLimit(1).truncationMode(.middle).help(m.path)
-                                Text(item.detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                                HStack(spacing: Theme.Space.s) {
+                                    if let pages = item.pages {
+                                        SectionProgress(file: course.file, material: m.id, range: pages).fixedSize()
+                                    }
+                                    Text(item.detail).lineLimit(1)
+                                }
+                                .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                             }
                             Spacer(minLength: Theme.Space.m)
                             if !item.direct {

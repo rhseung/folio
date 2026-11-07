@@ -1,3 +1,4 @@
+import FolioActions
 import FolioAI
 import FolioDomain
 import FolioMarkdown
@@ -80,6 +81,50 @@ final class FileViewModel {
         case .file: return false
         }
     }
+
+    // MARK: Splitting a lecture (#321)
+
+    /// The split being edited, while the split screen is up.
+    var splitting: LectureSplit?
+    private(set) var splitNote: String?
+
+    /// A course's lecture PDF can be split into its units.
+    var canSplit: Bool {
+        guard let m = material, let course, format.renderer == .pdf else { return false }
+        return course.file.lectureFiles.contains { $0.id == m.id }
+    }
+
+    /// The course's split when it has one; otherwise the same proposal the add sheet makes, read again, so a proposal
+    /// put off there is never lost.
+    func startSplit(_ controller: PDFController) async {
+        guard let m = material, let course, canSplit else { return }
+        let file = course.file
+        if file.isSplit(m.id) {
+            splitting = LectureSplit(file: file, material: m.id, pageCount: controller.pageCount)
+            splitNote = nil
+            return
+        }
+        splitting = LectureSplit(pageCount: controller.pageCount)
+        splitNote = String(localized: .fileViewSplitReading)
+        let claude = workspace.claudeReady ? workspace.claude(for: course) : nil
+        let found = await LectureReader.find(url, units: file.units, claude: claude)
+        // Left alone while it was read: a cut made meanwhile is the user's and stays.
+        guard let current = splitting, current.sections.count == 1, current.sections[0].unit == nil else { return }
+        switch found {
+        case .found(let split, let source):
+            splitting = split
+            splitNote = String(localized: source == .claude ? .fileViewSplitFromClaude : .fileViewSplitFound)
+        case .nothing, .unreadable:
+            splitNote = String(localized: .fileViewSplitNothing)
+        }
+    }
+
+    func saveSplit() {
+        guard let m = material, let course, let split = splitting else { return }
+        if workspace.run(MaterialSplit(course: course.id, material: m.id, sections: split.cuts)) != nil { splitting = nil }
+    }
+
+    func cancelSplit() { splitting = nil }
 
     /// A note is the app's own document: it has no other app to go to.
     var opensElsewhere: Bool {

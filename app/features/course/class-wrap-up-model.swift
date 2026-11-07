@@ -33,6 +33,8 @@ final class ClassWrapUpModel {
     private(set) var pageCounts: [UUID: Int] = [:]
     /// Once a field is touched, counts arriving late no longer redo the suggestion under the user's hands.
     private var edited = false
+    /// What the class had when the sheet opened, so leaving for the split screen asks only when something would be lost.
+    private let initial: (units: [UUID], topic: String, attendance: AttendanceState)
 
     /// The items shown open, in asking order: what was missing when the sheet opened, and any reopened from its line.
     private(set) var open: [WrapUpItem]
@@ -61,7 +63,12 @@ final class ClassWrapUpModel {
         units = s?.unitIds ?? []
         topic = s?.topic ?? ""
         attendance = file?.attendance.first { $0.sessionId == session }?.state ?? .present
+        initial = (units, topic, attendance)
         suggest()
+    }
+
+    var changed: Bool {
+        edited || makesNote || units != initial.units || topic != initial.topic || attendance != initial.attendance
     }
 
     var course: LoadedCourse? { workspace.course(courseId) }
@@ -156,6 +163,17 @@ final class ClassWrapUpModel {
     func taught(_ id: UUID) -> [PageRangeField.Taught] {
         guard let file else { return [] }
         return PageRangeField.Taught.list(file, material: id, besides: sessionId, calendar: workspace.calendar)
+    }
+
+    /// The file's zones when its units split it (#321): the bar draws them, and the range reads as the units it reaches.
+    func sections(_ id: UUID) -> [PageRangeField.Section] {
+        guard let file else { return [] }
+        return PageRangeField.Section.list(file, material: id, pageCount: pageCounts[id])
+    }
+
+    func reads(_ id: UUID) -> (ClosedRange<Int>) -> String? {
+        let file = file
+        return { file?.sectionLabel(of: id, pages: $0) }
     }
 
     func seen(_ id: UUID) -> ClosedRange<Int>? { viewed.first { $0.materialId == id }?.pages }

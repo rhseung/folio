@@ -175,9 +175,11 @@ public struct ImportItem: Codable, Sendable, Hashable {
     /// Course-relative.
     public var folder: String
     public var session: Session.ID?
+    /// A lecture's sections as the add sheet approved them (#321); nil leaves the file unsplit.
+    public var sections: [LectureCut]?
 
-    public init(file: String, folder: String, session: Session.ID? = nil) {
-        (self.file, self.folder, self.session) = (file, folder, session)
+    public init(file: String, folder: String, session: Session.ID? = nil, sections: [LectureCut]? = nil) {
+        (self.file, self.folder, self.session, self.sections) = (file, folder, session, sections)
     }
 }
 
@@ -199,24 +201,27 @@ public struct MaterialImport {
                 throw ActionError.notFound(String(localized: .errorMaterialImportMissing(item.file)))
             }
             if let session = item.session { _ = try index(session, in: file.sessions, .valueSession) }
+            if let cuts = item.sections { try checkCuts(cuts, in: file) }
         }
-        var linked: [(path: String, session: Session.ID?)] = []
+        var linked: [(path: String, item: ImportItem)] = []
         for item in items {
             let url = URL(filePath: item.file)
             if let inside = store.coursePath(of: url) {
-                linked.append((inside, item.session))
+                linked.append((inside, item))
                 continue
             }
             let name = MaterialIntake.name(url.lastPathComponent, in: item.folder, session: file.sessions.first { $0.id == item.session })
             let planned = try ctx.relative(course, "\(item.folder)/\(name)")
             if let path = try ctx.io(Change(.added, planned), { try store.importFile(url, into: item.folder, name: name) }) {
-                linked.append((path, item.session))
+                linked.append((path, item))
             }
         }
         try ctx.edit(course) { f in
             try store.refreshMaterials(in: &f, device: ctx.device, now: ctx.now)
-            for (path, session) in linked {
-                if let session, let m = f.materials.first(where: { $0.path == path }) { f.linkMaterial(m.id, session: session) }
+            for (path, item) in linked {
+                guard let m = f.materials.first(where: { $0.path == path }) else { continue }
+                if let session = item.session { f.linkMaterial(m.id, session: session) }
+                if let cuts = item.sections { f.split(m.id, into: cuts, device: ctx.device, now: ctx.now) }
             }
         }
     }

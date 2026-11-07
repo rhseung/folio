@@ -115,6 +115,13 @@ struct ScreenRenders {
                 entries.append(("course-units-detail", Navigator.Entry(link: AppLink(.unit, unit.id), course: course.id)))
             }
         }
+        // A course whose units split its slides (#321): its classes and a split unit draw the section strip.
+        if let split = workspace.currentCourses.first(where: { c in c.file.lectureFiles.contains { c.file.isSplit($0.id) } }) {
+            entries.append(("lecture-sessions", Navigator.Entry(link: .course(split.id, page: CourseSection.sessions.page), course: split.id)))
+            if let unit = split.file.units.first(where: { !$0.lecturePages.isEmpty }) {
+                entries.append(("lecture-unit", Navigator.Entry(link: AppLink(.unit, unit.id), course: split.id)))
+            }
+        }
         // Opened at a moment past the start, as a link from a note or a tab let go of does.
         if let held = workspace.currentCourses.first(where: { !$0.file.recordings.isEmpty }), let recording = held.file.recordings.first {
             entries.append(("course-recording", Navigator.Entry(link: AppLink(.recording, recording.id, anchor: .time(1700)), course: held.id)))

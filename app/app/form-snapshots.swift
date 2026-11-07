@@ -1,6 +1,7 @@
 #if DEBUG && os(macOS)
 import AppKit
 import FolioDomain
+import PDFKit
 import SwiftUI
 
 /// Debug-only: draws every editing sheet on its own into `form-<name>.png`, so the forms can be compared side by side.
@@ -49,6 +50,41 @@ enum FormSnapshots {
             forms.append(("note-folder", AnyView(NoteFolderSheet(workspace: workspace, course: course, note: note))))
         }
         if let unit = file.units.first { forms.append(("card", AnyView(CardEditorSheet(workspace: workspace, course: course, draft: CardDraft(unitId: unit.id), units: file.units) {}))) }
+        forms += lectureSections(workspace, places: importPlaces)
+        return forms
+    }
+
+    /// A course whose slides its units split (#321): the add sheet proposing the next deck's units, the split screen
+    /// on a drawn deck, and the progress sheet's bar over the zones.
+    @MainActor static func lectureSections(_ workspace: Workspace, places: [String]) -> [(String, AnyView)] {
+        guard let course = workspace.currentCourses.first(where: { c in c.file.lectureFiles.contains { c.file.isSplit($0.id) } }),
+              let slides = course.file.lectureFiles.first(where: { course.file.isSplit($0.id) }) else { return [] }
+        let file = course.file
+        let accent = workspace.accent(course.id)
+        var forms: [(String, AnyView)] = []
+
+        let model = ImportPlaceModel(workspace: workspace, course: course, files: [URL(filePath: "/tmp/06_Matchings in general graphs.pdf")],
+                                     places: places) { _, _, _ in .unreadable }
+        if var proposal = LectureSplit([.init(title: "Matchings", firstPage: 1, lastPage: 1), .init(title: "Hall's theorem", firstPage: 7, lastPage: 7),
+                                        .init(title: "Tutte's theorem", firstPage: 15, lastPage: 15), .init(title: "", firstPage: 23, lastPage: 23)],
+                                       pageCount: 26) {
+            proposal = SectionMatch.match(proposal, units: file.units)
+            for (i, title) in ["매칭", "Hall의 정리"].enumerated() {
+                proposal.setUnit(file.units.first { $0.title == title }?.id, of: i, match: .claude)
+            }
+            proposal.setUnit(nil, of: 3)
+            model.show(.proposed(proposal, source: .claude), for: 0)
+            forms.append(("import-place-sections", AnyView(ImportPlaceSheet(model: model).environment(\.accent, accent))))
+        }
+        if let document = SampleLecture.document() {
+            let split = LectureSplit(file: file, material: slides.id, pageCount: document.pageCount)
+            forms.append(("lecture-split", AnyView(LectureSplitPane(controller: PDFController(document: document, page: 8), split: .constant(split),
+                                                                     units: file.units, note: String(localized: .fileViewSplitFound), save: {}, cancel: {})
+                    .frame(width: 1180, height: 720).background(Theme.Palette.card).environment(\.accent, accent))))
+        }
+        if let session = file.sessions.first(where: { file.splitProgress(of: $0) != nil }) {
+            forms.append(("class-wrap-up", AnyView(ClassWrapUpSheet(workspace: workspace, course: course.id, session: session.id))))
+        }
         return forms
     }
 
