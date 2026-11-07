@@ -9,6 +9,10 @@ struct WindowRequest: Codable, Hashable {
     var course: UUID?
     /// A tab moved out to this window brings where it has been.
     var history: LinkHistory<Navigator.Entry>?
+    /// A tab of several panes moved out brings each pane's history, their widths and the focused one.
+    var panes: [LinkHistory<Navigator.Entry>]?
+    var shares: [Double]?
+    var focus: Int?
 
     static func == (a: Self, b: Self) -> Bool { a.id == b.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }

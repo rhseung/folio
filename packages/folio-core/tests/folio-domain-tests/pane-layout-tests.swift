@@ -45,6 +45,30 @@ struct PaneLayoutTests {
         #expect(l.focus == 0)
     }
 
+    @Test func theOpenCountHangsOnTheWidthAlone() {
+        // What a window resizing between two counts needs to know: 1096 holds three, 1095 two, 455 one.
+        #expect(PaneLayout.openCount(3, room: 1096, minWidth: 360, strip: 40, gap: 8) == 3)
+        #expect(PaneLayout.openCount(3, room: 1095, minWidth: 360, strip: 40, gap: 8) == 2)
+        #expect(PaneLayout.openCount(3, room: 455, minWidth: 360, strip: 40, gap: 8) == 1)
+        #expect(PaneLayout.openCount(1, room: 10, minWidth: 360, strip: 40, gap: 8) == 1)
+        // The same folds as `fit`, with the widths for them.
+        let l = Self.three()
+        #expect(l.folded(open: 2) == Self.fit(l, 956).folded)
+        #expect(l.widths(room: 956, folded: [0], minWidth: 360, strip: 40, gap: 8) == Self.fit(l, 956).widths)
+    }
+
+    @Test func aPaneFollowsItsOwnHistory() {
+        var l = Self.three()
+        l.show(.write, in: 2)
+        // The quiz pane, not the focused note, goes on; its note mode stays only for the same target.
+        l.open(AppLink.course(UUID(), page: .quiz), in: 2)
+        #expect(l.links[1] == note && l.focus == 1)
+        #expect(l.panes[2].noteMode == nil)
+        l.show(.read, in: 0)
+        l.open(AppLink(lecture.kind, lecture.id!, anchor: .page(3)), in: 0)
+        #expect(l.panes[0].noteMode == .read)
+    }
+
     @Test func aNarrowShareIsHeldAtTheMinimum() {
         let l = PaneLayout(links: [lecture, note, quiz], shares: [8, 1, 1], limit: 3)!
         let f = Self.fit(l, 1216)

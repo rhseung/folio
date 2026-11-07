@@ -162,10 +162,20 @@ enum Theme {
         static let fab: CGFloat = 44
         /// How far the content panel sits in from the window's right and bottom edges (and its left, sidebar folded).
         static let panelInset: CGFloat = 4
+        /// A pane of a tab of several (#62) never narrower: below it, the pane pressed longest ago folds into a strip.
+        static let paneMin: CGFloat = 360
+        /// A folded pane's strip, a finger's width on the iPad.
+        #if os(iOS)
+        static let paneStrip: CGFloat = 44
+        #else
+        static let paneStrip: CGFloat = 40
+        #endif
         static let dot: CGFloat = 8
         static let rowHeight: CGFloat = 44
         static let tile: CGFloat = 22
         static let toolbarButton: CGFloat = 32
+        /// The window's top row on the Mac, which the toolbar's capsules sit in the middle of (`TitleRow`).
+        static let toolbarRow: CGFloat = 48
         /// The window's search field, after the tabs: wide enough for "검색 ⌘K", the tabs taking the row's room.
         static let searchField: CGFloat = 120
         /// The longest name on a tab behind the front one, which shows where it is in full.

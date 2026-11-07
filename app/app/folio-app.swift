@@ -39,7 +39,7 @@ struct FolioApp: App {
             WindowPlacement(.center, size: WindowSize.opening(in: context.defaultDisplay.visibleRect.size))
         }
         .defaultLaunchBehavior(Self.hostingTests ? .suppressed : .automatic)
-        // The compact row keeps the frame around the content panel thin.
+        // The compact row (40pt), which `TitleRow` makes up to 48pt: neither style has the 48pt row (#62).
         .windowToolbarStyle(.unifiedCompact(showsTitle: false))
         #endif
         .commands {

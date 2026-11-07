@@ -22,6 +22,14 @@ import SwiftUI
         save()
     }
 
+    /// Opening a note uses what is remembered of it, so a note opened often outlasts `PaneMemory.capacity` though its
+    /// mode was set long ago.
+    func touch(note: UUID) {
+        guard let mode = memory.noteMode(note: note) else { return }
+        memory.remember(mode, note: note, at: .now)
+        save()
+    }
+
     func remember(_ layout: PaneLayout, session: UUID) {
         memory.remember(layout, session: session, at: .now)
         save()

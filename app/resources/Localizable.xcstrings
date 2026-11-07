@@ -18821,6 +18821,127 @@
           }
         }
       }
+    },
+    "panes.close": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "칸 닫기"
+          }
+        }
+      }
+    },
+    "panes.expand": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 펼치기"
+          }
+        }
+      }
+    },
+    "panes.page": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld쪽"
+          }
+        }
+      }
+    },
+    "panes.move-left": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "왼쪽으로 옮기기"
+          }
+        }
+      }
+    },
+    "panes.move-right": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오른쪽으로 옮기기"
+          }
+        }
+      }
+    },
+    "panes.more-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+%lld"
+          }
+        }
+      }
+    },
+    "panes.preset.in-class": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 중"
+          }
+        }
+      }
+    },
+    "panes.preset.concepts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개념 다지기"
+          }
+        }
+      }
+    },
+    "panes.preset.problems": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "문제 풀이"
+          }
+        }
+      }
+    },
+    "panes.preset.review": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습"
+          }
+        }
+      }
+    },
+    "panes.to-tab": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 탭으로 옮기기"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

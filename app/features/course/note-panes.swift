@@ -68,7 +68,10 @@ private struct RememberingPanes: ViewModifier {
     func body(content: Content) -> some View {
         content
             .onAppear {
-                if let id, let mode = paneMemory?.memory.noteMode(note: id) { panes = NotePanes(remembered: mode) }
+                if let id, let mode = paneMemory?.memory.noteMode(note: id) {
+                    panes = NotePanes(remembered: mode)
+                    paneMemory?.touch(note: id)
+                }
             }
             .onChange(of: panes.mode) { _, mode in
                 if let id { paneMemory?.remember(mode, note: id) }

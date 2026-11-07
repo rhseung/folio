@@ -30,12 +30,21 @@ struct RootView: View {
     @State private var madeAt = Date.now
     @State private var host = WindowHost()
     @State private var row = ToolbarRow()
+    #if os(macOS)
+    /// `TitleRow.extra` for this window's toolbar.
+    @State private var titleExtra: CGFloat = 0
+    #endif
     #else
     @State private var windowWidth: CGFloat = 1200
     #endif
 
     init(request: WindowRequest? = nil) {
         self.request = request
+        if let request, let histories = request.panes,
+           let panes = TabPanes(histories: histories, shares: request.shares, focus: request.focus ?? 0) {
+            _tabs = State(initialValue: WindowTabs(panes))
+            return
+        }
         let navigator = if let history = request?.history {
             Navigator(history: history)
         } else {
@@ -44,7 +53,7 @@ struct RootView: View {
         _tabs = State(initialValue: WindowTabs(navigator))
     }
 
-    /// The tab in front's history.
+    /// The history of the focused pane in the tab in front.
     var navigator: Navigator { tabs.current }
 
     var selection: Screen? { navigator.screen }
@@ -57,35 +66,60 @@ struct RootView: View {
     }
 
     /// The one place a link opens, whoever asked: a click in a note, the sidebar, search, a notification.
-    /// `tab`: the tab whose screen asked, which `.here` moves; else the one in front.
-    func open(_ link: AppLink, in placement: LinkPlacement = .here, course hint: UUID? = nil, from tab: Navigator? = nil) {
+    /// `pane`: the history of the pane whose screen asked, which `.here` moves and `.beside` opens beside; else the
+    /// focused pane of the tab in front.
+    func open(_ link: AppLink, in placement: LinkPlacement = .here, course hint: UUID? = nil, from pane: Navigator? = nil) {
         guard let entry = workspace.entry(for: link, hint: hint) else {
             workspace.error = String(localized: .linkNotFound(link.string))
             return
         }
-        guard placement != .here, multipleWindows else { return (tab ?? navigator).go(entry) }
-        #if os(macOS)
-        // Beside is a tab until panes (#62).
-        if placement != .window { return tabs.open(Navigator(entry), fromLink: true) }
-        #endif
-        // The iPad has no tabs, so a tab there is a window of its own.
+        let pane = pane ?? navigator
+        switch placement {
+        case .here:
+            pane.go(entry)
+        case .beside:
+            (tabs.panes(holding: pane) ?? tabs.front)?.openBeside(entry, from: pane)
+        case .tab:
+            #if os(macOS)
+            tabs.open(Navigator(entry), fromLink: true)
+            #else
+            // The iPad has no tabs, so a tab there is a window of its own.
+            openInWindow(entry, else: pane)
+            #endif
+        case .window:
+            openInWindow(entry, else: pane)
+        }
+    }
+
+    /// Where the system allows only one window, the link opens in place.
+    func openInWindow(_ entry: Navigator.Entry, else pane: Navigator) {
+        guard multipleWindows else { return pane.go(entry) }
         openWindow(id: FolioApp.mainWindow, value: WindowRequest(link: entry.link, course: entry.course))
     }
 
     var openLink: OpenLinkAction { openLink(from: navigator) }
 
-    /// For one tab's screen: kept alive behind the front tab, it must still move its own tab.
-    func openLink(from tab: Navigator) -> OpenLinkAction {
-        OpenLinkAction { link, placement, course in open(link, in: placement, course: course, from: tab) } upHandler: { link in
-            if let entry = workspace.entry(for: link) { tab.up(to: entry) }
+    /// For one pane's screen: kept alive behind the front tab, or beside the focused pane, it must still move its own
+    /// pane.
+    func openLink(from pane: Navigator) -> OpenLinkAction {
+        OpenLinkAction { link, placement, course in open(link, in: placement, course: course, from: pane) } upHandler: { link in
+            if let entry = workspace.entry(for: link) { pane.up(to: entry) }
         }
     }
 
     #if os(macOS)
-    /// Out of this window into one of its own, back and forward included. The last tab is the window already.
+    /// Out of this window into one of its own, every pane's back and forward included. The last tab is the window
+    /// already.
     func moveToWindow(_ id: UUID) {
         guard let moved = tabs.take(id) else { return }
-        openWindow(id: FolioApp.mainWindow, value: WindowRequest(link: moved.current.link, course: moved.current.course, history: moved.history))
+        let focused = moved.focused
+        var request = WindowRequest(link: focused.current.link, course: focused.current.course, history: focused.history)
+        if moved.count > 1 {
+            request.panes = moved.navigators.map(\.history)
+            request.shares = moved.shares
+            request.focus = moved.focus
+        }
+        openWindow(id: FolioApp.mainWindow, value: request)
     }
     #endif
 
@@ -187,7 +221,8 @@ struct RootView: View {
         .task {
             await ResizeProbe.run(window: { host.window }, workspace: workspace,
                                   openTab: { link, course in tabs.open(Navigator(Navigator.Entry(link: link, course: course))) },
-                                  front: { tabs.select(number: $0) })
+                                  front: { tabs.select(number: $0) },
+                                  openBeside: { link, course in tabs.front?.openBeside(Navigator.Entry(link: link, course: course)) })
         }
         #endif
         #if DEBUG && os(macOS)
@@ -210,6 +245,13 @@ struct RootView: View {
                     tabs.open(Navigator(workspace.entry(for: link) ?? Navigator.Entry(link: .place(.today))))
                 }
                 tabs.select(number: 1)
+            }
+            if SnapshotDriver.panes > 1, let course = workspace.currentCourses.first {
+                let lecture = course.file.materials.first { $0.path.lowercased().hasSuffix(".pdf") }.map { AppLink(.material, $0.id) }
+                let besides = [lecture, AppLink.course(course.id, page: .quiz)].compactMap { $0 }.prefix(SnapshotDriver.panes - 1)
+                for tab in tabs.ids.prefix(2) {
+                    for link in besides { if let entry = workspace.entry(for: link) { tabs.panes(tab)?.openBeside(entry) } }
+                }
             }
             // The exam furthest down its page, so opening it by its link has to scroll.
             let exam = workspace.currentCourses.first?.file.exams.min { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }
@@ -332,17 +374,22 @@ struct RootView: View {
                     .frame(width: Theme.Size.sidebar)
                     .transition(.move(edge: .leading).combined(with: .opacity))
             }
-            let shape = RoundedRectangle(cornerRadius: Theme.Radius.floating)
+            // Each pane draws its own panel (`PaneRow`), so a tab of several is panels side by side on the frame.
             content
-                .background(Theme.Palette.page, in: shape)
-                .clipShape(shape)
-                .overlay { shape.strokeBorder(Theme.Palette.lineSoft) }
                 .padding([.trailing, .bottom], Theme.Size.panelInset)
                 .padding(.leading, sidebarOpen ? 0 : Theme.Size.panelInset)
         }
-        .padding(.top, window.safeAreaInsets.top)
-        .ignoresSafeArea(.container, edges: .top)
+        .padding(.top, window.safeAreaInsets.top + TitleRow.extra(toolbar: window.safeAreaInsets.top))
+        // The band the 48pt row adds under the toolbar is still the row: it drags and zooms the window.
+        .overlay(alignment: .top) {
+            TitleDrag()
+                .frame(height: TitleRow.extra(toolbar: window.safeAreaInsets.top))
+                .padding(.top, window.safeAreaInsets.top)
         }
+        .ignoresSafeArea(.container, edges: .top)
+        .onChange(of: TitleRow.extra(toolbar: window.safeAreaInsets.top), initial: true) { _, extra in titleExtra = extra }
+        }
+        .background { TrafficLights(center: Theme.Size.toolbarRow / 2) }
         .background(Theme.Palette.frameTint.ignoresSafeArea())
         // Thinner in light: the regular material whitened the frame into milk over a light wallpaper. Not ultra-thin:
         // with the wallpaper showing through that clearly, the sidebar's text lost its contrast.
@@ -377,6 +424,9 @@ struct RootView: View {
                 }
                 TabBar(tabs: tabs, workspace: workspace, crumbs: crumbs, toolbar: row, moveToWindow: moveToWindow)
             }
+            // Down onto the 48pt row's middle (`TitleRow`): the compact toolbar centers the item, so padding its top by
+            // the row's extra moves the capsules down by half of it.
+            .padding(.top, titleExtra)
             .background { WindowOffset { x, _ in row.leadingX = x } }
         }
         .sharedBackgroundVisibility(.hidden)
@@ -388,6 +438,7 @@ struct RootView: View {
                 searchButton
                 tools
             }
+            .padding(.top, titleExtra)
             .onGeometryChange(for: CGFloat.self, of: \.size.width) { row.trailingWidth = $0 }
             .background { WindowOffset { row.placeTrailing($0, in: $1) } }
             #if DEBUG || RESIZE_PROBE

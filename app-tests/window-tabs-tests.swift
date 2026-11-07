@@ -38,10 +38,10 @@ struct WindowTabsTests {
         tabs.open(Navigator(Navigator.Entry(link: .place(.grades))))
         tabs.current.go(Navigator.Entry(link: .place(.people)))
         let moved = tabs.take(tabs.selected)
-        #expect(moved?.backList.map(\.link) == [.place(.grades)])
+        #expect(moved?.focused.backList.map(\.link) == [.place(.grades)])
         #expect(tabs.ids == [first])
         // A window made for it goes on from there, back included.
-        let window = Navigator(history: moved?.history ?? LinkHistory(Navigator.Entry(link: .place(.today))))
+        let window = Navigator(history: moved?.focused.history ?? LinkHistory(Navigator.Entry(link: .place(.today))))
         #expect(window.screen == .people && window.history.canGoBack)
     }
 
@@ -106,6 +106,25 @@ struct WindowTabsTests {
         #expect(tabs.playing.isEmpty)
     }
 
+    /// The strip marks the pane that plays, not the tab's first, and pauses that one from its icon.
+    @Test func aPlayingPaneIsTheOneMarked() throws {
+        let tabs = WindowTabs(Navigator())
+        let player = tabs.selected
+        let panes = try #require(tabs.panes(player))
+        panes.openBeside(Navigator.Entry(link: .course(graphTheory), course: graphTheory))
+        let second = panes.ids[1]
+        var paused = false
+        tabs.play(player, pane: second, pause: { paused = true })
+        #expect(tabs.playingPanes == [second] && tabs.playing == [player])
+        tabs.pause(pane: panes.ids[0])
+        #expect(!paused)
+        tabs.pause(player)
+        #expect(paused)
+        // The pane closed, its screen says it stopped and the tab plays no longer.
+        tabs.play(player, pane: second, pause: nil)
+        #expect(tabs.playingPanes.isEmpty && tabs.playing.isEmpty)
+    }
+
     @Test func eachTabHasItsOwnTrail() {
         let tabs = WindowTabs(Navigator())
         let first = tabs.selected
@@ -137,7 +156,8 @@ struct ToolbarRowTests {
         row.leadingX = 84
         row.trailingWidth = 328
         row.placeTrailing(width - 360, in: width)
-        row.measures = ToolbarRow.Measures(front: 300, others: [120, 120, 32], more: 60, chrome: 44)
+        row.measures = ToolbarRow.Measures(front: TabFit.Front(trail: 256, chrome: 44), others: [120, 120, 32].map { TabFit.Other(single: $0, icon: 32) },
+                                           more: 60)
         row.windowWidth = width
         return row
     }
@@ -165,7 +185,7 @@ struct ToolbarRowTests {
         // The + takes its 32 and the spacing that sets its glyph one gap after the menu; the rest is the tabs': the
         // menu alone beside the tab in front, whose trail is held to what is left after the menu, its gap and the chrome.
         row.windowWidth = 900
-        #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, shown: 0, hidden: 3))
+        #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, stacked: true, compactFront: true, shown: 0, hidden: 3))
         let spacing = TabFit.newTabSpacing(gap: TabBar.gap, button: Theme.Size.toolbarButton, glyph: TabBar.plusInk)
         #expect(row.placement.newTabSpacing == CGFloat(spacing))
         let held: CGFloat = (row.room - Theme.Size.toolbarButton - CGFloat(spacing) - 68 - 44).rounded(.down)
