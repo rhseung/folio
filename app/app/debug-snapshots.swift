@@ -34,7 +34,12 @@ final class SnapshotDriver {
     @ObservationIgnored var extraCaptures: ((URL) async -> Void)?
     var editCourse = false
     var editExam = false
-    var openPDF = false
+    /// The extension of the classified file the materials page opens, one renderer at a time (`FileView`).
+    var openFile: String?
+    /// Set by the materials page when it found a file for `openFile`.
+    var materialsOpenFile = false
+    /// Asks Claude about the open PDF's page, as its button would.
+    var askPage = false
     var searchQuery: String?
 
     /// `links` are opened by their address at the end, each drawn as its step: what a click on such a link shows.
@@ -58,7 +63,7 @@ final class SnapshotDriver {
             self.section = section
             try? await Task.sleep(for: .seconds(1.5))
             capture(to: directory.appending(path: "\(name).png"))
-            if name == "today" { captureScrolled(to: directory.appending(path: "today-full.png")) }
+            if name == "today" || name == "course-materials" { captureScrolled(to: directory.appending(path: "\(name)-full.png")) }
             if name == Self.webStep { await captureWebViews(to: directory, name: name) }
             if name == Self.holdStep { try? await Task.sleep(for: .seconds(6)) }
         }
@@ -89,11 +94,26 @@ final class SnapshotDriver {
             try? await Task.sleep(for: .seconds(1))
 
             section = .materials
-            openPDF = true
-            try? await Task.sleep(for: .seconds(2.5))
-            capture(to: directory.appending(path: "course-materials-pdf.png"))
-            if Self.holdStep == "course-materials-pdf" { try? await Task.sleep(for: .seconds(6)) }
-            openPDF = false
+            // A format the fixture lacks leaves the list on screen and gets no picture.
+            for ext in ["pdf", "md", "py", "png", "m4a", "docx", "hwp"] {
+                openFile = ext
+                try? await Task.sleep(for: .seconds(2.5))
+                if materialsOpenFile { capture(to: directory.appending(path: "course-materials-\(ext).png")) }
+                if materialsOpenFile, Self.webStep == "course-materials-\(ext)" { await captureWebViews(to: directory, name: "course-materials-\(ext)") }
+                if materialsOpenFile, ext == "pdf" {
+                    askPage = true
+                    try? await Task.sleep(for: .seconds(2))
+                    capture(to: directory.appending(path: "course-materials-pdf-ask.png"))
+                    askPage = false
+                    // Toggled, so the course view hears it close even when the panel was never asked open.
+                    claudePanel = true
+                    try? await Task.sleep(for: .seconds(0.3))
+                    claudePanel = false
+                }
+                if Self.holdStep == "course-materials-\(ext)" { try? await Task.sleep(for: .seconds(6)) }
+                openFile = nil
+                try? await Task.sleep(for: .seconds(0.5))
+            }
             searchQuery = ""
             try? await Task.sleep(for: .seconds(1))
             capture(to: directory.appending(path: "search-empty.png"))

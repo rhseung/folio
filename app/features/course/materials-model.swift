@@ -19,7 +19,6 @@ final class MaterialsModel {
     /// The 0-based page the viewer is on, which the window's link carries, so back, forward and a tab moved to its own
     /// window come back to it.
     var shownPage: Int?
-    var preview: URL?
     var linking: UUID?
     var relinking: UUID?
     var disconnecting: FolioDomain.Material?
@@ -64,16 +63,19 @@ final class MaterialsModel {
         var count: Int
         var note: String
         var rows: [TreeRow]
+        /// The PDFs this section shows through their `.tex` rows (#109), by the `.tex`.
+        var pdfs: [UUID: FolioDomain.Material]
     }
 
     func sections() -> [Section] {
         MaterialRole.allCases.compactMap { role in
             // A missing file that was never classified still needs a row to be re-pointed or dropped.
-            let items = materials.filter { $0.role == role && $0.status == .classified || ($0.role ?? .other) == role && $0.status == .missing }
+            let all = materials.filter { $0.role == role && $0.status == .classified || ($0.role ?? .other) == role && $0.status == .missing }
+            let items = all.withoutBuiltPDFs()
             guard !items.isEmpty else { return nil }
             let tree = PathTree(items) { $0.path }
             return Section(role: role, count: items.count, note: tree.path.isEmpty ? "\(items.count)" : "\(items.count) · \(tree.path)",
-                           rows: treeRows(tree, depth: 0))
+                           rows: treeRows(tree, depth: 0), pdfs: all.builtPDFsHidden())
         }
     }
 
@@ -108,6 +110,14 @@ final class MaterialsModel {
     var relocations: [String] { [CourseFolder.lectures.rawValue] + places }
 
     func moveTargets(_ m: FolioDomain.Material) -> [String] { relocations.filter { $0 != dir(m.path) } }
+
+    /// A `.tex` row's line carries its hidden PDF's links too, since the PDF has no row of its own to show them.
+    func linkLine(_ m: FolioDomain.Material, pdf: FolioDomain.Material?) -> String {
+        let own = linkLine(m)
+        guard let pdf else { return own }
+        let built = linkLine(pdf)
+        return built.isEmpty ? own : ([own].filter { !$0.isEmpty } + [String(localized: .materialsPairedPdfLinks(built))]).joined(separator: " · ")
+    }
 
     func linkLine(_ m: FolioDomain.Material) -> String {
         let file = course.file
@@ -157,17 +167,22 @@ final class MaterialsModel {
     func trash(_ m: FolioDomain.Material) { pending = workspace.ask(MaterialTrash(course: course.id, material: m.id), button: .materialsTrash) }
     func ignore(_ ids: [UUID]) { pending = workspace.ask(MaterialStatusSet(course: course.id, materials: ids, status: .ignored)) }
 
+    /// A folder's name is all name: a project called `robot.v2` has no extension to keep.
+    private func kept(_ m: FolioDomain.Material) -> String { m.isFolder ? "" : (m.path as NSString).pathExtension }
+
     func startRenaming(_ m: FolioDomain.Material) {
-        newName = ((m.path as NSString).lastPathComponent as NSString).deletingPathExtension
+        let name = (m.path as NSString).lastPathComponent
+        newName = m.isFolder ? name : (name as NSString).deletingPathExtension
         renaming = m
     }
 
     func renameMessage(_ m: FolioDomain.Material) -> String {
-        String(localized: .materialsRenameMessage((m.path as NSString).pathExtension))
+        let ext = kept(m)
+        return String(localized: ext.isEmpty ? .materialsRenameMessagePlain : .materialsRenameMessage(ext))
     }
 
     func rename(_ m: FolioDomain.Material) {
-        let ext = (m.path as NSString).pathExtension
+        let ext = kept(m)
         let base = newName.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "/", with: "-")
         let name = ext.isEmpty ? base : "\(base).\(ext)"
         guard !base.isEmpty, name != (m.path as NSString).lastPathComponent else { return }
@@ -202,41 +217,12 @@ final class MaterialsModel {
         return m
     }
 
-    func takeRequestedPage() -> Int? {
-        defer { requestedPage = nil }
-        return requestedPage
-    }
-
-    /// A PDF or a text file opens here, a folder in Finder (by the view), anything else in Quick Look.
+    /// Every file opens here, in the renderer its format picks (`FileView`); a folder opens in Finder (by the view).
     func open(_ m: FolioDomain.Material) {
-        if m.isPDF || m.isText { viewing = m.id } else { Task { preview = try? await workspace.download(m, course: course.id) } }
+        if !m.isFolder { viewing = m.id }
     }
 
     func fileURL(_ path: String) -> URL { course.store.fileURL(path) }
-
-    // MARK: Viewer
-
-    /// The file, downloaded if iCloud holds only a placeholder, and the page it was last left at on any device.
-    func pdf(_ m: FolioDomain.Material) async -> (url: URL, page: Int)? {
-        guard let url = try? await workspace.download(m, course: course.id) else { return nil }
-        let page = ((try? course.store.log.readAll()) ?? [])
-            .events(MaterialViewEvent.self)
-            .last { $0.event.materialId == m.id }?.event.page
-        return (url, page ?? 0)
-    }
-
-    func recordPage(_ page: Int, of m: FolioDomain.Material) {
-        let store = course.store
-        // folio:not-an-action page views are activity logs, not data changes
-        workspace.perform { try store.log.append(MaterialViewEvent(materialId: m.id, page: page), device: workspace.device, at: .now) }
-    }
-
-    var recording: UUID? { workspace.recorder.capturing }
-
-    /// `page` is 1-based; nil when the viewer closed.
-    func showing(_ page: Int?, of m: FolioDomain.Material) {
-        workspace.showing(page: page, of: m, course: course.id)
-    }
 
     // MARK: Links
 

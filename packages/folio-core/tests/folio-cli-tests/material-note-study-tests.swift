@@ -148,6 +148,17 @@ struct MaterialNoteStudyTests {
         #expect(try String(contentsOf: tex, encoding: .utf8) == "x")
     }
 
+    /// The format the app opens a file by, so an agent knows a PDF from a slide deck without guessing from the name.
+    @Test func showReportsTheFormat() throws {
+        let gist = try Harness.fixtureCopy()
+        _ = h.cli(Self.track, gist: gist)
+        let pdf = try #require(try JSONSerialization.jsonObject(with: Data(h.cli(["material", "show", "EC4207/Seating.pdf", "--json"], gist: gist).out.utf8)) as? [String: Any])
+        #expect(pdf["format"] as? String == "pdf" && pdf["text"] == nil)
+        let tex = try #require(try JSONSerialization.jsonObject(with: Data(h.cli(["material", "show", "EC4207/Problems.tex", "--json"], gist: gist).out.utf8)) as? [String: Any])
+        #expect(tex["format"] as? String == "tex" && tex["text"] != nil)
+        #expect(h.cli(["material", "show", "EC4207/Seating.pdf"], gist: gist).out.contains("pdf"))
+    }
+
     @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
     func buildTex() throws {
         let write = ["material", "write", "EC4207/Problems.tex", "--file",

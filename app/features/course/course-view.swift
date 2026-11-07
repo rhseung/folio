@@ -1,3 +1,4 @@
+import FolioAI
 import FolioDomain
 import SwiftUI
 
@@ -68,6 +69,7 @@ enum CourseTab: CaseIterable, Identifiable {
 struct CourseView: View {
     @State private var model: CourseModel
     @State private var showClaude = false
+    @State private var claudeAsk: ContextItem?
     @State private var claudeWidth = Theme.Size.claudePanel
     @State private var pageReset = 0
     @State private var claudeDragBase: CGFloat?
@@ -80,7 +82,7 @@ struct CourseView: View {
 
     func claude(_ course: LoadedCourse) -> some View {
         ClaudePanel(workspace: model.workspace, course: course, openNote: model.section == .notes ? model.openNote : nil,
-                    openUnit: model.section == .units ? model.openUnit : nil, insertIntoNote: { model.noteInsert = $0 }) {
+                    openUnit: model.section == .units ? model.openUnit : nil, incoming: $claudeAsk, insertIntoNote: { model.noteInsert = $0 }) {
             model.show(note: $0)
         }
     }
@@ -174,6 +176,10 @@ struct CourseView: View {
                 // Over the page, not beside it: a sidebar (or the iPad's inspector) squeezed the page to a strip in a
                 // narrow window.
                 .overlay(alignment: .bottomTrailing) { claudeFloat(course) }
+                .environment(\.askClaude) { item in
+                    claudeAsk = item
+                    showClaude = true
+                }
             }
             // On the split, not the column: folded, the column is gone and the section still heads the trail.
             // Back to the section's first screen from a file or unit opened in it.

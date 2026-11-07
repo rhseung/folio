@@ -114,11 +114,11 @@ struct AssignmentSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var pickingFiles = false
     @Environment(\.supportsMultipleWindows) private var multipleWindows
-    let openInEditor: (UUID, LinkPlacement) -> Void
+    let openFile: (UUID, LinkPlacement) -> Void
 
-    init(workspace: Workspace, course: LoadedCourse, assignment: Assignment, openInEditor: @escaping (UUID, LinkPlacement) -> Void) {
+    init(workspace: Workspace, course: LoadedCourse, assignment: Assignment, openFile: @escaping (UUID, LinkPlacement) -> Void) {
         _model = State(initialValue: AssignmentSheetModel(workspace: workspace, course: course, assignment: assignment))
-        self.openInEditor = openInEditor
+        self.openFile = openFile
     }
 
     var body: some View {
@@ -187,14 +187,13 @@ struct AssignmentSheet: View {
                             .fileDrag(store.fileURL(m.path))
                             Spacer()
                             ChoiceMenu(selection: Binding(get: { kind }, set: { model.setKind(m, $0) }), options: model.kindOptions)
-                            #if os(macOS)
-                            Button(.assignmentsOpen) { open(m) }.buttonStyle(.ghost)
-                            #endif
+                            if model.opens(m) { Button(.assignmentsOpen) { open(m) }.buttonStyle(.ghost) }
                         }
-                        #if os(macOS)
                         .contentShape(.rect)
-                        .contextMenu { Button(.assignmentsOpen) { open(m) } }
-                        #endif
+                        .contextMenu {
+                            if model.opens(m) { Button(.assignmentsOpen) { open(m) } }
+                            if m.isFolder { EditorMenu(url: store.fileURL(m.path)) }
+                        }
                     }
                 }
                 .fileDrop { model.importFiles($0) }
@@ -220,19 +219,20 @@ struct AssignmentSheet: View {
         Binding(get: { model.opening != nil }, set: { if !$0 { model.opening = nil } })
     }
 
-    #if os(macOS)
     func open(_ m: FolioDomain.Material) {
         switch model.open(m, windows: multipleWindows) {
-        case .elsewhere(let url): NSWorkspace.shared.open(url)
-        case .editor(let id): show(id)
-        case .window(let id): openInEditor(id, .window)
+        case .elsewhere(let url):
+            #if os(macOS)
+            NSWorkspace.shared.open(url)
+            #endif
+        case .materials(let id): show(id)
+        case .window(let id): openFile(id, .window)
         case .asks: break
         }
     }
-    #endif
 
     func show(_ id: UUID) {
         dismiss()
-        openInEditor(id, .here)
+        openFile(id, .here)
     }
 }

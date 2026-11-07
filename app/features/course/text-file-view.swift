@@ -34,7 +34,7 @@ struct TextFileView: View {
             HStack(spacing: 0) {
                 VStack(spacing: 0) {
                     if model.unreadable {
-                        ContentUnavailableView(String(localized: .materialsViewerCannotOpen), systemImage: "doc.questionmark",
+                        ContentUnavailableView(String(localized: .fileViewCannotRead), systemImage: "doc.questionmark",
                                                description: Text(.textFileUnreadable))
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {

@@ -207,10 +207,11 @@ final class AssignmentSheetModel {
     var edited: Bool { loaded.map { $0 != draft } ?? false }
 
     enum Opening: Equatable {
+        /// A code project folder, in Finder, with the sheet left open.
         case elsewhere(URL)
-        /// Nothing to lose: the sheet closes and the editor opens in the tab under it.
-        case editor(UUID)
-        /// The sheet holds edits, so it stays, and the editor opens in a window of its own.
+        /// Nothing to lose: the sheet closes and the file opens in the materials tab under it.
+        case materials(UUID)
+        /// The sheet holds edits, so it stays, and the file opens in a window of its own.
         case window(UUID)
         /// The sheet holds edits and no other window can open; `opening` waits for the user to save, drop them, or stay.
         case asks
@@ -218,12 +219,21 @@ final class AssignmentSheetModel {
 
     var opening: FolioDomain.Material?
 
-    /// A text file opens in the materials tab's editor; anything else in its own app, with the sheet left open. A sheet
-    /// is short work (#317): one with nothing typed in it gives way to the editor, one holding edits keeps them.
+    /// iPadOS has nowhere to open a folder.
+    func opens(_ m: FolioDomain.Material) -> Bool {
+        #if os(macOS)
+        true
+        #else
+        !m.isFolder
+        #endif
+    }
+
+    /// A file opens in the materials tab (`FileView`); a folder opens in Finder, with the sheet left open. A sheet is
+    /// short work (#317): one with nothing typed in it gives way to the file, one holding edits keeps them.
     /// `windows`: whether another window can open, as the iPad's can't for the sheet's link.
     func open(_ m: FolioDomain.Material, windows: Bool) -> Opening {
-        guard m.isText else { return .elsewhere(course.store.fileURL(m.path)) }
-        guard edited else { return .editor(m.id) }
+        guard !m.isFolder else { return .elsewhere(course.store.fileURL(m.path)) }
+        guard edited else { return .materials(m.id) }
         if windows { return .window(m.id) }
         opening = m
         return .asks

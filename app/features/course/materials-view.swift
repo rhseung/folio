@@ -1,7 +1,6 @@
 import FolioActions
 import FolioDomain
 import FolioStorage
-import QuickLook
 import SwiftUI
 
 struct MaterialsView: View {
@@ -21,17 +20,13 @@ struct MaterialsView: View {
         Group {
             if let m = model.viewed {
                 // Another file starts over: page, zoom, search and unsaved text belong to the old one.
-                if m.isText {
-                    TextFileView(workspace: model.workspace, course: model.course, material: m.id).id(m.id)
-                } else {
-                    MaterialViewer(model: model, material: m).id(m.id)
-                }
+                FileView(workspace: model.workspace, course: model.course, material: m.id, requestedPage: $model.requestedPage,
+                         shownPage: $model.shownPage).id(m.id)
             } else {
                 list
             }
         }
         .task { await model.load() }
-        .quickLookPreview($model.preview)
         .fileImporter(isPresented: Binding(get: { model.relinking != nil }, set: { if !$0 { model.relinking = nil } }), allowedContentTypes: [.item]) { result in
             if case .success(let url) = result { model.relink(to: url) }
             model.relinking = nil
@@ -62,10 +57,13 @@ struct MaterialsView: View {
         }
         .onChange(of: model.viewedLink) { _, link in moved(link) }
         #if DEBUG && os(macOS)
-        .onChange(of: SnapshotDriver.shared.openPDF, initial: true) { _, new in
-            // Fixtures ship without tracked files; register them so there is a PDF to show.
-            if new, model.materials.isEmpty { model.workspace.run(MaterialTrack(course: model.course.id)) }
-            model.viewing = new ? model.materials.first { $0.isPDF && $0.status == .classified }?.id : nil
+        .onChange(of: SnapshotDriver.shared.openFile, initial: true) { _, ext in
+            // Fixtures ship without tracked files; register them so there is a file to show.
+            if ext != nil, model.materials.isEmpty { model.workspace.run(MaterialTrack(course: model.course.id)) }
+            model.viewing = ext.flatMap { ext in
+                model.materials.first { !$0.isFolder && ($0.path as NSString).pathExtension.lowercased() == ext && $0.status == .classified }?.id
+            }
+            SnapshotDriver.shared.materialsOpenFile = model.viewing != nil
         }
         #endif
     }
@@ -104,14 +102,15 @@ struct MaterialsView: View {
                                 case .folder(let folder, let depth): folderRow(folder, depth: depth)
                                 case .file(let m, let name, let depth):
                                     // One stack, so the indent moves the row once rather than padding each of its parts.
-                                    HStack(spacing: Theme.Space.m) { fileRow(m, name: name) }.padding(.leading, CGFloat(depth) * Self.indent)
+                                    HStack(spacing: Theme.Space.m) { fileRow(m, name: name, pdf: section.pdfs[m.id]) }
+                                        .padding(.leading, CGFloat(depth) * Self.indent)
                                 }
                             }
                             .contentShape(.rect)
                             .contextMenu {
                                 switch row {
                                 case .folder(let folder, _): folderMenu(folder)
-                                case .file(let m, _, _): fileContextMenu(m)
+                                case .file(let m, _, _): fileContextMenu(m, pdf: section.pdfs[m.id])
                                 }
                             }
                         }
@@ -175,26 +174,45 @@ struct MaterialsView: View {
         #endif
     }
 
-    @ViewBuilder func fileContextMenu(_ m: FolioDomain.Material) -> some View {
+    @ViewBuilder func fileContextMenu(_ m: FolioDomain.Material, pdf: FolioDomain.Material?) -> some View {
         if m.status == .missing {
             Button(.materialsRelinkEllipsis) { model.relinking = m.id }
             Divider()
             Button(.materialsUntrackEllipsis, role: .destructive) { model.disconnecting = m }
         } else {
+            #if os(macOS)
             Button(m.isFolder ? .materialsOpenInFinder : .materialsOpen) { open(m) }
+            #else
+            if !m.isFolder { Button(.materialsOpen) { open(m) } }
+            #endif
             Button(.materialsLinkEllipsis) { model.linking = m.id }
             if !m.isFolder { LinkMenu(link: AppLink(.material, m.id), course: model.course.id, trailing: true) }
-            if !m.isFolder {
-                Divider()
-                fileMenuItems(m)
-            }
+            Divider()
+            fileMenuItems(m)
+            if let pdf { pdfMenu(pdf) }
+        }
+    }
+
+    /// Everything the PDF's own row had, since the list shows it only through its `.tex` (#109): links that exams and
+    /// units count, renaming, and trashing a bad build.
+    @ViewBuilder func pdfMenu(_ pdf: FolioDomain.Material) -> some View {
+        Divider()
+        // Titled by the file name, which is data rather than a phrase to translate.
+        Menu((pdf.path as NSString).lastPathComponent) {
+            Button(.materialsOpen) { model.open(pdf) }
+            Button(.materialsLinkEllipsis) { model.linking = pdf.id }
+            LinkMenu(link: AppLink(.material, pdf.id), course: model.course.id, trailing: true)
+            Divider()
+            fileMenuItems(pdf)
         }
     }
 
     @ViewBuilder func fileMenuItems(_ m: FolioDomain.Material) -> some View {
         #if os(macOS)
-        Button(.materialsOpenWithDefault) { NSWorkspace.shared.open(model.fileURL(m.path)) }
+        // A folder's own app is Finder, which "Finder에서 열기" already is.
+        if !m.isFolder { Button(.materialsOpenWithDefault) { NSWorkspace.shared.open(model.fileURL(m.path)) } }
         Button(.materialsShowInFinder) { NSWorkspace.shared.activateFileViewerSelecting([model.fileURL(m.path)]) }
+        if m.isFolder { EditorMenu(url: model.fileURL(m.path)) }
         Divider()
         #endif
         Button(.materialsRenameEllipsis) { model.startRenaming(m) }
@@ -207,13 +225,13 @@ struct MaterialsView: View {
         Button(.materialsTrashEllipsis, role: .destructive) { model.trash(m) }
     }
 
-    @ViewBuilder func fileRow(_ m: FolioDomain.Material, name: String) -> some View {
+    @ViewBuilder func fileRow(_ m: FolioDomain.Material, name: String, pdf: FolioDomain.Material?) -> some View {
         let missing = m.status == .missing
         Image(systemName: m.isFolder ? "folder" : missing ? "exclamationmark.triangle" : m.isPDF ? "doc.richtext" : "doc")
             .foregroundStyle(missing ? Theme.Palette.danger : Theme.Palette.textSecondary)
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
             Text(name).lineLimit(1).help(m.path)
-            let links = model.linkLine(m)
+            let links = model.linkLine(m, pdf: pdf)
             if !links.isEmpty { Text(links).font(Theme.Typeface.caption).foregroundStyle(accent.ink).lineLimit(1) }
         }
         .fileDrag(model.fileURL(m.path))
@@ -225,19 +243,31 @@ struct MaterialsView: View {
         } else {
             Button(.materialsLink) { model.linking = m.id }
                 .buttonStyle(.ghost)
-                .popover(isPresented: Binding(get: { model.linking == m.id }, set: { if !$0 { model.linking = nil } })) {
-                    MaterialLinksEditor(model: model, materialId: m.id)
+                // The hidden PDF's links are edited from its `.tex` row, the only place left to anchor them.
+                .popover(isPresented: Binding(get: { model.linking == m.id || model.linking != nil && model.linking == pdf?.id },
+                                              set: { if !$0 { model.linking = nil } })) {
+                    MaterialLinksEditor(model: model, materialId: model.linking ?? m.id)
                 }
-            Button(m.isFolder ? "Finder" : String(localized: .materialsOpen)) { open(m) }.buttonStyle(.ghost)
-            if !m.isFolder {
-                Menu { fileMenuItems(m) } label: {
-                    Image(systemName: "ellipsis")
-                }
-                .menuStyle(.button)
-                .buttonStyle(.borderless).pointingHand()
-                .menuIndicator(.hidden)
-                .fixedSize()
+            // The list shows a `.tex` and its PDF as one row (#109); the PDF opens from here.
+            if let pdf {
+                Button(.materialsPairedPdf) { model.open(pdf) }.buttonStyle(.ghost).help(Text(.materialsOpenPdf))
             }
+            #if os(macOS)
+            Button(m.isFolder ? "Finder" : String(localized: .materialsOpen)) { open(m) }.buttonStyle(.ghost)
+            #else
+            // iPadOS has no Finder to hand a folder to.
+            if !m.isFolder { Button(.materialsOpen) { open(m) }.buttonStyle(.ghost) }
+            #endif
+            Menu {
+                fileMenuItems(m)
+                if let pdf { pdfMenu(pdf) }
+            } label: {
+                Image(systemName: "ellipsis")
+            }
+            .menuStyle(.button)
+            .buttonStyle(.borderless).pointingHand()
+            .menuIndicator(.hidden)
+            .fixedSize()
         }
     }
 
@@ -391,11 +421,6 @@ extension SessionMaterial {
         case let (a, b): " p.\(a.map(String.init) ?? "")–\(b.map(String.init) ?? "")"
         }
     }
-}
-
-extension FolioDomain.Material {
-    var isPDF: Bool { !isFolder && MaterialFormat(path: path) == .pdf }
-    var isText: Bool { !isFolder && MaterialFormat(path: path).isText }
 }
 
 struct ImportPlaceSheet: View {

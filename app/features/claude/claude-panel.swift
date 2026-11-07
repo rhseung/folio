@@ -3,6 +3,12 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
+extension EnvironmentValues {
+    /// Opens the course's Claude panel with this item added to its context. Nil outside a course, where there is no
+    /// panel to ask, so a view hides its "ask Claude" control rather than offering one that does nothing.
+    @Entry var askClaude: (@MainActor (ContextItem) -> Void)?
+}
+
 /// Nothing leaves the device until the user presses send.
 struct ClaudePanel: View {
     @State private var model: ClaudeModel
@@ -11,15 +17,18 @@ struct ClaudePanel: View {
     let course: LoadedCourse
     let openNote: UUID?
     let openUnit: UUID?
+    /// Context asked for from elsewhere (`askClaude`), taken into the panel's own list once it arrives.
+    @Binding var incoming: ContextItem?
     let insertIntoNote: (String) -> Void
     let showNote: (UUID) -> Void
 
-    init(workspace: Workspace, course: LoadedCourse, openNote: UUID?, openUnit: UUID?, insertIntoNote: @escaping (String) -> Void,
-         showNote: @escaping (UUID) -> Void) {
+    init(workspace: Workspace, course: LoadedCourse, openNote: UUID?, openUnit: UUID?, incoming: Binding<ContextItem?> = .constant(nil),
+         insertIntoNote: @escaping (String) -> Void, showNote: @escaping (UUID) -> Void) {
         _model = State(initialValue: ClaudeModel(workspace: workspace))
         self.course = course
         self.openNote = openNote
         self.openUnit = openUnit
+        _incoming = incoming
         self.insertIntoNote = insertIntoNote
         self.showNote = showNote
     }
@@ -40,6 +49,11 @@ struct ClaudePanel: View {
         .foregroundStyle(Theme.Palette.text)
         .task(id: course.id) { model.load(course) }
         .task(id: openNote) { model.loadOpenNote(openNote, course: course) }
+        .onChange(of: incoming, initial: true) { _, item in
+            guard let item else { return }
+            model.add(item)
+            incoming = nil
+        }
         .confirmationDialog(model.confirming?.question ?? "", isPresented: Binding(get: { model.confirming != nil }, set: { if !$0 { model.confirming = nil } }),
                             titleVisibility: .visible, presenting: model.confirming) { pending in
             Button(.claudeProposalApply, role: .destructive) { model.confirm(pending, course: course) }
