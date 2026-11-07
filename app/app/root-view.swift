@@ -30,10 +30,8 @@ struct RootView: View {
     @State private var madeAt = Date.now
     @State private var host = WindowHost()
     @State private var row = ToolbarRow()
-    #if os(macOS)
-    /// `TitleRow.extra` for this window's toolbar.
-    @State private var titleExtra: CGFloat = 0
-    #endif
+    /// The window's buttons are out of the title row, gone to the menu bar's reveal.
+    @State private var fullScreen = false
     #else
     @State private var windowWidth: CGFloat = 1200
     #endif
@@ -152,14 +150,11 @@ struct RootView: View {
                         // Roomier buttons and segmented controls, as in Alcove; text sizes stay with the tokens.
                         .controlSize(.large)
                         .environment(\.showSettings) { showSettings($0) }
-                        // No toolbar band: columns (course, quiz scope, inspector) run to the window top, and a band over them
-                        // reads as a header cutting across every column.
-                        #if os(macOS)
-                        .toolbarBackgroundVisibility(.hidden, for: .windowToolbar)
-                        #endif
                         .background { Button(.commonSearch) { searching = true }.keyboardShortcut("k").opacity(0).accessibilityHidden(true) }
                 }
+                #if os(iOS)
                 .toolbar { globalTools }
+                #endif
                 .environment(\.openLink, openLink)
                 .classWrapUpPrompt(workspace)
                 #if os(iOS)
@@ -361,10 +356,8 @@ struct RootView: View {
     /// The iPad keeps the split view, which also folds the sidebar into an overlay in compact widths.
     @ViewBuilder func shell(@ViewBuilder content: () -> some View) -> some View {
         #if os(macOS)
-        // The toolbar's height is taken out as padding, not left as safe area: a column that runs up into the safe area
-        // pulled the whole panel under the toolbar.
-        let content = content()
-        GeometryReader { window in
+        VStack(spacing: 0) {
+        titleRow
         HStack(spacing: 0) {
             if sidebarOpen {
                 sidebar
@@ -375,21 +368,14 @@ struct RootView: View {
                     .transition(.move(edge: .leading).combined(with: .opacity))
             }
             // Each pane draws its own panel (`PaneRow`), so a tab of several is panels side by side on the frame.
-            content
+            content()
                 .padding([.trailing, .bottom], Theme.Size.panelInset)
                 .padding(.leading, sidebarOpen ? 0 : Theme.Size.panelInset)
         }
-        .padding(.top, window.safeAreaInsets.top + TitleRow.extra(toolbar: window.safeAreaInsets.top))
-        // The band the 48pt row adds under the toolbar is still the row: it drags and zooms the window.
-        .overlay(alignment: .top) {
-            TitleDrag()
-                .frame(height: TitleRow.extra(toolbar: window.safeAreaInsets.top))
-                .padding(.top, window.safeAreaInsets.top)
         }
+        // The row is the window's top: the hidden title bar's safe area would push it down under the window's buttons.
         .ignoresSafeArea(.container, edges: .top)
-        .onChange(of: TitleRow.extra(toolbar: window.safeAreaInsets.top), initial: true) { _, extra in titleExtra = extra }
-        }
-        .background { TrafficLights(center: Theme.Size.toolbarRow / 2) }
+        .background { TrafficLights(center: Theme.Size.toolbarRow / 2) { fullScreen = $0 } }
         .background(Theme.Palette.frameTint.ignoresSafeArea())
         // Thinner in light: the regular material whitened the frame into milk over a light wallpaper. Not ultra-thin:
         // with the wallpaper showing through that clearly, the sidebar's text lost its contrast.
@@ -404,49 +390,38 @@ struct RootView: View {
         #endif
     }
 
-    /// Actions that work from any page, so they live in the window's toolbar rather than on one screen.
-    @ToolbarContentBuilder var globalTools: some ToolbarContent {
-        #if os(macOS)
-        // The sidebar button, back and forward as in Finder and Safari, then the tabs, all one item: the gaps between
-        // them are the stack's, so the tabs start where the panel's corner says. As items of their own, the row
-        // spaced them as it saw fit and the tabs began short of the corner.
-        ToolbarItem(placement: .navigation) {
-            HStack(spacing: 0) {
-                HStack(spacing: Self.historyGap) {
-                    sidebarButton
-                        #if DEBUG || RESIZE_PROBE
-                        .background { ResizeMarker(name: "sidebar") }
-                        #endif
-                    HistoryButtons(navigator: navigator) { workspace.title(of: $0) }
-                        #if DEBUG || RESIZE_PROBE
-                        .background { ResizeMarker(name: "back") }
-                        #endif
-                }
-                TabBar(tabs: tabs, workspace: workspace, crumbs: crumbs, toolbar: row, moveToWindow: moveToWindow)
+    #if os(macOS)
+    /// Actions that work from any page, so they live in the window's top row rather than on one screen: the sidebar
+    /// button, back and forward as in Finder and Safari, the tabs, then the search field and the buttons at the end.
+    var titleRow: some View {
+        let lead = TitleRowEdges.lead(fullScreen: fullScreen)
+        return TitleRow(lead: lead) {
+            HStack(spacing: Self.historyGap) {
+                sidebarButton
+                    #if DEBUG || RESIZE_PROBE
+                    .background { ResizeMarker(name: "sidebar") }
+                    #endif
+                HistoryButtons(navigator: navigator) { workspace.title(of: $0) }
+                    #if DEBUG || RESIZE_PROBE
+                    .background { ResizeMarker(name: "back") }
+                    #endif
             }
-            // Down onto the 48pt row's middle (`TitleRow`): the compact toolbar centers the item, so padding its top by
-            // the row's extra moves the capsules down by half of it.
-            .padding(.top, titleExtra)
-            .background { WindowOffset { x, _ in row.leadingX = x } }
-        }
-        .sharedBackgroundVisibility(.hidden)
-        // Pushes the search field and the buttons to the row's end, whatever room the tabs leave.
-        ToolbarSpacer(.flexible)
-        // The search field and the buttons in one item, so the gap between them is the stack's.
-        ToolbarItem {
+            TabBar(tabs: tabs, workspace: workspace, crumbs: crumbs, toolbar: row, moveToWindow: moveToWindow)
+        } trailing: {
             HStack(spacing: Theme.Space.s) {
                 searchButton
                 tools
             }
-            .padding(.top, titleExtra)
             .onGeometryChange(for: CGFloat.self, of: \.size.width) { row.trailingWidth = $0 }
-            .background { WindowOffset { row.placeTrailing($0, in: $1) } }
             #if DEBUG || RESIZE_PROBE
             .background { ResizeMarker(name: "trailing") }
             #endif
         }
-        .sharedBackgroundVisibility(.hidden)
-        #else
+        .onChange(of: lead, initial: true) { _, lead in row.leadingX = lead }
+    }
+    #else
+    /// Actions that work from any page, so they live in the window's toolbar rather than on one screen.
+    @ToolbarContentBuilder var globalTools: some ToolbarContent {
         // Back and forward right after the sidebar, as in Safari. One item, so the crumb after them knows where it
         // starts (`crumbStart`).
         ToolbarItem(placement: .navigation) {
@@ -464,8 +439,8 @@ struct RootView: View {
         ToolbarSpacer(.flexible)
         ToolbarItem { tools }
             .sharedBackgroundVisibility(.hidden)
-        #endif
     }
+    #endif
 
     #if os(macOS)
     var sidebarButton: some View {

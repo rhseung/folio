@@ -154,8 +154,8 @@ struct ToolbarRowTests {
     func row(width: CGFloat) -> ToolbarRow {
         let row = ToolbarRow()
         row.leadingX = 84
-        row.trailingWidth = 328
-        row.placeTrailing(width - 360, in: width)
+        // With the row's trailing inset, 360 from the search field's start to the window's edge.
+        row.trailingWidth = 360 - TitleRowEdges.trailing
         row.measures = ToolbarRow.Measures(front: TabFit.Front(trail: 256, chrome: 44), others: [120, 120, 32].map { TabFit.Other(single: $0, icon: 32) },
                                            more: 60)
         row.windowWidth = width
@@ -178,8 +178,7 @@ struct ToolbarRowTests {
 
     @Test func itFollowsTheWidthAtOnceWhenTheRowRunsOut() throws {
         let row = row(width: 1400)
-        // The search field stays where the row put it from the trailing edge, so the narrower width counts now, not
-        // a turn later when the row reports the field's new place.
+        // The search field is pinned to the trailing edge, so the narrower width counts now, not a turn later.
         row.windowWidth = 1180
         #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, shown: 3, hidden: 0))
         // The + takes its 32 and the spacing that sets its glyph one gap after the menu; the rest is the tabs': the
@@ -199,8 +198,8 @@ struct ToolbarRowTests {
     }
 
     @Test func theStripNeverTakesTheSearchFieldsRoom() {
-        // Wider than the row leaves it, the strip pushed the search field and the buttons into the toolbar's overflow
-        // (#310). Down to where the tab in front's capsule, the menu and the + alone fill it.
+        // Wider than the row leaves it, the strip ran under the search field and the buttons (#310). Down to where
+        // the tab in front's capsule, the menu and the + alone fill it.
         let row = row(width: 1400)
         let least = 44 + 60 + TabBar.gap * 2 + Theme.Size.toolbarButton
         for width in stride(from: 1400, through: 600, by: -4) {
@@ -211,18 +210,14 @@ struct ToolbarRowTests {
     }
 
     @Test func aWiderSearchGroupTakesItsRoomFromTheTabs() {
-        // A course's timer or a recording's clock widens the group without the window. Gone into the overflow menu it
-        // has no place to report, so its width alone has to give the room back, or it never came out again.
+        // A course's timer or a recording's clock widens the group without the window: its width alone gives the
+        // room back.
         let row = row(width: 1000)
         let room = row.room
         let width = row.placement.width
         row.trailingWidth += 60
-        row.placeTrailing(nil, in: 1000)
         #expect(row.room == room - 60)
         #expect(row.placement.width < width && row.placement.width <= row.room)
-        // Back in the row, its place agrees.
-        row.placeTrailing(1000 - 32 - row.trailingWidth, in: 1000)
-        #expect(row.room == room - 60)
     }
 }
 

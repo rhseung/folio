@@ -39,8 +39,8 @@ struct FolioApp: App {
             WindowPlacement(.center, size: WindowSize.opening(in: context.defaultDisplay.visibleRect.size))
         }
         .defaultLaunchBehavior(Self.hostingTests ? .suppressed : .automatic)
-        // The compact row (40pt), which `TitleRow` makes up to 48pt: neither style has the 48pt row (#62).
-        .windowToolbarStyle(.unifiedCompact(showsTitle: false))
+        // No title bar or toolbar: the window draws its own 48pt top row (`TitleRow`), a height no toolbar has (#62).
+        .windowStyle(.hiddenTitleBar)
         #endif
         .commands {
             SettingsCommands()
