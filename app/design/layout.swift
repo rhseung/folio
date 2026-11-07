@@ -88,6 +88,7 @@ struct ColumnSplit<Column: View, Bar: View, Content: View>: View {
     @ViewBuilder var bar: Bar
     @ViewBuilder var content: Content
     @Environment(\.revealsOverflow) private var revealsOverflow
+    @Environment(\.inPanes) private var inPanes
     // Measured, unlike `Fold`: the side-by-side form can't push a pane out (the page goes down to nothing), so its
     // first pass at the old width costs nothing, and only the width the page is left decides.
     @State private var narrow = false
@@ -99,7 +100,9 @@ struct ColumnSplit<Column: View, Bar: View, Content: View>: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if narrow && showsPage {
+            // Not over a pane of several (#62): the tab's segment names the pane and its trail goes back up, and a bar
+            // over each pane read as a title bar per pane. A stacked list's way back has no other place, so it stays.
+            if narrow && showsPage && !(inPanes && fold == .menu) {
                 // Named, not just a glyph: the bar stands in for a column whose rows said where they lead.
                 PageBar { bar.buttonStyle(.ghost) } trailing: { EmptyView() }
                     .background(Theme.Palette.page)
@@ -131,6 +134,8 @@ extension EnvironmentValues {
     @Entry var revealsOverflow = false
     /// Inside a `ColumnSplit` that shows its column or its page alone: what each held for the other now has to be in it.
     @Entry var columnFolded = false
+    /// In a tab of several panes, which the tab's segments name: a screen leaves out what only named it (#62).
+    @Entry var inPanes = false
 }
 
 /// What only a folded `ColumnSplit` needs, such as a way from the column back to a page it hides.

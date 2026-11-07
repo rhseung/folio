@@ -1,3 +1,4 @@
+import FolioAI
 import FolioDomain
 import SwiftUI
 
@@ -13,10 +14,15 @@ struct PaneRow: View {
     /// A pane's screen saying it plays a recording (with how to pause it) or has stopped, by the pane's id: the tab
     /// marks the playing pane's icon (`WindowTabs.play`).
     var play: (UUID, (@MainActor () -> Void)?) -> Void = { _, _ in }
+    /// Takes a pane out into a tab of its own.
+    var newTab: ((Navigator) -> Void)?
     /// How many panes stay open at this width with two panes and with three. It changes only where the width crosses
     /// a count, so a live resize sets it a few times, not every frame.
     @State private var open = [2, 3]
     @State private var sizes = PaneSizes()
+    @State private var claude = false
+    @State private var claudeAsk: ContextItem?
+    @State private var inserts = PaneInserts()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     #if os(macOS)
@@ -27,6 +33,15 @@ struct PaneRow: View {
     static let gap: CGFloat = 1
     #endif
     static let space = "panes"
+
+    /// Opens the tab's Claude with an item added to it; nil while no pane is in a course, where it has none.
+    var askClaude: (@MainActor (ContextItem) -> Void)? {
+        guard panes.navigators.contains(where: { $0.current.course != nil }) else { return nil }
+        return { item in
+            claudeAsk = item
+            claude = true
+        }
+    }
 
     var folded: Set<Int> {
         panes.count > 1 ? panes.layout.folded(open: open[min(panes.count, 3) - 2]) : []
@@ -43,6 +58,14 @@ struct PaneRow: View {
             }
         }
         .coordinateSpace(.named(Self.space))
+        // Over the panes, not in each: one Claude for the tab, which sees them all (#62).
+        .overlay(alignment: .bottomTrailing) {
+            WindowClaude(workspace: workspace, panes: panes, folded: folded, shown: $claude, incoming: $claudeAsk, inserts: inserts,
+                         openLink: openLink)
+        }
+        #if DEBUG && os(macOS)
+        .onChange(of: SnapshotDriver.shared.claudePanel, initial: true) { _, new in claude = new }
+        #endif
         .onGeometryChange(for: [Int].self) { proxy in
             [2, 3].map { PaneLayout.openCount($0, room: proxy.size.width, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: Self.gap) }
         } action: { open = $0 }
@@ -62,6 +85,9 @@ struct PaneRow: View {
                 .environment(panes.trails[i])
                 .environment(\.openLink, openLink(navigator))
                 .environment(\.tabPlaying) { [play] pause in play(id, pause) }
+                .environment(\.inPanes, panes.count > 1)
+                .environment(\.paneInsert, inserts[id])
+                .environment(\.askClaude, askClaude)
                 .frame(width: kept, alignment: .topLeading)
                 .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { width in
@@ -75,11 +101,13 @@ struct PaneRow: View {
                 PaneStrip(mark: workspace.paneMark(of: navigator.current, trail: panes.trails[i]), page: navigator.current.link.anchor?.pageNumber) {
                     panes.press(i)
                 }
-                .contextMenu { PaneMenu(panes: panes, index: i) }
+                .contextMenu { PaneMenu(panes: panes, index: i, newTab: newTab) }
                 .transition(.opacity)
             }
         }
-        .panePanel(focused: panes.count > 1 && i == panes.focus)
+        // The focused pane's course color, else the app's.
+        .panePanel(ring: panes.count > 1 && i == panes.focus
+                   ? navigator.current.course.map { workspace.accent($0).color } ?? Theme.Palette.chromeSelected : nil)
         #if os(macOS)
         .background { PanePress(active: front && !folded) { panes.press(i) } }
         #else
@@ -91,6 +119,14 @@ struct PaneRow: View {
     func divider(after d: Int, folded: Set<Int>) -> some View {
         let enabled = !folded.contains(d) && !folded.contains(d + 1)
         return PaneDivider(enabled: enabled)
+            // The panes' own menus, for the two either side: nothing is laid over a pane to hold them.
+            .contextMenu {
+                ForEach([d, d + 1], id: \.self) { i in
+                    Menu(workspace.paneMark(of: panes.navigators[i].current, trail: panes.trails[i]).title) {
+                        PaneMenu(panes: panes, index: i, newTab: newTab)
+                    }
+                }
+            }
             .gesture(DragGesture(minimumDistance: 1, coordinateSpace: .named(Self.space)).onChanged { drag in
                 let widths = panes.layout.widths(room: sizes.row, folded: folded, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: Self.gap)
                 let start = widths.prefix(d).reduce(0, +) + Self.gap * CGFloat(d)
@@ -217,10 +253,18 @@ private struct Sideways: Layout {
 struct PaneMenu: View {
     let panes: TabPanes
     let index: Int
+    var newTab: ((Navigator) -> Void)?
 
     var body: some View {
         Button(.panesClose, systemImage: "xmark") { panes.close(index) }
             .disabled(panes.count < 2)
+        if let newTab {
+            Button(.panesToTab, systemImage: "macwindow.badge.plus") {
+                let navigator = panes.navigators[index]
+                if panes.close(index) { newTab(navigator) }
+            }
+            .disabled(panes.count < 2)
+        }
         Divider()
         Button(.panesMoveLeft, systemImage: "arrow.left") { panes.swap(index, index - 1) }
             .disabled(index == 0)
@@ -263,14 +307,18 @@ extension AppLink.Anchor {
 private extension View {
     /// On the Mac each pane is a paper panel of its own on the frame, the focused one's edge a step stronger; the
     /// iPad's split view detail is the paper already.
-    @ViewBuilder func panePanel(focused: Bool) -> some View {
+    /// `ring`: the focused pane's hairline, when the tab has several.
+    @ViewBuilder func panePanel(ring: Color?) -> some View {
         #if os(macOS)
         let shape = RoundedRectangle(cornerRadius: Theme.Radius.floating)
         background(Theme.Palette.page, in: shape)
             .clipShape(shape)
-            .overlay { shape.strokeBorder(focused ? Theme.Palette.lineStrong : Theme.Palette.lineSoft) }
+            .overlay { shape.strokeBorder(Theme.Palette.lineSoft) }
+            // A hairline in the accent says which pane the toolbar and the keys act on, without dimming the others.
+            .overlay { if let ring { shape.strokeBorder(ring, lineWidth: 1) } }
         #else
         background(Theme.Palette.page)
+            .overlay { if let ring { Rectangle().strokeBorder(ring, lineWidth: 1) } }
         #endif
     }
 }

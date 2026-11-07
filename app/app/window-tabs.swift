@@ -149,9 +149,9 @@ struct TabScreens: View {
                     // one in front: a note's text and preview page reflowing out of sight made each frame of a live
                     // resize wait on every kept tab. It takes the window's size again when it comes back.
                     let kept = front ? nil : sizes[id]
-                    PaneRow(workspace: workspace, panes: panes, front: front, openLink: openLink) { [tabs] pane, pause in
-                        tabs.play(id, pane: pane, pause: pause)
-                    }
+                    PaneRow(workspace: workspace, panes: panes, front: front, openLink: openLink,
+                            play: { [tabs] pane, pause in tabs.play(id, pane: pane, pause: pause) },
+                            newTab: { [tabs] navigator in tabs.open(navigator, fromLink: true) })
                         .onGeometryChange(for: CGSize.self, of: \.size) { sizes[id] = $0 }
                         .frame(width: kept?.width, height: kept?.height, alignment: .topLeading)
                         // The window's size whatever the screen inside: with no least size given, a screen behind
@@ -428,7 +428,7 @@ struct TabBar: View {
                 TabSegment(mark: workspace.paneMark(of: panes.navigators[i].current, trail: panes.trails[i]),
                            crumbs: i == panes.focus ? crumbs : nil, crumbRoom: crumbRoom, iconOnly: compact,
                            select: { panes.press(i) }, close: { panes.close(i) })
-                    .contextMenu { PaneMenu(panes: panes, index: i) }
+                    .contextMenu { PaneMenu(panes: panes, index: i) { [tabs] navigator in tabs.open(navigator, fromLink: true) } }
             }
             if tabs.count > 1 { closeButton(tabs.selected).padding(.leading, Theme.Space.xxs) }
         }
@@ -830,7 +830,7 @@ private struct SegmentRule: View {
     }
 
     /// The sidebar button's place when the row hasn't said yet: after the window's buttons, measured.
-    static let leadingEstimate: CGFloat = 84
+    static let leadingEstimate: CGFloat = 92
     /// Between the items and after the last to the window's edge, measured in a window snapshot.
     static let toolbarGaps: CGFloat = 32
     /// The search field and five buttons, until the item is measured. Not zero: the tabs then took the whole row and

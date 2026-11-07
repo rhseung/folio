@@ -18700,6 +18700,17 @@
           }
         }
       }
+    },
+    "panes.to-tab": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 탭으로 옮기기"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

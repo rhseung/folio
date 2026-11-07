@@ -16,17 +16,23 @@ struct ClaudePanel: View {
     @Environment(\.showSettings) private var showSettings
     let course: LoadedCourse
     let openNote: UUID?
+    /// The notes the tab's other panes show.
+    var alsoOpen: [UUID] = []
+    /// The tab's panes, when it has several (`ContextBuilder.panes`).
+    var panes: ContextItem?
     let openUnit: UUID?
     /// Context asked for from elsewhere (`askClaude`), taken into the panel's own list once it arrives.
     @Binding var incoming: ContextItem?
     let insertIntoNote: (String) -> Void
     let showNote: (UUID) -> Void
 
-    init(workspace: Workspace, course: LoadedCourse, openNote: UUID?, openUnit: UUID?, incoming: Binding<ContextItem?> = .constant(nil),
-         insertIntoNote: @escaping (String) -> Void, showNote: @escaping (UUID) -> Void) {
+    init(workspace: Workspace, course: LoadedCourse, openNote: UUID?, alsoOpen: [UUID] = [], panes: ContextItem? = nil, openUnit: UUID?,
+         incoming: Binding<ContextItem?> = .constant(nil), insertIntoNote: @escaping (String) -> Void, showNote: @escaping (UUID) -> Void) {
         _model = State(initialValue: ClaudeModel(workspace: workspace))
         self.course = course
         self.openNote = openNote
+        self.alsoOpen = alsoOpen
+        self.panes = panes
         self.openUnit = openUnit
         _incoming = incoming
         self.insertIntoNote = insertIntoNote
@@ -48,7 +54,8 @@ struct ClaudePanel: View {
         .font(Theme.Typeface.body)
         .foregroundStyle(Theme.Palette.text)
         .task(id: course.id) { model.load(course) }
-        .task(id: openNote) { model.loadOpenNote(openNote, course: course) }
+        .task(id: [openNote] + alsoOpen.map(Optional.some)) { model.loadOpenNote(openNote, alsoOpen: alsoOpen, course: course) }
+        .onChange(of: panes, initial: true) { _, panes in model.panes = panes }
         .onChange(of: incoming, initial: true) { _, item in
             guard let item else { return }
             model.add(item)
