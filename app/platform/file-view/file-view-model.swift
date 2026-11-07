@@ -36,11 +36,15 @@ final class FileViewModel {
     private(set) var loaded: Loaded = .loading
     /// The page the PDF was opened at, so leaving it there isn't logged as a new view.
     private var openedAt = 0
+    /// Off where a PDF is looked at for something else (a review's source): the materials tab resumes where the user
+    /// last read, not where a review happened to open it.
+    let remembersPage: Bool
 
-    init(workspace: Workspace, course: LoadedCourse?, subject: Subject) {
+    init(workspace: Workspace, course: LoadedCourse?, subject: Subject, remembersPage: Bool = true) {
         self.workspace = workspace
         initial = course
         self.subject = subject
+        self.remembersPage = remembersPage
     }
 
     var course: LoadedCourse? { initial.map { workspace.course($0.id) ?? $0 } }
@@ -129,7 +133,7 @@ final class FileViewModel {
         case .note(let note):
             return note.url
         case .file(let url):
-            return LocalFile.exists(url) ? url : nil
+            return await Task.detached { LocalFile.download(url) }.value
         }
     }
 
@@ -182,7 +186,7 @@ final class FileViewModel {
 
     func closed(at page: Int?) {
         guard let m = material, let course else { return }
-        if let page, page != openedAt {
+        if remembersPage, let page, page != openedAt {
             let store = course.store
             // folio:not-an-action page views are activity logs, not data changes
             workspace.perform { try store.log.append(MaterialViewEvent(materialId: m.id, page: page), device: workspace.device, at: .now) }

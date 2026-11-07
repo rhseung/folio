@@ -187,7 +187,8 @@ struct ReviewView: View {
 }
 
 /// A note or a lecture, in the file view every other place shows files with: a markdown note in the reader, a `.tex`
-/// note in the editor and PDF the notes tab opens, a lecture at its class's first page.
+/// note in the editor and PDF the notes tab opens, a lecture at its class's first page (the file's first without one).
+/// Reading it here leaves the materials tab's resume page alone.
 private struct SourcePane: View {
     let model: ReviewModel
     let source: ReviewView.Source
@@ -200,7 +201,7 @@ private struct SourcePane: View {
         self.source = source
         self.note = note
         self.course = course
-        _page = State(initialValue: source.page.map { $0 - 1 })
+        _page = State(initialValue: (source.page ?? 1) - 1)
     }
 
     var body: some View {
@@ -213,7 +214,7 @@ private struct SourcePane: View {
                     ContentUnavailableView(String(localized: .reviewSourceFailed), systemImage: "doc.questionmark", description: Text(source.title))
                 }
             case .lecture(let id):
-                FileView(workspace: model.workspace, course: course, material: id, requestedPage: $page)
+                FileView(workspace: model.workspace, course: course, material: id, requestedPage: $page, remembersPage: false)
             }
         }
         // The window's breadcrumb behind the sheet keeps its own steps.

@@ -16,8 +16,8 @@ struct FileView: View {
     @State private var query = ""
 
     init(workspace: Workspace, course: LoadedCourse, material: UUID, requestedPage: Binding<Int?> = .constant(nil),
-         shownPage: Binding<Int?> = .constant(nil)) {
-        _model = State(initialValue: FileViewModel(workspace: workspace, course: course, subject: .material(material)))
+         shownPage: Binding<Int?> = .constant(nil), remembersPage: Bool = true) {
+        _model = State(initialValue: FileViewModel(workspace: workspace, course: course, subject: .material(material), remembersPage: remembersPage))
         _requestedPage = requestedPage
         _shownPage = shownPage
     }
