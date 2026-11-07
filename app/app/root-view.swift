@@ -202,7 +202,10 @@ struct RootView: View {
                 }
                 tabs.select(number: 1)
             }
-            await SnapshotDriver.shared.run(select: { if let link = $0.link { open(link) } }, courses: ids, semester: workspace.currentSemester?.id)
+            // The exam furthest down its page, so opening it by its link has to scroll.
+            let exam = workspace.currentCourses.first?.file.exams.min { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }
+            await SnapshotDriver.shared.run(select: { if let link = $0.link { open(link) } }, open: { open($0) }, courses: ids,
+                                            semester: workspace.currentSemester?.id, links: exam.map { [("link-exam", AppLink(.exam, $0.id))] } ?? [])
         }
         #endif
         .environment(\.gradesLocked, !workspace.gradesUnlocked)

@@ -1,5 +1,6 @@
 #if DEBUG && os(macOS)
 import AppKit
+import FolioDomain
 import Observation
 import WebKit
 
@@ -36,7 +37,8 @@ final class SnapshotDriver {
     var openPDF = false
     var searchQuery: String?
 
-    func run(select: (Screen) -> Void, courses: [UUID], semester: UUID?) async {
+    /// `links` are opened by their address at the end, each drawn as its step: what a click on such a link shows.
+    func run(select: (Screen) -> Void, open: (AppLink) -> Void, courses: [UUID], semester: UUID?, links: [(String, AppLink)]) async {
         guard let directory = Self.directory else { return }
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -103,6 +105,23 @@ final class SnapshotDriver {
             capture(to: directory.appending(path: "search.png"))
             searchQuery = nil
         }
+        // Nil, so a course screen made for a link doesn't take the walk's last section over the link's.
+        section = nil
+        for (name, link) in links {
+            open(link)
+            try? await Task.sleep(for: .seconds(1.5))
+            capture(to: directory.appending(path: "\(name).png"))
+        }
+        // The panel's first app link, clicked as a user would, from a course with a chat (`FOLIO_SNAPSHOT_CLAUDE`).
+        if claudePanel, let first = courses.first {
+            select(.course(first))
+            try? await Task.sleep(for: .seconds(2))
+            capture(to: directory.appending(path: "link-claude-before.png"))
+            await captureWebViews(to: directory, name: "link-claude-before")
+            await clickAppLink()
+            try? await Task.sleep(for: .seconds(1.5))
+            capture(to: directory.appending(path: "link-claude.png"))
+        }
         for tab in SettingsTab.allCases {
             UserDefaults.standard.set(tab.rawValue, forKey: SettingsTab.storageKey)
             select(.settings)
@@ -122,6 +141,20 @@ final class SnapshotDriver {
                   let png = NSBitmapImageRep(data: tiff)?.representation(using: .png, properties: [:]) else { continue }
             // folio:not-an-action debug screenshots, outside the GIST folder
             try? png.write(to: directory.appending(path: "\(name)-web-\(i).png"))
+        }
+    }
+
+    /// Pages run no script of their own; this runs in the app's world, where the panel's reader script runs.
+    func clickAppLink() async {
+        func webViews(in view: NSView) -> [WKWebView] { (view as? WKWebView).map { [$0] } ?? view.subviews.flatMap(webViews) }
+        guard let root = NSApp.windows.first(where: { $0.isVisible })?.contentView else { return }
+        let click = """
+            const a = [...document.querySelectorAll('a[href^="folio://"]')].find(a => !a.href.startsWith('folio://action'));
+            a?.click();
+            return a != null;
+            """
+        for web in webViews(in: root) {
+            if (try? await web.callAsyncJavaScript(click, contentWorld: .defaultClient)) as? Bool == true { return }
         }
     }
 
