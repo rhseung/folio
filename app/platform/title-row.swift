@@ -20,11 +20,6 @@ enum TitleRow {
     }
 }
 
-extension EnvironmentValues {
-    /// `TitleRow.extra` for this window, which its toolbar items take as top padding.
-    @Entry var titleRowExtra: CGFloat = 0
-}
-
 /// The band the row adds under the toolbar: dragging it moves the window and a double-click does what the system's
 /// setting says, as on the toolbar above it. An AppKit view, since SwiftUI's `WindowDragGesture` has no double-click.
 struct TitleDrag: NSViewRepresentable {
