@@ -512,11 +512,13 @@ struct TabBar: View {
     /// The content panel's leading edge across the window, where the first tab's capsule lines up.
     @ObservationIgnored var panelEdge: CGFloat = Theme.Size.sidebar { didSet { settle() } }
     @ObservationIgnored var measures = Measures() { didSet { settle() } }
-    /// From where the row put the search field to the window's trailing edge. It holds as the window's width changes,
-    /// the field pinned to the end, so the tabs' room follows the width at once. The field's place itself is known
-    /// only a turn after the row laid out (`WindowOffset`): fitted to it, the tabs ran a frame behind the window, and a
-    /// strip too wide for the row pushed the first tab off the panel's edge.
-    @ObservationIgnored private var trailingInset: CGFloat?
+    /// From the end of the search field and its buttons to the window's trailing edge, as the row put them. It holds as
+    /// the window's width changes, the group pinned to the end, so the tabs' room follows the width at once. The
+    /// group's place itself is known only a turn after the row laid out (`WindowOffset`): fitted to it, the tabs ran a
+    /// frame behind the window, and a strip too wide for the row pushed the first tab off the panel's edge. Not the
+    /// whole inset: the group widens without the window (a course's timer, a recording's clock), and a held inset
+    /// kept the tabs' room while the group went into the overflow menu, where it has no place to correct it.
+    @ObservationIgnored private var trailingGap: CGFloat?
 
     init() { settle() }
 
@@ -525,9 +527,9 @@ struct TabBar: View {
         // Dropped into the overflow menu, the field has no place; the last one still says where it belongs. Forgetting
         // it fell back to an estimate, which could push the field out again.
         guard let x else { return }
-        let inset = width - x
-        guard inset != trailingInset else { return }
-        trailingInset = inset
+        let gap = width - x - trailingWidth
+        guard gap != trailingGap else { return }
+        trailingGap = gap
         settle()
     }
 
@@ -540,7 +542,7 @@ struct TabBar: View {
 
     /// From the tabs' start to the search field, less a gap before it: the tabs, the menu and the +.
     var room: CGFloat {
-        let end = windowWidth - (trailingInset ?? trailingWidth + Self.toolbarGaps)
+        let end = windowWidth - trailingWidth - (trailingGap ?? Self.toolbarGaps)
         return end - historyEnd - lead - Theme.Space.s
     }
 

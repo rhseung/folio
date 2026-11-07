@@ -114,6 +114,7 @@ struct ToolbarRowTests {
     func row(width: CGFloat) -> ToolbarRow {
         let row = ToolbarRow()
         row.leadingX = 84
+        row.trailingWidth = 328
         row.placeTrailing(width - 360, in: width)
         row.measures = ToolbarRow.Measures(front: 300, others: [120, 120, 32], more: 60, chrome: 44)
         row.windowWidth = width
@@ -157,6 +158,21 @@ struct ToolbarRowTests {
             guard row.room >= least else { break }
             #expect(row.placement.width <= row.room, "at \(width)")
         }
+    }
+
+    @Test func aWiderSearchGroupTakesItsRoomFromTheTabs() {
+        // A course's timer or a recording's clock widens the group without the window. Gone into the overflow menu it
+        // has no place to report, so its width alone has to give the room back, or it never came out again.
+        let row = row(width: 1000)
+        let room = row.room
+        let width = row.placement.width
+        row.trailingWidth += 60
+        row.placeTrailing(nil, in: 1000)
+        #expect(row.room == room - 60)
+        #expect(row.placement.width < width && row.placement.width <= row.room)
+        // Back in the row, its place agrees.
+        row.placeTrailing(1000 - 32 - row.trailingWidth, in: 1000)
+        #expect(row.room == room - 60)
     }
 }
 
