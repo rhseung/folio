@@ -133,6 +133,14 @@ public enum TabFit {
         (trail.map { $0 + chrome } ?? selected) + beside(others, layout: layout, icon: icon, gap: gap, more: more)
     }
 
+    /// Before the new-tab button after the last capsule: its bare glyph, centered in a button `button` wide, sits
+    /// `gap` after it, as the capsules sit among themselves. At the plain gap the button's margin around the glyph
+    /// read as a wider gap. Negative when that margin is wider than `gap`: the button's hit area then reaches under
+    /// the capsule's edge.
+    public static func newTabSpacing(gap: Double, button: Double, glyph: Double) -> Double {
+        gap - (button - glyph) / 2
+    }
+
     /// The tabs beside the one in front and the menu, each with the gap before it.
     private static func beside(_ others: [Double], layout: Layout, icon: Double, gap: Double, more: Double) -> Double {
         let shown = others.prefix(layout.shown)

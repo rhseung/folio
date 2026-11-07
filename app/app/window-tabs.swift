@@ -248,6 +248,31 @@ struct TabBar: View {
 
     static let gap = Theme.Space.s
     static let icon = Theme.Size.toolbarButton
+    static let plus = "plus"
+    /// The new-tab glyph's ink, which sets it one gap after the last capsule (`TabFit.newTabSpacing`). Not its image's
+    /// width: that has the symbol's side bearings in it, 2 points a side, and the + still sat further off than the
+    /// capsules from each other.
+    static let plusInk = inkWidth(of: plus, size: Theme.Glyph.toolbarSize)
+
+    static func inkWidth(of symbol: String, size: CGFloat) -> CGFloat {
+        guard let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
+            .withSymbolConfiguration(.init(pointSize: size, weight: .regular)) else { return size }
+        let scale = 4
+        guard let rep = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(image.size.width) * scale,
+                                         pixelsHigh: Int(image.size.height) * scale, bitsPerSample: 8, samplesPerPixel: 4,
+                                         hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0)
+        else { return size }
+        rep.size = image.size
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
+        image.draw(in: NSRect(origin: .zero, size: image.size))
+        NSGraphicsContext.restoreGraphicsState()
+        let inked = (0..<rep.pixelsWide).filter { x in
+            (0..<rep.pixelsHigh).contains { (rep.colorAt(x: x, y: $0)?.alphaComponent ?? 0) > 0.5 }
+        }
+        guard let first = inked.first, let last = inked.last else { return size }
+        return CGFloat(last + 1 - first) / CGFloat(scale)
+    }
 
     var body: some View {
         let others = tabs.ids.filter { $0 != tabs.selected }
@@ -285,10 +310,11 @@ struct TabBar: View {
                 .contextMenu { menu(id) }
             }
             if !hidden.isEmpty { more(hidden) }
-            Button(.tabsNew, systemImage: "plus") { tabs.open() }
+            Button(.tabsNew, systemImage: Self.plus) { tabs.open() }
                 .labelStyle(.iconOnly)
                 .buttonStyle(.toolbar)
                 .help(Text(.tabsNewHelp))
+                .padding(.leading, placement.newTabSpacing - Self.gap)
                 #if DEBUG || RESIZE_PROBE
                 .background { ResizeMarker(name: "newTab") }
                 #endif
@@ -408,7 +434,10 @@ struct TabBar: View {
             moreLabel(hidden.count)
         }
         .menuStyle(.button)
-        .buttonStyle(.pointing(.plain))
+        // Plain, not `.pointing(.plain)`: a custom style turns the menu back into a pop-up button, whose own margins
+        // drew the capsule wider than measured and set it further from its neighbors than they are from each other.
+        .buttonStyle(.plain)
+        .pointingHand()
         .menuIndicator(.hidden)
         .fixedSize()
         .help(Text(.tabsMore(hidden.count)))
@@ -499,9 +528,12 @@ struct TabBar: View {
         var trail: CGFloat?
         /// The strip's whole width, the + included.
         var width: CGFloat
+        /// Before the new-tab button (`TabFit.newTabSpacing`).
+        var newTabSpacing: CGFloat
     }
 
-    private(set) var placement = Placement(lead: 0, fit: TabFit.Layout(iconsOnly: false, shown: 0, hidden: 0), trail: nil, width: 0)
+    private(set) var placement = Placement(lead: 0, fit: TabFit.Layout(iconsOnly: false, shown: 0, hidden: 0), trail: nil, width: 0,
+                                           newTabSpacing: TabBar.gap)
 
     /// Set as the window resizes, before the row lays out (`WindowWidth`): the tabs fit the new width in the same frame.
     @ObservationIgnored var windowWidth: CGFloat = 1200 { didSet { settle() } }
@@ -547,20 +579,21 @@ struct TabBar: View {
     }
 
     private func settle() {
-        let space = room - Theme.Size.toolbarButton - TabBar.gap
         let m = measures
+        let plus = CGFloat(TabFit.newTabSpacing(gap: TabBar.gap, button: Theme.Size.toolbarButton, glyph: TabBar.plusInk))
+        let space = room - Theme.Size.toolbarButton - plus
         let fit = TabFit.layout(room: space, selected: m.front, others: m.others, icon: TabBar.icon, gap: TabBar.gap, more: m.more)
         // Whole points, down: a held trail follows the width anyway, fractions would only redraw it more often, and
         // rounded up the strip could outgrow the row by one.
         let trail = TabFit.trail(room: space, selected: m.front, others: m.others, layout: fit, icon: TabBar.icon, gap: TabBar.gap,
                                  more: m.more, chrome: m.chrome).map { $0.rounded(.down) }
         let width = TabFit.width(selected: m.front, others: m.others, layout: fit, trail: trail, icon: TabBar.icon, gap: TabBar.gap,
-                                 more: m.more, chrome: m.chrome) + TabBar.gap + Theme.Size.toolbarButton
+                                 more: m.more, chrome: m.chrome) + plus + Theme.Size.toolbarButton
         // The item whole points wide, the lead and the strip together: half a point over, the toolbar moved the item
         // by half a point, the row reported the new place, the lead took up the half, and the item went back, every
         // few frames of a resize.
         let whole = (lead + width).rounded(.down) - lead
-        let new = Placement(lead: lead, fit: fit, trail: trail.map { CGFloat($0) }, width: whole)
+        let new = Placement(lead: lead, fit: fit, trail: trail.map { CGFloat($0) }, width: whole, newTabSpacing: plus)
         if new != placement { placement = new }
     }
 
