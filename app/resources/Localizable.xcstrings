@@ -18118,6 +18118,17 @@
         }
       }
     },
+    "materials.paired-pdf-links": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF: %@"
+          }
+        }
+      }
+    },
     "materials.rename-message-plain": {
       "extractionState": "manual",
       "localizations": {

@@ -63,17 +63,19 @@ final class MaterialsModel {
         var count: Int
         var note: String
         var rows: [TreeRow]
+        /// The PDFs this section shows through their `.tex` rows (#109), by the `.tex`.
+        var pdfs: [UUID: FolioDomain.Material]
     }
 
     func sections() -> [Section] {
         MaterialRole.allCases.compactMap { role in
             // A missing file that was never classified still needs a row to be re-pointed or dropped.
-            let items = materials.filter { $0.role == role && $0.status == .classified || ($0.role ?? .other) == role && $0.status == .missing }
-                .withoutBuiltPDFs()
+            let all = materials.filter { $0.role == role && $0.status == .classified || ($0.role ?? .other) == role && $0.status == .missing }
+            let items = all.withoutBuiltPDFs()
             guard !items.isEmpty else { return nil }
             let tree = PathTree(items) { $0.path }
             return Section(role: role, count: items.count, note: tree.path.isEmpty ? "\(items.count)" : "\(items.count) · \(tree.path)",
-                           rows: treeRows(tree, depth: 0))
+                           rows: treeRows(tree, depth: 0), pdfs: all.builtPDFsHidden())
         }
     }
 
@@ -94,11 +96,6 @@ final class MaterialsModel {
             + tree.items.map { .file($0.item, name: $0.name, depth: depth) }
     }
 
-    /// The PDF a `.tex` row stands for as well, reached from that row since the list shows the pair once.
-    func builtPDF(of m: FolioDomain.Material) -> FolioDomain.Material? {
-        materials.builtPDF(of: m).flatMap { $0.status == .missing ? nil : $0 }
-    }
-
     func toggle(_ folder: PathTree<FolioDomain.Material>) {
         if opened.contains(folder.path) { opened.remove(folder.path) } else { opened.insert(folder.path) }
     }
@@ -113,6 +110,14 @@ final class MaterialsModel {
     var relocations: [String] { [CourseFolder.lectures.rawValue] + places }
 
     func moveTargets(_ m: FolioDomain.Material) -> [String] { relocations.filter { $0 != dir(m.path) } }
+
+    /// A `.tex` row's line carries its hidden PDF's links too, since the PDF has no row of its own to show them.
+    func linkLine(_ m: FolioDomain.Material, pdf: FolioDomain.Material?) -> String {
+        let own = linkLine(m)
+        guard let pdf else { return own }
+        let built = linkLine(pdf)
+        return built.isEmpty ? own : ([own].filter { !$0.isEmpty } + [String(localized: .materialsPairedPdfLinks(built))]).joined(separator: " · ")
+    }
 
     func linkLine(_ m: FolioDomain.Material) -> String {
         let file = course.file

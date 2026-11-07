@@ -155,7 +155,17 @@ extension [Material] {
     /// Only a PDF whose `.tex` is in the same list goes, so a list split by role never loses a PDF to a source it
     /// doesn't show. A missing PDF stays: its row is where it gets re-pointed or dropped.
     public func withoutBuiltPDFs() -> [Material] {
-        let built = Set(compactMap { builtPDF(of: $0)?.id })
-        return filter { !built.contains($0.id) || $0.status == .missing }
+        let hidden = Set(builtPDFsHidden().values.map(\.id))
+        return filter { !hidden.contains($0.id) }
+    }
+
+    /// The PDFs `withoutBuiltPDFs` leaves out, by the `.tex` whose row stands for them there. That row is the only way
+    /// left to the PDF's own links, renaming and trashing, so it reaches exactly these and no PDF shown in its own row.
+    public func builtPDFsHidden() -> [Material.ID: Material] {
+        var hidden: [Material.ID: Material] = [:]
+        for source in self {
+            if let pdf = builtPDF(of: source), pdf.status != .missing { hidden[source.id] = pdf }
+        }
+        return hidden
     }
 }
