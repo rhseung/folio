@@ -96,14 +96,6 @@ public struct Session: Entity {
         self.materials = []
     }
 
-    /// `9주차-2`: the second class of week 9 by date; also the default title of the session's rough note and recording.
-    /// The number isn't stored, so a makeup added before a class moves that class's name; names already written into
-    /// notes and recordings stay as they were.
-    public func name(among sessions: [Session]) -> String {
-        let week = (sessions.contains { $0.id == id } ? sessions : sessions + [self]).filter { $0.week == self.week }
-        return "\(self.week)주차-\(week.sorted(by: Session.inOrder).firstIndex { $0.id == id }! + 1)"
-    }
-
     /// By date; two classes at the same time (date-only imports) keep the order they were made in, so names don't flip.
     public static func inOrder(_ a: Session, _ b: Session) -> Bool {
         (a.date, a.createdAt, a.id.uuidString) < (b.date, b.createdAt, b.id.uuidString)
@@ -372,6 +364,19 @@ extension CourseFile {
     }
 }
 
+/// A recording to be renamed: its entry, its audio's course-relative path now, and the name (no extension) it takes.
+public struct RecordingRetitle: Equatable, Sendable {
+    public var recording: UUID
+    public var file: String
+    public var name: String
+
+    public init(recording: UUID, file: String, name: String) {
+        self.recording = recording
+        self.file = file
+        self.name = name
+    }
+}
+
 /// A note to be renamed: its entry, where its file is now (course-relative), and the title it takes.
 public struct NoteRetitle: Equatable, Sendable {
     public var note: UUID
@@ -386,8 +391,6 @@ public struct NoteRetitle: Equatable, Sendable {
 }
 
 extension CourseFile {
-    public func name(of session: Session) -> String { session.name(among: sessions) }
-
     /// Nothing was taught at a cancelled class, so a link list leaves it out; one linked already stays so it can be unlinked.
     public func linkableSessions(keeping linked: (Session) -> Bool) -> [Session] {
         sessions.filter { !$0.isCancelled || linked($0) }.sorted(by: Session.inOrder)
@@ -406,21 +409,62 @@ extension CourseFile {
         return String(localized: .sessionDay(c.month!, c.day!, ClassTime.weekdayNames[calendar.isoWeekday(of: session.date) - 1]))
     }
 
-    /// `11/3(화): 행복에도 습관이 무섭다`, or the day alone when nothing says what the class covered. The day tells
-    /// classes apart where `10주차-2` doesn't; the name stays for files and the command line.
+    /// `11/3(화): 행복에도 습관이 무섭다`, or the day alone when nothing says what the class covered: the one name a
+    /// class is shown by. Classes are no longer called `10주차-2`, which moved whenever a makeup came before them.
     public func title(of session: Session, calendar: Calendar) -> String {
         let day = day(of: session, calendar: calendar)
         return subject(of: session).map { String(localized: .sessionTitled(day, $0)) } ?? day
     }
 
+    /// `11-03`: how the command line points at a class and prints it, the day its note's file name starts with. A day
+    /// with another class adds the start, `11-03 14:00`, even when both start then (date-only imports): the bare day
+    /// names every class that day, so it can't be one class's own. Those at the same minute count on with ` 2` as
+    /// taken file names do; a month and day the course also met in another year takes the year. So every class of a
+    /// course has its own, and it changes only when a class is added on its own day. The calendar day, not the study
+    /// day: the note of a class at 1:00 is named for that date too.
+    public func reference(of session: Session, calendar: Calendar) -> String {
+        let all = sessions.contains { $0.id == session.id } ? sessions : sessions + [session]
+        let c = calendar.dateComponents([.year, .month, .day, .hour, .minute], from: session.date)
+        let sameMonthDay = all.filter {
+            let d = calendar.dateComponents([.month, .day], from: $0.date)
+            return d.month == c.month && d.day == c.day
+        }
+        let otherYear = sameMonthDay.contains { calendar.component(.year, from: $0.date) != c.year }
+        var ref = (otherYear ? String(format: "%04d-", c.year!) : "") + String(format: "%02d-%02d", c.month!, c.day!)
+        let sameDay = sameMonthDay.filter { calendar.isDate($0.date, inSameDayAs: session.date) }
+        guard sameDay.count > 1 else { return ref }
+        ref += String(format: " %02d:%02d", c.hour!, c.minute!)
+        let minute = { (s: Session) in calendar.dateComponents([.hour, .minute], from: s.date) }
+        let sameMinute = sameDay.filter { minute($0) == minute(session) }.sorted(by: Session.inOrder)
+        if let i = sameMinute.firstIndex(where: { $0.id == session.id }), i > 0 { ref += " \(i + 1)" }
+        return ref
+    }
+
+    /// What may be typed for a class: its reference, its day as `11/3`, `11-03` or `2026-11-03`, and what it covered.
+    /// A day with two classes is typed for both, so a lookup by it lists their references instead of guessing.
+    public func references(of session: Session, calendar: Calendar) -> [String] {
+        let d = calendar.dateComponents([.year, .month, .day], from: session.date)
+        return [reference(of: session, calendar: calendar), "\(d.month!)/\(d.day!)", String(format: "%02d-%02d", d.month!, d.day!),
+                String(format: "%04d-%02d-%02d", d.year!, d.month!, d.day!)] + (subject(of: session).map { [$0] } ?? [])
+    }
+
+    /// The classes `text` names by `references`, ignoring case and spaces: one for its reference, every class of a day.
+    public func sessions(matching text: String, calendar: Calendar) -> [Session] {
+        let key = Self.referenceKey(text)
+        guard !key.isEmpty else { return [] }
+        return sessions.filter { s in references(of: s, calendar: calendar).contains { Self.referenceKey($0) == key } }.sorted(by: Session.inOrder)
+    }
+
+    static func referenceKey(_ text: String) -> String { text.lowercased().filter { !$0.isWhitespace } }
+
+    /// `11-03(화)`: a recording's file name, the day its notes start with. A second recording that day gets ` 2`.
+    public func recordingName(of session: Session, calendar: Calendar) -> String { fileDay(of: session, calendar: calendar) }
+
     /// `11-05(목) Principles of reliable data transfer`, with ` 정리` for a review note. The title becomes the file
     /// name, so `session note` and the new-note sheet must name a session's note the same way. `-` stands for the
     /// title's `/`, which a file name can't hold. Notes made before this keep their `10주차-2` names.
     public func noteTitle(for session: Session, kind: NoteKind, calendar: Calendar) -> String {
-        let c = calendar.dateComponents([.month, .day], from: session.date)
-        let weekday = Self.noteWeekdays[calendar.isoWeekday(of: session.date) - 1]
-        let two = { (n: Int) in n < 10 ? "0\(n)" : "\(n)" }
-        let day = "\(two(c.month!))-\(two(c.day!))(\(weekday))"
+        let day = fileDay(of: session, calendar: calendar)
         let subject = subject(of: session).map(Self.noteSubject).flatMap { $0.isEmpty ? nil : $0 }
         let title = subject.map { "\(day) \($0)" } ?? day
         return kind == .review ? "\(title) 정리" : title
@@ -437,6 +481,22 @@ extension CourseFile {
             guard name.precomposedStringWithCanonicalMapping.wholeMatch(of: /\d+주차-\d+( 정리)?( \d+)?/) != nil else { return nil }
             return NoteRetitle(note: entry.id, path: entry.path, title: noteTitle(for: session, kind: entry.kind, calendar: calendar))
         }
+    }
+
+    /// Recordings named by the old rule, `3주차-1.m4a` (or `3주차-1 2.m4a`), with the name a recording of their class
+    /// gets now. A recording of no class keeps its name, as does one the user named.
+    public func legacyRecordingRetitles(calendar: Calendar) -> [RecordingRetitle] {
+        recordings.compactMap { r in
+            guard let session = r.sessionId.flatMap({ id in sessions.first { $0.id == id } }) else { return nil }
+            let name = ((r.file as NSString).lastPathComponent as NSString).deletingPathExtension
+            guard name.precomposedStringWithCanonicalMapping.wholeMatch(of: /\d+주차-\d+( \d+)?/) != nil else { return nil }
+            return RecordingRetitle(recording: r.id, file: r.file, name: recordingName(of: session, calendar: calendar))
+        }
+    }
+
+    func fileDay(of session: Session, calendar: Calendar) -> String {
+        let c = calendar.dateComponents([.month, .day], from: session.date)
+        return String(format: "%02d-%02d", c.month!, c.day!) + "(\(Self.noteWeekdays[calendar.isoWeekday(of: session.date) - 1]))"
     }
 
     /// In code, not the catalog: a file name must not change with the device's language.

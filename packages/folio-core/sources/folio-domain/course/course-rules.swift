@@ -99,7 +99,7 @@ extension CourseFile: Document {
             Refs(\.sessionIds, to: Session.self, onDelete: .nullify)
             Refs(\.examIds, to: Exam.self, onDelete: .nullify)
         }
-        Items(\.sessions, noun: String(localized: .modelNounSession), name: { s, f in f.name(of: s) }) {
+        Items(\.sessions, noun: String(localized: .modelNounSession), name: { s, f in f.title(of: s, calendar: .current) }) {
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
             Refs(\.materialIds, to: Material.self, onDelete: .nullify)
             // The session is the only side that holds the link, so the note it names must be of that slot's kind.
@@ -169,7 +169,7 @@ extension CourseFile: Document {
             Check("ScoreEntry.source", String(localized: .ruleScoreEntrySource)) { s, _ in s.assignmentId == nil || s.examId == nil }
             Check("ScoreEntry.unique", String(localized: .ruleScoreEntryUnique)) { s, f in !f.hasScore(s.source, in: s.componentId, other: s.id) }
         }
-        Items(\.attendance, noun: String(localized: .modelNounAttendance), name: { a, f in f.sessions.first { $0.id == a.sessionId }.map(f.name(of:)) ?? a.id.uuidString }) {
+        Items(\.attendance, noun: String(localized: .modelNounAttendance), name: { a, f in f.sessions.first { $0.id == a.sessionId }.map { f.title(of: $0, calendar: .current) } ?? a.id.uuidString }) {
             Ref(\.sessionId, to: Session.self, onDelete: .restrict)
             Check("Attendance.cancelled", String(localized: .ruleAttendanceCancelled)) { a, f in
                 f.sessions.first { $0.id == a.sessionId }?.isCancelled != true

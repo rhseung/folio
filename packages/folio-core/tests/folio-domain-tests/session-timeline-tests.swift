@@ -28,7 +28,7 @@ struct SessionTimelineTests {
             case .week(let s, let month): "week\(s[0].week)" + (month == nil ? "" : "+m")
             case .month: "month"
             case .exam(let e, _): e.title
-            case .session(let s, let exams): "s" + file.name(of: s).replacing("주차", with: "") + exams.map { "+" + $0.title }.joined()
+            case .session(let s, let exams): "s" + file.reference(of: s, calendar: calendar) + exams.map { "+" + $0.title }.joined()
             case .planned(let s, let exams): "p\(s.week)" + exams.map { "+" + $0.title }.joined()
             }
         }
@@ -39,7 +39,7 @@ struct SessionTimelineTests {
         let file = CourseFile(course: Course(device: device, at: .now, title: ""), sessions: [
             session(10, "2026-11-02 13:00"), session(9, "2026-10-26 13:00"), session(10, "2026-10-30 13:00"),
         ])
-        #expect(kinds(SessionTimeline.items(file, classMinutes: 75, calendar: calendar), in: file) == ["week9+m", "s9-1", "week10", "s10-1", "month", "s10-2"])
+        #expect(kinds(SessionTimeline.items(file, classMinutes: 75, calendar: calendar), in: file) == ["week9+m", "s10-26", "week10", "s10-30", "month", "s11-02"])
     }
 
     /// Exams outside class time sit by date inside their week, or between weeks when no class shares the week.
@@ -52,7 +52,7 @@ struct SessionTimelineTests {
                               sessions: [session(8, "2026-10-19 13:00"), session(9, "2026-10-26 13:00")],
                               exams: [final, quiz, midterm, undated])
         #expect(kinds(SessionTimeline.items(file, classMinutes: 75, calendar: calendar), in: file)
-            == ["week8+m", "s8-1", "중간", "week9", "s9-1", "퀴즈", "기말"])
+            == ["week8+m", "s10-19", "중간", "week9", "s10-26", "퀴즈", "기말"])
     }
 
     /// Only the times decide: an exam inside a held or planned class rides on it, one in a cancelled class stands alone.
@@ -69,7 +69,7 @@ struct SessionTimelineTests {
         ]
         let file = CourseFile(course: Course(device: device, at: .now, title: ""), sessions: [held, cancelled], exams: exams)
         #expect(kinds(SessionTimeline.items(file, planned: [planned], classMinutes: 75, calendar: calendar), in: file)
-            == ["week9+m", "s9-1+퀴즈1", "s9-2", "퀴즈2", "week10+m", "p10+퀴즈3", "끝난 뒤"])
+            == ["week9+m", "s10-26+퀴즈1", "s10-28", "퀴즈2", "week10+m", "p10+퀴즈3", "끝난 뒤"])
     }
 
     @Test func heldFromTheItemsOwnDate() {

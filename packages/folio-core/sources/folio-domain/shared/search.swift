@@ -81,7 +81,8 @@ public struct SearchIndex: Sendable {
 
     /// A course's searchable items. `notes` carry their body without frontmatter; notes without an ID can't be opened and are left out.
     /// `cards` come from the course's quiz files, which live apart from course.json.
-    public static func items(for file: CourseFile, notes: [(id: UUID, title: String, body: String)], cards: [QuizCard] = []) -> [SearchItem] {
+    public static func items(for file: CourseFile, notes: [(id: UUID, title: String, body: String)], cards: [QuizCard] = [],
+                             calendar: Calendar = .current) -> [SearchItem] {
         let course = file.course.id
         return notes.map { SearchItem(kind: .note, courseId: course, id: $0.id, title: $0.title, body: $0.body) }
             + file.materials.filter { $0.status != .ignored }.map {
@@ -89,7 +90,9 @@ public struct SearchIndex: Sendable {
             }
             + file.assignments.map { SearchItem(kind: .assignment, courseId: course, id: $0.id, title: $0.title, body: $0.memo) }
             + file.exams.map { SearchItem(kind: .exam, courseId: course, id: $0.id, title: $0.title, body: $0.scopeText) }
-            + file.sessions.map { SearchItem(kind: .session, courseId: course, id: $0.id, title: $0.topic.isEmpty ? $0.name(among: file.sessions) : "\($0.name(among: file.sessions)) · \($0.topic)") }
+            // The reference goes in the body, so `11-03` finds the class as the command line names it.
+            + file.sessions.map { SearchItem(kind: .session, courseId: course, id: $0.id, title: file.title(of: $0, calendar: calendar),
+                                             body: file.reference(of: $0, calendar: calendar)) }
             + file.units.map { SearchItem(kind: .unit, courseId: course, id: $0.id, title: $0.title) }
             + cards.map { SearchItem(kind: .quiz, courseId: course, id: $0.id, title: $0.prompt, body: $0.answer) }
     }

@@ -175,9 +175,9 @@ struct TodayTests {
         #expect(t.exams.first?.dDay == 5)
         #expect(t.deadlines.map(\.assignment.title) == ["HW5", "HW6", "Project"])
         #expect(t.deadlines.first?.isToday == true && t.deadlines.last?.isToday == false)
-        #expect(t.classesToday.map { file.name(of: $0.session) } == ["7주차-2"])
+        #expect(t.classesToday.map(\.session.date) == [at(22, 10)])
         // Today's class is over, so its note is due now; tomorrow's isn't.
-        #expect(t.missingReviewNotes.map { file.name(of: $0.session) } == ["7주차-2"])
+        #expect(t.missingReviewNotes.map(\.session.date) == [at(22, 10)])
         file.course.schedule = [ClassTime(weekday: 4, startMinute: 10 * 60, endMinute: 11 * 60 + 15)]
         #expect(TodaySummary.build(courses: [file], now: at(22, 11), settings: Settings(), calendar: calendar).missingReviewNotes.isEmpty)
         #expect(TodaySummary.build(courses: [file], now: at(22, 11, 15), settings: Settings(), calendar: calendar).missingReviewNotes.count == 1)
@@ -297,14 +297,15 @@ struct TodayTests {
         #expect(UnitTree.deepest(file.units(of: file.sessions[0]), in: file.units).map(\.title) == ["고윳값"])
     }
 
-    @Test func aRecitationIsNumberedLikeAnyClass() {
+    /// A recitation the evening of a lecture is a second class that day, so both take their start.
+    @Test func aRecitationIsNamedLikeAnyClass() {
         var file = CourseFile(course: Course(device: device, at: at(20, 9), title: "선형대수학"))
         file.sessions = [
             Session(device: device, at: at(20, 9), week: 9, date: at(20, 14, 30)),
             Session(device: device, at: at(20, 9), week: 9, date: at(20, 18, 30)),
             Session(device: device, at: at(20, 9), week: 9, date: at(22, 14, 30)),
         ]
-        #expect(file.sessions.map { file.name(of: $0) } == ["9주차-1", "9주차-2", "9주차-3"])
+        #expect(file.sessions.map { file.reference(of: $0, calendar: calendar) } == ["10-20 14:30", "10-20 18:30", "10-22"])
     }
 
     @Test func ongoingClassRunsFromItsStartToItsOwnOrItsSlotsEnd() {

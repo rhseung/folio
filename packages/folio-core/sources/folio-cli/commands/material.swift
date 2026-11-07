@@ -37,7 +37,7 @@ struct MaterialCommand: ParsableCommand {
             let materials = f.materials.sorted { $0.path < $1.path }.filter { all || $0.status != .ignored }
             if g.json { return try printJSON(materials) }
             func sessions(_ m: Material) -> String {
-                f.sessions.filter { s in s.materials.contains { $0.materialId == m.id } }.map { f.name(of: $0) }.joined(separator: ", ")
+                f.sessions.filter { s in s.materials.contains { $0.materialId == m.id } }.map { f.reference(of: $0, calendar: r.ctx.calendar) }.joined(separator: ", ")
             }
             if lines {
                 for m in materials { line(["\(c.code)/\(m.path)", m.role?.rawValue ?? "", m.status.rawValue, sessions(m)]) }
@@ -77,7 +77,7 @@ struct MaterialCommand: ParsableCommand {
                 say(String(localized: .materialShowSessions))
                 for (s, link) in sessions {
                     let pages = link.firstPage.map { first in " p.\(first)\(link.lastPage.map { "-\($0)" } ?? "")" } ?? ""
-                    say("    \(f.name(of: s))\(pages)")
+                    say("    \(f.reference(of: s, calendar: r.ctx.calendar))\(pages)")
                 }
             }
             let units = m.unitIds.compactMap { id in f.units.first { $0.id == id }?.title }
