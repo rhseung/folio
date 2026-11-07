@@ -59,7 +59,7 @@ struct NoteCommand: ParsableCommand {
                 return try printJSON(notes.map { Item(id: $0.meta.id, path: path($0), kind: $0.meta.kind, sessionId: $0.meta.sessionId, sessionIds: $0.meta.sessionIds, examId: $0.meta.examId, unitIds: $0.meta.unitIds) })
             }
             let f = c.file
-            let session = { (n: NoteFile) in f.sessionSpan(of: n.meta.id) ?? "" }
+            let session = { (n: NoteFile) in f.sessionSpan(of: n.meta.id, calendar: r.ctx.calendar) ?? "" }
             if lines {
                 for n in notes { line(["\(c.code)/\(path(n))", n.title, n.meta.kind.rawValue, session(n)]) }
                 return

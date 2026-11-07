@@ -197,8 +197,7 @@ final class SessionsModel {
 
     func isToday(_ date: Date) -> Bool { workspace.isStudyToday(date) }
 
-    /// What the class covered, else just 수업, drawn quieter: the tile carries the date, so the week's own number
-    /// (9주차-1) would only repeat it.
+    /// What the class covered, else just 수업, drawn quieter: the tile carries the date, which names the class.
     func title(of session: Session, in file: CourseFile) -> String { file.subject(of: session) ?? String(localized: .sessionsClass) }
 
     func hasSubject(_ session: Session, in file: CourseFile) -> Bool { file.subject(of: session) != nil }

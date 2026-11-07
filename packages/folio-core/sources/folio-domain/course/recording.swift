@@ -8,7 +8,7 @@ public struct Recording: Entity {
     public var updatedBy: DeviceID
 
     public var sessionId: UUID?
-    /// Course-relative path of the audio, e.g. `Recordings/3주차-1.m4a`.
+    /// Course-relative path of the audio, e.g. `Recordings/11-03(화).m4a`.
     public var file: String
     public var startedAt: Date
     /// Seconds of audio; pauses are not recorded, so this can be shorter than the class.
@@ -52,7 +52,11 @@ public struct Recording: Entity {
         pages = try c.decodeIfPresent([PageVisit].self, forKey: .pages) ?? []
     }
 
-    public var transcriptFile: String { (file as NSString).deletingPathExtension + ".transcript.json" }
+    public var transcriptFile: String { Self.transcriptFile(of: file) }
+
+    public static let transcriptSuffix = ".transcript.json"
+
+    public static func transcriptFile(of audio: String) -> String { (audio as NSString).deletingPathExtension + transcriptSuffix }
 
     public static func file(named base: String, taken: Set<String>) -> String {
         var name = "\(base).m4a"

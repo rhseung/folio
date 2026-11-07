@@ -42,7 +42,7 @@ struct UnitExamAssignmentTests {
     }
 
     @Test func unitLink() throws {
-        try h.expectSame(["unit", "link", "EC4207/트리", "9주차-1"], setup: [Self.addSession, Self.addTree]) { _ in
+        try h.expectSame(["unit", "link", "EC4207/트리", "10-28"], setup: [Self.addSession, Self.addTree]) { _ in
             UnitLink(course: course, unit: Self.tree, sessions: [Self.session])
         }
     }
@@ -75,7 +75,7 @@ struct UnitExamAssignmentTests {
     }
 
     @Test func examScopeTaught() throws {
-        let setup = [Self.addSession, Self.addTree, ["unit", "link", "EC4207/트리", "9주차-1"], Self.addExam]
+        let setup = [Self.addSession, Self.addTree, ["unit", "link", "EC4207/트리", "10-28"], Self.addExam]
         try h.expectSame(["exam", "scope", "EC4207/중간고사", "--taught"], setup: setup) { _ in ExamScopeTaught(course: course, exam: Self.exam) }
         let gist = try Harness.fixtureCopy()
         for line in setup + [["exam", "scope", "EC4207/중간고사", "--taught"]] { #expect(h.cli(line, gist: gist).code == 0) }

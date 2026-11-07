@@ -42,13 +42,13 @@ final class NoteListModel {
     }
 
     var shown: [NoteFile] { notes.filter { filter == nil || $0.meta.kind == filter } }
-    var parts: [Part] { Self.parts(shown, file: course.file) }
+    var parts: [Part] { Self.parts(shown, file: course.file, calendar: workspace.calendar) }
 
     var filterOptions: [(NoteKind?, String)] { [(NoteKind?.none, String(localized: .notesFilterAll))] + NoteKind.allCases.map { (Optional($0), $0.label) } }
     var addHelp: String { filter.map { String(localized: .notesNewKind($0.label)) } ?? String(localized: .notesNewFree) }
     var emptyLine: String { filter.map { String(localized: .notesKindEmpty($0.label)) } ?? String(localized: .notesEmpty) }
 
-    static func parts(_ notes: [NoteFile], file: CourseFile) -> [Part] {
+    static func parts(_ notes: [NoteFile], file: CourseFile, calendar: Calendar) -> [Part] {
         func byTitle(_ a: NoteFile, _ b: NoteFile) -> Bool { a.title.localizedStandardCompare(b.title) == .orderedAscending }
         // A note moved in from an old folder has no ID until opened; it says so instead of a kind it doesn't have yet.
         func detail(_ n: NoteFile, _ text: String?) -> String? { n.meta.id == nil ? String(localized: .notesNeedsId) : text }
@@ -65,7 +65,7 @@ final class NoteListModel {
                 }
             }
             .map { n, s in
-                let covered = s.count > 1 ? file.sessionSpan(of: n.meta.id) : s.first.map { $0.date.formatted(.dateTime.month().day().weekday()) }
+                let covered = s.count > 1 ? file.sessionSpan(of: n.meta.id, calendar: calendar) : s.first.map { $0.date.formatted(.dateTime.month().day().weekday()) }
                 return Row(note: n, detail: detail(n, covered.map { "\($0) · \(n.meta.kind.label)" } ?? "\(n.meta.kind.label) · " + String(localized: .notesNoSession)))
             }
 
@@ -369,7 +369,7 @@ final class NoteEditorModel {
             switch linkedSessions.count {
             case 0: String(localized: .notesLinkNoSession(meta.kind.label))
             case 1: String(localized: .notesLinkSession(course.file.day(of: linkedSessions[0], calendar: workspace.calendar), meta.kind.label))
-            default: String(localized: .notesLinkSession(course.file.sessionSpan(of: meta.id) ?? "", meta.kind.label))
+            default: String(localized: .notesLinkSession(course.file.sessionSpan(of: meta.id, calendar: workspace.calendar) ?? "", meta.kind.label))
             }
         case .examSummary:
             linkExams.first { $0.id == meta.examId }.map { String(localized: .notesLinkExam($0.title)) } ?? String(localized: .notesLinkNoExam)

@@ -7,7 +7,7 @@ func index<E: Identifiable>(_ id: E.ID, in items: [E], _ what: LocalizedStringRe
     return i
 }
 
-@Action("session add", "회차 추가. 주차와 순번은 학기 시작일에서 정한다", effect: .creates, done: "회차를 추가했습니다",
+@Action("session add", "회차 추가. 주차는 학기 시작일에서 정한다", effect: .creates, done: "회차를 추가했습니다",
         examples: [#"folio session add EC4207 --date "2026-10-28 10:30""#, "folio session add EC4207 --date 2026-10-30 --cancelled --dry-run",
                    #"folio session add EC4207 --date "2026-11-04 21:00" --end "2026-11-04 22:15" --topic 보강 --link https://zoom.us/j/123 --dry-run"#,
                    #"folio session add EC4207 --date "2026-11-11 10:30" --attendance absent --dry-run"#],
@@ -65,7 +65,7 @@ public struct SessionRemove {
             for id in sessions {
                 let s = f.sessions[try index(id, in: f.sessions, .valueSession)]
                 guard f.isUnlinked(s, notedSessions: noted) else {
-                    throw ActionError.rule(String(localized: .errorSessionLinked(f.name(of: s))))
+                    throw ActionError.rule(String(localized: .errorSessionLinked(f.title(of: s, calendar: ctx.calendar))))
                 }
             }
             f.sessions.removeAll { sessions.contains($0.id) }
@@ -75,16 +75,16 @@ public struct SessionRemove {
 
 @Action("session set", "회차의 일시, 주제, 온라인 링크, 휴강, 복습 여부, 복습 노트 상태 바꾸기. 준 것만 바뀐다",
         done: "회차 '{session}'을(를) 바꿨습니다",
-        examples: ["folio session set EC4207/9주차-1 --cancelled true", "folio session set EC4207/9주차-1 --review-unfinished false --dry-run",
-                   #"folio session set EC4207/9주차-1 --topic "매칭 보강" --link https://zoom.us/j/123 --dry-run"#,
-                   #"folio session set EC4207/9주차-1 --date "2026-10-29 19:00" --end "2026-10-29 20:15" --dry-run"#],
+        examples: ["folio session set EC4207/10-26 --cancelled true", "folio session set EC4207/10-26 --review-unfinished false --dry-run",
+                   #"folio session set EC4207/10-26 --topic "매칭 보강" --link https://zoom.us/j/123 --dry-run"#,
+                   #"folio session set EC4207/10-26 --date "2026-10-29 19:00" --end "2026-10-29 20:15" --dry-run"#],
         phrases: ["수업 없", "수업 안 함", "휴강", "수업 취소", "이 수업 복습 끄기", "복습 노트 다 씀", "회차 이름", "회차 제목", "수업 주제",
                   "줌 링크", "수업 링크", "수업 시간 변경", "보강 시간"])
 public struct SessionSet {
     @Arg var course: Course.ID
     /// 회차
     @Arg var session: Session.ID
-    /// 일시. 다른 주로 옮기면 그 주의 마지막 회차가 되어 이름(N주차-M)이 바뀐다
+    /// 일시. 회차를 가리키는 날짜(11-03)도 따라 바뀐다
     var date: Patch<Date>
     /// 끝 일시. 수업 시간표 칸과 다를 때만 저장된다
     var end: Patch<Date?>
@@ -126,7 +126,7 @@ public struct SessionSet {
 /// The session's rough or review note, created from its template the first time.
 /// A new review note starts unfinished: making it is not writing it.
 @Action("session note", "회차의 러프 노트와 복습 노트. 없으면 템플릿으로 만든다", effect: .creates, done: "회차 '{session}'의 노트",
-        examples: ["folio session note EC4207/9주차-1 review"], phrases: ["수업 노트", "강의 필기", "러프 노트", "복습 노트 열기"])
+        examples: ["folio session note EC4207/10-26 review"], phrases: ["수업 노트", "강의 필기", "러프 노트", "복습 노트 열기"])
 public struct SessionNote {
     /// The new note's id; unused when the note already exists.
     @New var id: Note.ID
@@ -163,7 +163,7 @@ public struct SessionNote {
 
 /// Present is the default, so it is stored as no entry.
 @Action("attendance set", "회차의 출결 정하기. 출석이 기본값이다", done: "회차 '{session}'의 출결을 {state}(으)로 정했습니다",
-        examples: ["folio attendance set EC4207/9주차-1 absent"],
+        examples: ["folio attendance set EC4207/10-26 absent"],
         phrases: ["빠졌", "못 갔", "안 갔", "결석", "지각", "공결", "출석 체크", "수업 빠짐", "못 갔어"])
 public struct AttendanceSet {
     @Arg var course: Course.ID
@@ -270,13 +270,13 @@ public struct UnitMove {
 
 /// Links or unlinks sessions, keeping `Unit.sessionIds` and `Session.unitIds` in step.
 @Action("unit link", "단원에 회차 연결하기, --off면 풀기", done: "단원 '{unit}'의 회차 연결을 바꿨습니다",
-        examples: ["folio unit link EC4207/트리 9주차-1 9주차-2", "folio unit link EC4207/트리 9주차-2 --off --dry-run"],
+        examples: ["folio unit link EC4207/트리 10-26 10-28", "folio unit link EC4207/트리 10-28 --off --dry-run"],
         phrases: ["단원과 수업 연결", "이 수업에서 배운 단원"])
 public struct UnitLink {
     @Arg var course: Course.ID
     /// 단원
     @Arg var unit: FolioDomain.Unit.ID
-    /// 회차. 예: 9주차-1
+    /// 회차. 예: 10-26
     @Arg var sessions: [Session.ID]
     /// 연결 풀기
     @Off("off") var linked = true
@@ -316,7 +316,7 @@ public struct ExamScope {
 /// each file with its pages (`05_Matchings.pdf:3-12`), so it is written by hand.
 @Action("session progress", "수업의 렉처 진도 기록하기. 자료마다 이번 수업이 다룬 쪽을 회차에 연결한다",
         done: "회차 '{session}'의 진도를 기록했습니다",
-        examples: ["folio session progress EC4207/9주차-1 05_Matchings.pdf:3-12 06_Flows.pdf:1-4"],
+        examples: ["folio session progress EC4207/10-26 05_Matchings.pdf:3-12 06_Flows.pdf:1-4"],
         phrases: ["렉처 진도", "수업 진도", "어디까지 나갔", "진도 기록"], cli: .manual)
 public struct SessionProgress {
     @Arg var course: Course.ID
@@ -339,7 +339,7 @@ public struct SessionProgress {
 @Action("session link-viewed", "녹음 중 본 강의 페이지를 회차에 연결하기. 연결이 없는 자료만 더하고 있는 연결은 그대로 둔다",
         discussion: "앱 안의 PDF 보기에서 20초 이상 머문 페이지의 처음부터 끝까지가 범위다. 녹음이 끝나면 앱이 부른다.",
         done: "회차 '{session}'에 녹음 중 본 페이지를 연결했습니다",
-        examples: ["folio session link-viewed EC4207/9주차-1 --dry-run"], phrases: ["녹음 중 본 페이지", "본 페이지 연결", "수업 중 본 슬라이드"])
+        examples: ["folio session link-viewed EC4207/10-26 --dry-run"], phrases: ["녹음 중 본 페이지", "본 페이지 연결", "수업 중 본 슬라이드"])
 public struct SessionLinkViewed {
     @Arg var course: Course.ID
     /// 회차

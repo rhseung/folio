@@ -114,7 +114,6 @@ struct SessionsView: View {
                 CardRow(last: i == shown.count - 1 && model.untouchedMore == 0) {
                     Text(s.date.formatted(.dateTime.month().day().weekday().hour().minute())).monospacedDigit()
                     Spacer()
-                    Text(course.file.name(of: s)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                 }
             }
             if model.untouchedMore > 0 {

@@ -107,18 +107,18 @@ struct WriteCommandTests {
 
     @Test func noteWriteChecksTheHash() throws {
         let gist = try Harness.fixtureCopy()
-        let shown = h.cli(["note", "show", "EC4207/2주차-1", "--json"], gist: gist)
+        let shown = h.cli(["note", "show", "EC4207/09-08", "--json"], gist: gist)
         let hash = try #require((try JSONSerialization.jsonObject(with: Data(shown.out.utf8)) as? [String: Any])?["hash"] as? String)
         let file = FileManager.default.temporaryDirectory.appending(path: "note-\(UUID().uuidString).md")
         try "# 새 내용\n".write(to: file, atomically: true, encoding: .utf8)
 
-        let note = gist.appending(path: "2026-3/EC4207 그래프 이론/Notes/2주차-1.md")
+        let note = gist.appending(path: "2026-3/EC4207 그래프 이론/Notes/09-08(화) 매칭.md")
         let before = try String(contentsOf: note, encoding: .utf8)
-        let stale = h.cli(["note", "write", "EC4207/2주차-1", "--file", file.path, "--expect", String(repeating: "0", count: 64)], gist: gist)
+        let stale = h.cli(["note", "write", "EC4207/09-08", "--file", file.path, "--expect", String(repeating: "0", count: 64)], gist: gist)
         #expect(stale.code == 6)
         #expect(try String(contentsOf: note, encoding: .utf8) == before)
 
-        #expect(h.cli(["note", "write", "EC4207/2주차-1", "--file", file.path, "--expect", hash], gist: gist).code == 0)
+        #expect(h.cli(["note", "write", "EC4207/09-08", "--file", file.path, "--expect", hash], gist: gist).code == 0)
         #expect(try String(contentsOf: note, encoding: .utf8) == "# 새 내용\n")
     }
 
@@ -140,7 +140,7 @@ struct WriteCommandTests {
         for line in [U.addTree, ["session", "add", "EC4207", "--date", "2026-10-26 10:30"], ["session", "add", "EC4207", "--date", "2026-10-28 10:30"]] {
             _ = h.cli(line, gist: gist)
         }
-        let r = h.cli(["unit", "link", "EC4207/트리", "9주차-1", "9주차-2", "--json"], gist: gist)
+        let r = h.cli(["unit", "link", "EC4207/트리", "10-26", "10-28", "--json"], gist: gist)
         #expect(r.code == 0, "\(r.err)")
         let changes = try JSONDecoder().decode(WriteResultProbe.self, from: Data(r.out.utf8)).changes
         let keys = changes.map { "\($0.path)|\($0.item ?? "")" }

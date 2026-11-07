@@ -35,7 +35,7 @@ struct SearchStoreTests {
         #expect(hits.first?.item.kind == .note)
         #expect(hits.first?.snippet?.contains("non-adjacent") == true)
         // Two-letter Hangul is below the trigram length, so this goes through the scan path.
-        #expect(try index.search("주차").contains { $0.item.title == "2주차-1" })
+        #expect(try index.search("매칭").contains { $0.item.title == "09-08(화) 매칭" })
         #expect(try index.search("no such words here").isEmpty)
     }
 
@@ -58,7 +58,7 @@ struct SearchStoreTests {
         try index.refresh(gist)
         #expect(try index.refresh(gist) == 0)
 
-        let note = gist.url.appending(path: "2026-3/EC4207 그래프 이론/Notes/2주차-1.md")
+        let note = gist.url.appending(path: "2026-3/EC4207 그래프 이론/Notes/09-08(화) 매칭.md")
         try (String(contentsOf: note, encoding: .utf8) + "\nKőnig theorem\n").write(to: note, atomically: true, encoding: .utf8)
         #expect(try index.refresh(gist) == 1)
         #expect(try index.search("theorem").map(\.item.kind) == [.note])
@@ -90,13 +90,13 @@ struct SearchStoreTests {
         let gist = try fixture()
         let index = try SearchStore(url: nil)
         try index.refresh(gist)
-        #expect(try index.search("1주차", courses: [robotics]).allSatisfy { $0.item.courseId == robotics })
-        #expect(try index.search("1주차", kinds: [.unit]).allSatisfy { $0.item.kind == .unit })
-        #expect(try index.search("1주차", courses: [robotics]).isEmpty == false)
+        #expect(try index.search("09-02", courses: [robotics]).allSatisfy { $0.item.courseId == robotics })
+        #expect(try index.search("09-02", kinds: [.unit]).allSatisfy { $0.item.kind == .unit })
+        #expect(try index.search("09-02", courses: [robotics]).isEmpty == false)
 
         try FileManager.default.removeItem(at: gist.url.appending(path: "2026-3/EC4321 로봇공학"))
         try index.refresh(gist)
-        #expect(try index.search("1주차", courses: [robotics]).isEmpty)
+        #expect(try index.search("09-02", courses: [robotics]).isEmpty)
     }
 
     /// What link completion offers before anything is typed, and exams, which it links to as well.

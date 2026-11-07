@@ -69,7 +69,7 @@ struct NoteActionTests {
         let session = UUID(), first = UUID(), second = UUID()
         try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
         try run(NoteAdd(id: first, course: Self.graphTheory, title: "복습", kind: .review, session: session))
-        let name = try file().name(of: try #require(try file().sessions.first { $0.id == session }))
+        let name = try file().title(of: try #require(try file().sessions.first { $0.id == session }), calendar: .current)
         #expect(throws: ActionError.rule("회차 \(name)에는 이미 복습 노트가 있습니다")) {
             try run(NoteAdd(id: second, course: Self.graphTheory, title: "복습 2", kind: .review, session: session))
         }
@@ -128,19 +128,19 @@ struct NoteActionTests {
     }
 
     @Test func aSecondNoteOfTheSameTitleGetsANumber() throws {
-        try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "2주차-1"))
-        #expect(try file().notes.map(\.path).contains("Notes/2주차-1 2.md"))
+        try run(NoteAdd(id: UUID(), course: Self.graphTheory, title: "09-08(화) 매칭"))
+        #expect(try file().notes.map(\.path).contains("Notes/09-08(화) 매칭 2.md"))
     }
 
     @Test func linkingChangesTheEntryAndLeavesTheFile() throws {
-        let before = try text("Notes/2주차-1.md")
+        let before = try text("Notes/09-08(화) 매칭.md")
         try run(NoteLink(course: Self.graphTheory, note: Self.note, kind: .topic))
         #expect(try file().notes.first { $0.id == Self.note }?.kind == .topic)
-        #expect(try text("Notes/2주차-1.md") == before)
+        #expect(try text("Notes/09-08(화) 매칭.md") == before)
     }
 
     @Test func removingANoteDropsItsEntry() throws {
-        try run(NoteRemove(course: Self.graphTheory, note: "Notes/2주차-1.md"))
+        try run(NoteRemove(course: Self.graphTheory, note: "Notes/09-08(화) 매칭.md"))
         #expect(try file().notes.contains { $0.id == Self.note } == false)
     }
 
@@ -156,7 +156,7 @@ struct NoteActionTests {
         let ctx = try run(NoteBuild(course: Self.graphTheory, note: "Notes/증명.tex", pdf: built.path))
         #expect(ctx.changes.first == Change(.added, "2026-3/EC4207 그래프 이론/Study/증명.pdf"))
         #expect(try text("Study/증명.pdf") == "%PDF")
-        #expect(throws: ActionError.self) { try run(NoteBuild(course: Self.graphTheory, note: "Notes/2주차-1.md", pdf: built.path)) }
+        #expect(throws: ActionError.self) { try run(NoteBuild(course: Self.graphTheory, note: "Notes/09-08(화) 매칭.md", pdf: built.path)) }
     }
 
     /// Exports are placed by title, so another tool's export can sit there already. Like `material build`, only this
@@ -243,10 +243,16 @@ struct NoteActionTests {
         return f.meta(of: try #require(f.notes.first { $0.id == id }))
     }
 
+    /// The fixture's rough note as notes were named before #273.
+    func oldName() throws {
+        try run(NoteMove(course: Self.graphTheory, note: "Notes/09-08(화) 매칭.md", to: "2주차-1"))
+    }
+
     /// Session notes named before #273 take the date and subject; their headings and the links to them follow, and
     /// undoing the batch turns all three back.
     @Test func retitlingRenamesOldSessionNotesAndUndoTurnsThemBack() throws {
         let session = UUID(), review = UUID(), mine = UUID(), own = UUID()
+        try oldName()
         try run(SessionAdd(id: session, course: Self.graphTheory, date: now, topic: "Matchings"))
         try run(NoteLink(course: Self.graphTheory, note: Self.note, kind: .rough, session: session))
         try run(NoteAdd(id: review, course: Self.graphTheory, title: "9주차-1 정리", kind: .review, session: session))
@@ -288,6 +294,7 @@ struct NoteActionTests {
     /// old title, in any course, and an undo turns it back. A name the writer chose stays.
     @Test func retitlingFollowsTheNamesOfLinksByID() throws {
         let session = UUID(), mine = UUID(), elsewhere = UUID()
+        try oldName()
         let robotics = UUID(uuidString: "C0000000-0000-4000-8000-000000000003")!
         let id = Self.note.uuidString
         try run(SessionAdd(id: session, course: Self.graphTheory, date: now, topic: "Matchings"))
@@ -312,26 +319,26 @@ struct NoteActionTests {
     /// `cleanup undo` turns back whole. A name the writer gave a link stays.
     @Test func renamingANoteFollowsItsLinksAndUndoTurnsThemBack() throws {
         let id = Self.note.uuidString, mine = UUID()
-        let body = "[[2주차-1#Matching]], [[note:\(id)|2주차-1]], [[note:\(id)|첫 수업]]\n"
+        let body = "[[09-08(화) 매칭#Matching]], [[note:\(id)|09-08(화) 매칭]], [[note:\(id)|첫 수업]]\n"
         try run(NoteAdd(id: mine, course: Self.graphTheory, title: "모음", body: body))
-        let before = try text("Notes/2주차-1.md")
+        let before = try text("Notes/09-08(화) 매칭.md")
 
         let dry = ActionContext(gist: gist, device: device, now: now, dryRun: true)
-        try NoteMove(course: Self.graphTheory, note: "Notes/2주차-1.md", to: "매칭 기초").run(dry)
-        #expect(dry.changes.contains(Change(.moved, "2026-3/EC4207 그래프 이론/Notes/2주차-1.md", to: "2026-3/EC4207 그래프 이론/Notes/매칭 기초.md")))
-        #expect(try text("Notes/2주차-1.md") == before && dry.made == nil)
+        try NoteMove(course: Self.graphTheory, note: "Notes/09-08(화) 매칭.md", to: "매칭 기초").run(dry)
+        #expect(dry.changes.contains(Change(.moved, "2026-3/EC4207 그래프 이론/Notes/09-08(화) 매칭.md", to: "2026-3/EC4207 그래프 이론/Notes/매칭 기초.md")))
+        #expect(try text("Notes/09-08(화) 매칭.md") == before && dry.made == nil)
 
-        let ran = try run(NoteMove(course: Self.graphTheory, note: "Notes/2주차-1.md", to: "매칭 기초.md"))
+        let ran = try run(NoteMove(course: Self.graphTheory, note: "Notes/09-08(화) 매칭.md", to: "매칭 기초.md"))
         let batch = try #require(ran.made)
         #expect(ran.changes.contains { $0.touchesNotes })
         #expect(try file().notes.first { $0.id == Self.note }?.path == "Notes/매칭 기초.md")
         #expect(try text("Notes/매칭 기초.md").hasPrefix("# 매칭 기초\n"))
         #expect(try text("Notes/모음.md") == "[[매칭 기초#Matching]], [[note:\(id)|매칭 기초]], [[note:\(id)|첫 수업]]\n")
-        #expect(try store().note(at: "Notes/2주차-1.md") == nil)
+        #expect(try store().note(at: "Notes/09-08(화) 매칭.md") == nil)
 
         try run(CleanupUndo(batch: batch))
-        #expect(try file().notes.first { $0.id == Self.note }?.path == "Notes/2주차-1.md")
-        #expect(try text("Notes/2주차-1.md") == before && text("Notes/모음.md") == body)
+        #expect(try file().notes.first { $0.id == Self.note }?.path == "Notes/09-08(화) 매칭.md")
+        #expect(try text("Notes/09-08(화) 매칭.md") == before && text("Notes/모음.md") == body)
     }
 
     /// Moved into a folder of Notes/, a note keeps its pictures, and a name another note of the course has gets ` 2`.
@@ -428,10 +435,10 @@ struct NoteActionTests {
 
     @Test func aNoteStaysInNotesAndKeepsItsFormat() throws {
         for to in ["assets/x", "Exports/x", ".hidden/x", "x.tex", "../x", "  "] {
-            #expect(throws: ActionError.self, "\(to)") { try run(NoteMove(course: Self.graphTheory, note: "Notes/2주차-1.md", to: to)) }
+            #expect(throws: ActionError.self, "\(to)") { try run(NoteMove(course: Self.graphTheory, note: "Notes/09-08(화) 매칭.md", to: to)) }
         }
-        #expect(try run(NoteMove(course: Self.graphTheory, note: "Notes/2주차-1.md", to: "2주차-1")).made == nil)
-        #expect(try file().notes.first { $0.id == Self.note }?.path == "Notes/2주차-1.md")
+        #expect(try run(NoteMove(course: Self.graphTheory, note: "Notes/09-08(화) 매칭.md", to: "09-08(화) 매칭")).made == nil)
+        #expect(try file().notes.first { $0.id == Self.note }?.path == "Notes/09-08(화) 매칭.md")
     }
 
     /// A class note's units are its session's as they are now, so unlinking the class from a unit takes the note off it.

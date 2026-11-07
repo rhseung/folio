@@ -225,7 +225,7 @@ func declaredInput(_ spec: ActionSpec, _ sniffed: JSONValue) -> JSONValue {
     return .object(o)
 }
 
-let actionRefNote = "항목을 가리키는 필드(course, semester, session, exam, unit, material, component, assignment, set, note)는 UUID와 이름(EC4207, 9주차-1, Quiz1)을 모두 받는다. 새 항목의 id는 빼면 만들어진다. x-folio-ref가 있는 필드는 그 종류의 항목을 가리킨다. NotePath는 노트를 과목 폴더 기준 경로로 가리키고, 노트 이름도 받는다."
+let actionRefNote = "항목을 가리키는 필드(course, semester, session, exam, unit, material, component, assignment, set, note)는 UUID와 이름(EC4207, 11-03, Quiz1)을 모두 받는다. 새 항목의 id는 빼면 만들어진다. x-folio-ref가 있는 필드는 그 종류의 항목을 가리킨다. NotePath는 노트를 과목 폴더 기준 경로로 가리키고, 노트 이름도 받는다."
 
 func actionSchemas() -> JSONValue {
     let builder = SchemaBuilder()
