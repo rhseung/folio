@@ -68,12 +68,12 @@ struct NoteLinks {
             }
         }
         if kind == .examSummary, let exam, !course.exams.contains(where: { $0.id == exam }) { throw ActionError.notFound(String(localized: .errorNotFoundExam)) }
-        if kind == .topic, let u = units.first(where: { u in !course.units.contains { $0.id == u } }) { throw ActionError.notFound(String(localized: .errorNotFoundUnitId("\(u)"))) }
+        if kind == .unit, let u = units.first(where: { u in !course.units.contains { $0.id == u } }) { throw ActionError.notFound(String(localized: .errorNotFoundUnitId("\(u)"))) }
         meta.kind = kind
         meta.sessionId = kind == .rough || kind == .review ? session : nil
         meta.examId = kind == .examSummary ? exam : nil
-        // Other kinds read their units from the session or exam, so a topic note's units go when it becomes one.
-        meta.unitIds = kind == .topic ? units : []
+        // Other kinds read their units from the session or exam, so a unit note's units go when it becomes one.
+        meta.unitIds = kind == .unit ? units : []
     }
 }
 
@@ -295,8 +295,8 @@ public struct NoteMigrate {
 /// Renames the session notes still named `10주차-2` the way `session note` names new ones (#273). The files move as one
 /// `moves.jsonl` batch (`made`), and `cleanup undo` of it turns names, headings and links back. A taken name gets ` 2`.
 /// The course may be left out, which generated commands can't take, so the command is written by hand.
-@Action("note retitle", "예전 이름(10주차-2)의 회차 노트를 날짜와 주제 이름으로 바꾸기. 노트의 첫 제목과 다른 노트의 링크도 따라 바뀐다",
-        effect: .moves, confirm: "회차 노트의 이름을 날짜와 주제로 바꿉니다.", done: "회차 노트의 이름을 바꿨습니다",
+@Action("note retitle", "예전 이름(10주차-2)의 회차 노트를 날짜와 단원 이름으로 바꾸기. 노트의 첫 제목과 다른 노트의 링크도 따라 바뀐다",
+        effect: .moves, confirm: "회차 노트의 이름을 날짜와 단원으로 바꿉니다.", done: "회차 노트의 이름을 바꿨습니다",
         phrases: ["노트 이름 날짜로", "예전 노트 이름 바꾸기", "주차 이름 노트"], cli: .manual)
 public struct NoteRetitleSessions {
     /// 과목. 빼면 모든 과목

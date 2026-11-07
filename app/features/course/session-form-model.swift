@@ -3,7 +3,7 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// Adding a session, or editing one: when it starts and ends, its topic and its meeting link.
+/// Adding a session, or editing one: when it starts and ends, and its meeting link.
 @MainActor @Observable
 final class SessionFormModel {
     let workspace: Workspace
@@ -13,7 +13,6 @@ final class SessionFormModel {
     var start: Date
     /// Minutes from the start day's midnight: a class ends on the day it starts. The view sets it through `setEnd`.
     var endMinute: Int
-    var topic: String
     var link: String
     var cancelled = false
     /// The end is stored only when the user picks it or a class moves off the timetable; otherwise the slot keeps
@@ -32,7 +31,6 @@ final class SessionFormModel {
             .expectedEnd(schedule: schedule, classMinutes: workspace.settings.classMinutes, calendar: calendar)
         self.start = start
         endMinute = Self.minute(of: end, from: start, calendar: calendar)
-        topic = session?.topic ?? ""
         link = session?.link ?? ""
     }
 
@@ -91,7 +89,7 @@ final class SessionFormModel {
     private var storedLink: String? { OnlineLink.stored(link) }
 
     private var add: SessionAdd {
-        SessionAdd(course: courseId, date: start, end: end, topic: topic, link: storedLink, cancelled: cancelled)
+        SessionAdd(course: courseId, date: start, end: end, link: storedLink, cancelled: cancelled)
     }
 
     /// Only what changed; nil while adding.
@@ -100,7 +98,6 @@ final class SessionFormModel {
         return SessionSet(course: courseId, session: session.id,
                           date: start == session.date ? .keep : .set(start),
                           end: endPatch(session),
-                          topic: topic == session.topic ? .keep : .set(topic),
                           link: storedLink == session.link ? .keep : .set(storedLink))
     }
 

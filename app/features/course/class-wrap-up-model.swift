@@ -4,8 +4,8 @@ import Foundation
 import Observation
 
 /// One class's wrap-up, asked when its recording stops, from the today screen, and from the class's menu. What the class
-/// has nothing for (`CourseFile.wrapUpGaps`) opens for input; the rest folds into one line each to confirm. Saving writes
-/// everything in one action.
+/// has nothing for (`CourseFile.wrapUpGaps`) opens for input; the rest folds into one line each to confirm. Attendance is
+/// a choice either way, the likely one picked: an entry's state, else present. Saving writes everything in one action.
 @MainActor @Observable
 final class ClassWrapUpModel {
     struct Row: Identifiable, Equatable {
@@ -34,14 +34,13 @@ final class ClassWrapUpModel {
     /// Once a field is touched, counts arriving late no longer redo the suggestion under the user's hands.
     private var edited = false
     /// What the class had when the sheet opened, so leaving for the split screen asks only when something would be lost.
-    private let initial: (units: [UUID], topic: String, attendance: AttendanceState)
+    private let initial: (units: [UUID], attendance: AttendanceState)
 
     /// The items shown open, in asking order: what was missing when the sheet opened, and any reopened from its line.
     private(set) var open: [WrapUpItem]
     var units: [UUID]
-    var topic: String
     var attendance: AttendanceState
-    /// The class's rough note is made on saving, after the topic is, so the note is named after it.
+    /// The class's rough note is made on saving, after the units are, so the note is named after them.
     var makesNote = false
     var newUnit = ""
     /// Assignments added from the announcements line, to show they went in.
@@ -61,17 +60,16 @@ final class ClassWrapUpModel {
         self.viewed = viewed.isEmpty ? file.flatMap { f in s.map { f.viewedPages(of: $0) } } ?? [] : viewed
         open = file.flatMap { f in s.map { f.wrapUpGaps(of: $0, recorded: recorded) } } ?? []
         // From locals: the observed properties can't be read back before every stored property is set.
-        let initial = (units: s?.unitIds ?? [], topic: s?.topic ?? "",
-                       attendance: file?.attendance.first { $0.sessionId == session }?.state ?? AttendanceState.present)
+        // Present is stored as no entry, so a class without one, recorded or not, starts on present.
+        let initial = (units: s?.unitIds ?? [], attendance: file?.attendance.first { $0.sessionId == session }?.state ?? AttendanceState.present)
         units = initial.units
-        topic = initial.topic
         attendance = initial.attendance
         self.initial = initial
         suggest()
     }
 
     var changed: Bool {
-        edited || makesNote || units != initial.units || topic != initial.topic || attendance != initial.attendance
+        edited || makesNote || units != initial.units || attendance != initial.attendance
     }
 
     var course: LoadedCourse? { workspace.course(courseId) }
@@ -115,14 +113,11 @@ final class ClassWrapUpModel {
                 return String(localized: .wrapUpProgressLine((m.path as NSString).lastPathComponent, pages.lowerBound, pages.upperBound))
             }.joined(separator: ", ")
         case .units: return unitTitles(units)
-        case .topic: return topic
         case .note:
             let id = session.roughNoteId ?? session.reviewNoteId
             return id.flatMap { id in file.notes.first { $0.id == id } }.map { (($0.path as NSString).lastPathComponent as NSString).deletingPathExtension } ?? ""
         case .attendance:
-            let state = AttendanceState.steps.first { $0.value == attendance }?.label ?? ""
-            return recorded || file.recordings.contains(where: { $0.sessionId == sessionId })
-                ? String(localized: .wrapUpAttendanceRecorded(state)) : state
+            return AttendanceState.steps.first { $0.value == attendance }?.label ?? ""
         }
     }
 
@@ -306,7 +301,7 @@ final class ClassWrapUpModel {
     var action: SessionWrapUp {
         SessionWrapUp(course: courseId, session: sessionId,
                       ranges: keptRows.map { SessionMaterial(materialId: $0.id, firstPage: $0.first, lastPage: $0.last) },
-                      units: units, topic: topic, attendance: attendance)
+                      units: units, attendance: attendance)
     }
 
     /// Why saving is off: a kept file without both pages says nothing about how far the class went.
@@ -324,7 +319,7 @@ final class ClassWrapUpModel {
     /// False when the save failed, so a run through several classes stays on this one.
     @discardableResult func wrapUp() -> Bool {
         guard workspace.run(action) != nil else { return false }
-        // After the topic is saved, so the note is named by the class's day and topic like any class note.
+        // After the units are saved, so the note is named by the class's day and units like any class note.
         if makesNote && !hasNote { _ = workspace.note(.rough, of: sessionId, in: courseId) }
         return true
     }
@@ -335,7 +330,6 @@ extension WrapUpItem {
         switch self {
         case .progress: String(localized: .wrapUpProgress)
         case .units: String(localized: .wrapUpUnits)
-        case .topic: String(localized: .wrapUpTopic)
         case .note: String(localized: .wrapUpNote)
         case .attendance: String(localized: .wrapUpAttendance)
         }

@@ -54,7 +54,7 @@ struct TodayCommand: ParsableCommand {
             Summary.Item(course: code[course] ?? "", courseId: course, id: id, title: title, at: at, detail: detail)
         }
         func session(_ s: TodaySummary.SessionItem) -> Summary.Item {
-            item(s.courseId, s.session.id, file[s.courseId]?.reference(of: s.session, calendar: calendar) ?? "", at: s.session.date, s.session.topic.isEmpty ? nil : s.session.topic)
+            item(s.courseId, s.session.id, file[s.courseId]?.reference(of: s.session, calendar: calendar) ?? "", at: s.session.date, file[s.courseId]?.subject(of: s.session))
         }
         let review = { (e: ReviewEntry) in item(e.courseId, e.item.unitId, e.unitTitle, e.item.overdueDays > 0 ? String(localized: .todayOverdue(e.item.overdueDays)) : nil) }
         let out = Summary(

@@ -22,7 +22,7 @@ enum FormSnapshots {
             ("class-times", AnyView(ClassTimesSheet(workspace: workspace, course: course))),
             ("session-add", AnyView(SessionFormSheet(workspace: workspace, course: course))),
             ("note-new", AnyView(NewNoteSheet(workspace: workspace, course: course, kind: .review) { _ in })),
-            ("note-new-topic", AnyView(NewNoteSheet(workspace: workspace, course: course, kind: .topic) { _ in })),
+            ("note-new-unit", AnyView(NewNoteSheet(workspace: workspace, course: course, kind: .unit) { _ in })),
             ("exam-new", AnyView(ExamEditor(workspace: workspace, course: course, exam: Exam(device: device, at: .now, title: "")))),
             ("assignment", AnyView(AssignmentSheet(workspace: workspace, course: course, assignment: file.assignments.first ?? Assignment(device: device, at: .now, title: "")) { _, _ in })),
             ("component", AnyView(ComponentSheet(workspace: workspace, course: course, component: component))),

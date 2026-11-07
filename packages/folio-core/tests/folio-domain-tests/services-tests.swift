@@ -68,8 +68,8 @@ struct ServiceSettingsTests {
     }
 
     @Test func templateOverrideIsUsed() {
-        let s = Settings(noteTemplates: [NoteKind.topic.rawValue: ["요약"]])
-        #expect(NoteTemplate.body(for: .topic, title: "T", sections: s.noteSections(for: .topic)) == "# T\n\n## 요약\n\n")
+        let s = Settings(noteTemplates: [NoteKind.unit.rawValue: ["요약"]])
+        #expect(NoteTemplate.body(for: .unit, title: "T", sections: s.noteSections(for: .unit)) == "# T\n\n## 요약\n\n")
     }
 }
 
@@ -124,7 +124,7 @@ struct NotificationPlanTests {
 
 struct NoteTemplateTests {
     @Test func aTexNoteHasTheSameSectionsAndEscapesItsTitle() {
-        let tex = NoteTemplate.body(for: .topic, title: "A_1 & 50%", sections: ["요약"], format: .tex)
+        let tex = NoteTemplate.body(for: .unit, title: "A_1 & 50%", sections: ["요약"], format: .tex)
         #expect(tex.contains("\\section*{A\\_1 \\& 50\\%}"))
         #expect(tex.contains("\\subsection*{요약}"))
         #expect(tex.hasSuffix("\\end{document}\n"))

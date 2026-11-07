@@ -41,7 +41,7 @@ struct NoteAssist: Equatable {
         a.snippets == b.snippets && a.asciiSnippets == b.asciiSnippets && a.templates == b.templates && a.links === b.links
     }
 
-    static let templateKinds: [NoteKind] = [.review, .examSummary, .topic]
+    static let templateKinds: [NoteKind] = [.review, .examSummary, .unit]
 
     /// The snippets outside formulas are the same in either syntax; inside them, each syntax has its own.
     func snippets(syntax: MathSyntax) -> [Snippet] {

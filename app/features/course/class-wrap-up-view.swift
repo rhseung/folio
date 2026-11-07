@@ -2,7 +2,8 @@ import FolioDomain
 import SwiftUI
 
 /// The end-of-class wrap-up on one sheet: what the class has nothing for opens for input, in asking order, and what it
-/// has folds into one line each under "채운 것" to confirm. Announcements made in class can be added below, or skipped.
+/// has folds into one line each under "채운 것" to confirm. Attendance folds as its choice itself rather than a line with
+/// 바꾸기, so a recorded class marked present is one press from late. Announcements made in class can be added below, or skipped.
 struct ClassWrapUpSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openLink) private var openLink
@@ -34,9 +35,14 @@ struct ClassWrapUpSheet: View {
                         ForEach(Array(folded.enumerated()), id: \.element) { i, item in
                             CardRow(last: i == folded.count - 1) {
                                 Text(model.label(item)).foregroundStyle(Theme.Palette.textSecondary).frame(width: 64, alignment: .leading)
-                                Text(model.summary(item)).lineLimit(1).truncationMode(.middle)
-                                Spacer(minLength: Theme.Space.s)
-                                Button(.wrapUpChange) { withAnimation(.snappy) { model.reopen(item) } }.buttonStyle(.ghost)
+                                if item == .attendance && model.takesAttendance {
+                                    attendance
+                                    Spacer(minLength: 0)
+                                } else {
+                                    Text(model.summary(item)).lineLimit(1).truncationMode(.middle)
+                                    Spacer(minLength: Theme.Space.s)
+                                    Button(.wrapUpChange) { withAnimation(.snappy) { model.reopen(item) } }.buttonStyle(.ghost)
+                                }
                             }
                         }
                     }
@@ -90,21 +96,17 @@ struct ClassWrapUpSheet: View {
         switch item {
         case .progress: progress
         case .units: units
-        case .topic:
-            CardRow(last: true) {
-                TextField(String(localized: .wrapUpTopicPrompt), text: $model.topic).textFieldStyle(.plain)
-            }
         case .note: note
         case .attendance:
             CardRow(last: true) {
-                if model.takesAttendance {
-                    Segmented(selection: $model.attendance, options: AttendanceState.steps.map { ($0.value, $0.label) })
-                } else {
-                    EmptyLine(String(localized: .wrapUpAttendanceNone))
-                }
+                if model.takesAttendance { attendance } else { EmptyLine(String(localized: .wrapUpAttendanceNone)) }
                 Spacer(minLength: 0)
             }
         }
+    }
+
+    var attendance: some View {
+        Segmented(selection: $model.attendance, options: AttendanceState.steps.map { ($0.value, $0.label) })
     }
 
     // MARK: Progress

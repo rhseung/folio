@@ -7382,13 +7382,13 @@
         }
       }
     },
-    "notes.kind.topic": {
+    "notes.kind.unit": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "단원 정리"
+            "value": "단원"
           }
         }
       }
@@ -7426,13 +7426,13 @@
         }
       }
     },
-    "notes.link.as-topic": {
+    "notes.link.as-unit": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "단원 정리로"
+            "value": "단원 노트로"
           }
         }
       }
@@ -7492,13 +7492,13 @@
         }
       }
     },
-    "notes.link.topic": {
+    "notes.link.unit": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "단원 정리 · %@"
+            "value": "단원 노트 · %@"
           }
         }
       }
@@ -7701,13 +7701,13 @@
         }
       }
     },
-    "notes.part.topic": {
+    "notes.part.unit": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "단원 정리"
+            "value": "단원 노트"
           }
         }
       }
@@ -10908,7 +10908,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "단원과 주제"
+            "value": "단원"
           }
         }
       }
@@ -15555,13 +15555,13 @@
         }
       }
     },
-    "settings.template-topic": {
+    "settings.template-unit": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "단원 정리"
+            "value": "단원 노트"
           }
         }
       }
@@ -16529,7 +16529,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "노트 편집 화면의 연결 메뉴에서 단원 정리로 이 단원을 고르면 여기 모입니다"
+            "value": "노트 편집 화면의 연결 메뉴에서 단원 노트로 이 단원을 고르면 여기 모입니다"
           }
         }
       }
@@ -16540,7 +16540,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "단원 정리와 이 단원을 단 노트"
+            "value": "단원 노트와 이 단원을 단 노트"
           }
         }
       }
@@ -17949,39 +17949,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "끝"
-          }
-        }
-      }
-    },
-    "sessions.topic": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "주제"
-          }
-        }
-      }
-    },
-    "sessions.topic-detail": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "목록에서 회차 제목으로 보입니다"
-          }
-        }
-      }
-    },
-    "sessions.topic-prompt": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예: 보강"
           }
         }
       }
@@ -19416,17 +19383,6 @@
         }
       }
     },
-    "wrap-up.topic-prompt": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이번 수업의 주제"
-          }
-        }
-      }
-    },
     "today.wrap-up.help": {
       "extractionState": "manual",
       "localizations": {
@@ -19456,17 +19412,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "출석"
-          }
-        }
-      }
-    },
-    "wrap-up.attendance-recorded": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ · 녹음이 있어 채움"
           }
         }
       }
@@ -19565,7 +19510,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "진도, 단원, 주제, 수업 노트, 출석 중 빈 것이 있는 수업이에요. 한 번 저장한 수업은 빈 칸이 남아도 다시 묻지 않아요."
+            "value": "진도, 단원, 수업 노트, 출석 중 빈 것이 있는 수업이에요. 한 번 저장한 수업은 빈 칸이 남아도 다시 묻지 않아요."
           }
         }
       }
@@ -19687,17 +19632,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 수업은 출결을 적을 수 없습니다"
-          }
-        }
-      }
-    },
-    "wrap-up.topic": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "주제"
           }
         }
       }

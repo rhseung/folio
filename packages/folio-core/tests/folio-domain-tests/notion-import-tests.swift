@@ -98,7 +98,7 @@ struct NotionNotesImportTests {
         // The only class known in week 7, so it is 7주차-1 here whatever Notion called it.
         #expect(session.week == 7 && session.roughNoteId == rough.id && session.reviewNoteId == review.id)
         #expect(first.notes.count == 3)
-        #expect(first.notes.first { $0.id == topic.id }?.meta.kind == .topic)
+        #expect(first.notes.first { $0.id == topic.id }?.meta.kind == .unit)
         #expect(first.notes.first { $0.id == review.id }?.meta.sessionId == session.id)
 
         let again = NotionNotesImporter.merge(dump, into: first.file, existingNotes: Set(first.notes.map(\.id)),

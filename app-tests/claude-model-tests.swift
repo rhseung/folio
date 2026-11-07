@@ -323,7 +323,7 @@ struct ClaudeModelTests {
         let (first, second) = (UUID(), UUID())
         workspace.run(UnitAdd(id: first, course: graphTheory, title: "그래프"))
         workspace.run(UnitAdd(id: second, course: graphTheory, title: "매칭"))
-        let note = try #require(workspace.run(NoteAdd(course: graphTheory, title: "매칭 정리", kind: .topic, units: [second]))?.made)
+        let note = try #require(workspace.run(NoteAdd(course: graphTheory, title: "매칭 정리", kind: .unit, units: [second]))?.made)
         let course = try #require(workspace.course(graphTheory))
         model.load(course)
         var chat = Chat(device: workspace.device, at: .now)

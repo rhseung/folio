@@ -114,14 +114,13 @@ struct CourseWorkTests {
         let now = date("2026-10-26 12:00")
         func at(_ s: String) -> Session { Session(device: device, at: .now, week: 9, date: date(s)) }
         let past = at("2026-10-19 13:00"), empty = at("2026-11-02 13:00"), noted = at("2026-11-04 13:00"), unitLinked = at("2026-11-09 13:00")
-        var topic = at("2026-11-11 13:00"); topic.topic = "행렬식"
         var online = at("2026-11-12 21:00"); online.link = "https://zoom.us/j/1"
         var makeup = at("2026-11-13 21:00"); makeup.end = date("2026-11-13 22:15")
         var cancelled = Session(device: device, at: .now, week: 10, date: date("2026-11-16 13:00"))
         cancelled.isCancelled = true
         var unit = Unit(device: device, at: .now, title: "고윳값", order: 1)
         unit.sessionIds = [unitLinked.id]
-        let file = CourseFile(course: courses[0], units: [unit], sessions: [past, empty, noted, unitLinked, topic, online, makeup, cancelled])
+        let file = CourseFile(course: courses[0], units: [unit], sessions: [past, empty, noted, unitLinked, online, makeup, cancelled])
         #expect(file.untouchedFutureSessions(now: now, notedSessions: [noted.id]).map(\.id) == [empty.id])
     }
 
@@ -236,21 +235,28 @@ struct CourseWorkTests {
         #expect(file.linkableSessions { $0.id == cancelled.id }.map(\.id) == [held.id, cancelled.id])
     }
 
-    @Test func titleIsTheDayAndWhatTheClassCovered() {
-        var s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
+    /// The deepest units, as many as are linked; the day alone without one.
+    @Test func titleIsTheDayAndTheClassUnits() {
+        let s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
         var file = CourseFile(course: courses[0], sessions: [s])
         #expect(file.title(of: s, calendar: calendar) == "11/3(화)")
-        let parent = Unit(device: device, at: .now, title: "행복", order: 1)
+        var parent = Unit(device: device, at: .now, title: "행복", order: 1)
         var child = Unit(device: device, at: .now, title: "습관", order: 1, parentId: parent.id)
         child.sessionIds = [s.id]
+        parent.sessionIds = [s.id]
         file.units = [parent, child]
         #expect(file.title(of: s, calendar: calendar) == "11/3(화): 습관")
-        s.topic = "행복에도 습관이 무섭다"
-        #expect(file.title(of: s, calendar: calendar) == "11/3(화): 행복에도 습관이 무섭다")
+        var other = Unit(device: device, at: .now, title: "몰입", order: 2)
+        other.sessionIds = [s.id]
+        file.units.append(other)
+        #expect(file.title(of: s, calendar: calendar) == "11/3(화): 습관 · 몰입")
+        // The page of a unit already names it, so its list leaves it out.
+        #expect(file.subject(of: s, besides: child.id) == "몰입")
+        #expect(file.subject(of: s, besides: parent.id) == "습관 · 몰입")
     }
 
-    @Test func aSessionNoteIsNamedByTheDayAndWhatTheClassCovered() {
-        var s = Session(device: device, at: .now, week: 10, date: date("2026-11-05 10:30"))
+    @Test func aSessionNoteIsNamedByTheDayAndTheClassUnits() {
+        let s = Session(device: device, at: .now, week: 10, date: date("2026-11-05 10:30"))
         var file = CourseFile(course: courses[0], sessions: [s])
         #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-05(목)")
         #expect(file.noteTitle(for: s, kind: .review, calendar: calendar) == "11-05(목) 정리")
@@ -260,38 +266,37 @@ struct CourseWorkTests {
         child.sessionIds = [s.id]
         file.units = [parent, child]
         #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-05(목) Reliable data transfer")
+        #expect(file.noteTitle(for: s, kind: .review, calendar: calendar) == "11-05(목) Reliable data transfer 정리")
+    }
 
-        s.topic = "Principles of reliable data transfer"
-        file.sessions = [s]
-        #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-05(목) Principles of reliable data transfer")
-        #expect(file.noteTitle(for: s, kind: .review, calendar: calendar) == "11-05(목) Principles of reliable data transfer 정리")
+    /// A class whose units are titled `title`, the only way to give it a subject now.
+    func covering(_ title: String, at day: String = "2026-11-03 10:30") -> (Session, CourseFile) {
+        let s = Session(device: device, at: .now, week: 10, date: date(day))
+        var u = Unit(device: device, at: .now, title: title, order: 1)
+        u.sessionIds = [s.id]
+        return (s, CourseFile(course: courses[0], units: [u], sessions: [s]))
     }
 
     @Test func aSessionNoteNameHoldsNoPathOrLinkCharacters() {
-        var s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
-        s.topic = "..TCP: flow/congestion [ch. 3] #1"
-        let file = CourseFile(course: courses[0], sessions: [s])
+        let (s, file) = covering("..TCP: flow/congestion [ch. 3] #1")
         #expect(file.noteTitle(for: s, kind: .rough, calendar: calendar) == "11-03(화) TCP flow-congestion ch. 3 1")
     }
 
     @Test func aLongSubjectIsCutAtAWord() {
-        var s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
-        s.topic = "Principles of reliable data transfer with pipelined protocols, Go-Back-N and selective repeat"
-        let file = CourseFile(course: courses[0], sessions: [s])
+        let (s, file) = covering("Principles of reliable data transfer with pipelined protocols, Go-Back-N and selective repeat")
         let title = file.noteTitle(for: s, kind: .review, calendar: calendar)
         #expect(title == "11-03(화) Principles of reliable data transfer with pipelined 정리")
 
-        s.topic = String(repeating: "가", count: 100)
-        let unbroken = CourseFile(course: courses[0], sessions: [s]).noteTitle(for: s, kind: .rough, calendar: calendar)
+        let (t, long) = covering(String(repeating: "가", count: 100))
+        let unbroken = long.noteTitle(for: t, kind: .rough, calendar: calendar)
         #expect(unbroken == "11-03(화) " + String(repeating: "가", count: 60))
     }
 
     /// A cut that ends on `and`, `of a` or an open `(` reads as a broken name, so those go too.
     @Test func aCutSubjectLeavesNothingHanging() {
-        var s = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
-        let title = { (topic: String) in
-            s.topic = topic
-            return CourseFile(course: courses[0], sessions: [s]).noteTitle(for: s, kind: .rough, calendar: calendar)
+        let title = { (unit: String) in
+            let (s, file) = covering(unit)
+            return file.noteTitle(for: s, kind: .rough, calendar: calendar)
         }
         #expect(title("Forest, Tree, Leaf, Cut-Edge and Equivalent Definitions of a Tree in General") == "11-03(화) Forest, Tree, Leaf, Cut-Edge and Equivalent Definitions")
         #expect(title("Walk, Trail, Path, Cycle and Bipartite Graphs (König's Theorem on Cycles)") == "11-03(화) Walk, Trail, Path, Cycle and Bipartite Graphs")
@@ -321,13 +326,14 @@ struct CourseWorkTests {
     @Test func oldSessionNoteNamesAreRetitled() {
         var s = Session(device: device, at: .now, week: 10, date: date("2026-11-05 10:30"))
         var t = Session(device: device, at: .now, week: 10, date: date("2026-11-03 10:30"))
-        s.topic = "Reliable data transfer"
+        var unit = Unit(device: device, at: .now, title: "Reliable data transfer", order: 1)
+        unit.sessionIds = [s.id]
         let rough = UUID(), review = UUID(), mine = UUID(), loose = UUID(), copy = UUID()
         s.roughNoteId = rough
         s.reviewNoteId = review
         t.reviewNoteId = review
         t.roughNoteId = mine
-        var file = CourseFile(course: courses[0], sessions: [s, t])
+        var file = CourseFile(course: courses[0], units: [unit], sessions: [s, t])
         let entry = { (id: UUID, path: String, kind: NoteKind) in NoteEntry(id: id, device: device, at: .now, path: path, meta: NoteMeta(id: id, kind: kind)) }
         // macOS file names come back decomposed; the name still reads as `10주차-2`.
         file.notes = [entry(rough, "Notes/10주차-2.md", .rough), entry(review, "Notes/10주차-1 정리 2.md", .review),

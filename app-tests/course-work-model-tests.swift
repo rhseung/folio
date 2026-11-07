@@ -232,13 +232,16 @@ struct MaterialsModelTests {
         #expect(model.selection == [1, 2])
     }
 
-    /// The day and topic say which class it was; newest first.
+    /// The day and units say which class it was; newest first.
     @Test func importSessionsReadByDayNewestFirst() throws {
         let workspace = try fixtureWorkspace()
         // A makeup set up first, then the class before it: made out of date order on purpose.
+        let makeup = UUID()
         for days in [-1, -2] {
-            workspace.run(SessionAdd(course: graphTheory, date: Calendar.current.date(byAdding: .day, value: days, to: .now)!, topic: days == -1 ? "보강" : ""))
+            workspace.run(SessionAdd(id: days == -1 ? makeup : UUID(), course: graphTheory, date: Calendar.current.date(byAdding: .day, value: days, to: .now)!))
         }
+        let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "보강"))?.made)
+        workspace.run(UnitLink(course: graphTheory, unit: unit, sessions: [makeup], linked: true))
         let course = try #require(workspace.course(graphTheory))
         let model = ImportPlaceModel(workspace: workspace, course: course, files: [URL(filePath: "/tmp/a.pdf")], places: [])
         let sessions = model.sessions
@@ -293,8 +296,8 @@ struct NotesModelTests {
         #expect(model.parts.map(\.title) == ["수업 노트"])
         #expect(model.parts[0].rows[0].detail == "러프 · 회차 없음")
 
-        model.filter = .topic
-        #expect(model.emptyLine == "단원 정리 노트가 없습니다")
+        model.filter = .unit
+        #expect(model.emptyLine == "단원 노트가 없습니다")
         let sheet = NewNoteModel(workspace: workspace, course: course, kind: model.filter ?? .free)
         #expect(sheet.link == .units && !sheet.canAdd)
         sheet.title = "  행렬식  "
@@ -306,10 +309,10 @@ struct NotesModelTests {
         #expect(model.parts.first?.rows.first?.detail == "단원 없음")
 
         model.filter = nil
-        #expect(model.parts.map(\.title) == ["수업 노트", "단원 정리"])
+        #expect(model.parts.map(\.title) == ["수업 노트", "단원 노트"])
         var closed = false
         model.delete(model.shown.first { $0.meta.id == id }!) { closed = true }
-        #expect(!closed && model.parts.map(\.title) == ["수업 노트", "단원 정리"])
+        #expect(!closed && model.parts.map(\.title) == ["수업 노트", "단원 노트"])
         try #require(model.pending).perform()
         #expect(closed && model.parts.map(\.title) == ["수업 노트"])
     }

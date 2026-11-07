@@ -55,7 +55,7 @@ public struct TranscriptionContext: Codable, Sendable, Equatable {
     /// Nil when no slides were found.
     public var source: Source?
     public var slides: [LecturePages]
-    /// The session's topic and its units' titles, parents after.
+    /// The session's units' titles, parents after.
     public var topics: [String]
     /// Read from the slides, most telling first.
     public var terms: [String]
@@ -107,9 +107,7 @@ extension CourseFile {
     /// Unit titles name what the class is about in the lecturer's own words ("NFA to DFA: The Subset Construction"),
     /// and most classes have units where few have slides linked. Parents follow their children: they are broader.
     func transcriptionTopics(for session: Session) -> [String] {
-        let chain = unitsCovering(session: session.id).compactMap { id in units.first { $0.id == id } }
-        let topic = session.topic.trimmingCharacters(in: .whitespacesAndNewlines)
-        return (topic.isEmpty ? [] : [topic]) + chain.map(\.title)
+        unitsCovering(session: session.id).compactMap { id in units.first { $0.id == id }?.title }
     }
 
     /// The slides a class covered: the pages left on screen while `recording`, else the PDFs that belong with the

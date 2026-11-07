@@ -247,15 +247,8 @@ final class SessionsModel {
     /// What the class covered, else just 수업, drawn quieter: the tile carries the date, which names the class.
     func title(of session: Session, in file: CourseFile) -> String { file.subject(of: session) ?? String(localized: .sessionsClass) }
 
+    /// The title is the units when there are any, so the units picker beside it shrinks to its icon.
     func hasSubject(_ session: Session, in file: CourseFile) -> Bool { file.subject(of: session) != nil }
-
-    /// Units that only restate the title (Lab04 Thin-layer chromatography under Thin-layer chromatography) shrink to their icon.
-    func unitsInTitle(_ session: Session, in file: CourseFile) -> Bool {
-        let units = UnitTree.deepest(file.units(of: session), in: file.units)
-        return !units.isEmpty && units.allSatisfy {
-            session.topic.isEmpty || $0.title.localizedCaseInsensitiveContains(session.topic) || session.topic.localizedCaseInsensitiveContains($0.title)
-        }
-    }
 
     enum Review: Equatable {
         case done(UUID), writing(UUID), missing

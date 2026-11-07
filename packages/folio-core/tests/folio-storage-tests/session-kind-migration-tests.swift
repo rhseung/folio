@@ -50,7 +50,12 @@ struct SessionKindMigrationTests {
         let file = try StoredDocument<CourseFile>.read(from: url).model
         let s = file.sessions
         #expect(s.map(\.isCancelled) == [true, false, false, false, false, false, false, false, false])
-        #expect(s[1].topic == "리시테이션" && s[8].topic == "보충")
+        // Sessions have no topic now, but what a recitation's name said is still kept in the file for its user.
+        try StoredDocument<CourseFile>.read(from: url).write(to: url)
+        let raw = try JSONFormat.decoder.decode(JSONValue.self, from: Data(contentsOf: url))
+        guard case .array(let written)? = raw["sessions"] else { Issue.record("no sessions"); return }
+        let topic = { (id: Int) in written.first { $0["id"] == .string("5E000000-0000-4000-8000-00000000000\(id)") }?["topic"] }
+        #expect(topic(2) == .string("리시테이션") && topic(6) == .string("보충"))
 
         let tlc = try #require(file.units.first { $0.labNumber == 4 })
         #expect(file.units.filter { $0.labNumber == 4 }.count == 1)

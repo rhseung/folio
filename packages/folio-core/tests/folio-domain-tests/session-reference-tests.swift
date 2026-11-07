@@ -16,10 +16,8 @@ struct SessionReferenceTests {
         calendar.date(from: DateComponents(year: year, month: month, day: day, hour: hour, minute: minute))!
     }
 
-    func session(_ date: Date, made: Date? = nil, topic: String = "") -> Session {
-        var s = Session(device: device, at: made ?? date, week: 1, date: date)
-        s.topic = topic
-        return s
+    func session(_ date: Date, made: Date? = nil) -> Session {
+        Session(device: device, at: made ?? date, week: 1, date: date)
     }
 
     func file(_ sessions: [Session]) -> CourseFile {
@@ -27,8 +25,11 @@ struct SessionReferenceTests {
     }
 
     @Test func aClassIsItsDay() {
-        let tue = session(at(11, 3), topic: "Matchings")
-        let f = file([tue, session(at(11, 5))])
+        let tue = session(at(11, 3))
+        var f = file([tue, session(at(11, 5))])
+        var unit = Unit(device: device, at: .now, title: "Matchings", order: 1)
+        unit.sessionIds = [tue.id]
+        f.units = [unit]
         #expect(f.reference(of: tue, calendar: calendar) == "11-03")
         #expect(f.title(of: tue, calendar: calendar) == "11/3(화): Matchings")
         #expect(f.recordingName(of: tue, calendar: calendar) == "11-03(화)")
@@ -169,6 +170,38 @@ struct SessionReferenceTests {
                 #expect(ref.hasPrefix(day) || ref.dropFirst(5).hasPrefix(day))
                 #expect(f.noteTitle(for: s, kind: .rough, calendar: calendar).hasPrefix(day))
             }
+        }
+    }
+
+    static let words = ["Matching", "Hall", "Tree", "Euler", "Cut", "and", "of", "그래프", "평면성", "Go-Back-N"]
+    /// Up to four units linked to one class, each a few words long, some too long to fit a file name.
+    static let unitTitles = Gen.int(in: 0...9).array(of: 1...12).array(of: 0...4)
+
+    /// A class's note is named by its day and as many of its units, whole and in order, as fit in 60 letters; the day
+    /// alone without units. Only a first unit too long by itself is cut.
+    @Test func aNoteTitleIsTheDayAndTheUnitsThatFit() async {
+        await propertyCheck(input: Self.unitTitles) { picks in
+            let s = session(at(11, 3))
+            var f = file([s])
+            let titles = picks.map { $0.map { Self.words[$0] }.joined(separator: " ") }
+            f.units = titles.enumerated().map { i, t in
+                var u = Unit(device: device, at: .now, title: t, order: i + 1)
+                u.sessionIds = [s.id]
+                return u
+            }
+            let name = f.noteTitle(for: s, kind: .rough, calendar: calendar)
+            let day = "11-03(화)"
+            #expect(name.hasPrefix(day))
+            guard let first = titles.first else {
+                #expect(name == day)
+                return
+            }
+            let subject = String(name.dropFirst(day.count + 1))
+            #expect(!subject.isEmpty && subject.count <= 60)
+            guard first.count <= 60 else { return }
+            let parts = subject.components(separatedBy: " · ")
+            #expect(parts == Array(titles.prefix(parts.count)))
+            if parts.count < titles.count { #expect((parts + [titles[parts.count]]).joined(separator: " · ").count > 60) }
         }
     }
 }

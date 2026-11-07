@@ -274,7 +274,7 @@ private struct NoteSettingsForm: View {
     @Binding var settings: FolioDomain.Settings
 
     var body: some View {
-        ForEach([NoteKind.review, .examSummary, .topic], id: \.self) { kind in
+        ForEach([NoteKind.review, .examSummary, .unit], id: \.self) { kind in
             Block(String(localized: .settingsTemplate(Self.name(kind))), note: kind == .review ? String(localized: .settingsTemplateNote) : nil) {
                 // The raw list, blanks included, so a row just added stays until it's typed into.
                 HeadingList(lines: Binding(
@@ -306,7 +306,7 @@ private struct NoteSettingsForm: View {
         switch kind {
         case .review: String(localized: .settingsTemplateReview)
         case .examSummary: String(localized: .settingsTemplateExamSummary)
-        case .topic: String(localized: .settingsTemplateTopic)
+        case .unit: String(localized: .settingsTemplateUnit)
         default: ""
         }
     }

@@ -76,11 +76,11 @@ struct MaterialNoteStudyTests {
     }
 
     @Test func sessionWrapUp() throws {
-        try h.expectSame(["session", "wrap-up", "EC4207/10-28", "05_Matchings.pdf:3-12", "--unit", "매칭", "--topic", "홀의 정리", "--attendance", "late"],
+        try h.expectSame(["session", "wrap-up", "EC4207/10-28", "05_Matchings.pdf:3-12", "--unit", "매칭", "--attendance", "late"],
                          setup: [Self.track, SessionCommandTests.add, Self.addUnit]) { gist in
             SessionWrapUp(course: course, session: SessionCommandTests.id,
                           ranges: [SessionMaterial(materialId: try material(gist, "05_Matchings.pdf"), firstPage: 3, lastPage: 12)],
-                          units: [Self.unit], topic: "홀의 정리", attendance: .late)
+                          units: [Self.unit], attendance: .late)
         }
         // Given nothing, what the class has stays and it is only marked wrapped up.
         let gist = try Harness.fixtureCopy()
@@ -290,7 +290,7 @@ struct MaterialNoteStudyTests {
     @Test func noteAdd() throws {
         let id = UUID(uuidString: "A0000000-0000-4000-8000-0000000000E1")!
         try h.expectSame(["note", "add", "EC4207", "매칭 정리", "--kind", "topic", "--id", id.uuidString]) { _ in
-            NoteAdd(id: id, course: course, title: "매칭 정리", kind: .topic)
+            NoteAdd(id: id, course: course, title: "매칭 정리", kind: .unit)
         }
     }
 

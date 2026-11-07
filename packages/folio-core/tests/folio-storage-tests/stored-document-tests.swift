@@ -59,6 +59,26 @@ struct StoredDocumentTests {
         #expect(materials.first?["futureMaterialField"] == .array([.number(1), .number(2)]))
     }
 
+    /// Sessions lost their topic (#336); a file that has one keeps it through a save, as any unknown field.
+    @Test func aSessionKeepsTheTopicItNoLongerHas() throws {
+        let session = """
+          "sessions": [{
+            "id": "5E000000-0000-4000-8000-000000000001",
+            "createdAt": "2026-09-01T00:00:00.000Z", "updatedAt": "2026-09-01T00:00:00.000Z",
+            "updatedBy": "D0000000-0000-4000-8000-000000000001",
+            "week": 1, "date": "2026-09-01T01:00:00.000Z", "topic": "매칭 보강",
+            "unitIds": [], "inkIds": [], "materials": []
+          }],
+        """
+        try writeRaw(courseJSON.replacingOccurrences(of: "  \"materials\": [", with: session + "\n  \"materials\": ["))
+        var doc = try StoredDocument<CourseFile>.read(from: url)
+        doc.model.sessions[0].isCancelled = true
+        try doc.write(to: url)
+
+        guard case .array(let sessions)? = try readRaw()["sessions"] else { Issue.record("no sessions"); return }
+        #expect(sessions.first?["topic"] == .string("매칭 보강") && sessions.first?["cancelled"] == .bool(true))
+    }
+
     @Test func removedArrayElementsStayRemoved() throws {
         try writeRaw(courseJSON)
         var doc = try StoredDocument<CourseFile>.read(from: url)
