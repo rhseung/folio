@@ -175,10 +175,10 @@ struct MaterialNoteStudyTests {
     }
 
     @Test func importCopiesAndLinks() throws {
-        let file = try scratch("06_Coloring.pdf", "pdf")
-        try h.expectSame(["material", "import", "EC4207", file, "--folder", "Lectures", "--week", "6", "--session", "9주차-1"],
+        let file = try scratch("Coloring.pdf", "pdf")
+        try h.expectSame(["material", "import", "EC4207", file, "--folder", "Lectures", "--session", "9주차-1"],
                          setup: [Self.track, SessionCommandTests.add]) { _ in
-            MaterialImport(course: course, files: [file], folder: "Lectures", week: 6, session: SessionCommandTests.id)
+            MaterialImport(course: course, items: [ImportItem(file: file, folder: "Lectures", session: SessionCommandTests.id)])
         }
     }
 
