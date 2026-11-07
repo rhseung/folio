@@ -38,10 +38,10 @@ struct WindowTabsTests {
         tabs.open(Navigator(Navigator.Entry(link: .place(.grades))))
         tabs.current.go(Navigator.Entry(link: .place(.people)))
         let moved = tabs.take(tabs.selected)
-        #expect(moved?.backList.map(\.link) == [.place(.grades)])
+        #expect(moved?.focused.backList.map(\.link) == [.place(.grades)])
         #expect(tabs.ids == [first])
         // A window made for it goes on from there, back included.
-        let window = Navigator(history: moved?.history ?? LinkHistory(Navigator.Entry(link: .place(.today))))
+        let window = Navigator(history: moved?.focused.history ?? LinkHistory(Navigator.Entry(link: .place(.today))))
         #expect(window.screen == .people && window.history.canGoBack)
     }
 
@@ -116,7 +116,8 @@ struct ToolbarRowTests {
         row.leadingX = 84
         row.trailingWidth = 328
         row.placeTrailing(width - 360, in: width)
-        row.measures = ToolbarRow.Measures(front: 300, others: [120, 120, 32], more: 60, chrome: 44)
+        row.measures = ToolbarRow.Measures(front: TabFit.Front(trail: 256, chrome: 44), others: [120, 120, 32].map { TabFit.Other(single: $0, icon: 32) },
+                                           more: 60)
         row.windowWidth = width
         return row
     }
@@ -143,7 +144,7 @@ struct ToolbarRowTests {
         #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, shown: 3, hidden: 0))
         // 276 for the tabs: the menu alone beside the tab in front, whose trail is held to 276 - 68 - 44 = 164.
         row.windowWidth = 900
-        #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, shown: 0, hidden: 3))
+        #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, stacked: true, compactFront: true, shown: 0, hidden: 3))
         #expect(row.placement.trail == 164)
         #expect(row.placement.lead == CGFloat(TabFit.lead(panelEdge: Theme.Size.sidebar, after: row.historyEnd, gap: Theme.Space.s)))
     }

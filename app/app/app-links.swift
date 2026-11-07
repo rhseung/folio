@@ -9,7 +9,7 @@ import UniformTypeIdentifiers
 /// Where a link opens. Taken apart from the link, so any link opens in any of them.
 enum LinkPlacement: CaseIterable {
     case here
-    /// The pane beside this one. Until panes (#62) it is a new tab.
+    /// The pane beside this one (`TabPanes.openBeside`).
     case beside
     case tab
     case window
@@ -316,9 +316,9 @@ struct LinkMenu: View {
         }
     }
 
-    /// Without more windows (an iPad set to one), only here is left.
+    /// Without more windows (an iPad set to one), here and the pane beside are left.
     static func placements(multipleWindows: Bool) -> [LinkPlacement] {
-        multipleWindows ? LinkPlacement.allCases : [.here]
+        multipleWindows ? LinkPlacement.allCases : [.here, .beside]
     }
 }
 

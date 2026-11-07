@@ -162,6 +162,14 @@ enum Theme {
         static let fab: CGFloat = 44
         /// How far the content panel sits in from the window's right and bottom edges (and its left, sidebar folded).
         static let panelInset: CGFloat = 4
+        /// A pane of a tab of several (#62) never narrower: below it, the pane pressed longest ago folds into a strip.
+        static let paneMin: CGFloat = 360
+        /// A folded pane's strip, a finger's width on the iPad.
+        #if os(iOS)
+        static let paneStrip: CGFloat = 44
+        #else
+        static let paneStrip: CGFloat = 40
+        #endif
         static let dot: CGFloat = 8
         static let rowHeight: CGFloat = 44
         static let tile: CGFloat = 22
