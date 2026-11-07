@@ -4,9 +4,13 @@ import SwiftUI
 /// A lecture file's pages by the classes that went through them, with the part no class has reached yet.
 struct LectureProgressBlock: View {
     @State private var model: LectureProgressModel
+    @Environment(\.openLink) private var openLink
+    /// Closes the popover this sits in, so the class opened isn't left under it.
+    let close: () -> Void
 
-    init(workspace: Workspace, course: UUID, material: UUID) {
+    init(workspace: Workspace, course: UUID, material: UUID, close: @escaping () -> Void = {}) {
         _model = State(initialValue: LectureProgressModel(workspace: workspace, course: course, material: material))
+        self.close = close
     }
 
     var body: some View {
@@ -18,8 +22,22 @@ struct LectureProgressBlock: View {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
                     CardRow(last: i == rows.count - 1 && unranged == nil) {
                         Text(row.pages).monospacedDigit().frame(width: 72, alignment: .leading)
-                        Text(row.classes ?? String(localized: .materialsProgressNotYet)).lineLimit(1)
-                            .foregroundStyle(row.classes == nil ? Theme.Palette.textTertiary : Theme.Palette.text)
+                        if row.classes.isEmpty {
+                            Text(.materialsProgressNotYet).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                        } else {
+                            HStack(spacing: Theme.Space.xs) {
+                                ForEach(Array(row.classes.enumerated()), id: \.element.id) { i, c in
+                                    if i > 0 { Text("·").foregroundStyle(Theme.Palette.textTertiary) }
+                                    Button(c.day) {
+                                        openLink(c.link, course: model.courseId)
+                                        close()
+                                    }
+                                    .buttonStyle(.pointing(.plain))
+                                    .help(Text(.materialsProgressOpenClass(c.day)))
+                                }
+                            }
+                            .lineLimit(1)
+                        }
                         Spacer(minLength: Theme.Space.s)
                     }
                 }

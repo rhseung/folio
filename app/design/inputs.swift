@@ -633,18 +633,6 @@ extension View {
     }
 }
 
-/// A page number on the gray capsule. Zero and below read as no page, so clearing the field clears the bound.
-struct PageField: View {
-    let prompt: String
-    let value: Int?
-    let set: (Int?) -> Void
-
-    var body: some View {
-        TextField(prompt, value: Binding(get: { value }, set: { set($0.flatMap { $0 > 0 ? $0 : nil }) }), format: .number)
-            .pill(width: 64)
-    }
-}
-
 /// A filter field on the gray capsule.
 struct SearchField: View {
     let prompt: String

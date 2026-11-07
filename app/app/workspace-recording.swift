@@ -120,10 +120,8 @@ extension Workspace {
             }
             local.remove(id)
             await retellFinished(recording, in: course)
-            // The pages the class went through become the session's range, for files it has none for yet.
-            if !recording.pages.isEmpty, let session = recording.sessionId, course.file.sessions.contains(where: { $0.id == session }) {
-                _ = run(SessionLinkViewed(course: course.id, session: session))
-            }
+            // The pages seen aren't linked to the session here: the progress prompt is the one writer of its range,
+            // and a prompt dismissed unsaved must leave it empty so opening it again starts after the last class.
             // Captions missing (the language model was still downloading, or a crash) are made from the audio now;
             // Whisper redoes them all, since it hears Korean and English together where the captions take one language.
             let heard = course.store.transcript(of: recording)?.reaches(recording.duration) == true

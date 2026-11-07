@@ -10,8 +10,14 @@ final class LectureProgressModel {
         let firstPage: Int
         let lastPage: Int
         let pages: String
-        /// The classes' days, or nil for pages no class has reached.
-        let classes: String?
+        /// Empty for pages no class has reached.
+        let classes: [Class]
+    }
+
+    struct Class: Identifiable, Equatable {
+        let id: UUID
+        let day: String
+        var link: AppLink { AppLink(.session, id) }
     }
 
     let workspace: Workspace
@@ -37,16 +43,16 @@ final class LectureProgressModel {
         guard let file else { return [] }
         return file.lectureProgress(of: materialId, pageCount: pageCount).map { span in
             let classes = span.sessions.compactMap { id in file.sessions.first { $0.id == id } }
-                .map { file.day(of: $0, calendar: workspace.calendar) }
+                .map { Class(id: $0.id, day: file.day(of: $0, calendar: workspace.calendar)) }
             return Row(firstPage: span.firstPage, lastPage: span.lastPage,
                        pages: span.firstPage == span.lastPage ? "p.\(span.firstPage)" : "p.\(span.firstPage)–\(span.lastPage)",
-                       classes: classes.isEmpty ? nil : classes.joined(separator: " · "))
+                       classes: classes)
         }
     }
 
     /// `40쪽 중 28쪽 나감`, or without a count only how many pages classes went through.
     var summary: String? {
-        let covered = rows.filter { $0.classes != nil }.reduce(0) { $0 + $1.lastPage - $1.firstPage + 1 }
+        let covered = rows.filter { !$0.classes.isEmpty }.reduce(0) { $0 + $1.lastPage - $1.firstPage + 1 }
         guard covered > 0 || pageCount != nil else { return nil }
         if let pageCount { return String(localized: .materialsProgressSummary(pageCount, covered)) }
         return String(localized: .materialsProgressCovered(covered))

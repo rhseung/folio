@@ -12,7 +12,7 @@ struct SessionProgressSheet: View {
 
     var body: some View {
         let rows = model.rows
-        SheetForm(title: model.title, confirm: String(localized: .commonSave), disabled: model.refusal != nil, note: model.note, width: 520) {
+        SheetForm(title: model.title, confirm: String(localized: .commonSave), disabled: model.refusal != nil, note: model.note, width: 640) {
             if rows.isEmpty {
                 CardRow(last: model.addable.isEmpty) { EmptyLine(String(localized: .sessionsProgressEmpty)) }
             }
@@ -23,14 +23,15 @@ struct SessionProgressSheet: View {
                         Text(model.name(row.id)).lineLimit(1).truncationMode(.middle)
                         let detail = model.detail(row.id)
                         if !detail.isEmpty {
-                            Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                            Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(2).fixedSize(horizontal: false, vertical: true)
                         }
                     }
+                    .frame(width: 176, alignment: .leading)
                     .opacity(row.included ? 1 : Theme.Opacity.ended)
                     Spacer(minLength: Theme.Space.s)
-                    PageField(prompt: String(localized: .materialsLinksFirstPage), value: row.first) { model.setFirst(row.id, $0) }
-                    Text("–").foregroundStyle(Theme.Palette.textTertiary)
-                    PageField(prompt: String(localized: .materialsLinksLastPage), value: row.last) { model.setLast(row.id, $0) }
+                    PageRangeField(range: row.range, pages: model.pageCounts[row.id], taught: model.taught(row.id),
+                                   seen: model.seen(row.id), resume: model.resume(row.id)) { model.setRange(row.id, $0) }
+                        .opacity(row.included ? 1 : Theme.Opacity.ended)
                 }
             }
             if !model.addable.isEmpty {
@@ -51,6 +52,7 @@ struct SessionProgressSheet: View {
             dismiss()
         }
         .task { await model.load() }
+        .environment(\.accent, model.accent)
     }
 }
 

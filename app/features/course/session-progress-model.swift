@@ -12,6 +12,14 @@ final class SessionProgressModel {
         var included = true
         var first: Int?
         var last: Int?
+
+        var range: PageRange {
+            get { PageRange(first: first, last: last) }
+            set {
+                first = newValue.first
+                last = newValue.last
+            }
+        }
     }
 
     let workspace: Workspace
@@ -27,7 +35,10 @@ final class SessionProgressModel {
         self.workspace = workspace
         courseId = course
         sessionId = session
-        self.viewed = viewed
+        // A recording just stopped isn't in course.json yet, so the ask passes its pages; opened later, the session's
+        // recordings have them.
+        let file = workspace.course(course)?.file
+        self.viewed = viewed.isEmpty ? file.flatMap { f in f.sessions.first { $0.id == session }.map(f.viewedPages(of:)) } ?? [] : viewed
         suggest()
     }
 
@@ -74,6 +85,20 @@ final class SessionProgressModel {
         return parts.joined(separator: " · ")
     }
 
+    var accent: CourseAccent { workspace.accent(courseId) }
+
+    func taught(_ id: UUID) -> [PageRangeField.Taught] {
+        guard let file else { return [] }
+        return PageRangeField.Taught.list(file, material: id, besides: sessionId, calendar: workspace.calendar)
+    }
+
+    func seen(_ id: UUID) -> ClosedRange<Int>? { viewed.first { $0.materialId == id }?.pages }
+
+    func resume(_ id: UUID) -> Int? {
+        guard let file, let session else { return nil }
+        return file.resumePage(of: id, for: session)
+    }
+
     /// Lecture files not in the list yet.
     var addable: [FolioDomain.Material] {
         (file?.lectureFiles ?? []).filter { m in !rows.contains { $0.id == m.id } }
@@ -81,16 +106,21 @@ final class SessionProgressModel {
 
     func add(_ id: UUID) {
         edited = true
-        rows.append(Row(id: id, first: session.flatMap { file?.resumePage(of: id, for: $0) } ?? 1))
-        guard let m = file?.materials.first(where: { $0.id == id }) else { return }
+        guard let file, let session else { return }
+        let range = file.suggestedRange(of: id, for: session, seen: viewed.first { $0.materialId == id }, pageCount: nil)
+        rows.append(Row(id: id, first: range.firstPage, last: range.lastPage))
+        guard let m = file.materials.first(where: { $0.id == id }) else { return }
         Task {
-            if let n = await workspace.pageCount(of: m, course: courseId) { pageCounts[id] = n }
+            if let n = await workspace.pageCount(of: m, course: courseId) {
+                pageCounts[id] = n
+                // The suggestion was made without the count; it stays within the file now that it's known.
+                change(id) { row in row.range = row.range.moving(.first, to: row.first, pages: n) }
+            }
         }
     }
 
     func toggle(_ id: UUID) { change(id) { $0.included.toggle() } }
-    func setFirst(_ id: UUID, _ page: Int?) { change(id) { $0.first = page } }
-    func setLast(_ id: UUID, _ page: Int?) { change(id) { $0.last = page } }
+    func setRange(_ id: UUID, _ range: PageRange) { change(id) { $0.range = range } }
 
     private func change(_ id: UUID, _ edit: (inout Row) -> Void) {
         guard let i = rows.firstIndex(where: { $0.id == id }) else { return }
