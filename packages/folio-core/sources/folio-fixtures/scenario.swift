@@ -164,6 +164,7 @@ private struct Builder {
         let matching = try unit(graph, "매칭", [s(graph, 10, 19), s(graph, 10, 21)], at: at(10, 21, 11))
         try recording(graph, session: s(graph, 11, 2), start: at(11, 2, 9))
         let coloring = try unit(graph, "그래프 채색", [s(graph, 10, 26), s(graph, 10, 28)], at: at(10, 28, 11))
+        try lectureSections(graph, matching: matching, classes: [s(graph, 10, 19), s(graph, 10, 21), s(graph, 11, 2)])
         let scheduling = try unit(os, "프로세스 스케줄링", [s(os, 10, 19), s(os, 10, 21)], at: at(10, 21, 15))
         _ = try unit(os, "교착 상태", [s(os, 10, 26)], at: at(10, 26, 15))
         let conditional = try unit(prob, "조건부 확률", [s(prob, 10, 26), s(prob, 10, 28)], at: at(10, 28, 16))
@@ -232,6 +233,25 @@ private struct Builder {
         try FileManager.default.createDirectory(at: store.recordingsURL, withIntermediateDirectories: true)
         try store.saveTranscript(transcript, of: recording)
         try ctx.edit(course) { $0.recordings.append(recording) }
+    }
+
+    /// The matching slides split into the chapter's units (#321), two of them new under it, and the classes' pages
+    /// through the file, so the section bars and strips have something to draw.
+    func lectureSections(_ course: UUID, matching: UUID, classes: [UUID]) throws {
+        let ctx = ActionContext(gist: gist, device: device, now: at(10, 21, 12), calendar: Scenario.calendar)
+        guard let slides = try ctx.file(course).materials.first(where: { $0.path == "Lectures/05_Matchings.pdf" })?.id else { return }
+        try run(MaterialSplit(course: course, material: slides, sections: [
+            LectureCut(unit: matching, firstPage: 1, lastPage: 8),
+            LectureCut(unit: UUID(uuidString: "B0000000-0000-4000-8000-000000000002")!, title: "Hall의 정리", parent: matching, firstPage: 9, lastPage: 16),
+            LectureCut(unit: UUID(uuidString: "B0000000-0000-4000-8000-000000000003")!, title: "증가 경로", parent: matching, firstPage: 17, lastPage: 24),
+        ]), at: at(10, 21, 12))
+        for (session, pages) in zip(classes, [1...7, 8...13, 14...20]) {
+            try run(MaterialLinkSession(course: course, material: slides, session: session, linked: true, firstPage: pages.lowerBound, lastPage: pages.upperBound), at: at(11, 2, 11))
+        }
+        // The last class reached both new units; its row has no title naming them, so it draws the strip.
+        for unit in ["B0000000-0000-4000-8000-000000000002", "B0000000-0000-4000-8000-000000000003"] {
+            try run(UnitLink(course: course, unit: UUID(uuidString: unit)!, sessions: [classes[2]]), at: at(11, 2, 11))
+        }
     }
 
     /// A syllabus with scores in so far, so the course's grade page has a curve and a projection to draw.

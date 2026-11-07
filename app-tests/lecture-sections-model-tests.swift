@@ -98,6 +98,23 @@ struct LectureSectionsModelTests {
         #expect(model.cuts(model.rows[0]) == nil)
     }
 
+    /// A deck without an outline splits at its divider slides; titles that name no unit are proposed as new ones.
+    @Test func theReaderSplitsADeckAtItsDividers() async throws {
+        let url = FileManager.default.temporaryDirectory.appending(path: "folio-deck-\(UUID().uuidString).pdf")
+        try SampleLecture.write(to: url)
+        let units = file.units
+        let found = await LectureReader.find(url, units: units, claude: nil)
+        guard case .found(let split, .titles) = found else {
+            Issue.record("\(found)")
+            return
+        }
+        #expect(split.sections.map(\.pages) == [1...8, 9...16, 17...24])
+        #expect(split.sections.map(\.title) == ["Matchings", "Hall's theorem", "Augmenting paths"])
+        #expect(split.sections.allSatisfy { $0.isNew })
+        let missing = await LectureReader.find(URL(filePath: "/nonexistent.pdf"), units: units, claude: nil)
+        #expect(missing == .unreadable)
+    }
+
     // MARK: The split screen and the bars
 
     @Test func theSplitScreenSavesTheWholeSplit() async throws {

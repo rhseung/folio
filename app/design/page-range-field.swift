@@ -219,6 +219,12 @@ struct PageRangeField: View {
                 .foregroundStyle(reached ? accent.ink : Theme.Palette.textSecondary))
             context.draw(text, in: rect.insetBy(dx: Theme.Space.s, dy: Theme.Space.xxs))
         }
+        // Until the count is read the bar runs past the last zone, so an end can still be dragged on: those pages are
+        // a zone no unit takes.
+        if let last = sections.last?.pages.upperBound, last < n {
+            let rect = CGRect(x: x(last, w) + 2, y: top, width: max(x(n, w) - x(last, w) - 2, 1), height: Self.zone)
+            context.fill(Path(roundedRect: rect, cornerRadius: Theme.Radius.tile), with: .color(Theme.Palette.fill))
+        }
         for t in taught where t.pages.lowerBound <= n {
             let upper = min(t.pages.upperBound, n)
             let rect = CGRect(x: x(t.pages.lowerBound - 1, w) + 1, y: top + Self.zone + Theme.Space.xxs, width: max(x(upper, w) - x(t.pages.lowerBound - 1, w) - 2, 1), height: 2)

@@ -311,6 +311,15 @@ final class ImportPlaceModel {
     }
 
     /// What approving writes for a row: nothing for a row put off, still being read, or no longer a lecture.
+    #if DEBUG
+    /// Sets a row's sections at once, as the form renders need: they draw before a read would finish.
+    func show(_ state: Sections, for id: Int) {
+        reads[id]?.cancel()
+        reads[id] = nil
+        sections[id] = state
+    }
+    #endif
+
     func cuts(_ row: Row) -> [LectureCut]? {
         guard case .proposed(let split, _)? = sections(of: row) else { return nil }
         let cuts = split.cuts

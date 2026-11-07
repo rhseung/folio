@@ -12,6 +12,13 @@ struct ImportPlaceSheet: View {
         _model = State(initialValue: ImportPlaceModel(workspace: workspace, course: course, files: files, places: places))
     }
 
+    #if DEBUG
+    /// A model set up beforehand: the form renders show a proposal without reading a file.
+    init(model: ImportPlaceModel) {
+        _model = State(initialValue: model)
+    }
+    #endif
+
     var body: some View {
         let placements = model.placements
         let kinds = model.kinds

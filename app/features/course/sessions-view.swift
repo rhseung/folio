@@ -480,6 +480,9 @@ struct SessionUnitsPicker: View {
             if !shown.isEmpty {
                 if compact {
                     Image(systemName: "link")
+                    if let progress = course.file.splitProgress(of: session) {
+                        SectionProgress(file: course.file, material: progress.material, range: progress.pages, labeled: false)
+                    }
                 } else if let progress = course.file.splitProgress(of: session) {
                     SectionProgress(file: course.file, material: progress.material, range: progress.pages)
                 } else {

@@ -53,12 +53,14 @@ struct SectionProgress: View {
     let file: CourseFile
     let material: UUID
     let range: ClosedRange<Int>
+    /// Off where the line already names the units (a class row titled by them).
+    var labeled = true
 
     var body: some View {
         let sections = PageRangeField.Section.list(file, material: material, pageCount: nil)
         HStack(spacing: Theme.Space.tight) {
             SectionStrip(sections: sections, pages: max(sections.last?.pages.upperBound ?? 0, range.upperBound), range: range)
-            if let label = file.sectionLabel(of: material, pages: range) {
+            if labeled, let label = file.sectionLabel(of: material, pages: range) {
                 Text(label).lineLimit(1).truncationMode(.tail)
             }
         }
