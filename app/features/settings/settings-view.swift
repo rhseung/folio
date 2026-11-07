@@ -50,17 +50,8 @@ struct SettingsView: View {
 
     var body: some View {
         // A column of sections beside the page, like a course's column, instead of a separate window with tabs.
-        ColumnSplit {
-            column
-        } bar: {
-            Menu {
-                ForEach(SettingsTab.allCases) { t in
-                    Toggle(isOn: Binding(get: { tab == t }, set: { if $0 { pick(t) } })) { Label(t.label, systemImage: t.symbol) }
-                }
-            } label: {
-                Label(tab.label, systemImage: tab.symbol)
-            }
-            .fixedSize()
+        ColumnSplit(kind: .settingsTabs) {
+            SettingsColumn(tab: tab, pick: pick)
         } content: {
             Page(maxWidth: 640) {
                 PageHeader(title: tab.label)
@@ -75,27 +66,6 @@ struct SettingsView: View {
         .task(id: model.settings) { await model.saveAfterPause() }
         // Closing right after a change cancels the wait above; save what was left.
         .onDisappear(perform: model.saveNow)
-    }
-
-    var column: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Space.l) {
-                Text(.settingsTitle).font(Theme.Typeface.columnTitle).padding(.horizontal, Theme.Inset.listRow.leading)
-                VStack(spacing: Theme.Space.xxs) {
-                    ForEach(SettingsTab.allCases) { t in
-                        let chosen = tab == t
-                        Button { pick(t) } label: { ColumnRow(title: t.label, symbol: t.symbol, chosen: chosen) }
-                        .buttonStyle(.pointing(.plain))
-                    }
-                }
-            }
-            .padding(.horizontal, Theme.Inset.panel)
-            .padding(.vertical, Theme.Space.l)
-        }
-        .overflowFade(.vertical)
-        .font(Theme.Typeface.body)
-        .foregroundStyle(Theme.Palette.text)
-        .background(Theme.Palette.window)
     }
 
     @ViewBuilder func content(_ tab: SettingsTab) -> some View {
@@ -114,6 +84,37 @@ struct SettingsView: View {
         case .recording: RecordingSettings()
         case .claude: ClaudeSettings(model: model)
         }
+    }
+}
+
+/// Its own view, so the column open over the page reads the `closeColumn` given there.
+private struct SettingsColumn: View {
+    let tab: SettingsTab
+    let pick: (SettingsTab) -> Void
+    @Environment(\.closeColumn) private var closeColumn
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Theme.Space.l) {
+                Text(.settingsTitle).font(Theme.Typeface.columnTitle).padding(.horizontal, Theme.Inset.listRow.leading)
+                VStack(spacing: Theme.Space.xxs) {
+                    ForEach(SettingsTab.allCases) { t in
+                        Button {
+                            pick(t)
+                            closeColumn()
+                        } label: { ColumnRow(title: t.label, symbol: t.symbol, chosen: tab == t) }
+                        .buttonStyle(.pointing(.plain))
+                    }
+                }
+            }
+            .padding(.horizontal, Theme.Inset.panel)
+            .padding(.vertical, Theme.Space.l)
+            .clearOfColumnButtons(inset: Theme.Space.l)
+        }
+        .overflowFade(.vertical)
+        .font(Theme.Typeface.body)
+        .foregroundStyle(Theme.Palette.text)
+        .columnBackground()
     }
 }
 

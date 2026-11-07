@@ -99,6 +99,7 @@ struct RecordingPage: View {
         .frame(maxWidth: Theme.Size.pageMaxWidth, alignment: .leading)
         .padding(.horizontal, Theme.Space.xxl)
         .padding(.top, Theme.Space.xl)
+        .clearOfColumnButtons(inset: Theme.Space.xl)
         // As `Page` leaves it, so the Claude button over the corner doesn't sit on the delete button.
         .padding(.bottom, Theme.Space.xxl * 2)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

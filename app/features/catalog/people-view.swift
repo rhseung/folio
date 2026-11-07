@@ -12,20 +12,11 @@ struct PeopleView: View {
 
     func openCourse(_ id: UUID) { openLink(.course(id)) }
 
-    /// Cleared here too: a person just added isn't saved yet, so the window is still on the list and the link alone
-    /// wouldn't move.
-    func backToList() {
-        model.selection = nil
-        openLink.up(to: .place(.people))
-    }
-
     var body: some View {
         CatalogEditing { $catalog in
             let shown = model.shown(in: catalog)
-            ColumnSplit(fold: .stack(showingPage: model.selection != nil)) {
+            ColumnSplit(kind: .people, fold: .list(showingPage: model.selection != nil)) {
                 list($catalog, shown: shown)
-            } bar: {
-                Button(.peopleTitle, systemImage: "chevron.left", action: backToList)
             } content: {
                 if let i = catalog.people.firstIndex(where: { $0.id == shown }) {
                     detail(catalog.people[i], person: $catalog.people.element(id: catalog.people[i].id, fallback: catalog.people[i]))
@@ -44,8 +35,8 @@ struct PeopleView: View {
             }
         }
         .navigationTitle(.peopleTitle)
-        // The window's link is the selection, so picking a person, and going back to the list where the list and a
-        // person don't fit side by side, are steps in the window's history.
+        // The window's link is the selection, so picking a person, from the column beside the page or open over it, is
+        // a step in the window's history, and stepping back to the list clears it.
         .onChange(of: place, initial: true) { _, entry in
             guard let entry else { return }
             if entry.link.kind == .person, let id = entry.link.id { model.selection = id }
@@ -59,7 +50,8 @@ struct PeopleView: View {
         return VStack(alignment: .leading, spacing: Theme.Space.m) {
             HStack {
                 SearchField(prompt: String(localized: .peopleSearch), text: $model.query)
-                Button(.commonAdd, systemImage: "plus") { model.add(to: &catalog.wrappedValue) }
+                // Shows the new person's page, which the window's link doesn't name until it is saved.
+                ColumnPick { model.add(to: &catalog.wrappedValue) } label: { Label(.commonAdd, systemImage: "plus") }
                     .buttonStyle(.ghostIcon)
                     .help(Text(.peopleAdd))
             }
@@ -70,7 +62,7 @@ struct PeopleView: View {
                             .padding(.horizontal, Theme.Space.s).padding(.top, role == groups.first?.role ? 0 : Theme.Space.m).padding(.bottom, Theme.Space.xs)
                         ForEach(people) { p in
                             let chosen = shown == p.id
-                            Button { openLink(AppLink(.person, p.id)) } label: {
+                            ColumnPick { openLink(AppLink(.person, p.id)) } label: {
                                 HStack(spacing: Theme.Space.s + 2) {
                                     Avatar(name: p.name, id: p.id)
                                     Text(model.name(p)).fontWeight(chosen ? .semibold : .regular).lineLimit(1)
@@ -96,9 +88,10 @@ struct PeopleView: View {
         }
         .padding(.horizontal, Theme.Inset.panel)
         .padding(.vertical, Theme.Space.l)
+        .clearOfColumnButtons(inset: Theme.Space.l)
         .font(Theme.Typeface.body)
         .foregroundStyle(Theme.Palette.text)
-        .background(Theme.Palette.window)
+        .columnBackground()
     }
 
     func detail(_ p: Person, person: Binding<Person>) -> some View {

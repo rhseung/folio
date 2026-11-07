@@ -80,3 +80,58 @@ struct ScreenFitTests {
         return zip(jobs, drawn).map { job, drawn in (job.name, job.width ?? 0, drawn) }
     }
 }
+
+/// The folded column's button and the column open over the page, drawn at the screen contract's widths (#43, #62).
+extension ScreenFitTests {
+    func draw(_ entry: Navigator.Entry, _ workspace: Workspace, width: CGFloat, collapsed: Set<ColumnKind> = []) async throws -> (width: CGFloat, labels: [String]) {
+        let seen = LabelBox()
+        let screen = ScreenView(workspace: workspace, entry: entry)
+            .environment(workspace)
+            .environment(\.revealsOverflow, true)
+            .environment(\.columnPrefs, ColumnPrefs(defaults: nil, collapsed: collapsed))
+            .onPreferenceChange(ColumnButtonLabels.self) { labels in MainActor.assumeIsolated { seen.labels = labels } }
+        let drawn = try #require(try await measureOffscreen([RenderJob(name: "column", view: AnyView(screen), width: width, height: nil, scheme: .light)]).first)
+        return (drawn, seen.labels)
+    }
+
+    @Test func aFoldedColumnLeavesItsButtonAndTheOverlayFits() async throws {
+        let workspace = try Workspace.scenario(.busyDay)
+        let course = try #require(workspace.currentCourses.first)
+        let person = try #require(workspace.catalog.people.first)
+        let sections = (show: String(localized: .designColumnShowSections), hide: String(localized: .designColumnHideSections))
+        let list = (show: String(localized: .designColumnShowList), hide: String(localized: .designColumnHideList))
+        let screens: [(Navigator.Entry, (show: String, hide: String))] = [
+            (Navigator.Entry(link: .course(course.id), course: course.id), sections),
+            (Navigator.Entry(link: .settings(SettingsTab.general.page)), sections),
+            (Navigator.Entry(link: AppLink(.person, person.id)), list),
+        ]
+        defer { SnapshotDriver.shared.columnOpen = false }
+        for (entry, label) in screens {
+            for open in [false, true] {
+                SnapshotDriver.shared.columnOpen = open
+                let drawn = try await draw(entry, workspace, width: 390)
+                #expect(drawn.width <= 390.5, "\(entry.link) at 390, open \(open), is \(drawn.width) wide")
+                #expect(drawn.labels.contains(open ? label.hide : label.show), "\(entry.link) at 390, open \(open): \(drawn.labels)")
+            }
+        }
+        SnapshotDriver.shared.columnOpen = false
+        for (entry, label) in screens {
+            let docked = try await draw(entry, workspace, width: 1440)
+            #expect(docked.labels.contains(label.hide), "\(entry.link) docked: \(docked.labels)")
+            let hidden = try await draw(entry, workspace, width: 1440, collapsed: Set(ColumnKind.allCases))
+            #expect(hidden.labels.contains(label.show), "\(entry.link) hidden by hand: \(hidden.labels)")
+            #expect(hidden.width <= 1440.5)
+        }
+    }
+
+    @Test func aFoldedListWithNothingBesideIsThePageWithNoButton() async throws {
+        let workspace = try Workspace.scenario(.busyDay)
+        let drawn = try await draw(Navigator.Entry(link: .place(.people)), workspace, width: 390)
+        #expect(drawn.width <= 390.5)
+        #expect(!drawn.labels.contains(String(localized: .designColumnShowList)))
+    }
+}
+
+@MainActor private final class LabelBox {
+    var labels: [String] = []
+}

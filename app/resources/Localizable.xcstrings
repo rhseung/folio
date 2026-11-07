@@ -3862,6 +3862,50 @@
         }
       }
     },
+    "design.column.hide-list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목록 열 숨기기"
+          }
+        }
+      }
+    },
+    "design.column.hide-sections": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구역 열 숨기기"
+          }
+        }
+      }
+    },
+    "design.column.show-list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목록 열 보기"
+          }
+        }
+      }
+    },
+    "design.column.show-sections": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구역 열 보기"
+          }
+        }
+      }
+    },
     "design.crumb-rename-help": {
       "extractionState": "manual",
       "localizations": {
@@ -10176,17 +10220,6 @@
         }
       }
     },
-    "quiz.solve.resume": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "풀던 카드로"
-          }
-        }
-      }
-    },
     "quiz.solve.review-detail": {
       "extractionState": "manual",
       "localizations": {
@@ -10227,17 +10260,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "채점 기준 %1$lld개 중 %2$lld개 충족"
-          }
-        }
-      }
-    },
-    "quiz.solve.scope": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "범위"
           }
         }
       }
