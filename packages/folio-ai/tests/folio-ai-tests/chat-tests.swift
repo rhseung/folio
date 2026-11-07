@@ -23,6 +23,17 @@ struct ChatTests {
         #expect(ContextBuilder.chatItems(course: file, rules: "r", openNote: nil, added: [], removed: [], now: now).count == 2)
     }
 
+    @Test func aPageAskedAboutIsInFocusWithItsPicture() {
+        let id = UUID()
+        let image = ContextItem.Image(name: "05_Matchings.pdf p3.jpg", data: Data([0xFF, 0xD8]))
+        let page = ContextBuilder.materialPage(id: id, path: "Lectures/05_Matchings.pdf", page: 3, text: "Hall's theorem", image: image)
+        #expect(page.id == "material:Lectures/05_Matchings.pdf#page=3" && page.tier == .focus)
+        #expect(page.text.contains("ID: \(id.uuidString)") && page.text.contains("쪽: 3") && page.text.hasSuffix("Hall's theorem"))
+        #expect(page.images == [image])
+        // Another page of the same file is another item, so asking about both keeps both.
+        #expect(ContextBuilder.materialPage(id: id, path: "Lectures/05_Matchings.pdf", page: 4, text: "", image: nil).id != page.id)
+    }
+
     @Test func replySendsHistoryAndPutsContextBeforeTheNewQuestion() async throws {
         let fake = FakeProvider(responses: [FakeProvider.reply("$\\lambda$ 는 고유값입니다")])
         let file = CourseFile(course: Course(device: device, at: now, title: "선형대수학"))

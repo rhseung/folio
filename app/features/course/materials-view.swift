@@ -184,6 +184,7 @@ struct MaterialsView: View {
             #else
             if !m.isFolder { Button(.materialsOpen) { open(m) } }
             #endif
+            if let pdf = model.builtPDF(of: m) { Button(.materialsOpenPdf) { model.open(pdf) } }
             Button(.materialsLinkEllipsis) { model.linking = m.id }
             if !m.isFolder { LinkMenu(link: AppLink(.material, m.id), course: model.course.id, trailing: true) }
             Divider()
@@ -196,6 +197,7 @@ struct MaterialsView: View {
         // A folder's own app is Finder, which "Finder에서 열기" already is.
         if !m.isFolder { Button(.materialsOpenWithDefault) { NSWorkspace.shared.open(model.fileURL(m.path)) } }
         Button(.materialsShowInFinder) { NSWorkspace.shared.activateFileViewerSelecting([model.fileURL(m.path)]) }
+        if m.isFolder { EditorMenu(url: model.fileURL(m.path)) }
         Divider()
         #endif
         Button(.materialsRenameEllipsis) { model.startRenaming(m) }
@@ -229,6 +231,10 @@ struct MaterialsView: View {
                 .popover(isPresented: Binding(get: { model.linking == m.id }, set: { if !$0 { model.linking = nil } })) {
                     MaterialLinksEditor(model: model, materialId: m.id)
                 }
+            // The list shows a `.tex` and its PDF as one row (#109); the PDF opens from here.
+            if let pdf = model.builtPDF(of: m) {
+                Button(.materialsPairedPdf) { model.open(pdf) }.buttonStyle(.ghost).help(Text(.materialsOpenPdf))
+            }
             #if os(macOS)
             Button(m.isFolder ? "Finder" : String(localized: .materialsOpen)) { open(m) }.buttonStyle(.ghost)
             #else

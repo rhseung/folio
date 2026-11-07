@@ -69,6 +69,7 @@ final class MaterialsModel {
         MaterialRole.allCases.compactMap { role in
             // A missing file that was never classified still needs a row to be re-pointed or dropped.
             let items = materials.filter { $0.role == role && $0.status == .classified || ($0.role ?? .other) == role && $0.status == .missing }
+                .withoutBuiltPDFs()
             guard !items.isEmpty else { return nil }
             let tree = PathTree(items) { $0.path }
             return Section(role: role, count: items.count, note: tree.path.isEmpty ? "\(items.count)" : "\(items.count) · \(tree.path)",
@@ -91,6 +92,11 @@ final class MaterialsModel {
     func treeRows(_ tree: PathTree<FolioDomain.Material>, depth: Int) -> [TreeRow] {
         tree.folders.flatMap { f in [TreeRow.folder(f, depth: depth)] + (opened.contains(f.path) ? treeRows(f, depth: depth + 1) : []) }
             + tree.items.map { .file($0.item, name: $0.name, depth: depth) }
+    }
+
+    /// The PDF a `.tex` row stands for as well, reached from that row since the list shows the pair once.
+    func builtPDF(of m: FolioDomain.Material) -> FolioDomain.Material? {
+        materials.builtPDF(of: m).flatMap { $0.status == .missing ? nil : $0 }
     }
 
     func toggle(_ folder: PathTree<FolioDomain.Material>) {

@@ -107,4 +107,19 @@ struct MaterialTrackingTests {
         let pdf = try #require(result.first { $0.path.hasSuffix(".PDF") })
         #expect(result.first { $0.path.hasSuffix(".TEX") }?.sourceOf == pdf.id)
     }
+
+    @Test func aListShowsATexAndItsPDFAsOne() throws {
+        let scanned: [ScannedEntry] = [
+            .init(path: "Study/Summary.tex"), .init(path: "Study/Summary.pdf"), .init(path: "Study/Other.pdf"), .init(path: "HW/Summary.pdf"),
+        ]
+        let result = try MaterialTracking.reconcile([], with: scanned, io: io(), device: device, now: t1)
+        #expect(Set(result.withoutBuiltPDFs().map(\.path)) == ["Study/Summary.tex", "Study/Other.pdf", "HW/Summary.pdf"])
+        // A list without the source keeps the PDF.
+        #expect(result.filter { $0.path.hasSuffix(".pdf") }.withoutBuiltPDFs().count == 3)
+        // A missing PDF keeps its row, to be re-pointed or dropped.
+        var gone = result
+        let i = try #require(gone.firstIndex { $0.path == "Study/Summary.pdf" })
+        gone[i].status = .missing
+        #expect(gone.withoutBuiltPDFs().contains { $0.path == "Study/Summary.pdf" })
+    }
 }

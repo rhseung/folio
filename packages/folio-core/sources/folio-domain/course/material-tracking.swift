@@ -150,4 +150,12 @@ extension [Material] {
         guard let pdf = MaterialFormat.builtPDF(of: source.path)?.lowercased() else { return nil }
         return first { $0.path.lowercased() == pdf }
     }
+
+    /// A `.tex` and the PDF built from it are one item in a list (#109): the PDF goes, and its `.tex` stands for both.
+    /// Only a PDF whose `.tex` is in the same list goes, so a list split by role never loses a PDF to a source it
+    /// doesn't show. A missing PDF stays: its row is where it gets re-pointed or dropped.
+    public func withoutBuiltPDFs() -> [Material] {
+        let built = Set(compactMap { builtPDF(of: $0)?.id })
+        return filter { !built.contains($0.id) || $0.status == .missing }
+    }
 }

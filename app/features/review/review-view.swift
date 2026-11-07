@@ -217,8 +217,9 @@ private struct SourcePane: View {
                 FileView(workspace: model.workspace, course: course, material: id, requestedPage: $page, remembersPage: false)
             }
         }
-        // The window's breadcrumb behind the sheet keeps its own steps.
+        // The window's breadcrumb behind the sheet keeps its own steps, and its Claude panel would open behind it.
         .environment(nil as CrumbTrail?)
+        .environment(\.askClaude, nil)
     }
 }
 
