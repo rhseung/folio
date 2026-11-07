@@ -25,8 +25,9 @@ public struct WikiLink: Hashable, Sendable {
     public var noteID: UUID? { objectKind == "note" ? objectID : nil }
 
     /// The kinds of `folio://<kind>/<ID>` (FolioDomain's `AppLink`) that a note can link by ID. FolioMarkdown depends on no
-    /// other Folio module, so the names are repeated here; `AppLinkWikiTests` checks they still parse as links.
-    public static let objectKinds: Set<String> = ["note", "course", "session", "unit", "material", "assignment", "exam", "card", "problem-set"]
+    /// other Folio module, so the names are repeated here; `AppLinkWikiTests` checks both ways that they match the kinds
+    /// that take an ID.
+    public static let objectKinds: Set<String> = ["semester", "course", "session", "unit", "note", "material", "assignment", "exam", "card", "problem-set", "person"]
 
     public static var pattern: Regex<(Substring, Substring, Substring, Substring?, Substring?, Substring?)> {
         #/(!?)\[\[([^\]\|#]+)(?:#(\^?)([^\]\|]*))?(?:\|([^\]]*))?\]\]/#

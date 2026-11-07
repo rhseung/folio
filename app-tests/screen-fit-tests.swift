@@ -1,3 +1,4 @@
+import FolioActions
 import FolioDomain
 import FolioFixtures
 import SwiftUI
@@ -14,26 +15,34 @@ struct ScreenFitTests {
     @Test func everyKindOfLinkHasAScreen() throws {
         let workspace = try Workspace.scenario(.busyDay)
         let course = try #require(workspace.currentCourses.first)
-        let files = workspace.courses.map(\.file)
-        // What the scenario lacks is linked by a made-up ID, found in no course: the entry then names the course.
-        func first(_ kind: AppLink.Kind, _ ids: (CourseFile) -> [UUID]) -> AppLink { AppLink(kind, files.lazy.flatMap(ids).first ?? UUID()) }
+        // What the scenario lacks is made here, so every link names something real and has to be found.
+        if course.file.materials.isEmpty { workspace.run(MaterialTrack(course: course.id)) }
+        let unit = try #require(course.file.units.first?.id ?? workspace.run(UnitAdd(course: course.id, title: "매칭"))?.made)
+        let card = QuizCard(device: workspace.device, at: .now, unitId: unit, type: .free, category: .definition, prompt: "p", answer: "a")
+        workspace.run(QuizCardSave(course: course.id, cards: [card]))
+        workspace.run(ProblemSetSave(course: course.id, set: ProblemSet(device: workspace.device, at: .now, title: "Exercise 1", problems: [.init(number: "1")])))
+        let file = try #require(workspace.course(course.id)?.file)
+        func first(_ kind: AppLink.Kind, _ ids: [UUID]) throws -> AppLink { AppLink(kind, try #require(ids.first, "no \(kind) to link")) }
         for kind in AppLink.Kind.allCases {
             // No default: a new kind fails here too until the test gives it something to point at.
-            let link: AppLink = switch kind {
-            case .today, .grades, .requirements, .people, .codes, .settings: .place(kind)
-            case .semester: AppLink(.semester, try #require(workspace.currentSemester).id)
-            case .course: .course(course.id)
-            case .session: first(.session) { $0.sessions.map(\.id) }
-            case .unit: first(.unit) { $0.units.map(\.id) }
-            case .note: first(.note) { $0.notes.map(\.id) }
-            case .material: first(.material) { $0.materials.map(\.id) }
-            case .assignment: first(.assignment) { $0.assignments.map(\.id) }
-            case .exam: first(.exam) { $0.exams.map(\.id) }
-            case .problemSet: AppLink(.problemSet, UUID())
-            case .card: AppLink(.card, UUID())
-            case .person: AppLink(.person, try #require(workspace.catalog.people.first).id)
+            let link: AppLink
+            switch kind {
+            case .today, .grades, .requirements, .people, .codes, .settings: link = .place(kind)
+            case .semester: link = AppLink(.semester, try #require(workspace.currentSemester).id)
+            case .course: link = .course(course.id)
+            case .session: link = try first(.session, file.sessions.map(\.id))
+            case .unit: link = try first(.unit, file.units.map(\.id))
+            case .note: link = try first(.note, file.notes.map(\.id))
+            case .material: link = try first(.material, file.materials.map(\.id))
+            case .assignment: link = try first(.assignment, file.assignments.map(\.id))
+            case .exam: link = try first(.exam, file.exams.map(\.id))
+            case .problemSet: link = try first(.problemSet, file.problemSets.map(\.id))
+            case .card: link = AppLink(.card, card.id)
+            case .person: link = AppLink(.person, try #require(workspace.catalog.people.first).id)
             }
-            let entry = workspace.entry(for: link) ?? Navigator.Entry(link: link, course: course.id)
+            let entry = try #require(workspace.entry(for: link), "\(kind): \(link) is found nowhere")
+            let inCourse = kind.home == .course || kind.home == .quiz
+            #expect(entry.course == (inCourse ? course.id : nil), "\(kind)")
             #expect(Screen(entry) != .missing, "\(kind) has no screen")
             #expect(Screen(entry).link != nil)
         }

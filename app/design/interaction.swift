@@ -39,6 +39,43 @@ extension View {
     }
 }
 
+extension EnvironmentValues {
+    /// The item of a list page the window's link names (an exam, a session): `Page` scrolls to it and its row is marked.
+    @Entry var linkFocus: UUID?
+}
+
+extension View {
+    /// A row a link can name. While the window's link names it, it is marked as chosen, and edged in the course color
+    /// for a moment when the link arrives, so the eye finds it after the scroll.
+    func linkTarget(_ id: UUID) -> some View { modifier(LinkTarget(id: id)) }
+}
+
+private struct LinkTarget: ViewModifier {
+    let id: UUID
+    @Environment(\.linkFocus) private var focus
+    @Environment(\.accent) private var accent
+    @State private var lit = false
+
+    func body(content: Content) -> some View {
+        content
+            .overlay {
+                if focus == id {
+                    RoundedRectangle(cornerRadius: Theme.Radius.control)
+                        .fill(accent.tint)
+                        .strokeBorder(accent.color.opacity(lit ? 1 : 0), lineWidth: 2)
+                        .allowsHitTesting(false)
+                }
+            }
+            .id(id)
+            .task(id: focus) {
+                guard focus == id else { return lit = false }
+                lit = true
+                try? await Task.sleep(for: .seconds(1.2))
+                withAnimation(.easeOut(duration: 0.8)) { lit = false }
+            }
+    }
+}
+
 extension View {
     /// Takes files dropped from outside (Finder, Files, another app), outlined in the accent while they hover.
     func fileDrop(_ perform: @escaping ([URL]) -> Void) -> some View { modifier(FileDrop(perform: perform)) }

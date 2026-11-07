@@ -1,3 +1,4 @@
+import FolioDomain
 import SwiftUI
 import WebKit
 
@@ -42,9 +43,10 @@ struct HTMLView {
 
     @MainActor func makeCoordinator() -> Coordinator { Coordinator() }
 
-    @MainActor func update(_ view: WKWebView, _ coordinator: Coordinator, accent: CourseAccent) {
+    @MainActor func update(_ view: WKWebView, _ coordinator: Coordinator, accent: CourseAccent, openLink: OpenLinkAction) {
         coordinator.openNote = openNote
         coordinator.onAction = onAction
+        coordinator.openLink = openLink
         let page = page(accent: accent)
         guard coordinator.loaded != page else { return }
         // Reloading would blank the page and lose its scroll on every keystroke.
@@ -59,10 +61,11 @@ struct HTMLView {
         view.loadHTMLString(page, baseURL: LocalFileScheme.base(for: baseURL))
     }
 
-    /// Keeps clicks out of the web view: note links open in the app, web links in the browser.
+    /// Keeps clicks out of the web view: app and note links open in the app, the rest in the app they belong to.
     @MainActor final class Coordinator: NSObject, WKNavigationDelegate {
         var openNote: (String) -> Void = { _ in }
         var onAction: (URL) -> Void = { _ in }
+        var openLink = OpenLinkAction()
         var loaded: String?
         var ready = false
         let files = LocalFileScheme()
@@ -71,27 +74,19 @@ struct HTMLView {
 
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
             guard action.navigationType == .linkActivated, let url = action.request.url else { return .allow }
-            await open(url)
+            open(url)
             return .cancel
         }
 
-        func open(_ url: URL) async {
-            switch url.scheme {
-            case "folio" where url.host == "note":
-                openNote(String(url.path.dropFirst()))
-            case "folio" where url.host == "action":
-                onAction(url)
-            case LocalFileScheme.scheme where url.pathExtension == "md":
-                openNote(url.deletingPathExtension().lastPathComponent)
-            case "http", "https":
-                #if os(macOS)
-                NSWorkspace.shared.open(url)
-                #else
-                await UIApplication.shared.open(url)
-                #endif
-            default:
-                break
+        /// The panel's own buttons here; every other link as a note's link opens, so an answer's `folio://exam/…`,
+        /// `[[note:<ID>]]`, `obsidian:` and `mailto:` go where they would from the note itself.
+        func open(_ url: URL) {
+            if AppLink.isAction(url) { return onAction(url) }
+            if url.scheme == LocalFileScheme.scheme {
+                if url.pathExtension == "md" { openNote(url.deletingPathExtension().lastPathComponent) }
+                return
             }
+            NoteLinks.open(url.absoluteString, base: nil, openNote: openNote, openLink: openLink)
         }
     }
 }
@@ -99,11 +94,11 @@ struct HTMLView {
 #if os(macOS)
 extension HTMLView: NSViewRepresentable {
     func makeNSView(context: Context) -> WKWebView { makeWebView(context.coordinator) }
-    func updateNSView(_ view: WKWebView, context: Context) { update(view, context.coordinator, accent: context.environment.accent) }
+    func updateNSView(_ view: WKWebView, context: Context) { update(view, context.coordinator, accent: context.environment.accent, openLink: context.environment.openLink) }
 }
 #else
 extension HTMLView: UIViewRepresentable {
     func makeUIView(context: Context) -> WKWebView { makeWebView(context.coordinator) }
-    func updateUIView(_ view: WKWebView, context: Context) { update(view, context.coordinator, accent: context.environment.accent) }
+    func updateUIView(_ view: WKWebView, context: Context) { update(view, context.coordinator, accent: context.environment.accent, openLink: context.environment.openLink) }
 }
 #endif

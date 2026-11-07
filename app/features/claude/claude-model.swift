@@ -118,6 +118,11 @@ final class ClaudeModel {
         ((try? course.store.notes()) ?? []).filter { $0.meta.id != nil }
     }
 
+    /// The note an answer's `[[제목]]` names, found in the course as a note's own title link is.
+    func noteId(titled title: String, course: LoadedCourse) -> UUID? {
+        ((try? course.store.notes()) ?? []).linked(title)?.meta.id
+    }
+
     func noteContext(_ id: UUID, course: LoadedCourse, open: Bool) -> ContextItem? {
         guard let note = try? course.store.note(id: id), let text = try? course.store.read(note) else { return nil }
         let body = Frontmatter.split(text).body
