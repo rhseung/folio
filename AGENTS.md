@@ -86,7 +86,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
 | --- | --- | --- |
 | 액션 `@Action` | 데이터를 바꾸는 모든 동작. 앱, CLI, MCP가 같은 선언을 쓴다 | 있음 |
 | 표준 구조 `standard-layout.swift` | 폴더와 파일 이름 | 있음 |
-| 앱 링크 `AppLink` | 앱 안의 모든 대상을 가리키는 `folio://<종류>/<ID>[#page=N\|#^블록\|#제목]` 주소. 앱은 `\.openLink`(여는 위치는 여기·옆 칸·새 탭·새 창)로만 열고, 탭마다 `Navigator`가 뒤로·앞으로 기록을 둔다. 새 탭은 macOS 창 탭이 아니라 창이 툴바 줄에 직접 그리는 탭이다(`WindowTabs`, 탭 목록과 고른 탭은 값 `TabStrip`). 사이드바, 검색, 노트와 파일의 링크, 바깥에서 온 `folio://`(앞에 있는 창의 새 탭에서 열고 그 탭을 고르며 앱을 앞으로 가져온다), `folio open`이 쓴다 | 있음 |
+| 앱 링크 `AppLink` | 앱 안의 모든 대상을 가리키는 `folio://<종류>/<ID>[#page=N\|#^블록\|#제목]` 주소. 과목의 페이지는 `folio://course/<ID>/<페이지>`, 설정 탭은 `folio://settings/<탭>`이다. 종류마다 담는 곳(`home`), 받는 앵커(`anchors`), 페이지 경로(`hasPages`)는 `AppLink.Kind` 한 곳에 있고 주소 해석, CLI 검사, `Workspace.entry`가 그 값을 읽는다. 종류별 `switch`에는 `default:`를 두지 않아 새 종류는 모든 곳이 다룰 때까지 컴파일되지 않는다. 앱은 `\.openLink`(여는 위치는 여기·옆 칸·새 탭·새 창)로만 열고, 탭마다 `Navigator`가 뒤로·앞으로 기록을 둔다. 새 탭은 macOS 창 탭이 아니라 창이 툴바 줄에 직접 그리는 탭이다(`WindowTabs`, 탭 목록과 고른 탭은 값 `TabStrip`). 회차, 과제, 시험, 카드, 문제집 링크는 그 목록 페이지를 열고 그 항목으로 스크롤해 표시한다(`\.linkFocus`, `.linkTarget`). 자료의 쪽은 주소에 실려 기록의 지금 걸음을 고친다. 사이드바, 검색, 노트와 파일의 링크, Claude 패널의 답, 바깥에서 온 `folio://`(앞에 있는 창의 새 탭에서 열고 그 탭을 고르며 앱을 앞으로 가져온다), `folio open`이 쓴다. 같은 scheme의 두 주소는 `AppLink`가 아니다. 손으로 쓴 `[[제목]]`이 되는 `folio://note/<제목>`은 그 노트가 있는 과목에서 `[NoteFile].linked`로 찾고(`AppLink.noteTitle`), `folio://action/…`은 Claude 패널의 버튼이라 종류 이름으로 쓸 수 없다(`AppLink.actionHost`) | 있음 |
 | 화면 계약 `ScreenView` | 모든 화면이 주소 하나를 그리고 전체·칸·좁은 폭(1440·720·390)에서 넘치거나 잘리지 않는다. 주소에서 화면을 고르는 곳은 `Screen(entry)` 하나이고, `ScreenFitTests`가 세 폭을 검사한다 | 있음 |
 | 제안 | Claude가 내놓는 분류, 추출, 일정을 승인 화면으로 받는 공통 구조 | #90 |
 | 파일 보기 렌더러 | 형식 판단(`MaterialFormat`)과 형식별 보기(`FileView`) | #179 |
