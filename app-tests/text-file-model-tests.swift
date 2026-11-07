@@ -96,6 +96,20 @@ struct TextFileModelTests {
         #expect(model.pdfPath == "Study/증명.pdf")
     }
 
+    /// A `.tex` opens the way it was last left, as a markdown note does: a material by its own ID, a note by its note's.
+    @Test func aTexIsRememberedByItsOwnID() throws {
+        let tex = try model("Study/Problems.tex")
+        let material = try #require(course.file.materials.first { $0.path == "Study/Problems.tex" })
+        #expect(tex.paneId == material.id)
+        let id = try #require(workspace.run(NoteAdd(course: graphTheory, title: "증명", format: .tex))?.made)
+        let note = try #require(try workspace.course(graphTheory)?.store.note(id: id))
+        #expect(TextFileModel(workspace: workspace, course: course, source: .note(note)).paneId == id)
+
+        let store = PaneMemoryStore(defaults: try #require(UserDefaults(suiteName: "folio-tests-\(UUID().uuidString)")))
+        store.remember(.read, note: material.id)
+        #expect(store.memory.noteMode(note: material.id).map { NotePanes(remembered: $0).shown(wide: true) } == .read)
+    }
+
     @Test func onlyThisFilesIssuesJump() throws {
         let model = try model("Study/Problems.tex")
         let here = TexIssue(.error, file: "Problems.tex", line: 3, message: "Undefined control sequence")

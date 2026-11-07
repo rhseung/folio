@@ -3,9 +3,16 @@ import FolioStorage
 import PDFKit
 import SwiftUI
 
-/// A `.tex`, code or text file of the course, edited in place. A `.tex` shows its PDF beside it, built with ⌘B.
+/// A `.tex`, code or text file of the course, edited in place. A `.tex` is shown as a markdown note is: its source, its
+/// PDF (built with ⌘B) beside it, or the PDF alone, by the same switch.
 struct TextFileView: View {
     @State private var model: TextFileModel
+    @State private var panes = NotePanes()
+    @State private var wide = false
+    /// A page a link asked for, 0-based, in the built PDF; taken once the PDF has it.
+    @Binding private var requestedPage: Int?
+    /// The built PDF's page, for the window's link to this `.tex`, as `FileView` reports a PDF's.
+    @Binding private var shownPage: Int?
     /// A note's kind and links, for the same menu the markdown editor has.
     @State private var links: NoteEditorModel?
     @State private var controller: PDFController?
@@ -14,14 +21,19 @@ struct TextFileView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.colorScheme) private var colorScheme
 
-    init(workspace: Workspace, course: LoadedCourse, material: UUID) {
+    init(workspace: Workspace, course: LoadedCourse, material: UUID, requestedPage: Binding<Int?> = .constant(nil),
+         shownPage: Binding<Int?> = .constant(nil)) {
         _model = State(initialValue: TextFileModel(workspace: workspace, course: course, material: material))
+        _requestedPage = requestedPage
+        _shownPage = shownPage
     }
 
     init(workspace: Workspace, course: LoadedCourse, note: NoteFile, moves: MoveUndo? = nil) {
         self.moves = moves
         _model = State(initialValue: TextFileModel(workspace: workspace, course: course, source: .note(note)))
         _links = State(initialValue: NoteEditorModel(workspace: workspace, course: course, note: note))
+        _requestedPage = .constant(nil)
+        _shownPage = .constant(nil)
     }
 
     var body: some View {
@@ -31,29 +43,15 @@ struct TextFileView: View {
             #if os(macOS)
             if model.isTex, model.engineMissing { installHint }
             #endif
+            // One row whose columns come and go, so switching keeps the editor's caret and the PDF's page.
             HStack(spacing: 0) {
-                VStack(spacing: 0) {
-                    if model.unreadable {
-                        ContentUnavailableView(String(localized: .fileViewCannotRead), systemImage: "doc.questionmark",
-                                               description: Text(.textFileUnreadable))
-                            .frame(maxWidth: .infinity, maxHeight: .infinity)
-                    } else {
-                        SourceFileEditor(text: $model.text, language: model.format.highlightLanguage, reveal: $model.reveal)
-                    }
-                    if !model.issues.isEmpty { issueList }
-                }
-                .frame(maxWidth: .infinity)
-                if model.isTex, let controller {
-                    Theme.Palette.lineSoft.frame(width: 1)
-                    // `PDFKitView` keeps the view it was made with, so each build's controller needs a view of its own.
-                    PDFKitView(controller: controller).id(ObjectIdentifier(controller)).frame(maxWidth: .infinity)
-                        #if os(macOS)
-                        .help(Text(.textFilePdfHelp))
-                        #endif
-                }
+                if !model.isTex || shown != .read { source }
+                if model.isTex && shown == .split { Theme.Palette.lineSoft.frame(width: 1) }
+                if model.isTex && shown != .write { pdf }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onGeometryChange(for: Bool.self) { $0.size.width >= NotePanes.sideBySide } action: { wide = $0 }
         .background(Theme.Palette.card)
         // A `.tex` note renames from its name as a markdown note does; saved first, since the file is about to move.
         .crumb(model.name, level: 2, symbol: model.isTex ? "doc.text" : "chevron.left.forwardslash.chevron.right", rename: links.map { _ in {
@@ -64,6 +62,14 @@ struct TextFileView: View {
             if let links { NoteRenameSheet(workspace: links.workspace, course: links.course, note: links.note, moves: moves) }
         }
         .onAppear(perform: model.load)
+        .rememberingPanes($panes, id: model.isTex ? model.paneId : nil)
+        .onChange(of: controller?.page) { _, page in if let page { shownPage = page } }
+        // A link to a page of this `.tex` is a page of its PDF, so the PDF comes into view.
+        .onChange(of: requestedPage) { _, page in
+            guard page != nil, let controller, let page = takeRequestedPage() else { return }
+            if shown == .write { panes.choose(wide ? .split : .read) }
+            controller.go(to: page)
+        }
         // Saved a moment after typing stops, and whenever the file goes away, as notes are.
         .task(id: model.text) {
             guard model.dirty else { return }
@@ -100,8 +106,55 @@ struct TextFileView: View {
         }
     }
 
+    var source: some View {
+        VStack(spacing: 0) {
+            if model.unreadable {
+                ContentUnavailableView(String(localized: .fileViewCannotRead), systemImage: "doc.questionmark",
+                                       description: Text(.textFileUnreadable))
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                SourceFileEditor(text: $model.text, language: model.format.highlightLanguage, reveal: $model.reveal)
+            }
+            if !model.issues.isEmpty { issueList }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    /// The built PDF, or, before the first build, the build's state where the PDF will be.
+    @ViewBuilder var pdf: some View {
+        if let controller {
+            // `PDFKitView` keeps the view it was made with, so each build's controller needs a view of its own.
+            PDFKitView(controller: controller).id(ObjectIdentifier(controller)).frame(maxWidth: .infinity)
+                #if os(macOS)
+                .help(Text(.textFilePdfHelp))
+                #endif
+        } else if model.building {
+            ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+        } else {
+            ContentUnavailableView {
+                Label(String(localized: .textFileNoPdf), systemImage: "doc.richtext")
+            } description: {
+                #if os(macOS)
+                Text(model.engineMissing ? .textFileNoPdfEngine : model.errors.isEmpty ? .textFileNoPdfBuild : .textFileNoPdfErrors)
+                #else
+                Text(.textFileNoPdfMac)
+                #endif
+            } actions: {
+                #if os(macOS)
+                Button(.textFileBuild) { Task { await model.build() } }
+                    .buttonStyle(.pointing(.borderedProminent))
+                    .disabled(!model.canBuild)
+                #endif
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+    }
+
+    var shown: NotePanes.Mode { panes.shown(wide: wide) }
+
     var bar: some View {
         PageBar {
+            if model.isTex { NotePanesPicker(panes: $panes, wide: wide) }
             #if os(macOS)
             if model.isTex {
                 Button(.textFileBuild, systemImage: "hammer") { Task { await model.build() } }
@@ -170,11 +223,16 @@ struct TextFileView: View {
             controller = nil
             return
         }
-        controller = PDFController(document: document, page: controller?.page ?? 0)
+        controller = PDFController(document: document, page: takeRequestedPage() ?? controller?.page ?? 0)
         #if os(macOS)
         controller?.darken(colorScheme == .dark)
         controller?.onCommandClick { [model] page, point in model.showSource(page: page, at: point) }
         #endif
         controller?.restore()
+    }
+
+    func takeRequestedPage() -> Int? {
+        defer { requestedPage = nil }
+        return requestedPage
     }
 }

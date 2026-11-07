@@ -147,12 +147,9 @@ struct NotesView: View {
 
 struct NoteEditor: View {
     /// From here the note panel can hold the source and the preview side by side.
-    nonisolated static let sideBySide: CGFloat = 880
-
     @State private var model: NoteEditorModel
     @Environment(\.accent) private var accent
     @Environment(\.scenePhase) private var scenePhase
-    @Environment(\.paneMemory) private var paneMemory
     var anchor: AppLink.Anchor?
     var insert: Binding<String?> = .constant(nil)
     let openNote: (String) -> Void
@@ -175,18 +172,7 @@ struct NoteEditor: View {
     var body: some View {
         VStack(spacing: 0) {
             PageBar {
-                if wide {
-                    Segmented(selection: Binding { panes.mode } set: { panes.choose($0) },
-                              options: [(.read, String(localized: .notesModeRead)), (.split, String(localized: .notesModeSplit)),
-                                        (.write, String(localized: .notesModeWrite))],
-                              compact: true)
-                    .help(Text(.notesModeToggle))
-                } else {
-                    Segmented(selection: Binding { shown } set: { panes.chooseNarrow($0) },
-                              options: [(.read, String(localized: .notesModeRead)), (.write, String(localized: .notesModeWrite))],
-                              compact: true)
-                    .help(Text(.notesModeToggle))
-                }
+                NotePanesPicker(panes: $panes, wide: wide)
             } trailing: {
                 if let session = model.unfinishedReview {
                     Button { model.finishReview(session) } label: {
@@ -229,28 +215,19 @@ struct NoteEditor: View {
                 }
             }
         }
-        .onGeometryChange(for: Bool.self) { $0.size.width >= Self.sideBySide } action: { wide = $0 }
+        .onGeometryChange(for: Bool.self) { $0.size.width >= NotePanes.sideBySide } action: { wide = $0 }
         .background(Theme.Palette.card)
         .animation(.snappy(duration: 0.25), value: showsAssets)
         // Edits save on their own; ⌘S is kept only for the habit, with no button of its own.
         .background { Button("") { model.saveNow(force: false) }.keyboardShortcut("s").opacity(0).allowsHitTesting(false).accessibilityHidden(true) }
-        .background {
-            Button("", action: toggleMode).keyboardShortcut("e")
-                .opacity(0).allowsHitTesting(false).accessibilityHidden(true)
-        }
         // The note's name is the screen's title; clicking it renames the note. Saved first: the file is about to move.
         .crumb(model.note.title, level: 2, symbol: "doc.text", rename: {
             model.saveIfDirty()
             renaming = true
         })
         .sheet(isPresented: $renaming) { NoteRenameSheet(workspace: model.workspace, course: model.course, note: model.note, moves: moves) }
-        .onAppear {
-            model.load()
-            if let id = model.note.meta.id, let mode = paneMemory?.memory.noteMode(note: id) { panes = NotePanes(remembered: mode) }
-        }
-        .onChange(of: panes.mode) { _, mode in
-            if let id = model.note.meta.id { paneMemory?.remember(mode, note: id) }
-        }
+        .onAppear(perform: model.load)
+        .rememberingPanes($panes, id: model.note.meta.id)
         // Saved a moment after typing stops, and whenever the note goes away: switching notes or courses, closing the
         // window or quitting would otherwise drop the edits.
         .task(id: model.body) {

@@ -17161,6 +17161,61 @@
         }
       }
     },
+    "text-file.no-pdf": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 빌드한 PDF가 없습니다"
+          }
+        }
+      }
+    },
+    "text-file.no-pdf-build": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌘B로 빌드하면 여기에 PDF가 보입니다."
+          }
+        }
+      }
+    },
+    "text-file.no-pdf-engine": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빌드하려면 Tectonic이 필요합니다. 위 안내대로 설치합니다."
+          }
+        }
+      }
+    },
+    "text-file.no-pdf-errors": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빌드에 실패했습니다. 오류를 고친 뒤 다시 빌드합니다."
+          }
+        }
+      }
+    },
+    "text-file.no-pdf-mac": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mac에서 빌드한 PDF가 여기에 보입니다."
+          }
+        }
+      }
+    },
     "text-file.pdf-help": {
       "extractionState": "manual",
       "localizations": {
