@@ -156,17 +156,26 @@ struct ToolbarRowTests {
         #expect(row.placement == wide)
     }
 
-    @Test func itFollowsTheWidthAtOnceWhenTheRowRunsOut() {
+    @Test func itFollowsTheWidthAtOnceWhenTheRowRunsOut() throws {
         let row = row(width: 1400)
         // The search field stays where the row put it from the trailing edge, so the narrower width counts now, not
         // a turn later when the row reports the field's new place.
         row.windowWidth = 1180
         #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, shown: 3, hidden: 0))
-        // 276 for the tabs: the menu alone beside the tab in front, whose trail is held to 276 - 68 - 44 = 164.
+        // The + takes its 32 and the spacing that sets its glyph one gap after the menu; the rest is the tabs': the
+        // menu alone beside the tab in front, whose trail is held to what is left after the menu, its gap and the chrome.
         row.windowWidth = 900
         #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, shown: 0, hidden: 3))
-        #expect(row.placement.trail == 164)
+        let spacing = TabFit.newTabSpacing(gap: TabBar.gap, button: Theme.Size.toolbarButton, glyph: TabBar.plusInk)
+        #expect(row.placement.newTabSpacing == CGFloat(spacing))
+        let held: CGFloat = (row.room - Theme.Size.toolbarButton - CGFloat(spacing) - 68 - 44).rounded(.down)
+        #expect(try #require(row.placement.trail) == held)
         #expect(row.placement.lead == CGFloat(TabFit.lead(panelEdge: Theme.Size.sidebar, after: row.historyEnd, gap: Theme.Space.s)))
+    }
+
+    @Test func theNewTabGlyphIsMeasuredByItsInk() {
+        // The plus's image is about 17 wide at the toolbar's size; its ink is about 13.
+        #expect((11...14).contains(TabBar.plusInk))
     }
 
     @Test func theStripNeverTakesTheSearchFieldsRoom() {
