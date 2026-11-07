@@ -23,6 +23,28 @@ struct ChatTests {
         #expect(ContextBuilder.chatItems(course: file, rules: "r", openNote: nil, added: [], removed: [], now: now).count == 2)
     }
 
+    /// One panel for the window's panes: it says which pane is focused before the notes they show, and a folded
+    /// pane only by its address.
+    @Test func thePanesComeFocusedFirstBeforeTheirNotes() throws {
+        let file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"))
+        let lecture = UUID(), note = UUID(), quiz = UUID()
+        let item = try #require(ContextBuilder.panes([
+            .init(address: "folio://material/\(lecture)", shows: "05_Matchings.pdf", focused: false),
+            .init(address: "folio://note/\(note)", shows: "11-05(목) Matchings", focused: true),
+            .init(address: "folio://course/\(quiz)/quiz", shows: nil, focused: false),
+        ]))
+        let lines = item.text.split(separator: "\n").dropFirst().map(String.init)
+        #expect(lines == ["- [초점] 11-05(목) Matchings: folio://note/\(note)", "- 05_Matchings.pdf: folio://material/\(lecture)",
+                          "- (접힘) folio://course/\(quiz)/quiz"])
+        let open = ContextBuilder.note(id: note, title: "11-05(목) Matchings", path: "Notes/a.md", body: "매칭", open: true)
+        let other = ContextBuilder.note(id: UUID(), title: "10-29(목) 정리", path: "Notes/b.md", body: "정리", open: true)
+        let items = ContextBuilder.chatItems(course: file, rules: "r", panes: item, openNote: open, alsoOpen: [other, open], added: [],
+                                             removed: [], now: now)
+        #expect(items.map(\.id) == ["course:\(file.course.id)", "rules", "panes", open.id, other.id])
+        // A lone pane is what its note already says.
+        #expect(ContextBuilder.panes([.init(address: "folio://note/\(note)", shows: "노트", focused: true)]) == nil)
+    }
+
     @Test func aPageAskedAboutIsInFocusWithItsPicture() {
         let id = UUID()
         let image = ContextItem.Image(name: "05_Matchings.pdf p3.jpg", data: Data([0xFF, 0xD8]))

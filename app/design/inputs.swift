@@ -121,6 +121,7 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
                         }
                         .padding(.vertical, Theme.Space.xs)
                     }
+                    .overflowFade(.vertical)
                     .onChange(of: highlighted) { _, id in if let id { proxy.scrollTo(id) } }
                 }
                 .frame(maxHeight: 340)

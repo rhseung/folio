@@ -10,7 +10,8 @@ import SwiftUI
 /// they sat at rest: what a live resize costs with the tabs open (#310).
 ///
 /// With `FOLIO_RESIZE_PROBE=<file>` and a fake `FOLIO_GIST`, the window opens `FOLIO_RESIZE_TABS` tabs (notes and
-/// courses in turn), puts `FOLIO_RESIZE_FRONT` (`note`, `course` or `today`) in front, sweeps `FOLIO_RESIZE_LEGS` times
+/// courses in turn), puts `FOLIO_RESIZE_FRONT` (`note`, `course` or `today`) in front with `FOLIO_RESIZE_PANES` panes
+/// (a lecture file and a quiz beside it), sweeps `FOLIO_RESIZE_LEGS` times
 /// (each one way), writes the table and quits. The sidebar follows the `sidebarOpen` default, which `-sidebarOpen NO`
 /// on the command line folds without writing it. A debug build has it; for timings that say something about the app,
 /// build Release with `SWIFT_ACTIVE_COMPILATION_CONDITIONS='$(inherited) RESIZE_PROBE'`.
@@ -57,7 +58,8 @@ import SwiftUI
         width = most
     }
 
-    static func run(window: () -> NSWindow?, workspace: Workspace, openTab: ((AppLink, UUID) -> Void)?, front: (Int) -> Void) async {
+    static func run(window: () -> NSWindow?, workspace: Workspace, openTab: ((AppLink, UUID) -> Void)?, front: (Int) -> Void,
+                    openBeside: (AppLink, UUID) -> Void) async {
         guard let file else { return }
         try? await Task.sleep(for: .seconds(4))
         guard let window = window() ?? NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain }) else { return }
@@ -78,11 +80,26 @@ import SwiftUI
             }
         }
         // 1 is Today, the window's own first tab; 2 a note, 3 a course.
-        switch environment["FOLIO_RESIZE_FRONT"] {
-        case "today": front(1)
-        case "course": front(3)
-        default: front(2)
+        let number = switch environment["FOLIO_RESIZE_FRONT"] {
+        case "today": 1
+        case "course": 3
+        default: 2
         }
+        // `FOLIO_RESIZE_PANES` panes in the tab in front (#62), a lecture file and a course's quiz beside it, what a
+        // class's layout holds; and in the course tab behind it, so the row has a tab of several panes behind.
+        let panes = environment["FOLIO_RESIZE_PANES"].flatMap(Int.init) ?? 1
+        if panes > 1, let course = courses.first {
+            let lecture = course.file.materials.first { $0.path.lowercased().hasSuffix(".pdf") }.map { AppLink(.material, $0.id) }
+            let besides = [lecture, AppLink.course(course.id, page: .quiz)].compactMap { $0 }
+            for tab in Set([number, 3]).sorted() where tab <= count + 1 {
+                front(tab)
+                for link in besides.prefix(panes - 1) {
+                    openBeside(link, course.id)
+                    try? await Task.sleep(for: .seconds(2))
+                }
+            }
+        }
+        front(number)
         try? await Task.sleep(for: .seconds(3))
         let screen = window.screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let least = max(window.minSize.width, window.frameRect(forContentRect: NSRect(origin: .zero, size: window.contentMinSize)).width)

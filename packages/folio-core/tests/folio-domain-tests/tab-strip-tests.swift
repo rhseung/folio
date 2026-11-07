@@ -124,8 +124,13 @@ struct TabStripTests {
 }
 
 struct TabFitTests {
-    func layout(_ room: Double, selected: Double = 300, others: [Double]) -> TabFit.Layout {
-        TabFit.layout(room: room, selected: selected, others: others, icon: 32, gap: 8, more: 80)
+    /// A tab in front of one pane, 300 wide with its close button.
+    let lone = TabFit.Front(trail: 260, chrome: 40)
+
+    func singles(_ widths: [Double]) -> [TabFit.Other] { widths.map { TabFit.Other(single: $0, icon: 32) } }
+
+    func layout(_ room: Double, front: TabFit.Front? = nil, others: [Double]) -> TabFit.Layout {
+        TabFit.layout(room: room, front: front ?? lone, others: singles(others), gap: 8, more: 80)
     }
 
     @Test func roomyRowShowsNames() {
@@ -141,9 +146,49 @@ struct TabFitTests {
 
     @Test func thenFoldsTheRestIntoTheMenu() {
         // Four icons need 460; one icon, the menu and 2 gaps 428.
-        #expect(layout(430, others: [100, 100, 100, 100]) == TabFit.Layout(iconsOnly: true, shown: 1, hidden: 3))
+        #expect(layout(430, others: [100, 100, 100, 100]) == TabFit.Layout(iconsOnly: true, stacked: true, compactFront: true, shown: 1, hidden: 3))
         // Not even one icon: the menu alone, and the tab in front folds its own trail.
-        #expect(layout(200, others: [100, 100]) == TabFit.Layout(iconsOnly: true, shown: 0, hidden: 2))
+        #expect(layout(200, others: [100, 100]) == TabFit.Layout(iconsOnly: true, stacked: true, compactFront: true, shown: 0, hidden: 2))
+    }
+
+    @Test func givesWayInTheOrderTheUserPicked() {
+        // The tab in front has two other panes: named, its capsule is 500 wide; as icons, 420. One other tab has
+        // two panes (150 with its preset's name, 70 as icons, 50 stacked), one has one (100, or its 32 icon).
+        let front = TabFit.Front(trail: 300, chrome: 200, compactChrome: 120)
+        let others = [TabFit.Other(full: 150, icons: 70, stacked: 50), TabFit.Other(single: 100, icon: 32)]
+        func step(_ room: Double) -> Int { TabFit.layout(room: room, front: front, others: others, gap: 8, more: 80).step }
+        // All of it: 500 + 150 + 100 + 2 gaps.
+        #expect(step(766) == 0)
+        // ① names go: 500 + 70 + 32 + 16.
+        #expect(step(765) == 1 && step(618) == 1)
+        // ② the other tab of two panes stacks: 500 + 50 + 32 + 16.
+        #expect(step(617) == 2 && step(598) == 2)
+        // ③ the tab in front's other segments go to icons: 420 + 50 + 32 + 16.
+        #expect(step(597) == 3 && step(518) == 3)
+        // ④ the menu: alone beside the tab in front, 420 + 80 + 8.
+        let menu = TabFit.layout(room: 517, front: front, others: others, gap: 8, more: 80)
+        #expect(menu.step == 4 && menu.shown == 0 && menu.hidden == 2)
+        // ⑤ the trail folds: 400 - 88 - 120 leaves it 192 of its 300.
+        let fit = TabFit.layout(room: 400, front: front, others: others, gap: 8, more: 80)
+        #expect(TabFit.trail(room: 400, front: front, others: others, layout: fit, gap: 8, more: 80) == 192)
+        #expect(TabFit.trail(room: 517, front: front, others: others, layout: menu, gap: 8, more: 80) == nil)
+    }
+
+    /// Others whose stacked form is no wider than their icons, and those no wider than their names.
+    static let others = Gen.int(in: 32...200).array(of: 3).map { w -> TabFit.Other in
+        let stacked = Double(min(w[2], 60))
+        let icons = max(Double(min(w[1], 120)), stacked)
+        return TabFit.Other(full: max(Double(w[0]), icons), icons: icons, stacked: stacked)
+    }.array(of: 0...12)
+
+    @Test func aNarrowerRowNeverTakesAStepBack() async {
+        await propertyCheck(input: Self.others, Gen.int(in: 0...2000), Gen.int(in: 1...400), Gen.int(in: 60...400), Gen.int(in: 0...200)) { others, room, less, trail, extra in
+            let front = TabFit.Front(trail: Double(trail), chrome: 40 + Double(extra), compactChrome: 40 + Double(extra / 2))
+            let wide = TabFit.layout(room: Double(room), front: front, others: others, gap: 8, more: 80)
+            let narrow = TabFit.layout(room: Double(room - less), front: front, others: others, gap: 8, more: 80)
+            #expect(narrow.step >= wide.step)
+            #expect(narrow.shown <= wide.shown)
+        }
     }
 
     @Test func theFirstTabLinesUpWithThePanelEdge() async {
@@ -163,9 +208,9 @@ struct TabFitTests {
         #expect(TabFit.lead(panelEdge: 4, after: 189, gap: 8) == 8)
     }
 
-    func trail(_ room: Double, selected: Double = 300, others: [Double]) -> Double? {
-        let fit = layout(room, selected: selected, others: others)
-        return TabFit.trail(room: room, selected: selected, others: others, layout: fit, icon: 32, gap: 8, more: 80, chrome: 40)
+    func trail(_ room: Double, front: TabFit.Front? = nil, others: [Double]) -> Double? {
+        let fit = layout(room, front: front, others: others)
+        return TabFit.trail(room: room, front: front ?? lone, others: singles(others), layout: fit, gap: 8, more: 80)
     }
 
     @Test func theFrontTrailIsFreeWhileItFits() {
@@ -180,9 +225,10 @@ struct TabFitTests {
         // The menu alone at 200: 200 - (80 + 8) - 40 = 72, however short, so the strip stays inside the row.
         #expect(trail(200, others: [100, 100]) == 72)
         // A front tab of 400 (a trail of 360) beside one icon in 460: 460 - 32 - 8 - 40 = 380 still holds it.
-        #expect(trail(460, selected: 400, others: [100]) == nil)
+        let long = TabFit.Front(trail: 360, chrome: 40)
+        #expect(trail(460, front: long, others: [100]) == nil)
         // In 400 the other tab goes to the menu: 400 - (80 + 8) - 40 = 272 for a trail that needs 360.
-        #expect(trail(400, selected: 400, others: [100]) == 272)
+        #expect(trail(400, front: long, others: [100]) == 272)
     }
 
     @Test func theNewTabGlyphSitsOneGapAfterTheLastCapsule() {
@@ -199,38 +245,40 @@ struct TabFitTests {
     @Test func theStripNeverOutgrowsTheRow() async {
         // Wider than the row, the strip pushes the toolbar's search field and buttons into its overflow menu (#310).
         // It may only when not even the front tab's capsule and the menu fit.
-        await propertyCheck(input: Gen.int(in: 32...200).array(of: 0...20), Gen.int(in: 0...2000), Gen.int(in: 60...600)) { others, room, selected in
-            let o = others.map(Double.init)
+        await propertyCheck(input: Self.others, Gen.int(in: 0...2000), Gen.int(in: 20...600), Gen.int(in: 0...200)) { others, room, trail, extra in
+            let front = TabFit.Front(trail: Double(trail), chrome: 40 + Double(extra), compactChrome: 40)
             let r = Double(room)
-            let fit = TabFit.layout(room: r, selected: Double(selected), others: o, icon: 32, gap: 8, more: 80)
-            let trail = TabFit.trail(room: r, selected: Double(selected), others: o, layout: fit, icon: 32, gap: 8, more: 80, chrome: 40)
-            let width = TabFit.width(selected: Double(selected), others: o, layout: fit, trail: trail, icon: 32, gap: 8, more: 80, chrome: 40)
-            let least = 40 + (fit.hidden > 0 ? 88 : 0)
-            #expect(width <= r || r < Double(least))
+            let fit = TabFit.layout(room: r, front: front, others: others, gap: 8, more: 80)
+            let held = TabFit.trail(room: r, front: front, others: others, layout: fit, gap: 8, more: 80)
+            let width = TabFit.width(front: front, others: others, layout: fit, trail: held, gap: 8, more: 80)
+            let least = front.chrome(compact: fit.compactFront) + (fit.hidden > 0 ? 88 : 0)
+            #expect(width <= r || r < least)
         }
         // By hand: the menu alone beside a front tab held to 200 - 88 - 40 = 72, which with its capsule fills the row.
-        let fit = TabFit.layout(room: 200, selected: 300, others: [100, 100], icon: 32, gap: 8, more: 80)
-        #expect(TabFit.width(selected: 300, others: [100, 100], layout: fit, trail: 72, icon: 32, gap: 8, more: 80, chrome: 40) == 200)
+        let fit = layout(200, others: [100, 100])
+        #expect(TabFit.width(front: lone, others: singles([100, 100]), layout: fit, trail: 72, gap: 8, more: 80) == 200)
     }
 
     @Test func aLoneTabNeverNeedsTheMenu() {
-        #expect(layout(100, others: []) == TabFit.Layout(iconsOnly: false, shown: 0, hidden: 0))
+        #expect(layout(100, others: []).hidden == 0)
+        #expect(layout(300, others: []) == TabFit.Layout(iconsOnly: false, shown: 0, hidden: 0))
     }
 
     @Test func whatIsShownFitsAndNoMoreIsHidden() async {
-        await propertyCheck(input: Gen.int(in: 32...200).array(of: 0...20), Gen.int(in: 100...2000), Gen.int(in: 60...600)) { others, room, selected in
-            let o = others.map(Double.init)
-            let fit = TabFit.layout(room: Double(room), selected: Double(selected), others: o, icon: 32, gap: 8, more: 80)
-            #expect(fit.shown + fit.hidden == o.count)
-            let tabs = fit.iconsOnly ? 32 * Double(fit.shown) : o.prefix(fit.shown).reduce(0, +)
+        await propertyCheck(input: Self.others, Gen.int(in: 100...2000), Gen.int(in: 60...600)) { others, room, selected in
+            let front = TabFit.Front(trail: Double(selected) - 40, chrome: 40)
+            let fit = TabFit.layout(room: Double(room), front: front, others: others, gap: 8, more: 80)
+            #expect(fit.shown + fit.hidden == others.count)
+            let tabs = others.prefix(fit.shown).map(fit.width(of:)).reduce(0, +)
             let menu = fit.hidden > 0
             let used = Double(selected) + tabs + (menu ? 80 : 0) + 8 * Double(fit.shown + (menu ? 1 : 0))
             // Over only when the tab in front, with the menu, already is.
             #expect(used <= Double(room) || fit.shown == 0)
             if menu {
-                // One more icon would not have fit.
-                let more = Double(selected) + 32 * Double(fit.shown + 1) + 80 + 8 * Double(fit.shown + 2)
-                #expect(more > Double(room) || fit.shown + 1 == o.count)
+                // One more tab would not have fit.
+                let next = others.prefix(fit.shown + 1).map(fit.width(of:)).reduce(0, +)
+                let more = Double(selected) + next + 80 + 8 * Double(fit.shown + 2)
+                #expect(more > Double(room) || fit.shown + 1 == others.count)
             }
         }
     }

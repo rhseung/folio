@@ -19,6 +19,10 @@ final class ClaudeModel {
     var chatID: UUID?
     var notes: [NoteFile] = []
     var openNoteItem: ContextItem?
+    /// The notes the tab's other panes show (#62).
+    var alsoOpenItems: [ContextItem] = []
+    /// The tab's panes, which the window's one panel serves (`ContextBuilder.panes`).
+    var panes: ContextItem?
     var added: [ContextItem] = []
     var removed: Set<String> = []
     var sending = false
@@ -64,8 +68,8 @@ final class ClaudeModel {
     var chat: Chat? { chats.first { $0.model.id == chatID }?.model }
 
     func built(_ course: LoadedCourse) -> BuiltContext {
-        let items = ContextBuilder.chatItems(course: course.file, rules: workspace.settings.noteRules, openNote: openNoteItem,
-                                             added: added, removed: removed, now: .now)
+        let items = ContextBuilder.chatItems(course: course.file, rules: workspace.settings.noteRules, panes: panes, openNote: openNoteItem,
+                                             alsoOpen: alsoOpenItems, added: added, removed: removed, now: .now)
         return ContextBuilder.build(items, budgetTokens: ContextBuilder.chatBudgetTokens)
     }
 
@@ -109,9 +113,10 @@ final class ClaudeModel {
         notes = Self.notes(course)
     }
 
-    func loadOpenNote(_ id: UUID?, course: LoadedCourse) {
+    func loadOpenNote(_ id: UUID?, alsoOpen: [UUID] = [], course: LoadedCourse) {
         openNote = id
         openNoteItem = id.flatMap { noteContext($0, course: course, open: true) }
+        alsoOpenItems = alsoOpen.filter { $0 != id }.compactMap { noteContext($0, course: course, open: true) }
     }
 
     static func notes(_ course: LoadedCourse) -> [NoteFile] {

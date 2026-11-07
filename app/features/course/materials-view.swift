@@ -405,6 +405,7 @@ struct MaterialLinksEditor: View {
             }
             .padding(Theme.Space.l)
         }
+        .overflowFade(.vertical)
         .frame(width: 440, height: 480)
         .background(Theme.Palette.page)
         .font(Theme.Typeface.body)

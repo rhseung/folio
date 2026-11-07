@@ -99,7 +99,7 @@ struct ReviewView: View {
             }
             // One chip per source, so a lecture is a click away without leaving the review note.
             if model.sources.count > 1 {
-                ScrollView(.horizontal, showsIndicators: false) {
+                ScrollView(.horizontal) {
                     HStack(spacing: Theme.Space.s) {
                         ForEach(model.sources) { source in
                             let on = model.isShown(source)
@@ -117,6 +117,7 @@ struct ReviewView: View {
                         }
                     }
                 }
+                .overflowFade(.horizontal)
             }
         }
         .padding(.horizontal, Theme.Space.xl)

@@ -27,7 +27,7 @@ struct AssetTray: View {
             .padding(.horizontal, Theme.Space.xl)
             .padding(.vertical, Theme.Space.s)
         }
-        .scrollIndicators(.never)
+        .overflowFade(.horizontal)
         .frame(height: files.isEmpty ? Theme.Size.rowHeight : 104)
         .background(targeted ? accent.tint : Theme.Palette.page.opacity(0.5))
         .overlay {

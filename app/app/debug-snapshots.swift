@@ -24,6 +24,8 @@ final class SnapshotDriver {
     static let width = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_WIDTH"].flatMap(Double.init) ?? 1440
     /// How many tabs the window opens before the walk (`4`), to see the toolbar's tabs share and give up the row.
     static let tabs = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_TABS"].flatMap(Int.init) ?? 1
+    /// How many panes the first two tabs hold (`2`, `3`), a lecture file and a quiz beside the page the walk moves (#62).
+    static let panes = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_PANES"].flatMap(Int.init) ?? 1
 
     var section: CourseSection?
     /// Inside the units section: `detail` opens the first unit, `review` also opens its review sheet.

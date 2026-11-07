@@ -203,6 +203,7 @@ struct CourseIconPanel: View {
                     .padding(Theme.Space.m)
                 }
                 .onAppear { if let icon { proxy.scrollTo(icon, anchor: .center) } }
+                .overflowFade(.vertical)
             }
             // Fixed so the popover doesn't jump in size as the search narrows the grid.
             .frame(height: 340)

@@ -1,8 +1,8 @@
 import FolioDomain
 import SwiftUI
 
-/// One window's tabs, each with its own history. The window draws them in its toolbar row itself rather than as
-/// AppKit window tabs, whose bar took a row of its own over the frame.
+/// One window's tabs, each a layout of panes with their own histories (`TabPanes`, #62). The window draws them in its
+/// toolbar row itself rather than as AppKit window tabs, whose bar took a row of its own over the frame.
 ///
 /// The screens of the most recent tabs stay alive behind the one in front (`alive`, chosen by `TabKeep`), so going back
 /// to one finds it as it was left; the others are drawn again from their address.
@@ -14,17 +14,15 @@ final class WindowTabs {
             settle()
         }
     }
-    private var navigators: [UUID: Navigator]
-    /// Each tab's breadcrumb steps, which its screen sets while alive. With one trail for the window, a screen kept
-    /// behind would keep its steps in the front tab's trail.
-    private var trails: [UUID: CrumbTrail]
+    private var tabs: [UUID: TabPanes]
     /// The tabs whose screens are alive, the one in front among them.
     private(set) var alive: Set<UUID>
     /// When each tab last went behind another.
     @ObservationIgnored private var left: [UUID: Date] = [:]
-    /// The tabs playing a recording, each with how to pause it from the strip. `TabKeep` keeps them alive: dropping the
-    /// screen would stop the audio.
+    /// The tabs playing a recording. `TabKeep` keeps them alive: dropping the screen would stop the audio.
     private(set) var playing: Set<UUID> = []
+    /// The panes playing, which the strip marks, each with how to pause it.
+    private(set) var playingPanes: Set<UUID> = []
     @ObservationIgnored private var pauses: [UUID: @MainActor () -> Void] = [:]
     /// Closing the last tab closes the window, which the window hands over once it has one.
     @ObservationIgnored var closeWindow: @MainActor () -> Void = {}
@@ -36,27 +34,37 @@ final class WindowTabs {
     /// 10MB for a course page (measured with `TabMemoryProbe`; the numbers are in #304).
     static let keep = TabKeep.Policy(limit: 3, idle: 30 * 60)
 
-    init(_ first: Navigator) {
+    convenience init(_ first: Navigator) { self.init(TabPanes(first)) }
+
+    init(_ first: TabPanes) {
         let id = UUID()
         strip = TabStrip(id)
-        navigators = [id: first]
-        trails = [id: CrumbTrail()]
+        tabs = [id: first]
         alive = [id]
     }
 
     var selected: UUID { strip.selected }
     var ids: [UUID] { strip.tabs }
     var count: Int { strip.tabs.count }
-    var current: Navigator { navigators[strip.selected] ?? Navigator() }
+    /// The focused pane's history in the tab in front.
+    var current: Navigator { tabs[strip.selected]?.focused ?? Navigator() }
+    var front: TabPanes? { tabs[strip.selected] }
 
-    func navigator(_ id: UUID) -> Navigator? { navigators[id] }
-    func trail(_ id: UUID) -> CrumbTrail? { trails[id] }
+    func panes(_ id: UUID) -> TabPanes? { tabs[id] }
+    /// The focused pane's history in a tab.
+    func navigator(_ id: UUID) -> Navigator? { tabs[id]?.focused }
+    /// The focused pane's breadcrumb steps, which its screen sets while alive. With one trail for the window, a screen
+    /// kept behind would keep its steps in the front tab's trail.
+    func trail(_ id: UUID) -> CrumbTrail? { tabs[id]?.focusedTrail }
+    /// The tab a pane's history is in.
+    func panes(holding navigator: Navigator) -> TabPanes? { tabs.values.first { $0.index(of: navigator) != nil } }
 
     /// `fromLink`: beside the tab in front rather than last.
-    func open(_ navigator: Navigator = Navigator(), fromLink: Bool = false) {
+    func open(_ navigator: Navigator = Navigator(), fromLink: Bool = false) { open(TabPanes(navigator), fromLink: fromLink) }
+
+    func open(_ panes: TabPanes, fromLink: Bool = false) {
         let id = UUID()
-        navigators[id] = navigator
-        trails[id] = CrumbTrail()
+        tabs[id] = panes
         strip.open(id, afterSelected: fromLink)
     }
 
@@ -68,33 +76,43 @@ final class WindowTabs {
 
     func close(_ id: UUID) {
         guard strip.close(id) else { return closeWindow() }
-        navigators[id] = nil
-        trails[id] = nil
+        tabs[id] = nil
     }
 
     func closeSelected() { close(selected) }
 
-    /// A tab's screen saying it plays (with how to pause it) or has stopped (nil).
-    func play(_ id: UUID, pause: (@MainActor () -> Void)?) {
-        pauses[id] = pause
-        let on = pause != nil && strip.tabs.contains(id)
-        if on != playing.contains(id) { if on { playing.insert(id) } else { playing.remove(id) } }
+    /// A pane's screen saying it plays (with how to pause it) or has stopped (nil); without a pane, the tab's first.
+    func play(_ id: UUID, pane: UUID? = nil, pause: (@MainActor () -> Void)?) {
+        if let pane = pane ?? tabs[id]?.ids.first {
+            pauses[pane] = pause
+            let on = pause != nil && strip.tabs.contains(id)
+            if on != playingPanes.contains(pane) { if on { playingPanes.insert(pane) } else { playingPanes.remove(pane) } }
+        }
+        // From the tabs still open: a closed tab's screen says it stopped only once the tab is gone.
+        let open = Set(strip.tabs.flatMap { tabs[$0]?.ids ?? [] })
+        let panes = playingPanes.intersection(open)
+        if panes != playingPanes { playingPanes = panes }
+        let tabs = Set(strip.tabs.filter { self.tabs[$0]?.ids.contains(where: panes.contains) == true })
+        if tabs != playing { playing = tabs }
     }
 
-    func pause(_ id: UUID) { pauses[id]?() }
+    /// Every pane of the tab that plays.
+    func pause(_ id: UUID) {
+        for pane in tabs[id]?.ids ?? [] where playingPanes.contains(pane) { pauses[pane]?() }
+    }
+
+    func pause(pane: UUID) { pauses[pane]?() }
 
     func closeOthers(than id: UUID) {
         strip.closeOthers(than: id)
-        navigators = navigators.filter { $0.key == id }
-        trails = trails.filter { $0.key == id }
+        tabs = tabs.filter { $0.key == id }
     }
 
     /// Takes a tab out for a window of its own; nil for the last one, which is the window already.
-    func take(_ id: UUID) -> Navigator? {
-        guard count > 1, let navigator = navigators[id], strip.close(id) else { return nil }
-        navigators[id] = nil
-        trails[id] = nil
-        return navigator
+    func take(_ id: UUID) -> TabPanes? {
+        guard count > 1, let panes = tabs[id], strip.close(id) else { return nil }
+        tabs[id] = nil
+        return panes
     }
 
     /// Lets go of the screens that have waited behind too long; the window calls it as the minutes pass.
@@ -112,11 +130,12 @@ final class WindowTabs {
 }
 
 /// The screens of the tabs kept alive, stacked. Only the one in front shows and takes the pointer and the keys: a kept
-/// screen's ⌘S or ⌘E, or the zoom keys of a file it shows, would otherwise act on a page no one sees. Each screen
-/// keeps its own breadcrumb steps and moves its own tab when it opens a link.
+/// screen's ⌘S or ⌘E, or the zoom keys of a file it shows, would otherwise act on a page no one sees. Each pane's
+/// screen keeps its own breadcrumb steps and moves its own pane when it opens a link.
 struct TabScreens: View {
     let tabs: WindowTabs
     let workspace: Workspace
+    /// For the pane whose history this is.
     let openLink: (Navigator) -> OpenLinkAction
     @State private var sizes = ScreenSizes()
 
@@ -124,16 +143,15 @@ struct TabScreens: View {
         ZStack {
             // In the strip's order, so a screen keeps its place in the stack, and its state, as others come and go.
             ForEach(tabs.ids.filter { tabs.alive.contains($0) }, id: \.self) { id in
-                if let navigator = tabs.navigator(id) {
+                if let panes = tabs.panes(id) {
                     let front = id == tabs.selected
                     // A screen behind keeps the size it last had in front, so resizing the window lays out only the
                     // one in front: a note's text and preview page reflowing out of sight made each frame of a live
                     // resize wait on every kept tab. It takes the window's size again when it comes back.
                     let kept = front ? nil : sizes[id]
-                    TabScreen(workspace: workspace, navigator: navigator)
-                        .environment(tabs.trail(id))
-                        .environment(\.tabPlaying) { [tabs] pause in tabs.play(id, pause: pause) }
-                        .environment(\.openLink, openLink(navigator))
+                    PaneRow(workspace: workspace, panes: panes, front: front, openLink: openLink,
+                            play: { [tabs] pane, pause in tabs.play(id, pane: pane, pause: pause) },
+                            newTab: { [tabs] navigator in tabs.open(navigator, fromLink: true) })
                         .onGeometryChange(for: CGSize.self, of: \.size) { sizes[id] = $0 }
                         .frame(width: kept?.width, height: kept?.height, alignment: .topLeading)
                         // The window's size whatever the screen inside: with no least size given, a screen behind
@@ -153,18 +171,39 @@ struct TabScreens: View {
 }
 
 extension EnvironmentValues {
-    /// Where a screen says it is playing a recording, so its tab is kept and marked behind the front one.
+    /// Where a screen says it is playing a recording, so its tab is kept and its pane marked behind the front one.
     @Entry var tabPlaying: @MainActor ((@MainActor () -> Void)?) -> Void = { _ in }
 }
 
-/// The tabs at full width, as `TabBar` measures them. Not observed: nothing draws from them, they only feed `ToolbarRow`.
+#if os(macOS)
+/// The tabs at each width they can take, as `TabBar` measures them. Not observed: nothing draws from them, they only
+/// feed `ToolbarRow`.
 @MainActor final class TabSizes {
+    /// The tab in front's trail alone, then its whole capsule with its other segments named and as icons.
+    var trail: CGFloat = 0
     var front: CGFloat = 0
+    var compactFront: CGFloat = 0
     var more: CGFloat = 0
-    var others: [UUID: CGFloat] = [:]
+    private var others: [UUID: [TabForm: CGFloat]] = [:]
     /// False in the toolbar's menu-form copy of the row.
     var inWindow = false
+
+    var frontFit: TabFit.Front {
+        TabFit.Front(trail: Double(trail), chrome: Double(front - trail), compactChrome: Double(compactFront - trail))
+    }
+
+    func set(_ width: CGFloat, _ id: UUID, _ form: TabForm) { others[id, default: [:]][form] = width }
+
+    /// Until measured, an icon.
+    func other(_ id: UUID) -> TabFit.Other {
+        let widths = others[id] ?? [:]
+        let icon = TabBar.icon
+        return TabFit.Other(full: Double(widths[.full] ?? icon), icons: Double(widths[.icons] ?? icon), stacked: Double(widths[.stacked] ?? icon))
+    }
+
+    func keep(_ ids: Set<UUID>) { others = others.filter { ids.contains($0.key) } }
 }
+#endif
 
 /// The size each kept screen was last laid out at. Not observed: it changes every frame of a resize, which would redraw
 /// the stack each frame; it is read only when a screen goes behind.
@@ -177,14 +216,6 @@ extension EnvironmentValues {
     }
 
     func keep(_ ids: Set<UUID>) { sizes = sizes.filter { ids.contains($0.key) } }
-}
-
-/// One tab's screen. Its own view, so a move in one tab redraws only that tab's screen.
-private struct TabScreen: View {
-    let workspace: Workspace
-    let navigator: Navigator
-
-    var body: some View { ScreenView(workspace: workspace, entry: navigator.current) }
 }
 
 /// The system running short of memory, one notification on the Mac and the iPad alike.
@@ -249,13 +280,13 @@ extension Workspace {
 }
 
 #if os(macOS)
-/// The window's tabs in its toolbar row: the tab in front is the breadcrumb of where it is, with a close button; the
-/// others are an icon and a short name, then icons alone, then a menu, as the row runs out (`TabFit`). A + at the end
-/// opens Today in a new tab.
+/// The window's tabs in its toolbar row: the tab in front is the breadcrumb of where its focused pane is, with a close
+/// button; a tab of several panes is one capsule with a segment for each (B2 in #62). The others are their icons and a
+/// short name, then icons alone, then a menu, as the row runs out (`TabFit`). A + at the end opens Today in a new tab.
 struct TabBar: View {
     let tabs: WindowTabs
     let workspace: Workspace
-    /// The tab in front's whole trail: its screen, then what the screen added.
+    /// The focused pane's whole trail: its screen, then what the screen added.
     let crumbs: [Crumb]
     /// Where the row has room for the tabs, worked out there as the window resizes.
     let toolbar: ToolbarRow
@@ -310,13 +341,14 @@ struct TabBar: View {
                         // Its own width while it fits: offered the row, the trail's frame would take all of it, and
                         // held to its measured width a fraction short, it cut the course's name.
                         if let trail = placement.trail {
-                            front(crumbRoom: trail).frame(width: trail + frontChrome)
+                            front(crumbRoom: trail, compact: fit.compactFront)
+                                .frame(width: trail + CGFloat(toolbar.measures.front.chrome(compact: fit.compactFront)))
                         } else {
-                            front(crumbRoom: .infinity).fixedSize()
+                            front(crumbRoom: .infinity, compact: fit.compactFront).fixedSize()
                         }
                     } else {
                         // At their measured width: `TabFit` already made room, and squeezed they'd cut their names.
-                        tab(id, iconOnly: fit.iconsOnly).fixedSize()
+                        tab(id, form: TabForm(fit)).fixedSize()
                     }
                 }
                 #if DEBUG || RESIZE_PROBE
@@ -344,7 +376,7 @@ struct TabBar: View {
         .onChange(of: tabs.selected) { report() }
         .onChange(of: tabs.ids) { _, ids in
             let open = Set(ids)
-            sizes.others = sizes.others.filter { open.contains($0.key) }
+            sizes.keep(open)
             report()
             frames = frames.filter { open.contains($0.key) }
         }
@@ -365,26 +397,43 @@ struct TabBar: View {
     func report() {
         guard sizes.inWindow else { return }
         let others = tabs.ids.filter { $0 != tabs.selected }
-        let measures = ToolbarRow.Measures(front: sizes.front, others: others.map { Double(sizes.others[$0] ?? Self.icon) },
-                                           more: sizes.more, chrome: frontChrome)
+        let measures = ToolbarRow.Measures(front: sizes.frontFit, others: others.map(sizes.other), more: sizes.more)
         if measures != toolbar.measures { toolbar.measures = measures }
-    }
-
-    /// The front tab's capsule around its trail: the leading inset and the close button with its gap.
-    var frontChrome: CGFloat {
-        Theme.Space.m + (tabs.count > 1 ? Theme.Space.xs + Self.closeSize + Theme.Space.xs : Theme.Space.m)
     }
 
     static let closeSize = Theme.Size.tile
 
-    @ViewBuilder func front(crumbRoom: CGFloat) -> some View {
-        HStack(spacing: Theme.Space.xs) {
-            Breadcrumb(crumbs: crumbs, foldWidth: crumbRoom, maxWidth: crumbRoom)
-            // Not on a lone tab: there it would close the window, which the window's own button already does.
-            if tabs.count > 1 { closeButton(tabs.selected) }
+    @ViewBuilder func front(crumbRoom: CGFloat, compact: Bool) -> some View {
+        if let panes = tabs.front, panes.count > 1 {
+            joined(panes, crumbRoom: crumbRoom, compact: compact)
+        } else {
+            HStack(spacing: Theme.Space.xs) {
+                Breadcrumb(crumbs: crumbs, foldWidth: crumbRoom, maxWidth: crumbRoom)
+                // Not on a lone tab: there it would close the window, which the window's own button already does.
+                if tabs.count > 1 { closeButton(tabs.selected) }
+            }
+            .padding(.leading, Theme.Space.m)
+            .padding(.trailing, tabs.count > 1 ? Theme.Space.xs : Theme.Space.m)
+            .frame(height: Theme.Size.toolbarButton)
+            .tabSurface(front: true)
         }
-        .padding(.leading, Theme.Space.m)
-        .padding(.trailing, tabs.count > 1 ? Theme.Space.xs : Theme.Space.m)
+    }
+
+    /// The tab in front with several panes: a segment for each, the focused one the breadcrumb in full ink, the others
+    /// a gray icon and a dimmed short name (icons alone at `compact`); the close button at the end closes the tab.
+    func joined(_ panes: TabPanes, crumbRoom: CGFloat, compact: Bool) -> some View {
+        HStack(spacing: 0) {
+            ForEach(Array(panes.ids.enumerated()), id: \.element) { i, _ in
+                if i > 0 { SegmentRule() }
+                TabSegment(mark: workspace.paneMark(of: panes.navigators[i].current, trail: panes.trails[i]),
+                           crumbs: i == panes.focus ? crumbs : nil, crumbRoom: crumbRoom, iconOnly: compact,
+                           playing: tabs.playingPanes.contains(panes.ids[i]),
+                           select: { panes.press(i) }, close: { panes.close(i) }, pause: { [tabs] in tabs.pause(pane: panes.ids[i]) })
+                    .contextMenu { PaneMenu(panes: panes, index: i) { [tabs] navigator in tabs.open(navigator, fromLink: true) } }
+            }
+            if tabs.count > 1 { closeButton(tabs.selected).padding(.leading, Theme.Space.xxs) }
+        }
+        .padding(.horizontal, Theme.Space.xs)
         .frame(height: Theme.Size.toolbarButton)
         .tabSurface(front: true)
     }
@@ -401,37 +450,103 @@ struct TabBar: View {
         .accessibilityLabel(Text(.tabsClose))
     }
 
-    func tab(_ id: UUID, iconOnly: Bool) -> some View {
+    @ViewBuilder func tab(_ id: UUID, form: TabForm) -> some View {
         let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
         let title = workspace.tabTitle(of: entry)
-        let playing = tabs.playing.contains(id)
-        return Button { tabs.select(id) } label: {
-            label(entry, title: iconOnly ? nil : title, playing: playing)
+        let name = tabs.panes(id).flatMap(workspace.presetName(of:)) ?? title ?? workspace.placeCrumb(of: entry).title
+        if let panes = tabs.panes(id), panes.count > 1 {
+            // Not one button: the playing pane's speaker is a button of its own, and inside the tab's label it would
+            // select the tab.
+            label(id, form: form)
+                .help(name)
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel(name)
+        } else {
+            let playing = tabs.playing.contains(id)
+            Button { tabs.select(id) } label: {
+                label(entry, title: form == .full ? title : nil, playing: playing)
+            }
+            .buttonStyle(.pointing(.plain))
+            // Its own button over the room the label leaves it: a button inside the tab's label would select the tab.
+            .overlay(alignment: .trailing) { if playing && form == .full { speaker(id) } }
+            .help(name)
+            .accessibilityLabel(name)
         }
-        .buttonStyle(.pointing(.plain))
-        // Its own button over the room the label leaves it: a button inside the tab's label would select the tab.
-        .overlay(alignment: .trailing) { if playing && !iconOnly { speaker(id) } }
-        .help(title ?? workspace.placeCrumb(of: entry).title)
-        .accessibilityLabel(title ?? workspace.placeCrumb(of: entry).title)
     }
 
-    /// A tab behind the front one: its icon, and its name unless it has none or the row is short. Playing a recording,
-    /// it leaves room at its end for the speaker, set as the front tab sets its close button, or shows the speaker in
-    /// place of its icon when the row is short.
+    /// A tab behind the front one. One pane: its icon, and its name unless it has none or the row is short. Several:
+    /// their icons joined, with the preset's name the layout is, or the first icon and "+n" (`TabFit`'s step 2). The
+    /// playing pane's icon is a speaker that pauses it; stacked into one icon, the tab shows the speaker there and
+    /// selects, as a tab of one pane does at an icon.
+    @ViewBuilder func label(_ id: UUID, form: TabForm) -> some View {
+        if let panes = tabs.panes(id), panes.count > 1 {
+            let marks = zip(panes.navigators, panes.trails).map { workspace.paneMark(of: $0.current, trail: $1) }
+            let playing = panes.ids.map { tabs.playingPanes.contains($0) }
+            HStack(spacing: 0) {
+                if form == .stacked {
+                    Button { tabs.select(id) } label: {
+                        HStack(spacing: Theme.Space.xxs) {
+                            if playing.contains(true) { speakerIcon } else { PlaceIcon(place: marks[0]) }
+                            Text(.panesMoreCount(marks.count - 1)).font(Theme.Typeface.caption).monospacedDigit()
+                        }
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.pointing(.plain))
+                } else {
+                    ForEach(marks.indices, id: \.self) { i in
+                        if i > 0 { SegmentRule() }
+                        Group {
+                            if playing[i] {
+                                Button { tabs.pause(pane: panes.ids[i]) } label: { speakerIcon.contentShape(.rect) }
+                                    .help(Text(.tabsPause))
+                                    .accessibilityLabel(Text(.tabsPause))
+                            } else {
+                                Button { tabs.select(id) } label: { PlaceIcon(place: marks[i]).contentShape(.rect) }
+                                    .accessibilityLabel(marks[i].title)
+                            }
+                        }
+                        .buttonStyle(.pointing(.plain))
+                        .padding(.horizontal, Theme.Space.xs)
+                    }
+                    if form == .full, let preset = workspace.presetName(of: panes) {
+                        Button { tabs.select(id) } label: { CappedWidth(width: Theme.Size.tabName) { Text(preset).lineLimit(1) } }
+                            .buttonStyle(.pointing(.plain))
+                            .padding(.leading, Theme.Space.xxs)
+                            .padding(.trailing, Theme.Space.xs)
+                    }
+                }
+            }
+            .padding(.horizontal, Theme.Space.xs)
+            .font(Theme.Typeface.body)
+            .foregroundStyle(Theme.Palette.chromeText)
+            .frame(height: Theme.Size.toolbarButton)
+            .tabSurface(front: false)
+            .contentShape(.capsule)
+            // The room between the icons selects the tab too; the buttons in it take their own presses first.
+            .onTapGesture { tabs.select(id) }
+        } else {
+            let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
+            label(entry, title: form == .full ? workspace.tabTitle(of: entry) : nil, playing: tabs.playing.contains(id))
+        }
+    }
+
+    /// A tab of one pane behind the front one: its icon, and its name unless it has none or the row is short. Playing
+    /// a recording, it leaves room at its end for the speaker, set as the front tab sets its close button, or shows the
+    /// speaker in place of its icon when the row is short.
     @ViewBuilder func label(_ entry: Navigator.Entry, title: String?, playing: Bool = false) -> some View {
         let place = workspace.placeCrumb(of: entry)
         Group {
             if let title {
                 HStack(spacing: Theme.Space.tight) {
-                    icon(place)
+                    PlaceIcon(place: place)
                     CappedWidth(width: Theme.Size.tabName) { Text(title).lineLimit(1) }
                 }
                 .padding(.leading, Theme.Space.s)
                 .padding(.trailing, playing ? Theme.Space.xs + Self.closeSize + Theme.Space.xs : Theme.Space.m)
             } else if playing {
-                LineIcon(symbol: Self.speakerSymbol).foregroundStyle(Theme.Palette.chromeIcon).frame(width: Self.icon)
+                speakerIcon.frame(width: Self.icon)
             } else {
-                icon(place).frame(width: Self.icon)
+                PlaceIcon(place: place).frame(width: Self.icon)
             }
         }
         .font(Theme.Typeface.body)
@@ -441,15 +556,9 @@ struct TabBar: View {
         .contentShape(.capsule)
     }
 
-    @ViewBuilder func icon(_ place: Crumb) -> some View {
-        if let dot = place.dot {
-            CourseMark(icon: place.symbol, color: dot)
-        } else {
-            LineIcon(symbol: place.symbol ?? "questionmark.folder").foregroundStyle(Theme.Palette.chromeIcon)
-        }
-    }
-
     static let speakerSymbol = "speaker.wave.2.fill"
+
+    var speakerIcon: some View { LineIcon(symbol: Self.speakerSymbol).foregroundStyle(Theme.Palette.chromeIcon) }
 
     func speaker(_ id: UUID) -> some View {
         Button { tabs.pause(id) } label: {
@@ -469,8 +578,10 @@ struct TabBar: View {
             ForEach(hidden, id: \.self) { id in
                 let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
                 let place = workspace.placeCrumb(of: entry)
-                Button(workspace.tabTitle(of: entry) ?? place.title,
-                       systemImage: tabs.playing.contains(id) ? Self.speakerSymbol : place.symbol ?? CourseMark.defaultIcon) { tabs.select(id) }
+                let name = tabs.panes(id).flatMap(workspace.presetName(of:)) ?? workspace.tabTitle(of: entry) ?? place.title
+                Button(name, systemImage: tabs.playing.contains(id) ? Self.speakerSymbol : place.symbol ?? CourseMark.defaultIcon) {
+                    tabs.select(id)
+                }
             }
         } label: {
             moreLabel(hidden.count)
@@ -505,16 +616,21 @@ struct TabBar: View {
         }
     }
 
-    /// What every tab would take at full width, drawn once out of sight: a tab drawn as an icon can't tell how wide
-    /// its name would make it.
+    /// What every tab would take at each width it can have, drawn once out of sight: a tab drawn as an icon can't tell
+    /// how wide its name would make it.
     func measures(_ others: [UUID]) -> some View {
         ZStack {
-            front(crumbRoom: .infinity).fixedSize()
+            Breadcrumb(crumbs: crumbs, foldWidth: .infinity, maxWidth: .infinity).fixedSize()
+                .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.trail = $0; report() }
+            front(crumbRoom: .infinity, compact: false).fixedSize()
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.front = $0; report() }
+            front(crumbRoom: .infinity, compact: true).fixedSize()
+                .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.compactFront = $0; report() }
             ForEach(others, id: \.self) { id in
-                let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
-                label(entry, title: workspace.tabTitle(of: entry), playing: tabs.playing.contains(id)).fixedSize()
-                    .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.others[id] = $0; report() }
+                ForEach(TabForm.allCases, id: \.self) { form in
+                    label(id, form: form).fixedSize()
+                        .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.set($0, id, form); report() }
+                }
             }
             // Two digits: the menu's width hardly changes with its count.
             moreLabel(max(others.count, 10)).fixedSize()
@@ -550,17 +666,112 @@ struct TabBar: View {
     }
 }
 
+/// How a tab behind the front one is drawn, by `TabFit`'s steps.
+enum TabForm: CaseIterable {
+    case full, icons, stacked
+
+    init(_ fit: TabFit.Layout) {
+        self = !fit.iconsOnly ? .full : fit.stacked ? .stacked : .icons
+    }
+}
+
+/// One pane's segment of the tab in front. The focused one is raised in paper and holds the breadcrumb; the others
+/// are an icon and a short name and focus their pane when pressed. Under the pointer, a small × closes the pane; its
+/// place is kept when hidden, so the tab doesn't change width as the pointer passes.
+private struct TabSegment: View {
+    let mark: Crumb
+    /// The breadcrumb, on the focused segment only.
+    let crumbs: [Crumb]?
+    let crumbRoom: CGFloat
+    let iconOnly: Bool
+    /// The pane plays a recording: its icon slot is a speaker that pauses it.
+    let playing: Bool
+    let select: () -> Void
+    let close: () -> Void
+    let pause: () -> Void
+    @State private var hovering = false
+
+    static let height = Theme.Size.toolbarButton - Theme.Space.s
+    static let close = Theme.Space.l
+
+    var body: some View {
+        HStack(spacing: Theme.Space.xxs) {
+            // The focused segment is told by its ink alone, no capsule of its own: a capsule inside the tab's capsule
+            // inside the row made three boxes and left the inner one 3pt to spare (#62). Fading in place as the focus
+            // moves: the segments change their ink, they don't slide.
+            if let crumbs {
+                HStack(spacing: Theme.Space.s) {
+                    if playing { speakerButton.foregroundStyle(mark.dot ?? Theme.Palette.chromeSelected) }
+                    Breadcrumb(crumbs: crumbs, foldWidth: crumbRoom, maxWidth: crumbRoom)
+                }
+                .transition(.asymmetric(insertion: .opacity.animation(.snappy), removal: .identity))
+            } else {
+                HStack(spacing: Theme.Space.tight) {
+                    if playing { speakerButton }
+                    Button(action: select) {
+                        HStack(spacing: Theme.Space.tight) {
+                            if !playing { PlaceIcon(place: mark, tint: Theme.Palette.textSecondary) }
+                            if !iconOnly { CappedWidth(width: Theme.Size.tabName) { Text(mark.title).lineLimit(1) } }
+                        }
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.pointing(.plain))
+                    .help(mark.title)
+                    .accessibilityLabel(mark.title)
+                }
+                .foregroundStyle(Theme.Palette.textSecondary)
+                .transition(.asymmetric(insertion: .opacity.animation(.snappy), removal: .identity))
+            }
+            Button(action: close) {
+                Image(systemName: "xmark").font(Theme.Glyph.small)
+                    .frame(width: Self.close, height: Self.close)
+                    .contentShape(.circle)
+            }
+            .buttonStyle(.pointing(.plain))
+            .foregroundStyle(Theme.Palette.textTertiary)
+            .opacity(hovering ? 1 : 0)
+            .allowsHitTesting(hovering)
+            .help(Text(.panesClose))
+            .accessibilityLabel(Text(.panesClose))
+        }
+        .font(Theme.Typeface.body)
+        .padding(.leading, Theme.Space.s)
+        .padding(.trailing, Theme.Space.xs)
+        .frame(height: Self.height)
+        .contentShape(.rect)
+        .onTapGesture(perform: select)
+        .onHover { hovering = $0 }
+    }
+
+    /// Gray on a segment behind, in the course's color on the focused one, like the icon it stands in for.
+    var speakerButton: some View {
+        Button(action: pause) {
+            LineIcon(symbol: TabBar.speakerSymbol).contentShape(.rect)
+        }
+        .buttonStyle(.pointing(.plain))
+        .help(Text(.tabsPause))
+        .accessibilityLabel(Text(.tabsPause))
+    }
+}
+
+/// The thin rule between two segments of a tab.
+private struct SegmentRule: View {
+    var body: some View {
+        Theme.Palette.text.opacity(Theme.Opacity.edge)
+            .frame(width: 1, height: Theme.Space.l)
+            .padding(.horizontal, Theme.Space.xxs)
+    }
+}
+
 /// Where the toolbar row's items sit across the window, and so where the tabs between them go and how many fit. Only
 /// `placement` is watched: what it is worked out from changes with every frame of a live resize, and as the root
 /// view's state it redrew the sidebar, every kept tab's screen and the tabs on each one.
 @MainActor @Observable final class ToolbarRow {
-    /// The tabs at full width, as `TabBar` measured them.
+    /// The tabs at each width they can take, as `TabBar` measured them.
     struct Measures: Equatable {
-        var front: CGFloat = 0
-        var others: [Double] = []
+        var front = TabFit.Front(trail: 0, chrome: 0)
+        var others: [TabFit.Other] = []
         var more: CGFloat = 0
-        /// The front tab's capsule around its trail.
-        var chrome: CGFloat = 0
     }
 
     struct Placement: Equatable {
@@ -625,13 +836,13 @@ struct TabBar: View {
         let m = measures
         let plus = CGFloat(TabFit.newTabSpacing(gap: TabBar.gap, button: Theme.Size.toolbarButton, glyph: TabBar.plusInk))
         let space = room - Theme.Size.toolbarButton - plus
-        let fit = TabFit.layout(room: space, selected: m.front, others: m.others, icon: TabBar.icon, gap: TabBar.gap, more: m.more)
+        let fit = TabFit.layout(room: space, front: m.front, others: m.others, gap: TabBar.gap, more: m.more)
         // Whole points, down: a held trail follows the width anyway, fractions would only redraw it more often, and
         // rounded up the strip could outgrow the row by one.
-        let trail = TabFit.trail(room: space, selected: m.front, others: m.others, layout: fit, icon: TabBar.icon, gap: TabBar.gap,
-                                 more: m.more, chrome: m.chrome).map { $0.rounded(.down) }
-        let width = TabFit.width(selected: m.front, others: m.others, layout: fit, trail: trail, icon: TabBar.icon, gap: TabBar.gap,
-                                 more: m.more, chrome: m.chrome) + plus + Theme.Size.toolbarButton
+        let trail = TabFit.trail(room: space, front: m.front, others: m.others, layout: fit, gap: TabBar.gap, more: m.more)
+            .map { $0.rounded(.down) }
+        let width = TabFit.width(front: m.front, others: m.others, layout: fit, trail: trail, gap: TabBar.gap, more: m.more)
+            + plus + Theme.Size.toolbarButton
         // The item whole points wide, the lead and the strip together: half a point over, the toolbar moved the item
         // by half a point, the row reported the new place, the lead took up the half, and the item went back, every
         // few frames of a resize.

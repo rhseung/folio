@@ -79,6 +79,7 @@ struct SearchPalette: View {
                         .padding(Self.inset)
                         .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { resultsHeight = $0 }
                     }
+                    .overflowFade(.vertical)
                     // A ScrollView takes all the height it is offered; size it to its results so a short list stays short.
                     .frame(height: min(resultsHeight, 440))
                     .onChange(of: model.selected) { _, new in proxy.scrollTo(new) }

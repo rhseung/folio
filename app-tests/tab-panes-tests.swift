@@ -1,0 +1,117 @@
+import FolioDomain
+import Foundation
+import Testing
+@testable import Folio
+
+/// A tab's panes (#62): each keeps its own history, the tab's place follows the focused one, and "옆 칸에 열기" opens
+/// a pane beside the one that asked.
+@MainActor
+struct TabPanesTests {
+    let grades = Navigator.Entry(link: .place(.grades))
+    let people = Navigator.Entry(link: .place(.people))
+    let codes = Navigator.Entry(link: .place(.codes))
+    let settings = Navigator.Entry(link: .place(.settings))
+
+    @Test func besideOpensARightNeighborAndFocusesIt() {
+        let panes = TabPanes(Navigator(), limit: 3)
+        panes.openBeside(grades)
+        #expect(panes.count == 2 && panes.focus == 1)
+        #expect(panes.navigators.map(\.current) == [Navigator.Entry(link: .place(.today)), grades])
+        // The new pane starts its own history.
+        #expect(!panes.focused.history.canGoBack)
+        // From the first pane, the next one opens right of it, between the two.
+        panes.openBeside(people, from: panes.navigators[0])
+        #expect(panes.navigators.map(\.current) == [Navigator.Entry(link: .place(.today)), people, grades])
+        #expect(panes.trails.count == 3 && Set(panes.ids).count == 3)
+    }
+
+    @Test func atTheLimitThePaneUsedLongestAgoGoesOn() {
+        let panes = TabPanes(Navigator(), limit: 2)
+        panes.openBeside(grades)
+        panes.press(0)
+        panes.openBeside(people)
+        // The grades pane was pressed longest ago: it goes on to people, with grades a step back.
+        #expect(panes.count == 2 && panes.focus == 1)
+        #expect(panes.focused.current == people && panes.focused.backList == [grades])
+        // A target a pane already shows goes to that pane.
+        panes.openBeside(Navigator.Entry(link: .place(.today)))
+        #expect(panes.focus == 0 && panes.count == 2)
+    }
+
+    @Test func closingHandsTheFocusToThePanePressedLast() {
+        let panes = TabPanes(Navigator(), limit: 3)
+        panes.openBeside(grades)
+        panes.openBeside(people)
+        panes.press(0)
+        #expect(panes.close(0))
+        #expect(panes.navigators.map(\.current) == [grades, people] && panes.focus == 1)
+        #expect(panes.close(1) && !panes.close(0))
+        #expect(panes.count == 1 && panes.shares == [1])
+    }
+
+    @Test func swappingKeepsEachPaneItsHistoryAndFocus() {
+        let panes = TabPanes(Navigator(), limit: 3)
+        panes.openBeside(grades)
+        let focused = panes.focused
+        let trail = panes.focusedTrail
+        panes.swap(0, 1)
+        #expect(panes.focus == 0 && panes.focused === focused && panes.focusedTrail === trail)
+    }
+
+    @Test func draggingADividerDoesNotRedrawTheTabs() {
+        // The toolbar's tabs draw from the focus and the panes; a share changing every frame of a drag must not touch
+        // them, or the toolbar rebuilds its menu form each frame (#310).
+        let panes = TabPanes(Navigator(), limit: 3)
+        panes.openBeside(grades)
+        final class Changes: @unchecked Sendable { var count = 0 }
+        let changes = Changes()
+        withObservationTracking {
+            _ = panes.focus
+            _ = panes.ids
+            _ = panes.navigators
+            _ = panes.trails
+        } onChange: { changes.count += 1 }
+        panes.resize(divider: 0, to: 0.3)
+        panes.press(1)
+        #expect(changes.count == 0)
+        #expect(abs(panes.shares[0] - 0.3) < 1e-9)
+    }
+
+    @Test func theWindowFollowsTheFocusedPane() {
+        let tabs = WindowTabs(Navigator())
+        let panes = tabs.front!
+        panes.openBeside(grades)
+        #expect(tabs.current === panes.navigators[1])
+        #expect(tabs.trail(tabs.selected) === panes.trails[1])
+        panes.press(0)
+        #expect(tabs.current.screen == .today)
+        // A pane's screen finds its tab even behind another.
+        let pane = panes.navigators[1]
+        tabs.open()
+        #expect(tabs.panes(holding: pane) === panes)
+    }
+
+    @Test func aTabOfSeveralPanesMovesToAWindowWhole() throws {
+        let tabs = WindowTabs(Navigator())
+        tabs.open(Navigator(grades))
+        let panes = try #require(tabs.front)
+        panes.focused.go(people)
+        panes.openBeside(codes)
+        panes.resize(divider: 0, to: 0.7)
+        panes.press(0)
+        let moved = try #require(tabs.take(tabs.selected))
+        var request = WindowRequest(link: moved.focused.current.link, history: moved.focused.history)
+        request.panes = moved.navigators.map(\.history)
+        request.shares = moved.shares
+        request.focus = moved.focus
+        let back = try JSONDecoder().decode(WindowRequest.self, from: JSONEncoder().encode(request))
+        let window = try #require(TabPanes(histories: back.panes ?? [], shares: back.shares, focus: back.focus ?? 0, limit: 3))
+        #expect(window.navigators.map(\.current) == [people, codes])
+        #expect(window.focus == 0 && window.focused.backList == [grades])
+        #expect(abs(window.shares[0] - 0.7) < 1e-9)
+    }
+
+    @Test func eachPresetHasAName() {
+        for preset in PanePreset.builtIn { #expect(preset.name != preset.id) }
+    }
+}

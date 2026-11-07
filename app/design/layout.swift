@@ -14,6 +14,9 @@ struct Page<Content: View, Backdrop: View>: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Space.section) { content }
+                    // The fade's hidden bars reach everything inside through the environment; a text area or sheet
+                    // on the page keeps its own.
+                    .scrollIndicators(.automatic)
                     .frame(maxWidth: maxWidth, alignment: .leading)
                     .padding(.horizontal, Theme.Space.xxl)
                     .padding(.top, Theme.Space.xl)
@@ -22,6 +25,7 @@ struct Page<Content: View, Backdrop: View>: View {
                     .background(alignment: .top) { backdrop }
                     .pageScrollWithoutBounce()
             }
+            .overflowFade(.vertical)
             // To the row a link named (`linkTarget`), a little below the top. Rows a page reads in after it appears
             // (the exams' review state) aren't laid out on the first pass, so the scroll waits for one.
             .task(id: focus) {
@@ -88,6 +92,7 @@ struct ColumnSplit<Column: View, Bar: View, Content: View>: View {
     @ViewBuilder var bar: Bar
     @ViewBuilder var content: Content
     @Environment(\.revealsOverflow) private var revealsOverflow
+    @Environment(\.inPanes) private var inPanes
     // Measured, unlike `Fold`: the side-by-side form can't push a pane out (the page goes down to nothing), so its
     // first pass at the old width costs nothing, and only the width the page is left decides.
     @State private var narrow = false
@@ -99,7 +104,9 @@ struct ColumnSplit<Column: View, Bar: View, Content: View>: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            if narrow && showsPage {
+            // Not over a pane of several (#62): the tab's segment names the pane and its trail goes back up, and a bar
+            // over each pane read as a title bar per pane. A stacked list's way back has no other place, so it stays.
+            if narrow && showsPage && !(inPanes && fold == .menu) {
                 // Named, not just a glyph: the bar stands in for a column whose rows said where they lead.
                 PageBar { bar.buttonStyle(.ghost) } trailing: { EmptyView() }
                     .background(Theme.Palette.page)
@@ -131,6 +138,8 @@ extension EnvironmentValues {
     @Entry var revealsOverflow = false
     /// Inside a `ColumnSplit` that shows its column or its page alone: what each held for the other now has to be in it.
     @Entry var columnFolded = false
+    /// In a tab of several panes, which the tab's segments name: a screen leaves out what only named it (#62).
+    @Entry var inPanes = false
 }
 
 /// What only a folded `ColumnSplit` needs, such as a way from the column back to a page it hides.
@@ -592,8 +601,6 @@ private struct OverflowFade: ViewModifier {
     func body(content: Content) -> some View {
         let vertical = axis == .vertical
         let (start, end): (Edge.Set, Edge.Set) = vertical ? (.top, .bottom) : (.leading, .trailing)
-        let (from, to): (UnitPoint, UnitPoint) = vertical ? (.top, .bottom) : (.leading, .trailing)
-        let stack = vertical ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
         return content
             // Not .hidden: with scroll bars set to always show, that still reserved the bar's height below a row.
             .scrollIndicators(.never)
@@ -608,14 +615,26 @@ private struct OverflowFade: ViewModifier {
             } action: { _, past in
                 withAnimation(.easeOut(duration: 0.15)) { edges = past }
             }
-            .mask {
-                stack {
-                    LinearGradient(colors: [edges.contains(start) ? .clear : .primary, .primary], startPoint: from, endPoint: to)
-                        .frame(width: vertical ? nil : Theme.Space.xl, height: vertical ? Theme.Space.xl : nil)
-                    Rectangle()
-                    LinearGradient(colors: [.primary, edges.contains(end) ? .clear : .primary], startPoint: from, endPoint: to)
-                        .frame(width: vertical ? nil : Theme.Space.xl, height: vertical ? Theme.Space.xl : nil)
-                }
-            }
+            .mask { OverflowFadeMask(axis: axis, edges: edges) }
+    }
+}
+
+/// The fade alone, for a scroller SwiftUI can't watch (the Claude panel's web view), told its edges by the view.
+struct OverflowFadeMask: View {
+    let axis: Axis
+    let edges: Edge.Set
+
+    var body: some View {
+        let vertical = axis == .vertical
+        let (start, end): (Edge.Set, Edge.Set) = vertical ? (.top, .bottom) : (.leading, .trailing)
+        let (from, to): (UnitPoint, UnitPoint) = vertical ? (.top, .bottom) : (.leading, .trailing)
+        let stack = vertical ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
+        stack {
+            LinearGradient(colors: [edges.contains(start) ? .clear : .primary, .primary], startPoint: from, endPoint: to)
+                .frame(width: vertical ? nil : Theme.Space.xl, height: vertical ? Theme.Space.xl : nil)
+            Rectangle()
+            LinearGradient(colors: [.primary, edges.contains(end) ? .clear : .primary], startPoint: from, endPoint: to)
+                .frame(width: vertical ? nil : Theme.Space.xl, height: vertical ? Theme.Space.xl : nil)
+        }
     }
 }
