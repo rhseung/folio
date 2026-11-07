@@ -141,6 +141,26 @@ struct LectureSectionsModelTests {
         #expect(model.splitting?.sections.map(\.pages) == [1...4, 5...10] && model.splitting?.sections[1].unit == matching)
     }
 
+    /// Cancelled, the screen closes and the course is as it was; opened again, it starts over.
+    @Test func cancellingTheSplitScreenWritesNothing() async throws {
+        let course = try #require(workspace.course(graphTheory))
+        let model = FileViewModel(workspace: workspace, course: course, subject: .material(slides.id))
+        let document = PDFDocument()
+        for i in 0..<10 { document.insert(PDFPage(), at: i) }
+        let controller = PDFController(document: document, page: 0)
+        await model.startSplit(controller)
+        model.splitting?.split(at: 4)
+        model.splitting?.split(at: 8)
+        model.splitting?.setUnit(matching, of: 2)
+        model.cancelSplit()
+        #expect(model.splitting == nil)
+        #expect(!file.isSplit(slides.id))
+        #expect(file.units.first { $0.id == matching }?.lecturePages.isEmpty == true)
+
+        await model.startSplit(controller)
+        #expect(model.splitting?.sections.map(\.pages) == [1...10])
+    }
+
     @Test func theProgressBarReadsTheUnitsItReaches() throws {
         workspace.run(MaterialSplit(course: graphTheory, material: slides.id, sections: [LectureCut(unit: matching, firstPage: 3, lastPage: 8)]))
         let session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now))?.made)
@@ -157,3 +177,55 @@ struct LectureSectionsModelTests {
         #expect(units.materials(unit, in: file).first { $0.material.id == slides.id }?.pages == 3...8)
     }
 }
+
+#if os(macOS)
+import AppKit
+import SwiftUI
+
+/// The split screen drawn in a window, on `busyDay`'s real deck: closing it or merging zones redraws rows whose zone
+/// is gone, which read past the split's end and stopped the app (#179).
+@MainActor @Suite(.serialized)
+struct LectureSplitScreenTests {
+    let workspace: Workspace
+    let model: FileViewModel
+    let controller: PDFController
+    let host: NSHostingView<AnyView>
+
+    init() async throws {
+        workspace = try Workspace.scenario(.busyDay)
+        let course = try #require(workspace.course(graphTheory))
+        let slides = try #require(course.file.lectureFiles.first { course.file.isSplit($0.id) })
+        model = FileViewModel(workspace: workspace, course: course, subject: .material(slides.id))
+        let document = try #require(PDFDocument(url: model.url))
+        #expect(document.pageCount == 24)
+        controller = PDFController(document: document, page: 0)
+        await model.startSplit(controller)
+        host = NSHostingView(rootView: AnyView(PDFContent(model: model, controller: controller).environment(workspace)))
+        let window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: 1180, height: 720), styleMask: [.borderless], backing: .buffered, defer: false)
+        window.contentView = host
+        try await settle()
+    }
+
+    func settle() async throws {
+        host.layoutSubtreeIfNeeded()
+        try await Task.sleep(for: .milliseconds(150))
+        host.layoutSubtreeIfNeeded()
+    }
+
+    @Test func cancellingClosesTheScreen() async throws {
+        #expect(model.splitting?.sections.count == 3)
+        model.cancelSplit()
+        try await settle()
+        #expect(model.splitting == nil)
+    }
+
+    @Test func mergingTheLastZonesKeepsTheRows() async throws {
+        model.splitting?.merge(after: 1)
+        try await settle()
+        #expect(model.splitting?.sections.map(\.pages) == [1...8, 9...24])
+        model.cancelSplit()
+        try await settle()
+        #expect(model.splitting == nil)
+    }
+}
+#endif

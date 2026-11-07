@@ -84,10 +84,11 @@ struct SectionEditor: View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             SectionBar(split: $split, selected: $selected, label: label, page: page, pick: pick)
             VStack(spacing: 0) {
-                ForEach(Array(split.sections.enumerated()), id: \.element.id) { i, _ in
-                    SectionRow(split: $split, index: i, units: units, selected: selected == i, label: label(i))
+                ForEach(Array(split.sections.enumerated()), id: \.element.id) { i, section in
+                    SectionRow(split: $split, id: section.id, units: units, selected: selected == i, label: label(i))
                         .contentShape(.rect)
                         .onTapGesture {
+                            guard let i = split.sections.firstIndex(where: { $0.id == section.id }) else { return }
                             selected = i
                             pick(split.sections[i].firstPage)
                         }
@@ -330,33 +331,46 @@ struct SectionBar: View {
 }
 
 /// One zone as a row: its name (typed for a new unit), its pages, and the unit it goes to.
+///
+/// A row holds its zone's id, not its place: a merge, or the screen closing, shrinks the split while the row is drawn
+/// once more, and a row reading its old place ran past the end (#179). Each edit finds the place as it runs.
 private struct SectionRow: View {
     @Binding var split: LectureSplit
-    let index: Int
+    let id: LectureSplit.Section.ID
     let units: [FolioDomain.Unit]
     let selected: Bool
     let label: String
 
     @Environment(\.accent) private var accent
 
-    private var section: LectureSplit.Section { split.sections[index] }
+    private var index: Int? { split.sections.firstIndex { $0.id == id } }
 
     var body: some View {
+        if let index { row(split.sections[index], at: index) }
+    }
+
+    private func row(_ section: LectureSplit.Section, at index: Int) -> some View {
         HStack(spacing: Theme.Space.s) {
-            name.frame(maxWidth: .infinity, alignment: .leading)
+            name(section).frame(maxWidth: .infinity, alignment: .leading)
             Text(section.firstPage == section.lastPage ? "\(section.firstPage)" : "\(section.firstPage)–\(section.lastPage)")
                 .font(Theme.Typeface.mono).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
                 .frame(width: 56, alignment: .trailing)
-            unitMenu.frame(width: 152, alignment: .trailing)
+            unitMenu(section, at: index).frame(width: 152, alignment: .trailing)
         }
         .padding(.horizontal, Theme.Space.s)
         .frame(height: 32)
         .background(selected ? Theme.Palette.fill : .clear, in: .rect(cornerRadius: Theme.Radius.control))
     }
 
-    @ViewBuilder private var name: some View {
+    /// On the zone where it stands when the edit runs; once it's gone, nothing.
+    private func edit(_ change: (Int) -> Void) {
+        if let index { change(index) }
+    }
+
+    @ViewBuilder private func name(_ section: LectureSplit.Section) -> some View {
         if section.isNew {
-            TextField(String(localized: .designSectionsNamePlaceholder), text: Binding(get: { section.title }, set: { split.rename(index, to: $0) }))
+            TextField(String(localized: .designSectionsNamePlaceholder),
+                      text: Binding(get: { section.title }, set: { title in edit { split.rename($0, to: title) } }))
                 .textFieldStyle(.plain)
         } else {
             let own = section.title.isEmpty ? label : section.title
@@ -366,12 +380,12 @@ private struct SectionRow: View {
         }
     }
 
-    private var unitMenu: some View {
+    private func unitMenu(_ section: LectureSplit.Section, at index: Int) -> some View {
         Menu {
             Section(String(localized: .designSectionsCourseUnits)) {
                 ForEach(UnitTree.outline(units), id: \.unit.id) { item in
                     Button {
-                        split.setUnit(item.unit.id, of: index)
+                        edit { split.setUnit(item.unit.id, of: $0) }
                     } label: {
                         if section.unit == item.unit.id && !section.isNew { Image(systemName: "checkmark") }
                         Text(String(repeating: "    ", count: item.depth) + item.unit.title)
@@ -379,25 +393,25 @@ private struct SectionRow: View {
                 }
             }
             Button(section.title.isEmpty ? String(localized: .designSectionsNewUnit) : String(localized: .designSectionsNewUnitNamed(section.title))) {
-                split.makeNew(index)
+                edit { split.makeNew($0) }
             }
-            Button(String(localized: .designSectionsNoUnit)) { split.setUnit(nil, of: index) }
+            Button(String(localized: .designSectionsNoUnit)) { edit { split.setUnit(nil, of: $0) } }
             Divider()
-            Button(String(localized: .designSectionsMergeBefore)) { split.merge(after: index - 1) }.disabled(index == 0)
-            Button(String(localized: .designSectionsMergeAfter)) { split.merge(after: index) }.disabled(index == split.sections.count - 1)
+            Button(String(localized: .designSectionsMergeBefore)) { edit { split.merge(after: $0 - 1) } }.disabled(index == 0)
+            Button(String(localized: .designSectionsMergeAfter)) { edit { split.merge(after: $0) } }.disabled(index == split.sections.count - 1)
         } label: {
             HStack(spacing: Theme.Space.tight) {
                 if section.match != nil { Image(systemName: "sparkle").font(Theme.Glyph.small).foregroundStyle(accent.color) }
-                menuText.lineLimit(1).truncationMode(.tail)
+                menuText(section).lineLimit(1).truncationMode(.tail)
                 Image(systemName: "chevron.up.chevron.down").font(Theme.Glyph.small).foregroundStyle(Theme.Palette.textTertiary)
             }
             .contentShape(.rect)
         }
         .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).pointingHand()
-        .help(matchHelp)
+        .help(matchHelp(section))
     }
 
-    @ViewBuilder private var menuText: some View {
+    @ViewBuilder private func menuText(_ section: LectureSplit.Section) -> some View {
         if section.isNew {
             Text(.designSectionsNewUnitLabel).foregroundStyle(accent.ink)
         } else if let unit = section.unit {
@@ -407,7 +421,7 @@ private struct SectionRow: View {
         }
     }
 
-    private var matchHelp: String {
+    private func matchHelp(_ section: LectureSplit.Section) -> String {
         switch section.match {
         case .name: String(localized: .designSectionsMatchName)
         case .claude: String(localized: .designSectionsMatchClaude)
