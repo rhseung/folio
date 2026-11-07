@@ -154,7 +154,7 @@ enum GeneratedCommands {
     }
 
     struct SessionAdd: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "add", abstract: "회차 추가. 주차와 순번은 학기 시작일에서 정한다", discussion: """
+        static let configuration = CommandConfiguration(commandName: "add", abstract: "회차 추가. 주차는 학기 시작일에서 정한다", discussion: """
             예시:
               folio session add EC4207 --date \"2026-10-28 10:30\"
               folio session add EC4207 --date 2026-10-30 --cancelled --dry-run
@@ -192,14 +192,14 @@ enum GeneratedCommands {
     struct SessionSet: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "set", abstract: "회차의 일시, 주제, 온라인 링크, 휴강, 복습 여부, 복습 노트 상태 바꾸기. 준 것만 바뀐다", discussion: """
             예시:
-              folio session set EC4207/9주차-1 --cancelled true
-              folio session set EC4207/9주차-1 --review-unfinished false --dry-run
-              folio session set EC4207/9주차-1 --topic \"매칭 보강\" --link https://zoom.us/j/123 --dry-run
-              folio session set EC4207/9주차-1 --date \"2026-10-29 19:00\" --end \"2026-10-29 20:15\" --dry-run
+              folio session set EC4207/10-26 --cancelled true
+              folio session set EC4207/10-26 --review-unfinished false --dry-run
+              folio session set EC4207/10-26 --topic \"매칭 보강\" --link https://zoom.us/j/123 --dry-run
+              folio session set EC4207/10-26 --date \"2026-10-29 19:00\" --end \"2026-10-29 20:15\" --dry-run
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref("Session")) var session: String = ""
-        @Option(help: ArgumentHelp("일시. 다른 주로 옮기면 그 주의 마지막 회차가 되어 이름(N주차-M)이 바뀐다", valueName: "date")) var date: DateArg?
+        @Option(help: ArgumentHelp("일시. 회차를 가리키는 날짜(11-03)도 따라 바뀐다", valueName: "date")) var date: DateArg?
         @Option(help: ArgumentHelp("끝 일시. 수업 시간표 칸과 다를 때만 저장된다. none이면 지운다", valueName: "date")) var end: Clearable<DateArg>?
         @Option(help: "주제. 회차 목록에서 제목으로 보인다") var topic: String?
         @Option(help: "온라인 수업 링크(Zoom 등). none이면 지운다") var link: Clearable<String>?
@@ -230,7 +230,7 @@ enum GeneratedCommands {
     struct SessionNote: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "note", abstract: "회차의 러프 노트와 복습 노트. 없으면 템플릿으로 만든다", discussion: """
             예시:
-              folio session note EC4207/9주차-1 review
+              folio session note EC4207/10-26 review
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
@@ -256,7 +256,7 @@ enum GeneratedCommands {
             앱 안의 PDF 보기에서 20초 이상 머문 페이지의 처음부터 끝까지가 범위다. 녹음이 끝나면 앱이 부른다.
 
             예시:
-              folio session link-viewed EC4207/9주차-1 --dry-run
+              folio session link-viewed EC4207/10-26 --dry-run
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref("Session")) var session: String = ""
@@ -276,7 +276,7 @@ enum GeneratedCommands {
     struct AttendanceSet: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "set", abstract: "회차의 출결 정하기. 출석이 기본값이다", discussion: """
             예시:
-              folio attendance set EC4207/9주차-1 absent
+              folio attendance set EC4207/10-26 absent
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref("Session")) var session: String
@@ -368,12 +368,12 @@ enum GeneratedCommands {
     struct UnitLink: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "link", abstract: "단원에 회차 연결하기, --off면 풀기", discussion: """
             예시:
-              folio unit link EC4207/트리 9주차-1 9주차-2
-              folio unit link EC4207/트리 9주차-2 --off --dry-run
+              folio unit link EC4207/트리 10-26 10-28
+              folio unit link EC4207/트리 10-28 --off --dry-run
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref("Unit")) var unit: String
-        @Argument(help: ArgumentHelp("회차. 예: 9주차-1. 여러 번 줄 수 있다", valueName: "sessions"), completion: Complete.ref("Session")) var sessions: [String]
+        @Argument(help: ArgumentHelp("회차. 예: 10-26. 여러 번 줄 수 있다", valueName: "sessions"), completion: Complete.ref("Session")) var sessions: [String]
         @Flag(name: .customLong("off"), help: "연결 풀기") var off = false
 
         func run() throws {
@@ -993,11 +993,11 @@ enum GeneratedCommands {
     struct NoteLinkSessions: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "link-sessions", abstract: "복습 노트를 회차 여러 개에 연결하기. 이미 연결된 회차는 그대로 둔다", discussion: """
             예시:
-              folio note link-sessions \"EC4207/9주차 정리\" 9주차-1 9주차-2
+              folio note link-sessions \"EC4207/10-26(월) 정리\" 10-26 10-28
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<복습 노트>", valueName: "note"), completion: Complete.ref("Note")) var note: String
-        @Argument(help: ArgumentHelp("회차. 예: 9주차-1. 여러 번 줄 수 있다", valueName: "sessions"), completion: Complete.ref("Session")) var sessions: [String]
+        @Argument(help: ArgumentHelp("회차. 예: 10-26. 여러 번 줄 수 있다", valueName: "sessions"), completion: Complete.ref("Session")) var sessions: [String]
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -1015,7 +1015,7 @@ enum GeneratedCommands {
     struct NoteUnlinkSession: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "unlink-session", abstract: "회차 하나에서 노트 떼기. 노트가 맡은 다른 회차는 그대로 둔다", discussion: """
             예시:
-              folio note unlink-session \"EC4207/9주차 정리\" 9주차-1
+              folio note unlink-session \"EC4207/10-26(월) 정리\" 10-26
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<노트>", valueName: "note"), completion: Complete.ref("Note")) var note: String

@@ -37,7 +37,7 @@ struct ClaudeModelTests {
         let course = try #require(workspace.course(graphTheory))
         model.load(course)
         #expect(model.chats.isEmpty && model.chatID == nil)
-        #expect(model.notes.map(\.title) == ["2주차-1"])
+        #expect(model.notes.map(\.title) == ["09-08(화) 매칭"])
         #expect(model.addOptions(course).first?.section == "노트")
     }
 

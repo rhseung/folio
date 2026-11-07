@@ -98,13 +98,13 @@ struct CourseWorkTests {
         // Term starts Wednesday 2026-09-02: that week is 1, so 2026-10-26 is 9주차.
         let first = SessionPlanner.session(at: date("2026-10-26 13:00"), sessions: [], termStart: LocalDate("2026-09-02"),
                                            calendar: calendar, device: device, now: .now)
-        #expect(first.week == 9 && first.name(among: [first]) == "9주차-1")
+        #expect(first.week == 9)
         let recitation = SessionPlanner.session(at: date("2026-10-27 19:00"), sessions: [first], termStart: LocalDate("2026-09-02"),
                                                 calendar: calendar, device: device, now: .now)
         let second = SessionPlanner.session(at: date("2026-10-28 13:00"), sessions: [first, recitation], termStart: LocalDate("2026-09-02"),
                                             calendar: calendar, device: device, now: .now)
         let all = [first, recitation, second]
-        #expect(all.map { $0.name(among: all) } == ["9주차-1", "9주차-2", "9주차-3"])
+        #expect(all.map(\.week) == [9, 9, 9])
         // Without a term start, weeks count from the earliest session.
         let later = SessionPlanner.session(at: date("2026-11-02 13:00"), sessions: all, termStart: nil, calendar: calendar, device: device, now: .now)
         #expect(later.week == 2)
@@ -225,19 +225,6 @@ struct CourseWorkTests {
         #expect(OnlineLink.appURL(try #require(URL(string: "https://us06web.zoom.us/launch/jc/884"))) == nil)
         #expect(OnlineLink.appURL(try #require(URL(string: "https://meet.google.com/abc"))) == nil)
         #expect(OnlineLink.appURL(try #require(URL(string: "https://notzoom.us/j/123"))) == nil)
-    }
-
-    /// A makeup set up before the class earlier that week used to take 10주차-2 and push the class to 10주차-3.
-    @Test func namesFollowTheDatesNotTheOrderMade() {
-        let makeup = Session(device: device, at: date("2026-11-01 09:00"), week: 10, date: date("2026-11-04 21:00"))
-        let tuesday = Session(device: device, at: date("2026-11-03 10:00"), week: 10, date: date("2026-11-03 10:30"))
-        var file = CourseFile(course: courses[0], sessions: [makeup, tuesday])
-        #expect([tuesday, makeup].map(file.name(of:)) == ["10주차-1", "10주차-2"])
-        // A session not yet in the file is named where its date puts it.
-        let monday = Session(device: device, at: .now, week: 10, date: date("2026-11-02 10:30"))
-        #expect(monday.name(among: file.sessions) == "10주차-1")
-        file.sessions.removeAll { $0.id == tuesday.id }
-        #expect(file.name(of: makeup) == "10주차-1")
     }
 
     @Test func linkListsLeaveOutCancelledClassesUnlessLinked() {
@@ -395,17 +382,17 @@ struct CourseWorkTests {
         let c = Session(device: device, at: .now, week: 11, date: date("2026-11-10 10:30"))
         var file = CourseFile(course: courses[0], sessions: [a, b, c])
 
-        // Within its week it keeps its name; its own end moves with it.
+        // Within its week; its own end moves with it.
         file.reschedule(b.id, to: date("2026-11-05 20:00"), termStart: start, calendar: calendar)
-        #expect(file.sessions[1].week == 10 && file.name(of: file.sessions[1]) == "10주차-2")
+        #expect(file.sessions[1].week == 10 && file.reference(of: file.sessions[1], calendar: calendar) == "11-05")
         #expect(file.sessions[1].end == date("2026-11-05 21:15"))
 
         #expect(file.week(of: date("2026-11-12 20:00"), moving: b.id, termStart: start, calendar: calendar) == 11)
         file.reschedule(b.id, to: date("2026-11-12 20:00"), termStart: start, calendar: calendar)
-        #expect(file.sessions[1].week == 11 && file.name(of: file.sessions[1]) == "11주차-2")
-        // Moved before the class that week, it takes the first name.
+        #expect(file.sessions[1].week == 11 && file.reference(of: file.sessions[1], calendar: calendar) == "11-12")
+        // Moved before the class that week, it leaves the other class's reference as it was.
         file.reschedule(b.id, to: date("2026-11-09 20:00"), termStart: start, calendar: calendar)
-        #expect(file.name(of: file.sessions[1]) == "11주차-1" && file.name(of: file.sessions[2]) == "11주차-2")
+        #expect(file.reference(of: file.sessions[1], calendar: calendar) == "11-09" && file.reference(of: file.sessions[2], calendar: calendar) == "11-10")
     }
 
     @Test func aSessionEndingBeforeItStartsOrABadLinkIsRefused() {

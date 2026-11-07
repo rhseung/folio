@@ -54,13 +54,13 @@ struct TodayCommand: ParsableCommand {
             Summary.Item(course: code[course] ?? "", courseId: course, id: id, title: title, at: at, detail: detail)
         }
         func session(_ s: TodaySummary.SessionItem) -> Summary.Item {
-            item(s.courseId, s.session.id, file[s.courseId]?.name(of: s.session) ?? "", at: s.session.date, s.session.topic.isEmpty ? nil : s.session.topic)
+            item(s.courseId, s.session.id, file[s.courseId]?.reference(of: s.session, calendar: calendar) ?? "", at: s.session.date, s.session.topic.isEmpty ? nil : s.session.topic)
         }
         let review = { (e: ReviewEntry) in item(e.courseId, e.item.unitId, e.unitTitle, e.item.overdueDays > 0 ? String(localized: .todayOverdue(e.item.overdueDays)) : nil) }
         let out = Summary(
             studyDay: summary.studyDay.description,
             ongoing: TodaySummary.ongoingClass(in: files, at: now, calendar: calendar).map {
-                item($0.courseId, $0.session.id, file[$0.courseId]?.name(of: $0.session) ?? "", at: $0.end, String(localized: .todayMinutesLeft(Int(($0.end.timeIntervalSince(now) / 60).rounded(.up)))))
+                item($0.courseId, $0.session.id, file[$0.courseId]?.reference(of: $0.session, calendar: calendar) ?? "", at: $0.end, String(localized: .todayMinutesLeft(Int(($0.end.timeIntervalSince(now) / 60).rounded(.up)))))
             },
             exams: summary.exams.map { item($0.courseId, $0.exam.id, $0.exam.title, at: $0.exam.start, $0.dDay == 0 ? "D-day" : "D-\($0.dDay)") },
             classes: summary.classesToday.map(session),

@@ -49,7 +49,7 @@ struct LinkTarget: ParsableArguments {
         case .card:
             return try card(r)
         case .session:
-            return try item(r) { c, name in let s = try r.session(name, in: c); return (s.id, c.file.name(of: s)) }
+            return try item(r) { c, name in let s = try r.session(name, in: c); return (s.id, c.file.title(of: s, calendar: r.ctx.calendar)) }
         case .unit:
             return try item(r) { c, name in let u = try r.unit(name, in: c); return (u.id, u.title) }
         case .exam:

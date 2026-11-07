@@ -14,10 +14,10 @@ struct NoteStoreTests {
 
     @Test func notesTakeTheirPropertiesFromCourseJSON() throws {
         let notes = try store().notes()
-        #expect(notes.map(\.title) == ["2주차-1"])
+        #expect(notes.map(\.title) == ["09-08(화) 매칭"])
         #expect(notes.first?.meta.id == UUID(uuidString: "6F1D2C4E-8A3B-4F5E-9C1D-2B7A8E0F3D41"))
         #expect(notes.first?.meta.kind == .rough)
-        #expect(try store().read(#require(notes.first)).hasPrefix("# 2주차-1"))
+        #expect(try store().read(#require(notes.first)).hasPrefix("# 09-08(화) 매칭"))
     }
 
     /// A link's title finds its note as written first, and otherwise ignoring case.
@@ -27,7 +27,7 @@ struct NoteStoreTests {
         let notes = try store.notes()
         #expect(notes.titled("Matching")?.url.lastPathComponent == "Matching.md")
         #expect(notes.titled("MATCHING")?.url.lastPathComponent == "Matching.md")
-        #expect(notes.titled("2주차-1")?.meta.id != nil)
+        #expect(notes.titled("09-08(화) 매칭")?.meta.id != nil)
         #expect(notes.titled("없음") == nil)
         // A link may name the file; a `.tex` note is still a note to open.
         try store.createNote(at: store.newNoteURL(title: "증명", format: .tex), text: "")
@@ -43,7 +43,7 @@ struct NoteStoreTests {
         try store.createNote(at: store.newNoteURL(title: "밖에서", format: .markdown), text: "# 밖에서\n")
         try store.createNote(at: store.newNoteURL(title: "증명", format: .tex), text: "\\documentclass{article}\n")
         let notes = try store.notes()
-        #expect(notes.map(\.title) == ["2주차-1", "밖에서", "증명"])
+        #expect(notes.map(\.title) == ["09-08(화) 매칭", "밖에서", "증명"])
         #expect(notes[1].meta.id == nil && notes[1].format == .markdown)
         #expect(notes[2].meta.id == nil && notes[2].format == .tex)
         #expect(try store.note(at: "Notes/증명.tex")?.format == .tex)
@@ -51,12 +51,12 @@ struct NoteStoreTests {
 
     @Test func newNamesNeverTakeAnExistingFile() throws {
         let store = try store()
-        let first = store.newNoteURL(title: "2주차-1 정리", format: .markdown)
+        let first = store.newNoteURL(title: "09-08(화) 매칭 정리", format: .markdown)
         try store.createNote(at: first, text: "")
-        #expect(first.lastPathComponent == "2주차-1 정리.md")
-        #expect(store.newNoteURL(title: "2주차-1 정리", format: .markdown).lastPathComponent == "2주차-1 정리 2.md")
+        #expect(first.lastPathComponent == "09-08(화) 매칭 정리.md")
+        #expect(store.newNoteURL(title: "09-08(화) 매칭 정리", format: .markdown).lastPathComponent == "09-08(화) 매칭 정리 2.md")
         // The title is the file name, so another format doesn't free it.
-        #expect(store.newNoteURL(title: "2주차-1 정리", format: .tex).lastPathComponent == "2주차-1 정리 2.tex")
+        #expect(store.newNoteURL(title: "09-08(화) 매칭 정리", format: .tex).lastPathComponent == "09-08(화) 매칭 정리 2.tex")
         #expect(store.newNoteURL(title: "숙제", format: .markdown, avoiding: ["숙제", "숙제 2"]).lastPathComponent == "숙제 3.md")
         #expect(store.newNoteURL(title: "a/b:c", format: .markdown).lastPathComponent == "a-b-c.md")
     }
@@ -69,11 +69,11 @@ struct NoteStoreTests {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         try store.createNote(at: folder.appending(path: "증명".decomposedStringWithCanonicalMapping + ".tex"), text: "")
         let file = try store.load().model
-        let note = try #require(try store.note(at: "Notes/2주차-1.md"))
+        let note = try #require(try store.note(at: "Notes/09-08(화) 매칭.md"))
         let moved = { (to: String) in store.movedNoteURL(note, to: to, in: file).flatMap { store.coursePath(of: $0) } }
         #expect(moved("증명") == "Notes/증명 2.md")
-        #expect(moved("정리/2주차-1.md") == "Notes/정리/2주차-1.md")
-        #expect(moved("2주차-1") == "Notes/2주차-1.md")
+        #expect(moved("정리/09-08(화) 매칭.md") == "Notes/정리/09-08(화) 매칭.md")
+        #expect(moved("09-08(화) 매칭") == "Notes/09-08(화) 매칭.md")
         #expect(moved("정리/assets/x") == nil && moved("x.tex") == nil && moved("Exports/x") == nil && moved("Assets/x") == nil)
         #expect(store.noteFolders() == ["", "정리"])
     }
@@ -81,7 +81,7 @@ struct NoteStoreTests {
     @Test func writingLeavesTheTextAsGiven() throws {
         let store = try store()
         let note = try #require(try store.notes().first)
-        let text = "---\ncssclasses: wide\n---\n# 2주차-1\n"
+        let text = "---\ncssclasses: wide\n---\n# 09-08(화) 매칭\n"
         try store.write(note, text: text)
         #expect(try store.read(note) == text)
         #expect(try store.notes().first?.meta.id == note.meta.id)
@@ -181,10 +181,10 @@ struct RecordingStoreTests {
     @Test func recordingFilesNeverCollideAndTranscriptsRoundTrip() throws {
         let gist = GISTStore(url: try Fixture.standard.copyToTemp())
         let store = try #require(try gist.courseStores().first)
-        let first = try store.newRecordingFile(named: "3주차-1")
-        #expect(first == "Recordings/3주차-1.m4a")
+        let first = try store.newRecordingFile(named: "11-03(화)")
+        #expect(first == "Recordings/11-03(화).m4a")
         try Data("audio".utf8).write(to: store.fileURL(first))
-        #expect(try store.newRecordingFile(named: "3주차-1") == "Recordings/3주차-1 2.m4a")
+        #expect(try store.newRecordingFile(named: "11-03(화)") == "Recordings/11-03(화) 2.m4a")
 
         let recording = Recording(device: UUID(), at: .now, sessionId: nil, file: first)
         let transcript = LectureTranscript(locale: "ko_KR", lines: [.init(start: 0, end: 2.5, text: "그래프의 정의")])
@@ -196,7 +196,7 @@ struct RecordingStoreTests {
         let gist = GISTStore(url: try Fixture.standard.copyToTemp())
         let store = try #require(try gist.courseStores().first)
         let pending = PendingRecordings(url: gist.url.deletingLastPathComponent().appending(path: "pending"))
-        let recording = Recording(device: UUID(), at: Date(timeIntervalSince1970: 3_000_000), sessionId: nil, file: try store.newRecordingFile(named: "3주차-1"))
+        let recording = Recording(device: UUID(), at: Date(timeIntervalSince1970: 3_000_000), sessionId: nil, file: try store.newRecordingFile(named: "11-03(화)"))
         try pending.save(PendingRecording(courseId: UUID(), recording: recording))
         #expect(pending.all().isEmpty)  // no audio yet
         try Data("caf".utf8).write(to: pending.audioURL(of: recording.id))
@@ -205,7 +205,7 @@ struct RecordingStoreTests {
         try Data("other device".utf8).write(to: store.fileURL(recording.file))
         try Data("m4a".utf8).write(to: pending.compressedURL(of: recording.id))
         let landed = try store.installRecording(from: pending.compressedURL(of: recording.id), as: recording.file)
-        #expect(landed == "Recordings/3주차-1 2.m4a")
+        #expect(landed == "Recordings/11-03(화) 2.m4a")
         #expect(try Data(contentsOf: store.fileURL(recording.file)) == Data("other device".utf8))
         pending.remove(recording.id)
         #expect(pending.all().isEmpty)
@@ -214,9 +214,9 @@ struct RecordingStoreTests {
     @Test func deletingARecordingRemovesAudioAndTranscriptOnly() throws {
         let gist = GISTStore(url: try Fixture.standard.copyToTemp())
         let store = try #require(try gist.courseStores().first)
-        let file = try store.newRecordingFile(named: "3주차-1")
+        let file = try store.newRecordingFile(named: "11-03(화)")
         try Data("audio".utf8).write(to: store.fileURL(file))
-        let other = try store.newRecordingFile(named: "3주차-1")
+        let other = try store.newRecordingFile(named: "11-03(화)")
         try Data("audio".utf8).write(to: store.fileURL(other))
         let recording = Recording(device: UUID(), at: .now, sessionId: nil, file: file)
         try store.saveTranscript(LectureTranscript(locale: "ko_KR", lines: []), of: recording)

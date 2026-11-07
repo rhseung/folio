@@ -33,10 +33,10 @@ struct CalendarImportTests {
         #expect(r.filled.map(\.id) == [existing.id])
         #expect(r.file.sessions.first { $0.id == existing.id }?.date == at(8, 14, 30))
         #expect(r.file.sessions.first { $0.id == existing.id }?.topic == "Vectors")
-        // Week 2 keeps 2-1 for the day's first meeting; the recitation that evening is a session of its own.
+        // The day's first meeting is the session that was there; the recitation that evening is a session of its own.
         let week2 = r.added.filter { $0.week == 2 }
         #expect(week2.map(\.date) == [at(8, 18, 30), at(10, 14, 30)])
-        #expect(week2.map(r.file.name(of:)) == ["2주차-2", "2주차-3"])
+        #expect(week2.map { r.file.reference(of: $0, calendar: calendar) } == ["09-08 18:30", "09-10"])
         #expect(r.added.filter { $0.week == 4 }.map(\.date) == [at(22, 14, 30), at(23, 21)])
         #expect(r.file.course.schedule.map(\.weekday) == [2])
         #expect(r.cancelled.isEmpty)

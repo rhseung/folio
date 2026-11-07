@@ -389,8 +389,8 @@ struct NotesModelTests {
     @Test func editorNamesItsLinkAndFindsNotesByTitle() throws {
         let (workspace, course) = try fixtureCourse()
         let notes = NotesModel(workspace: workspace, course: course)
-        let id = try #require(notes.noteId(titled: "1주차-1"))
-        #expect(notes.noteId(titled: "1주차-1".uppercased()) == id)
+        let id = try #require(notes.noteId(titled: "03-03(화)"))
+        #expect(notes.noteId(titled: "03-03(화)".uppercased()) == id)
         let editor = NoteEditorModel(workspace: workspace, course: course, note: try #require(notes.note(id)))
         editor.load()
         #expect(editor.currentLink == "러프 노트 · 회차 없음")
@@ -417,7 +417,7 @@ struct NotesModelTests {
         #expect(editor.linkedSessions.map(\.id) == [first, second] && editor.meta.sessionIds == [first, second])
         let file = try #require(workspace.course(linearAlgebra)).file
         #expect([first, second].allSatisfy { s in file.sessions.first { $0.id == s }?.reviewNoteId == id })
-        let span = try #require(file.sessionSpan(of: id))
+        let span = try #require(file.sessionSpan(of: id, calendar: workspace.calendar))
         #expect(editor.currentLink == "\(span) 복습 노트")
         let list = NoteListModel(workspace: workspace, course: course)
         list.reload()
@@ -466,7 +466,7 @@ struct NotesModelTests {
     @Test func readViewEditsReplaceTheirOwnLines() throws {
         let (workspace, course) = try fixtureCourse()
         let notes = NotesModel(workspace: workspace, course: course)
-        let editor = NoteEditorModel(workspace: workspace, course: course, note: try #require(notes.note(try #require(notes.noteId(titled: "1주차-1")))))
+        let editor = NoteEditorModel(workspace: workspace, course: course, note: try #require(notes.note(try #require(notes.noteId(titled: "03-03(화)")))))
         editor.load()
         editor.body += "\n\n문단 하나\n둘째 줄\n"
         let parsed = ParsedNote(editor.body)

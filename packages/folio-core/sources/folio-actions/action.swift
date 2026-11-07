@@ -206,11 +206,14 @@ public final class ActionContext {
         return doc
     }
 
-    /// The display name of any item: a course, a semester, a catalog row, or anything in a course file.
+    /// The display name of any item: a course, a semester, a catalog row, or anything in a course file. A class is
+    /// named by this context's calendar, which the model's names don't have.
     public func name(of id: UUID) -> String? {
         if let n = (try? transcript())?.name(of: id) ?? (try? catalog())?.name(of: id) { return n }
         for course in ((try? courseStores()) ?? [:]).keys {
-            if let n = (try? file(course))?.name(of: id) { return n }
+            guard let f = try? file(course) else { continue }
+            if let s = f.sessions.first(where: { $0.id == id }) { return f.title(of: s, calendar: calendar) }
+            if let n = f.name(of: id) { return n }
         }
         return nil
     }

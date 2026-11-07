@@ -366,7 +366,8 @@ struct UnitDetail: View {
         #endif
     }
 
-    /// Date, name and topic, then the rough and review notes in the sessions page's fixed slots, so both pages read alike.
+    /// Date, then what the class covered as the sessions page titles it, then the rough and review notes in the sessions
+    /// page's fixed slots, so both pages read alike.
     @ViewBuilder func sessionRow(_ s: Session) -> some View {
         let file = course.file
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
@@ -374,13 +375,10 @@ struct UnitDetail: View {
             Text(s.date.formatted(.dateTime.weekday())).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
         }
         .frame(width: 84, alignment: .leading)
-        VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-            Text(file.name(of: s)).font(Theme.Typeface.bodyStrong).strikethrough(s.isCancelled)
-            if !s.topic.isEmpty {
-                Text(s.topic).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        Text(model.classTitle(s) ?? String(localized: .sessionsClass))
+            .font(Theme.Typeface.bodyStrong).foregroundStyle(model.classTitle(s) == nil ? Theme.Palette.textTertiary : Theme.Palette.text)
+            .strikethrough(s.isCancelled).lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
         SessionNoteSlots(file: file, session: s, openNote: openNote) { if $0 == .review { openReview(s) } }
         Button { model.unlink(s, from: unit) } label: { Image(systemName: "xmark") }
             .buttonStyle(.ghost)

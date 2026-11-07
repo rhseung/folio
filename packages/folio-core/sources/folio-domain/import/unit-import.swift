@@ -1,6 +1,6 @@
 import Foundation
 
-/// One unit from a units file, with the sessions (`3주차-1`) that covered it.
+/// One unit from a units file, with the sessions that covered it, as the command line names them (`11-03`, `11/3`).
 public struct UnitSpec: Codable, Sendable, Equatable {
     public var title: String
     public var sessions: [String]?
@@ -30,7 +30,8 @@ public enum UnitImporter {
 
     /// Units match by title under the same parent, so re-running adds nothing and units edited in the app keep their IDs.
     /// New units go after their existing siblings. Links are only added, on both sides; nothing is removed.
-    public static func merge(_ specs: [UnitSpec], into file: CourseFile, device: DeviceID, now: Date) -> Result {
+    /// A name that picks no class, or a day with two, is reported unknown and links nothing.
+    public static func merge(_ specs: [UnitSpec], into file: CourseFile, calendar: Calendar, device: DeviceID, now: Date) -> Result {
         var file = file
         var added: [String] = [], linked: [String] = [], unknown: [String] = []
         func visit(_ specs: [UnitSpec], parent: UUID?) {
@@ -46,7 +47,8 @@ public enum UnitImporter {
                     id = unit.id
                 }
                 for name in spec.sessions ?? [] {
-                    guard let s = file.sessions.firstIndex(where: { $0.name(among: file.sessions) == name }) else {
+                    let matches = file.sessions(matching: name, calendar: calendar)
+                    guard matches.count == 1, let s = file.sessions.firstIndex(where: { $0.id == matches[0].id }) else {
                         unknown.append(name)
                         continue
                     }
