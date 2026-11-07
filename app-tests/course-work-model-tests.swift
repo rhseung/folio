@@ -496,20 +496,23 @@ struct AssignmentSheetOpenTests {
         let memo = { workspace.course(graphTheory)?.file.assignments.first { $0.id == assignment.id }?.memo }
 
         #expect(!sheet.edited)
-        #expect(sheet.open(pdf) == .elsewhere(course.store.fileURL(pdf.path)))
-        #expect(sheet.open(tex) == .editor(tex.id))
+        #expect(sheet.open(pdf, windows: true) == .elsewhere(course.store.fileURL(pdf.path)))
+        #expect(sheet.open(tex, windows: true) == .editor(tex.id))
+        #expect(sheet.open(tex, windows: false) == .editor(tex.id))
         #expect(sheet.opening == nil)
 
         sheet.memo = "풀이 방향 메모"
         #expect(sheet.edited)
         // A file opened in its own app leaves the sheet up, so the edits aren't at stake.
-        #expect(sheet.open(pdf) == .elsewhere(course.store.fileURL(pdf.path)))
-        #expect(sheet.open(tex) == .asks && sheet.opening?.id == tex.id)
+        #expect(sheet.open(pdf, windows: true) == .elsewhere(course.store.fileURL(pdf.path)))
+        // With edits the sheet stays, and the editor opens in a window of its own; with no other window to open, it asks.
+        #expect(sheet.open(tex, windows: true) == .window(tex.id) && sheet.opening == nil)
+        #expect(sheet.open(tex, windows: false) == .asks && sheet.opening?.id == tex.id)
         sheet.discardAndOpen()
         #expect(sheet.opening == nil)
         #expect(memo() == assignment.memo)
 
-        #expect(sheet.open(tex) == .asks)
+        #expect(sheet.open(tex, windows: false) == .asks)
         #expect(sheet.saveAndOpen())
         #expect(sheet.opening == nil)
         #expect(memo() == "풀이 방향 메모")

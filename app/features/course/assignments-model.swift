@@ -208,18 +208,23 @@ final class AssignmentSheetModel {
 
     enum Opening: Equatable {
         case elsewhere(URL)
+        /// Nothing to lose: the sheet closes and the editor opens in the tab under it.
         case editor(UUID)
-        /// The sheet holds edits; `opening` waits for the user to save, drop them, or stay.
+        /// The sheet holds edits, so it stays, and the editor opens in a window of its own.
+        case window(UUID)
+        /// The sheet holds edits and no other window can open; `opening` waits for the user to save, drop them, or stay.
         case asks
     }
 
     var opening: FolioDomain.Material?
 
-    /// A text file opens in the materials tab's editor, which closes this sheet; anything else in its own app, with the
-    /// sheet left open.
-    func open(_ m: FolioDomain.Material) -> Opening {
+    /// A text file opens in the materials tab's editor; anything else in its own app, with the sheet left open. A sheet
+    /// is short work (#317): one with nothing typed in it gives way to the editor, one holding edits keeps them.
+    /// `windows`: whether another window can open, as the iPad's can't for the sheet's link.
+    func open(_ m: FolioDomain.Material, windows: Bool) -> Opening {
         guard m.isText else { return .elsewhere(course.store.fileURL(m.path)) }
         guard edited else { return .editor(m.id) }
+        if windows { return .window(m.id) }
         opening = m
         return .asks
     }
