@@ -19,7 +19,7 @@ final class ProblemSetDraftModel {
     }
 
     var pdfs: [FolioDomain.Material] {
-        course.file.materials.filter { !$0.isFolder && $0.status != .ignored && $0.path.lowercased().hasSuffix(".pdf") }.sorted { $0.path < $1.path }
+        course.file.materials.filter { $0.isPDF && $0.status != .ignored }.sorted { $0.path < $1.path }
     }
 
     var pdfOptions: [PickOption<UUID?>] {

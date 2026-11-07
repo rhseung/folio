@@ -90,7 +90,7 @@ public final class SearchStore: Sendable {
         }
         let cards = file.units.flatMap { (try? store.loadQuiz(unit: $0.id).model.cards) ?? [] }
         var items = SearchIndex.items(for: file, notes: notes, cards: cards)
-        for (i, item) in items.enumerated() where item.kind == .material && item.body.lowercased().hasSuffix(".pdf") {
+        for (i, item) in items.enumerated() where item.kind == .material && MaterialFormat(path: item.body) == .pdf {
             items[i].body += "\n" + (try pdfText(store.url.appending(path: item.body)))
         }
         let course = file.course.id.uuidString
@@ -124,7 +124,7 @@ public final class SearchStore: Sendable {
         if let files = FileManager.default.enumerator(at: store.url.appending(path: CourseFolder.notes.rawValue), includingPropertiesForKeys: [.contentModificationDateKey, .fileSizeKey]) {
             for case let url as URL in files { parts.append(url.lastPathComponent + stamp(url)) }
         }
-        for m in file.materials where m.path.lowercased().hasSuffix(".pdf") { parts.append(stamp(store.url.appending(path: m.path))) }
+        for m in file.materials where m.isPDF { parts.append(stamp(store.url.appending(path: m.path))) }
         for u in file.units { parts.append(u.id.uuidString + stamp(store.quizURL(unit: u.id))) }
         return parts.sorted().joined(separator: "|")
     }

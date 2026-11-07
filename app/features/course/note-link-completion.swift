@@ -65,7 +65,7 @@ import PDFKit
         let name = alias ?? found.title
         let elsewhere = found.courseId == courseId ? nil : workspace.course(found.courseId)?.title
         // A PDF's link goes on to its page, which the menu that opens there picks.
-        if found.kind == .material, found.title.lowercased().hasSuffix(".pdf") {
+        if found.kind == .material, MaterialFormat(path: found.title) == .pdf {
             let body = WikiLink.written(link.kind.rawValue, found.id, fragment: "page=", alias: name)
             let caret = (body as NSString).range(of: "#page=").upperBound
             return CompletionItem(id: "link.\(found.id)", title: found.title, detail: elsewhere, symbol: found.kind.symbol, body: body,

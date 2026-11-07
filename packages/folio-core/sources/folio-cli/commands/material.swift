@@ -63,13 +63,14 @@ struct MaterialCommand: ParsableCommand {
             let (c, name) = try r.split(material)
             let m = try r.material(name, in: c)
             if g.json {
-                guard MaterialFormat(path: m.path).isText, let text = try? c.store.readText(m.path) else { return try printJSON(m) }
-                return try printJSON(TextMaterial(material: m, text: text))
+                let text = m.isText ? try? c.store.readText(m.path) : nil
+                return try printJSON(ShownMaterial(material: m, text: text))
             }
             let f = c.file
             courseHeader(c, catalog: try? r.ctx.catalog())
             say(m.path.link(c.store.url.appending(path: m.path)).styled(.bold))
             say(String(localized: .materialShowRole(m.role?.rawValue ?? "-")))
+            if let format = m.format { say(String(localized: .materialShowFormat(ShownMaterial.label(format)))) }
             say(String(localized: .materialShowStatus(m.status.rawValue.toned)))
             let sessions = f.sessionLinks(of: m.id)
             if !sessions.isEmpty {
@@ -231,16 +232,29 @@ struct MaterialCommand: ParsableCommand {
 
 /// A text material's JSON also carries the file as it is now and the hash `material write --expect` compares. The
 /// material's own `hash` is from the last tracking, so after a change from another device it would never match.
-struct TextMaterial: Encodable {
+/// A material as `material show --json` gives it: its entry, the format the app opens it by, and a text file's
+/// content with the hash `material write --expect` compares.
+struct ShownMaterial: Encodable {
     var material: Material
-    var text: String
+    var text: String?
 
-    private enum Keys: String, CodingKey { case text, contentHash }
+    private enum Keys: String, CodingKey { case format, language, text, contentHash }
 
     func encode(to encoder: Encoder) throws {
         try material.encode(to: encoder)
         var c = encoder.container(keyedBy: Keys.self)
-        try c.encode(text, forKey: .text)
-        try c.encode(contentHash(text), forKey: .contentHash)
+        if let format = material.format {
+            try c.encode(format.name, forKey: .format)
+            if case .code(let language) = format { try c.encode(language, forKey: .language) }
+        }
+        if let text {
+            try c.encode(text, forKey: .text)
+            try c.encode(contentHash(text), forKey: .contentHash)
+        }
+    }
+
+    static func label(_ format: MaterialFormat) -> String {
+        if case .code(let language) = format { return "\(format.name) (\(language))" }
+        return format.name
     }
 }

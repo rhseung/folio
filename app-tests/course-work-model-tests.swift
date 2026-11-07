@@ -483,7 +483,8 @@ struct NotesModelTests {
 /// 그래프 이론's HW03 holds PDFs; a `.tex` is made beside them.
 @MainActor
 struct AssignmentSheetOpenTests {
-    @Test func aTextFileOpensInTheEditorAndAsksAboutEdits() throws {
+    /// Every file opens in the materials tab's file view (#179), which closes the sheet, so edits ask first.
+    @Test func aFileOpensInTheMaterialsTabAndAsksAboutEdits() throws {
         let workspace = try fixtureWorkspace()
         workspace.run(MaterialTrack(course: graphTheory))
         let assignment = try #require(workspace.course(graphTheory)?.file.assignments.first { AssignmentFiles.path(of: $0) == "Assignments/HW03" })
@@ -496,14 +497,14 @@ struct AssignmentSheetOpenTests {
         let memo = { workspace.course(graphTheory)?.file.assignments.first { $0.id == assignment.id }?.memo }
 
         #expect(!sheet.edited)
-        #expect(sheet.open(pdf) == .elsewhere(course.store.fileURL(pdf.path)))
-        #expect(sheet.open(tex) == .editor(tex.id))
+        #expect(sheet.open(pdf) == .materials(pdf.id))
+        #expect(sheet.open(tex) == .materials(tex.id))
         #expect(sheet.opening == nil)
 
         sheet.memo = "풀이 방향 메모"
         #expect(sheet.edited)
-        // A file opened in its own app leaves the sheet up, so the edits aren't at stake.
-        #expect(sheet.open(pdf) == .elsewhere(course.store.fileURL(pdf.path)))
+        #expect(sheet.open(pdf) == .asks && sheet.opening?.id == pdf.id)
+        sheet.opening = nil
         #expect(sheet.open(tex) == .asks && sheet.opening?.id == tex.id)
         sheet.discardAndOpen()
         #expect(sheet.opening == nil)

@@ -113,11 +113,11 @@ struct AssignmentSheet: View {
     @State private var model: AssignmentSheetModel
     @Environment(\.dismiss) private var dismiss
     @State private var pickingFiles = false
-    let openInEditor: (UUID) -> Void
+    let openFile: (UUID) -> Void
 
-    init(workspace: Workspace, course: LoadedCourse, assignment: Assignment, openInEditor: @escaping (UUID) -> Void) {
+    init(workspace: Workspace, course: LoadedCourse, assignment: Assignment, openFile: @escaping (UUID) -> Void) {
         _model = State(initialValue: AssignmentSheetModel(workspace: workspace, course: course, assignment: assignment))
-        self.openInEditor = openInEditor
+        self.openFile = openFile
     }
 
     var body: some View {
@@ -186,14 +186,10 @@ struct AssignmentSheet: View {
                             .fileDrag(store.fileURL(m.path))
                             Spacer()
                             ChoiceMenu(selection: Binding(get: { kind }, set: { model.setKind(m, $0) }), options: model.kindOptions)
-                            #if os(macOS)
-                            Button(.assignmentsOpen) { open(m) }.buttonStyle(.ghost)
-                            #endif
+                            if model.opens(m) { Button(.assignmentsOpen) { open(m) }.buttonStyle(.ghost) }
                         }
-                        #if os(macOS)
                         .contentShape(.rect)
-                        .contextMenu { Button(.assignmentsOpen) { open(m) } }
-                        #endif
+                        .contextMenu { if model.opens(m) { Button(.assignmentsOpen) { open(m) } } }
                     }
                 }
                 .fileDrop { model.importFiles($0) }
@@ -219,18 +215,19 @@ struct AssignmentSheet: View {
         Binding(get: { model.opening != nil }, set: { if !$0 { model.opening = nil } })
     }
 
-    #if os(macOS)
     func open(_ m: FolioDomain.Material) {
         switch model.open(m) {
-        case .elsewhere(let url): NSWorkspace.shared.open(url)
-        case .editor(let id): show(id)
+        case .elsewhere(let url):
+            #if os(macOS)
+            NSWorkspace.shared.open(url)
+            #endif
+        case .materials(let id): show(id)
         case .asks: break
         }
     }
-    #endif
 
     func show(_ id: UUID) {
         dismiss()
-        openInEditor(id)
+        openFile(id)
     }
 }

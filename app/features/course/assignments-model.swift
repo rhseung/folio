@@ -207,19 +207,28 @@ final class AssignmentSheetModel {
     var edited: Bool { loaded.map { $0 != draft } ?? false }
 
     enum Opening: Equatable {
+        /// A code project folder, in Finder, with the sheet left open.
         case elsewhere(URL)
-        case editor(UUID)
+        case materials(UUID)
         /// The sheet holds edits; `opening` waits for the user to save, drop them, or stay.
         case asks
     }
 
     var opening: FolioDomain.Material?
 
-    /// A text file opens in the materials tab's editor, which closes this sheet; anything else in its own app, with the
-    /// sheet left open.
+    /// iPadOS has nowhere to open a folder.
+    func opens(_ m: FolioDomain.Material) -> Bool {
+        #if os(macOS)
+        true
+        #else
+        !m.isFolder
+        #endif
+    }
+
+    /// A file opens in the materials tab (`FileView`), which closes this sheet; a folder opens in Finder.
     func open(_ m: FolioDomain.Material) -> Opening {
-        guard m.isText else { return .elsewhere(course.store.fileURL(m.path)) }
-        guard edited else { return .editor(m.id) }
+        guard !m.isFolder else { return .elsewhere(course.store.fileURL(m.path)) }
+        guard edited else { return .materials(m.id) }
         opening = m
         return .asks
     }

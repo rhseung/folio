@@ -1,11 +1,9 @@
 import Algorithms
 import FolioActions
 import FolioDomain
-import FolioMarkdown
 import FolioStorage
 import Foundation
 import Observation
-import PDFKit
 
 @MainActor @Observable
 final class ReviewModel {
@@ -143,17 +141,5 @@ final class ReviewModel {
     func advance() {
         position += 1
         started = .now
-    }
-
-    // MARK: Sources
-
-    func body(of note: NoteFile, in course: LoadedCourse) -> String {
-        Frontmatter.split((try? course.store.read(note)) ?? "").body
-    }
-
-    func document(_ source: Source, in course: LoadedCourse) async -> PDFDocument? {
-        guard case .lecture(let id) = source.id, let material = course.file.materials.first(where: { $0.id == id }),
-              let url = try? await workspace.download(material, course: course.id) else { return nil }
-        return PDFDocument(url: url)
     }
 }
