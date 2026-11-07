@@ -302,7 +302,7 @@ extension NotePreview: UIViewRepresentable {
         switch anchor {
         case .heading(let text): id = HTMLRenderer.slug(text)
         case .block(let block): id = "^" + block
-        case .page: return
+        case .page, .time: return
         }
         Task {
             _ = try? await view.callAsyncJavaScript("document.getElementById(id)?.scrollIntoView({block: 'start'})", arguments: ["id": id],

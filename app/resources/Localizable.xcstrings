@@ -10682,6 +10682,28 @@
         }
       }
     },
+    "recording.page": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 듣기"
+          }
+        }
+      }
+    },
+    "recording.page-named": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 다시 듣기"
+          }
+        }
+      }
+    },
     "recording.pause": {
       "extractionState": "manual",
       "localizations": {
@@ -18388,7 +18410,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ %2$lld쪽 열기"
+            "value": "%1$@ %2$lld쪽을 옆 칸에서 열기"
           }
         }
       }

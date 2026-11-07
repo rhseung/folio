@@ -35,6 +35,16 @@ struct NavigatorTests {
         #expect(navigator.screen == .course(graphTheory))
     }
 
+    /// Listening moves a replay's address every few seconds; none of it is a step to go back through.
+    @Test func anotherMomentOfTheSameRecordingIsTheSameStep() {
+        let navigator = Navigator()
+        let replay = AppLink(.recording, UUID())
+        navigator.go(Navigator.Entry(link: replay, course: graphTheory))
+        for t in stride(from: 5, through: 60, by: 5) { navigator.go(Navigator.Entry(link: replay.with(.time(t)), course: graphTheory)) }
+        #expect(navigator.current.link == replay.with(.time(60)))
+        #expect(navigator.backList.count == 1)
+    }
+
     @Test func aLinkFromOutsideOpensInANewTabUnlessTheWindowWasMadeForIt() {
         let fresh = Navigator()
         #expect(fresh.outsidePlacement(windowAge: 0.3) == .here)
@@ -116,6 +126,14 @@ struct WorkspaceLinkTests {
         let title = workspace.title(of: Navigator.Entry(link: AppLink(.exam, exam), course: graphTheory))
         #expect(title.hasSuffix("· 중간고사"))
         #expect(workspace.title(of: Navigator.Entry(link: .place(.today))) == String(localized: .rootNavToday))
+        let session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now))?.made)
+        let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a")
+        try ActionContext(gist: try #require(workspace.gist), device: workspace.device).edit(graphTheory) { $0.recordings = [recording] }
+        workspace.reload()
+        let day = try #require(workspace.course(graphTheory)?.file).day(of: try #require(workspace.course(graphTheory)?.file.sessions.first { $0.id == session }), calendar: workspace.calendar)
+        let replay = Navigator.Entry(link: AppLink(.recording, recording.id, anchor: .time(90)), course: graphTheory)
+        #expect(workspace.title(of: replay).hasSuffix("· " + String(localized: .recordingPageNamed(day))))
+        #expect(workspace.entry(for: AppLink(.recording, recording.id))?.course == graphTheory)
         #expect(workspace.title(of: Navigator.Entry(link: .settings(.claude))) == "\(String(localized: .rootNavSettings)) · Claude")
     }
 

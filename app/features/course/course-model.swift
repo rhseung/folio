@@ -32,6 +32,12 @@ final class CourseModel {
     }
 
     var course: LoadedCourse? { workspace.course(courseId) }
+
+    /// The replay the sessions page shows in place of its list: a recording's address is a page of the sessions.
+    var openRecording: Recording? {
+        guard section == .sessions, place.kind == .recording else { return nil }
+        return course?.file.recordings.first { $0.id == place.id }
+    }
     var accent: CourseAccent { workspace.accent(courseId) }
 
     func show(note id: UUID) {
@@ -61,6 +67,7 @@ final class CourseModel {
         case .exam: section = .exams
         case .card: section = .quizCards
         case .problemSet: section = .quizProblems
+        case .recording: section = .sessions
         // Not in a course: `Screen` never hands these to one.
         case .today, .grades, .requirements, .people, .codes, .settings, .semester, .person: break
         }
@@ -71,8 +78,8 @@ final class CourseModel {
         guard let id = place.id else { return nil }
         switch place.kind {
         case .session, .assignment, .exam, .card, .problemSet: return id
-        // A note, a file and a unit open on a page of their own; the rest are no item of a page.
-        case .note, .material, .unit, .course, .today, .grades, .requirements, .people, .codes, .settings, .semester, .person: return nil
+        // A note, a file, a unit and a recording open on a page of their own; the rest are no item of a page.
+        case .note, .material, .unit, .recording, .course, .today, .grades, .requirements, .people, .codes, .settings, .semester, .person: return nil
         }
     }
 

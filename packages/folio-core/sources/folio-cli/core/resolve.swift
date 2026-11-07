@@ -85,6 +85,14 @@ final class Resolver {
                         ref: { "\(c.code)/\(f.name(of: $0))" })
     }
 
+    /// By its class's name (`9주차-1`), as the recordings folder names them, or by its file.
+    func recording(_ name: String, in c: CourseRef) throws -> Recording {
+        let f = c.file
+        let session = { (r: Recording) in r.sessionId.flatMap { id in f.sessions.first { $0.id == id } }.map { f.name(of: $0) } }
+        return try pick(name, f.recordings, what: "녹음", names: { [session($0) ?? "", $0.file, ($0.file as NSString).lastPathComponent] },
+                        ref: { "\(c.code)/\(($0.file as NSString).lastPathComponent)" })
+    }
+
     func exam(_ name: String, in c: CourseRef) throws -> Exam {
         try pick(name, c.file.exams, what: "시험", names: { [$0.title] }, ref: { "\(c.code)/\($0.title)" })
     }

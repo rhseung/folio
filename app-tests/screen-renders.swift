@@ -115,6 +115,10 @@ struct ScreenRenders {
                 entries.append(("course-units-detail", Navigator.Entry(link: AppLink(.unit, unit.id), course: course.id)))
             }
         }
+        // Opened at a moment past the start, as a link from a note or a tab let go of does.
+        if let held = workspace.currentCourses.first(where: { !$0.file.recordings.isEmpty }), let recording = held.file.recordings.first {
+            entries.append(("course-recording", Navigator.Entry(link: AppLink(.recording, recording.id, anchor: .time(1700)), course: held.id)))
+        }
         return entries
     }
 }

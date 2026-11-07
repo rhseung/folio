@@ -69,6 +69,23 @@ struct CourseModelTests {
         }
     }
 
+    /// A recording opens on the sessions page in place of its list, and the moments it reports become the window's link.
+    @Test func aRecordingIsAPageOfTheSessions() throws {
+        let workspace = try fixtureWorkspace()
+        let session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now))?.made)
+        let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a", duration: 600)
+        try ActionContext(gist: try #require(workspace.gist), device: workspace.device).edit(graphTheory) { $0.recordings = [recording] }
+        workspace.reload()
+        let model = CourseModel(workspace: workspace, courseId: graphTheory)
+        let link = AppLink(.recording, recording.id, anchor: .time(90))
+        model.follow(Navigator.Entry(link: link, course: graphTheory))
+        #expect(model.section == .sessions && model.openRecording?.id == recording.id && model.focus == nil)
+        model.moved(link.with(.time(95)))
+        #expect(model.place == link.with(.time(95)))
+        model.resetPage()
+        #expect(model.place == .course(graphTheory, page: .sessions) && model.openRecording == nil)
+    }
+
     /// The page the viewer is on comes back as the window's link; following it again must not jump the viewer.
     @Test func aFileFollowsOnlyAPageItIsNotOn() throws {
         let workspace = try fixtureWorkspace()

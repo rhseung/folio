@@ -582,7 +582,7 @@ struct SessionCard: View {
     let session: Session
     var now = Date.now
     let openNote: (UUID) -> Void
-    @State private var playing: Recording?
+    @Environment(\.openLink) private var openLink
     @State private var editing = false
     @State private var askingProgress = false
 
@@ -637,7 +637,6 @@ struct SessionCard: View {
         }
         .contentShape(.rect)
         .contextMenu { menuItems }
-        .sheet(item: $playing) { RecordingPlayer(workspace: model.workspace, courseId: course.id, store: course.store, recording: $0, title: model.playerTitle(session, in: file)) }
         .sheet(isPresented: $editing) { SessionFormSheet(workspace: model.workspace, course: course, session: session) }
         .sheet(isPresented: $askingProgress) { SessionProgressSheet(workspace: model.workspace, course: course.id, session: session.id) }
     }
@@ -676,7 +675,7 @@ struct SessionCard: View {
                 ClassCard.Tag(title: String(localized: .sessionsRecording), symbol: "waveform", tone: .danger)
                     .symbolEffect(.variableColor.iterative, isActive: recorder.state == .recording)
             } else if let last = recordings.last {
-                ClassCard.Pill(title: model.recordingsLabel(recordings.count), symbol: "waveform", help: String(localized: .sessionsRecordingPlayHelp)) { playing = last }
+                ClassCard.Pill(title: model.recordingsLabel(recordings.count), symbol: "waveform", help: String(localized: .sessionsRecordingPlayHelp)) { play(last) }
             }
             switch model.review(of: session, in: file, now: now) {
             case .done(let id):
@@ -716,7 +715,7 @@ struct SessionCard: View {
     }
 
     var menuItems: some View {
-        SessionMenu(courseId: course.id, sessionId: session.id, openNote: openNote, play: { playing = $0 }, edit: { editing = true },
+        SessionMenu(courseId: course.id, sessionId: session.id, openNote: openNote, edit: { editing = true },
                     progress: model.offersProgress(session, in: course.file) ? { askingProgress = true } : nil) {
             model.remove(session)
         }
@@ -725,6 +724,8 @@ struct SessionCard: View {
     func open(_ kind: NoteKind) {
         if let id = model.menu.note(kind, of: session) { openNote(id) }
     }
+
+    func play(_ recording: Recording) { openLink(AppLink(.recording, recording.id), course: course.id) }
 }
 
 /// One action of a session row: an icon and a short word, all in one plain style. Whether it exists, is offered or is
