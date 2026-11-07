@@ -1,4 +1,3 @@
-import FolioActions
 import FolioDomain
 import Foundation
 import Observation
@@ -62,11 +61,5 @@ final class LectureProgressModel {
         guard let file else { return nil }
         let days = file.unrangedSessions(of: materialId).map { file.day(of: $0, calendar: workspace.calendar) }
         return days.isEmpty ? nil : String(localized: .materialsProgressUnranged(days.joined(separator: " · ")))
-    }
-
-    func open(_ page: Int) -> AppLink { AppLink(.material, materialId, anchor: .page(page)) }
-
-    func clearConfusing(_ page: Int) {
-        workspace.run(MaterialConfusing(course: courseId, material: materialId, page: page, marked: false))
     }
 }
