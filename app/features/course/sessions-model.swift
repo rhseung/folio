@@ -152,7 +152,7 @@ final class SessionsModel {
     }
 
     func importFiles(_ urls: [URL], into session: Session) {
-        workspace.importFiles(urls, into: CourseFolder.lectures.rawValue, week: session.week, session: session.id, course: courseId)
+        workspace.importFiles(urls, into: CourseFolder.lectures.rawValue, session: session.id, course: courseId)
     }
 
     // MARK: Sessions made ahead

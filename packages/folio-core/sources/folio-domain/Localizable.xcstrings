@@ -111,6 +111,72 @@
         }
       }
     },
+    "intake.session.latest": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가장 최근 수업"
+          }
+        }
+      }
+    },
+    "intake.session.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘 수업"
+          }
+        }
+      }
+    },
+    "intake.session.week": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름의 주차인 %lld주차 수업"
+          }
+        }
+      }
+    },
+    "intake.why.book": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld쪽짜리 책"
+          }
+        }
+      }
+    },
+    "intake.why.named": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름의 %@"
+          }
+        }
+      }
+    },
+    "intake.why.slides": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "가로 슬라이드 %lld쪽"
+          }
+        }
+      }
+    },
     "model.delete-restricted": {
       "extractionState": "manual",
       "localizations": {
