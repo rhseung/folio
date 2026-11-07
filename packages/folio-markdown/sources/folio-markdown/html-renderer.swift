@@ -380,8 +380,8 @@ public struct HTMLRenderer {
     }
 
     /// A `folio://` address written as it is, which markdown makes no link of, as GFM links a bare `https://`. Not
-    /// inside another link, a tag, code or math. Punctuation closing a sentence isn't part of it, except after `#`,
-    /// where a heading may end with it: the rule FolioDomain's `AppLink.links(in:)` finds addresses by in the editors.
+    /// inside another link, a tag, code or math. Punctuation closing a sentence isn't part of it, except in a heading
+    /// anchor (`trimmedAddress`).
     func linkAddresses(_ html: String) -> String {
         guard !inLink, html.localizedCaseInsensitiveContains("folio://") else { return html }
         let protected = /(?s)(<a\b[^>]*>.*?<\/a>|<code>.*?<\/code>|<span class="math">.*?<\/span>|<template\b.*?<\/template>|<[^>]*>)/
@@ -389,7 +389,7 @@ public struct HTMLRenderer {
         let replace = { (s: Substring) -> String in
             String(s.replacing(address) { m in
                 let written = String(m.0)
-                let kept = written.contains("#") ? written : String(written.reversed().drop { ".,;:!?".contains($0) }.reversed())
+                let kept = Self.trimmedAddress(written)
                 return "<a href=\"\(kept)\">\(kept)</a>" + written.dropFirst(kept.count)
             })
         }
@@ -400,6 +400,16 @@ public struct HTMLRenderer {
             cursor = m.range.upperBound
         }
         return out + replace(html[cursor...])
+    }
+
+    /// FolioDomain's `AppLink.trimmed`, which the editors find addresses by, so both views link the same text: kept
+    /// on a page, time or block anchor, the full stop would make it read as a heading and open at the top.
+    static func trimmedAddress(_ written: String) -> String {
+        if let hash = written.firstIndex(of: "#") {
+            let anchor = written[written.index(after: hash)...]
+            guard anchor.hasPrefix("page=") || anchor.hasPrefix("t=") || anchor.hasPrefix("^") else { return written }
+        }
+        return String(written.reversed().drop { ".,;:!?".contains($0) }.reversed())
     }
 
     /// For a link by ID, the title of the note it names, which a link without its own name shows. `missing` when no

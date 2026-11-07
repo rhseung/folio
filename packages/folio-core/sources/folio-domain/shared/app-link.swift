@@ -260,11 +260,16 @@ public struct AppLink: Hashable, Sendable {
     /// Ends where a link written in text ends: whitespace, quotes, a closing bracket, or TeX's backslash.
     static var pattern: Regex<Substring> { #/[Ff][Oo][Ll][Ii][Oo]://[^\s<>"'`(){}\[\]\\|]+/# }
 
-    /// Punctuation closing the sentence an address ends is not part of it (`시험은 folio://exam/<ID>.`), except after
-    /// `#`, where a heading may end with it. A note's preview links a bare address by the same rule (FolioMarkdown's
+    /// Punctuation closing the sentence an address ends is not part of it (`시험은 folio://exam/<ID>#page=12.`), except
+    /// in a heading anchor, which may end with it: kept on a page, time or block, it would no longer read as one and
+    /// open at the top. A note's preview links a bare address by the same rule (FolioMarkdown's
     /// `HTMLRenderer.linkAddresses`).
     static func trimmed(_ written: String) -> String {
-        written.contains("#") ? written : String(written.reversed().drop { ".,;:!?".contains($0) }.reversed())
+        if let hash = written.firstIndex(of: "#") {
+            let anchor = written[written.index(after: hash)...]
+            guard anchor.hasPrefix("page=") || anchor.hasPrefix("t=") || anchor.hasPrefix("^") else { return written }
+        }
+        return String(written.reversed().drop { ".,;:!?".contains($0) }.reversed())
     }
 }
 

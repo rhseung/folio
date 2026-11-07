@@ -82,6 +82,9 @@ struct AddressLinkTests {
         #expect(HTMLRenderer.render(markdown: "시험: \(exam).") == "<p>시험: <a href=\"\(exam)\">\(exam)</a>.</p>\n")
         let page = "folio://material/\(id.uuidString)#page=12"
         #expect(HTMLRenderer.render(markdown: "- \(page)").contains("<a href=\"\(page)\">\(page)</a>"))
+        #expect(HTMLRenderer.render(markdown: "범위는 \(page).") == "<p>범위는 <a href=\"\(page)\">\(page)</a>.</p>\n")
+        let heading = "folio://note/\(id.uuidString)#Intro."
+        #expect(HTMLRenderer.render(markdown: heading).contains("<a href=\"\(heading)\">"))
     }
 
     @Test func aBareAddressInCodeOrAnotherLinkStaysAsItIs() {
