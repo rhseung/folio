@@ -35,8 +35,11 @@ public enum Scenario: String, CaseIterable, Sendable {
         try Fixture.standard.write(to: folder)
         let build = Builder(gist: GISTStore(url: folder))
         switch self {
-        case .busyDay: try build.busyDay()
-        case .manyExams: try build.busyDay(extraExams: true)
+        case .busyDay, .manyExams:
+            // Before the slides are tracked, so the course holds this file's hash. Split into units below, they need
+            // pages to open: a placeholder left the split screen and the section bars with nothing to show.
+            try SampleLecture.write(to: folder.appending(path: Builder.graphFolder).appending(path: Builder.matchingSlides))
+            try build.busyDay(extraExams: self == .manyExams)
         case .quietDay: try build.quietDay()
         case .empty: break
         }
@@ -60,6 +63,8 @@ private struct Builder {
     let graph = UUID(uuidString: "C0000000-0000-4000-8000-000000000002")!
     let robotics = UUID(uuidString: "C0000000-0000-4000-8000-000000000003")!
     let linearAlgebra = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
+    static let graphFolder = "2026-3/EC4207 그래프 이론"
+    static let matchingSlides = "Lectures/05_Matchings.pdf"
 
     func at(_ m: Int, _ d: Int, _ h: Int = 0, _ min: Int = 0) -> Date { Scenario.at(2026, m, d, h, min) }
 
@@ -239,7 +244,7 @@ private struct Builder {
     /// through the file, so the section bars and strips have something to draw.
     func lectureSections(_ course: UUID, matching: UUID, classes: [UUID]) throws {
         let ctx = ActionContext(gist: gist, device: device, now: at(10, 21, 12), calendar: Scenario.calendar)
-        guard let slides = try ctx.file(course).materials.first(where: { $0.path == "Lectures/05_Matchings.pdf" })?.id else { return }
+        guard let slides = try ctx.file(course).materials.first(where: { $0.path == Self.matchingSlides })?.id else { return }
         try run(MaterialSplit(course: course, material: slides, sections: [
             LectureCut(unit: matching, firstPage: 1, lastPage: 8),
             LectureCut(unit: UUID(uuidString: "B0000000-0000-4000-8000-000000000002")!, title: "Hall의 정리", parent: matching, firstPage: 9, lastPage: 16),

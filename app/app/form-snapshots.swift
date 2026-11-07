@@ -1,6 +1,7 @@
 #if DEBUG && os(macOS)
 import AppKit
 import FolioDomain
+import FolioFixtures
 import PDFKit
 import SwiftUI
 
@@ -76,7 +77,7 @@ enum FormSnapshots {
             model.show(.proposed(proposal, source: .claude), for: 0)
             forms.append(("import-place-sections", AnyView(ImportPlaceSheet(model: model).environment(\.accent, accent))))
         }
-        if let document = SampleLecture.document() {
+        if let document = PDFDocument(data: SampleLecture.data()) {
             let split = LectureSplit(file: file, material: slides.id, pageCount: document.pageCount)
             forms.append(("lecture-split", AnyView(LectureSplitPane(controller: PDFController(document: document, page: 8), split: .constant(split),
                                                                      units: file.units, note: String(localized: .fileViewSplitFound), save: {}, cancel: {})
