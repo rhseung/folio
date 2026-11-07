@@ -13,8 +13,9 @@ final class SnapshotDriver {
     /// On this step (e.g. `course-notes`), web views are also drawn into `<step>-web-<n>.png`: `cacheDisplay` leaves
     /// them blank.
     static let webStep = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_WEB"]
-    /// A step to linger on, so the real window (its buttons too, which cacheDisplay leaves out) can be captured.
-    static let holdStep = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_HOLD"]
+    /// Steps to linger on (`course-sessions,settings-general`), so the real window (its buttons and glass too, which
+    /// cacheDisplay leaves out) can be captured.
+    static let holdSteps = Set((ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_HOLD"] ?? "").split(separator: ",").map(String.init))
     /// Shows the recording card in the sidebar as if a lecture were being recorded, without the microphone: `paused`
     /// shows it paused, a number (`0.3`) at that level.
     static let recording = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_RECORDING"] != nil
@@ -26,6 +27,9 @@ final class SnapshotDriver {
     static let tabs = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_TABS"].flatMap(Int.init) ?? 1
     /// How many panes the first two tabs hold (`2`, `3`), a lecture file and a quiz beside the page the walk moves (#62).
     static let panes = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_PANES"].flatMap(Int.init) ?? 1
+    /// `courses`: the first tab holds two courses side by side, the walk moving the left one and the second course's
+    /// overview beside it, so both fold their section columns (#62).
+    static let coursePanes = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_PANES"] == "courses"
 
     var section: CourseSection?
     /// Inside the units section: `detail` opens the first unit, `review` also opens its review sheet.
@@ -45,6 +49,8 @@ final class SnapshotDriver {
     /// The view an open `.tex` switches to, as its bar's switch would.
     var texMode: NoteViewMode?
     var searchQuery: String?
+    /// Opens every folded list column over its page (`FOLIO_SNAPSHOT_COLUMN=open`), as its corner button would.
+    var columnOpen = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_COLUMN"] == "open"
 
     /// `links` are opened by their address at the end, each drawn as its step: what a click on such a link shows.
     func run(select: (Screen) -> Void, open: (AppLink) -> Void, courses: [UUID], semester: UUID?, links: [(String, AppLink)]) async {
@@ -69,7 +75,7 @@ final class SnapshotDriver {
             capture(to: directory.appending(path: "\(name).png"))
             if name == "today" || name == "course-materials" { captureScrolled(to: directory.appending(path: "\(name)-full.png")) }
             if name == Self.webStep { await captureWebViews(to: directory, name: name) }
-            if name == Self.holdStep { try? await Task.sleep(for: .seconds(6)) }
+            if Self.holdSteps.contains(name) { try? await Task.sleep(for: .seconds(6)) }
         }
         if let first = courses.first {
             select(.course(first))
@@ -123,7 +129,7 @@ final class SnapshotDriver {
                     }
                     texMode = nil
                 }
-                if Self.holdStep == "course-materials-\(ext)" { try? await Task.sleep(for: .seconds(6)) }
+                if Self.holdSteps.contains("course-materials-\(ext)") { try? await Task.sleep(for: .seconds(6)) }
                 openFile = nil
                 try? await Task.sleep(for: .seconds(0.5))
             }
@@ -144,6 +150,7 @@ final class SnapshotDriver {
             open(link)
             try? await Task.sleep(for: .seconds(1.5))
             capture(to: directory.appending(path: "\(name).png"))
+            if Self.holdSteps.contains(name) { try? await Task.sleep(for: .seconds(6)) }
         }
         // The panel's first app link, clicked as a user would, from a course with a chat (`FOLIO_SNAPSHOT_CLAUDE`).
         if claudePanel, let first = courses.first {
@@ -160,6 +167,7 @@ final class SnapshotDriver {
             select(.settings)
             try? await Task.sleep(for: .seconds(1.2))
             capture(to: directory.appending(path: "settings-\(tab).png"))
+            if Self.holdSteps.contains("settings-\(tab)") { try? await Task.sleep(for: .seconds(6)) }
         }
         await extraCaptures?(directory)
         NSApp.terminate(nil)

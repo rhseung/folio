@@ -181,6 +181,7 @@ struct RootView: View {
                 #endif
                 .focusedSceneValue(\.showSettings) { showSettings($0) }
                 .focusedSceneValue(\.navigator, navigator)
+                .focusedSceneValue(\.columnCommand, tabs.trail(tabs.selected)?.column)
                 .onAppear { MemoryPressure.start() }
                 .onReceive(MemoryPressure.publisher) { _ in tabs.dropBackground() }
                 // Minute by minute, for the screens that have waited behind too long.
@@ -248,12 +249,18 @@ struct RootView: View {
                     for link in besides { if let entry = workspace.entry(for: link) { tabs.panes(tab)?.openBeside(entry) } }
                 }
             }
+            if SnapshotDriver.coursePanes, workspace.currentCourses.count > 1, let tab = tabs.ids.first,
+               let entry = workspace.entry(for: .course(workspace.currentCourses[1].id)) {
+                tabs.panes(tab)?.openBeside(entry)
+                tabs.panes(tab)?.press(0)
+            }
             // The exam furthest down its page, so opening it by its link has to scroll.
             let exam = workspace.currentCourses.first?.file.exams.min { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }
             // A replay opened at a moment, as a copied link or a tab let go of opens it.
             let replay = workspace.currentCourses.lazy.compactMap { $0.file.recordings.first }.first
             let links = (exam.map { [("link-exam", AppLink(.exam, $0.id))] } ?? [])
                 + (replay.map { [("link-recording", AppLink(.recording, $0.id, anchor: .time(1700)))] } ?? [])
+                + (workspace.catalog.people.first.map { [("link-person", AppLink(.person, $0.id))] } ?? [])
             await SnapshotDriver.shared.run(select: { if let link = $0.link { open(link) } }, open: { open($0) }, courses: ids,
                                             semester: workspace.currentSemester?.id, links: links)
         }

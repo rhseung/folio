@@ -45,6 +45,7 @@ struct FolioApp: App {
         .commands {
             SettingsCommands()
             NavigationCommands()
+            ColumnCommands()
             #if os(macOS)
             TabCommands()
             #endif
@@ -61,6 +62,22 @@ private struct SettingsCommands: Commands {
             Button(.appSettingsMenu) { showSettings?(nil) }
                 .keyboardShortcut(",")
                 .disabled(showSettings == nil)
+        }
+    }
+}
+
+/// 보기 › 구역 열 보기·숨기기 (⌥⌘S) for the focused pane's list column, beside the sidebar's ⌃⌘S: hides a docked
+/// column by hand, and shows a folded one again, docked where it fits and over the page where it doesn't (#62).
+private struct ColumnCommands: Commands {
+    @FocusedValue(\.columnCommand) private var column
+
+    var body: some Commands {
+        CommandGroup(after: .sidebar) {
+            Button(column.map { ColumnSplit<EmptyView, EmptyView>.label($0.kind, shown: $0.shown) } ?? String(localized: .designColumnShowSections)) {
+                column?.toggle()
+            }
+            .keyboardShortcut("s", modifiers: [.command, .option])
+            .disabled(column == nil)
         }
     }
 }

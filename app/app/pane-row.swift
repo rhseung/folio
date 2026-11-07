@@ -93,7 +93,7 @@ struct PaneRow: View {
                 .environment(panes.trails[i])
                 .environment(\.openLink, openLink(navigator))
                 .environment(\.tabPlaying) { [play] pause in play(id, pause) }
-                .environment(\.inPanes, panes.count > 1)
+                .environment(\.paneFocused, i == panes.focus)
                 .environment(\.paneInsert, inserts[id])
                 .environment(\.askClaude, askClaude)
                 .frame(width: kept, alignment: .topLeading)
