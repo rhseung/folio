@@ -73,6 +73,21 @@ struct LectureSectionsTests {
         #expect(f.units(in: m, meeting: 1...24).map(\.title) == ["König", "Hall", "Augmenting paths"])
     }
 
+    @Test func aClassDrawsItsFirstSplitLecture() {
+        var f = course()
+        pages(&f, 1, 1, 1...4)
+        var session = Session(device: device, at: now, week: 9, date: now)
+        session.materials = [SessionMaterial(materialId: f.materials[0].id, firstPage: 1, lastPage: 5),
+                             SessionMaterial(materialId: f.materials[1].id),
+                             SessionMaterial(materialId: f.materials[1].id, firstPage: 2, lastPage: 6)]
+        // The first file has no units' pages, and the second's first link has no range.
+        #expect(f.splitProgress(of: session)?.material == f.materials[1].id)
+        #expect(f.splitProgress(of: session)?.pages == 2...6)
+        pages(&f, 1, 1, 9...12)
+        #expect(f.pages(of: f.units[1].id, in: f.materials[1].id) == 1...12)
+        #expect(f.pages(of: f.units[2].id, in: f.materials[1].id) == nil)
+    }
+
     @Test func removingAFileLetsGoOfItsPages() throws {
         var f = course()
         pages(&f, 1, 0, 5...8)

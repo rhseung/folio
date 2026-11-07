@@ -84,6 +84,19 @@ extension CourseFile {
             .map(\.element.unit).filter { seen.insert($0.id).inserted }
     }
 
+    /// A class's pages in its first lecture file the units split: what its progress line draws as the section bar's
+    /// small form instead of joining unit titles. Nil when no such file has a range for it.
+    public func splitProgress(of session: Session) -> (material: UUID, pages: ClosedRange<Int>)? {
+        session.materials.lazy.compactMap { link in link.pages.flatMap { self.isSplit(link.materialId) ? (link.materialId, $0) : nil } }.first
+    }
+
+    /// The span of a unit's pages in `material`, first to last: a unit page's line for that file.
+    public func pages(of unit: UUID, in material: UUID) -> ClosedRange<Int>? {
+        let held = units.first { $0.id == unit }?.lecturePages.filter { $0.materialId == material } ?? []
+        guard let lo = held.map(\.pages.lowerBound).min(), let hi = held.map(\.pages.upperBound).max() else { return nil }
+        return lo...hi
+    }
+
     /// What a range of the file reads as on its bar: the first and last unit it reaches (`König–Hall`), or the one.
     public func sectionLabel(of material: UUID, pages: ClosedRange<Int>) -> String? {
         let reached = units(in: material, meeting: pages)
