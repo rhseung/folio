@@ -88,8 +88,8 @@ struct SessionsModelTests {
         #expect(model.subtitle(try #require(workspace.course(graphTheory)).file, now: now).contains("남은 수업 \(plan.count - 1)개"))
     }
 
-    /// A class without a topic or units is just "수업": the tile already gives its day.
-    @Test func titleFallsBackFromTopicToUnitsToClass() throws {
+    /// A class without units is just "수업": the tile already gives its day.
+    @Test func titleIsTheUnitsElseClass() throws {
         let workspace = try fixtureWorkspace()
         let model = SessionsModel(workspace: workspace, courseId: graphTheory)
         let s = try session(workspace, daysFromNow: -1)
@@ -98,10 +98,7 @@ struct SessionsModelTests {
         let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
         workspace.run(UnitLink(course: graphTheory, unit: unit, sessions: [s.id]))
         #expect(model.title(of: s, in: try #require(workspace.course(graphTheory)).file) == "매칭")
-        var topic = try #require(workspace.course(graphTheory)?.file.sessions.first)
-        topic.topic = "매칭 이론"
-        #expect(model.title(of: topic, in: try #require(workspace.course(graphTheory)).file) == "매칭 이론")
-        #expect(model.unitsInTitle(topic, in: try #require(workspace.course(graphTheory)).file))
+        #expect(model.hasSubject(s, in: try #require(workspace.course(graphTheory)).file))
     }
 
     @Test func untouchedFutureSessionsAreListedAndRemovedTogether() throws {

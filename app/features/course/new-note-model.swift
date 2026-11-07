@@ -43,7 +43,7 @@ final class NewNoteModel {
         switch kind {
         case .rough, .review: .session
         case .examSummary: .exam
-        case .topic: .units
+        case .unit: .units
         case .free: .none
         }
     }

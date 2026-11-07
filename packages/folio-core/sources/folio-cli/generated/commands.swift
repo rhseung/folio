@@ -159,7 +159,7 @@ enum GeneratedCommands {
             예시:
               folio session add EC4207 --date \"2026-10-28 10:30\"
               folio session add EC4207 --date 2026-10-30 --cancelled --dry-run
-              folio session add EC4207 --date \"2026-11-04 21:00\" --end \"2026-11-04 22:15\" --topic 보강 --link https://zoom.us/j/123 --dry-run
+              folio session add EC4207 --date \"2026-11-04 21:00\" --end \"2026-11-04 22:15\" --link https://zoom.us/j/123 --dry-run
               folio session add EC4207 --date \"2026-11-11 10:30\" --attendance absent --dry-run
             """)
         @OptionGroup var g: GlobalOptions
@@ -167,7 +167,6 @@ enum GeneratedCommands {
         @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String = ""
         @Option(help: ArgumentHelp("일시. 2026-10-28 또는 \"2026-10-28 10:30\"", valueName: "date")) var date: DateArg
         @Option(help: ArgumentHelp("끝 일시. 수업 시간표에 없는 시간일 때만 필요하다", valueName: "date")) var end: DateArg?
-        @Option(help: "주제. 회차 목록에서 제목으로 보인다") var topic: String = ""
         @Option(help: "온라인 수업 링크(Zoom 등)") var link: String?
         @Flag(help: "수업이 없던 날의 휴강으로") var cancelled = false
         @Option(help: "출결. 결석이나 공결을 미리 알 때. 휴강과 함께 줄 수 없다") var attendance: AttendanceState?
@@ -181,7 +180,6 @@ enum GeneratedCommands {
                 course: c.id,
                 date: date.date,
                 end: end.map { $0.date },
-                topic: topic,
                 link: link,
                 cancelled: cancelled,
                 attendance: attendance
@@ -191,25 +189,24 @@ enum GeneratedCommands {
     }
 
     struct SessionSet: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "set", abstract: "회차의 일시, 주제, 온라인 링크, 휴강, 복습 여부, 복습 노트 상태 바꾸기. 준 것만 바뀐다", discussion: """
+        static let configuration = CommandConfiguration(commandName: "set", abstract: "회차의 일시, 온라인 링크, 휴강, 복습 여부, 복습 노트 상태 바꾸기. 준 것만 바뀐다", discussion: """
             예시:
               folio session set EC4207/10-26 --cancelled true
               folio session set EC4207/10-26 --review-unfinished false --dry-run
-              folio session set EC4207/10-26 --topic \"매칭 보강\" --link https://zoom.us/j/123 --dry-run
+              folio session set EC4207/10-26 --link https://zoom.us/j/123 --dry-run
               folio session set EC4207/10-26 --date \"2026-10-29 19:00\" --end \"2026-10-29 20:15\" --dry-run
             """)
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref("Session")) var session: String = ""
         @Option(help: ArgumentHelp("일시. 회차를 가리키는 날짜(11-03)도 따라 바뀐다", valueName: "date")) var date: DateArg?
         @Option(help: ArgumentHelp("끝 일시. 수업 시간표 칸과 다를 때만 저장된다. none이면 지운다", valueName: "date")) var end: Clearable<DateArg>?
-        @Option(help: "주제. 회차 목록에서 제목으로 보인다") var topic: String?
         @Option(help: "온라인 수업 링크(Zoom 등). none이면 지운다") var link: Clearable<String>?
         @Option(help: "휴강인지. 휴강이면 그 회차의 출결을 지운다") var cancelled: Toggle?
         @Option(help: "복습에서 뺄지") var skipsReview: Toggle?
         @Option(help: "복습 노트를 마저 써야 하는지") var reviewUnfinished: Toggle?
 
         func run() throws {
-            guard date != nil || end != nil || topic != nil || link != nil || cancelled != nil || skipsReview != nil || reviewUnfinished != nil else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --date, --end, --topic, --link, --cancelled, --skips-review, --review-unfinished") }
+            guard date != nil || end != nil || link != nil || cancelled != nil || skipsReview != nil || reviewUnfinished != nil else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --date, --end, --link, --cancelled, --skips-review, --review-unfinished") }
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let (c, sessionName) = try r.split(session)
@@ -218,7 +215,6 @@ enum GeneratedCommands {
                 session: try r.id("Session", sessionName, in: c),
                 date: date.map { Patch.set($0.date) } ?? .keep,
                 end: end.map { p in Patch.set(p.value.map { $0.date }) } ?? .keep,
-                topic: topic.map { Patch.set($0) } ?? .keep,
                 link: link.map { p in Patch.set(p.value) } ?? .keep,
                 cancelled: cancelled.map { Patch.set($0.value) } ?? .keep,
                 skipsReview: skipsReview.map { Patch.set($0.value) } ?? .keep,

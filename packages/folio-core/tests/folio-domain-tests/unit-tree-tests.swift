@@ -114,7 +114,7 @@ struct NoteUnitTests {
         exam.scopeUnitIds = [UUID(), later.id]
         var file = CourseFile(course: Course(device: device, at: now, title: ""), units: [later, first, bySession], sessions: [session], exams: [exam])
         let topic = UUID(), examNote = UUID(), free = UUID()
-        file.notes = [NoteEntry(id: topic, device: device, at: now, path: "Notes/t.md", meta: NoteMeta(id: topic, kind: .topic, unitIds: [UUID(), first.id])),
+        file.notes = [NoteEntry(id: topic, device: device, at: now, path: "Notes/t.md", meta: NoteMeta(id: topic, kind: .unit, unitIds: [UUID(), first.id])),
                       NoteEntry(id: examNote, device: device, at: now, path: "Notes/e.md", meta: NoteMeta(id: examNote, kind: .examSummary, examId: exam.id)),
                       NoteEntry(id: free, device: device, at: now, path: "Notes/f.md", meta: NoteMeta(id: free)),
                       NoteEntry(id: rough, device: device, at: now, path: "Notes/r.md", meta: NoteMeta(id: rough, kind: .rough))]

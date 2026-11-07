@@ -25,14 +25,29 @@ struct ClassWrapUpModelTests {
     var saved: Session { file.sessions.first { $0.id == session }! }
 
     @Test func whatIsMissingOpensAndTheRestFolds() throws {
-        workspace.run(SessionSet(course: graphTheory, session: session, topic: .set("홀의 정리")))
+        workspace.run(UnitLink(course: graphTheory, unit: unit, sessions: [session], linked: true))
         let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session, recorded: true)
+        #expect(model.items.filter(model.isOpen) == [.progress, .note])
+        #expect(model.folded == [.units, .attendance])
+        #expect(model.summary(.units) == "매칭")
+        model.reopen(.units)
         #expect(model.items.filter(model.isOpen) == [.progress, .units, .note])
-        #expect(model.folded == [.topic, .attendance])
-        #expect(model.summary(.topic) == "홀의 정리")
-        #expect(model.summary(.attendance) == String(localized: .wrapUpAttendanceRecorded(String(localized: .attendancePresent))))
-        model.reopen(.topic)
-        #expect(model.items.filter(model.isOpen) == [.progress, .units, .topic, .note])
+    }
+
+    /// Attendance is a choice with the likely answer picked, not a line saying why: a recorded class starts on
+    /// present, one with an entry on that entry's state, and saving writes what was picked, present as no entry.
+    @Test func attendanceStartsOnTheLikelyChoiceAndSavesThePickedOne() throws {
+        let recorded = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session, recorded: true)
+        #expect(recorded.attendance == .present && recorded.summary(.attendance) == String(localized: .attendancePresent))
+        recorded.attendance = .late
+        recorded.wrapUp()
+        #expect(file.attendance.first { $0.sessionId == session }?.state == .late)
+
+        let again = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
+        #expect(again.attendance == .late && again.folded.contains(.attendance))
+        again.attendance = .present
+        again.wrapUp()
+        #expect(!file.attendance.contains { $0.sessionId == session })
     }
 
     @Test func savingWritesEverythingAtOnceAndMarksTheClass() throws {
@@ -40,7 +55,6 @@ struct ClassWrapUpModelTests {
         model.add(slides.id)
         model.setRange(slides.id, PageRange(first: 3, last: 9))
         model.pick(unit)
-        model.topic = "증가 경로"
         model.attendance = .late
         model.makesNote = true
         #expect(model.refusal == nil)
@@ -48,11 +62,11 @@ struct ClassWrapUpModelTests {
         let s = saved
         #expect(s.isWrappedUp)
         #expect(s.materials == [SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 9)])
-        #expect(s.unitIds == [unit] && s.topic == "증가 경로")
+        #expect(s.unitIds == [unit])
         #expect(file.attendance.first { $0.sessionId == session }?.state == .late)
-        // Made after the topic was saved, so it carries it in its name.
+        // Made after the units were saved, so it carries them in its name.
         let note = try #require(s.roughNoteId.flatMap { id in file.notes.first { $0.id == id } })
-        #expect(note.path.contains("증가 경로"))
+        #expect(note.path.contains("매칭"))
         #expect(file.wrapUpGaps(of: s).isEmpty)
     }
 
@@ -67,7 +81,6 @@ struct ClassWrapUpModelTests {
         #expect(!model.isOpen(.progress))
         #expect(model.rows.contains { $0.id == problems.id && $0.last == nil })
         #expect(model.refusal == nil)
-        model.topic = "매칭"
         model.wrapUp()
         #expect(saved.materials == [SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 9), SessionMaterial(materialId: problems.id)])
         // Opened, the same row asks for its pages.
@@ -123,7 +136,7 @@ struct ClassWrapUpModelTests {
         let left = model.leftUnwrapped(file).map(\.id)
         let a = try #require(left.firstIndex(of: older)), b = try #require(left.firstIndex(of: newer))
         #expect(a < b)
-        #expect(model.gapsLine(model.leftGaps(file.sessions.first { $0.id == older }!, in: file)).contains(String(localized: .wrapUpTopic)))
+        #expect(model.gapsLine(model.leftGaps(file.sessions.first { $0.id == older }!, in: file)).contains(String(localized: .wrapUpUnits)))
 
         model.startWrapUps(file)
         let run = try #require(model.wrapUpRun)

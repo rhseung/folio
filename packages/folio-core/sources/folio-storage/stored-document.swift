@@ -46,7 +46,7 @@ extension CourseFile: StoredModel {
     /// changes. The session now holds the link alone and those units are read from it. A note's `sessionId` is moved
     /// to its session when that slot is free and nothing else points at the note; a note a session points at takes
     /// that slot's kind (`import calendar` linked review notes without making them one); a second pointer at a note
-    /// lets go of it, the first in the file keeping it. A pointer at a topic or exam note lets go too: that
+    /// lets go of it, the first in the file keeping it. A pointer at a unit or exam note lets go too: that
     /// `import calendar` took any unlinked note, and making it a review note would drop the units its user chose.
     static func keepNoteLinksOnSessions(_ raw: inout JSONValue) throws {
         func id(_ value: JSONValue?) -> UUID? { if case .string(let s)? = value { UUID(uuidString: s) } else { nil } }
@@ -54,7 +54,7 @@ extension CourseFile: StoredModel {
         var sessions: [JSONValue] = if case .array(let a)? = raw["sessions"] { a } else { [] }
         var notes: [JSONValue] = if case .array(let a)? = raw["notes"] { a } else { [] }
         var kindOf: [UUID: String] = [:]
-        let kept: Set<String> = [NoteKind.topic.rawValue, NoteKind.examSummary.rawValue]
+        let kept: Set<String> = [NoteKind.unit.rawValue, NoteKind.examSummary.rawValue]
         let ownUnits = Set(notes.compactMap { n -> UUID? in
             guard case .string(let kind)? = n["kind"], kept.contains(kind) else { return nil }
             return id(n["id"])
@@ -80,7 +80,7 @@ extension CourseFile: StoredModel {
         }
         for n in notes.indices {
             if let note = id(notes[n]["id"]), let kind = kindOf[note] { notes[n]["kind"] = .string(kind) }
-            if notes[n]["kind"] != .string(NoteKind.topic.rawValue) { notes[n]["unitIds"] = .array([]) }
+            if notes[n]["kind"] != .string(NoteKind.unit.rawValue) { notes[n]["unitIds"] = .array([]) }
             notes[n]["sessionId"] = nil
         }
         if raw["sessions"] != nil { raw["sessions"] = .array(sessions) }
@@ -173,10 +173,13 @@ extension CourseFile: StoredModel {
         guard !labs.isEmpty else { return }
 
         var file = try JSONFormat.decoder.decode(CourseFile.self, from: JSONFormat.encoder.encode(raw))
+        // The model has no topic any more; the raw session still holds the one the lab's unit is named after.
+        let topic = { (i: Int) -> String in if case .string(let t)? = sessions[i]["topic"] { t } else { "" } }
         // By number, then date, so a lab's unit takes its title from its first session.
-        for lab in labs.map({ (session: file.sessions[$0.index], number: $0.number) }).sorted(by: { ($0.number, $0.session.date) < ($1.number, $1.session.date) }) {
+        for lab in labs.map({ (session: file.sessions[$0.index], topic: topic($0.index), number: $0.number) })
+            .sorted(by: { ($0.number, $0.session.date) < ($1.number, $1.session.date) }) {
             let s = lab.session
-            file.linkLab(lab.number, session: s.id, topic: s.topic, id: derivedID(s.id), device: s.updatedBy, at: s.updatedAt)
+            file.linkLab(lab.number, session: s.id, experiment: lab.topic, id: derivedID(s.id), device: s.updatedBy, at: s.updatedAt)
         }
         let encoded = try JSONFormat.decoder.decode(JSONValue.self, from: JSONFormat.encoder.encode(file))
         raw = JSONValue.preservingUnknownKeys(old: raw, new: encoded, model: file)

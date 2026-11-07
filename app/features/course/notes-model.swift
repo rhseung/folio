@@ -78,7 +78,7 @@ final class NoteListModel {
             .map { n, e in Row(note: n, detail: detail(n, e.map { $0.title } ?? String(localized: .notesNoExam))) }
 
         let units = UnitTree.outline(file.units).map(\.unit)
-        let topics = notes.filter { $0.meta.kind == .topic }.sorted(by: byTitle).map { n in
+        let unitNotes = notes.filter { $0.meta.kind == .unit }.sorted(by: byTitle).map { n in
             Row(note: n, detail: detail(n, units.filter { n.meta.unitIds.contains($0.id) }.map(\.title).joined(separator: ", ").nilIfEmpty ?? String(localized: .notesNoUnits)))
         }
 
@@ -87,7 +87,7 @@ final class NoteListModel {
         }
 
         return [Part(title: String(localized: .notesPartClass), rows: classNotes), Part(title: String(localized: .notesPartExam), rows: exams),
-                Part(title: String(localized: .notesPartTopic), rows: topics), Part(title: String(localized: .notesPartFree), rows: free)].filter { !$0.rows.isEmpty }
+                Part(title: String(localized: .notesPartUnit), rows: unitNotes), Part(title: String(localized: .notesPartFree), rows: free)].filter { !$0.rows.isEmpty }
     }
 
     func reload() {
@@ -373,8 +373,8 @@ final class NoteEditorModel {
             }
         case .examSummary:
             linkExams.first { $0.id == meta.examId }.map { String(localized: .notesLinkExam($0.title)) } ?? String(localized: .notesLinkNoExam)
-        case .topic:
-            String(localized: .notesLinkTopic(outline.map(\.unit).filter { meta.unitIds.contains($0.id) }.map(\.title).joined(separator: ", ").nilIfEmpty
+        case .unit:
+            String(localized: .notesLinkUnit(outline.map(\.unit).filter { meta.unitIds.contains($0.id) }.map(\.title).joined(separator: ", ").nilIfEmpty
                                               ?? String(localized: .notesNoUnits)))
         case .free: String(localized: .notesPartFree)
         }
@@ -404,11 +404,11 @@ final class NoteEditorModel {
         saveLinks()
     }
 
-    func toggleTopic(_ unit: UUID) {
-        // The units another kind shows are its session's or exam's, not the note's own, so a new topic note starts empty.
-        if meta.kind != .topic {
+    func toggleUnit(_ unit: UUID) {
+        // The units another kind shows are its session's or exam's, not the note's own, so a new unit note starts empty.
+        if meta.kind != .unit {
             meta.unitIds = []
-            relink(.topic)
+            relink(.unit)
         }
         if let i = meta.unitIds.firstIndex(of: unit) { meta.unitIds.remove(at: i) } else { meta.unitIds.append(unit) }
         saveLinks()

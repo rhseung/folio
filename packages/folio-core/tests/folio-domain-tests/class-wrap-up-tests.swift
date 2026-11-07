@@ -30,10 +30,10 @@ struct ClassWrapUpTests {
 
     @Test func anEmptyClassMissesEverythingInAskingOrder() {
         let f = course()
-        #expect(f.wrapUpGaps(of: f.sessions[0]) == [.progress, .units, .topic, .note, .attendance])
+        #expect(f.wrapUpGaps(of: f.sessions[0]) == [.progress, .units, .note, .attendance])
         // No lecture file, no progress to ask about.
         let g = course(lectures: false)
-        #expect(g.wrapUpGaps(of: g.sessions[0]) == [.units, .topic, .note, .attendance])
+        #expect(g.wrapUpGaps(of: g.sessions[0]) == [.units, .note, .attendance])
     }
 
     @Test func eachItemIsFilledByWhatItAsks() {
@@ -46,9 +46,7 @@ struct ClassWrapUpTests {
         let unit = FolioDomain.Unit(device: device, at: at(1, 9), title: "매칭", order: 0, parentId: nil)
         f.units = [unit]
         f.toggle(session: s, unit: unit.id)
-        f.sessions[0].topic = "  "
-        #expect(f.wrapUpGaps(of: f.sessions[0]) == [.topic, .note, .attendance])
-        f.sessions[0].topic = "홀의 정리"
+        #expect(f.wrapUpGaps(of: f.sessions[0]) == [.note, .attendance])
         // A review note is a written-up class too.
         f.sessions[0].reviewNoteId = UUID()
         #expect(f.wrapUpGaps(of: f.sessions[0]) == [.attendance])
@@ -111,7 +109,6 @@ struct ClassWrapUpTests {
         let unit = FolioDomain.Unit(device: device, at: now, title: "매칭", order: 0, parentId: nil)
         f.units = [unit]
         f.toggle(session: s, unit: unit.id)
-        f.sessions[0].topic = "매칭"
         f.sessions[0].roughNoteId = UUID()
         f.attendance = [Attendance(device: device, at: now, sessionId: s, state: .absent)]
         #expect(f.classesToWrapUp(at: now, classMinutes: 75, calendar: calendar).isEmpty)
@@ -149,7 +146,6 @@ struct ClassWrapUpTests {
         let unit = FolioDomain.Unit(device: device, at: at(1, 9), title: "매칭", order: 0, parentId: nil)
         f.units = [unit]
         f.toggle(session: s, unit: unit.id)
-        f.sessions[1].topic = "매칭"
         f.sessions[1].reviewNoteId = UUID()
         f.attendance = [Attendance(device: device, at: at(2, 12), sessionId: s, state: .late)]
         #expect(f.unwrappedPastSessions(at: at(4, 12), settings: settings, calendar: calendar).map(\.id) == [lastWeek.id])

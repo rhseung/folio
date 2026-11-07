@@ -40,6 +40,11 @@ public final class SearchStore: Sendable {
             try db.execute(sql: "DELETE FROM course")
             try db.execute(sql: "DELETE FROM item")
         }
+        // Classes lost their topic and go by their units: an unchanged course.json would otherwise keep the topics found.
+        migrator.registerMigration("v4-session-units") { db in
+            try db.execute(sql: "DELETE FROM course")
+            try db.execute(sql: "DELETE FROM item")
+        }
         try migrator.migrate(db)
     }
 

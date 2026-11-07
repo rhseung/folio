@@ -3,7 +3,7 @@ import Foundation
 /// What a class's wrap-up asks about, in the order it asks. Announcements made in class (new assignments, exam dates)
 /// are offered too but never missing: most classes have none.
 public enum WrapUpItem: String, CaseIterable, Sendable {
-    case progress, units, topic, note, attendance
+    case progress, units, note, attendance
 }
 
 extension CourseFile {
@@ -15,7 +15,6 @@ extension CourseFile {
             switch item {
             case .progress: !lectures.isEmpty && !session.materials.contains { lectures.contains($0.materialId) && $0.pages != nil }
             case .units: session.unitIds.isEmpty
-            case .topic: session.topic.trimmingCharacters(in: .whitespaces).isEmpty
             // A review note means the class was written up, whether or not notes were taken during it.
             case .note: session.roughNoteId == nil && session.reviewNoteId == nil
             // Present is stored as no entry, so it is known only from a recording, an entry, or a saved wrap-up.

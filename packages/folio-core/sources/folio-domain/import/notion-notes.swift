@@ -100,7 +100,7 @@ public enum NotionNotesImporter {
         for row in dump.notes.sorted(by: { ($0.date ?? "", $0.title) < ($1.date ?? "", $1.title) }) {
             guard let source = row.file else { continue }
             var sessionId: UUID?
-            var kind: NoteKind = row.kind == "러프" ? .rough : .topic
+            var kind: NoteKind = row.kind == "러프" ? .rough : .unit
             if let s = session(of: row.title) {
                 let review = row.kind == "복습" || (row.kind == nil && s.review)
                 kind = review ? .review : .rough

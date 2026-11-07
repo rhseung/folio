@@ -22,14 +22,14 @@ struct SessionCommand: ParsableCommand {
             let sessions = f.sessions.sorted { $0.date < $1.date }.filter { all || !$0.isCancelled }
             if g.json { return try printJSON(sessions) }
             if lines {
-                for s in sessions { line(["\(c.code)/\(f.reference(of: s, calendar: r.ctx.calendar))", s.date.formatted(date: .numeric, time: .shortened), s.isCancelled ? String(localized: .sessionListCancelled) : "", s.topic]) }
+                for s in sessions { line(["\(c.code)/\(f.reference(of: s, calendar: r.ctx.calendar))", s.date.formatted(date: .numeric, time: .shortened), s.isCancelled ? String(localized: .sessionListCancelled) : "", f.subject(of: s) ?? ""]) }
                 return
             }
             courseHeader(c, catalog: try? r.ctx.catalog())
-            var t = Table(header: [String(localized: .sessionListHeaderSession), String(localized: .sessionListHeaderDate), String(localized: .sessionListCancelled), String(localized: .sessionListHeaderTopic), String(localized: .sessionListHeaderNotes)], shrink: [3])
+            var t = Table(header: [String(localized: .sessionListHeaderSession), String(localized: .sessionListHeaderDate), String(localized: .sessionListCancelled), String(localized: .sessionListHeaderUnits), String(localized: .sessionListHeaderNotes)], shrink: [3])
             for s in sessions {
                 let notes = [s.roughNoteId.map { _ in String(localized: .sessionListRough) }, s.reviewNoteId.map { _ in s.reviewNoteUnfinished == true ? String(localized: .sessionListReviewUnfinished) : String(localized: .sessionListReview) }].compactMap { $0 }
-                let cells = [f.reference(of: s, calendar: r.ctx.calendar), when(s.date, now: r.ctx.now, time: true), s.isCancelled ? String(localized: .sessionListCancelled).toned : "", s.topic, notes.joined(separator: " · ")]
+                let cells = [f.reference(of: s, calendar: r.ctx.calendar), when(s.date, now: r.ctx.now, time: true), s.isCancelled ? String(localized: .sessionListCancelled).toned : "", f.subject(of: s) ?? "", notes.joined(separator: " · ")]
                 t.rows.append(s.date < r.ctx.now ? cells.map { $0.styled(.dim) } : cells)
             }
             t.print()
@@ -55,7 +55,6 @@ struct SessionCommand: ParsableCommand {
             if let end = s.end(schedule: f.course.schedule, calendar: r.ctx.calendar) {
                 say(String(localized: .sessionShowEnd(end.formatted(date: .omitted, time: .shortened))))
             }
-            if !s.topic.isEmpty { say(String(localized: .sessionShowTopic(s.topic))) }
             // The slot's link counts too: that's the one the join button opens.
             if let link = s.link(schedule: f.course.schedule, calendar: r.ctx.calendar) { say(String(localized: .sessionShowLink(link.absoluteString))) }
             let units = s.unitIds.compactMap { id in f.units.first { $0.id == id }?.title }
@@ -113,7 +112,6 @@ struct SessionCommand: ParsableCommand {
         @Argument(help: ArgumentHelp(String(localized: .sessionShowHelpSession), valueName: "session"), completion: Complete.sessions) var session: String
         @Argument(help: ArgumentHelp(String(localized: .sessionProgressHelpRanges), valueName: "material:pages")) var ranges: [String] = []
         @Option(name: .customLong("unit"), help: ArgumentHelp(String(localized: .sessionWrapUpHelpUnit))) var units: [String] = []
-        @Option(help: ArgumentHelp(String(localized: .sessionWrapUpHelpTopic))) var topic: String?
         @Option(help: ArgumentHelp(String(localized: .sessionWrapUpHelpAttendance))) var attendance: AttendanceState?
 
         func run() throws {
@@ -124,7 +122,7 @@ struct SessionCommand: ParsableCommand {
             let links = try Progress.links(ranges, r, c)
             let unitIds = units.isEmpty ? s.unitIds : try units.map { try r.unit($0, in: c).id }
             let state = attendance ?? c.file.attendance.first { $0.sessionId == s.id }?.state ?? .present
-            try perform(spec: SessionWrapUp(course: c.id, session: s.id, ranges: links, units: unitIds, topic: topic ?? s.topic, attendance: state), g, ctx: ctx)
+            try perform(spec: SessionWrapUp(course: c.id, session: s.id, ranges: links, units: unitIds, attendance: state), g, ctx: ctx)
         }
     }
 

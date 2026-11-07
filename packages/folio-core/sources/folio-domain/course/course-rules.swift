@@ -195,7 +195,7 @@ extension CourseFile: Document {
             // Notes are found by their file, so two entries on one file would give it two sets of properties.
             Check("NoteEntry.path", String(localized: .ruleNotePath)) { n, f in f.notes.count { $0.path == n.path } == 1 }
             // Other kinds read their units from their session or exam; a stored copy would go stale and resurface.
-            Check("NoteEntry.units", String(localized: .ruleNoteUnits)) { n, _ in n.kind == .topic || n.unitIds.isEmpty }
+            Check("NoteEntry.units", String(localized: .ruleNoteUnits)) { n, _ in n.kind == .unit || n.unitIds.isEmpty }
         }
         // A rough note is taken during one class, so a second session pointing at it would give it two. A review note
         // may cover several classes reviewed at once; `Session.noteKind` keeps one note from filling both slots.

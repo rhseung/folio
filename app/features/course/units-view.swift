@@ -248,7 +248,7 @@ struct UnitDetail: View {
                             Image(systemName: "doc.text").foregroundStyle(Theme.Palette.textTertiary)
                             Text(note.title).lineLimit(1)
                             Spacer(minLength: Theme.Space.m)
-                            Chip(note.meta.kind.label, tone: note.meta.kind == .topic ? .accent : .plain)
+                            Chip(note.meta.kind.label, tone: note.meta.kind == .unit ? .accent : .plain)
                         }
                         .opens(note.meta.id.map { id in { openNote(id) } })
                         .contextMenu { if let id = note.meta.id { Button(.commonOpen) { openNote(id) } } }
@@ -381,8 +381,9 @@ struct UnitDetail: View {
             Text(s.date.formatted(.dateTime.weekday())).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
         }
         .frame(width: 84, alignment: .leading)
-        Text(model.classTitle(s) ?? String(localized: .sessionsClass))
-            .font(Theme.Typeface.bodyStrong).foregroundStyle(model.classTitle(s) == nil ? Theme.Palette.textTertiary : Theme.Palette.text)
+        let title = model.classTitle(s, besides: unit, in: file)
+        Text(title ?? String(localized: .sessionsClass))
+            .font(Theme.Typeface.bodyStrong).foregroundStyle(title == nil ? Theme.Palette.textTertiary : Theme.Palette.text)
             .strikethrough(s.isCancelled).lineLimit(1)
             .frame(maxWidth: .infinity, alignment: .leading)
         SessionNoteSlots(file: file, session: s, openNote: openNote) { if $0 == .review { openReview(s) } }

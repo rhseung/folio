@@ -21,10 +21,9 @@ struct CalendarImportTests {
     }
 
     @Test func fillsKnownDaysAndAddsTheRest() {
-        var existing = Session(device: device, at: now, week: 2, date: calendar.startOfDay(for: at(8, 0)))
-        existing.topic = "Vectors"
+        let existing = Session(device: device, at: now, week: 2, date: calendar.startOfDay(for: at(8, 0)))
         let file = CourseFile(course: Course(device: device, at: now, title: "선형대수학"), sessions: [existing])
-        let recitation = CalendarMeeting(course: "GS2004 선형대수학", start: at(8, 18, 30), end: at(8, 19, 30), room: "C110")
+        let recitation = CalendarMeeting(course: "GS2004 선형대수학", start: at(8, 18, 30), end: at(8, 19, 30), room: "C110", topic: "Recitation")
         let meetings = [lecture(8), lecture(10), recitation, lecture(15), lecture(17), lecture(22),
                         CalendarMeeting(course: "GS2004 선형대수학", start: at(23, 21), end: at(23, 22, 15))]
         let start = LocalDate(year: 2026, month: 8, day: 31)!
@@ -32,10 +31,11 @@ struct CalendarImportTests {
 
         #expect(r.filled.map(\.id) == [existing.id])
         #expect(r.file.sessions.first { $0.id == existing.id }?.date == at(8, 14, 30))
-        #expect(r.file.sessions.first { $0.id == existing.id }?.topic == "Vectors")
         // The day's first meeting is the session that was there; the recitation that evening is a session of its own.
         let week2 = r.added.filter { $0.week == 2 }
         #expect(week2.map(\.date) == [at(8, 18, 30), at(10, 14, 30)])
+        // The meeting's title is the import's to use, not the session's: classes have no topic.
+        #expect(r.titles[week2[0].id] == "Recitation" && r.titles[existing.id] == "")
         #expect(week2.map { r.file.reference(of: $0, calendar: calendar) } == ["09-08 18:30", "09-10"])
         #expect(r.added.filter { $0.week == 4 }.map(\.date) == [at(22, 14, 30), at(23, 21)])
         #expect(r.file.course.schedule.map(\.weekday) == [2])
@@ -45,26 +45,23 @@ struct CalendarImportTests {
         #expect(again.added.isEmpty && again.filled.isEmpty)
     }
 
-    @Test func linksNotesNamedAfterTopics() {
-        var lab = Session(device: device, at: now, week: 3, date: at(16, 10, 30))
-        lab.topic = "Accuracy & Precision"
+    @Test func linksNotesNamedAfterMeetings() {
+        let lab = Session(device: device, at: now, week: 3, date: at(16, 10, 30))
         let taken = UUID(), topic = UUID(), free = UUID()
-        let links = CalendarImporter.noteLinks(sessions: [lab], notes: [
+        let links = CalendarImporter.noteLinks(sessions: [lab], titles: [lab.id: "Accuracy & Precision"], notes: [
             (taken, "Accuracy & Precision", NoteMeta(id: taken, kind: .review, sessionId: UUID())),
-            (topic, "Accuracy & Precision", NoteMeta(id: topic, kind: .topic)),
+            (topic, "Accuracy & Precision", NoteMeta(id: topic, kind: .unit)),
             (free, "Accuracy & Precision", NoteMeta(id: free)),
         ])
         #expect(links.map(\.note) == [free])
     }
 
-    /// Two classes with one topic can't share a note: the earlier one takes it.
+    /// Two classes with one title can't share a note: the earlier one takes it.
     @Test func aNoteGoesToOneSession() {
-        var first = Session(device: device, at: now, week: 3, date: at(16, 10, 30))
-        var second = Session(device: device, at: now, week: 4, date: at(23, 10, 30))
-        first.topic = "Kinematics"
-        second.topic = "Kinematics"
+        let first = Session(device: device, at: now, week: 3, date: at(16, 10, 30))
+        let second = Session(device: device, at: now, week: 4, date: at(23, 10, 30))
         let note = UUID()
-        let links = CalendarImporter.noteLinks(sessions: [second, first], notes: [(note, "Kinematics", NoteMeta(id: note))])
+        let links = CalendarImporter.noteLinks(sessions: [second, first], titles: [first.id: "Kinematics", second.id: "Kinematics"], notes: [(note, "Kinematics", NoteMeta(id: note))])
         #expect(links.map(\.session) == [first.id])
     }
 

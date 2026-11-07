@@ -43,7 +43,7 @@ struct NoteList: View {
                 ForEach(part.rows) { row($0) }
             }
         }
-        // The filter's kind is the likely one: a + under 단원 정리 makes a topic note.
+        // The filter's kind is the likely one: a + under 단원 노트 makes a unit note.
         .sheet(isPresented: $model.adding) {
             NewNoteSheet(workspace: model.workspace, course: model.course, kind: model.filter ?? .free) { id in
                 model.reload()
@@ -290,9 +290,9 @@ struct NoteLinkMenu: View {
             Menu(String(localized: .notesLinkAsExam)) {
                 ForEach(model.linkExams) { e in item(e.title, on: meta.kind == .examSummary && meta.examId == e.id) { model.relink(.examSummary, exam: e.id) } }
             }
-            Menu(String(localized: .notesLinkAsTopic)) {
+            Menu(String(localized: .notesLinkAsUnit)) {
                 ForEach(model.outline, id: \.unit.id) { u, depth in
-                    item(String(repeating: "   ", count: depth) + u.title, on: meta.kind == .topic && meta.unitIds.contains(u.id)) { model.toggleTopic(u.id) }
+                    item(String(repeating: "   ", count: depth) + u.title, on: meta.kind == .unit && meta.unitIds.contains(u.id)) { model.toggleUnit(u.id) }
                 }
             }
             item(String(localized: .notesLinkAsFree), on: meta.kind == .free) { model.relink(.free) }
@@ -318,7 +318,7 @@ extension NoteKind {
         case .rough: String(localized: .notesKindRough)
         case .review: String(localized: .notesKindReview)
         case .examSummary: String(localized: .notesKindExamSummary)
-        case .topic: String(localized: .notesKindTopic)
+        case .unit: String(localized: .notesKindUnit)
         case .free: String(localized: .notesKindFree)
         }
     }

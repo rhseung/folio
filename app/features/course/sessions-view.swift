@@ -408,9 +408,6 @@ struct SessionFormSheet: View {
         SheetForm(title: model.title, confirm: model.confirm, disabled: model.disabled, note: model.note) {
             FormRow(label: String(localized: .sessionsDate)) { DateChip(date: Binding(get: { model.start }, set: { model.setStart($0) })) }
             FormRow(label: String(localized: .sessionsEnd)) { TimeMenu(minute: Binding(get: { model.endMinute }, set: { model.setEnd($0) })) }
-            FormRow(label: String(localized: .sessionsTopic), detail: String(localized: .sessionsTopicDetail)) {
-                InlineField(String(localized: .sessionsTopicPrompt), text: $model.topic)
-            }
             FormRow(label: String(localized: .sessionsLink), detail: String(localized: .sessionsLinkDetail), last: model.session != nil) {
                 InlineField(String(localized: .sessionsLinkPrompt), text: $model.link)
             }
@@ -649,7 +646,7 @@ struct SessionCard: View {
                                fill: live ? accent.tint : Theme.Palette.page)
                     .opacity(cancelled ? Theme.Opacity.ended : 1)
                 // The pills under the lines where both don't fit: beside them on an iPhone, the units picker broke a
-                // letter a line and the row ran out of its card. The lines' ideal is pinned, so a long topic in a full
+                // letter a line and the row ran out of its card. The lines' ideal is pinned, so a long title in a full
                 // window truncates as before rather than folding the row.
                 ViewThatFits(in: .horizontal) {
                     HStack(spacing: Theme.Space.l) {
@@ -711,7 +708,7 @@ struct SessionCard: View {
                 if model.link(of: session, in: file) != nil && !cancelled {
                     Image(systemName: "video").help(Text(.sessionsOnline))
                 }
-                if !cancelled { SessionUnitsPicker(course: course, session: session, compact: model.unitsInTitle(session, in: file), separated: true) }
+                if !cancelled { SessionUnitsPicker(course: course, session: session, compact: model.hasSubject(session, in: file), separated: true) }
             }
             .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
         }

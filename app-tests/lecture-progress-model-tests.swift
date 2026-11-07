@@ -42,8 +42,8 @@ struct LectureProgressModelTests {
         #expect(links(session) == [SessionMaterial(materialId: slides.id, firstPage: 7, lastPage: 11)])
     }
 
-    /// A recording without a class has nothing to wrap up. A course without lecture files still has a topic, units
-    /// and a note to ask about; a class wrapped up with nothing missing isn't asked again.
+    /// A recording without a class has nothing to wrap up. A course without lecture files still has units and a
+    /// note to ask about; a class wrapped up with nothing missing isn't asked again.
     @Test func aRecordingAsksUnlessItsClassHasNothingLeft() throws {
         workspace.askWrapUp(after: Recording(device: workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a"), course: graphTheory)
         #expect(workspace.wrapUpAsk == nil)
@@ -56,7 +56,7 @@ struct LectureProgressModelTests {
         workspace.wrapUpAsk = nil
 
         let unit = try #require(workspace.run(UnitAdd(course: linearAlgebra, title: "행렬식"))?.made)
-        workspace.run(SessionWrapUp(course: linearAlgebra, session: other, ranges: [], units: [unit], topic: "행렬식", attendance: .present))
+        workspace.run(SessionWrapUp(course: linearAlgebra, session: other, ranges: [], units: [unit], attendance: .present))
         _ = workspace.note(.rough, of: other, in: linearAlgebra)
         workspace.askWrapUp(after: recording, course: linearAlgebra)
         #expect(workspace.wrapUpAsk == nil)

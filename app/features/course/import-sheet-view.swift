@@ -255,7 +255,7 @@ private struct QuietMenuLabel: View {
         .onHover { hovering = $0 }
     }
 
-    /// A long session topic truncates rather than taking the room the destination path needs: the day reads first
+    /// A long session title truncates rather than taking the room the destination path needs: the day reads first
     /// and the menu itself lists whole titles.
     static let sessionText: CGFloat = 136
 }

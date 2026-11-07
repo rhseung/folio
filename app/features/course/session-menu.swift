@@ -13,7 +13,7 @@ struct SessionMenu: View {
     let openNote: (UUID) -> Void
     var showSessions: (() -> Void)?
     var edit: (() -> Void)?
-    /// The class's wrap-up: progress, units, topic, note, attendance.
+    /// The class's wrap-up: progress, units, note, attendance.
     var wrapUp: (() -> Void)?
     var remove: (() -> Void)?
 

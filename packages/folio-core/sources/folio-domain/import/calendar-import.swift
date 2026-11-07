@@ -6,6 +6,8 @@ public struct CalendarMeeting: Codable, Sendable, Equatable {
     public var start: Date
     public var end: Date
     public var room: String
+    /// The event's title. Not kept on the session, which has no topic of its own: it names a new lab unit, and a
+    /// note of the same title becomes the class's review note.
     public var topic: String
     /// The experiment's `Lab<NN>` number: the session links to that lab's unit. The parts of a two-session
     /// experiment share it.
@@ -44,8 +46,10 @@ public enum CalendarImporter {
     public struct Result: Sendable {
         public var file: CourseFile
         public var added: [Session]
-        /// Existing sessions that only had a date and got the meeting's time or topic.
+        /// Existing sessions that only had a date and got the meeting's time or lab unit.
         public var filled: [Session]
+        /// Each matched session's meeting title, for `noteLinks`.
+        public var titles: [UUID: String]
         /// Sessions inside the calendar's span on a day it has no meeting for: the class was cancelled.
         public var cancelled: [Session]
         /// Set only when the course had no schedule.
@@ -53,13 +57,16 @@ public enum CalendarImporter {
     }
 
     /// Adds a session for each meeting with none that day, preferring one at the meeting's time; existing sessions keep
-    /// their week and only gain a missing time, topic or lab unit. Re-running adds nothing.
+    /// their week and only gain a missing time or lab unit. Re-running adds nothing.
     public static func merge(_ meetings: [CalendarMeeting], into file: CourseFile, semesterStart: LocalDate,
                              calendar: Calendar, device: DeviceID, now: Date) -> Result {
         var file = file
         var added: [Session] = []
         var filled: [Session] = []
-        guard let first = semesterStart.date(in: calendar) else { return Result(file: file, added: [], filled: [], cancelled: [], schedule: []) }
+        var titles: [UUID: String] = [:]
+        guard let first = semesterStart.date(in: calendar) else {
+            return Result(file: file, added: [], filled: [], titles: [:], cancelled: [], schedule: [])
+        }
         let firstMonday = calendar.startOfWeek(containing: first)
         // A session stands for one meeting only, so a lecture and a recitation on the same day stay two.
         var matched: Set<UUID> = []
@@ -68,10 +75,10 @@ public enum CalendarImporter {
             if let i = sameDay.first(where: { file.sessions[$0].date == m.start }) ?? sameDay.first {
                 let before = file.sessions[i]
                 matched.insert(before.id)
+                titles[before.id] = m.topic
                 // Imported sessions carry only a day; midnight means no time was known.
                 if before.date == calendar.startOfDay(for: before.date) { file.sessions[i].date = m.start }
-                if before.topic.isEmpty { file.sessions[i].topic = m.topic }
-                if let lab = m.lab { file.linkLab(lab, session: before.id, topic: m.topic, device: device, at: now) }
+                if let lab = m.lab { file.linkLab(lab, session: before.id, experiment: m.topic, device: device, at: now) }
                 if file.sessions[i] != before {
                     file.sessions[i].touch(by: device, at: now)
                     filled.append(file.sessions[i])
@@ -79,11 +86,11 @@ public enum CalendarImporter {
                 continue
             }
             let week = calendar.dateComponents([.day], from: firstMonday, to: calendar.startOfDay(for: m.start)).day! / 7 + 1
-            var s = Session(device: device, at: now, week: week, date: m.start)
-            s.topic = m.topic
+            let s = Session(device: device, at: now, week: week, date: m.start)
             file.sessions.append(s)
             matched.insert(s.id)
-            if let lab = m.lab { file.linkLab(lab, session: s.id, topic: m.topic, device: device, at: now) }
+            titles[s.id] = m.topic
+            if let lab = m.lab { file.linkLab(lab, session: s.id, experiment: m.topic, device: device, at: now) }
             added.append(file.sessions.last!)
         }
         var cancelled: [Session] = []
@@ -103,7 +110,7 @@ public enum CalendarImporter {
             schedule = weeklySlots(meetings, calendar: calendar)
             file.course.schedule = schedule
         }
-        return Result(file: file, added: added, filled: filled, cancelled: cancelled, schedule: schedule)
+        return Result(file: file, added: added, filled: filled, titles: titles, cancelled: cancelled, schedule: schedule)
     }
 
     /// Times that repeat at least three times; one-off meetings (a makeup, a single extra session) are left out.
@@ -116,13 +123,14 @@ public enum CalendarImporter {
         return counts.filter { $0.value >= 3 }.keys.sorted { ($0.weekday, $0.startMinute) < ($1.weekday, $1.startMinute) }
     }
 
-    /// Session -> review note pairs where a session's topic is a note's title and neither is linked yet. Only a free
-    /// or review note is taken: a topic note's units or a rough note's kind would be lost by becoming a review note.
-    /// Each note goes to one session, the first by order, since two sessions with one topic can't share a note.
-    public static func noteLinks(sessions: [Session], notes: [(id: UUID, title: String, meta: NoteMeta)]) -> [(session: UUID, note: UUID)] {
+    /// Session -> review note pairs where a session's meeting title (`titles`) is a note's title and neither is linked
+    /// yet. Only a free or review note is taken: a unit note's units or a rough note's kind would be lost by becoming a
+    /// review note. Each note goes to one session, the first by order, since two sessions with one title can't share a note.
+    public static func noteLinks(sessions: [Session], titles: [UUID: String], notes: [(id: UUID, title: String, meta: NoteMeta)]) -> [(session: UUID, note: UUID)] {
         var free = notes.filter { $0.meta.sessionId == nil && ($0.meta.kind == .free || $0.meta.kind == .review) }
         return sessions.sorted(by: Session.inOrder).compactMap { s in
-            guard !s.topic.isEmpty, s.reviewNoteId == nil, let i = free.firstIndex(where: { $0.title == s.topic }) else { return nil }
+            guard let title = titles[s.id], !title.isEmpty, s.reviewNoteId == nil,
+                  let i = free.firstIndex(where: { $0.title == title }) else { return nil }
             return (s.id, free.remove(at: i).id)
         }
     }

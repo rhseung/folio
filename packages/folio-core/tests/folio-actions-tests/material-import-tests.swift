@@ -36,7 +36,7 @@ struct MaterialImportTests {
     /// Each file has its own folder and class, and a lecture takes its class's week, not one week for all.
     @Test func eachFileGoesToItsOwnFolderAndSession() throws {
         let session = UUID()
-        try run(SessionAdd(id: session, course: Self.course, date: now, topic: "Hall"))
+        try run(SessionAdd(id: session, course: Self.course, date: now))
         let week = try #require(try file().sessions.first { $0.id == session }).week
         try run(MaterialImport(course: Self.course, items: [
             ImportItem(file: try download("Hall.pdf"), folder: "Lectures", session: session),

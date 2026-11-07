@@ -3,7 +3,9 @@ import Foundation
 public enum NoteKind: String, Codable, Sendable, CaseIterable {
     case rough, review
     case examSummary = "exam_summary"
-    case topic, free
+    // A unit note was a topic note; its files say `topic`, read as they are rather than migrated (#336).
+    case unit = "topic"
+    case free
 }
 
 /// Notes without the frontmatter key are LaTeX, as Obsidian and Notion write them.
@@ -69,7 +71,7 @@ public struct NoteEntry: Entity {
     /// Relative to the course folder, `/`-separated, like a material's.
     public var path: String
     public var kind: NoteKind
-    /// A topic note's own units. Other kinds take theirs from their session or exam, so they store none.
+    /// A unit note's own units. Other kinds take theirs from their session or exam, so they store none.
     public var unitIds: [UUID]
     public var examId: UUID?
     public var tags: [String]
@@ -93,7 +95,7 @@ public struct NoteEntry: Entity {
     /// Everything but the id, which an entry keeps for life, and the session, which the session holds.
     public mutating func apply(_ meta: NoteMeta) {
         kind = meta.kind
-        unitIds = meta.kind == .topic ? meta.unitIds : []
+        unitIds = meta.kind == .unit ? meta.unitIds : []
         examId = meta.examId
         tags = meta.tags
         math = meta.math
@@ -106,7 +108,7 @@ extension CourseFile {
     public func meta(of entry: NoteEntry) -> NoteMeta {
         let sessions = sessions(pointingAt: entry.id)
         let units: [UUID] = switch entry.kind {
-        case .topic: entry.unitIds
+        case .unit: entry.unitIds
         case .rough, .review: UnitTree.outline(self.units).map(\.unit).filter { u in sessions.contains { u.sessionIds.contains($0.id) } }.map(\.id)
         case .examSummary: exams.first { $0.id == entry.examId }?.scopeUnitIds ?? []
         case .free: []
@@ -124,7 +126,7 @@ public enum NoteTemplate {
         case .rough, .free: []
         case .review: ["이번 회차의 단원", "핵심 정의와 정리", "예시", "모르는 것"]
         case .examSummary: ["시험 범위", "단원별 요약", "자주 틀리는 것", "공식과 정리 모음"]
-        case .topic: ["정의", "정리와 증명", "예시와 반례", "관련 단원"]
+        case .unit: ["정의", "정리와 증명", "예시와 반례", "관련 단원"]
         }
     }
 

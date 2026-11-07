@@ -55,17 +55,16 @@ struct TranscriptionHintsTests {
                                  LecturePages(path: "Lectures/03 Syntax-analysis.pdf", materialId: file.materials[1].id)])
     }
 
-    @Test func topicsAndUnitsComeBeforeTheSlides() {
+    @Test func unitsComeBeforeTheSlides() {
         var file = course([])
         let parent = Unit(device: device, at: now, title: "Syntax Analysis", order: 0)
         var child = Unit(device: device, at: now, title: "LR Parsing", order: 1, parentId: parent.id)
         child.sessionIds = [file.sessions[0].id]
         file.units = [parent, child]
-        file.sessions[0].topic = "SLR과 LALR"
         let hints = file.transcriptionContext(for: file.sessions[0]).reading("lookahead, lookahead, syntax analysis, syntax analysis, LALR").hints(course: file.course.title)
         #expect(hints.title == "컴파일러")
         // A slide term the units already said, in another case, is not said twice.
-        #expect(hints.terms == ["SLR과 LALR", "LR Parsing", "Syntax Analysis", "lookahead", "syntax", "analysis", "LALR"])
+        #expect(hints.terms == ["LR Parsing", "Syntax Analysis", "lookahead", "syntax", "analysis", "LALR"])
     }
 
     @Test func termsAreTheEnglishOnTheSlides() {
@@ -142,7 +141,9 @@ struct TranscriptionHintsTests {
         file.sessions[0].materials[0].lastPage = 6
         #expect(linked.differs(from: file.transcriptionContext(for: file.sessions[0])))
         file.sessions[0].materials[0].lastPage = 5
-        file.sessions[0].topic = "LR"
+        var unit = Unit(device: device, at: now, title: "LR", order: 0)
+        unit.sessionIds = [file.sessions[0].id]
+        file.units.append(unit)
         #expect(linked.differs(from: file.transcriptionContext(for: file.sessions[0])))
     }
 

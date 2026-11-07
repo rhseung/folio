@@ -44,7 +44,7 @@ struct CourseBoardTests {
     }
 
     /// A note's session is the one pointing at it, and its units follow that session or its exam's scope as they are
-    /// now; only a topic note's own units count, and a stored copy on another kind is ignored.
+    /// now; only a unit note's own units count, and a stored copy on another kind is ignored.
     @Test func aNotesLinksAreReadFromItsSessionAndExam() {
         let review = UUID(), topic = UUID(), summary = UUID(), loose = UUID()
         var taught = Unit(device: device, at: now, title: "매칭", order: 0)
@@ -61,7 +61,7 @@ struct CourseBoardTests {
         var stale = entry(review, .review)
         stale.unitIds = [tested.id]
         let file = CourseFile(course: Course(device: device, at: now, title: ""), units: [taught, tested], sessions: [session], exams: [exam],
-                              notes: [stale, entry(topic, .topic, units: [tested.id]), entry(summary, .examSummary, exam: exam.id), entry(loose, .rough)])
+                              notes: [stale, entry(topic, .unit, units: [tested.id]), entry(summary, .examSummary, exam: exam.id), entry(loose, .rough)])
         let meta = Dictionary(uniqueKeysWithValues: file.notes.map { ($0.id, file.meta(of: $0)) })
         #expect(meta[review]?.sessionId == session.id && meta[review]?.unitIds == [taught.id])
         #expect(meta[topic]?.unitIds == [tested.id] && meta[topic]?.sessionId == nil)

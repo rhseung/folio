@@ -54,18 +54,19 @@ struct SearchTests {
         ]
         file.assignments = [Assignment(device: device, at: now, title: "HW3")]
         file.exams = [Exam(device: device, at: now, title: "중간고사")]
-        var session = Session(device: device, at: now, week: 2, date: now)
-        session.topic = "Matchings"
+        let session = Session(device: device, at: now, week: 2, date: now)
         file.sessions = [session]
-        file.units = [Unit(device: device, at: now, title: "Covers", order: 1)]
+        var covers = Unit(device: device, at: now, title: "Covers", order: 1)
+        covers.sessionIds = [session.id]
+        file.units = [covers]
         let card = QuizCard(device: device, at: now, unitId: file.units[0].id, type: .free, category: .definition, prompt: "덮개의 정의", answer: "모든 꼭짓점을 덮는 변 집합")
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = TimeZone(identifier: "Asia/Seoul")!
         let items = SearchIndex.items(for: file, notes: [(UUID(), "09-08(화) 매칭", "본문")], cards: [card], calendar: calendar)
         #expect(items.map(\.kind) == [.note, .material, .assignment, .exam, .session, .unit, .quiz])
-        // A class goes by its day and topic, and its reference is in the body so `11-03` finds it.
+        // A class goes by its day and units, and its reference is in the body so `11-03` finds it.
         #expect(items.map(\.title) == ["09-08(화) 매칭", "05_Matchings.pdf", "HW3", "중간고사", file.title(of: session, calendar: calendar), "Covers", "덮개의 정의"])
-        #expect(items[4].title.hasSuffix(": Matchings") && items[4].body == file.reference(of: session, calendar: calendar))
+        #expect(items[4].title.hasSuffix(": Covers") && items[4].body == file.reference(of: session, calendar: calendar))
         #expect(items.last?.body == "모든 꼭짓점을 덮는 변 집합")
     }
 }

@@ -146,7 +146,7 @@ extension CourseFile {
 }
 
 extension CourseFile {
-    /// The unit a note is about: the first of its units as `meta(of:)` reads them (a topic note's own, a class note's
+    /// The unit a note is about: the first of its units as `meta(of:)` reads them (a unit note's own, a class note's
     /// session's, an exam note's scope). A unit since removed is skipped.
     public func unit(ofNote id: UUID) -> UUID? {
         guard let entry = notes.first(where: { $0.id == id }) else { return nil }

@@ -34,7 +34,7 @@ struct NoteActionTests {
         #expect(added.changes.filter(\.touchesNotes).count == 2 && !added.changes.contains(where: \.touchesQuizzes))
         let unitAdded = try run(UnitAdd(id: unit, course: Self.graphTheory, title: "매칭"))
         #expect(!unitAdded.changes.contains { $0.touchesNotes || $0.touchesQuizzes })
-        let linked = try run(NoteLink(course: Self.graphTheory, note: id, kind: .topic, units: [unit]))
+        let linked = try run(NoteLink(course: Self.graphTheory, note: id, kind: .unit, units: [unit]))
         #expect(linked.changes.map(\.touchesNotes) == [true])
         let card = QuizCard(device: device, at: now, unitId: unit, type: .free, category: .definition, prompt: "p", answer: "a")
         let saved = try run(QuizCardSave(course: Self.graphTheory, cards: [card]))
@@ -45,9 +45,9 @@ struct NoteActionTests {
 
     @Test func aTexNoteIsAFileWithAnEntry() throws {
         let id = UUID()
-        try run(NoteAdd(id: id, course: Self.graphTheory, title: "매칭 정리", kind: .topic, format: .tex))
+        try run(NoteAdd(id: id, course: Self.graphTheory, title: "매칭 정리", kind: .unit, format: .tex))
         let entry = try #require(try file().notes.first { $0.id == id })
-        #expect(entry.path == "Notes/매칭 정리.tex" && entry.kind == .topic)
+        #expect(entry.path == "Notes/매칭 정리.tex" && entry.kind == .unit)
         let tex = try text(entry.path)
         #expect(tex.hasPrefix("\\documentclass") && tex.contains("\\section*{매칭 정리}") && !tex.contains("---"))
         #expect(try store().note(id: id)?.format == .tex)
@@ -134,8 +134,8 @@ struct NoteActionTests {
 
     @Test func linkingChangesTheEntryAndLeavesTheFile() throws {
         let before = try text("Notes/09-08(화) 매칭.md")
-        try run(NoteLink(course: Self.graphTheory, note: Self.note, kind: .topic))
-        #expect(try file().notes.first { $0.id == Self.note }?.kind == .topic)
+        try run(NoteLink(course: Self.graphTheory, note: Self.note, kind: .unit))
+        #expect(try file().notes.first { $0.id == Self.note }?.kind == .unit)
         #expect(try text("Notes/09-08(화) 매칭.md") == before)
     }
 
@@ -253,7 +253,8 @@ struct NoteActionTests {
     @Test func retitlingRenamesOldSessionNotesAndUndoTurnsThemBack() throws {
         let session = UUID(), review = UUID(), mine = UUID(), own = UUID()
         try oldName()
-        try run(SessionAdd(id: session, course: Self.graphTheory, date: now, topic: "Matchings"))
+        try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
+        try linkUnit("Matchings", to: session)
         try run(NoteLink(course: Self.graphTheory, note: Self.note, kind: .rough, session: session))
         try run(NoteAdd(id: review, course: Self.graphTheory, title: "9주차-1 정리", kind: .review, session: session))
         try run(NoteAdd(id: mine, course: Self.graphTheory, title: "모음", body: "[[2주차-1]]와 [[9주차-1 정리#예시|예시]], [[다른 노트]]\n"))
@@ -297,7 +298,8 @@ struct NoteActionTests {
         try oldName()
         let robotics = UUID(uuidString: "C0000000-0000-4000-8000-000000000003")!
         let id = Self.note.uuidString
-        try run(SessionAdd(id: session, course: Self.graphTheory, date: now, topic: "Matchings"))
+        try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
+        try linkUnit("Matchings", to: session)
         try run(NoteLink(course: Self.graphTheory, note: Self.note, kind: .rough, session: session))
         let body = "[[note:\(id)|2주차-1]], [[note:\(id)#^c1|2주차-1]], [[note:\(id)|첫 수업]], [[note:\(id)]]\n"
         try run(NoteAdd(id: mine, course: Self.graphTheory, title: "모음", body: body))
@@ -464,7 +466,7 @@ struct NoteActionTests {
         #expect(try meta(note).unitIds == [unit])
     }
 
-    /// Becoming a topic note doesn't bring back units the note had as another kind, and leaving it drops them.
+    /// Becoming a unit note doesn't bring back units the note had as another kind, and leaving it drops them.
     @Test func changingKindDropsTheOtherKindsLinks() throws {
         let session = UUID(), unit = UUID(), other = UUID(), note = UUID()
         try run(SessionAdd(id: session, course: Self.graphTheory, date: now))
@@ -472,7 +474,7 @@ struct NoteActionTests {
         try run(UnitAdd(id: other, course: Self.graphTheory, title: "트리"))
         try run(UnitLink(course: Self.graphTheory, unit: unit, sessions: [session]))
         try run(NoteAdd(id: note, course: Self.graphTheory, title: "필기", kind: .rough, session: session))
-        try run(NoteLink(course: Self.graphTheory, note: note, kind: .topic, units: [other]))
+        try run(NoteLink(course: Self.graphTheory, note: note, kind: .unit, units: [other]))
         #expect(try meta(note).unitIds == [other] && meta(note).sessionId == nil)
         #expect(try file().sessions.first { $0.id == session }?.roughNoteId == nil)
         try run(NoteLink(course: Self.graphTheory, note: note, kind: .rough, session: session, units: [other]))
@@ -493,7 +495,13 @@ struct NoteActionTests {
         }
     }
 
-    /// `import calendar` gives a free note named after a class's topic to that class as its review note.
+    func linkUnit(_ title: String, to session: UUID) throws {
+        let unit = UUID()
+        try run(UnitAdd(id: unit, course: Self.graphTheory, title: title))
+        try run(UnitLink(course: Self.graphTheory, unit: unit, sessions: [session]))
+    }
+
+    /// `import calendar` gives a free note named after a class's meeting to that class as its review note.
     @Test func importCalendarMakesTheNoteAReviewNote() throws {
         let note = UUID()
         try run(NoteAdd(id: note, course: Self.graphTheory, title: "평면 그래프"))

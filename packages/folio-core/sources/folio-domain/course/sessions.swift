@@ -56,7 +56,7 @@ public struct Session: Entity {
 
     public var week: Int
     public var date: Date
-    public var topic: String
+    // A `topic` key older files carry is kept as an unknown field: what a class covered is its units now (#336).
     public var unitIds: [UUID]
     public var roughNoteId: UUID?
     public var reviewNoteId: UUID?
@@ -108,7 +108,6 @@ public struct Session: Entity {
         self.updatedBy = device
         self.week = week
         self.date = date
-        self.topic = ""
         self.unitIds = []
         self.inkIds = []
         self.materials = []
@@ -196,11 +195,11 @@ public enum SessionPlanner {
 }
 
 extension CourseFile {
-    /// Sessions made ahead of time that nothing has touched yet: in the future, not cancelled, and with no topic, end,
+    /// Sessions made ahead of time that nothing has touched yet: in the future, not cancelled, and with no end,
     /// link, note, ink, material, unit, attendance or recording. An end or link is a makeup someone set up on purpose. `notedSessions` are those a note's frontmatter points to.
     public func untouchedFutureSessions(now: Date, notedSessions: Set<UUID>) -> [Session] {
         sessions.filter { s in
-            s.date > now && !s.isCancelled && s.topic.isEmpty && s.end == nil && s.link == nil && isUnlinked(s, notedSessions: notedSessions)
+            s.date > now && !s.isCancelled && s.end == nil && s.link == nil && isUnlinked(s, notedSessions: notedSessions)
         }
     }
 
@@ -370,11 +369,11 @@ extension CourseFile {
         }, uniquingKeysWith: { a, _ in a })
     }
 
-    /// Links the session to experiment `number`'s unit, making `Lab<NN> <topic>` at the top level when there is none,
-    /// so the parts of a two-session experiment share one unit. `id` is the new unit's.
-    public mutating func linkLab(_ number: Int, session: UUID, topic: String, id: UUID = UUID(), device: DeviceID, at now: Date) {
+    /// Links the session to experiment `number`'s unit, making `Lab<NN> <experiment>` at the top level when there is
+    /// none, so the parts of a two-session experiment share one unit. `id` is the new unit's.
+    public mutating func linkLab(_ number: Int, session: UUID, experiment: String, id: UUID = UUID(), device: DeviceID, at now: Date) {
         let unit = units.first { $0.labNumber == number }?.id ?? {
-            let title = [AssignmentKind.lab.folderName(number), topic].filter { !$0.isEmpty }.joined(separator: " ")
+            let title = [AssignmentKind.lab.folderName(number), experiment].filter { !$0.isEmpty }.joined(separator: " ")
             units.append(Unit(id: id, device: device, at: now, title: title, order: UnitTree.nextOrder(under: nil, in: units)))
             return id
         }()
@@ -414,10 +413,10 @@ extension CourseFile {
         sessions.filter { !$0.isCancelled || linked($0) }.sorted(by: Session.inOrder)
     }
 
-    /// What the class covered: its topic, else the deepest units linked to it. Nil when neither says.
-    public func subject(of session: Session) -> String? {
-        if !session.topic.isEmpty { return session.topic }
-        let units = UnitTree.deepest(units(of: session), in: units)
+    /// What the class covered: the deepest units linked to it, less `besides` (the unit whose page lists the class
+    /// says it already). Nil without one.
+    public func subject(of session: Session, besides: UUID? = nil) -> String? {
+        let units = UnitTree.deepest(units(of: session), in: units).filter { $0.id != besides }
         return units.isEmpty ? nil : units.map(\.title).joined(separator: " · ")
     }
 
@@ -427,7 +426,7 @@ extension CourseFile {
         return String(localized: .sessionDay(c.month!, c.day!, ClassTime.weekdayNames[calendar.isoWeekday(of: session.date) - 1]))
     }
 
-    /// `11/3(화): 행복에도 습관이 무섭다`, or the day alone when nothing says what the class covered: the one name a
+    /// `11/3(화): 행복과 습관`, or the day alone when nothing says what the class covered: the one name a
     /// class is shown by. Classes are no longer called `10주차-2`, which moved whenever a makeup came before them.
     public func title(of session: Session, calendar: Calendar) -> String {
         let day = day(of: session, calendar: calendar)
@@ -478,9 +477,10 @@ extension CourseFile {
     /// `11-03(화)`: a recording's file name, the day its notes start with. A second recording that day gets ` 2`.
     public func recordingName(of session: Session, calendar: Calendar) -> String { fileDay(of: session, calendar: calendar) }
 
-    /// `11-05(목) Principles of reliable data transfer`, with ` 정리` for a review note. The title becomes the file
-    /// name, so `session note` and the new-note sheet must name a session's note the same way. `-` stands for the
-    /// title's `/`, which a file name can't hold. Notes made before this keep their `10주차-2` names.
+    /// `11-05(목) Principles of reliable data transfer`, the day and the class's units, with ` 정리` for a review note.
+    /// The title becomes the file name, so `session note` and the new-note sheet must name a session's note the same
+    /// way. `-` stands for the title's `/`, which a file name can't hold. A note keeps the name it was made with when the
+    /// class's units change, as do those named by the topic classes once had.
     public func noteTitle(for session: Session, kind: NoteKind, calendar: Calendar) -> String {
         let day = fileDay(of: session, calendar: calendar)
         let subject = subject(of: session).map(Self.noteSubject).flatMap { $0.isEmpty ? nil : $0 }

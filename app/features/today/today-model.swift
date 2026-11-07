@@ -249,7 +249,7 @@ final class TodayModel {
         return (made + planned).sorted { $0.start < $1.start }
     }
 
-    /// A planned class, or one with no topic or unit yet, has no name; its part is left out rather than left blank.
+    /// A planned class, or one with no unit yet, has no name; its part is left out rather than left blank.
     func ribbonHelp(_ item: RibbonClass) -> String {
         [title(item.courseId), item.name, "\(time(item.start)) – \(time(item.end))"].filter { !$0.isEmpty }.joined(separator: " · ")
     }

@@ -120,17 +120,15 @@ public struct ImportCalendar {
             }
             let r = CalendarImporter.merge(group, into: file, semesterStart: start, calendar: ctx.calendar, device: ctx.device, now: ctx.now)
             let notes = store.notes(in: file)
-            let links = CalendarImporter.noteLinks(sessions: r.file.sessions, notes: notes.compactMap { n in n.meta.id.map { ($0, n.title, n.meta) } })
+            let links = CalendarImporter.noteLinks(sessions: r.file.sessions, titles: r.titles, notes: notes.compactMap { n in n.meta.id.map { ($0, n.title, n.meta) } })
             ctx.note(String(localized: .noteImportCalendarCourse(name, r.added.count, r.filled.count, r.cancelled.count, links.count)))
             if !r.schedule.isEmpty {
                 ctx.note(String(localized: .noteImportCalendarSchedule(name, r.schedule.map { "\(ClassTime.weekdayNames[$0.weekday - 1]) \(String(format: "%02d:%02d-%02d:%02d", $0.startMinute / 60, $0.startMinute % 60, $0.endMinute / 60, $0.endMinute % 60)) \($0.room)" }.joined(separator: ", "))))
             }
-            for s in r.added {
-                // A lab's unit title already holds its topic.
-                let label = r.file.units(of: s).first?.title ?? s.topic
-                ctx.note("+ \(r.file.reference(of: s, calendar: ctx.calendar)) \(weekdayTime(s.date))\(label.isEmpty ? "" : " · \(label)")")
-            }
-            for s in r.filled { ctx.note("~ \(r.file.reference(of: s, calendar: ctx.calendar)) \(weekdayTime(s.date))\(s.topic.isEmpty ? "" : " · \(s.topic)")") }
+            // A lab's unit title already holds the meeting's title.
+            let label = { (s: Session) in r.file.units(of: s).first?.title ?? r.titles[s.id] ?? "" }
+            for s in r.added { ctx.note("+ \(r.file.reference(of: s, calendar: ctx.calendar)) \(weekdayTime(s.date))\(label(s).isEmpty ? "" : " · \(label(s))")") }
+            for s in r.filled { ctx.note("~ \(r.file.reference(of: s, calendar: ctx.calendar)) \(weekdayTime(s.date))\(label(s).isEmpty ? "" : " · \(label(s))")") }
             for s in r.cancelled { ctx.note(String(localized: .noteImportCalendarCancelled(r.file.reference(of: s, calendar: ctx.calendar), weekdayTime(s.date)))) }
             var result = r.file
             for l in links {

@@ -29,9 +29,9 @@ struct RemoveActionTests {
         try store.save(doc)
     }
 
-    // Only a topic note keeps units of its own; any other kind would drop them on the way in.
+    // Only a unit note keeps units of its own; any other kind would drop them on the way in.
     func note(_ path: String, units: [UUID] = [], exam: UUID? = nil) -> NoteEntry {
-        NoteEntry(id: UUID(), device: device, at: now, path: path, meta: NoteMeta(kind: units.isEmpty ? .free : .topic, unitIds: units, examId: exam))
+        NoteEntry(id: UUID(), device: device, at: now, path: path, meta: NoteMeta(kind: units.isEmpty ? .free : .unit, unitIds: units, examId: exam))
     }
 
     func problems(_ title: String, units: [UUID]) -> ProblemSet {
