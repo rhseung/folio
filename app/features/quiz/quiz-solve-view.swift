@@ -109,6 +109,7 @@ struct QuizSolveView: View {
             }
             .padding(Theme.Space.l)
         }
+        .overflowFade(.vertical)
         // The start button stays in view: below forty units it was a scroll away from every choice it starts.
         .safeAreaInset(edge: .bottom, spacing: 0) {
             VStack(alignment: .leading, spacing: Theme.Space.s) {
@@ -204,6 +205,7 @@ struct QuizSolveView: View {
                 .frame(maxWidth: 720)
                 .frame(maxWidth: .infinity)
             }
+            .overflowFade(.vertical)
         } else if model.started {
             finished
         } else {
@@ -259,6 +261,8 @@ struct QuizSolveView: View {
                     VStack(alignment: .leading, spacing: Theme.Space.s) {
                         Caption(String(localized: .quizSolveMyAnswer))
                         TextEditor(text: $model.answer)
+                            // A text input keeps its bar: the card's fade hides it for everything inside.
+                            .scrollIndicators(.automatic)
                             .font(.system(size: 14)) // design: one-off, the answer sits a step under the 15pt prompt
                             .scrollContentBackground(.hidden)
                             .padding(Theme.Space.s)

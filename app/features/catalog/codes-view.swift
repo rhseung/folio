@@ -124,6 +124,7 @@ struct CodeEditor: View {
                             }
                         }
                     }
+                    .overflowFade(.vertical)
                     // GS alone has a dozen and more; past about eight rows the list scrolls instead of growing the popover.
                     .frame(maxHeight: 240)
                     .fixedSize(horizontal: false, vertical: true)

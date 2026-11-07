@@ -92,6 +92,7 @@ struct SettingsView: View {
             .padding(.horizontal, Theme.Inset.panel)
             .padding(.vertical, Theme.Space.l)
         }
+        .overflowFade(.vertical)
         .font(Theme.Typeface.body)
         .foregroundStyle(Theme.Palette.text)
         .background(Theme.Palette.window)

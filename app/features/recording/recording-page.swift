@@ -200,7 +200,7 @@ struct RecordingPage: View {
     var bookmarkStrip: some View {
         HStack(spacing: Theme.Space.s) {
             Label(.recordingBookmarks, systemImage: "bookmark.fill").labelStyle(.iconOnly).foregroundStyle(Theme.Palette.warning)
-            ScrollView(.horizontal, showsIndicators: false) {
+            ScrollView(.horizontal) {
                 HStack(spacing: Theme.Space.xs) {
                     ForEach(model.bookmarks, id: \.self) { mark in
                         Button(RecordingTime.label(mark)) { model.jump(to: mark); hold() }
@@ -209,6 +209,7 @@ struct RecordingPage: View {
                     }
                 }
             }
+            .overflowFade(.horizontal)
         }
         .font(Theme.Typeface.caption)
     }

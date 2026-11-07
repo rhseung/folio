@@ -288,6 +288,7 @@ struct CourseColumn: View {
             .padding(.horizontal, Theme.Inset.panel)
             .padding(.vertical, Theme.Space.l)
         }
+        .overflowFade(.vertical)
         .font(Theme.Typeface.body)
         .foregroundStyle(Theme.Palette.text)
         .background(Theme.Palette.window)
@@ -334,6 +335,7 @@ struct CourseNotesPage: View {
                     .padding(.horizontal, Theme.Inset.panel)
                     .padding(.vertical, Theme.Space.l)
             }
+            .overflowFade(.vertical)
         } else {
             NotesView(workspace: model.workspace, course: course, selection: model.openNote, anchor: model.noteAnchor, insert: $model.noteInsert,
                       moves: model.noteMoves) { model.openNote = $0 }
