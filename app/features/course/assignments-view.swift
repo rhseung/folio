@@ -42,8 +42,8 @@ struct AssignmentsView: View {
         }
         // The jump is taken here, outside the sheet, where the course screen's target is.
         .sheet(item: $model.editing) {
-            AssignmentSheet(workspace: model.workspace, course: model.course, assignment: $0) { id in
-                openLink(AppLink(.material, id), course: model.course.id)
+            AssignmentSheet(workspace: model.workspace, course: model.course, assignment: $0) { id, placement in
+                openLink(AppLink(.material, id), in: placement, course: model.course.id)
             }
         }
         .confirming($model.pending)
@@ -113,9 +113,10 @@ struct AssignmentSheet: View {
     @State private var model: AssignmentSheetModel
     @Environment(\.dismiss) private var dismiss
     @State private var pickingFiles = false
-    let openFile: (UUID) -> Void
+    @Environment(\.supportsMultipleWindows) private var multipleWindows
+    let openFile: (UUID, LinkPlacement) -> Void
 
-    init(workspace: Workspace, course: LoadedCourse, assignment: Assignment, openFile: @escaping (UUID) -> Void) {
+    init(workspace: Workspace, course: LoadedCourse, assignment: Assignment, openFile: @escaping (UUID, LinkPlacement) -> Void) {
         _model = State(initialValue: AssignmentSheetModel(workspace: workspace, course: course, assignment: assignment))
         self.openFile = openFile
     }
@@ -219,18 +220,19 @@ struct AssignmentSheet: View {
     }
 
     func open(_ m: FolioDomain.Material) {
-        switch model.open(m) {
+        switch model.open(m, windows: multipleWindows) {
         case .elsewhere(let url):
             #if os(macOS)
             NSWorkspace.shared.open(url)
             #endif
         case .materials(let id): show(id)
+        case .window(let id): openFile(id, .window)
         case .asks: break
         }
     }
 
     func show(_ id: UUID) {
         dismiss()
-        openFile(id)
+        openFile(id, .here)
     }
 }

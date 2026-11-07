@@ -226,8 +226,6 @@ final class SessionsModel {
         String(localized: count > 1 ? .sessionsRecordingCount(count) : .sessionsRecordingShort)
     }
 
-    func playerTitle(_ session: Session, in file: CourseFile) -> String { "\(file.course.title) · \(file.title(of: session, calendar: calendar))" }
-
     /// Only a class held, in a course with lecture files, has progress to record.
     func offersProgress(_ session: Session, in file: CourseFile) -> Bool { !session.isCancelled && !file.lectureFiles.isEmpty }
 

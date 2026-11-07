@@ -205,8 +205,12 @@ struct RootView: View {
             }
             // The exam furthest down its page, so opening it by its link has to scroll.
             let exam = workspace.currentCourses.first?.file.exams.min { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }
+            // A replay opened at a moment, as a copied link or a tab let go of opens it.
+            let replay = workspace.currentCourses.lazy.compactMap { $0.file.recordings.first }.first
+            let links = (exam.map { [("link-exam", AppLink(.exam, $0.id))] } ?? [])
+                + (replay.map { [("link-recording", AppLink(.recording, $0.id, anchor: .time(1700)))] } ?? [])
             await SnapshotDriver.shared.run(select: { if let link = $0.link { open(link) } }, open: { open($0) }, courses: ids,
-                                            semester: workspace.currentSemester?.id, links: exam.map { [("link-exam", AppLink(.exam, $0.id))] } ?? [])
+                                            semester: workspace.currentSemester?.id, links: links)
         }
         #endif
         .environment(\.gradesLocked, !workspace.gradesUnlocked)

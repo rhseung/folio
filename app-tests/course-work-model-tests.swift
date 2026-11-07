@@ -483,7 +483,8 @@ struct NotesModelTests {
 /// 그래프 이론's HW03 holds PDFs; a `.tex` is made beside them.
 @MainActor
 struct AssignmentSheetOpenTests {
-    /// Every file opens in the materials tab's file view (#179), which closes the sheet, so edits ask first.
+    /// Every file opens in the materials tab's file view (#179). With nothing typed the sheet gives way; holding edits
+    /// it stays and the file opens in a new window, or, with no other window to open, it asks first (#317).
     @Test func aFileOpensInTheMaterialsTabAndAsksAboutEdits() throws {
         let workspace = try fixtureWorkspace()
         workspace.run(MaterialTrack(course: graphTheory))
@@ -497,20 +498,24 @@ struct AssignmentSheetOpenTests {
         let memo = { workspace.course(graphTheory)?.file.assignments.first { $0.id == assignment.id }?.memo }
 
         #expect(!sheet.edited)
-        #expect(sheet.open(pdf) == .materials(pdf.id))
-        #expect(sheet.open(tex) == .materials(tex.id))
+        #expect(sheet.open(pdf, windows: true) == .materials(pdf.id))
+        #expect(sheet.open(tex, windows: true) == .materials(tex.id))
+        #expect(sheet.open(tex, windows: false) == .materials(tex.id))
         #expect(sheet.opening == nil)
 
         sheet.memo = "풀이 방향 메모"
         #expect(sheet.edited)
-        #expect(sheet.open(pdf) == .asks && sheet.opening?.id == pdf.id)
+        // With edits the sheet stays, and the file opens in a window of its own; with no other window to open, it asks.
+        #expect(sheet.open(pdf, windows: true) == .window(pdf.id) && sheet.opening == nil)
+        #expect(sheet.open(pdf, windows: false) == .asks && sheet.opening?.id == pdf.id)
         sheet.opening = nil
-        #expect(sheet.open(tex) == .asks && sheet.opening?.id == tex.id)
+        #expect(sheet.open(tex, windows: true) == .window(tex.id) && sheet.opening == nil)
+        #expect(sheet.open(tex, windows: false) == .asks && sheet.opening?.id == tex.id)
         sheet.discardAndOpen()
         #expect(sheet.opening == nil)
         #expect(memo() == assignment.memo)
 
-        #expect(sheet.open(tex) == .asks)
+        #expect(sheet.open(tex, windows: false) == .asks)
         #expect(sheet.saveAndOpen())
         #expect(sheet.opening == nil)
         #expect(memo() == "풀이 방향 메모")

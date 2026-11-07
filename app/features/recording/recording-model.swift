@@ -63,14 +63,61 @@ final class RecordingPlayerModel {
         self.courseId = courseId
         self.store = store
         self.recording = recording
-        // Read before the sheet opens, not in `load`: whether there are lines sets the sheet's height, which would
-        // otherwise jump once it is up.
+        // Read before the page draws, not in `load`: whether there are lines sets its layout, which would otherwise
+        // jump once it is up.
         transcript = store.transcript(of: recording)
     }
 
+    private var loaded = false
+
     func load() {
-        if recording.hasAudio { player.load(store.fileURL(recording.file)) }
+        guard !loaded else { return }
+        loaded = true
+        if recording.hasAudio { player.load(store.fileURL(recording.file), expected: recording.duration) }
     }
+
+    // MARK: Address
+
+    /// `11/2(월) 다시 듣기`: the class's day, which tells a course's recordings apart, as the crumb and a tab name it.
+    static func name(of recording: Recording, in file: CourseFile, calendar: Calendar) -> String {
+        guard let session = recording.sessionId.flatMap({ id in file.sessions.first { $0.id == id } }) else { return String(localized: .recordingPage) }
+        return String(localized: .recordingPageNamed(file.day(of: session, calendar: calendar)))
+    }
+
+    var name: String { courseFile.map { Self.name(of: recording, in: $0, calendar: workspace.calendar) } ?? String(localized: .recordingPage) }
+    /// What the class covered, as the sessions page titles it; a recording of no class goes by when it started.
+    var title: String {
+        if let courseFile, let session { return courseFile.title(of: session, calendar: workspace.calendar) }
+        return recording.startedAt.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    /// The moment the address names, in whole seconds and, while playing, in steps of five: each step redraws the
+    /// window around the page, and a tab let go of reopens within a few seconds of where it was.
+    var moment: Int {
+        let t = Int(player.time)
+        return player.playing ? t / 5 * 5 : t
+    }
+
+    var viewedLink: AppLink { AppLink(.recording, recording.id, anchor: .time(moment)) }
+
+    /// Where a link opened the player, for the transcript to show that line.
+    private(set) var seekedTo: TimeInterval?
+
+    /// A moment the page reported comes back as the window's link; seeking to it again would pull playback back to
+    /// the last step.
+    func follow(_ link: AppLink) {
+        load()
+        guard link.kind == .recording, link.id == recording.id, case .time(let t) = link.anchor, t != moment else { return }
+        player.seek(TimeInterval(t))
+        seekedTo = TimeInterval(t)
+    }
+
+    func jump(to seconds: TimeInterval) {
+        player.seek(seconds)
+        player.play()
+    }
+
+    func lineIndex(at seconds: TimeInterval) -> Int? { transcript?.lineIndex(at: seconds) }
 
     var subtitle: String {
         recording.startedAt.formatted(date: .abbreviated, time: .shortened) + " · " + RecordingTime.label(recording.hasAudio ? player.duration : recording.duration)

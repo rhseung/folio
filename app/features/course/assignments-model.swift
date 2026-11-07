@@ -209,8 +209,11 @@ final class AssignmentSheetModel {
     enum Opening: Equatable {
         /// A code project folder, in Finder, with the sheet left open.
         case elsewhere(URL)
+        /// Nothing to lose: the sheet closes and the file opens in the materials tab under it.
         case materials(UUID)
-        /// The sheet holds edits; `opening` waits for the user to save, drop them, or stay.
+        /// The sheet holds edits, so it stays, and the file opens in a window of its own.
+        case window(UUID)
+        /// The sheet holds edits and no other window can open; `opening` waits for the user to save, drop them, or stay.
         case asks
     }
 
@@ -225,10 +228,13 @@ final class AssignmentSheetModel {
         #endif
     }
 
-    /// A file opens in the materials tab (`FileView`), which closes this sheet; a folder opens in Finder.
-    func open(_ m: FolioDomain.Material) -> Opening {
+    /// A file opens in the materials tab (`FileView`); a folder opens in Finder, with the sheet left open. A sheet is
+    /// short work (#317): one with nothing typed in it gives way to the file, one holding edits keeps them.
+    /// `windows`: whether another window can open, as the iPad's can't for the sheet's link.
+    func open(_ m: FolioDomain.Material, windows: Bool) -> Opening {
         guard !m.isFolder else { return .elsewhere(course.store.fileURL(m.path)) }
         guard edited else { return .materials(m.id) }
+        if windows { return .window(m.id) }
         opening = m
         return .asks
     }

@@ -64,6 +64,13 @@ struct HelpExampleTests {
         let matching = try #require(try h.file(GISTStore(url: gist)).units.first { $0.title == "매칭" })
         let card = QuizCard(device: h.device, at: h.now, unitId: matching.id, type: .free, category: .definition, prompt: "최대 매칭의 정의", answer: "크기가 가장 큰 매칭")
         try h.direct(QuizCardSave(course: Harness.graphTheory, cards: [card], movedFrom: nil), gist: gist)
+        // A recording is the recorder's, not a command's, so it is written as the app writes it.
+        let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
+        let file = try ctx.file(Harness.graphTheory)
+        let session = try #require(file.sessions.first { file.name(of: $0) == "9주차-1" })
+        try ctx.edit(Harness.graphTheory) {
+            $0.recordings.append(Recording(device: h.device, at: h.now, sessionId: session.id, file: "Recordings/9주차-1.m4a", duration: 4500))
+        }
     }
 
     static func examples(_ type: ParsableCommand.Type = Folio.self) -> [String] {

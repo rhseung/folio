@@ -21,6 +21,12 @@ struct ScreenFitTests {
         let card = QuizCard(device: workspace.device, at: .now, unitId: unit, type: .free, category: .definition, prompt: "p", answer: "a")
         workspace.run(QuizCardSave(course: course.id, cards: [card]))
         workspace.run(ProblemSetSave(course: course.id, set: ProblemSet(device: workspace.device, at: .now, title: "Exercise 1", problems: [.init(number: "1")])))
+        if course.file.recordings.isEmpty {
+            // Recording is the recorder's, not an action's, so its entry is written here.
+            let recording = Recording(device: workspace.device, at: .now, sessionId: course.file.sessions.first?.id, file: "Recordings/a.m4a")
+            try ActionContext(gist: try #require(workspace.gist), device: workspace.device).edit(course.id) { $0.recordings.append(recording) }
+            workspace.reload()
+        }
         let file = try #require(workspace.course(course.id)?.file)
         func first(_ kind: AppLink.Kind, _ ids: [UUID]) throws -> AppLink { AppLink(kind, try #require(ids.first, "no \(kind) to link")) }
         for kind in AppLink.Kind.allCases {
@@ -39,6 +45,7 @@ struct ScreenFitTests {
             case .problemSet: link = try first(.problemSet, file.problemSets.map(\.id))
             case .card: link = AppLink(.card, card.id)
             case .person: link = AppLink(.person, try #require(workspace.catalog.people.first).id)
+            case .recording: link = try first(.recording, file.recordings.map(\.id))
             }
             let entry = try #require(workspace.entry(for: link), "\(kind): \(link) is found nowhere")
             let inCourse = kind.home == .course || kind.home == .quiz

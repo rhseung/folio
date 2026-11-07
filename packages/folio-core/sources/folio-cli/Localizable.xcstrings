@@ -7608,7 +7608,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "과목, 회차, 단원, 노트(제목·블록), 자료(쪽), 과제, 시험, 카드, 문제 묶음, 학기, 교수, 앱의 페이지를 folio:// 주소 하나로 가리킨다.\n이 링크를 노트나 답에 넣으면 누를 때 Folio에서 그 항목이 열린다. 노트에서는 [글](링크), .tex에서는 \\href{링크}{글}로 쓴다.\n\n예시:\n  folio link course EC4207\n  folio link course EC4207 --section materials\n  folio link settings --section claude\n  folio link exam EC4207/중간고사\n  folio link assignment EC4207/HW3\n  folio link material EC4207/05_Matchings.pdf --page 12\n  folio link note \"EC4207/매칭 정리\" --heading 정의\n  folio link today --json"
+            "value": "과목, 회차, 단원, 노트(제목·블록), 자료(쪽), 녹음(재생 위치), 과제, 시험, 카드, 문제 묶음, 학기, 교수, 앱의 페이지를 folio:// 주소 하나로 가리킨다.\n이 링크를 노트나 답에 넣으면 누를 때 Folio에서 그 항목이 열린다. 노트에서는 [글](링크), .tex에서는 \\href{링크}{글}로 쓴다.\n\n예시:\n  folio link course EC4207\n  folio link course EC4207 --section materials\n  folio link settings --section claude\n  folio link exam EC4207/중간고사\n  folio link assignment EC4207/HW3\n  folio link material EC4207/05_Matchings.pdf --page 12\n  folio link note \"EC4207/매칭 정리\" --heading 정의\n  folio link recording EC4207/9주차-1 --time 12:30\n  folio link today --json"
           }
         }
       }
@@ -7619,7 +7619,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "가리킬 종류. today, grades, requirements, people, codes, settings, semester, course, session, unit, note, material, assignment, exam, card, problem-set, person"
+            "value": "가리킬 종류. today, grades, requirements, people, codes, settings, semester, course, session, unit, note, material, assignment, exam, card, problem-set, person, recording"
           }
         }
       }
@@ -7630,7 +7630,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "항목. 과목은 EC4207, 과목 안의 항목은 EC4207/중간고사, 카드는 ID. 앱의 페이지(today 등)는 비운다"
+            "value": "항목. 과목은 EC4207, 과목 안의 항목은 EC4207/중간고사, 녹음은 EC4207/9주차-1처럼 회차나 파일 이름, 카드는 ID. 앱의 페이지(today 등)는 비운다"
           }
         }
       }
@@ -7679,6 +7679,17 @@
         }
       }
     },
+    "link.help.time": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음의 재생 위치(12:30, 1:02:03, 초)"
+          }
+        }
+      }
+    },
     "link.page-only-material": {
       "extractionState": "manual",
       "localizations": {
@@ -7686,6 +7697,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "--page는 자료(material)에만 쓴다"
+          }
+        }
+      }
+    },
+    "link.time-only-recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "--time은 녹음(recording)에만 쓴다"
           }
         }
       }
@@ -7730,6 +7752,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "쪽은 1 이상, 블록 ID는 영문·숫자·-로만 쓴다"
+          }
+        }
+      }
+    },
+    "link.bad-time": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "재생 위치 '%@'를 읽지 못했다. 12:30, 1:02:03이나 초로 쓴다"
           }
         }
       }
