@@ -13,7 +13,7 @@ final class SnapshotDriver {
     /// On this step (e.g. `course-notes`), web views are also drawn into `<step>-web-<n>.png`: `cacheDisplay` leaves
     /// them blank.
     static let webStep = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_WEB"]
-    /// A step to linger on, so the real window (toolbar and all, which cacheDisplay leaves out) can be screen-captured.
+    /// A step to linger on, so the real window (its buttons too, which cacheDisplay leaves out) can be captured.
     static let holdStep = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_HOLD"]
     /// Shows the recording card in the sidebar as if a lecture were being recorded, without the microphone: `paused`
     /// shows it paused, a number (`0.3`) at that level.
@@ -22,7 +22,7 @@ final class SnapshotDriver {
     static let recordingLevel = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_RECORDING"].flatMap(Float.init) ?? 0.6
     /// A narrower window (e.g. `1100`) to catch labels that wrap or truncate once the columns squeeze.
     static let width = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_WIDTH"].flatMap(Double.init) ?? 1440
-    /// How many tabs the window opens before the walk (`4`), to see the toolbar's tabs share and give up the row.
+    /// How many tabs the window opens before the walk (`4`), to see the title row's tabs share and give up the row.
     static let tabs = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_TABS"].flatMap(Int.init) ?? 1
     /// How many panes the first two tabs hold (`2`, `3`), a lecture file and a quiz beside the page the walk moves (#62).
     static let panes = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_PANES"].flatMap(Int.init) ?? 1
@@ -204,7 +204,7 @@ final class SnapshotDriver {
 
     func capture(to url: URL) {
         let window = NSApp.windows.first { $0.isVisible && $0.sheetParent == nil }
-        // The main window's frame view, so the toolbar row is in the picture too; a sheet is its content alone.
+        // The main window's frame view, so the window's buttons are in the picture too; a sheet is its content alone.
         guard let view = window?.attachedSheet?.contentView ?? window?.contentView?.superview,
               let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
         view.cacheDisplay(in: view.bounds, to: rep)

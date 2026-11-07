@@ -4,24 +4,44 @@ import SwiftUI
 
 /// The window's top row at `Theme.Size.toolbarRow` (48pt): 32pt capsules with 8pt above and below (#62).
 ///
-/// AppKit's toolbar styles give 40pt (`unifiedCompact`) or 52pt (`unified`) and nothing between: taller items don't
-/// grow the compact row. So the window keeps the compact toolbar, which still does what a titlebar does (drag,
-/// double-click, full screen, the items' own layout), and the row is made up to 48pt around it:
-/// - the items are padded at the top by the difference (`extra`), which moves their capsules down by half of it into
-///   the band below the toolbar, centered on the 48pt row;
-/// - the content starts the difference lower, and that band drags and zooms the window like the toolbar (`TitleDrag`);
-/// - the window's buttons are moved down by half of it onto the capsules' center line (`TrafficLights`).
-enum TitleRow {
-    /// What the row adds under the toolbar, from the toolbar's height as the window reports it (its top safe area).
-    /// Nothing for a toolbar outside the compact row's range, so a toolbar AppKit ever sizes otherwise (or none in a
-    /// full-screen window that hid it) keeps its own row rather than being padded off the mark.
-    static func extra(toolbar: CGFloat) -> CGFloat {
-        (28...Theme.Size.toolbarRow).contains(toolbar) ? Theme.Size.toolbarRow - toolbar : 0
+/// Drawn here rather than by an AppKit toolbar. Its styles give a 40pt (`unifiedCompact`) or a 52pt (`unified`) row
+/// and nothing between, and a compact toolbar padded out to 48pt came apart each time AppKit laid the title bar out
+/// again (the zoom button alone back at the compact row's middle). So the window hides its title bar (`.hiddenTitleBar`
+/// in `FolioApp`) and this row is the top of its content: its height and layout are ours, its empty parts drag the
+/// window (`TitleDrag`), and the window's buttons are moved onto its middle (`TrafficLights`).
+struct TitleRow<Leading: View, Trailing: View>: View {
+    /// From the window's leading edge to the first item.
+    let lead: CGFloat
+    @ViewBuilder let leading: Leading
+    @ViewBuilder let trailing: Trailing
+
+    var body: some View {
+        HStack(spacing: 0) {
+            leading
+            Spacer(minLength: 0)
+            trailing
+        }
+        .padding(.leading, lead)
+        .padding(.trailing, TitleRowEdges.trailing)
+        .frame(height: Theme.Size.toolbarRow)
+        // Behind the items, so only the row's empty parts reach it: between the capsules, above and below them.
+        .background { TitleDrag() }
     }
 }
 
-/// The band the row adds under the toolbar: dragging it moves the window and a double-click does what the system's
-/// setting says, as on the toolbar above it. An AppKit view, since SwiftUI's `WindowDragGesture` has no double-click.
+/// Where the title row's items begin and end across the window, which `ToolbarRow` fits the tabs between.
+enum TitleRowEdges {
+    /// From the window's leading edge to the first item: past the window's buttons, where the compact toolbar began
+    /// it (85pt, measured), on the 4pt grid. In full screen the buttons are in the menu bar's reveal, so the row
+    /// starts as far in as the content panel.
+    static func lead(fullScreen: Bool) -> CGFloat { fullScreen ? Theme.Size.panelInset : 84 }
+
+    /// The last item ends where the content panel does.
+    static let trailing = Theme.Size.panelInset
+}
+
+/// The title row's empty space: dragging it moves the window and a double-click does what the system's setting says,
+/// as on a title bar. An AppKit view, since SwiftUI's `WindowDragGesture` has no double-click.
 struct TitleDrag: NSViewRepresentable {
     func makeNSView(context: Context) -> Band { Band() }
     func updateNSView(_ view: Band, context: Context) {}
@@ -33,7 +53,7 @@ struct TitleDrag: NSViewRepresentable {
         override func mouseDown(with event: NSEvent) {
             guard let window else { return }
             if event.clickCount == 2 {
-                // The same setting the titlebar follows (Desktop & Dock, "Double-click a window's title bar to").
+                // The same setting the title bar follows (Desktop & Dock, "Double-click a window's title bar to").
                 switch UserDefaults.standard.string(forKey: "AppleActionOnDoubleClick") {
                 case "Minimize": window.performMiniaturize(nil)
                 case "None": break
@@ -46,56 +66,100 @@ struct TitleDrag: NSViewRepresentable {
     }
 }
 
-/// Moves the window's close, minimize and zoom buttons so their center is `center` from the window's top.
+/// Moves the window's close, minimize and zoom buttons so their center is `center` from the window's top, and tells
+/// whether the window is going into full screen, where the buttons leave the row.
 ///
-/// AppKit lays the buttons out again whenever the titlebar changes (resize, toolbar, key state), each time back on the
-/// compact row's center. So each button's frame is watched and set again whenever AppKit moves it; the target is in
-/// window coordinates, so setting it again is a no-op. Only public API: `standardWindowButton` and frames. In full
-/// screen the buttons live in the menu-bar reveal, another window, and are left alone.
+/// AppKit lays the buttons out again whenever the title bar changes (the window becoming key, its title changing with
+/// each tab, resize, leaving full screen), each time back on the title bar's own middle. It moves close, then minimize,
+/// then zoom, and a button set back while that pass runs reads as already in place, so the last one moved (zoom) was
+/// left behind. So the buttons are set only after the pass: every frame change AppKit makes, and every change of the
+/// window, asks for one placing on the next turn of the run loop, before the window is drawn. The target is in window
+/// coordinates, so placing again is a no-op. Only public API: `standardWindowButton` and frames. In full screen the
+/// buttons live in the menu-bar reveal, another window, and are left alone.
 struct TrafficLights: NSViewRepresentable {
     let center: CGFloat
+    let fullScreen: (Bool) -> Void
 
-    func makeNSView(context: Context) -> Probe { Probe(center: center) }
+    func makeNSView(context: Context) -> Probe { Probe(center: center, fullScreen: fullScreen) }
     func updateNSView(_ view: Probe, context: Context) {
         view.center = center
+        view.fullScreen = fullScreen
         view.place()
     }
 
     final class Probe: NSView {
         var center: CGFloat
-        private var observers: [NSObjectProtocol] = []
+        var fullScreen: (Bool) -> Void
+        private var windowObservers: [NSObjectProtocol] = []
+        private var frameObservers: [NSObjectProtocol] = []
+        /// The buttons whose frames are watched.
+        private var watched: [ObjectIdentifier] = []
 
-        init(center: CGFloat) {
+        init(center: CGFloat, fullScreen: @escaping (Bool) -> Void) {
             self.center = center
+            self.fullScreen = fullScreen
             super.init(frame: .zero)
         }
 
         required init?(coder: NSCoder) { nil }
 
+        override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
         override func viewDidMoveToWindow() {
             super.viewDidMoveToWindow()
-            for observer in observers { NotificationCenter.default.removeObserver(observer) }
-            observers = []
+            for observer in windowObservers + frameObservers { NotificationCenter.default.removeObserver(observer) }
+            windowObservers = []
+            frameObservers = []
+            watched = []
             guard let window else { return }
-            let buttons = Self.kinds.compactMap { window.standardWindowButton($0) }
-            for button in buttons { button.postsFrameChangedNotifications = true }
-            let watched: [(Notification.Name, AnyObject)] = buttons.map { (NSView.frameDidChangeNotification, $0) }
-                + [NSWindow.didResizeNotification, NSWindow.didExitFullScreenNotification, NSWindow.didBecomeKeyNotification,
-                   NSWindow.didResignKeyNotification].map { ($0, window) }
-            observers = watched.map { name, object in
-                NotificationCenter.default.addObserver(forName: name, object: object, queue: .main) { [weak self] _ in
-                    MainActor.assumeIsolated { self?.place() }
+            let center = NotificationCenter.default
+            let changes: [Notification.Name] = [
+                NSWindow.didResizeNotification, NSWindow.didEndLiveResizeNotification, NSWindow.didBecomeKeyNotification,
+                NSWindow.didResignKeyNotification, NSWindow.didBecomeMainNotification, NSWindow.didResignMainNotification,
+                NSWindow.didExitFullScreenNotification, NSWindow.didChangeBackingPropertiesNotification,
+                NSWindow.didChangeScreenNotification, NSWindow.didDeminiaturizeNotification,
+            ]
+            windowObservers = changes.map { name in
+                center.addObserver(forName: name, object: window, queue: nil) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.placeNowAndNextTurn() }
                 }
             }
-            place()
+            let going: [(Notification.Name, Bool)] = [(NSWindow.willEnterFullScreenNotification, true), (NSWindow.willExitFullScreenNotification, false)]
+            windowObservers += going.map { name, full in
+                center.addObserver(forName: name, object: window, queue: .main) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.fullScreen(full) }
+                }
+            }
+            let full = window.styleMask.contains(.fullScreen)
+            // Joining the window happens while SwiftUI updates its views, which mustn't change what they read.
+            Task { @MainActor [weak self] in self?.fullScreen(full) }
+            placeNowAndNextTurn()
         }
 
         static let kinds: [NSWindow.ButtonType] = [.closeButton, .miniaturizeButton, .zoomButton]
 
+        private var placingNextTurn = false
+
+        private func placeNowAndNextTurn() {
+            place()
+            placeNextTurn()
+        }
+
+        private func placeNextTurn() {
+            guard !placingNextTurn else { return }
+            placingNextTurn = true
+            Task { @MainActor [weak self] in
+                self?.placingNextTurn = false
+                self?.place()
+            }
+        }
+
         func place() {
             guard let window, !window.styleMask.contains(.fullScreen) else { return }
-            for kind in Self.kinds {
-                guard let button = window.standardWindowButton(kind), button.window === window, let host = button.superview else { continue }
+            let buttons = Self.kinds.compactMap { window.standardWindowButton($0) }.filter { $0.window === window }
+            watch(buttons)
+            for button in buttons {
+                guard let host = button.superview else { continue }
                 let inWindow = host.convert(button.frame, to: nil)
                 var target = inWindow
                 target.origin.y = window.frame.height - center - inWindow.height / 2
@@ -103,6 +167,21 @@ struct TrafficLights: NSViewRepresentable {
                 // Rounded to the pixel, or the frame drifts by a fraction and the watch sets it forever.
                 let origin = host.backingAlignedRect(frame, options: .alignAllEdgesNearest).origin
                 if abs(button.frame.origin.y - origin.y) > 0.25 { button.setFrameOrigin(NSPoint(x: button.frame.origin.x, y: origin.y)) }
+            }
+        }
+
+        /// Again whenever AppKit hands out other buttons, so a title bar built anew is still watched.
+        private func watch(_ buttons: [NSButton]) {
+            let ids = buttons.map(ObjectIdentifier.init)
+            guard ids != watched else { return }
+            for observer in frameObservers { NotificationCenter.default.removeObserver(observer) }
+            watched = ids
+            frameObservers = buttons.map { button in
+                button.postsFrameChangedNotifications = true
+                // Not placed here, inside AppKit's pass, where the move doesn't hold (see above).
+                return NotificationCenter.default.addObserver(forName: NSView.frameDidChangeNotification, object: button, queue: nil) { [weak self] _ in
+                    MainActor.assumeIsolated { self?.placeNextTurn() }
+                }
             }
         }
     }

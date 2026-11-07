@@ -5,7 +5,7 @@ import QuartzCore
 import SwiftUI
 
 /// Drags the window's width from the screen's full width down to the window's least and back, a frame at a time, and
-/// writes by width band how long each frame took, whether the search field's item fell into the toolbar's overflow
+/// writes by width band how long each frame took, whether the search field was pushed off the window's edge
 /// or the tabs ran into it, and how far the leading items (the sidebar button, back, the first tab) moved from where
 /// they sat at rest: what a live resize costs with the tabs open (#310).
 ///
@@ -18,8 +18,7 @@ import SwiftUI
 @MainActor final class ResizeProbe: NSObject {
     static let environment = ProcessInfo.processInfo.environment
     static let file = environment["FOLIO_RESIZE_PROBE"].map { URL(filePath: $0) }
-    /// The views `ResizeMarker` marks, by name. The toolbar can draw an item twice (in the row, and for its menu
-    /// form), so the probe reads the one in its window.
+    /// The views `ResizeMarker` marks, by name, in every window; the probe reads the one in its own.
     static var marked: [String: NSHashTable<NSView>] = [:]
     static let leading = ["sidebar", "back", "firstTab"]
 
@@ -144,7 +143,7 @@ import SwiftUI
             for name in Self.leading {
                 if let x = x(of: name), let at = rest[name] { moved[name] = x - at }
             }
-            // The search field's item out of the window, or off its edge, went into the toolbar's overflow.
+            // The search field out of the window, or off its edge.
             let overflowed = x(of: "trailing").map { $0 >= window.frame.width } ?? true
             let overlapped = x(of: "trailing").flatMap { trailing in end(of: "newTab").map { $0 > trailing + 0.5 } } ?? false
             var at: [String: (x: CGFloat, count: Int)] = [:]
@@ -172,8 +171,8 @@ import SwiftUI
         last = (now, width, CACurrentMediaTime() - begin)
     }
 
-    /// With `FOLIO_RESIZE_SHOTS=<folder>`, every third frame of the first leg as the window showed it, toolbar and all
-    /// (`cacheDisplay` leaves the toolbar out): the frames a person sees mid-drag. Taken at the next tick, once the
+    /// With `FOLIO_RESIZE_SHOTS=<folder>`, every third frame of the first leg as the window showed it, its buttons
+    /// and all (`cacheDisplay` leaves them out): the frames a person sees mid-drag. Taken at the next tick, once the
     /// frame is on screen, with the main thread held: `waitUntilExit` runs the run loop, which drew later frames and
     /// let the row catch up before the shot. It slows those frames, so the table of such a run says little.
     private func shoot(_ shown: CGFloat) {

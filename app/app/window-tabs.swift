@@ -185,8 +185,6 @@ extension EnvironmentValues {
     var compactFront: CGFloat = 0
     var more: CGFloat = 0
     private var others: [UUID: [TabForm: CGFloat]] = [:]
-    /// False in the toolbar's menu-form copy of the row.
-    var inWindow = false
 
     var frontFit: TabFit.Front {
         TabFit.Front(trail: Double(trail), chrome: Double(front - trail), compactChrome: Double(compactFront - trail))
@@ -326,9 +324,9 @@ struct TabBar: View {
 
     var body: some View {
         let others = tabs.ids.filter { $0 != tabs.selected }
-        // Changes only as the fit or the front tab's trail does, not with every width the window passes through: each
-        // redraw of the tabs makes the toolbar rebuild its items' menu form, images and all, and done on every frame
-        // of a live resize it held the window to a few frames a second.
+        // Changes only as the fit or the front tab's trail does, not with every width the window passes through: a
+        // redraw of the tabs on every frame of a live resize is work the frame can't spare (in the AppKit toolbar,
+        // which rebuilt its items' menu form each time, it held the window to a few frames a second).
         let placement = toolbar.placement
         let fit = placement.fit
         let shown = Array(others.prefix(fit.shown))
@@ -372,7 +370,6 @@ struct TabBar: View {
         }
         .coordinateSpace(.named(Self.space))
         .background { measures(others) }
-        .background { InWindow { sizes.inWindow = $0; report() } }
         .onChange(of: tabs.selected) { report() }
         .onChange(of: tabs.ids) { _, ids in
             let open = Set(ids)
@@ -383,7 +380,7 @@ struct TabBar: View {
         .animation(.snappy(duration: 0.25), value: tabs.ids)
         // A new fit (names to icons, into the menu) comes at once, not animated: it comes mid-resize, and animated the
         // strip slid in from the width it had, the first tab off the panel's edge by as much for a quarter second.
-        // Never wider than the row leaves it: wider, the toolbar put the search field and the buttons in its overflow.
+        // Never wider than the row leaves it: wider, the strip runs under the search field and the buttons.
         .frame(width: placement.width, alignment: .leading)
         .padding(.leading, placement.lead)
     }
@@ -392,10 +389,8 @@ struct TabBar: View {
 
     /// Tells the row what the tabs take, straight from the measures: state set in a measure's callback reached the
     /// body late or not at all, and the row held the front tab to a width it had long outgrown, running the strip
-    /// over the search field. Only the row in the window: the toolbar's menu-form copy measures what it showed when
-    /// the toolbar last drew it.
+    /// over the search field.
     func report() {
-        guard sizes.inWindow else { return }
         let others = tabs.ids.filter { $0 != tabs.selected }
         let measures = ToolbarRow.Measures(front: sizes.frontFit, others: others.map(sizes.other), more: sizes.more)
         if measures != toolbar.measures { toolbar.measures = measures }
@@ -763,9 +758,9 @@ private struct SegmentRule: View {
     }
 }
 
-/// Where the toolbar row's items sit across the window, and so where the tabs between them go and how many fit. Only
-/// `placement` is watched: what it is worked out from changes with every frame of a live resize, and as the root
-/// view's state it redrew the sidebar, every kept tab's screen and the tabs on each one.
+/// Where the title row's items sit across the window (`TitleRow`), and so where the tabs between them go and how many
+/// fit. Only `placement` is watched: what it is worked out from changes with every frame of a live resize, and as the
+/// root view's state it redrew the sidebar, every kept tab's screen and the tabs on each one.
 @MainActor @Observable final class ToolbarRow {
     /// The tabs at each width they can take, as `TabBar` measured them.
     struct Measures: Equatable {
@@ -790,37 +785,22 @@ private struct SegmentRule: View {
                                            newTabSpacing: TabBar.gap)
 
     /// Set as the window resizes, before the row lays out (`WindowWidth`): the tabs fit the new width in the same frame.
+    /// Measured from the laid-out row instead, it would come a frame behind the window, and a strip too wide for the
+    /// row ran the first tab off the panel's edge.
     @ObservationIgnored var windowWidth: CGFloat = 1200 { didSet { settle() } }
-    /// Where the row put its first item (the sidebar button), across the window.
-    @ObservationIgnored var leadingX: CGFloat? { didSet { settle() } }
-    /// The search field and the buttons after it, measured, until the row has placed them.
+    /// Where the row puts its first item (the sidebar button), across the window (`TitleRowEdges.lead`).
+    @ObservationIgnored var leadingX = TitleRowEdges.lead(fullScreen: false) { didSet { settle() } }
+    /// The search field and the buttons after it, measured. They widen without the window (a course's timer, a
+    /// recording's clock), taking their room from the tabs.
     @ObservationIgnored var trailingWidth = ToolbarRow.trailingEstimate { didSet { settle() } }
     /// The content panel's leading edge across the window, where the first tab's capsule lines up.
     @ObservationIgnored var panelEdge: CGFloat = Theme.Size.sidebar { didSet { settle() } }
     @ObservationIgnored var measures = Measures() { didSet { settle() } }
-    /// From the end of the search field and its buttons to the window's trailing edge, as the row put them. It holds as
-    /// the window's width changes, the group pinned to the end, so the tabs' room follows the width at once. The
-    /// group's place itself is known only a turn after the row laid out (`WindowOffset`): fitted to it, the tabs ran a
-    /// frame behind the window, and a strip too wide for the row pushed the first tab off the panel's edge. Not the
-    /// whole inset: the group widens without the window (a course's timer, a recording's clock), and a held inset
-    /// kept the tabs' room while the group went into the overflow menu, where it has no place to correct it.
-    @ObservationIgnored private var trailingGap: CGFloat?
 
     init() { settle() }
 
-    /// The search field's place, as the row reports it, with the window's width at the time.
-    func placeTrailing(_ x: CGFloat?, in width: CGFloat) {
-        // Dropped into the overflow menu, the field has no place; the last one still says where it belongs. Forgetting
-        // it fell back to an estimate, which could push the field out again.
-        guard let x else { return }
-        let gap = width - x - trailingWidth
-        guard gap != trailingGap else { return }
-        trailingGap = gap
-        settle()
-    }
-
-    /// Where the back and forward buttons end across the window, the tabs' item placed where the row put it.
-    var historyEnd: CGFloat { (leadingX ?? Self.leadingEstimate) + Theme.Size.toolbarButton + RootView.historyGap + HistoryButtons.width }
+    /// Where the back and forward buttons end across the window.
+    var historyEnd: CGFloat { leadingX + Theme.Size.toolbarButton + RootView.historyGap + HistoryButtons.width }
 
     /// From the back and forward buttons over to the panel's edge; with the sidebar folded the edge is under the
     /// buttons, and the tabs keep a gap after them instead.
@@ -828,7 +808,7 @@ private struct SegmentRule: View {
 
     /// From the tabs' start to the search field, less a gap before it: the tabs, the menu and the +.
     var room: CGFloat {
-        let end = windowWidth - trailingWidth - (trailingGap ?? Self.toolbarGaps)
+        let end = windowWidth - trailingWidth - TitleRowEdges.trailing
         return end - historyEnd - lead - Theme.Space.s
     }
 
@@ -843,20 +823,14 @@ private struct SegmentRule: View {
             .map { $0.rounded(.down) }
         let width = TabFit.width(front: m.front, others: m.others, layout: fit, trail: trail, gap: TabBar.gap, more: m.more)
             + plus + Theme.Size.toolbarButton
-        // The item whole points wide, the lead and the strip together: half a point over, the toolbar moved the item
-        // by half a point, the row reported the new place, the lead took up the half, and the item went back, every
-        // few frames of a resize.
+        // Whole points wide with the lead, so the strip ends on a whole point and nothing after it sits between pixels.
         let whole = (lead + width).rounded(.down) - lead
         let new = Placement(lead: lead, fit: fit, trail: trail.map { CGFloat($0) }, width: whole, newTabSpacing: plus)
         if new != placement { placement = new }
     }
 
-    /// The sidebar button's place when the row hasn't said yet: after the window's buttons, measured.
-    static let leadingEstimate: CGFloat = 84
-    /// Between the items and after the last to the window's edge, measured in a window snapshot.
-    static let toolbarGaps: CGFloat = 32
-    /// The search field and five buttons, until the item is measured. Not zero: the tabs then took the whole row and
-    /// pushed the search field into the toolbar's overflow menu, where it was never measured.
+    /// The search field and five buttons, until they are measured. Not zero: the tabs would take the whole row for the
+    /// first frame and run over the search field.
     static let trailingEstimate = Theme.Size.searchField + Theme.Space.s + Theme.Size.toolbarButton * 5 + Theme.Space.xxs * 4
 }
 
