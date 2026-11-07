@@ -31,10 +31,15 @@ struct TitleRow<Leading: View, Trailing: View>: View {
 
 /// Where the title row's items begin and end across the window, which `ToolbarRow` fits the tabs between.
 enum TitleRowEdges {
-    /// From the window's leading edge to the first item: past the window's buttons, where the compact toolbar began
-    /// it (85pt, measured), on the 4pt grid. In full screen the buttons are in the menu bar's reveal, so the row
-    /// starts as far in as the content panel.
-    static func lead(fullScreen: Bool) -> CGFloat { fullScreen ? Theme.Size.panelInset : 84 }
+    /// The close button's center, as far from the window's left edge as from its top (the row's middle). AppKit
+    /// leaves it 16pt from the side in a window without a title bar, nearer the side than the top, which looked
+    /// lopsided and stood left of the sidebar's icons. The other two buttons follow at AppKit's spacing.
+    static let lights = Theme.Size.toolbarRow / 2
+
+    /// From the window's leading edge to the first item: past the window's buttons, at the gap the compact toolbar
+    /// left after them (84pt with the buttons where AppKit puts them), plus the 8pt they move right (`lights`). In
+    /// full screen the buttons are in the menu bar's reveal, so the row starts as far in as the content panel.
+    static func lead(fullScreen: Bool) -> CGFloat { fullScreen ? Theme.Size.panelInset : 92 }
 
     /// The last item ends where the content panel does.
     static let trailing = Theme.Size.panelInset
@@ -66,8 +71,9 @@ struct TitleDrag: NSViewRepresentable {
     }
 }
 
-/// Moves the window's close, minimize and zoom buttons so their center is `center` from the window's top, and tells
-/// whether the window is going into full screen, where the buttons leave the row.
+/// Moves the window's close, minimize and zoom buttons so their center is `center` from the window's top and the close
+/// button's is `center` from its left edge, and tells whether the window is going into full screen, where the buttons
+/// leave the row.
 ///
 /// AppKit lays the buttons out again whenever the title bar changes (the window becoming key, its title changing with
 /// each tab, resize, leaving full screen), each time back on the title bar's own middle. It moves close, then minimize,
@@ -94,6 +100,8 @@ struct TrafficLights: NSViewRepresentable {
         private var frameObservers: [NSObjectProtocol] = []
         /// The buttons whose frames are watched.
         private var watched: [ObjectIdentifier] = []
+        /// Each watched button's middle from the close button's, across the window, as AppKit spaced them.
+        private var spacing: [CGFloat] = []
 
         init(center: CGFloat, fullScreen: @escaping (Bool) -> Void) {
             self.center = center
@@ -158,15 +166,18 @@ struct TrafficLights: NSViewRepresentable {
             guard let window, !window.styleMask.contains(.fullScreen) else { return }
             let buttons = Self.kinds.compactMap { window.standardWindowButton($0) }.filter { $0.window === window }
             watch(buttons)
-            for button in buttons {
+            for (button, offset) in zip(buttons, spacing) {
                 guard let host = button.superview else { continue }
                 let inWindow = host.convert(button.frame, to: nil)
                 var target = inWindow
+                target.origin.x = center + offset - inWindow.width / 2
                 target.origin.y = window.frame.height - center - inWindow.height / 2
                 let frame = host.convert(target, from: nil)
                 // Rounded to the pixel, or the frame drifts by a fraction and the watch sets it forever.
                 let origin = host.backingAlignedRect(frame, options: .alignAllEdgesNearest).origin
-                if abs(button.frame.origin.y - origin.y) > 0.25 { button.setFrameOrigin(NSPoint(x: button.frame.origin.x, y: origin.y)) }
+                if abs(button.frame.origin.x - origin.x) > 0.25 || abs(button.frame.origin.y - origin.y) > 0.25 {
+                    button.setFrameOrigin(origin)
+                }
             }
         }
 
@@ -176,6 +187,10 @@ struct TrafficLights: NSViewRepresentable {
             guard ids != watched else { return }
             for observer in frameObservers { NotificationCenter.default.removeObserver(observer) }
             watched = ids
+            // Read once, from buttons not yet moved: read at each placing, a button AppKit had just put back while the
+            // others stood moved would bake that gap into the spacing.
+            let middles = buttons.map { $0.convert($0.bounds, to: nil).midX }
+            spacing = middles.map { $0 - (middles.first ?? 0) }
             frameObservers = buttons.map { button in
                 button.postsFrameChangedNotifications = true
                 // Not placed here, inside AppKit's pass, where the move doesn't hold (see above).
