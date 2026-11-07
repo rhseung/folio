@@ -41,8 +41,10 @@ enum TitleRowEdges {
     /// full screen the buttons are in the menu bar's reveal, so the row starts as far in as the content panel.
     static func lead(fullScreen: Bool) -> CGFloat { fullScreen ? Theme.Size.panelInset : 92 }
 
-    /// The last item ends where the content panel does.
-    static let trailing = Theme.Size.panelInset
+    /// The last capsule ends as far from the window's right edge as the capsules sit below its top (8pt), as the
+    /// window's buttons do on the left (`lights`). Ended at the content panel's edge (`panelInset`, 4pt), the
+    /// capsules crowded the window's corner, half as far from the side as from the top.
+    static let trailing = (Theme.Size.toolbarRow - Theme.Size.toolbarButton) / 2
 }
 
 /// The title row's empty space: dragging it moves the window and a double-click does what the system's setting says,
