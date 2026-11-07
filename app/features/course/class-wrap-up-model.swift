@@ -60,10 +60,13 @@ final class ClassWrapUpModel {
         // recordings have them.
         self.viewed = viewed.isEmpty ? file.flatMap { f in s.map { f.viewedPages(of: $0) } } ?? [] : viewed
         open = file.flatMap { f in s.map { f.wrapUpGaps(of: $0, recorded: recorded) } } ?? []
-        units = s?.unitIds ?? []
-        topic = s?.topic ?? ""
-        attendance = file?.attendance.first { $0.sessionId == session }?.state ?? .present
-        initial = (units, topic, attendance)
+        // From locals: the observed properties can't be read back before every stored property is set.
+        let initial = (units: s?.unitIds ?? [], topic: s?.topic ?? "",
+                       attendance: file?.attendance.first { $0.sessionId == session }?.state ?? AttendanceState.present)
+        units = initial.units
+        topic = initial.topic
+        attendance = initial.attendance
+        self.initial = initial
         suggest()
     }
 
