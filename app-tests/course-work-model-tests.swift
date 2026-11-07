@@ -232,7 +232,7 @@ struct MaterialsModelTests {
         #expect(model.selection == [1, 2])
     }
 
-    /// The day said what the class was, where `10주차-3` didn't; newest first, today's marked as today.
+    /// The day and topic say which class it was; newest first.
     @Test func importSessionsReadByDayNewestFirst() throws {
         let workspace = try fixtureWorkspace()
         // A makeup set up first, then the class before it: made out of date order on purpose.

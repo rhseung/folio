@@ -70,8 +70,14 @@ private struct ImportRow: View {
             FileThumbnail(url: row.url)
             VStack(alignment: .leading, spacing: Theme.Space.xs) {
                 Text(row.url.lastPathComponent).lineLimit(1).truncationMode(.middle)
-                Text(destination).font(Theme.Typeface.mono).lineLimit(1).truncationMode(.middle)
-                    .help([placement.path, model.nameNote(placement)].compactMap(\.self).joined(separator: "\n"))
+                // The folder and the week Folio adds always show; only the file's own name gives way, in its middle,
+                // so the ` 2` and the extension stay too.
+                HStack(spacing: 0) {
+                    Text(destinationHead).fixedSize()
+                    Text(destinationName).truncationMode(.middle)
+                }
+                .font(Theme.Typeface.mono).lineLimit(1)
+                .help([placement.path, model.nameNote(placement)].compactMap(\.self).joined(separator: "\n"))
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: Theme.Space.xs) {
@@ -92,16 +98,19 @@ private struct ImportRow: View {
 
     /// The folder in the quiet mono of a path, and only what Folio adds to the name in color: the week in front, the
     /// number past a name the folder holds.
-    private var destination: AttributedString {
+    private var destinationHead: AttributedString {
         var out = AttributedString(placement.folder + "/")
         out.foregroundColor = Theme.Palette.textTertiary
-        var name = placement.name
         if let prefix = placement.prefix {
             var part = AttributedString(prefix)
             part.foregroundColor = accent.ink
             out += part
-            name.removeFirst(prefix.count)
         }
+        return out
+    }
+
+    private var destinationName: AttributedString {
+        let name = String(placement.name.dropFirst(placement.prefix?.count ?? 0))
         let ext = (name as NSString).pathExtension
         var base = ext.isEmpty ? name : (name as NSString).deletingPathExtension
         var tail = AttributedString()
@@ -114,7 +123,7 @@ private struct ImportRow: View {
         plain.foregroundColor = Theme.Palette.textTertiary
         var dot = AttributedString(ext.isEmpty ? "" : "." + ext)
         dot.foregroundColor = Theme.Palette.textTertiary
-        return out + plain + tail + dot
+        return plain + tail + dot
     }
 
     private var kindMenu: some View {
@@ -147,7 +156,7 @@ private struct ImportRow: View {
                 choice(model.sessionTitle(s), detail: model.sessionNote(s), on: row.session == s.id) { model.setSession(s.id, for: model.targets(row)) }
             }
         } label: {
-            QuietMenuLabel(text: model.sessionLabel(row), guessed: model.sessionWhy(row) != nil)
+            QuietMenuLabel(text: model.sessionLabel(row), guessed: model.sessionWhy(row) != nil, maxText: QuietMenuLabel.sessionText)
         }
         .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).pointingHand()
         .help(model.sessionWhy(row) ?? String(localized: .materialsImportSession))
@@ -167,13 +176,14 @@ private struct ImportRow: View {
 private struct QuietMenuLabel: View {
     let text: String
     let guessed: Bool
+    var maxText: CGFloat = 176
     @State private var hovering = false
     @Environment(\.accent) private var accent
 
     var body: some View {
         HStack(spacing: Theme.Space.tight) {
             if guessed { Image(systemName: "sparkle").font(Theme.Glyph.small).foregroundStyle(accent.color) }
-            Text(text).lineLimit(1).frame(maxWidth: Self.maxText, alignment: .leading).fixedSize()
+            Text(text).lineLimit(1).frame(maxWidth: maxText, alignment: .leading).fixedSize()
             Image(systemName: "chevron.up.chevron.down").font(Theme.Glyph.small).foregroundStyle(Theme.Palette.textTertiary)
         }
         .foregroundStyle(hovering ? Theme.Palette.text : Theme.Palette.textSecondary)
@@ -183,8 +193,9 @@ private struct QuietMenuLabel: View {
         .onHover { hovering = $0 }
     }
 
-    /// A long session topic truncates rather than pushing the file name out of its row.
-    static let maxText: CGFloat = 176
+    /// A long session topic truncates rather than taking the room the destination path needs: the day reads first
+    /// and the menu itself lists whole titles.
+    static let sessionText: CGFloat = 136
 }
 
 /// The file's first page, as Finder would show it; a document glyph until it is drawn, or where none can be.
