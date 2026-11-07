@@ -54,9 +54,11 @@ struct SessionMenuModel {
         workspace.run(AttendanceSet(course: courseId, session: session.id, state: state))
     }
 
-    /// Undoing a 휴강 leaves a lecture: a makeup that was cancelled is set back from the form.
-    func setCancelled(_ cancelled: Bool, of session: Session) {
-        workspace.run(SessionSet(course: courseId, session: session.id, kind: .set(cancelled ? .cancelled : .lecture)))
+    var kindOptions: [(Session.Kind, String)] { Session.Kind.options }
+
+    func setKind(_ kind: Session.Kind, of session: Session) {
+        guard kind != session.kind else { return }
+        workspace.run(SessionSet(course: courseId, session: session.id, kind: .set(kind)))
     }
 
     func record(_ session: Session) { workspace.record(session.id, in: courseId) }
@@ -96,5 +98,13 @@ struct SessionMenuModel {
 
     func record(_ item: Workspace.SuggestedSession) {
         if let s = make(item) { record(s) }
+    }
+}
+
+extension Session.Kind {
+    /// The menu and the form offer the same choice in the same order.
+    static var options: [(Session.Kind, String)] {
+        [(.lecture, String(localized: .sessionsLecture)), (.cancelled, String(localized: .sessionsCancelled)),
+         (.makeup, String(localized: .sessionsMakeup))]
     }
 }
