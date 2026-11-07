@@ -60,7 +60,7 @@ struct SessionMenuModelTests {
         model.setAttendance(.late, of: try session())
         #expect(model.attendance(of: try session()) == .late)
         // A 휴강 has no attendance to count, and takes none.
-        model.setCancelled(true, of: try session())
+        model.setKind(.cancelled, of: try session())
         #expect(try session().isCancelled && model.attendance(of: try session()) == .present)
         #expect(!model.takesAttendance(try session()))
         #expect(model.link(of: try session()) == nil)
@@ -70,6 +70,24 @@ struct SessionMenuModelTests {
         #expect(try session().unitIds == [unit])
         model.toggleUnit(unit, of: try session())
         #expect(try session().unitIds.isEmpty)
+    }
+
+    /// A makeup that was cancelled goes back to a makeup, not to a lecture.
+    @Test func theMenuPicksAnyKind() throws {
+        let workspace = try fixtureWorkspace()
+        let model = SessionMenuModel(workspace: workspace, courseId: graphTheory)
+        let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now.addingTimeInterval(-86_400), kind: .makeup))?.made)
+        func session() throws -> Session { try #require(model.session(id)) }
+        #expect(model.kindOptions.map(\.0) == [.lecture, .cancelled, .makeup])
+
+        model.setAttendance(.late, of: try session())
+        model.setKind(.cancelled, of: try session())
+        #expect(try session().kind == .cancelled && model.attendance(of: try session()) == .present)
+        model.setKind(.makeup, of: try session())
+        #expect(try session().kind == .makeup)
+        #expect(model.takesAttendance(try session()))
+        model.setKind(.lecture, of: try session())
+        #expect(try session().kind == .lecture)
     }
 
     /// One skip for every screen: the review screen's keeps the time the unit was open, a list's has none.

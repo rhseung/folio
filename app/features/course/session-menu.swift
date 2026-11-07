@@ -52,9 +52,14 @@ struct SessionMenu: View {
             Divider()
             if let edit { Button(.commonEditEllipsis, systemImage: "pencil", action: edit) }
             if let wrapUp, !session.isCancelled { Button(.wrapUpEllipsis, systemImage: "checklist", action: wrapUp) }
-            Toggle(isOn: Binding(get: { session.isCancelled }, set: { model.setCancelled($0, of: session) })) {
-                Label(.sessionsCancelled, systemImage: "calendar.badge.minus")
+            // Inline, so a makeup that was cancelled goes back to a makeup from here, not only from the form.
+            Divider()
+            Picker(selection: Binding(get: { session.kind }, set: { model.setKind($0, of: session) })) {
+                ForEach(model.kindOptions, id: \.0) { Text($0.1).tag($0.0) }
+            } label: {
+                Label(.sessionsKind, systemImage: "calendar.badge.minus")
             }
+            .pickerStyle(.inline)
             if let remove {
                 Divider()
                 Button(.sessionsRemoveSessionEllipsis, systemImage: "trash", role: .destructive, action: remove)
