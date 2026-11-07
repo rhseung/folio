@@ -6,14 +6,21 @@ import SwiftUI
 struct ClassWrapUpSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var model: ClassWrapUpModel
+    var step: String?
+    /// Set in a run through several classes, which moves on to the next instead of closing.
+    var saved: (() -> Void)?
 
-    init(workspace: Workspace, course: UUID, session: UUID, viewed: [SessionMaterial] = [], recorded: Bool = false) {
+    init(workspace: Workspace, course: UUID, session: UUID, viewed: [SessionMaterial] = [], recorded: Bool = false,
+         step: String? = nil, saved: (() -> Void)? = nil) {
         _model = State(initialValue: ClassWrapUpModel(workspace: workspace, course: course, session: session, viewed: viewed, recorded: recorded))
+        self.step = step
+        self.saved = saved
     }
 
     var body: some View {
         SheetForm(title: model.title, confirm: String(localized: .commonSave), disabled: model.refusal != nil, note: model.note,
-                  carded: false, width: 640, mark: CourseMark(model.workspace, model.courseId), cancel: String(localized: .wrapUpLater)) {
+                  carded: false, width: 640, mark: CourseMark(model.workspace, model.courseId), cancel: String(localized: .wrapUpLater),
+                  step: step) {
             ForEach(model.openItems, id: \.self) { item in
                 Block(model.label(item)) { Card { open(item) } }
             }
@@ -34,8 +41,8 @@ struct ClassWrapUpSheet: View {
             }
             announcements
         } onConfirm: {
-            model.wrapUp()
-            dismiss()
+            guard model.wrapUp() else { return }
+            if let saved { saved() } else { dismiss() }
         }
         .task { await model.load() }
         .environment(\.accent, model.accent)

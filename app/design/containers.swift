@@ -193,6 +193,8 @@ struct SheetForm<Rows: View>: View {
     var mark: CourseMark?
     /// For a sheet that comes back later (a class's wrap-up), "나중에" rather than "취소".
     var cancel: String?
+    /// Where a run through several sheets is, at the title's trailing end.
+    var step: String?
     @ViewBuilder var rows: Rows
     let onConfirm: () -> Void
 
@@ -201,6 +203,10 @@ struct SheetForm<Rows: View>: View {
             HStack(spacing: Theme.Space.s) {
                 if let mark { mark }
                 Text(title).font(Theme.Typeface.columnTitle)
+                if let step {
+                    Spacer(minLength: Theme.Space.s)
+                    Text(step).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
+                }
             }
             if carded { Card { rows } } else { rows }
             if let note { Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).padding(.horizontal, Theme.Space.m) }

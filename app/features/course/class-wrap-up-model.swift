@@ -300,10 +300,12 @@ final class ClassWrapUpModel {
         refusal ?? (viewed.isEmpty || !isOpen(.progress) ? nil : String(localized: .sessionsProgressFromRecording))
     }
 
-    func wrapUp() {
-        guard workspace.run(action) != nil else { return }
+    /// False when the save failed, so a run through several classes stays on this one.
+    @discardableResult func wrapUp() -> Bool {
+        guard workspace.run(action) != nil else { return false }
         // After the topic is saved, so the note is named by the class's day and topic like any class note.
         if makesNote && !hasNote { _ = workspace.note(.rough, of: sessionId, in: courseId) }
+        return true
     }
 }
 

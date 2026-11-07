@@ -19107,6 +19107,61 @@
           }
         }
       }
+    },
+    "wrap-up.left-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정리하지 않은 지난 수업 %lld개"
+          }
+        }
+      }
+    },
+    "wrap-up.left-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "진도, 단원, 주제, 수업 노트, 출석 중 빈 것이 있는 수업이에요. 한 번 저장한 수업은 빈 칸이 남아도 다시 묻지 않아요."
+          }
+        }
+      }
+    },
+    "wrap-up.left-go": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정리하기"
+          }
+        }
+      }
+    },
+    "wrap-up.left-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정리하지 않은 수업 · 빈 것: %@"
+          }
+        }
+      }
+    },
+    "wrap-up.step": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지난 수업 (%1$lld/%2$lld)"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

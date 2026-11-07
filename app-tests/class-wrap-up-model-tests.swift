@@ -115,4 +115,27 @@ struct ClassWrapUpModelTests {
         ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session).wrapUp()
         #expect(!today.wrapUps(now: now).contains { $0.session.id == session })
     }
+
+    @Test func classesLeftFromEarlierDaysRunOneSheetAfterAnother() throws {
+        let model = SessionsModel(workspace: workspace, courseId: graphTheory)
+        let older = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now.addingTimeInterval(-9 * 86400)))?.made)
+        let newer = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now.addingTimeInterval(-8 * 86400)))?.made)
+        let left = model.leftUnwrapped(file).map(\.id)
+        let a = try #require(left.firstIndex(of: older)), b = try #require(left.firstIndex(of: newer))
+        #expect(a < b)
+        #expect(model.gapsLine(model.leftGaps(file.sessions.first { $0.id == older }!, in: file)).contains(String(localized: .wrapUpTopic)))
+
+        model.startWrapUps(file)
+        let run = try #require(model.wrapUpRun)
+        #expect(run.sessions == left)
+        #expect(model.step(of: run) == String(localized: .wrapUpStep(1, left.count)))
+        #expect(ClassWrapUpModel(workspace: workspace, course: graphTheory, session: run.current).wrapUp())
+        model.wrappedUpOne()
+        #expect(model.wrapUpRun?.index == 1)
+        // Saved, so neither the notice nor the row's mark lists it, though its gaps were left empty.
+        #expect(!model.leftUnwrapped(file).contains { $0.id == run.sessions[0] })
+        #expect(model.leftGaps(file.sessions.first { $0.id == run.sessions[0] }!, in: file).isEmpty)
+        for _ in 1..<left.count { model.wrappedUpOne() }
+        #expect(model.wrapUpRun?.id == nil)
+    }
 }
