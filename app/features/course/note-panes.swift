@@ -1,12 +1,18 @@
+import FolioDomain
 import Foundation
 
 /// What the note panel shows. A narrow panel can't fit two columns, so there `split` shows the source alone.
 struct NotePanes: Equatable {
-    enum Mode: Hashable { case read, split, write }
+    typealias Mode = NoteViewMode
 
     private(set) var mode = Mode.split
     /// The way back from reading, so ⌘E and a narrow panel's 편집 return to the column(s) last written in.
     private(set) var editing = Mode.split
+
+    init() {}
+
+    /// Opened the way the note was last left (`PaneMemory`). Left reading, ⌘E still goes to the split.
+    init(remembered: Mode) { choose(remembered) }
 
     func shown(wide: Bool) -> Mode { mode == .split && !wide ? .write : mode }
 

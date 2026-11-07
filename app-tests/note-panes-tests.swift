@@ -38,4 +38,13 @@ struct NotePanesTests {
         #expect(panes.shown(wide: false) == .write)
         #expect(panes.shown(wide: true) == .split)
     }
+
+    @Test func opensAsRemembered() {
+        let read = NotePanes(remembered: .read)
+        #expect(read.mode == .read)
+        var toggled = read
+        toggled.toggle()
+        #expect(toggled.mode == .split)
+        #expect(NotePanes(remembered: .write).shown(wide: true) == .write)
+    }
 }
