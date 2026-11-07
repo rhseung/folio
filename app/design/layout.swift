@@ -140,6 +140,25 @@ extension EnvironmentValues {
     @Entry var columnFolded = false
     /// In a tab of several panes, which the tab's segments name: a screen leaves out what only named it (#62).
     @Entry var inPanes = false
+    /// How far from the pane's trailing edge the tab's Claude button reaches over its bottom; zero in a pane it isn't over.
+    @Entry var claudeButtonRoom: CGFloat = 0
+}
+
+extension View {
+    /// For actions along a pane's bottom edge, `inset` in from its trailing end: they stop short of the Claude button,
+    /// on its line, instead of lying under it. The button floats over the panes and takes no room of its own.
+    func clearOfClaudeButton(inset: CGFloat) -> some View { modifier(ClearOfClaudeButton(inset: inset)) }
+}
+
+private struct ClearOfClaudeButton: ViewModifier {
+    let inset: CGFloat
+    @Environment(\.claudeButtonRoom) private var room
+
+    func body(content: Content) -> some View {
+        content
+            .padding(.trailing, max(room - inset, 0))
+            .frame(minHeight: room > 0 ? Theme.Size.fab : nil)
+    }
 }
 
 /// What only a folded `ColumnSplit` needs, such as a way from the column back to a page it hides.

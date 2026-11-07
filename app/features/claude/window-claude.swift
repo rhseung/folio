@@ -18,6 +18,8 @@ struct WindowClaude: View {
 
     /// Past this the panel stops growing with the window: a full-height panel read as a sidebar laid over the page.
     static let maxHeight: CGFloat = 720
+    /// What the button covers from the panes' trailing edge, with a gap after it (`claudeButtonRoom`).
+    static let buttonRoom = Theme.Space.l + Theme.Size.fab + Theme.Space.m
 
     var body: some View {
         if let target = Self.target(panes: panes, folded: folded, workspace: workspace), let course = workspace.course(target.course) {

@@ -32,6 +32,7 @@ struct LectureSplitPane: View {
                     Button(String(localized: .commonCancel), action: cancel).buttonStyle(.ghost).keyboardShortcut(.cancelAction)
                     Button(String(localized: .commonSave), action: save).buttonStyle(.pointing(.borderedProminent)).keyboardShortcut(.defaultAction)
                 }
+                .clearOfClaudeButton(inset: Theme.Space.l)
             }
             .padding(Theme.Space.l)
             .frame(width: Self.panel)
