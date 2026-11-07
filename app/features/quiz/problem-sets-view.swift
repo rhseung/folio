@@ -5,6 +5,7 @@ struct ProblemSetsView: View {
     let course: LoadedCourse
     @Bindable var model: QuizModel
     @State private var adding = false
+    @Environment(\.openLink) private var openLink
 
     var body: some View {
         let sets = course.file.problemSets
@@ -38,10 +39,8 @@ struct ProblemSetsView: View {
     func setBlock(_ set: ProblemSet, units: [FolioDomain.Unit]) -> some View {
         Block(title: set.title, note: model.summary(set), trailing: {
             HStack(spacing: Theme.Space.m) {
-                #if os(macOS)
                 if let m = model.material(set.materialId, in: course) { Button(.quizProblemsSheet) { open(m) }.buttonStyle(.ghost) }
                 if let m = model.material(set.solutionMaterialId, in: course) { Button(.quizProblemsSolution) { open(m) }.buttonStyle(.ghost) }
-                #endif
                 Menu { setItems(set) } label: { Image(systemName: "ellipsis") }
                     .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.borderless).pointingHand().fixedSize()
             }
@@ -64,21 +63,18 @@ struct ProblemSetsView: View {
     }
 
     @ViewBuilder func setItems(_ set: ProblemSet) -> some View {
-        #if os(macOS)
         let sheet = model.material(set.materialId, in: course)
         let solution = model.material(set.solutionMaterialId, in: course)
         if let m = sheet { Button(.quizProblemsOpenSheet) { open(m) } }
         if let m = solution { Button(.quizProblemsOpenSolution) { open(m) } }
         if sheet != nil || solution != nil { Divider() }
-        #endif
         Button(.quizProblemsRemoveEllipsis, role: .destructive) { model.remove(set, in: course) }
     }
 
-    #if os(macOS)
+    /// In the materials page's file view, through the window's history like any other move.
     func open(_ m: FolioDomain.Material) {
-        NSWorkspace.shared.open(course.store.fileURL(m.path))
+        openLink(AppLink(.material, m.id), course: course.id)
     }
-    #endif
 }
 
 struct ProblemSetSheet: View {

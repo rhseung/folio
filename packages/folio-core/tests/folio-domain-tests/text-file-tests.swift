@@ -10,8 +10,32 @@ struct MaterialFormatTests {
         #expect(MaterialFormat(path: "Assignments/Lab03/main.cpp") == .code(language: "cpp"))
         #expect(MaterialFormat(path: "Assignments/HW01/refs.bib") == .text)
         #expect(MaterialFormat(path: "Assignments/HW01/macros.sty") == .code(language: "latex"))
-        #expect(MaterialFormat(path: "Recordings/2주차-1.m4a") == .other)
+        #expect(MaterialFormat(path: "Recordings/2주차-1.m4a") == .audio)
+        #expect(MaterialFormat(path: "Notes/assets/board.JPG") == .image)
+        #expect(MaterialFormat(path: "Study/widget.html") == .html)
+        #expect(MaterialFormat(path: "Lectures/05_Matchings.pptx") == .other)
         #expect(MaterialFormat(path: "Makefile") == .other)
+    }
+
+    /// The renderer table of #179: the app draws what it can, Quick Look the rest.
+    @Test func picksARendererPerFormat() {
+        #expect(MaterialFormat(path: "a.pdf").renderer == .pdf)
+        #expect(MaterialFormat(path: "a.md").renderer == .markdown)
+        #expect(MaterialFormat(path: "a.tex").renderer == .source)
+        #expect(MaterialFormat(path: "a.py").renderer == .source)
+        #expect(MaterialFormat(path: "a.csv").renderer == .source)
+        #expect(MaterialFormat(path: "a.png").renderer == .image)
+        #expect(MaterialFormat(path: "a.m4a").renderer == .audio)
+        #expect(MaterialFormat(path: "a.html").renderer == .quickLook)
+        #expect(MaterialFormat(path: "a.docx").renderer == .quickLook)
+        #expect(MaterialFormat(path: "a.hwp").renderer == .quickLook)
+    }
+
+    @Test func aFolderHasNoFormat() {
+        let folder = Material(device: UUID(), at: .now, path: "Assignments/Lab03/robot.pdf", isFolder: true, status: .classified)
+        let pdf = Material(device: UUID(), at: .now, path: "Lectures/01.PDF", status: .classified)
+        #expect(folder.format == nil && !folder.isPDF && !folder.isText)
+        #expect(pdf.format == .pdf && pdf.isPDF)
     }
 
     @Test func onlyTextIsEditable() {

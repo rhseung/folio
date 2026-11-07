@@ -128,6 +128,15 @@ extension StoredDocument {
 public enum LocalFile {
     public static func read(_ url: URL) -> Data? { try? CoordinatedFile.read(url) }
     public static func exists(_ url: URL) -> Bool { FileManager.default.fileExists(atPath: url.path) }
+
+    /// A coordinated read brings an iCloud placeholder down, as `CourseStore.download` does for a material, so a view
+    /// that reads the file itself (PDFKit, Quick Look) finds its contents there. Nil when it isn't there to read.
+    public static func download(_ url: URL) -> URL? {
+        guard exists(url) else { return nil }
+        var error: NSError?
+        NSFileCoordinator().coordinate(readingItemAt: url, options: [], error: &error) { _ in }
+        return error == nil ? url : nil
+    }
     public static func modified(_ url: URL) -> Date? {
         (try? FileManager.default.attributesOfItem(atPath: url.path))?[.modificationDate] as? Date
     }

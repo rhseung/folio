@@ -1,7 +1,6 @@
 import FolioActions
 import FolioDomain
 import FolioStorage
-import QuickLook
 import SwiftUI
 
 struct MaterialsView: View {
@@ -21,17 +20,13 @@ struct MaterialsView: View {
         Group {
             if let m = model.viewed {
                 // Another file starts over: page, zoom, search and unsaved text belong to the old one.
-                if m.isText {
-                    TextFileView(workspace: model.workspace, course: model.course, material: m.id).id(m.id)
-                } else {
-                    MaterialViewer(model: model, material: m).id(m.id)
-                }
+                FileView(workspace: model.workspace, course: model.course, material: m.id, requestedPage: $model.requestedPage,
+                         shownPage: $model.shownPage).id(m.id)
             } else {
                 list
             }
         }
         .task { await model.load() }
-        .quickLookPreview($model.preview)
         .fileImporter(isPresented: Binding(get: { model.relinking != nil }, set: { if !$0 { model.relinking = nil } }), allowedContentTypes: [.item]) { result in
             if case .success(let url) = result { model.relink(to: url) }
             model.relinking = nil
@@ -62,10 +57,13 @@ struct MaterialsView: View {
         }
         .onChange(of: model.viewedLink) { _, link in moved(link) }
         #if DEBUG && os(macOS)
-        .onChange(of: SnapshotDriver.shared.openPDF, initial: true) { _, new in
-            // Fixtures ship without tracked files; register them so there is a PDF to show.
-            if new, model.materials.isEmpty { model.workspace.run(MaterialTrack(course: model.course.id)) }
-            model.viewing = new ? model.materials.first { $0.isPDF && $0.status == .classified }?.id : nil
+        .onChange(of: SnapshotDriver.shared.openFile, initial: true) { _, ext in
+            // Fixtures ship without tracked files; register them so there is a file to show.
+            if ext != nil, model.materials.isEmpty { model.workspace.run(MaterialTrack(course: model.course.id)) }
+            model.viewing = ext.flatMap { ext in
+                model.materials.first { !$0.isFolder && ($0.path as NSString).pathExtension.lowercased() == ext && $0.status == .classified }?.id
+            }
+            SnapshotDriver.shared.materialsOpenFile = model.viewing != nil
         }
         #endif
     }
@@ -181,19 +179,22 @@ struct MaterialsView: View {
             Divider()
             Button(.materialsUntrackEllipsis, role: .destructive) { model.disconnecting = m }
         } else {
+            #if os(macOS)
             Button(m.isFolder ? .materialsOpenInFinder : .materialsOpen) { open(m) }
+            #else
+            if !m.isFolder { Button(.materialsOpen) { open(m) } }
+            #endif
             Button(.materialsLinkEllipsis) { model.linking = m.id }
             if !m.isFolder { LinkMenu(link: AppLink(.material, m.id), course: model.course.id, trailing: true) }
-            if !m.isFolder {
-                Divider()
-                fileMenuItems(m)
-            }
+            Divider()
+            fileMenuItems(m)
         }
     }
 
     @ViewBuilder func fileMenuItems(_ m: FolioDomain.Material) -> some View {
         #if os(macOS)
-        Button(.materialsOpenWithDefault) { NSWorkspace.shared.open(model.fileURL(m.path)) }
+        // A folder's own app is Finder, which "Finder에서 열기" already is.
+        if !m.isFolder { Button(.materialsOpenWithDefault) { NSWorkspace.shared.open(model.fileURL(m.path)) } }
         Button(.materialsShowInFinder) { NSWorkspace.shared.activateFileViewerSelecting([model.fileURL(m.path)]) }
         Divider()
         #endif
@@ -228,16 +229,19 @@ struct MaterialsView: View {
                 .popover(isPresented: Binding(get: { model.linking == m.id }, set: { if !$0 { model.linking = nil } })) {
                     MaterialLinksEditor(model: model, materialId: m.id)
                 }
+            #if os(macOS)
             Button(m.isFolder ? "Finder" : String(localized: .materialsOpen)) { open(m) }.buttonStyle(.ghost)
-            if !m.isFolder {
-                Menu { fileMenuItems(m) } label: {
-                    Image(systemName: "ellipsis")
-                }
-                .menuStyle(.button)
-                .buttonStyle(.borderless).pointingHand()
-                .menuIndicator(.hidden)
-                .fixedSize()
+            #else
+            // iPadOS has no Finder to hand a folder to.
+            if !m.isFolder { Button(.materialsOpen) { open(m) }.buttonStyle(.ghost) }
+            #endif
+            Menu { fileMenuItems(m) } label: {
+                Image(systemName: "ellipsis")
             }
+            .menuStyle(.button)
+            .buttonStyle(.borderless).pointingHand()
+            .menuIndicator(.hidden)
+            .fixedSize()
         }
     }
 
@@ -391,11 +395,6 @@ extension SessionMaterial {
         case let (a, b): " p.\(a.map(String.init) ?? "")–\(b.map(String.init) ?? "")"
         }
     }
-}
-
-extension FolioDomain.Material {
-    var isPDF: Bool { !isFolder && MaterialFormat(path: path) == .pdf }
-    var isText: Bool { !isFolder && MaterialFormat(path: path).isText }
 }
 
 struct ImportPlaceSheet: View {

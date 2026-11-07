@@ -151,10 +151,6 @@ extension CourseFile {
     }
 }
 
-private extension Material {
-    var isPDF: Bool { !isFolder && path.lowercased().hasSuffix(".pdf") }
-}
-
 /// The words on a slide worth telling a recognizer about. Korean it already hears well; what it gets wrong is the
 /// English in between, so only Latin-script words count: names, acronyms, and two-word terms that recur.
 public enum LectureTerms {

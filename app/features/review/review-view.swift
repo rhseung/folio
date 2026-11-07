@@ -1,6 +1,5 @@
 import FolioDomain
 import FolioStorage
-import PDFKit
 import SwiftUI
 
 struct ReviewOpener<Label: View>: View {
@@ -187,52 +186,39 @@ struct ReviewView: View {
     }
 }
 
+/// A note or a lecture, in the file view every other place shows files with: a markdown note in the reader, a `.tex`
+/// note in the editor and PDF the notes tab opens, a lecture at its class's first page (the file's first without one).
+/// Reading it here leaves the materials tab's resume page alone.
 private struct SourcePane: View {
     let model: ReviewModel
     let source: ReviewView.Source
     let note: NoteFile?
     let course: LoadedCourse
-    @State private var text: String?
-    @State private var pdf: PDFController?
-    @State private var failed = false
-    @State private var embeds: NoteEmbedSource?
+    @State private var page: Int?
+
+    init(model: ReviewModel, source: ReviewView.Source, note: NoteFile?, course: LoadedCourse) {
+        self.model = model
+        self.source = source
+        self.note = note
+        self.course = course
+        _page = State(initialValue: (source.page ?? 1) - 1)
+    }
 
     var body: some View {
-        if let note, note.format == .tex {
-            // The editor and PDF the notes tab opens. The window's breadcrumb behind the sheet keeps its own steps.
-            TextFileView(workspace: model.workspace, course: course, note: note).environment(nil as CrumbTrail?)
-        } else {
-            rendered
-        }
-    }
-
-    var rendered: some View {
         Group {
-            if let pdf {
-                PDFKitView(controller: pdf)
-            } else if let text {
-                NotePreview(text: text, baseURL: note?.url.deletingLastPathComponent(), math: note?.meta.math ?? .latex, embeds: embeds,
-                            revision: model.workspace.notesRevision)
-            } else if failed {
-                ContentUnavailableView(String(localized: .reviewSourceFailed), systemImage: "doc.questionmark", description: Text(source.title))
-            } else {
-                ProgressView()
+            switch source.id {
+            case .note:
+                if let note {
+                    FileView(workspace: model.workspace, course: course, note: note)
+                } else {
+                    ContentUnavailableView(String(localized: .reviewSourceFailed), systemImage: "doc.questionmark", description: Text(source.title))
+                }
+            case .lecture(let id):
+                FileView(workspace: model.workspace, course: course, material: id, requestedPage: $page, remembersPage: false)
             }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .task { await load() }
-    }
-
-    func load() async {
-        switch source.id {
-        case .note:
-            guard let note else { failed = true; return }
-            embeds = NoteEmbedSource(workspace: model.workspace, course: course, own: note.url)
-            text = model.body(of: note, in: course)
-        case .lecture:
-            guard let document = await model.document(source, in: course) else { failed = true; return }
-            pdf = PDFController(document: document, page: (source.page ?? 1) - 1)
-        }
+        // The window's breadcrumb behind the sheet keeps its own steps.
+        .environment(nil as CrumbTrail?)
     }
 }
 

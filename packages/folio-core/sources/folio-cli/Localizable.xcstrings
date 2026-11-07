@@ -7767,6 +7767,17 @@
         }
       }
     },
+    "material.show.format": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "  형식  %@"
+          }
+        }
+      }
+    },
     "note.edit.abstract": {
       "extractionState": "manual",
       "localizations": {

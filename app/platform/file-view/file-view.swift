@@ -1,0 +1,167 @@
+import FolioDomain
+import FolioStorage
+import SwiftUI
+
+/// A file shown in the pane, by the renderer its format picks (`MaterialFormat.renderer`, #179). Every place that shows
+/// a file goes through this: the materials page (and with it every `folio://material` link from assignments, problem
+/// sets, exams, units and search), the review's sources, and a semester's `_Admin` files.
+struct FileView: View {
+    @State private var model: FileViewModel
+    /// A page a link asked for, 0-based; taken once the PDF has it.
+    @Binding private var requestedPage: Int?
+    /// The 0-based page the PDF is on, for the window's link (`folio://material/<ID>#page=N`), so back, forward and a
+    /// tab moved to its own window come back to it.
+    @Binding private var shownPage: Int?
+    @State private var thumbnails = true
+    @State private var query = ""
+
+    init(workspace: Workspace, course: LoadedCourse, material: UUID, requestedPage: Binding<Int?> = .constant(nil),
+         shownPage: Binding<Int?> = .constant(nil), remembersPage: Bool = true) {
+        _model = State(initialValue: FileViewModel(workspace: workspace, course: course, subject: .material(material), remembersPage: remembersPage))
+        _requestedPage = requestedPage
+        _shownPage = shownPage
+    }
+
+    init(workspace: Workspace, course: LoadedCourse, note: NoteFile) {
+        _model = State(initialValue: FileViewModel(workspace: workspace, course: course, subject: .note(note)))
+        _requestedPage = .constant(nil)
+        _shownPage = .constant(nil)
+    }
+
+    /// A file no course tracks: shown only, never written.
+    init(workspace: Workspace, url: URL) {
+        _model = State(initialValue: FileViewModel(workspace: workspace, course: nil, subject: .file(url)))
+        _requestedPage = .constant(nil)
+        _shownPage = .constant(nil)
+    }
+
+    var body: some View {
+        if model.editsInPlace, let course = model.course {
+            // The editor brings its own bar, crumb and saving.
+            switch model.subject {
+            case .material(let id): TextFileView(workspace: model.workspace, course: course, material: id)
+            case .note(let note): TextFileView(workspace: model.workspace, course: course, note: note)
+            case .file: EmptyView()
+            }
+        } else {
+            shown
+        }
+    }
+
+    var shown: some View {
+        VStack(spacing: 0) {
+            if model.opensElsewhere || isPDF { bar }
+            content.frame(maxWidth: .infinity, maxHeight: .infinity)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(Theme.Palette.card)
+        .crumb(model.name, level: 2, symbol: model.symbol)
+        .task(id: model.url) { await model.load(page: takeRequestedPage()) }
+        // While a class is being recorded, the pages it goes through are kept with the recording.
+        .onChange(of: pdf?.page) { _, page in
+            guard let page else { return }
+            model.showing(page)
+            shownPage = page
+        }
+        // A page already open when recording starts doesn't change, so it is told then.
+        .onChange(of: model.recording) { _, recording in if recording != nil, let page = pdf?.page { model.showing(page) } }
+        // Another link to this file at another page, while it is open.
+        .onChange(of: requestedPage) { _, page in
+            if page != nil, let pdf, let page = takeRequestedPage() { pdf.go(to: page) }
+        }
+        .onDisappear { model.closed(at: pdf?.page) }
+    }
+
+    @ViewBuilder var content: some View {
+        switch model.loaded {
+        case .loading:
+            ProgressView()
+        case .failed:
+            ContentUnavailableView(String(localized: .fileViewCannotRead), systemImage: "doc.questionmark", description: Text(model.name))
+        case .pdf(let controller):
+            PDFPane(controller: controller, thumbnails: thumbnails)
+        case .markdown(let text):
+            NotePreview(text: text, baseURL: model.url.deletingLastPathComponent(), math: model.math, embeds: model.embeds,
+                        revision: model.workspace.notesRevision)
+        case .source(let text):
+            SourceFileEditor(text: .constant(text), language: model.format.highlightLanguage, reveal: .constant(nil), editable: false)
+        case .image(let url):
+            ImagePane(url: url)
+        case .audio(let url):
+            AudioPane(url: url, name: model.name)
+        case .quickLook(let url):
+            QuickLookPane(url: url)
+        case .unsupported:
+            ContentUnavailableView {
+                Label(String(localized: .fileViewCannotShow), systemImage: model.symbol)
+            } description: {
+                Text(.fileViewCannotShowDetail(model.url.pathExtension.uppercased()))
+            } actions: {
+                OpenElsewhereButton(url: model.url, prominent: true)
+            }
+        }
+    }
+
+    var pdf: PDFController? {
+        if case .pdf(let controller) = model.loaded { controller } else { nil }
+    }
+
+    var isPDF: Bool { pdf != nil }
+
+    /// Page and zoom lead; search and opening elsewhere trail, as in Preview.
+    var bar: some View {
+        PageBar {
+            if let c = pdf {
+                Button(.materialsViewerThumbnails, systemImage: "sidebar.left") { thumbnails.toggle() }.help(Text(.materialsViewerThumbnails))
+                Text("\(c.page + 1) / \(c.pageCount)").monospacedDigit().foregroundStyle(Theme.Palette.textSecondary).padding(.horizontal, Theme.Space.xs)
+                Button(.materialsViewerZoomOut, systemImage: "minus.magnifyingglass") { c.zoomOut() }.keyboardShortcut("-")
+                Button(.materialsViewerFit, systemImage: "arrow.up.left.and.arrow.down.right") { c.fit() }.help(Text(.materialsViewerFit)).keyboardShortcut("0")
+                Button(.materialsViewerZoomIn, systemImage: "plus.magnifyingglass") { c.zoomIn() }.keyboardShortcut("=")
+            }
+        } trailing: {
+            if let c = pdf {
+                // A see-through capsule like the window's search field.
+                HStack(spacing: Theme.Space.xs) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(Theme.Palette.textTertiary)
+                    TextField(String(localized: .materialsViewerSearch), text: $query).textFieldStyle(.plain).frame(width: 160).onSubmit { c.find(query) }
+                    if !c.matches.isEmpty {
+                        Text("\(c.matchIndex + 1)/\(c.matches.count)").font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(Theme.Palette.textTertiary)
+                        Button { c.step(-1) } label: { Image(systemName: "chevron.up") }.buttonStyle(.ghost)
+                        Button { c.step(1) } label: { Image(systemName: "chevron.down") }.buttonStyle(.ghost)
+                    }
+                }
+                .toolbarField()
+            }
+            if model.opensElsewhere { OpenElsewhereButton(url: model.url) }
+        }
+    }
+
+    func takeRequestedPage() -> Int? {
+        defer { requestedPage = nil }
+        return requestedPage
+    }
+}
+
+/// The way out to another app, for what Folio only shows: the file's default app on a Mac, the share sheet on iPad,
+/// which has no default app to hand a file to.
+struct OpenElsewhereButton: View {
+    let url: URL
+    var prominent = false
+
+    var body: some View {
+        #if os(macOS)
+        if prominent {
+            Button(.materialsOpenWithDefault) { NSWorkspace.shared.open(url) }.buttonStyle(.pointing(.borderedProminent))
+        } else {
+            Button(.materialsOpenWithDefault, systemImage: "arrow.up.forward.app") { NSWorkspace.shared.open(url) }
+                .help(Text(.materialsOpenWithDefault))
+        }
+        #else
+        if prominent {
+            ShareLink(item: url) { Text(.fileViewShare) }.buttonStyle(.pointing(.borderedProminent))
+        } else {
+            ShareLink(item: url) { Label(String(localized: .fileViewShare), systemImage: "square.and.arrow.up") }
+        }
+        #endif
+    }
+}

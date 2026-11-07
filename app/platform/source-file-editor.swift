@@ -9,6 +9,8 @@ struct SourceFileEditor {
     var language: String?
     /// Set to put the caret on a 1-based line; cleared once it's there.
     @Binding var reveal: Int?
+    /// False for a file no action writes (one outside any course): shown, selectable, never saved.
+    var editable = true
 
     @MainActor func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -110,6 +112,7 @@ extension SourceFileEditor: NSViewRepresentable {
         coordinator.parent = self
         coordinator.updating = true
         defer { coordinator.updating = false }
+        view.isEditable = editable
         if Self.swaps(view.string, for: text, composing: view.hasMarkedText()) {
             view.string = text
             if let storage = view.textStorage { Self.color(storage, language: language) }
@@ -259,6 +262,7 @@ extension SourceFileEditor: UIViewRepresentable {
         coordinator.parent = self
         coordinator.updating = true
         defer { coordinator.updating = false }
+        view.isEditable = editable
         if Self.swaps(view.text, for: text, composing: view.markedTextRange != nil) {
             view.text = text
             Self.color(view.textStorage, language: language)

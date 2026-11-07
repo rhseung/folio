@@ -24,20 +24,21 @@ extension CourseStore {
         try chat.write(to: chatsURL.appending(path: "\(chat.model.id.uuidString).json"))
     }
 
-    static let contextTextExtensions: Set<String> = ["md", "tex", "txt", "csv", "py", "c", "cpp", "java", "swift"]
+    static func isContextText(_ format: MaterialFormat) -> Bool { format == .markdown || format.isText }
 
     public static func canReadContext(_ path: String) -> Bool {
-        let ext = (path as NSString).pathExtension.lowercased()
-        return ext == "pdf" || contextTextExtensions.contains(ext)
+        let format = MaterialFormat(path: path)
+        return format == .pdf || isContextText(format)
     }
 
     /// Reading downloads an iCloud placeholder, which is what the spec wants for files handed to Claude.
     public func contextText(ofMaterial path: String) throws -> String? {
         let url = url.appending(path: path)
-        if url.pathExtension.lowercased() == "pdf" {
+        let format = MaterialFormat(path: path)
+        if format == .pdf {
             return PDFDocument(data: try CoordinatedFile.read(url))?.string
         }
-        guard Self.contextTextExtensions.contains(url.pathExtension.lowercased()) else { return nil }
+        guard Self.isContextText(format) else { return nil }
         return String(decoding: try CoordinatedFile.read(url), as: UTF8.self)
     }
 

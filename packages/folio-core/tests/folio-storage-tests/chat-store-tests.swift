@@ -41,5 +41,8 @@ struct ChatStoreTests {
         #expect(try store.contextText(ofMaterial: "Notes/x.tex") == "\\section{Trees}")
         try Data([0, 1]).write(to: store.url.appending(path: "Notes/x.bin"))
         #expect(try store.contextText(ofMaterial: "Notes/x.bin") == nil)
+        // Any text format `MaterialFormat` knows, not a list of its own: data a code assignment reads, too.
+        try Data("{\"n\": 3}".utf8).write(to: store.url.appending(path: "Notes/x.json"))
+        #expect(try store.contextText(ofMaterial: "Notes/x.json") == "{\"n\": 3}")
     }
 }

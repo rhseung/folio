@@ -8,6 +8,8 @@ struct SemesterView: View {
     @State private var addingCourse = false
     @State private var confirmingTrim = false
     @State private var confirmingSource = false
+    /// An `_Admin` file shown over the page. These files belong to no course and have no ID, so no app link names them.
+    @State private var viewingFile: AdminFile?
 
     init(workspace: Workspace, semesterID: UUID) {
         _model = State(initialValue: SemesterModel(workspace: workspace, semesterID: semesterID))
@@ -78,16 +80,16 @@ struct SemesterView: View {
                                     Image(systemName: "doc").foregroundStyle(Theme.Palette.textSecondary)
                                     Text(url.lastPathComponent).lineLimit(1)
                                     Spacer()
+                                    Button(.commonOpen) { viewingFile = AdminFile(url: url) }.buttonStyle(.ghost)
+                                }
+                                .contentShape(.rect)
+                                .contextMenu {
+                                    Button(.commonOpen, systemImage: "doc.text.magnifyingglass") { viewingFile = AdminFile(url: url) }
                                     #if os(macOS)
-                                    Button(.commonOpen) { NSWorkspace.shared.open(url) }.buttonStyle(.ghost)
+                                    Button(.materialsOpenWithDefault, systemImage: "arrow.up.forward.app") { NSWorkspace.shared.open(url) }
+                                    Button(.commonShowInFinder, systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
                                     #endif
                                 }
-                                #if os(macOS)
-                                .contextMenu {
-                                    Button(.commonOpen, systemImage: "arrow.up.forward.app") { NSWorkspace.shared.open(url) }
-                                    Button(.commonShowInFinder, systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([url]) }
-                                }
-                                #endif
                             }
                         }
                     }
@@ -98,6 +100,7 @@ struct SemesterView: View {
                 model.loadSource()
                 await model.refreshAudio()
             }
+            .sheet(item: $viewingFile) { AdminFileSheet(workspace: model.workspace, url: $0.url) }
             .sheet(isPresented: $addingCourse) { AddCourseSheet(workspace: model.workspace, semester: semester) { if let id = $0 { openCourse(id) } } }
         } else {
             ContentUnavailableView(String(localized: .semesterNotFound), systemImage: "calendar")
@@ -381,4 +384,26 @@ struct AddCourseSheet: View {
             dismiss()
         }
     }
+}
+
+/// A semester's `_Admin` file over the page, in the file view every other file opens in.
+private struct AdminFileSheet: View {
+    let workspace: Workspace
+    let url: URL
+    @Environment(\.dismiss) private var dismiss
+
+    var body: some View {
+        NavigationStack {
+            FileView(workspace: workspace, url: url)
+                .environment(nil as CrumbTrail?)
+                .navigationTitle(url.lastPathComponent)
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button(.commonClose) { dismiss() } } }
+        }
+        .frame(minWidth: 720, idealWidth: 960, minHeight: 560, idealHeight: 760)
+    }
+}
+
+private struct AdminFile: Identifiable {
+    let url: URL
+    var id: URL { url }
 }
