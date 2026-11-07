@@ -67,10 +67,9 @@ struct TextFileView: View {
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.texMode) { _, mode in if let mode { panes.choose(mode) } }
         #endif
-        // A link to a page of this `.tex` is a page of its PDF, so the PDF comes into view.
         .onChange(of: requestedPage) { _, page in
             guard page != nil, let controller, let page = takeRequestedPage() else { return }
-            if shown == .write { panes.choose(wide ? .split : .read) }
+            showPDF()
             controller.go(to: page)
         }
         // Saved a moment after typing stops, and whenever the file goes away, as notes are.
@@ -155,6 +154,11 @@ struct TextFileView: View {
 
     var shown: NotePanes.Mode { panes.shown(wide: wide) }
 
+    /// A link to a page of this `.tex` is a page of its PDF, so the PDF comes into view if the source alone was.
+    func showPDF() {
+        if shown == .write { panes.choose(wide ? .split : .read) }
+    }
+
     var bar: some View {
         PageBar {
             if model.isTex { NotePanesPicker(panes: $panes, wide: wide) }
@@ -226,7 +230,10 @@ struct TextFileView: View {
             controller = nil
             return
         }
-        controller = PDFController(document: document, page: takeRequestedPage() ?? controller?.page ?? 0)
+        let requested = takeRequestedPage()
+        // After `rememberingPanes` has put back the remembered view, which runs on appear, before this task.
+        if requested != nil { showPDF() }
+        controller = PDFController(document: document, page: requested ?? controller?.page ?? 0)
         #if os(macOS)
         controller?.darken(colorScheme == .dark)
         controller?.onCommandClick { [model] page, point in model.showSource(page: page, at: point) }
