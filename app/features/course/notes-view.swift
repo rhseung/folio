@@ -152,6 +152,7 @@ struct NoteEditor: View {
     @State private var model: NoteEditorModel
     @Environment(\.accent) private var accent
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.paneMemory) private var paneMemory
     var anchor: AppLink.Anchor?
     var insert: Binding<String?> = .constant(nil)
     let openNote: (String) -> Void
@@ -243,7 +244,13 @@ struct NoteEditor: View {
             renaming = true
         })
         .sheet(isPresented: $renaming) { NoteRenameSheet(workspace: model.workspace, course: model.course, note: model.note, moves: moves) }
-        .onAppear(perform: model.load)
+        .onAppear {
+            model.load()
+            if let id = model.note.meta.id, let mode = paneMemory?.memory.noteMode(note: id) { panes = NotePanes(remembered: mode) }
+        }
+        .onChange(of: panes.mode) { _, mode in
+            if let id = model.note.meta.id { paneMemory?.remember(mode, note: id) }
+        }
         // Saved a moment after typing stops, and whenever the note goes away: switching notes or courses, closing the
         // window or quitting would otherwise drop the edits.
         .task(id: model.body) {
