@@ -9,7 +9,7 @@ enum SampleLecture {
     static let titles = [
         "Matchings", "Definitions", "Examples", "Maximum matchings", "Alternating paths", "Exercise", "Proof", "Summary",
         "Hall's theorem", "Proof", "Proof (cont.)", "Corollaries", "Marriage problem", "Exercise", "Exercise (cont.)", "Summary",
-        "Augmenting paths", "Berge's theorem", "Proof", "Hungarian method", "Example", "Running time", "Exercise", "Summary",
+        "Augmenting paths and Berge's theorem in simple bipartite graphs", "Berge's theorem", "Proof", "Hungarian method", "Example", "Running time", "Exercise", "Summary",
     ]
 
     /// Chapter pages carry only their title, as a deck's dividers do.
@@ -18,16 +18,16 @@ enum SampleLecture {
     /// 16:9 pages: the title in large type at the top, then a few body lines.
     static func document(_ titles: [String] = titles) -> PDFDocument? {
         let data = NSMutableData()
-        var box = CGRect(x: 0, y: 0, width: 640, height: 360)
+        var box = CGRect(x: 0, y: 0, width: 960, height: 540)
         guard let consumer = CGDataConsumer(data: data), let context = CGContext(consumer: consumer, mediaBox: &box, nil) else { return nil }
         for (i, title) in titles.enumerated() {
             context.beginPDFPage(nil)
             context.setFillColor(NSColor.white.cgColor) // design: one-off, the slide paper of a drawn PDF, not the app
             context.fill(box)
-            draw(title, size: 28, bold: true, at: CGPoint(x: 40, y: 290), in: context)
+            draw(title, size: 24, bold: true, at: CGPoint(x: 48, y: 460), in: context)
             for line in 0..<(chapters.contains(i) ? 0 : 3) {
                 draw("Slide \(i + 1), point \(line + 1): a line of body text about \(title.lowercased())", size: 14, bold: false,
-                     at: CGPoint(x: 40, y: 220 - CGFloat(line) * 28), in: context)
+                     at: CGPoint(x: 48, y: 380 - CGFloat(line) * 28), in: context)
             }
             context.endPDFPage()
         }

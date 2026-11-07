@@ -98,7 +98,8 @@ struct LectureSectionsModelTests {
         #expect(model.cuts(model.rows[0]) == nil)
     }
 
-    /// A deck without an outline splits at its divider slides; titles that name no unit are proposed as new ones.
+    /// A deck without an outline splits at its divider slides, a long title (nine words) included; titles that name no
+    /// unit are proposed as new ones.
     @Test func theReaderSplitsADeckAtItsDividers() async throws {
         let url = FileManager.default.temporaryDirectory.appending(path: "folio-deck-\(UUID().uuidString).pdf")
         try SampleLecture.write(to: url)
@@ -109,7 +110,7 @@ struct LectureSectionsModelTests {
             return
         }
         #expect(split.sections.map(\.pages) == [1...8, 9...16, 17...24])
-        #expect(split.sections.map(\.title) == ["Matchings", "Hall's theorem", "Augmenting paths"])
+        #expect(split.sections.map(\.title) == ["Matchings", "Hall's theorem", "Augmenting paths and Berge's theorem in simple bipartite graphs"])
         #expect(split.sections.allSatisfy { $0.isNew })
         let missing = await LectureReader.find(URL(filePath: "/nonexistent.pdf"), units: units, claude: nil)
         #expect(missing == .unreadable)

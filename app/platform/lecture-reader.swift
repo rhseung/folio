@@ -96,6 +96,8 @@ enum LectureReader {
             lines += 1
             if lines >= 4 { stop.pointee = true }
         }
-        return LectureReading.Page(title: best.map(\.title), words: words)
+        // `Page.words` counts what the slide has besides its title: a long title on a divider is still a divider.
+        let titleWords = best?.title.split(whereSeparator: \.isWhitespace).count ?? 0
+        return LectureReading.Page(title: best.map(\.title), words: max(words - titleWords, 0))
     }
 }
