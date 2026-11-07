@@ -43,6 +43,9 @@ final class Workspace {
     var finishingRecordings = Set<UUID>()
     /// The class whose recording just stopped, until a window asks how far it went.
     var progressAsk: SessionProgressAsk?
+    /// A lecture whose split screen was asked for from elsewhere (the progress sheet's "단원으로 나누기"); the file view
+    /// that opens it takes it.
+    var splitAsk: UUID?
     @ObservationIgnored var recoveryTried = Set<UUID>()
     /// Lazy so tests, previews and renders can give a folder of their own before the first use; one that forgets
     /// stops there (`LocalFolders`) instead of recovering this Mac's unfinished recordings into a fixture.

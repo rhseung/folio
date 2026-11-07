@@ -102,6 +102,10 @@ enum Theme {
         static let liveEdge = 0.55
         /// A class the timetable holds but not saved: half a card laid over the page.
         static let planned = 0.5
+        /// Every other zone of a lecture's section bar (#321), over `tint`: two neighbors of one color still read as two.
+        static let zoneAlt = 0.18
+        /// The zone picked on a section bar, above `onTint`, which the zone under the pointer takes.
+        static let zonePicked = 0.3
     }
 
     enum Space {

@@ -144,6 +144,8 @@ final class UnitsModel {
         var detail: String
         /// Linked to the unit itself, so it can be unlinked here; otherwise it only comes through a class.
         var direct: Bool
+        /// The unit's pages of a split lecture (#321), drawn as the section strip.
+        var pages: ClosedRange<Int>? = nil
     }
 
     /// The files that belong with the unit (`CourseFile.routes(of:to:)`), by role as on the materials page.
@@ -157,7 +159,7 @@ final class UnitsModel {
                 let role = m.status == .unclassified ? String(localized: .unitsUnclassified) : (m.role ?? .other).label
                 let direct = routes.contains(.direct)
                 let detail = [role] + links.map { file.day(of: $0.session, calendar: workspace.calendar) + $0.link.pageLabel }
-                return MaterialRow(material: m, detail: detail.joined(separator: " · "), direct: direct)
+                return MaterialRow(material: m, detail: detail.joined(separator: " · "), direct: direct, pages: file.pages(of: unit.id, in: m.id))
             }
             .sorted { a, b in
                 let (x, y) = (roles.firstIndex { $0 == a.material.role } ?? roles.count, roles.firstIndex { $0 == b.material.role } ?? roles.count)

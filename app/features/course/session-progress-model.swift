@@ -28,8 +28,9 @@ final class SessionProgressModel {
     let viewed: [SessionMaterial]
     private(set) var rows: [Row] = []
     private(set) var pageCounts: [UUID: Int] = [:]
-    /// Once a field is touched, counts arriving late no longer redo the suggestion under the user's hands.
-    private var edited = false
+    /// Once a field is touched, counts arriving late no longer redo the suggestion under the user's hands. Also whether
+    /// leaving for the split screen would lose anything.
+    private(set) var edited = false
 
     init(workspace: Workspace, course: UUID, session: UUID, viewed: [SessionMaterial] = []) {
         self.workspace = workspace
@@ -90,6 +91,17 @@ final class SessionProgressModel {
     func taught(_ id: UUID) -> [PageRangeField.Taught] {
         guard let file else { return [] }
         return PageRangeField.Taught.list(file, material: id, besides: sessionId, calendar: workspace.calendar)
+    }
+
+    /// The file's zones when its units split it (#321): the bar draws them, and the range reads as the units it reaches.
+    func sections(_ id: UUID) -> [PageRangeField.Section] {
+        guard let file else { return [] }
+        return PageRangeField.Section.list(file, material: id, pageCount: pageCounts[id])
+    }
+
+    func reads(_ id: UUID) -> (ClosedRange<Int>) -> String? {
+        let file = file
+        return { file?.sectionLabel(of: id, pages: $0) }
     }
 
     func seen(_ id: UUID) -> ClosedRange<Int>? { viewed.first { $0.materialId == id }?.pages }

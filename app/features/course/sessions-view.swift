@@ -455,8 +455,12 @@ struct SessionUnitsPicker: View {
                     HStack(spacing: Theme.Space.xs) {
                         Image(systemName: missing ? "exclamationmark.triangle.fill" : linked.isEmpty ? "plus" : "link")
                         if !compact {
-                            Text(shown.isEmpty ? String(localized: missing ? .sessionsUnitsNeeded : .sessionsUnitsLink) : shown.map(\.title).joined(separator: " · "))
-                                .lineLimit(1).truncationMode(.tail)
+                            if !shown.isEmpty, let progress = file.splitProgress(of: session) {
+                                SectionProgress(file: file, material: progress.material, range: progress.pages)
+                            } else {
+                                Text(shown.isEmpty ? String(localized: missing ? .sessionsUnitsNeeded : .sessionsUnitsLink) : shown.map(\.title).joined(separator: " · "))
+                                    .lineLimit(1).truncationMode(.tail)
+                            }
                         }
                     }
                     .font(Theme.Typeface.caption.weight(missing ? .semibold : .regular))
@@ -474,7 +478,13 @@ struct SessionUnitsPicker: View {
             // The title names the units already, so only the icon is left to click and it needs no separator.
             if !(compact && !shown.isEmpty) { Text("·") }
             if !shown.isEmpty {
-                if !compact { Text(shown.map(\.title).joined(separator: " · ")).lineLimit(1).truncationMode(.tail) } else { Image(systemName: "link") }
+                if compact {
+                    Image(systemName: "link")
+                } else if let progress = course.file.splitProgress(of: session) {
+                    SectionProgress(file: course.file, material: progress.material, range: progress.pages)
+                } else {
+                    Text(shown.map(\.title).joined(separator: " · ")).lineLimit(1).truncationMode(.tail)
+                }
             } else if missing {
                 Label(.sessionsUnitsAdd, systemImage: "plus").labelStyle(.titleAndIcon).fontWeight(.semibold).foregroundStyle(accent.ink)
             } else {

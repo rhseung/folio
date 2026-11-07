@@ -1,4 +1,5 @@
 import FolioActions
+import FolioAI
 import FolioDomain
 import FolioStorage
 import Foundation
@@ -7,8 +8,22 @@ import PDFKit
 
 /// The add sheet: one row per incoming file with where it lands, under what name, and for which class. Each row opens
 /// on `MaterialIntake.guess`; menus change one row, or every selected row when the menu's row is among them.
+/// A lecture PDF is read for its units as it comes in (#321), and the sections the user keeps are written with it.
 @MainActor @Observable
 final class ImportPlaceModel {
+    /// A lecture row's proposed split into units, from reading to what the user approves.
+    indirect enum Sections: Equatable {
+        case reading(done: Int, total: Int)
+        /// `source` is nil once split by hand from nothing found.
+        case proposed(LectureSplit, source: LectureSource?)
+        /// Read, but nothing said where the units begin.
+        case nothing(pageCount: Int)
+        /// Put off: the file comes in unsplit. What was proposed is kept, to take back.
+        case later(Sections)
+    }
+
+    typealias Find = @MainActor (URL, [FolioDomain.Unit], @escaping @MainActor (Int, Int) -> Void) async -> LectureFinding
+
     let workspace: Workspace
     let course: LoadedCourse
     let places: [String]
@@ -19,6 +34,11 @@ final class ImportPlaceModel {
     private var cursor = 0
     /// What each folder holds, read once: nothing else writes there while the sheet is open.
     private let held: [String: Set<String>]
+    private(set) var sections: [Int: Sections] = [:]
+    /// Rows whose sections are shown under them. One file opens on them; a batch keeps each to its summary line.
+    private(set) var opened: Set<Int> = []
+    private let find: Find
+    @ObservationIgnored private var reads: [Int: Task<Void, Never>] = [:]
 
     struct Row: Identifiable {
         let id: Int
@@ -37,10 +57,12 @@ final class ImportPlaceModel {
         var perItem: Bool { places[0].contains("/") }
     }
 
-    init(workspace: Workspace, course: LoadedCourse, files: [URL], places: [String]) {
+    init(workspace: Workspace, course: LoadedCourse, files: [URL], places: [String], find: Find? = nil) {
         self.workspace = workspace
         self.course = course
         self.places = places
+        let claude = workspace.claudeReady ? workspace.claude(for: course) : nil
+        self.find = find ?? { url, units, progress in await LectureReader.find(url, units: units, claude: claude, progress: progress) }
         let sessions = course.file.sessions
         rows = files.enumerated().map { i, url in
             let guess = MaterialIntake.guess(Self.incoming(url), places: places, sessions: sessions, exams: course.file.exams, now: workspace.now,
@@ -48,6 +70,12 @@ final class ImportPlaceModel {
             return Row(id: i, url: url, guess: guess, folder: guess.folder, session: guess.session)
         }
         held = Dictionary(uniqueKeysWithValues: ([CourseFolder.lectures.rawValue] + places).map { ($0, course.store.names(in: $0)) })
+        if files.count == 1 { opened = [0] }
+        for row in rows { readSections(row.id) }
+    }
+
+    isolated deinit {
+        for task in reads.values { task.cancel() }
     }
 
     /// The page count and shape `guess` reads. Files from outside the sandbox open only inside their scope.
@@ -150,6 +178,7 @@ final class ImportPlaceModel {
         for i in ids {
             rows[i].folder = folder
             if isLecture(rows[i]), rows[i].session == nil { rows[i].session = rows[i].guess.session ?? defaultSession }
+            readSections(i)
         }
     }
 
@@ -200,7 +229,96 @@ final class ImportPlaceModel {
         return true
     }
 
+    // MARK: Sections
+
+    /// A lecture PDF is read once, the first time it is a lecture; one turned into something else keeps what was read
+    /// in case it turns back.
+    private func readSections(_ id: Int) {
+        let row = rows[id]
+        guard isLecture(row), sections[id] == nil, reads[id] == nil, row.url.pathExtension.lowercased() == "pdf" else { return }
+        sections[id] = .reading(done: 0, total: 0)
+        let units = course.file.units
+        reads[id] = Task { [weak self, find] in
+            let found = await find(row.url, units) { done, total in
+                guard let self, case .reading = self.sections[id] else { return }
+                self.sections[id] = .reading(done: done, total: total)
+            }
+            guard let self, !Task.isCancelled else { return }
+            switch found {
+            case .found(let split, let source): self.sections[id] = .proposed(split, source: source)
+            case .nothing(let count): self.sections[id] = .nothing(pageCount: count)
+            case .unreadable: self.sections[id] = nil
+            }
+            self.reads[id] = nil
+        }
+    }
+
+    /// Only a lecture's sections show: a row turned into an assignment keeps them out of sight, and out of the import.
+    func sections(of row: Row) -> Sections? { isLecture(row) ? sections[row.id] : nil }
+
+    func toggleOpen(_ id: Int) {
+        if opened.contains(id) { opened.remove(id) } else { opened.insert(id) }
+    }
+
+    func edit(_ id: Int) -> LectureSplit? {
+        if case .proposed(let split, _) = sections[id] { return split }
+        return nil
+    }
+
+    func setSplit(_ split: LectureSplit, of id: Int) {
+        guard case .proposed(_, let source) = sections[id] else { return }
+        sections[id] = .proposed(split, source: source)
+    }
+
+    /// From nothing found, the whole file as one zone to cut.
+    func splitByHand(_ id: Int) {
+        guard case .nothing(let count) = sections[id] else { return }
+        sections[id] = .proposed(LectureSplit(pageCount: count), source: nil)
+        opened.insert(id)
+    }
+
+    func later(_ id: Int) {
+        switch sections[id] {
+        case .proposed?, .nothing?: sections[id] = .later(sections[id]!)
+        default: break
+        }
+    }
+
+    func takeBack(_ id: Int) {
+        guard case .later(let kept) = sections[id] else { return }
+        sections[id] = kept
+        opened.insert(id)
+    }
+
+    /// The summary line under a lecture row.
+    func sectionsLine(_ row: Row) -> String? {
+        switch sections(of: row) {
+        case .reading(let done, let total):
+            return total == 0 ? String(localized: .materialsImportSectionsReading) : String(localized: .materialsImportSectionsReadingPages(done, total))
+        case .proposed(let split, let source):
+            let count = String(localized: .materialsImportSectionsCount(split.claimed))
+            guard let source else { return count }
+            let from = switch source {
+            case .outline: String(localized: .materialsImportSectionsFromOutline)
+            case .titles: String(localized: .materialsImportSectionsFromTitles)
+            case .claude: String(localized: .materialsImportSectionsFromClaude)
+            }
+            return "\(count) · \(from)"
+        case .nothing: return String(localized: .materialsImportSectionsNone)
+        case .later: return String(localized: .materialsImportSectionsLater)
+        case nil: return nil
+        }
+    }
+
+    /// What approving writes for a row: nothing for a row put off, still being read, or no longer a lecture.
+    func cuts(_ row: Row) -> [LectureCut]? {
+        guard case .proposed(let split, _)? = sections(of: row) else { return nil }
+        let cuts = split.cuts
+        return cuts.isEmpty ? nil : cuts
+    }
+
     func confirm() {
-        workspace.importFiles(rows.map { ($0.url, $0.folder, isLecture($0) ? $0.session : nil) }, course: course.id)
+        for task in reads.values { task.cancel() }
+        workspace.importFiles(rows.map { ($0.url, $0.folder, isLecture($0) ? $0.session : nil, cuts($0)) }, course: course.id)
     }
 }

@@ -5,6 +5,9 @@ import SwiftUI
 /// lie faintly under it, the pages seen while recording hang below as a dashed span to take in one tap, and the two
 /// numbers ride the handles. Every change goes through `PageRange` (`moving`, `tapping`, `shifted`), so the range
 /// stays within the file and in order during a drag as much as after one.
+///
+/// A lecture split into units (#321) draws its zones as tiles instead of the thin rail (the section bar, e2): the range
+/// lies over them, reads as the units it reaches, and its ends settle on zone edges unless ⌥ is held.
 struct PageRangeField: View {
     /// Pages another class took through the file.
     struct Taught: Identifiable {
@@ -13,7 +16,7 @@ struct PageRangeField: View {
         let label: String
     }
 
-    /// A part of the file by its outline or slide titles (#321). Its edges are the bar's stronger ticks.
+    /// A zone of the file by the units holding it (#321); an empty title is pages no unit takes.
     struct Section: Equatable {
         let title: String
         let pages: ClosedRange<Int>
@@ -27,6 +30,10 @@ struct PageRangeField: View {
     /// The page after the last class's, offered as one tap. The sheet passes it; the popover's rows are too tight.
     var resume: Int?
     var sections: [Section] = []
+    /// What a range of a split file reads as (`CourseFile.sectionLabel`): `König–Hall`.
+    var reads: ((ClosedRange<Int>) -> String?)?
+    /// Opens the split screen, offered under an unsplit file's bar.
+    var split: (() -> Void)?
     var compact = false
     /// Once a drag lets go, or at once for a tap, a key or a typed page: every step of a scrub would otherwise be a
     /// write.
@@ -65,6 +72,13 @@ struct PageRangeField: View {
     private static let mergeBelow: CGFloat = 56
     private static let grabReach: CGFloat = 10
     private static let spring = Animation.spring(duration: 0.32, bounce: 0.35)
+    private static let zone: CGFloat = 20
+    /// Within this much of a zone's edge, a dragged end settles on it.
+    private static let snap: CGFloat = 0.75 // design: one-off, a fraction of a page, not a distance on screen
+
+    private var zoned: Bool { !sections.isEmpty }
+    /// The edges between zones, as page counts before them: where the ends settle and the firm haptic is.
+    private var zoneEdges: Set<Int> { Set(sections.flatMap { [$0.pages.lowerBound - 1, $0.pages.upperBound] }) }
 
     private var shown: PageRange { draft ?? range }
 
@@ -84,7 +98,8 @@ struct PageRangeField: View {
                 GeometryReader { proxy in ghost(seen, width: proxy.size.width) }
                     .frame(height: Self.ghostRow)
             }
-            if !compact, let resume { actions(resume) }
+            if zoned, let summary { summaryRow(summary) }
+            if !compact, resume != nil || (!zoned && split != nil) { actions(resume) }
         }
         .frame(minWidth: compact ? 200 : 240)
         .sensoryFeedback(.selection, trigger: ticks)
@@ -121,7 +136,15 @@ struct PageRangeField: View {
         return ZStack(alignment: .topLeading) {
             Canvas { context, _ in rail(context, width: w) }
                 .allowsHitTesting(false)
-            if let xa, let xb {
+            if zoned, let xa, let xb {
+                RoundedRectangle(cornerRadius: Theme.Radius.tile)
+                    .fill(accent.color.opacity(Theme.Opacity.onTint))
+                    .overlay(RoundedRectangle(cornerRadius: Theme.Radius.tile).strokeBorder(accent.color, lineWidth: 1.5))
+                    .frame(width: max(xb - xa, Self.bar), height: Self.zone + 4)
+                    .offset(x: grabbedSpan ? rubber : 0)
+                    .position(x: (xa + xb) / 2, y: barY)
+                    .allowsHitTesting(false)
+            } else if let xa, let xb {
                 Capsule()
                     .fill(LinearGradient(colors: [accent.color.opacity(0.8), accent.color], startPoint: .top, endPoint: .bottom))
                     .overlay(Capsule().strokeBorder(Color.white.opacity(0.35), lineWidth: 0.5))
@@ -159,6 +182,7 @@ struct PageRangeField: View {
     }
 
     private func rail(_ context: GraphicsContext, width w: CGFloat) {
+        if zoned { return zones(context, width: w) }
         let n = extent, u = unit(w), top = barY - Self.bar / 2
         context.fill(Capsule().path(in: CGRect(x: Self.inset, y: top, width: w - 2 * Self.inset, height: Self.bar)),
                      with: .color(Theme.Palette.fill))
@@ -177,6 +201,48 @@ struct PageRangeField: View {
             context.fill(Path(CGRect(x: x(i, w) - 0.5, y: barY - h / 2, width: 1, height: h)),
                          with: .color(Theme.Palette.text.opacity(major ? Theme.Opacity.toneEdge : Theme.Opacity.hover)))
         }
+    }
+
+    /// The zones as grey tiles with their names; a name the range reaches is in the course ink. Pages other classes
+    /// took are a line under the tiles, as the tiles leave no room to lay them in.
+    private func zones(_ context: GraphicsContext, width w: CGFloat) {
+        let n = extent, top = barY - Self.zone / 2
+        let r = shown
+        let picked = r.first.flatMap { f in r.last.map { f...$0 } }
+        for (i, s) in sections.enumerated() where s.pages.lowerBound <= n {
+            let lo = x(s.pages.lowerBound - 1, w) + (i == 0 ? 0 : 2), hi = x(min(s.pages.upperBound, n), w) - (i == sections.count - 1 ? 0 : 2)
+            let rect = CGRect(x: lo, y: top, width: max(hi - lo, 1), height: Self.zone)
+            context.fill(Path(roundedRect: rect, cornerRadius: Theme.Radius.tile), with: .color(Theme.Palette.fill))
+            guard !s.title.isEmpty, rect.width > 24 else { continue }
+            let reached = picked?.overlaps(s.pages) == true
+            let text = context.resolve(Text(s.title).font(reached ? Theme.Typeface.label : Theme.Typeface.label.weight(.regular))
+                .foregroundStyle(reached ? accent.ink : Theme.Palette.textSecondary))
+            context.draw(text, in: rect.insetBy(dx: Theme.Space.s, dy: Theme.Space.xxs))
+        }
+        for t in taught where t.pages.lowerBound <= n {
+            let upper = min(t.pages.upperBound, n)
+            let rect = CGRect(x: x(t.pages.lowerBound - 1, w) + 1, y: top + Self.zone + Theme.Space.xxs, width: max(x(upper, w) - x(t.pages.lowerBound - 1, w) - 2, 1), height: 2)
+            context.fill(Path(rect), with: .color(Theme.Palette.text.opacity(Theme.Opacity.projected)))
+        }
+    }
+
+    private var summary: String? {
+        guard let f = shown.first, let l = shown.last else { return nil }
+        let pages = String(localized: f == l ? .designPageRangeLength(f) : .designPageRangeSpan(f, l))
+        guard let name = reads?(f...l) else { return pages }
+        return String(localized: .designPageRangeSummary(name, pages))
+    }
+
+    private func summaryRow(_ summary: String) -> some View {
+        HStack {
+            Text(summary).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1).truncationMode(.middle)
+            Spacer(minLength: Theme.Space.s)
+            #if os(macOS)
+            if !compact { Text(.designPageRangeFineHint).foregroundStyle(Theme.Palette.textTertiary) }
+            #endif
+        }
+        .font(Theme.Typeface.caption)
+        .padding(.horizontal, Self.inset)
     }
 
     private var grabbedEnd: PageRange.End? { if case let .end(end, _) = grab { end } else { nil } }
@@ -308,8 +374,10 @@ struct PageRangeField: View {
 
     private func tip(_ p: Int, width w: CGFloat) -> some View {
         let label = taught.first { $0.pages.contains(p) }?.label
+        let zone = sections.first { $0.pages.contains(p) && !$0.title.isEmpty }?.title
         return Group {
-            if let label { Text(.designPageRangeTipTaught(p, label)) } else { Text(.designPageRangeLength(p)) }
+            if let zone { Text(.designPageRangeTipSection(p, zone)) }
+            else if let label { Text(.designPageRangeTipTaught(p, label)) } else { Text(.designPageRangeLength(p)) }
         }
         .font(Theme.Typeface.caption)
         .padding(.horizontal, Theme.Space.s)
@@ -344,14 +412,22 @@ struct PageRangeField: View {
         .position(x: (lo + hi) / 2, y: Self.ghostRow / 2)
     }
 
-    private func actions(_ resume: Int) -> some View {
-        HStack {
-            Button(String(localized: .designPageRangeResume)) {
-                apply(range.moving(.first, to: resume, pages: pages))
+    private func actions(_ resume: Int?) -> some View {
+        HStack(spacing: Theme.Space.m) {
+            if let resume {
+                Button(String(localized: .designPageRangeResume)) {
+                    apply(range.moving(.first, to: resume, pages: pages))
+                }
+                .buttonStyle(.pointing(.plain))
+                .foregroundStyle(accent.ink)
+                .disabled(range.first == resume)
             }
-            .buttonStyle(.pointing(.plain))
-            .foregroundStyle(accent.ink)
-            .disabled(range.first == resume)
+            if !zoned, let split {
+                Button(String(localized: .designPageRangeSplit), action: split)
+                    .buttonStyle(.pointing(.plain))
+                    .foregroundStyle(accent.ink)
+                    .help(Text(.designPageRangeSplitHelp))
+            }
             Spacer()
             if let pages { Text(.designPageRangeTotal(pages)).foregroundStyle(Theme.Palette.textTertiary) }
         }
@@ -371,7 +447,8 @@ struct PageRangeField: View {
                 switch grab {
                 case let .end(end, from):
                     let e = edge(at: g.location.x, w)
-                    let p = end == .first ? Int(e.rounded()) + 1 : Int(e.rounded())
+                    let settled = settle(e)
+                    let p = end == .first ? Int(settled.rounded()) + 1 : Int(settled.rounded())
                     change(to: from.moving(end, to: min(max(p, 1), extent), pages: pages), end: end)
                     // Past the file's first or last page the handle gives a little, less the further it goes.
                     let (lo, hi): (CGFloat, CGFloat) = end == .first ? (0, CGFloat(extent - 1)) : (1, CGFloat(extent))
@@ -393,6 +470,17 @@ struct PageRangeField: View {
                 grab = nil
                 moved = false
             }
+    }
+
+    /// A dragged end near a zone edge lands on it, unless ⌥ asks for single pages. iPad has no ⌥ to hold, so it always
+    /// settles: the typed number is there for a page off an edge.
+    private func settle(_ e: CGFloat) -> CGFloat {
+        guard zoned else { return e }
+        #if os(macOS)
+        if NSEvent.modifierFlags.contains(.option) { return e }
+        #endif
+        guard let near = zoneEdges.min(by: { abs(CGFloat($0) - e) < abs(CGFloat($1) - e) }), abs(CGFloat(near) - e) <= Self.snap else { return e }
+        return CGFloat(near)
     }
 
     /// A press on a handle takes that end, on the range the whole of it; anywhere else on the bar is a tap there,
@@ -431,7 +519,9 @@ struct PageRangeField: View {
             let other: PageRange.End = end == .first ? .last : .first
             let pushed = was[other] != nil && was[other] != next[other]
             if pushed { pushes[other, default: 0] += 1 }
-            firm = pushed || (next.touches(end, pages: pages) && !was.touches(end, pages: pages) && next[end] != next[other])
+            let edgeOf = { (r: PageRange) in r[end].map { end == .first ? $0 - 1 : $0 } }
+            let onZoneEdge = zoned && edgeOf(next).map(zoneEdges.contains) == true && edgeOf(was) != edgeOf(next)
+            firm = pushed || onZoneEdge || (next.touches(end, pages: pages) && !was.touches(end, pages: pages) && next[end] != next[other])
         } else {
             firm = next.first == 1 || (pages != nil && next.last == pages)
         }
