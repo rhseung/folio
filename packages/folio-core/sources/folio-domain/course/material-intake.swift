@@ -7,6 +7,40 @@ public enum MaterialIntake {
         StandardLayout.isLectureFileName(name) ? name : String(format: "%02d_", week) + name
     }
 
+    /// What a file brought into `folder` for `session` is called there. Only `Lectures` puts the session's week in
+    /// front; elsewhere the name is the professor's and stays.
+    public static func name(_ source: String, in folder: String, session: Session?) -> String {
+        guard folder == CourseFolder.lectures.rawValue, let session else { return source }
+        return lectureName(source, week: session.week)
+    }
+
+    /// Where one incoming file lands. `prefix` and `suffix` are the parts added to its own name: `05_` for a lecture's
+    /// week, ` 2` past a name the folder already holds.
+    public struct Placement: Equatable, Sendable {
+        public var folder: String
+        public var name: String
+        public var prefix: String?
+        public var suffix: String?
+
+        public var path: String { "\(folder)/\(name)" }
+    }
+
+    /// Every file's final name in one pass, so two incoming files with one name also get ` 2`, as copying them one by
+    /// one does. `taken` gives what a folder holds now.
+    public static func plan(_ items: [(source: String, folder: String, session: Session?)], taken: (String) -> Set<String>) -> [Placement] {
+        var held: [String: Set<String>] = [:]
+        return items.map { item in
+            let named = name(item.source, in: item.folder, session: item.session)
+            let had = held[item.folder] ?? taken(item.folder)
+            let free = freeName(named, taken: had)
+            held[item.folder] = had.union([free])
+            let base = { (name: String) in (name as NSString).deletingPathExtension }
+            return Placement(folder: item.folder, name: free,
+                             prefix: named == item.source ? nil : String(named.dropLast(item.source.count)),
+                             suffix: free == named ? nil : String(base(free).dropFirst(base(named).count)))
+        }
+    }
+
     /// `name`, or `name 2.ext`, `name 3.ext`… — the first one not in `taken`, so a copy never overwrites.
     public static func freeName(_ name: String, taken: Set<String>) -> String {
         guard taken.contains(name) else { return name }
