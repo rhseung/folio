@@ -185,6 +185,17 @@ struct TabFitTests {
         #expect(trail(400, selected: 400, others: [100]) == 272)
     }
 
+    @Test func theNewTabGlyphSitsOneGapAfterTheLastCapsule() {
+        // A 12-point plus centered in a 32-point button has 10 on each side: the button starts 2 under the capsule.
+        #expect(TabFit.newTabSpacing(gap: 8, button: 32, glyph: 12) == -2)
+        #expect(TabFit.newTabSpacing(gap: 8, button: 32, glyph: 16) == 0)
+        // The glyph's own start, wherever the button puts it.
+        for glyph in stride(from: 8.0, through: 32, by: 2) {
+            let spacing = TabFit.newTabSpacing(gap: 8, button: 32, glyph: glyph)
+            #expect(spacing + (32 - glyph) / 2 == 8)
+        }
+    }
+
     @Test func theStripNeverOutgrowsTheRow() async {
         // Wider than the row, the strip pushes the toolbar's search field and buttons into its overflow menu (#310).
         // It may only when not even the front tab's capsule and the menu fit.
