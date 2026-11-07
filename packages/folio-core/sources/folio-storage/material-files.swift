@@ -45,10 +45,14 @@ extension CourseStore {
     public func importFile(_ source: URL, into folder: String, name: String? = nil) throws -> String {
         let dir = url.appending(path: folder)
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let taken = Set((try? FileManager.default.contentsOfDirectory(atPath: dir.path)) ?? [])
-        let fileName = MaterialIntake.freeName(name ?? source.lastPathComponent, taken: taken)
+        let fileName = MaterialIntake.freeName(name ?? source.lastPathComponent, taken: names(in: folder))
         try CoordinatedFile.copy(source, to: dir.appending(path: fileName))
         return "\(folder)/\(fileName)"
+    }
+
+    /// What `folder` (course-relative) holds now, so the add sheet steps a name past it as `importFile` will.
+    public func names(in folder: String) -> Set<String> {
+        Set((try? FileManager.default.contentsOfDirectory(atPath: url.appending(path: folder).path)) ?? [])
     }
 
     /// Moves or renames a tracked file through `moves.jsonl`, so it can be undone, keeping its ID and links.

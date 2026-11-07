@@ -248,12 +248,34 @@ final class MaterialsModel {
 
     func sessionTitle(_ s: Session) -> String { course.file.title(of: s, calendar: workspace.calendar) }
 
+    /// A lecture newly linked to a class starts where the end-of-class prompt would: after the last class's pages.
     func link(_ material: UUID, session: UUID, linked: Bool) {
-        workspace.run(MaterialLinkSession(course: course.id, material: material, session: session, linked: linked))
+        let s = course.file.sessions.first { $0.id == session }
+        let start = linked && isLecture(material) ? s.map { course.file.suggestedLink(of: material, for: $0, pageCount: pageCounts[material]) } : nil
+        workspace.run(MaterialLinkSession(course: course.id, material: material, session: session, linked: linked,
+                                          firstPage: start?.firstPage, lastPage: start?.lastPage))
     }
 
-    func setPages(_ material: UUID, session: UUID, _ first: Int?, _ last: Int?) {
-        workspace.run(MaterialLinkSession(course: course.id, material: material, session: session, firstPage: first, lastPage: last))
+    func taught(_ material: UUID, besides session: UUID) -> [PageRangeField.Taught] {
+        PageRangeField.Taught.list(course.file, material: material, besides: session, calendar: workspace.calendar)
+    }
+
+    func seen(_ material: UUID, in session: Session) -> ClosedRange<Int>? {
+        course.file.viewedPages(of: session).first { $0.materialId == material }?.pages
+    }
+
+    func setPages(_ material: UUID, session: UUID, _ range: PageRange) {
+        workspace.run(MaterialLinkSession(course: course.id, material: material, session: session, firstPage: range.first, lastPage: range.last))
+    }
+
+    /// PDF page counts read so far, which bound the page fields. Read when the links open, not for the whole list:
+    /// each read may download the file from iCloud.
+    private(set) var pageCounts: [UUID: Int] = [:]
+
+    func loadPageCount(_ material: UUID) async {
+        guard pageCounts[material] == nil, let m = materials.first(where: { $0.id == material }),
+              let n = await workspace.pageCount(of: m, course: course.id) else { return }
+        pageCounts[material] = n
     }
 
     // MARK: Lecture progress
@@ -332,71 +354,5 @@ final class MaterialsModel {
 
     func covers(_ move: PlannedMove, _ path: String) -> Bool {
         path == move.from || path.hasPrefix(move.from + "/")
-    }
-}
-
-/// Where files brought in from the materials screen go: one row per kind, and for a kind with several folders
-/// (assignments, exams) a second choice beneath it. A lecture needs its session, which names it by week and links it.
-@MainActor @Observable
-final class ImportPlaceModel {
-    let workspace: Workspace
-    let course: LoadedCourse
-    let files: [URL]
-    let places: [String]
-    private(set) var place = CourseFolder.lectures.rawValue
-    var session: UUID?
-
-    init(workspace: Workspace, course: LoadedCourse, files: [URL], places: [String]) {
-        self.workspace = workspace
-        self.course = course
-        self.files = files
-        self.places = places
-        // Slides often come before the class, so one later today counts as today's.
-        session = sessions.last { $0.date <= workspace.now || workspace.isStudyToday($0.date) }?.id
-    }
-
-    var sessions: [Session] { course.file.sessions.filter { !$0.isCancelled }.sorted(by: Session.inOrder) }
-
-    var title: String {
-        String(localized: files.count == 1 ? .materialsImportOne(files[0].lastPathComponent) : .materialsImportMany(files.count))
-    }
-
-    struct Kind {
-        var label: String
-        var places: [String]
-        var isLecture: Bool { places == [CourseFolder.lectures.rawValue] }
-        /// Assignments and exams name which one even when there is one, so the choice reads plainly.
-        var perItem: Bool { places[0].contains("/") }
-    }
-
-    /// Places by kind label, in the order first met: `과제` → `Assignments/HW00`, `Assignments/HW01`, …
-    var kinds: [Kind] {
-        var result: [Kind] = []
-        for p in [CourseFolder.lectures.rawValue] + places {
-            let label = MaterialRole(path: p + "/_")?.label ?? p
-            if let i = result.firstIndex(where: { $0.label == label }) { result[i].places.append(p) } else { result.append(Kind(label: label, places: [p])) }
-        }
-        return result
-    }
-
-    func shown(_ kind: Kind) -> String {
-        kind.places.contains(place) ? place : kind.perItem ? "\((kind.places[0] as NSString).deletingLastPathComponent)/…" : kind.places[0]
-    }
-
-    var sessionOptions: [(UUID?, String)] {
-        // Newest first: the file is almost always for a recent class.
-        [(nil, String(localized: .materialsImportNoSession))] + sessions.reversed().map { ($0.id, course.file.title(of: $0, calendar: workspace.calendar)) }
-    }
-
-    /// The newest folder of a kind first: the latest assignment or exam is the likely one.
-    func pick(_ places: [String]) {
-        if !places.contains(place) { place = places.last ?? place }
-    }
-
-    func choose(_ place: String) { self.place = place }
-
-    func confirm() {
-        let picked = place == CourseFolder.lectures.rawValue ? sessions.first { $0.id == session } : nil
-        workspace.importFiles(files, into: place, week: picked?.week, session: picked?.id, course: course.id)
     }
 }

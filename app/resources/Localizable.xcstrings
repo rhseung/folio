@@ -5776,6 +5776,50 @@
         }
       }
     },
+    "materials.import-confirm-many": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld개 넣기"
+          }
+        }
+      }
+    },
+    "materials.import-guessed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "추측: %@"
+          }
+        }
+      }
+    },
+    "materials.import-keys": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⇧ 또는 ⌘로 여러 줄 고르기 · 1–9 종류 · ⏎ 넣기"
+          }
+        }
+      }
+    },
+    "materials.import-kind": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "종류"
+          }
+        }
+      }
+    },
     "materials.import-many": {
       "extractionState": "manual",
       "localizations": {
@@ -5809,6 +5853,17 @@
         }
       }
     },
+    "materials.import-numbered": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 이름이 있어 뒤에 %@를 붙입니다"
+          }
+        }
+      }
+    },
     "materials.import-one": {
       "extractionState": "manual",
       "localizations": {
@@ -5827,6 +5882,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "회차"
+          }
+        }
+      }
+    },
+    "materials.import-today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 오늘"
+          }
+        }
+      }
+    },
+    "materials.import-today-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
+          }
+        }
+      }
+    },
+    "materials.import-upcoming": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예정"
+          }
+        }
+      }
+    },
+    "materials.import-week-prefix": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차의 주차로 앞에 %@를 붙입니다"
           }
         }
       }
@@ -5919,17 +6018,6 @@
         }
       }
     },
-    "materials.links.first-page": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "처음"
-          }
-        }
-      }
-    },
     "materials.links.in-folder": {
       "extractionState": "manual",
       "localizations": {
@@ -5937,17 +6025,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "시험 폴더에 있음"
-          }
-        }
-      }
-    },
-    "materials.links.last-page": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "끝"
           }
         }
       }
@@ -18587,6 +18664,160 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ %2$lld쪽을 옆 칸에서 열기"
+          }
+        }
+      }
+    },
+    "materials.progress.open-class": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 수업 열기"
+          }
+        }
+      }
+    },
+    "design.page-range.unit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쪽"
+          }
+        }
+      }
+    },
+    "design.page-range.first": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시작"
+          }
+        }
+      }
+    },
+    "design.page-range.last": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끝"
+          }
+        }
+      }
+    },
+    "design.page-range.length": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld쪽"
+          }
+        }
+      }
+    },
+    "design.page-range.from": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쪽부터"
+          }
+        }
+      }
+    },
+    "design.page-range.to": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쪽까지"
+          }
+        }
+      }
+    },
+    "design.page-range.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "막대를 눌러 쪽을 고르세요"
+          }
+        }
+      }
+    },
+    "design.page-range.seen": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 중 봄 %1$lld–%2$lld"
+          }
+        }
+      }
+    },
+    "design.page-range.seen-short": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 %1$lld–%2$lld"
+          }
+        }
+      }
+    },
+    "design.page-range.seen-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음하는 동안 20초 넘게 본 쪽입니다. 누르면 이 구간으로 맞춥니다"
+          }
+        }
+      }
+    },
+    "design.page-range.resume": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지난 수업 다음부터"
+          }
+        }
+      }
+    },
+    "design.page-range.total": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체 %lld쪽"
+          }
+        }
+      }
+    },
+    "design.page-range.tip-taught": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld쪽 · %2$@"
           }
         }
       }

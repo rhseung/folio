@@ -346,7 +346,7 @@ struct MaterialLinksEditor: View {
         let exams = model.exams
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Space.l) {
-                if model.isLecture(materialId) { LectureProgressBlock(workspace: model.workspace, course: model.course.id, material: materialId) }
+                if model.isLecture(materialId) { LectureProgressBlock(workspace: model.workspace, course: model.course.id, material: materialId) { model.linking = nil } }
                 Block(String(localized: .materialsLinksSessions), note: String(localized: .materialsLinksSessionsNote)) {
                     Card {
                         if sessions.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .materialsLinksNoSessions)) } }
@@ -355,11 +355,13 @@ struct MaterialLinksEditor: View {
                             CardRow(last: i == sessions.count - 1) {
                                 CheckCircle(on: link != nil) { model.link(materialId, session: s.id, linked: link == nil) }
                                 Text(model.sessionTitle(s)).lineLimit(1)
-                                Spacer()
+                                Spacer(minLength: Theme.Space.s)
                                 if let link {
-                                    pageField(String(localized: .materialsLinksFirstPage), link.firstPage) { model.setPages(materialId, session: s.id, $0, link.lastPage) }
-                                    Text("–").foregroundStyle(Theme.Palette.textTertiary)
-                                    pageField(String(localized: .materialsLinksLastPage), link.lastPage) { model.setPages(materialId, session: s.id, link.firstPage, $0) }
+                                    PageRangeField(range: link.pageRange, pages: model.pageCounts[materialId],
+                                                   taught: model.taught(materialId, besides: s.id), seen: model.seen(materialId, in: s),
+                                                   compact: true) {
+                                        model.setPages(materialId, session: s.id, $0)
+                                    }
                                 }
                             }
                         }
@@ -406,10 +408,7 @@ struct MaterialLinksEditor: View {
         .frame(width: 440, height: 480)
         .background(Theme.Palette.page)
         .font(Theme.Typeface.body)
-    }
-
-    func pageField(_ prompt: String, _ value: Int?, set: @escaping (Int?) -> Void) -> some View {
-        PageField(prompt: prompt, value: value, set: set)
+        .task(id: materialId) { await model.loadPageCount(materialId) }
     }
 }
 
@@ -419,45 +418,6 @@ extension SessionMaterial {
         case (nil, nil): ""
         case let (a?, b?) where a == b: " p.\(a)"
         case let (a, b): " p.\(a.map(String.init) ?? "")–\(b.map(String.init) ?? "")"
-        }
-    }
-}
-
-struct ImportPlaceSheet: View {
-    @State private var model: ImportPlaceModel
-    @Environment(\.dismiss) private var dismiss
-
-    init(workspace: Workspace, course: LoadedCourse, files: [URL], places: [String]) {
-        _model = State(initialValue: ImportPlaceModel(workspace: workspace, course: course, files: files, places: places))
-    }
-
-    var body: some View {
-        let kinds = model.kinds
-        SheetForm(title: model.title, confirm: String(localized: .materialsImportConfirm), note: String(localized: .materialsImportNote)) {
-            ForEach(Array(kinds.enumerated()), id: \.element.label) { i, kind in
-                let chosen = kind.places.contains(model.place)
-                let sub = chosen && (kind.isLecture || kind.perItem)
-                CardRow(last: i == kinds.count - 1 && !sub) {
-                    CheckCircle(on: chosen) { model.pick(kind.places) }
-                    Text(kind.label)
-                    Spacer()
-                    Text(model.shown(kind))
-                        .font(Theme.Typeface.mono).foregroundStyle(Theme.Palette.textTertiary)
-                }
-                .opens { model.pick(kind.places) }
-                if sub && kind.isLecture {
-                    FormRow(label: String(localized: .materialsImportSession), last: i == kinds.count - 1) {
-                        ChoiceMenu(selection: $model.session, options: model.sessionOptions)
-                    }
-                } else if sub {
-                    FormRow(label: kind.label, last: i == kinds.count - 1) {
-                        ChoiceMenu(selection: Binding(get: { model.place }, set: { model.choose($0) }), options: kind.places.map { ($0, ($0 as NSString).lastPathComponent) })
-                    }
-                }
-            }
-        } onConfirm: {
-            model.confirm()
-            dismiss()
         }
     }
 }
