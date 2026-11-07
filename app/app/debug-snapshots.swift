@@ -33,6 +33,9 @@ final class SnapshotDriver {
     /// `courses`: the first tab holds two courses side by side, the walk moving the left one and the second course's
     /// overview beside it, so both fold their section columns (#62).
     static let coursePanes = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_PANES"] == "courses"
+    /// Only the page strip of a lecture with classes' pages (#147): its brackets, a range picked, the class popover and
+    /// the range saved, as `strip-*.png`. Set to `from-to` (`9-12`) for the range picked.
+    static let strip = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP"]
 
     var section: CourseSection?
     /// Inside the units section: `detail` opens the first unit, `review` also opens its review sheet.
@@ -54,6 +57,14 @@ final class SnapshotDriver {
     var searchQuery: String?
     /// Opens every folded list column over its page (`FOLIO_SNAPSHOT_COLUMN=open`), as its corner button would.
     var columnOpen = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_COLUMN"] == "open"
+    /// What the open PDF's page strip does next, as a click on it would.
+    var strip: StripStep?
+
+    enum StripStep: Equatable {
+        case range(Int, Int)
+        case choose
+        case save
+    }
 
     /// `links` are opened by their address at the end, each drawn as its step: what a click on such a link shows.
     func run(select: (Screen) -> Void, open: (AppLink) -> Void, courses: [UUID], semester: UUID?, links: [(String, AppLink)]) async {
@@ -185,6 +196,37 @@ final class SnapshotDriver {
         NSApp.terminate(nil)
     }
 
+    /// The strip walk (`FOLIO_SNAPSHOT_STRIP`): opens `lecture` and steps through picking and saving a range.
+    func runStrip(open: (AppLink) -> Void, lecture: AppLink) async {
+        guard let directory = Self.directory else { return }
+        // folio:not-an-action debug screenshots, outside the GIST folder
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        if let window = NSApp.windows.first(where: { $0.isVisible }) {
+            window.setContentSize(NSSize(width: Self.width, height: 900))
+            window.center()
+        }
+        let bounds = (Self.strip ?? "").split(separator: "-").compactMap { Int($0) }
+        let range = bounds.count == 2 ? (bounds[0], bounds[1]) : (9, 12)
+        open(lecture)
+        try? await Task.sleep(for: .seconds(3))
+        // Glass and popovers draw only on screen: a `<step>.ready` file tells a script outside to capture the screen then.
+        func shot(_ name: String) async {
+            capture(to: directory.appending(path: "\(name).png"), popovers: true)
+            guard ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP_SCREEN"] != nil else { return }
+            // folio:not-an-action debug screenshots, outside the GIST folder
+            try? Data().write(to: directory.appending(path: "\(name).ready"))
+            try? await Task.sleep(for: .seconds(3))
+        }
+        await shot("strip-brackets")
+        for (name, step) in [("strip-range", StripStep.range(range.0, range.1)), ("strip-popover", .choose), ("strip-saved", .save)] {
+            strip = step
+            try? await Task.sleep(for: .seconds(2))
+            await shot(name)
+        }
+        strip = nil
+        NSApp.terminate(nil)
+    }
+
     func captureWebViews(to directory: URL, name: String) async {
         try? await Task.sleep(for: .seconds(2))
         func webViews(in view: NSView) -> [WKWebView] { (view as? WKWebView).map { [$0] } ?? view.subviews.flatMap(webViews) }
@@ -222,14 +264,32 @@ final class SnapshotDriver {
         try? rep.representation(using: .png, properties: [:])?.write(to: url)
     }
 
-    func capture(to url: URL) {
-        let window = NSApp.windows.first { $0.isVisible && $0.sheetParent == nil }
+    /// `popovers` also draws the app's popovers over the window where they stand: each is a window of its own, which
+    /// drawing the main window leaves out.
+    func capture(to url: URL, popovers: Bool = false) {
+        let window = NSApp.windows.first { $0.isVisible && $0.sheetParent == nil && !$0.isPopover }
         // The main window's frame view, so the window's buttons are in the picture too; a sheet is its content alone.
-        guard let view = window?.attachedSheet?.contentView ?? window?.contentView?.superview,
+        guard let window, let view = window.attachedSheet?.contentView ?? window.contentView?.superview,
               let rep = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }
         view.cacheDisplay(in: view.bounds, to: rep)
+        if popovers, window.attachedSheet == nil, let context = NSGraphicsContext(bitmapImageRep: rep) {
+            NSGraphicsContext.saveGraphicsState()
+            NSGraphicsContext.current = context
+            for popover in NSApp.windows where popover.isVisible && popover.isPopover {
+                guard let content = popover.contentView?.superview ?? popover.contentView,
+                      let drawn = content.bitmapImageRepForCachingDisplay(in: content.bounds) else { continue }
+                content.cacheDisplay(in: content.bounds, to: drawn)
+                let origin = NSPoint(x: popover.frame.minX - window.frame.minX, y: popover.frame.minY - window.frame.minY)
+                drawn.draw(in: NSRect(origin: origin, size: content.bounds.size), from: .zero, operation: .sourceOver, fraction: 1,
+                           respectFlipped: true, hints: nil)
+            }
+            NSGraphicsContext.restoreGraphicsState()
+        }
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? rep.representation(using: .png, properties: [:])?.write(to: url)
     }
+}
+extension NSWindow {
+    fileprivate var isPopover: Bool { className.contains("Popover") }
 }
 #endif

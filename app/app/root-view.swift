@@ -230,6 +230,13 @@ struct RootView: View {
                                          paused: SnapshotDriver.recordingPaused, level: SnapshotDriver.recordingLevel)
             }
             let ids = workspace.currentCourses.map(\.id)
+            // The first lecture file some class names pages of.
+            if SnapshotDriver.strip != nil, let lecture = workspace.currentCourses.lazy.compactMap({ c in
+                c.file.lectureFiles.first { m in c.file.sessions.contains { $0.materials.contains { $0.materialId == m.id && $0.pages != nil } } }
+            }).first {
+                await SnapshotDriver.shared.runStrip(open: { open($0) }, lecture: AppLink(.material, lecture.id))
+                return
+            }
             if SnapshotDriver.tabs > 1 {
                 // Tabs of every kind behind the first, which the walk below then moves through.
                 let notes = workspace.currentCourses.compactMap { c in c.file.notes.first.map { AppLink(.note, $0.id) } }
