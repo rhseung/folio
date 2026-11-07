@@ -270,7 +270,7 @@ Me/GIST/
 - 시험 일정: `import exams <exams.json>`. `exams.json`은 구글 캘린더 "시험" 캘린더에서 읽은 `CalendarExam` 목록이며 저장소에 넣지 않는다. 같은 날 시험은 빈 칸만 채우고, 다른 날이면 바꾸지 않고 알린다
 - 단원: `import units <units.json>...`. 과목마다 `{"course": <과목 폴더 이름>, "units": [{"title", "sessions": ["11-03"], "children"}]}`. 제목으로 맞춰 없는 단원만 더하고 회차 연결은 더하기만 한다
 - 예전 녹음 이름: `recording retitle [<과목>]`. 회차에 연결된 녹음 중 파일 이름이 `3주차-1.m4a`인 것만 수업 날짜(`11-03(화).m4a`)로 바꾸고 받아쓰기도 함께 옮긴다. 이동은 `moves.jsonl`의 한 묶음이고 `cleanup undo`가 파일과 `course.json`의 녹음 경로를 함께 되돌린다. 실제 GIST 폴더에는 사용자 승인 뒤에만 돌린다
-- 렉처 진도: `session progress <과목>/<회차> <자료>:<시작>-<끝>...`. 적은 자료의 쪽을 한 번에 회차에 연결하고 나머지 연결은 그대로 둔다. 앱은 녹음을 멈출 때 지난 수업이 끝난 다음 쪽부터 녹음 중 본 가장 뒤 쪽까지로 미리 채워 묻는다(`CourseFile.suggestedProgress`)
+- 렉처 진도: `session progress <과목>/<회차> <자료>:<시작>-<끝>...`. 적은 자료의 쪽을 한 번에 회차에 연결하고 나머지 연결은 그대로 둔다. 앱은 녹음을 멈출 때 지난 수업이 끝난 다음 쪽부터 녹음 중 본 가장 뒤 쪽까지로 미리 채워 묻는다(`CourseFile.suggestedProgress`). 녹음이 끝나도 앱은 본 쪽을 회차에 저절로 연결하지 않는다. 그 시트가 회차 진도를 쓰는 유일한 곳이라, 저장하지 않고 닫으면 진도는 비고 본 쪽은 녹음(`recordings[].pages`)에만 남아 나중에 회차 메뉴로 다시 열 때 같은 값으로 채운다. `session link-viewed`는 CLI와 MCP용으로 남는다. 자료 연결 팝오버에서 렉처를 회차에 새로 연결해도 같은 규칙으로 시작 쪽을 채운다(`CourseFile.suggestedLink`).
 - 시험 범위: `exam scope <과목>/<시험> --taught`. 그 시험 전에 지난 회차에 연결된 단원(과 상위 단원)을 범위에 더한다. 빼지는 않는다
 - 졸업 요건과 학생 정보: `import requirements <requirements.json>`. 학사편람 분류 표: `import handbook <handbook.json> [--accept]`. 두 파일 모두 실제 학업 데이터라 저장소에 넣지 않는다
 - 예전 회차 노트 이름: `note retitle [<과목>]`. 회차에 연결된 노트 중 이름이 `10주차-2`, `10주차-2 정리`인 것만 날짜와 주제 이름으로 바꾸고, 템플릿이 쓴 첫 제목과 과목 노트의 제목 링크(`[[10주차-2]]`), 모든 과목 노트에서 옛 이름을 보이던 ID 링크(`[[note:<ID>|10주차-2]]`)의 이름도 따라 바꾼다. 다른 이름을 붙인 ID 링크는 그대로 둔다. 이동은 `moves.jsonl`의 한 묶음이고 `cleanup undo`가 이름, 제목, 링크를 함께 되돌린다

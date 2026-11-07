@@ -346,7 +346,7 @@ struct MaterialLinksEditor: View {
         let exams = model.exams
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Space.l) {
-                if model.isLecture(materialId) { LectureProgressBlock(workspace: model.workspace, course: model.course.id, material: materialId) }
+                if model.isLecture(materialId) { LectureProgressBlock(workspace: model.workspace, course: model.course.id, material: materialId) { model.linking = nil } }
                 Block(String(localized: .materialsLinksSessions), note: String(localized: .materialsLinksSessionsNote)) {
                     Card {
                         if sessions.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .materialsLinksNoSessions)) } }
@@ -355,11 +355,13 @@ struct MaterialLinksEditor: View {
                             CardRow(last: i == sessions.count - 1) {
                                 CheckCircle(on: link != nil) { model.link(materialId, session: s.id, linked: link == nil) }
                                 Text(model.sessionTitle(s)).lineLimit(1)
-                                Spacer()
+                                Spacer(minLength: Theme.Space.s)
                                 if let link {
-                                    pageField(String(localized: .materialsLinksFirstPage), link.firstPage) { model.setPages(materialId, session: s.id, $0, link.lastPage) }
-                                    Text("–").foregroundStyle(Theme.Palette.textTertiary)
-                                    pageField(String(localized: .materialsLinksLastPage), link.lastPage) { model.setPages(materialId, session: s.id, link.firstPage, $0) }
+                                    PageRangeField(range: link.pageRange, pages: model.pageCounts[materialId],
+                                                   taught: model.taught(materialId, besides: s.id), seen: model.seen(materialId, in: s),
+                                                   compact: true) {
+                                        model.setPages(materialId, session: s.id, $0)
+                                    }
                                 }
                             }
                         }
@@ -406,10 +408,7 @@ struct MaterialLinksEditor: View {
         .frame(width: 440, height: 480)
         .background(Theme.Palette.page)
         .font(Theme.Typeface.body)
-    }
-
-    func pageField(_ prompt: String, _ value: Int?, set: @escaping (Int?) -> Void) -> some View {
-        PageField(prompt: prompt, value: value, set: set)
+        .task(id: materialId) { await model.loadPageCount(materialId) }
     }
 }
 

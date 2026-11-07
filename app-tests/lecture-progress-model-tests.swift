@@ -60,17 +60,50 @@ struct LectureProgressModelTests {
         model.add(slides.id)
         #expect(model.rows == [.init(id: slides.id, first: 1, last: nil)])
         #expect(model.refusal == String(localized: .sessionsProgressMissingPages("05_Matchings.pdf")))
-        model.setLast(slides.id, 4)
+        model.setRange(slides.id, PageRange(first: 1, last: 4))
         #expect(model.refusal == nil)
-        // The rules' own refusal: an end before the start.
-        model.setFirst(slides.id, 9)
-        #expect(model.refusal != nil)
         model.toggle(slides.id)
         #expect(model.refusal == String(localized: .sessionsProgressNothing))
         model.toggle(slides.id)
-        model.setFirst(slides.id, 2)
+        model.setRange(slides.id, PageRange(first: 2, last: 4))
         model.record()
         #expect(links(session) == [SessionMaterial(materialId: slides.id, firstPage: 2, lastPage: 4)])
+    }
+
+    /// The prompt is the one writer of a class's progress: dismissed unsaved, the class stays without pages, and
+    /// opening it again from the class's menu fills the same pages from the recording, not the recording's first.
+    @Test func aPromptDismissedAndOpenedAgainStartsAfterTheLastClass() throws {
+        workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: earlier, firstPage: 1, lastPage: 6))
+        let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a", duration: 600,
+                                  pages: [PageVisit(at: 0, materialId: slides.id, page: 6), PageVisit(at: 100, materialId: slides.id, page: 11)])
+        let ctx = ActionContext(gist: try #require(workspace.gist), device: workspace.device, now: workspace.now)
+        try ctx.edit(graphTheory) { $0.recordings = [recording] }
+        workspace.reload()
+        #expect(links(session).isEmpty)
+
+        let model = SessionProgressModel(workspace: workspace, course: graphTheory, session: session)
+        #expect(model.rows == [.init(id: slides.id, first: 7, last: 11)])
+        #expect(model.note == String(localized: .sessionsProgressFromRecording))
+    }
+
+    @Test func aRangeFromTheFieldIsKeptAsIs() throws {
+        let model = SessionProgressModel(workspace: workspace, course: graphTheory, session: session)
+        model.add(slides.id)
+        model.setRange(slides.id, PageRange(first: 9, last: 9))
+        #expect(model.rows == [.init(id: slides.id, first: 9, last: 9)])
+    }
+
+    // MARK: The links popover
+
+    @Test func aLectureLinkedToAClassStartsAfterTheLastOne() throws {
+        let materials = MaterialsModel(workspace: workspace, course: try #require(workspace.course(graphTheory)))
+        // No class has reached the file: linked without pages, the whole file.
+        materials.link(slides.id, session: earlier, linked: true)
+        #expect(links(earlier) == [SessionMaterial(materialId: slides.id)])
+        materials.setPages(slides.id, session: earlier, PageRange(first: 1, last: 8))
+        #expect(links(earlier) == [SessionMaterial(materialId: slides.id, firstPage: 1, lastPage: 8)])
+        materials.link(slides.id, session: session, linked: true)
+        #expect(links(session) == [SessionMaterial(materialId: slides.id, firstPage: 9)])
     }
 
     // MARK: A file's progress
@@ -84,7 +117,9 @@ struct LectureProgressModelTests {
         let model = LectureProgressModel(workspace: workspace, course: graphTheory, material: slides.id)
         let days = [earlier, session].map { id in file.day(of: file.sessions.first { $0.id == id }!, calendar: workspace.calendar) }
         #expect(model.rows.map(\.pages) == ["p.1–3", "p.4–5"])
-        #expect(model.rows.map(\.classes) == days)
+        #expect(model.rows.map { $0.classes.map(\.day) } == days.map { [$0] })
+        // A class's day opens that class.
+        #expect(model.rows.map { $0.classes.map(\.link) } == [[AppLink(.session, earlier)], [AppLink(.session, session)]])
         #expect(model.summary == String(localized: .materialsProgressCovered(5)))
         #expect(model.unranged == nil)
     }

@@ -248,12 +248,34 @@ final class MaterialsModel {
 
     func sessionTitle(_ s: Session) -> String { course.file.title(of: s, calendar: workspace.calendar) }
 
+    /// A lecture newly linked to a class starts where the end-of-class prompt would: after the last class's pages.
     func link(_ material: UUID, session: UUID, linked: Bool) {
-        workspace.run(MaterialLinkSession(course: course.id, material: material, session: session, linked: linked))
+        let s = course.file.sessions.first { $0.id == session }
+        let start = linked && isLecture(material) ? s.map { course.file.suggestedLink(of: material, for: $0, pageCount: pageCounts[material]) } : nil
+        workspace.run(MaterialLinkSession(course: course.id, material: material, session: session, linked: linked,
+                                          firstPage: start?.firstPage, lastPage: start?.lastPage))
     }
 
-    func setPages(_ material: UUID, session: UUID, _ first: Int?, _ last: Int?) {
-        workspace.run(MaterialLinkSession(course: course.id, material: material, session: session, firstPage: first, lastPage: last))
+    func taught(_ material: UUID, besides session: UUID) -> [PageRangeField.Taught] {
+        PageRangeField.Taught.list(course.file, material: material, besides: session, calendar: workspace.calendar)
+    }
+
+    func seen(_ material: UUID, in session: Session) -> ClosedRange<Int>? {
+        course.file.viewedPages(of: session).first { $0.materialId == material }?.pages
+    }
+
+    func setPages(_ material: UUID, session: UUID, _ range: PageRange) {
+        workspace.run(MaterialLinkSession(course: course.id, material: material, session: session, firstPage: range.first, lastPage: range.last))
+    }
+
+    /// PDF page counts read so far, which bound the page fields. Read when the links open, not for the whole list:
+    /// each read may download the file from iCloud.
+    private(set) var pageCounts: [UUID: Int] = [:]
+
+    func loadPageCount(_ material: UUID) async {
+        guard pageCounts[material] == nil, let m = materials.first(where: { $0.id == material }),
+              let n = await workspace.pageCount(of: m, course: course.id) else { return }
+        pageCounts[material] = n
     }
 
     // MARK: Lecture progress

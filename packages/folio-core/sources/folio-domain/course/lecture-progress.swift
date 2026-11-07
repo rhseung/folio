@@ -14,7 +14,77 @@ public struct LectureSpan: Equatable, Sendable {
     }
 }
 
+/// A start and an end page edited together, either one possibly empty. Every move keeps both within the file and
+/// the start at or before the end: moving one end past the other pushes it along, so a one-page range is reachable
+/// from either side and the range never runs backwards.
+public struct PageRange: Equatable, Sendable {
+    public enum End: Sendable { case first, last }
+
+    public var first: Int?
+    public var last: Int?
+
+    public init(first: Int? = nil, last: Int? = nil) {
+        self.first = first
+        self.last = last
+    }
+
+    /// Pages a field may take: the file's, or any page while its count isn't known yet.
+    public static func bounds(_ pages: Int?) -> ClosedRange<Int> { 1...max(pages ?? 9_999, 1) }
+
+    public subscript(end: End) -> Int? { end == .first ? first : last }
+
+    /// `end` moved to `page` (nil empties it), kept within 1…`pages`; the other end is pushed along past it. The
+    /// other end is also brought into the file, for a count learned after it was set.
+    public func moving(_ end: End, to page: Int?, pages: Int?) -> PageRange {
+        let bounds = Self.bounds(pages)
+        let clamp = { (p: Int) in min(max(p, bounds.lowerBound), bounds.upperBound) }
+        let moved = page.map(clamp)
+        switch end {
+        case .first: return PageRange(first: moved, last: last.map { max(clamp($0), moved ?? $0) })
+        case .last: return PageRange(first: first.map { min(clamp($0), moved ?? $0) }, last: moved)
+        }
+    }
+
+    /// A tap on `page` of the file's bar. A missing end is filled first, so a range set by taps never keeps one end
+    /// empty for good; with both set, the nearer end comes to the page (the start on a tie, `moving` doing the push).
+    public func tapping(_ page: Int, pages: Int?) -> PageRange {
+        switch (first, last) {
+        case (nil, nil): return moving(.first, to: page, pages: pages).moving(.last, to: page, pages: pages)
+        case let (f?, nil): return page >= f ? moving(.last, to: page, pages: pages) : PageRange(first: page, last: f).moving(.first, to: page, pages: pages)
+        case let (nil, l?): return page <= l ? moving(.first, to: page, pages: pages) : PageRange(first: l, last: page).moving(.last, to: page, pages: pages)
+        case let (f?, l?): return moving(abs(page - f) <= abs(page - l) ? .first : .last, to: page, pages: pages)
+        }
+    }
+
+    /// The whole range moved `pages` later (earlier when negative), its length kept and stopped at the file's ends.
+    /// A range missing an end has no length to keep and stays where it is.
+    public func shifted(by delta: Int, pages: Int?) -> PageRange {
+        guard let f = first, let l = last else { return self }
+        let bounds = Self.bounds(pages)
+        let length = min(l - f, bounds.upperBound - bounds.lowerBound)
+        let start = min(max(f + delta, bounds.lowerBound), bounds.upperBound - length)
+        return PageRange(first: start, last: start + length)
+    }
+
+    /// `end` rests against a bound of the file or against the other end: where a drag stops giving, and a firmer
+    /// tick tells so.
+    public func touches(_ end: End, pages: Int?) -> Bool {
+        guard let page = self[end] else { return false }
+        let bounds = Self.bounds(pages)
+        let other = end == .first ? last : first
+        return page == bounds.lowerBound || (pages != nil && page == bounds.upperBound) || page == other
+    }
+}
+
 extension SessionMaterial {
+    public var pageRange: PageRange {
+        get { PageRange(first: firstPage, last: lastPage) }
+        set {
+            firstPage = newValue.first
+            lastPage = newValue.last
+        }
+    }
+
     /// One bound alone is that one page: a class that only says where it stopped still covered that page.
     public var pages: ClosedRange<Int>? {
         guard let a = firstPage ?? lastPage, let b = lastPage ?? firstPage else { return nil }
@@ -49,6 +119,12 @@ extension CourseFile {
         return spans
     }
 
+    /// The pages each other class took through `material`, in class order: what a page bar lays under the class being
+    /// edited.
+    public func pagesTaught(in material: UUID, besides session: UUID) -> [(session: Session, pages: ClosedRange<Int>)] {
+        coverage(of: material).filter { $0.session.id != session }
+    }
+
     /// Classes linked to the file without pages: they used it, but nothing says which part.
     public func unrangedSessions(of material: UUID) -> [Session] {
         sessionLinks(of: material).filter { !$0.session.isCancelled && $0.link.pages == nil }.map(\.session)
@@ -69,23 +145,57 @@ extension CourseFile {
         for range in viewed where !files.contains(range.materialId) { files.append(range.materialId) }
         if files.isEmpty, let next = continuingFile(before: session, pageCounts: pageCounts) { files = [next] }
         return files.map { id in
-            let saved = session.materials.first { $0.materialId == id }
-            let seen = viewed.first { $0.materialId == id }
-            var last = saved?.lastPage ?? seen?.lastPage
-            var first: Int
-            if let given = saved?.firstPage {
-                first = given
-            } else {
-                first = resumePage(of: id, for: session) ?? 1
-                // The class only went back over pages covered before (a recap): those pages, not an empty range.
-                if let end = last, first > end { first = min(seen?.firstPage ?? end, end) }
-            }
-            if let count = pageCounts[id] {
-                first = min(first, count)
-                last = last.map { min($0, count) }
-            }
-            return SessionMaterial(materialId: id, firstPage: first, lastPage: last)
+            suggestedRange(of: id, for: session, seen: viewed.first { $0.materialId == id }, pageCount: pageCounts[id])
         }
+    }
+
+    /// The pages a new link of `material` to `session` starts with, by the prompt's rule. Without pages when nothing
+    /// says where the class was (no earlier class reached the file, no recording saw it): a link without pages is the
+    /// whole file, where a start alone would be one page.
+    public func suggestedLink(of material: UUID, for session: Session, pageCount: Int?) -> SessionMaterial {
+        let seen = viewedPages(of: session).first { $0.materialId == material }
+        guard seen != nil || resumePage(of: material, for: session) != nil else { return SessionMaterial(materialId: material) }
+        return suggestedRange(of: material, for: session, seen: seen, pageCount: pageCount)
+    }
+
+    /// What the session's recordings saw, one range per file across all of them. Only the recordings keep these
+    /// until the prompt is saved, so a prompt opened again later starts from them. `stopped` is a recording that has
+    /// just ended and isn't saved to the course yet: the prompt it raises has to see the same pages a reopened one will.
+    public func viewedPages(of session: Session, including stopped: Recording? = nil) -> [SessionMaterial] {
+        var ranges: [SessionMaterial] = []
+        let saved = recordings.filter { $0.sessionId == session.id && $0.id != stopped?.id }
+        for recording in saved + [stopped].compactMap({ $0 }) {
+            for seen in recording.viewedPages() {
+                guard let pages = seen.pages else { continue }
+                if let i = ranges.firstIndex(where: { $0.materialId == seen.materialId }), let had = ranges[i].pages {
+                    ranges[i].firstPage = min(had.lowerBound, pages.lowerBound)
+                    ranges[i].lastPage = max(had.upperBound, pages.upperBound)
+                } else {
+                    ranges.append(SessionMaterial(materialId: seen.materialId, firstPage: pages.lowerBound, lastPage: pages.upperBound))
+                }
+            }
+        }
+        return ranges
+    }
+
+    /// The prompt's rule for one file: pages saved for the session stay; otherwise from the page after the last
+    /// class's to the furthest page `seen` while recording.
+    public func suggestedRange(of id: UUID, for session: Session, seen: SessionMaterial?, pageCount: Int?) -> SessionMaterial {
+        let saved = session.materials.first { $0.materialId == id }
+        var last = saved?.lastPage ?? seen?.lastPage
+        var first: Int
+        if let given = saved?.firstPage {
+            first = given
+        } else {
+            first = resumePage(of: id, for: session) ?? 1
+            // The class only went back over pages covered before (a recap): those pages, not an empty range.
+            if let end = last, first > end { first = min(seen?.firstPage ?? end, end) }
+        }
+        if let count = pageCount {
+            first = min(first, count)
+            last = last.map { min($0, count) }
+        }
+        return SessionMaterial(materialId: id, firstPage: first, lastPage: last)
     }
 
     /// The file the most recent ranged class before `session` stopped in. Once its count says the class reached the
