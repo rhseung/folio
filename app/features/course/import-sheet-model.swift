@@ -43,7 +43,7 @@ final class ImportPlaceModel {
         self.places = places
         let sessions = course.file.sessions
         rows = files.enumerated().map { i, url in
-            let guess = MaterialIntake.guess(Self.incoming(url), places: places, sessions: sessions, now: workspace.now,
+            let guess = MaterialIntake.guess(Self.incoming(url), places: places, sessions: sessions, exams: course.file.exams, now: workspace.now,
                                              settings: workspace.settings, calendar: workspace.calendar)
             return Row(id: i, url: url, guess: guess, folder: guess.folder, session: guess.session)
         }

@@ -25,9 +25,16 @@ struct MaterialIntakeTests {
     static let sessions = [session(week: 4, day: 22), session(week: 4, day: 24), session(week: 5, day: 29), session(week: 5, day: 31, hour: 19),
                            session(week: 6, day: 36)]
 
-    func guess(_ name: String, pages: Int? = nil, landscape: Bool = false, settings: Settings = Settings()) -> IntakeGuess {
-        MaterialIntake.guess(IncomingFile(name: name, pages: pages, landscape: landscape), places: Self.places, sessions: Self.sessions,
-                             now: Self.now, settings: settings, calendar: Self.calendar)
+    static func day(_ month: Int, _ day: Int) -> Date { calendar.date(from: DateComponents(year: 2026, month: month, day: day, hour: 10))! }
+
+    /// Added final first, as when both are set up at the start of term: the order they are stored in says nothing.
+    static let exams = [Exam(device: device, at: now, title: "기말고사", start: day(12, 15), folder: "기말고사"),
+                        Exam(device: device, at: now, title: "중간고사", start: day(10, 20), folder: "중간고사")]
+
+    func guess(_ name: String, pages: Int? = nil, landscape: Bool = false, settings: Settings = Settings(), exams: [Exam] = Self.exams,
+               now: Date = Self.now) -> IntakeGuess {
+        MaterialIntake.guess(IncomingFile(name: name, pages: pages, landscape: landscape), places: Self.places, sessions: Self.sessions, exams: exams,
+                             now: now, settings: settings, calendar: Self.calendar)
     }
 
     @Test func aWeekInTheNameIsALectureForThatWeek() {
@@ -54,13 +61,27 @@ struct MaterialIntakeTests {
     @Test func namesPointAtTheirFolders() {
         #expect(guess("HW3.pdf") == IntakeGuess(folder: "Assignments/HW03", why: .named("HW3")))
         #expect(guess("gt_hw_2_solution.pdf").folder == "Assignments/HW02")
-        #expect(guess("Lab 2 manual.pdf").folder == "Assignments/Lab02")
+        // The report is the student's; the manual is the professor's handout for that class, so it is a lecture file.
+        #expect(guess("Lab 2 report.pdf").folder == "Assignments/Lab02")
+        #expect(guess("Lab 2 manual.pdf") == IntakeGuess(folder: "Lectures", why: .named("manual"), session: Self.sessions[3].id, sessionWhy: .today))
+        #expect(guess("실험 안내 3.pdf").folder == "Lectures")
         // No HW09 folder to put it in: the sheet can't make one, so the name says nothing.
         #expect(guess("HW9.pdf").folder == "Lectures" && guess("HW9.pdf").why == nil)
         #expect(guess("2024 중간고사 기출.pdf") == IntakeGuess(folder: "Inherited", why: .named("기출")))
         #expect(guess("GT_Syllabus_2026.pdf").folder == "Syllabus")
         #expect(guess("Midterm seating.pdf").folder == "Exams/중간고사")
         #expect(guess("기말 자리 배치.pdf").folder == "Exams/기말고사")
+    }
+
+    /// A notice that names no exam goes to the next one by date, not the one added last.
+    @Test func anUnnamedExamNoticeGoesToTheNextExam() {
+        #expect(guess("seating.pdf").folder == "Exams/중간고사")
+        #expect(guess("seating.pdf", now: Self.day(11, 2)).folder == "Exams/기말고사")
+        // Both past: the latest.
+        #expect(guess("시험 안내.pdf", now: Self.day(12, 20)).folder == "Exams/기말고사")
+        // Without dates nothing says which is coming, so no guess.
+        let undated = Self.exams.map { var e = $0; e.start = nil; return e }
+        #expect(guess("seating.pdf", exams: undated).why == nil)
         #expect(guess("Introduction to Graph Theory.pdf").folder == "Textbooks")
         #expect(guess("Exercise 3.pdf").folder == "Exercises")
     }
@@ -96,13 +117,14 @@ struct MaterialIntakeTests {
     // MARK: Properties
 
     static let names = Gen.element(of: ["05_Slides.pdf", "05-2_Hall.pdf", "HW3.pdf", "hw 12.pdf", "Lecture 12.pdf", "기출.pdf", "notes", "Lab 2.pdf",
-                                        "7주차.pdf", "Final seating.pdf", "crisp 2.pdf", "select 3.pdf", "", "5_x.pdf", "syllabus.pdf"]).map { $0! }
+                                        "7주차.pdf", "Final seating.pdf", "seating.pdf", "Lab 2 manual.pdf", "crisp 2.pdf", "select 3.pdf", "", "5_x.pdf", "syllabus.pdf"]).map { $0! }
 
     @Test func aGuessStaysAmongTheOfferedFoldersAndHeldClasses() async {
         await propertyCheck(input: Self.names, Gen.int(in: 1...600).optional, Gen.bool(), Gen.int(in: 0...(30 * 86_400)),
                             Gen.int(in: 0...(8 * 60))) { name, pages, landscape, offset, boundary in
             let sessions = Self.sessions.enumerated().map { i, s in i == 1 ? Self.session(week: s.week, day: 24, cancelled: true) : s }
             let g = MaterialIntake.guess(IncomingFile(name: name, pages: pages, landscape: landscape), places: Self.places, sessions: sessions,
+                                         exams: Self.exams,
                                          now: Self.now.addingTimeInterval(Double(offset) - 15 * 86_400),
                                          settings: Settings(dayBoundaryMinutes: boundary), calendar: Self.calendar)
             #expect(g.folder == "Lectures" || Self.places.contains(g.folder))

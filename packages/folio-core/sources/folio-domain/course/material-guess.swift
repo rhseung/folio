@@ -58,7 +58,7 @@ public struct IntakeGuess: Equatable, Sendable {
 extension MaterialIntake {
     /// Read in order, the first that matches wins: a name says more than a page count, and `05_` more than any word.
     /// `places` are the folders the sheet offers besides `Lectures`; a guess never points elsewhere.
-    public static func guess(_ file: IncomingFile, places: [String], sessions: [Session], now: Date, settings: Settings,
+    public static func guess(_ file: IncomingFile, places: [String], sessions: [Session], exams: [Exam] = [], now: Date, settings: Settings,
                              calendar: Calendar) -> IntakeGuess {
         let name = file.name.precomposedStringWithCanonicalMapping
         let lower = name.lowercased()
@@ -72,6 +72,11 @@ extension MaterialIntake {
         if let m = name.firstMatch(of: /^(\d{2})(?:-\d+)?_/), StandardLayout.isLectureFileName(name) {
             return lecture(.named(String(m.0)), Int(m.1))
         }
+        // A lab manual is the professor's handout for that class, so it is a lecture file; only the report the student
+        // writes goes in `Assignments/Lab03`. Read before the assignment words, which `Lab 3 manual` also matches.
+        if let m = name.firstMatch(of: /manual|매뉴얼|메뉴얼|실험[\s_-]?안내/.ignoresCase()) {
+            return lecture(.named(String(m.0)), week(in: name)?.week)
+        }
         if let (folder, words) = assignment(in: name, places: places) {
             return IntakeGuess(folder: folder, why: .named(words))
         }
@@ -81,7 +86,7 @@ extension MaterialIntake {
         if let word = Keywords.syllabus.first(where: lower.contains), let folder = offered(.syllabus) {
             return IntakeGuess(folder: folder, why: .named(word))
         }
-        if let word = Keywords.examFiles.flatMap(\.words).first(where: lower.contains), let folder = examFolder(for: lower, places: places) {
+        if let word = Keywords.examFiles.flatMap(\.words).first(where: lower.contains), let folder = examFolder(for: lower, places: places, exams: exams, now: now) {
             return IntakeGuess(folder: folder, why: .named(word))
         }
         if let word = Keywords.textbook.first(where: lower.contains), let folder = offered(.textbooks) {
@@ -131,12 +136,17 @@ extension MaterialIntake {
         return (folder, String(m.1))
     }
 
-    /// The exam folder a seating chart or exam notice belongs to: the one its name says (midterm, final), else the
-    /// latest, which is the one coming up.
-    static func examFolder(for lower: String, places: [String]) -> String? {
-        let exams = places.filter { $0.hasPrefix(CourseFolder.exams.rawValue + "/") }
-        let said = { (word: Regex<Substring>) in lower.contains(word) ? exams.first { $0.lowercased().contains(word) } : nil }
-        return said(Keywords.midterm) ?? said(Keywords.final) ?? exams.last
+    /// The exam folder a seating chart or exam notice belongs to: the one its name says (midterm, final), else the next
+    /// exam by date, else the latest past one. Exams are stored in the order they were added, which says nothing about
+    /// which comes up, so without dates there is no guess.
+    static func examFolder(for lower: String, places: [String], exams: [Exam], now: Date) -> String? {
+        let offered = exams.compactMap { e in folder(of: e).flatMap { places.contains($0) ? (exam: e, folder: $0) : nil } }
+        let said = { (word: Regex<Substring>) in
+            lower.contains(word) ? offered.first { $0.folder.lowercased().contains(word) || $0.exam.title.lowercased().contains(word) }?.folder : nil
+        }
+        if let folder = said(Keywords.midterm) ?? said(Keywords.final) { return folder }
+        let dated = offered.compactMap { o in o.exam.start.map { (start: $0, folder: o.folder) } }.sorted { $0.start < $1.start }
+        return (dated.first { $0.start >= now } ?? dated.last)?.folder
     }
 
     /// The class a lecture file is for. Slides often come before the class, so one later today counts as today's.
