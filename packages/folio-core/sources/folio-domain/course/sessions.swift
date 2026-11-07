@@ -72,11 +72,20 @@ public struct Session: Entity {
     private var reviewNoteDraft: Bool?
     // Same again: only a cancelled class carries the key.
     private var cancelled: Bool?
+    // And again: only a class whose wrap-up was saved carries it.
+    private var wrappedUp: Bool?
 
     /// The class didn't happen (a holiday, 휴강): it stays as a session but counts toward no attendance or review.
     public var isCancelled: Bool {
         get { cancelled ?? false }
         set { cancelled = newValue ? true : nil }
+    }
+
+    /// The class's wrap-up was saved: what it left empty was left so on purpose, and present needs no entry of its
+    /// own, so without this a class attended in person would be asked about forever.
+    public var isWrappedUp: Bool {
+        get { wrappedUp ?? false }
+        set { wrappedUp = newValue ? true : nil }
     }
 
     /// A class that covered nothing new (only grading, say): no review note is asked of it, and it doesn't restart

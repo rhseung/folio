@@ -42,8 +42,8 @@ final class Workspace {
     /// Recordings being compressed into their course folder; each runs once even when a reload asks again.
     var finishingRecordings = Set<UUID>()
     /// The class whose recording just stopped, until a window asks how far it went.
-    var progressAsk: SessionProgressAsk?
-    /// A lecture whose split screen was asked for from elsewhere (the progress sheet's "단원으로 나누기"); the file view
+    var wrapUpAsk: ClassWrapUpAsk?
+    /// A lecture whose split screen was asked for from elsewhere (the wrap-up sheet's "단원으로 나누기"); the file view
     /// that opens it takes it.
     var splitAsk: UUID?
     @ObservationIgnored var recoveryTried = Set<UUID>()

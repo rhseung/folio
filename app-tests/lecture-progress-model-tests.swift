@@ -30,32 +30,43 @@ struct LectureProgressModelTests {
         workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: earlier, firstPage: 1, lastPage: 6))
         let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a", duration: 600,
                                   pages: [PageVisit(at: 0, materialId: slides.id, page: 6), PageVisit(at: 100, materialId: slides.id, page: 11)])
-        workspace.askProgress(after: recording, course: graphTheory)
-        let ask = try #require(workspace.progressAsk)
+        workspace.askWrapUp(after: recording, course: graphTheory)
+        let ask = try #require(workspace.wrapUpAsk)
         #expect(ask.session == session && ask.viewed == [SessionMaterial(materialId: slides.id, firstPage: 6, lastPage: 11)])
 
-        let model = SessionProgressModel(workspace: workspace, course: graphTheory, session: session, viewed: ask.viewed)
+        let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session, viewed: ask.viewed)
         #expect(model.rows == [.init(id: slides.id, first: 7, last: 11)])
         #expect(model.detail(slides.id).hasPrefix("지난 수업 6쪽까지 · 녹음 중 6–11쪽"))
         #expect(model.refusal == nil && model.note == String(localized: .sessionsProgressFromRecording))
-        model.record()
+        model.wrapUp()
         #expect(links(session) == [SessionMaterial(materialId: slides.id, firstPage: 7, lastPage: 11)])
     }
 
-    @Test func aRecordingWithoutASessionOrLecturesAsksNothing() throws {
-        workspace.askProgress(after: Recording(device: workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a"), course: graphTheory)
-        #expect(workspace.progressAsk == nil)
+    /// A recording without a class has nothing to wrap up. A course without lecture files still has a topic, units
+    /// and a note to ask about; a class wrapped up with nothing missing isn't asked again.
+    @Test func aRecordingAsksUnlessItsClassHasNothingLeft() throws {
+        workspace.askWrapUp(after: Recording(device: workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a"), course: graphTheory)
+        #expect(workspace.wrapUpAsk == nil)
         // Linear algebra's files aren't tracked in the fixture, so it has no lecture files yet.
         let linearAlgebra = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
         let other = try #require(workspace.run(SessionAdd(course: linearAlgebra, date: .now.addingTimeInterval(-200 * 86_400)))?.made)
-        workspace.askProgress(after: Recording(device: workspace.device, at: .now, sessionId: other, file: "Recordings/a.m4a"), course: linearAlgebra)
-        #expect(workspace.progressAsk == nil)
+        let recording = Recording(device: workspace.device, at: .now, sessionId: other, file: "Recordings/a.m4a")
+        workspace.askWrapUp(after: recording, course: linearAlgebra)
+        #expect(workspace.wrapUpAsk?.session == other)
+        workspace.wrapUpAsk = nil
+
+        let unit = try #require(workspace.run(UnitAdd(course: linearAlgebra, title: "행렬식"))?.made)
+        workspace.run(SessionWrapUp(course: linearAlgebra, session: other, ranges: [], units: [unit], topic: "행렬식", attendance: .present))
+        _ = workspace.note(.rough, of: other, in: linearAlgebra)
+        workspace.askWrapUp(after: recording, course: linearAlgebra)
+        #expect(workspace.wrapUpAsk == nil)
     }
 
     @Test func aKeptFileNeedsBothPagesAndOnlyKeptFilesAreSaved() throws {
-        let model = SessionProgressModel(workspace: workspace, course: graphTheory, session: session)
+        let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
         #expect(model.rows.isEmpty)
-        #expect(model.refusal == String(localized: .sessionsProgressNothing))
+        // The rest of the wrap-up can be saved without any progress.
+        #expect(model.refusal == nil)
         #expect(model.addable.map(\.id) == [slides.id])
         model.add(slides.id)
         #expect(model.rows == [.init(id: slides.id, first: 1, last: nil)])
@@ -63,10 +74,10 @@ struct LectureProgressModelTests {
         model.setRange(slides.id, PageRange(first: 1, last: 4))
         #expect(model.refusal == nil)
         model.toggle(slides.id)
-        #expect(model.refusal == String(localized: .sessionsProgressNothing))
+        #expect(model.refusal == nil)
         model.toggle(slides.id)
         model.setRange(slides.id, PageRange(first: 2, last: 4))
-        model.record()
+        model.wrapUp()
         #expect(links(session) == [SessionMaterial(materialId: slides.id, firstPage: 2, lastPage: 4)])
     }
 
@@ -81,13 +92,13 @@ struct LectureProgressModelTests {
         workspace.reload()
         #expect(links(session).isEmpty)
 
-        let model = SessionProgressModel(workspace: workspace, course: graphTheory, session: session)
+        let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
         #expect(model.rows == [.init(id: slides.id, first: 7, last: 11)])
         #expect(model.note == String(localized: .sessionsProgressFromRecording))
     }
 
     @Test func aRangeFromTheFieldIsKeptAsIs() throws {
-        let model = SessionProgressModel(workspace: workspace, course: graphTheory, session: session)
+        let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
         model.add(slides.id)
         model.setRange(slides.id, PageRange(first: 9, last: 9))
         #expect(model.rows == [.init(id: slides.id, first: 9, last: 9)])

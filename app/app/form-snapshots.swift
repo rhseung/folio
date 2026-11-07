@@ -83,7 +83,7 @@ enum FormSnapshots {
                     .frame(width: 1180, height: 720).background(Theme.Palette.card).environment(\.accent, accent))))
         }
         if let session = file.sessions.first(where: { file.splitProgress(of: $0) != nil }) {
-            forms.append(("session-progress", AnyView(SessionProgressSheet(workspace: workspace, course: course.id, session: session.id))))
+            forms.append(("class-wrap-up", AnyView(ClassWrapUpSheet(workspace: workspace, course: course.id, session: session.id))))
         }
         return forms
     }

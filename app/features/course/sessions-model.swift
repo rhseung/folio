@@ -173,6 +173,53 @@ final class SessionsModel {
         pending = workspace.ask(SessionRemove(course: courseId, sessions: untouched.map(\.id)), button: .sessionsRemove)
     }
 
+    // MARK: Classes left unwrapped
+
+    /// A run through the classes left unwrapped, one sheet after another. The list is fixed when it starts, so the
+    /// count in the sheet doesn't shift as each one saved drops out of the notice.
+    struct WrapUpRun: Identifiable {
+        let id = UUID()
+        let sessions: [UUID]
+        var index = 0
+        var current: UUID { sessions[index] }
+    }
+
+    var wrapUpRun: WrapUpRun?
+
+    /// Only the current term's courses: an old term's gaps are past mattering.
+    private func isCurrent(_ file: CourseFile) -> Bool { file.course.semesterId == workspace.currentSemester?.id }
+
+    func leftUnwrapped(_ file: CourseFile, now: Date? = nil) -> [Session] {
+        guard isCurrent(file) else { return [] }
+        return file.unwrappedPastSessions(at: now ?? workspace.now, settings: workspace.settings, calendar: calendar)
+    }
+
+    /// What the row's mark lists; empty for a class that has none.
+    func leftGaps(_ session: Session, in file: CourseFile, now: Date? = nil) -> [WrapUpItem] {
+        guard isCurrent(file), file.isLeftUnwrapped(session, at: now ?? workspace.now, settings: workspace.settings, calendar: calendar)
+        else { return [] }
+        return file.wrapUpGaps(of: session)
+    }
+
+    func gapsLine(_ gaps: [WrapUpItem]) -> String { gaps.map(\.label).joined(separator: ", ") }
+
+    func startWrapUps(_ file: CourseFile) {
+        let left = leftUnwrapped(file)
+        guard !left.isEmpty else { return }
+        wrapUpRun = WrapUpRun(sessions: left.map(\.id))
+    }
+
+    /// The next class of the run once one is saved, and the run's end after the last.
+    func wrappedUpOne() {
+        guard var run = wrapUpRun else { return }
+        run.index += 1
+        wrapUpRun = run.index < run.sessions.count ? run : nil
+    }
+
+    func step(of run: WrapUpRun) -> String? {
+        run.sessions.count > 1 ? String(localized: .wrapUpStep(run.index + 1, run.sessions.count)) : nil
+    }
+
     // MARK: A session's row
 
     func isOngoing(_ session: Session, end: Date?, now: Date) -> Bool {
@@ -225,8 +272,8 @@ final class SessionsModel {
         String(localized: count > 1 ? .sessionsRecordingCount(count) : .sessionsRecordingShort)
     }
 
-    /// Only a class held, in a course with lecture files, has progress to record.
-    func offersProgress(_ session: Session, in file: CourseFile) -> Bool { !session.isCancelled && !file.lectureFiles.isEmpty }
+    /// Once the class has begun: before it there is nothing to wrap up.
+    func offersWrapUp(_ session: Session) -> Bool { !session.isCancelled && session.date <= workspace.now }
 
     // MARK: A session's actions
 

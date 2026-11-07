@@ -161,7 +161,7 @@ struct RootView: View {
                 }
                 .toolbar { globalTools }
                 .environment(\.openLink, openLink)
-                .sessionProgressPrompt(workspace)
+                .classWrapUpPrompt(workspace)
                 #if os(iOS)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { windowWidth = $0 }
                 #endif

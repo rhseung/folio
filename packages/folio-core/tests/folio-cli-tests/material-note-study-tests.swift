@@ -75,6 +75,25 @@ struct MaterialNoteStudyTests {
         #expect(h.cli(["session", "show", "EC4207/10-28"], gist: gist).out.contains("05_Matchings.pdf p.3-12"))
     }
 
+    @Test func sessionWrapUp() throws {
+        try h.expectSame(["session", "wrap-up", "EC4207/10-28", "05_Matchings.pdf:3-12", "--unit", "매칭", "--topic", "홀의 정리", "--attendance", "late"],
+                         setup: [Self.track, SessionCommandTests.add, Self.addUnit]) { gist in
+            SessionWrapUp(course: course, session: SessionCommandTests.id,
+                          ranges: [SessionMaterial(materialId: try material(gist, "05_Matchings.pdf"), firstPage: 3, lastPage: 12)],
+                          units: [Self.unit], topic: "홀의 정리", attendance: .late)
+        }
+        // Given nothing, what the class has stays and it is only marked wrapped up.
+        let gist = try Harness.fixtureCopy()
+        for setup in [Self.track, SessionCommandTests.add, Self.addUnit] { _ = h.cli(setup, gist: gist) }
+        #expect(h.cli(["session", "wrap-up", "EC4207/10-28", "--unit", "매칭", "--attendance", "absent"], gist: gist).code == 0)
+        #expect(h.cli(["session", "wrap-up", "EC4207/10-28"], gist: gist).code == 0)
+        let f = try h.file(GISTStore(url: gist))
+        let s = try #require(f.sessions.first { $0.id == SessionCommandTests.id })
+        #expect(s.isWrappedUp)
+        #expect(s.unitIds == [Self.unit])
+        #expect(f.attendance.first { $0.sessionId == s.id }?.state == .absent)
+    }
+
     @Test func linkUnit() throws {
         try h.expectSame(["material", "link-unit", "EC4207/05_Matchings.pdf", "매칭"], setup: [Self.track, Self.addUnit]) { gist in
             MaterialLinkUnit(course: course, material: try material(gist, "05_Matchings.pdf"), unit: Self.unit, linked: true)

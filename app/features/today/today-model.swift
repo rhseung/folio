@@ -149,6 +149,32 @@ final class TodayModel {
         item.exam.start?.formatted(.dateTime.month().day().weekday().hour().minute()) ?? ""
     }
 
+    struct WrapUp: Identifiable {
+        var courseId: UUID
+        var session: Session
+        var gaps: [WrapUpItem]
+        var id: UUID { session.id }
+        var labels: [String] { gaps.map(\.label) }
+        /// The chips' words as one line, for a row too narrow for them.
+        var line: String { labels.joined(separator: " · ") }
+    }
+
+    /// Classes that ended with something missing, until their course's next class starts (`CourseFile.classesToWrapUp`).
+    func wrapUps(now: Date) -> [WrapUp] {
+        current.flatMap { course in
+            course.file.classesToWrapUp(at: now, classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar)
+                .map { WrapUp(courseId: course.id, session: $0, gaps: course.file.wrapUpGaps(of: $0)) }
+        }
+        .sorted { $0.session.date < $1.session.date }
+    }
+
+    func wrapUpName(_ item: WrapUp) -> String {
+        guard let course = workspace.course(item.courseId) else { return "" }
+        return String(localized: .todayWrapUpClass(course.title, course.file.day(of: item.session, calendar: workspace.calendar)))
+    }
+
+    var wrappingUp: WrapUp?
+
     struct EditingAssignment: Identifiable {
         var course: LoadedCourse
         var assignment: Assignment

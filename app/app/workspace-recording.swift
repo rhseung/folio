@@ -81,7 +81,7 @@ extension Workspace {
     func stopRecording() async {
         // Stopped first, whatever happens to the course: the microphone must not stay on.
         guard let id = recorder.courseId, let (recording, captions) = await recorder.stop() else { return }
-        askProgress(after: recording, course: id)
+        askWrapUp(after: recording, course: id)
         if let course = course(id) { perform { try course.store.saveTranscript(captions, of: recording) } }
         await finishRecording(PendingRecording(courseId: id, recording: recording))
     }

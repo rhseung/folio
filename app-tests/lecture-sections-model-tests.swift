@@ -143,12 +143,12 @@ struct LectureSectionsModelTests {
     @Test func theProgressBarReadsTheUnitsItReaches() throws {
         workspace.run(MaterialSplit(course: graphTheory, material: slides.id, sections: [LectureCut(unit: matching, firstPage: 3, lastPage: 8)]))
         let session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now))?.made)
-        let model = SessionProgressModel(workspace: workspace, course: graphTheory, session: session)
+        let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
         #expect(model.sections(slides.id).map(\.pages) == [1...2, 3...8])
         #expect(model.sections(slides.id).map(\.title) == ["", "매칭"])
         #expect(model.reads(slides.id)(5...12) == "매칭")
         #expect(model.reads(slides.id)(1...2) == nil)
-        #expect(!model.edited)
+        #expect(!model.changed)
 
         let units = UnitsModel(workspace: workspace, courseId: graphTheory)
         workspace.run(MaterialLinkUnit(course: graphTheory, material: slides.id, unit: matching, linked: true))

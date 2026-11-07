@@ -33,6 +33,8 @@ struct SessionsView: View {
                     .help(Text(.sessionsAddHelp))
             }
             if file.course.schedule.isEmpty { schedule }
+            let left = model.leftUnwrapped(file)
+            if !left.isEmpty { leftUnwrappedCard(left, file: file) }
             if !model.untouched.isEmpty { untouchedCard }
             ForEach(model.weeks(file)) { week in
                 VStack(alignment: .leading, spacing: Theme.Space.s) {
@@ -45,6 +47,12 @@ struct SessionsView: View {
         }
         .sheet(isPresented: $editingTimes) { ClassTimesSheet(workspace: model.workspace, course: course) }
         .sheet(isPresented: $adding) { SessionFormSheet(workspace: model.workspace, course: course) }
+        .sheet(item: $model.wrapUpRun) { run in
+            ClassWrapUpSheet(workspace: model.workspace, course: course.id, session: run.current, step: model.step(of: run),
+                             saved: model.wrappedUpOne)
+                // A new sheet model for each class: the one before's answers must not carry over.
+                .id(run.current)
+        }
         .task(id: file.sessions) { model.loadUntouched(course) }
         .confirming($model.pending)
     }
@@ -103,6 +111,27 @@ struct SessionsView: View {
     }
 
     /// Left over from when whole terms were made ahead; deleted only once the user agrees.
+    func leftUnwrappedCard(_ left: [Session], file: CourseFile) -> some View {
+        let shown = Array(left.prefix(4))
+        return NoticeCard(title: String(localized: .wrapUpLeftTitle(left.count)),
+                          detail: String(localized: .wrapUpLeftDetail),
+                          systemImage: "checklist") {
+            Button(.wrapUpLeftGo) { model.startWrapUps(file) }.buttonStyle(.pointing(.bordered))
+        } rows: {
+            ForEach(Array(shown.enumerated()), id: \.element.id) { i, s in
+                CardRow(last: i == shown.count - 1 && left.count == shown.count) {
+                    Text(file.title(of: s, calendar: model.calendar)).lineLimit(1)
+                    Spacer(minLength: Theme.Space.s)
+                    Text(model.gapsLine(model.leftGaps(s, in: file))).font(Theme.Typeface.caption)
+                        .foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
+                }
+            }
+            if left.count > shown.count {
+                CardRow(last: true) { EmptyLine(String(localized: .commonMoreCount(left.count - shown.count))) }
+            }
+        }
+    }
+
     var untouchedCard: some View {
         let shown = model.untouchedShown
         return NoticeCard(title: String(localized: .sessionsUntouchedTitle(model.untouched.count)),
@@ -601,7 +630,7 @@ struct SessionCard: View {
     let openNote: (UUID) -> Void
     @Environment(\.openLink) private var openLink
     @State private var editing = false
-    @State private var askingProgress = false
+    @State private var wrappingUp = false
 
     /// The day line and its units, which the pills must leave beside them.
     static let linesRoom: CGFloat = 240
@@ -655,7 +684,7 @@ struct SessionCard: View {
         .contentShape(.rect)
         .contextMenu { menuItems }
         .sheet(isPresented: $editing) { SessionFormSheet(workspace: model.workspace, course: course, session: session) }
-        .sheet(isPresented: $askingProgress) { SessionProgressSheet(workspace: model.workspace, course: course.id, session: session.id) }
+        .sheet(isPresented: $wrappingUp) { ClassWrapUpSheet(workspace: model.workspace, course: course.id, session: session.id) }
     }
 
     func lines(_ file: CourseFile, live: Bool) -> some View {
@@ -670,6 +699,12 @@ struct SessionCard: View {
                     .accessibilityValue(live ? String(localized: .sessionsNow) : "")
                 if cancelled { Chip(String(localized: .sessionsCancelled)) }
                 if let late { Chip(late.label, tone: late.value == .late ? .warning : late.value == .absent ? .danger : .plain) }
+                let gaps = model.leftGaps(session, in: file, now: now)
+                if !gaps.isEmpty {
+                    Circle().fill(Theme.Palette.warning).frame(width: Theme.Size.dot, height: Theme.Size.dot)
+                        .help(Text(.wrapUpLeftHelp(model.gapsLine(gaps))))
+                        .accessibilityLabel(Text(.wrapUpLeftHelp(model.gapsLine(gaps))))
+                }
             }
             HStack(spacing: Theme.Space.tight) {
                 Text(model.dayLine(session.date, end: model.end(of: session, in: file))).monospacedDigit().lineLimit(1).fixedSize()
@@ -733,7 +768,7 @@ struct SessionCard: View {
 
     var menuItems: some View {
         SessionMenu(courseId: course.id, sessionId: session.id, openNote: openNote, edit: { editing = true },
-                    progress: model.offersProgress(session, in: course.file) ? { askingProgress = true } : nil) {
+                    wrapUp: model.offersWrapUp(session) ? { wrappingUp = true } : nil) {
             model.remove(session)
         }
     }

@@ -2,9 +2,9 @@ import FolioDomain
 import Foundation
 import PDFKit
 
-/// A class whose recording just stopped, to be asked how far it went. The window that stopped it takes it
-/// (`SessionProgressPrompt`), so a second window doesn't ask again.
-struct SessionProgressAsk: Identifiable, Equatable {
+/// A class whose recording just stopped, to be asked to wrap up. The window that stopped it takes it
+/// (`ClassWrapUpPrompt`), so a second window doesn't ask again.
+struct ClassWrapUpAsk: Identifiable, Equatable {
     let id = UUID()
     let course: UUID
     let session: UUID
@@ -13,12 +13,12 @@ struct SessionProgressAsk: Identifiable, Equatable {
 }
 
 extension Workspace {
-    /// Asked at once, before the audio is compressed: that takes a while, and the class has only just ended. Only a
-    /// course with lecture files has progress to ask about.
-    func askProgress(after recording: Recording, course id: UUID) {
-        guard let file = course(id)?.file, let session = file.sessions.first(where: { $0.id == recording.sessionId }),
-              !file.lectureFiles.isEmpty else { return }
-        progressAsk = SessionProgressAsk(course: id, session: session.id, viewed: file.viewedPages(of: session, including: recording))
+    /// Asked at once, before the audio is compressed: that takes a while, and the class has only just ended. Not asked
+    /// of a class wrapped up already with nothing missing: a second recording of it has nothing to add.
+    func askWrapUp(after recording: Recording, course id: UUID) {
+        guard let file = course(id)?.file, let session = file.sessions.first(where: { $0.id == recording.sessionId }), !session.isCancelled,
+              !(session.isWrappedUp && file.wrapUpGaps(of: session, recorded: true).isEmpty) else { return }
+        wrapUpAsk = ClassWrapUpAsk(course: id, session: session.id, viewed: file.viewedPages(of: session, including: recording))
     }
 
     /// A PDF's page count, downloaded first if iCloud holds only a placeholder. Nil for anything else.
