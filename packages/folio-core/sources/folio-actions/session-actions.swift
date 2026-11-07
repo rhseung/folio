@@ -8,8 +8,8 @@ func index<E: Identifiable>(_ id: E.ID, in items: [E], _ what: LocalizedStringRe
 }
 
 @Action("session add", "회차 추가. 주차는 학기 시작일에서 정한다", effect: .creates, done: "회차를 추가했습니다",
-        examples: [#"folio session add EC4207 --date "2026-10-28 10:30""#, "folio session add EC4207 --date 2026-10-30 --cancelled --dry-run",
-                   #"folio session add EC4207 --date "2026-11-04 21:00" --end "2026-11-04 22:15" --link https://zoom.us/j/123 --dry-run"#,
+        examples: [#"folio session add EC4207 --date "2026-10-28 10:30""#, "folio session add EC4207 --date 2026-10-30 --kind cancelled --dry-run",
+                   #"folio session add EC4207 --date "2026-11-04 21:00" --end "2026-11-04 22:15" --kind makeup --link https://zoom.us/j/123 --dry-run"#,
                    #"folio session add EC4207 --date "2026-11-11 10:30" --attendance absent --dry-run"#],
         phrases: ["보충", "보충수업", "잡혔", "수업 추가", "보강", "추가 수업", "회차 만들기", "줌 수업", "온라인 수업", "비대면 수업"])
 public struct SessionAdd {
@@ -22,8 +22,8 @@ public struct SessionAdd {
     var end: Date?
     /// 온라인 수업 링크(Zoom 등)
     var link: String?
-    /// 수업이 없던 날의 휴강으로
-    var cancelled = false
+    /// 종류. lecture(강의), cancelled(휴강), makeup(보강)
+    var kind: Session.Kind = .lecture
     /// 출결. 결석이나 공결을 미리 알 때. 휴강과 함께 줄 수 없다
     var attendance: AttendanceState?
 
@@ -34,7 +34,7 @@ public struct SessionAdd {
             var s = SessionPlanner.session(at: date, sessions: f.sessions, termStart: start, calendar: ctx.calendar,
                                            device: ctx.device, now: ctx.now)
             s.id = id
-            s.isCancelled = cancelled
+            s.kind = kind
             s.link = OnlineLink.stored(link)
             s.setEnd(end, schedule: f.course.schedule, calendar: ctx.calendar)
             f.sessions.append(s)
@@ -70,12 +70,13 @@ public struct SessionRemove {
     }
 }
 
-@Action("session set", "회차의 일시, 온라인 링크, 휴강, 복습 여부, 복습 노트 상태 바꾸기. 준 것만 바뀐다",
+@Action("session set", "회차의 일시, 온라인 링크, 종류(강의, 휴강, 보강), 복습 여부, 복습 노트 상태 바꾸기. 준 것만 바뀐다",
         done: "회차 '{session}'을(를) 바꿨습니다",
-        examples: ["folio session set EC4207/10-26 --cancelled true", "folio session set EC4207/10-26 --review-unfinished false --dry-run",
+        examples: ["folio session set EC4207/10-26 --kind cancelled", "folio session set EC4207/10-28 --kind makeup --dry-run",
+                   "folio session set EC4207/10-26 --review-unfinished false --dry-run",
                    #"folio session set EC4207/10-26 --link https://zoom.us/j/123 --dry-run"#,
                    #"folio session set EC4207/10-26 --date "2026-10-29 19:00" --end "2026-10-29 20:15" --dry-run"#],
-        phrases: ["수업 없", "수업 안 함", "휴강", "수업 취소", "이 수업 복습 끄기", "복습 노트 다 씀",
+        phrases: ["수업 없", "수업 안 함", "휴강", "수업 취소", "보강으로", "보강 표시", "이 수업 복습 끄기", "복습 노트 다 씀",
                   "줌 링크", "수업 링크", "수업 시간 변경", "보강 시간"])
 public struct SessionSet {
     @Arg var course: Course.ID
@@ -87,8 +88,8 @@ public struct SessionSet {
     var end: Patch<Date?>
     /// 온라인 수업 링크(Zoom 등)
     var link: Patch<String?>
-    /// 휴강인지. 휴강이면 그 회차의 출결을 지운다
-    var cancelled: Patch<Bool>
+    /// 종류. lecture(강의), cancelled(휴강), makeup(보강). 휴강이면 그 회차의 출결을 지운다
+    var kind: Patch<Session.Kind>
     /// 복습에서 뺄지
     var skipsReview: Patch<Bool>
     /// 복습 노트를 마저 써야 하는지
@@ -103,7 +104,7 @@ public struct SessionSet {
             try f.update(\.sessions, session) { s in
                 if let end = end.value { s.setEnd(end, schedule: schedule, calendar: ctx.calendar) }
                 if let link = link.value { s.link = OnlineLink.stored(link) }
-                cancelled.apply(&s.isCancelled)
+                kind.apply(&s.kind)
                 skipsReview.apply(&s.skipsReview)
                 reviewUnfinished.apply(&s.reviewNoteUnfinished)
             }
@@ -112,7 +113,7 @@ public struct SessionSet {
                 f.setReviewNoteUnfinished(note, unfinished)
             }
             // A class that didn't happen has no attendance to count.
-            if cancelled.value == true { f.attendance.removeAll { $0.sessionId == session } }
+            if kind.value == .cancelled { f.attendance.removeAll { $0.sessionId == session } }
         }
     }
 }

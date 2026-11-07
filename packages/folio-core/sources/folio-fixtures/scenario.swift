@@ -82,7 +82,7 @@ private struct Builder {
         if note {
             let end = date.addingTimeInterval(TimeInterval(minutes * 60))
             try run(SessionNote(course: course, session: id, kind: .review), at: end)
-            if !unfinished { try run(SessionSet(course: course, session: id, cancelled: .keep, skipsReview: .keep, reviewUnfinished: .set(false)), at: end) }
+            if !unfinished { try run(SessionSet(course: course, session: id, kind: .keep, skipsReview: .keep, reviewUnfinished: .set(false)), at: end) }
         }
         return id
     }
@@ -168,7 +168,11 @@ private struct Builder {
         let scheduling = try unit(os, "프로세스 스케줄링", [s(os, 10, 19), s(os, 10, 21)], at: at(10, 21, 15))
         _ = try unit(os, "교착 상태", [s(os, 10, 26)], at: at(10, 26, 15))
         let conditional = try unit(prob, "조건부 확률", [s(prob, 10, 26), s(prob, 10, 28)], at: at(10, 28, 16))
-        let kinematics = try unit(robotics, "순기구학", [s(robotics, 10, 21), s(robotics, 10, 26)], at: at(10, 26, 12))
+        // A Friday evening makeup, off the timetable, so the class in session today has one on its page.
+        let makeup = try run(SessionAdd(course: robotics, date: at(10, 30, 19), end: at(10, 30, 20, 15), kind: .makeup), at: at(10, 28, 12))
+        try run(SessionNote(course: robotics, session: makeup, kind: .review), at: at(10, 30, 21))
+        try run(SessionSet(course: robotics, session: makeup, reviewUnfinished: .set(false)), at: at(10, 30, 21))
+        let kinematics = try unit(robotics, "순기구학", [s(robotics, 10, 21), s(robotics, 10, 26), makeup], at: at(10, 26, 12))
         _ = try unit(robotics, "역기구학과 야코비안", [s(robotics, 10, 28)], at: at(10, 28, 12))
         _ = try unit(physics, "전기장과 가우스 법칙", [s(physics, 10, 26), s(physics, 10, 28)], at: at(10, 28, 18))
 

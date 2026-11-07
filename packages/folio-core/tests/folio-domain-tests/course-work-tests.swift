@@ -118,10 +118,44 @@ struct CourseWorkTests {
         var makeup = at("2026-11-13 21:00"); makeup.end = date("2026-11-13 22:15")
         var cancelled = Session(device: device, at: .now, week: 10, date: date("2026-11-16 13:00"))
         cancelled.isCancelled = true
+        var marked = at("2026-11-18 13:00"); marked.kind = .makeup
         var unit = Unit(device: device, at: .now, title: "고윳값", order: 1)
         unit.sessionIds = [unitLinked.id]
-        let file = CourseFile(course: courses[0], units: [unit], sessions: [past, empty, noted, unitLinked, online, makeup, cancelled])
+        let file = CourseFile(course: courses[0], units: [unit], sessions: [past, empty, noted, unitLinked, online, makeup, cancelled, marked])
         #expect(file.untouchedFutureSessions(now: now, notedSessions: [noted.id]).map(\.id) == [empty.id])
+    }
+
+    /// One kind at a time. Clearing 휴강 leaves a lecture, and clearing it on a makeup leaves the makeup.
+    @Test func aSessionHasOneKind() {
+        var s = Session(device: device, at: .now, week: 9, date: date("2026-10-26 13:00"))
+        #expect(s.kind == .lecture && !s.isCancelled)
+        s.isCancelled = true
+        #expect(s.kind == .cancelled)
+        s.kind = .makeup
+        #expect(!s.isCancelled)
+        s.isCancelled = false
+        #expect(s.kind == .makeup)
+        s.isCancelled = true
+        s.isCancelled = false
+        #expect(s.kind == .lecture)
+    }
+
+    /// A makeup is held like a lecture: its attendance counts, it owes a review note and is asked to be wrapped up.
+    /// The same class as a 휴강 does none of these.
+    @Test func aMakeupCountsAsALecture() {
+        let now = date("2026-10-28 20:00")
+        var makeup = Session(device: device, at: .now, week: 9, date: date("2026-10-27 21:00"))
+        makeup.end = date("2026-10-27 22:15")
+        for kind in Session.Kind.allCases {
+            makeup.kind = kind
+            let held = kind != .cancelled
+            let absent = Attendance(device: device, at: .now, sessionId: makeup.id, state: .absent)
+            let file = CourseFile(course: courses[0], sessions: [makeup], attendance: [absent])
+            #expect(file.heldAttendance(at: now).count == (held ? 1 : 0))
+            #expect(file.needsReviewNote(makeup, at: now) == held)
+            #expect(file.classesToWrapUp(at: now, classMinutes: 75, calendar: calendar).map(\.id) == (held ? [makeup.id] : []))
+            #expect(file.isLeftUnwrapped(makeup, at: now, settings: Settings(), calendar: calendar) == held)
+        }
     }
 
     /// A past session can be deleted too, as long as nothing points at it.

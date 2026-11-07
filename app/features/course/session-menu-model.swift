@@ -54,8 +54,9 @@ struct SessionMenuModel {
         workspace.run(AttendanceSet(course: courseId, session: session.id, state: state))
     }
 
+    /// Undoing a 휴강 leaves a lecture: a makeup that was cancelled is set back from the form.
     func setCancelled(_ cancelled: Bool, of session: Session) {
-        workspace.run(SessionSet(course: courseId, session: session.id, cancelled: .set(cancelled)))
+        workspace.run(SessionSet(course: courseId, session: session.id, kind: .set(cancelled ? .cancelled : .lecture)))
     }
 
     func record(_ session: Session) { workspace.record(session.id, in: courseId) }
@@ -80,8 +81,8 @@ struct SessionMenuModel {
 
     /// One action, so an attendance the course refuses leaves no session made for it.
     @discardableResult
-    func make(_ item: Workspace.SuggestedSession, cancelled: Bool = false, attendance: AttendanceState? = nil) -> Session? {
-        guard let id = workspace.run(SessionAdd(course: courseId, date: item.suggestion.date, cancelled: cancelled, attendance: attendance))?.made else { return nil }
+    func make(_ item: Workspace.SuggestedSession, kind: Session.Kind = .lecture, attendance: AttendanceState? = nil) -> Session? {
+        guard let id = workspace.run(SessionAdd(course: courseId, date: item.suggestion.date, kind: kind, attendance: attendance))?.made else { return nil }
         return session(id)
     }
 

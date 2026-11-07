@@ -50,7 +50,7 @@ struct UnitsModelTests {
         let unitId = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
         let day = { (d: Int) in Calendar.current.date(byAdding: .day, value: -d, to: .now)! }
         let held = try #require(workspace.run(SessionAdd(course: graphTheory, date: day(2)))?.made)
-        let cancelled = try #require(workspace.run(SessionAdd(course: graphTheory, date: day(1), cancelled: true))?.made)
+        let cancelled = try #require(workspace.run(SessionAdd(course: graphTheory, date: day(1), kind: .cancelled))?.made)
         func menu() throws -> [UUID] { model.linkMenu(try #require(try file(workspace).units.first), in: try file(workspace)).map(\.id) }
         #expect(try menu() == [held])
         workspace.run(UnitLink(course: graphTheory, unit: unitId, sessions: [cancelled]))

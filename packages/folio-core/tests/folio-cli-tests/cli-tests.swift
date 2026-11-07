@@ -17,7 +17,14 @@ struct SessionCommandTests {
     }
 
     @Test func addCancelled() throws {
-        try h.expectSame(Self.add + ["--cancelled"]) { _ in SessionAdd(id: Self.id, course: Harness.graphTheory, date: date, cancelled: true) }
+        try h.expectSame(Self.add + ["--kind", "cancelled"]) { _ in SessionAdd(id: Self.id, course: Harness.graphTheory, date: date, kind: .cancelled) }
+    }
+
+    /// The Korean the app shows reads as the English value.
+    @Test func addMakeupInKorean() throws {
+        for word in ["makeup", "보강"] {
+            try h.expectSame(Self.add + ["--kind", word]) { _ in SessionAdd(id: Self.id, course: Harness.graphTheory, date: date, kind: .makeup) }
+        }
     }
 
     @Test func addAbsent() throws {
@@ -25,15 +32,15 @@ struct SessionCommandTests {
     }
 
     @Test func set() throws {
-        try h.expectSame(["session", "set", "EC4207/10-28", "--cancelled", "true"], setup: [Self.add]) { _ in
-            SessionSet(course: Harness.graphTheory, session: Self.id, cancelled: .set(true))
+        try h.expectSame(["session", "set", "EC4207/10-28", "--kind", "휴강"], setup: [Self.add]) { _ in
+            SessionSet(course: Harness.graphTheory, session: Self.id, kind: .set(.cancelled))
         }
     }
 
     @Test func setByDay() throws {
         for day in ["EC4207/10/28", "EC4207/10-28", "EC4207/2026-10-28"] {
-            try h.expectSame(["session", "set", day, "--cancelled", "true"], setup: [Self.add]) { _ in
-                SessionSet(course: Harness.graphTheory, session: Self.id, cancelled: .set(true))
+            try h.expectSame(["session", "set", day, "--kind", "cancelled"], setup: [Self.add]) { _ in
+                SessionSet(course: Harness.graphTheory, session: Self.id, kind: .set(.cancelled))
             }
         }
     }
@@ -71,8 +78,8 @@ struct SessionCommandTests {
     }
 
     @Test func runTakesNamesLikeTheCommands() throws {
-        try h.expectSame(["run", "session", "set", "--input", #"{"course":"EC4207","session":"10-28","cancelled":true}"#], setup: [Self.add]) { _ in
-            SessionSet(course: Harness.graphTheory, session: Self.id, cancelled: .set(true))
+        try h.expectSame(["run", "session", "set", "--input", #"{"course":"EC4207","session":"10-28","kind":"cancelled"}"#], setup: [Self.add]) { _ in
+            SessionSet(course: Harness.graphTheory, session: Self.id, kind: .set(.cancelled))
         }
     }
 

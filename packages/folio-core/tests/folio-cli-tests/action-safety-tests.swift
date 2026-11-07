@@ -97,12 +97,23 @@ struct ActionSafetyTests {
         let gist = try Harness.fixtureCopy()
         settled([["session", "add", "EC4207", "--date", "2026-10-20 10:30"],
                  ["attendance", "set", "EC4207/10-20", "absent"],
-                 ["session", "set", "EC4207/10-20", "--cancelled", "true"]], gist: gist)
+                 ["session", "set", "EC4207/10-20", "--kind", "cancelled"]], gist: gist)
         let file = try GISTStore(url: gist).courseStores().map { try $0.load().model }.first { $0.course.id == Harness.graphTheory }!
         #expect(file.attendance.isEmpty)
         let r = h.cli(["attendance", "set", "EC4207/10-20", "absent"], gist: gist)
         #expect(r.code == Exit.rule.rawValue)
         #expect(r.err.contains("휴강한 회차"))
+    }
+
+    /// A makeup is held like a lecture: turning a class into one keeps its attendance.
+    @Test func aMakeupKeepsItsAttendance() throws {
+        let gist = try Harness.fixtureCopy()
+        settled([["session", "add", "EC4207", "--date", "2026-10-20 10:30"],
+                 ["attendance", "set", "EC4207/10-20", "absent"],
+                 ["session", "set", "EC4207/10-20", "--kind", "makeup"]], gist: gist)
+        let file = try GISTStore(url: gist).courseStores().map { try $0.load().model }.first { $0.course.id == Harness.graphTheory }!
+        #expect(file.attendance.map(\.state) == [.absent])
+        #expect(file.sessions.first { $0.id == file.attendance.first?.sessionId }?.kind == .makeup)
     }
 
     @Test func examEndsAfterItStarts() throws {

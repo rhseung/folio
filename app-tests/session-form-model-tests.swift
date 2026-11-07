@@ -103,6 +103,40 @@ struct SessionFormModelTests {
         #expect(try file(workspace).sessions.first { $0.id == id }?.end == nil)
     }
 
+    /// Added by hand off the timetable, a class starts as 보강 until a kind is picked. Editing never guesses.
+    @Test func aClassAddedOffTheTimetableStartsAsAMakeup() throws {
+        let workspace = try fixtureWorkspace()
+        let calendar = workspace.calendar
+        workspace.run(CourseSet(course: graphTheory, [.schedule([ClassTime(weekday: 1, startMinute: 13 * 60, endMinute: 14 * 60 + 15)])]))
+        let monday = calendar.date(byAdding: .day, value: 7, to: calendar.date(byAdding: .hour, value: 13, to: calendar.startOfWeek(containing: workspace.now))!)!
+        let evening = monday.addingTimeInterval(8 * 3600)
+
+        let model = SessionFormModel(workspace: workspace, courseId: graphTheory)
+        model.setStart(monday)
+        #expect(model.kind == .lecture)
+        model.setStart(evening)
+        #expect(model.kind == .makeup)
+        model.submit()
+        #expect(try file(workspace).sessions.first { $0.date == evening }?.kind == .makeup)
+
+        let picked = SessionFormModel(workspace: workspace, courseId: graphTheory)
+        picked.setStart(monday)
+        picked.setKind(.lecture)
+        picked.setStart(evening.addingTimeInterval(86_400))
+        #expect(picked.kind == .lecture)
+
+        // Moving a lecture off the timetable keeps it a lecture; picking a kind is what changes it.
+        let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: monday))?.made)
+        workspace.run(AttendanceSet(course: graphTheory, session: id, state: .late))
+        let edit = SessionFormModel(workspace: workspace, courseId: graphTheory, session: try #require(try file(workspace).sessions.first { $0.id == id }))
+        edit.setStart(monday.addingTimeInterval(6 * 3600))
+        #expect(edit.kind == .lecture)
+        edit.setKind(.cancelled)
+        edit.submit()
+        #expect(try file(workspace).sessions.first { $0.id == id }?.kind == .cancelled)
+        #expect(try file(workspace).attendance.allSatisfy { $0.sessionId != id })
+    }
+
     @Test func movingToAnotherWeekWarnsTheNameChanges() throws {
         let workspace = try fixtureWorkspace()
         let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: workspace.now))?.made)

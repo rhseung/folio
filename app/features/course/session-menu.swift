@@ -105,7 +105,7 @@ struct SuggestedSessionItems: View {
         Button(.sessionsMarkExcused, systemImage: "person.crop.circle.badge.checkmark") { model.make(item, attendance: .excused) }
             .disabled(!model.canMark(item, .excused))
         Divider()
-        Button(.sessionsCancelled, systemImage: "calendar.badge.minus") { model.make(item, cancelled: true) }
+        Button(.sessionsCancelled, systemImage: "calendar.badge.minus") { model.make(item, kind: .cancelled) }
         if let editTimes {
             Divider()
             Button(.sessionsClassTimesChangeEllipsis, systemImage: "clock", action: editTimes)

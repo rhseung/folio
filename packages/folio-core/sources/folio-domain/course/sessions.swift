@@ -70,15 +70,32 @@ public struct Session: Entity {
     private var noReview: Bool?
     // Same optional trick: notes from before it, and imported ones, count as written.
     private var reviewNoteDraft: Bool?
-    // Same again: only a cancelled class carries the key.
+    // Same again: only a cancelled class carries its key, and only a makeup the other. Two flags rather than one
+    // `kind` key, so every file from before the makeup reads as it was (#338).
     private var cancelled: Bool?
+    private var makeup: Bool?
     // And again: only a class whose wrap-up was saved carries it.
     private var wrappedUp: Bool?
 
+    /// 강의, 휴강 or 보강. A makeup is held like any lecture (attendance, review, wrap-up); it only says the class was
+    /// added to make up for another.
+    public enum Kind: String, Codable, Sendable, CaseIterable {
+        case lecture, cancelled, makeup
+    }
+
+    public var kind: Kind {
+        get { cancelled == true ? .cancelled : makeup == true ? .makeup : .lecture }
+        set {
+            cancelled = newValue == .cancelled ? true : nil
+            makeup = newValue == .makeup ? true : nil
+        }
+    }
+
     /// The class didn't happen (a holiday, 휴강): it stays as a session but counts toward no attendance or review.
+    /// Clearing it leaves a lecture.
     public var isCancelled: Bool {
-        get { cancelled ?? false }
-        set { cancelled = newValue ? true : nil }
+        get { kind == .cancelled }
+        set { if newValue { kind = .cancelled } else if kind == .cancelled { kind = .lecture } }
     }
 
     /// The class's wrap-up was saved: what it left empty was left so on purpose, and present needs no entry of its
@@ -195,11 +212,11 @@ public enum SessionPlanner {
 }
 
 extension CourseFile {
-    /// Sessions made ahead of time that nothing has touched yet: in the future, not cancelled, and with no end,
-    /// link, note, ink, material, unit, attendance or recording. An end or link is a makeup someone set up on purpose. `notedSessions` are those a note's frontmatter points to.
+    /// Sessions made ahead of time that nothing has touched yet: in the future, a plain lecture, and with no end,
+    /// link, note, ink, material, unit, attendance or recording. A kind, end or link is something someone set up on purpose. `notedSessions` are those a note's frontmatter points to.
     public func untouchedFutureSessions(now: Date, notedSessions: Set<UUID>) -> [Session] {
         sessions.filter { s in
-            s.date > now && !s.isCancelled && s.end == nil && s.link == nil && isUnlinked(s, notedSessions: notedSessions)
+            s.date > now && s.kind == .lecture && s.end == nil && s.link == nil && isUnlinked(s, notedSessions: notedSessions)
         }
     }
 

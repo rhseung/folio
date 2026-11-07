@@ -14048,6 +14048,28 @@
         }
       }
     },
+    "sessions.kind": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "종류"
+          }
+        }
+      }
+    },
+    "sessions.makeup": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보강"
+          }
+        }
+      }
+    },
     "sessions.make": {
       "extractionState": "manual",
       "localizations": {
