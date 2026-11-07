@@ -121,6 +121,7 @@ struct ClaudePanel: View {
     @ViewBuilder var conversation: some View {
         if let chat = model.chat, !chat.messages.isEmpty {
             HTMLView(body: model.page(chat, cards: !course.file.units.isEmpty),
+                     openNote: { title in if let id = model.noteId(titled: title, course: course) { showNote(id) } },
                      onAction: { model.handle($0, course: course, openNote: openNote, openUnit: openUnit, insertIntoNote: insertIntoNote, showNote: showNote) })
         } else {
             VStack(spacing: Theme.Space.s) {

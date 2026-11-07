@@ -143,3 +143,42 @@ struct CoursePageLinkTests {
         #expect(Set(SettingsTab.allCases.map(\.page)).count == AppLink.SettingsPage.allCases.count)
     }
 }
+
+/// The Claude panel's page opens links as a note does; only its own buttons stay with it.
+@MainActor
+struct ClaudePanelLinkTests {
+    final class Opened {
+        var links: [AppLink] = []
+        var titles: [String] = []
+        var actions: [URL] = []
+    }
+
+    func coordinator(_ opened: Opened) -> HTMLView.Coordinator {
+        let c = HTMLView.Coordinator()
+        c.openLink = OpenLinkAction { link, _, _ in opened.links.append(link) }
+        c.openNote = { opened.titles.append($0) }
+        c.onAction = { opened.actions.append($0) }
+        return c
+    }
+
+    @Test func anAnswersLinksOpenWhereANotesWould() throws {
+        let opened = Opened()
+        let c = coordinator(opened)
+        let exam = AppLink(.exam, UUID()), block = AppLink(.note, UUID(), anchor: .block("proof"))
+        c.open(exam.url)
+        c.open(block.url)
+        c.open(try #require(URL(string: "folio://note/%EB%A7%A4%EC%B9%AD%20%EC%A0%95%EB%A6%AC")))
+        #expect(opened.links == [exam, block])
+        #expect(opened.titles == ["매칭 정리"])
+        #expect(opened.actions.isEmpty)
+    }
+
+    @Test func theButtonsStayWithThePanel() throws {
+        let opened = Opened()
+        let c = coordinator(opened)
+        let button = try #require(URL(string: "folio://action/copy/\(UUID().uuidString)"))
+        c.open(button)
+        #expect(opened.actions == [button])
+        #expect(opened.links.isEmpty && opened.titles.isEmpty)
+    }
+}
