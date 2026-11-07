@@ -113,7 +113,7 @@ final class ClassWrapUpModel {
                 return String(localized: .wrapUpProgressLine((m.path as NSString).lastPathComponent, pages.lowerBound, pages.upperBound))
             }.joined(separator: ", ")
         case .units: return unitTitles(units)
-        case .note: return linkedNote.map(noteName) ?? ""
+        case .note: return (linkedNote ?? note(session.reviewNoteId)).map(noteName) ?? ""
         case .attendance:
             return AttendanceState.steps.first { $0.value == attendance }?.label ?? ""
         }
@@ -246,9 +246,12 @@ final class ClassWrapUpModel {
 
     var hasNote: Bool { linkedNote != nil }
 
-    /// The note the row shows: the rough note, else the review note.
-    var linkedNote: NoteEntry? {
-        guard let file, let id = session.flatMap({ $0.roughNoteId ?? $0.reviewNoteId }) else { return nil }
+    /// The class's own (rough) note. A review note also fills the gap, but it covers other classes too, so the row
+    /// never swaps or unlinks it: it only names it while folded (`summary`).
+    var linkedNote: NoteEntry? { note(session?.roughNoteId) }
+
+    private func note(_ id: UUID?) -> NoteEntry? {
+        guard let file, let id else { return nil }
         return file.notes.first { $0.id == id }
     }
 
@@ -258,7 +261,7 @@ final class ClassWrapUpModel {
 
     /// Written at once, as "새 단원" is (#147): the note exists already, so there is nothing to wait for.
     func linkNote(_ id: UUID) {
-        // `NoteLink` refuses a class that already holds a note, so the held one is taken off first. Nothing else
+        // `NoteLink` refuses a class that already holds a rough note, so the held one is taken off first. Nothing else
         // can refuse the link here: the class is open in a wrap-up, so it exists and isn't cancelled.
         if let held = linkedNote, held.id != id { unlinkNote() }
         workspace.run(NoteLink(course: courseId, note: id, kind: .rough, session: sessionId, exam: nil, units: [], math: nil))

@@ -210,4 +210,24 @@ struct ClassWrapUpModelTests {
         let made = try #require(saved.roughNoteId)
         #expect(made != newer && made != older)
     }
+
+    /// A review note covers other classes too, so the note row only ever swaps or unlinks the class's own note.
+    @Test func theNoteRowLeavesAReviewNoteAlone() throws {
+        let review = try #require(workspace.run(NoteAdd(course: graphTheory, title: "복습", kind: .review, session: session))?.made)
+        let free = try #require(workspace.run(NoteAdd(course: graphTheory, title: "메모"))?.made)
+        let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
+        #expect(model.linkedNote == nil && model.summary(.note) == "복습")
+
+        model.linkNote(free)
+        #expect(saved.roughNoteId == free && saved.reviewNoteId == review)
+        model.unlinkNote()
+        #expect(saved.roughNoteId == nil && saved.reviewNoteId == review)
+
+        model.linkNote(free)
+        model.makeNewNote()
+        #expect(model.makesNote && saved.reviewNoteId == review)
+        model.wrapUp()
+        let made = try #require(saved.roughNoteId)
+        #expect(made != free && saved.reviewNoteId == review)
+    }
 }
