@@ -43,6 +43,19 @@ extension CourseFile {
         .sorted(by: Session.inOrder)
     }
 
+    /// Classes of earlier study days still left to wrap up, oldest first: classes from before wrap-ups existed were
+    /// never asked about, so their gaps are not choices. A saved wrap-up ends the question even with gaps left, since
+    /// what it left empty was. Today's classes are the today card's and the recording prompt's until the day turns.
+    public func unwrappedPastSessions(at now: Date, settings: Settings, calendar: Calendar) -> [Session] {
+        sessions.filter { isLeftUnwrapped($0, at: now, settings: settings, calendar: calendar) }.sorted(by: Session.inOrder)
+    }
+
+    public func isLeftUnwrapped(_ s: Session, at now: Date, settings: Settings, calendar: Calendar) -> Bool {
+        !s.isCancelled && !s.isWrappedUp
+            && settings.studyDay(of: s.date, calendar: calendar) < settings.studyDay(of: now, calendar: calendar)
+            && !wrapUpGaps(of: s).isEmpty
+    }
+
     /// When the course meets next after `session`: its next session that isn't cancelled, or the next weekly class
     /// no cancelled session stands for, whichever is sooner. Nil for a course with neither.
     public func nextClassStart(after session: Session, calendar: Calendar) -> Date? {

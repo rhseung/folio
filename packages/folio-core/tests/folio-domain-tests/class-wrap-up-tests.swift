@@ -128,6 +128,51 @@ struct ClassWrapUpTests {
         }
     }
 
+    // MARK: Classes left from earlier days
+
+    @Test func earlierClassesWithGapsAreListedOldestFirst() {
+        let settings = Settings()
+        var f = course()
+        let monday = f.sessions[0]
+        // Last week's Monday wrapped up, Wednesday cancelled and a makeup that evening never wrapped up.
+        var wrapped = Session(device: device, at: at(1, 9), week: 9, date: at(2, 10, 30).addingTimeInterval(-7 * 86400))
+        wrapped.isWrappedUp = true
+        var cancelled = Session(device: device, at: at(1, 9), week: 9, date: at(4, 10, 30).addingTimeInterval(-7 * 86400))
+        cancelled.isCancelled = true
+        let lastWeek = Session(device: device, at: at(1, 9), week: 9, date: at(4, 19).addingTimeInterval(-7 * 86400))
+        let today = Session(device: device, at: at(1, 9), week: 10, date: at(4, 10, 30))
+        f.sessions = [today, monday, wrapped, cancelled, lastWeek]
+        #expect(f.unwrappedPastSessions(at: at(4, 12), settings: settings, calendar: calendar).map(\.id) == [lastWeek.id, monday.id])
+        // A class with nothing missing is done without a wrap-up.
+        let s = monday.id
+        f.linkMaterial(f.materials[0].id, session: s, firstPage: 1, lastPage: 4)
+        let unit = FolioDomain.Unit(device: device, at: at(1, 9), title: "매칭", order: 0, parentId: nil)
+        f.units = [unit]
+        f.toggle(session: s, unit: unit.id)
+        f.sessions[1].topic = "매칭"
+        f.sessions[1].reviewNoteId = UUID()
+        f.attendance = [Attendance(device: device, at: at(2, 12), sessionId: s, state: .late)]
+        #expect(f.unwrappedPastSessions(at: at(4, 12), settings: settings, calendar: calendar).map(\.id) == [lastWeek.id])
+    }
+
+    /// A class late at night, or past midnight, belongs to the study day it began on: it is left over once the
+    /// 4 a.m. boundary after it passes, never before.
+    @Test func leftOverExactlyFromTheNextStudyDay() async {
+        let settings = Settings()
+        var f = course()
+        let night = Session(device: device, at: at(1, 9), week: 10, date: at(2, 23, 30))
+        let pastMidnight = Session(device: device, at: at(1, 9), week: 10, date: at(3, 1, 0))
+        f.sessions = [night, pastMidnight]
+        let turn = at(3, 4, 0)
+        #expect(f.unwrappedPastSessions(at: at(3, 3, 59), settings: settings, calendar: calendar).isEmpty)
+        #expect(f.unwrappedPastSessions(at: turn, settings: settings, calendar: calendar).count == 2)
+        await propertyCheck(input: Gen.int(in: 0...(3 * 24 * 60))) { minutes in
+            let now = at(2, 0).addingTimeInterval(TimeInterval(minutes * 60))
+            let listed = f.unwrappedPastSessions(at: now, settings: settings, calendar: calendar).map(\.id)
+            #expect(listed == (turn <= now ? [night.id, pastMidnight.id] : []))
+        }
+    }
+
     @Test func theLastClassesUnitsComeFirstButAreNotChosen() {
         var f = course()
         let earlier = Session(device: device, at: at(1, 9), week: 9, date: at(1, 10, 30))
