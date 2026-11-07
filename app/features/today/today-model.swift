@@ -154,6 +154,9 @@ final class TodayModel {
         var session: Session
         var gaps: [WrapUpItem]
         var id: UUID { session.id }
+        var labels: [String] { gaps.map(\.label) }
+        /// The chips' words as one line, for a row too narrow for them.
+        var line: String { labels.joined(separator: " · ") }
     }
 
     /// Classes that ended with something missing, until their course's next class starts (`CourseFile.classesToWrapUp`).

@@ -14,7 +14,7 @@ struct ClassWrapUpSheet: View {
     var body: some View {
         SheetForm(title: model.title, confirm: String(localized: .commonSave), disabled: model.refusal != nil, note: model.note,
                   carded: false, width: 640, mark: CourseMark(model.workspace, model.courseId), cancel: String(localized: .wrapUpLater)) {
-            ForEach(model.items.filter(model.isOpen), id: \.self) { item in
+            ForEach(model.openItems, id: \.self) { item in
                 Block(model.label(item)) { Card { open(item) } }
             }
             let folded = model.folded
@@ -40,8 +40,10 @@ struct ClassWrapUpSheet: View {
         .task { await model.load() }
         .environment(\.accent, model.accent)
         .sheet(item: $model.addingExam, onDismiss: nil) { exam in
-            ExamEditor(workspace: model.workspace, course: model.workspace.course(model.courseId)!, exam: exam)
-                .onDisappear { model.examClosed(exam) }
+            if let course = model.course {
+                ExamEditor(workspace: model.workspace, course: course, exam: exam)
+                    .onDisappear { model.examClosed(exam) }
+            }
         }
     }
 

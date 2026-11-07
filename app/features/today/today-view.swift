@@ -63,9 +63,9 @@ struct TodayView: View {
                                 // Five chips don't fit a phone's row; the same words as one line do.
                                 ViewThatFits(in: .horizontal) {
                                     HStack(spacing: Theme.Space.xs) {
-                                        ForEach(item.gaps, id: \.self) { Chip($0.label) }
+                                        ForEach(item.labels, id: \.self) { Chip($0) }
                                     }
-                                    Text(item.gaps.map(\.label).joined(separator: " · ")).font(Theme.Typeface.caption)
+                                    Text(item.line).font(Theme.Typeface.caption)
                                         .foregroundStyle(Theme.Palette.textSecondary).lineLimit(1).truncationMode(.tail)
                                 }
                             }

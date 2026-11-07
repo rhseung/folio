@@ -64,7 +64,7 @@ final class ClassWrapUpModel {
         suggest()
     }
 
-    private var course: LoadedCourse? { workspace.course(courseId) }
+    var course: LoadedCourse? { workspace.course(courseId) }
     private var file: CourseFile? { course?.file }
     private var session: Session? { file?.sessions.first { $0.id == sessionId } }
 
@@ -80,8 +80,10 @@ final class ClassWrapUpModel {
 
     /// Every item this class can be asked about, in asking order: progress only for a course with lecture files.
     var items: [WrapUpItem] {
-        WrapUpItem.allCases.filter { $0 != .progress || !(file?.lectureFiles.isEmpty ?? true) || !rows.isEmpty }
+        WrapUpItem.allCases.filter { $0 != .progress || !(file?.lectureFiles.isEmpty ?? true) }
     }
+
+    var openItems: [WrapUpItem] { items.filter(isOpen) }
 
     var folded: [WrapUpItem] { items.filter { !open.contains($0) } }
     func isOpen(_ item: WrapUpItem) -> Bool { open.contains(item) }
@@ -276,15 +278,19 @@ final class ClassWrapUpModel {
 
     // MARK: Saving
 
+    /// The rows only while progress is open. Folded, they aren't on screen, and the class's links stay as they are,
+    /// as the command leaves what it isn't given: a file linked whole would otherwise block saving from out of sight.
+    private var keptRows: [Row] { isOpen(.progress) ? rows.filter(\.included) : [] }
+
     var action: SessionWrapUp {
         SessionWrapUp(course: courseId, session: sessionId,
-                      ranges: rows.filter(\.included).map { SessionMaterial(materialId: $0.id, firstPage: $0.first, lastPage: $0.last) },
+                      ranges: keptRows.map { SessionMaterial(materialId: $0.id, firstPage: $0.first, lastPage: $0.last) },
                       units: units, topic: topic, attendance: attendance)
     }
 
     /// Why saving is off: a kept file without both pages says nothing about how far the class went.
     var refusal: String? {
-        if let row = rows.first(where: { $0.included && ($0.first == nil || $0.last == nil) }) {
+        if let row = keptRows.first(where: { $0.first == nil || $0.last == nil }) {
             return String(localized: .sessionsProgressMissingPages(name(row.id)))
         }
         return workspace.refusal(action)
