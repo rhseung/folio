@@ -3983,6 +3983,182 @@
         }
       }
     },
+    "design.sections.bar-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "경계를 끌어 옮기고, 두 번 눌러 그 쪽에서 나눕니다. 구역을 고른 뒤 ←→로 끝을 옮깁니다"
+          }
+        }
+      }
+    },
+    "design.sections.boundary": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld|%2$lld쪽"
+          }
+        }
+      }
+    },
+    "design.sections.course-units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목의 단원"
+          }
+        }
+      }
+    },
+    "design.sections.match-claude": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude가 이 단원에 넣었습니다"
+          }
+        }
+      }
+    },
+    "design.sections.match-name": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제목이 단원 이름과 같아 이 단원에 넣었습니다"
+          }
+        }
+      }
+    },
+    "design.sections.merge-after": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "뒤 구역과 합치기"
+          }
+        }
+      }
+    },
+    "design.sections.merge-before": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앞 구역과 합치기"
+          }
+        }
+      }
+    },
+    "design.sections.name-placeholder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 단원 이름"
+          }
+        }
+      }
+    },
+    "design.sections.new-unit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 단원 만들기"
+          }
+        }
+      }
+    },
+    "design.sections.new-unit-label": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "+ 새 단원"
+          }
+        }
+      }
+    },
+    "design.sections.new-unit-named": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 단원 “%@”"
+          }
+        }
+      }
+    },
+    "design.sections.no-unit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원에 잇지 않기"
+          }
+        }
+      }
+    },
+    "design.sections.pages": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld–%2$lld쪽"
+          }
+        }
+      }
+    },
+    "design.sections.skip": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "넘김"
+          }
+        }
+      }
+    },
+    "design.sections.unit-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 구역이 들어갈 단원"
+          }
+        }
+      }
+    },
+    "design.sections.unnamed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름 없는 구역"
+          }
+        }
+      }
+    },
     "design.step-toggle-help": {
       "extractionState": "manual",
       "localizations": {
@@ -4771,6 +4947,83 @@
           "stringUnit": {
             "state": "translated",
             "value": "이 시험에서 연결 해제"
+          }
+        }
+      }
+    },
+    "file-view.split-cut-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "여기서 나누기"
+          }
+        }
+      }
+    },
+    "file-view.split-found": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목차와 슬라이드 제목에서 찾은 구간입니다. 고친 뒤 저장하세요"
+          }
+        }
+      }
+    },
+    "file-view.split-from-claude": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude가 제안한 구간입니다. 고친 뒤 저장하세요"
+          }
+        }
+      }
+    },
+    "file-view.split-join-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앞 구역과 합치기"
+          }
+        }
+      }
+    },
+    "file-view.split-nothing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목차와 슬라이드 제목을 찾지 못했습니다. 썸네일 사이를 눌러 나누세요"
+          }
+        }
+      }
+    },
+    "file-view.split-reading": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목차와 슬라이드 제목을 읽는 중…"
+          }
+        }
+      }
+    },
+    "file-view.split-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원으로 나누기"
           }
         }
       }
@@ -5871,6 +6124,138 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 넣기"
+          }
+        }
+      }
+    },
+    "materials.import-sections-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 %lld구역"
+          }
+        }
+      }
+    },
+    "materials.import-sections-from-claude": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude 제안"
+          }
+        }
+      }
+    },
+    "materials.import-sections-from-outline": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목차에서"
+          }
+        }
+      }
+    },
+    "materials.import-sections-from-titles": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "슬라이드 제목에서"
+          }
+        }
+      }
+    },
+    "materials.import-sections-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "넣을 때 이 구간을 단원에 붙입니다. 고치거나 나중에 나눌 수 있습니다"
+          }
+        }
+      }
+    },
+    "materials.import-sections-later": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 구간 없음 · 나중에 나누기"
+          }
+        }
+      }
+    },
+    "materials.import-sections-none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목차와 슬라이드 제목을 찾지 못했습니다"
+          }
+        }
+      }
+    },
+    "materials.import-sections-put-off": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나중에 나누기"
+          }
+        }
+      }
+    },
+    "materials.import-sections-reading": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 나누는 중…"
+          }
+        }
+      }
+    },
+    "materials.import-sections-reading-pages": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 나누는 중… %1$lld/%2$lld쪽"
+          }
+        }
+      }
+    },
+    "materials.import-sections-split": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "직접 나누기"
+          }
+        }
+      }
+    },
+    "materials.import-sections-take-back": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 나누기"
           }
         }
       }
@@ -18558,6 +18943,17 @@
         }
       }
     },
+    "sessions.progress-split-unsaved": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "렉처는 단원으로 나누는 화면으로 열리고 이 시트는 닫힙니다."
+          }
+        }
+      }
+    },
     "sessions.progress.add-file": {
       "extractionState": "manual",
       "localizations": {
@@ -18690,6 +19086,17 @@
         }
       }
     },
+    "design.page-range.fine-hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⌥ 누른 채 끌면 쪽 단위"
+          }
+        }
+      }
+    },
     "design.page-range.first": {
       "extractionState": "manual",
       "localizations": {
@@ -18807,6 +19214,61 @@
           "stringUnit": {
             "state": "translated",
             "value": "전체 %lld쪽"
+          }
+        }
+      }
+    },
+    "design.page-range.span": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld–%2$lld쪽"
+          }
+        }
+      }
+    },
+    "design.page-range.split": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원으로 나누기"
+          }
+        }
+      }
+    },
+    "design.page-range.split-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 보기에서 렉처를 단원 구간으로 나눕니다"
+          }
+        }
+      }
+    },
+    "design.page-range.summary": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ (%2$@)"
+          }
+        }
+      }
+    },
+    "design.page-range.tip-section": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "p.%1$lld · %2$@"
           }
         }
       }

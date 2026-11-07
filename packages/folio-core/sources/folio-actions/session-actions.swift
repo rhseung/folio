@@ -292,6 +292,125 @@ public struct UnitLink {
     }
 }
 
+// MARK: Lecture sections
+
+/// Checks one unit's pages of a lecture file before anything is written.
+func checkPages(_ first: Int, _ last: Int) throws {
+    guard first >= 1, first <= last else { throw ActionError.rule(String(localized: .errorUnitPagesRange(first, last))) }
+}
+
+@Action("unit pages add", "단원에 렉처 파일의 쪽 구간 더하기. 한 단원이 여러 파일에, 한 파일이 여러 단원에 걸칠 수 있다",
+        done: "단원 '{unit}'에 {material}의 쪽 구간을 더했습니다",
+        examples: ["folio unit pages add EC4207/매칭 05_Matchings.pdf --first 1 --last 4"],
+        phrases: ["렉처 목차", "단원 쪽 구간", "이 단원은 몇 쪽부터"])
+public struct UnitPagesAdd {
+    @Arg var course: Course.ID
+    /// 단원
+    @Arg var unit: FolioDomain.Unit.ID
+    /// 렉처 자료
+    @Arg var material: Material.ID
+    /// 첫 쪽
+    var first: Int
+    /// 끝 쪽
+    var last: Int
+
+    public func run(_ ctx: ActionContext) throws {
+        try checkPages(first, last)
+        try ctx.edit(course) { f in
+            _ = try index(material, in: f.materials, .valueMaterial)
+            try f.update(\.units, unit) { u in
+                u.lecturePages.append(UnitPages(materialId: material, firstPage: first, lastPage: last))
+                u.touch(by: ctx.device, at: ctx.now)
+            }
+        }
+    }
+}
+
+/// One range in place of every range the unit has in the file.
+@Action("unit pages set", "단원의 렉처 쪽 구간 고치기. 그 파일에서 단원이 가진 구간을 이 구간 하나로 바꾼다",
+        done: "단원 '{unit}'의 {material} 쪽 구간을 고쳤습니다",
+        examples: ["folio unit pages set EC4207/매칭 05_Matchings.pdf --first 1 --last 6"],
+        phrases: ["단원 쪽 구간 고치기", "목차 경계 옮기기"])
+public struct UnitPagesSet {
+    @Arg var course: Course.ID
+    /// 단원
+    @Arg var unit: FolioDomain.Unit.ID
+    /// 렉처 자료
+    @Arg var material: Material.ID
+    /// 첫 쪽
+    var first: Int
+    /// 끝 쪽
+    var last: Int
+
+    public func run(_ ctx: ActionContext) throws {
+        try checkPages(first, last)
+        try ctx.edit(course) { f in
+            _ = try index(material, in: f.materials, .valueMaterial)
+            try f.update(\.units, unit) { u in
+                let next = u.lecturePages.filter { $0.materialId != material } + [UnitPages(materialId: material, firstPage: first, lastPage: last)]
+                guard next != u.lecturePages else { return }
+                u.lecturePages = next
+                u.touch(by: ctx.device, at: ctx.now)
+            }
+        }
+    }
+}
+
+@Action("unit pages rm", "단원에서 렉처 파일의 쪽 구간 빼기. 파일과 단원은 그대로 둔다", effect: .removes,
+        confirm: "단원 '{unit}'에서 {material}의 쪽 구간을 뺍니다.", done: "단원 '{unit}'에서 {material}의 쪽 구간을 뺐습니다",
+        examples: ["folio unit pages rm EC4207/매칭 05_Matchings.pdf --dry-run"], phrases: ["단원 쪽 구간 지우기"])
+public struct UnitPagesRemove {
+    @Arg var course: Course.ID
+    /// 단원
+    @Arg var unit: FolioDomain.Unit.ID
+    /// 렉처 자료
+    @Arg var material: Material.ID
+
+    public func run(_ ctx: ActionContext) throws {
+        try ctx.edit(course) { f in
+            _ = try index(material, in: f.materials, .valueMaterial)
+            try f.update(\.units, unit) { u in
+                guard u.lecturePages.contains(where: { $0.materialId == material }) else { return }
+                u.lecturePages.removeAll { $0.materialId == material }
+                u.touch(by: ctx.device, at: ctx.now)
+            }
+        }
+    }
+}
+
+/// Every cut is checked before the file is changed: a unit that is missing must come with the title to make it.
+func checkCuts(_ cuts: [LectureCut], in f: CourseFile) throws {
+    for cut in cuts {
+        try checkPages(cut.firstPage, cut.lastPage)
+        guard !f.units.contains(where: { $0.id == cut.unit }) else { continue }
+        guard !(cut.title ?? "").trimmingCharacters(in: .whitespaces).isEmpty else {
+            throw ActionError.notFound(String(localized: .errorNotFoundItem(String(localized: .valueUnit))))
+        }
+        if let parent = cut.parent { _ = try index(parent, in: f.units, .valueUnit) }
+    }
+}
+
+/// The whole split of one lecture file at once, as the split screen and the add sheet approve it: every unit's
+/// pages of the file become these, and units named only by a title are made. The command names units by title, so it
+/// is written by hand.
+@Action("material split", "렉처 파일을 단원 구간으로 나누기. 그 파일의 단원 구간을 모두 이 목록으로 바꾸고, 없는 단원은 만든다",
+        done: "{material}을(를) 단원 구간으로 나눴습니다",
+        examples: [#"folio material split EC4207/05_Matchings.pdf 1-4:매칭 5-8:König 9-13:"Hall의 결혼 정리""#],
+        phrases: ["단원으로 나누기", "렉처 목차 나누기", "렉처를 단원별로"], cli: .manual)
+public struct MaterialSplit {
+    @Arg var course: Course.ID
+    @Arg var material: Material.ID
+    var sections: [LectureCut]
+
+    public func run(_ ctx: ActionContext) throws {
+        try ctx.edit(course) { f in
+            _ = try index(material, in: f.materials, .valueMaterial)
+            try checkCuts(sections, in: f)
+            f.split(material, into: sections, device: ctx.device, now: ctx.now)
+        }
+    }
+}
+
 /// Puts a unit, with the units under it, into an exam's scope or takes it out.
 @Action("exam scope", "시험 범위에 단원 넣기, --off면 빼기", done: "시험 '{exam}'의 범위를 바꿨습니다", cli: .manual)
 public struct ExamScope {

@@ -359,7 +359,7 @@ struct MaterialLinksEditor: View {
                                 if let link {
                                     PageRangeField(range: link.pageRange, pages: model.pageCounts[materialId],
                                                    taught: model.taught(materialId, besides: s.id), seen: model.seen(materialId, in: s),
-                                                   compact: true) {
+                                                   sections: model.sections(materialId), reads: model.reads(materialId), compact: true) {
                                         model.setPages(materialId, session: s.id, $0)
                                     }
                                 }

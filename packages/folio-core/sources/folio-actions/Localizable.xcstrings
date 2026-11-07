@@ -1419,6 +1419,17 @@
           }
         }
       }
+    },
+    "error.unit-pages.range": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쪽 구간은 1쪽부터이고 끝 쪽이 시작 쪽보다 앞설 수 없습니다: %1$lld–%2$lld"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

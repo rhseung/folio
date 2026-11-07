@@ -20,7 +20,7 @@ func absolute(_ path: String) -> String {
 struct MaterialCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "material", abstract: String(localized: .materialAbstract),
-        subcommands: [List.self, Show.self, Link.self, Status.self, Kind.self, Relink.self, Track.self, Import.self, Move.self, Write.self]
+        subcommands: [List.self, Show.self, Link.self, Status.self, Kind.self, Relink.self, Track.self, Import.self, Move.self, Write.self, Split.self]
             + GeneratedCommands.material)
 
     struct List: ParsableCommand {
@@ -209,6 +209,36 @@ struct MaterialCommand: ParsableCommand {
             let c = try r.course(course)
             let s = try session.map { try r.session(c.local($0), in: c).id }
             try perform(spec: MaterialImport(course: c.id, items: files.map { ImportItem(file: absolute($0), folder: folder, session: s) }), g, ctx: ctx)
+        }
+    }
+
+    struct Split: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: String(localized: .materialSplitAbstract), discussion: String(localized: .materialSplitDiscussion))
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp(String(localized: .commonHelpMaterial), valueName: "material"), completion: Complete.materials) var material: String
+        @Argument(help: ArgumentHelp(String(localized: .materialSplitHelpSections), valueName: "pages:unit")) var sections: [String] = []
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, name) = try r.split(material)
+            let m = try r.material(name, in: c)
+            // A title no unit has is a new unit; one new title written twice is the same new unit.
+            var made: [String: UUID] = [:]
+            let cuts = try sections.map { arg in
+                // The first colon: the pages never hold one, a unit's title may.
+                guard let colon = arg.firstIndex(of: ":") else { throw CLIError(exit: .usage, message: String(localized: .materialSplitFormat(arg))) }
+                let bounds = arg[..<colon].split(separator: "-", omittingEmptySubsequences: false).map { Int($0) }
+                let title = String(arg[arg.index(after: colon)...]).trimmingCharacters(in: .whitespaces)
+                guard (1...2).contains(bounds.count), let first = bounds.first ?? nil, let last = bounds.last ?? nil, !title.isEmpty else {
+                    throw CLIError(exit: .usage, message: String(localized: .materialSplitFormat(arg)))
+                }
+                if let unit = c.file.units.first(where: { $0.title == title }) { return LectureCut(unit: unit.id, firstPage: first, lastPage: last) }
+                let id = made[title] ?? UUID()
+                made[title] = id
+                return LectureCut(unit: id, title: title, firstPage: first, lastPage: last)
+            }
+            try perform(spec: MaterialSplit(course: c.id, material: m.id, sections: cuts), g, ctx: ctx)
         }
     }
 

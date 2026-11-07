@@ -2,7 +2,7 @@ import FolioDomain
 import Foundation
 
 public enum ClaudeTask: String, Codable, Sendable, CaseIterable {
-    case chat, reviewNoteDraft, examSummaryDraft, quizCards, grading, classifyFile, extractAssignment, extractGradingPolicy, examPlan, widget
+    case chat, reviewNoteDraft, examSummaryDraft, quizCards, grading, classifyFile, extractAssignment, extractGradingPolicy, examPlan, widget, lectureSections
 }
 
 /// Per the spec: light jobs (file classification) on the small model, grading and proof review on the large one.
@@ -17,7 +17,7 @@ public struct TaskConfig: Codable, Sendable, Equatable {
 
     public static func defaults(for task: ClaudeTask) -> TaskConfig {
         switch task {
-        case .classifyFile, .extractAssignment: TaskConfig(model: small, effort: .low, maxTokens: 4_000)
+        case .classifyFile, .extractAssignment, .lectureSections: TaskConfig(model: small, effort: .low, maxTokens: 4_000)
         case .grading: TaskConfig(model: large, effort: .high, maxTokens: 16_000)
         case .chat, .reviewNoteDraft, .examSummaryDraft, .quizCards, .extractGradingPolicy, .examPlan, .widget:
             TaskConfig(model: large, effort: .medium, maxTokens: 16_000)

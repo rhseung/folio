@@ -72,6 +72,9 @@ struct FileView: View {
             if page != nil, let pdf, let page = takeRequestedPage() { pdf.go(to: page) }
         }
         .onDisappear { model.closed(at: pdf?.page) }
+        // The progress sheet asked for this file's split screen before opening it.
+        .onChange(of: pdf == nil, initial: true) { _, _ in takeSplitAsk() }
+        .onChange(of: model.workspace.splitAsk) { _, _ in takeSplitAsk() }
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.askPage) { _, ask in
             if ask, let c = pdf, let item = model.pageContext(c.page, in: c) { askClaude?(item) }
@@ -86,7 +89,14 @@ struct FileView: View {
         case .failed:
             ContentUnavailableView(String(localized: .fileViewCannotRead), systemImage: "doc.questionmark", description: Text(model.name))
         case .pdf(let controller):
-            PDFPane(controller: controller, thumbnails: thumbnails)
+            if model.splitting != nil, let course = model.course {
+                LectureSplitPane(controller: controller, split: Binding(get: { model.splitting ?? LectureSplit(pageCount: controller.pageCount) },
+                                                                         set: { model.splitting = $0 }),
+                                 units: course.file.units, note: model.splitNote, save: model.saveSplit, cancel: model.cancelSplit)
+                    .environment(\.accent, model.workspace.accent(course.id))
+            } else {
+                PDFPane(controller: controller, thumbnails: thumbnails)
+            }
         case .markdown(let text):
             NotePreview(text: text, baseURL: model.url.deletingLastPathComponent(), math: model.math, embeds: model.embeds,
                         revision: model.workspace.notesRevision)
@@ -119,7 +129,9 @@ struct FileView: View {
     var bar: some View {
         PageBar {
             if let c = pdf {
-                Button(.materialsViewerThumbnails, systemImage: "sidebar.left") { thumbnails.toggle() }.help(Text(.materialsViewerThumbnails))
+                if model.splitting == nil {
+                    Button(.materialsViewerThumbnails, systemImage: "sidebar.left") { thumbnails.toggle() }.help(Text(.materialsViewerThumbnails))
+                }
                 Text("\(c.page + 1) / \(c.pageCount)").monospacedDigit().foregroundStyle(Theme.Palette.textSecondary).padding(.horizontal, Theme.Space.xs)
                 Button(.materialsViewerZoomOut, systemImage: "minus.magnifyingglass") { c.zoomOut() }.keyboardShortcut("-")
                 Button(.materialsViewerFit, systemImage: "arrow.up.left.and.arrow.down.right") { c.fit() }.help(Text(.materialsViewerFit)).keyboardShortcut("0")
@@ -138,6 +150,9 @@ struct FileView: View {
                     }
                 }
                 .toolbarField()
+                if model.canSplit, model.splitting == nil {
+                    Button(.designPageRangeSplit, systemImage: "scissors") { Task { await model.startSplit(c) } }.help(Text(.designPageRangeSplitHelp))
+                }
                 if let link = model.pageLink(c.page) {
                     Button(.fileViewCopyPageLink, systemImage: "link") { copyLink(link) }.help(Text(.fileViewCopyPageLink))
                 }
@@ -150,6 +165,12 @@ struct FileView: View {
             }
             if model.opensElsewhere { OpenElsewhereButton(url: model.url) }
         }
+    }
+
+    func takeSplitAsk() {
+        guard let ask = model.workspace.splitAsk, ask == model.material?.id, let c = pdf else { return }
+        model.workspace.splitAsk = nil
+        Task { await model.startSplit(c) }
     }
 
     func takeRequestedPage() -> Int? {
