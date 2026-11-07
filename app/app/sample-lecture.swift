@@ -22,7 +22,7 @@ enum SampleLecture {
         guard let consumer = CGDataConsumer(data: data), let context = CGContext(consumer: consumer, mediaBox: &box, nil) else { return nil }
         for (i, title) in titles.enumerated() {
             context.beginPDFPage(nil)
-            context.setFillColor(NSColor.white.cgColor)
+            context.setFillColor(NSColor.white.cgColor) // design: one-off, the slide paper of a drawn PDF, not the app
             context.fill(box)
             draw(title, size: 28, bold: true, at: CGPoint(x: 40, y: 290), in: context)
             for line in 0..<(chapters.contains(i) ? 0 : 3) {
@@ -37,12 +37,13 @@ enum SampleLecture {
 
     static func write(to url: URL) throws {
         guard let data = document()?.dataRepresentation() else { throw CocoaError(.fileWriteUnknown) }
+        // folio:not-an-action a debug deck in a temporary folder, outside the GIST folder
         try data.write(to: url)
     }
 
     private static func draw(_ text: String, size: CGFloat, bold: Bool, at point: CGPoint, in context: CGContext) {
         let font = bold ? NSFont.boldSystemFont(ofSize: size) : NSFont.systemFont(ofSize: size)
-        let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [.font: font, .foregroundColor: NSColor.black]))
+        let line = CTLineCreateWithAttributedString(NSAttributedString(string: text, attributes: [.font: font, .foregroundColor: NSColor.black])) // design: one-off, ink on a drawn PDF
         context.textPosition = point
         CTLineDraw(line, context)
     }
