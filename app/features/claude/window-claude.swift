@@ -30,6 +30,9 @@ struct WindowClaude: View {
                                 insertIntoNote: { text in if let pane = target.notePane { inserts[pane].text = text } }) { id in
                         openLink(panes.focused)(AppLink(.note, id), course: target.course)
                     }
+                    // A panel per course: the one panel kept across a focus move took the context added in one course
+                    // (`added`, `removed`) into the next one's chat.
+                    .id(target.course)
                     // Inside the glass, controls wash instead of standing on it as solid fills. Set inside
                     // `floatingGlass()`, which would otherwise draw a wash instead of the glass itself.
                     .environment(\.onGlass, true)
