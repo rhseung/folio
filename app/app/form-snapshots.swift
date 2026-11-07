@@ -12,6 +12,7 @@ enum FormSnapshots {
         let file = course.file
         let device = workspace.device
         let component = file.components.first ?? GradeComponent(device: device, at: .now, name: "과제", weight: 20)
+        let importPlaces = MaterialIntake.places(assignmentFolders: ["HW01", "HW02", "SP01"]) + ["Exams/Midterm", "Exams/Final"]
         var forms: [(String, AnyView)] = [
             ("semester-add", AnyView(AddSemesterSheet(workspace: workspace) { _ in })),
             ("course-add", AnyView(AddCourseSheet(workspace: workspace, semester: semester) { _ in })),
@@ -28,8 +29,12 @@ enum FormSnapshots {
             ("policy", AnyView(PolicySheet(workspace: workspace, course: course))),
             ("requirement", AnyView(RequirementSheet(workspace: workspace, category: workspace.requirementCatalog.categories.first ?? RequirementCategory(device: device, at: .now, name: "")))),
             ("profile", AnyView(ProfileSheet(workspace: workspace))),
-            ("import-place", AnyView(ImportPlaceSheet(workspace: workspace, course: course, files: [URL(filePath: "/tmp/slides.pdf")],
-                                                      places: MaterialIntake.places(assignmentFolders: ["HW01", "HW02", "SP01"]) + ["Exams/Midterm", "Exams/Final"]))),
+            ("import-place", AnyView(ImportPlaceSheet(workspace: workspace, course: course, files: [URL(filePath: "/tmp/Flows.pdf")],
+                                                      places: importPlaces))),
+            ("import-place-many", AnyView(ImportPlaceSheet(workspace: workspace, course: course,
+                                                           files: ["10_Matchings.pdf", "Lecture 9 - Paths.pdf", "Flows.pdf", "HW2.pdf", "Diestel GT 5th edition.pdf",
+                                                                   "2024 중간고사 기출.pdf"].map { URL(filePath: "/tmp/\($0)") },
+                                                           places: importPlaces))),
             ("material-new", AnyView(NewMaterialFileSheet(workspace: workspace, course: course, folder: nil) { _ in })),
         ]
         let users = workspace.allCourses.flatMap(\.codes)

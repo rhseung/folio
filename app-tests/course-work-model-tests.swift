@@ -188,21 +188,51 @@ struct ScoreSourceModelTests {
 
 @MainActor
 struct MaterialsModelTests {
-    @Test func importPlacesGroupByKindAndPickTheNewest() throws {
+    /// Each file opens on its own guess, and the destination shows the name it will get before anything is copied.
+    @Test func importRowsOpenOnTheirGuessAndShowTheirNames() throws {
         let (workspace, course) = try fixtureCourse()
-        let model = ImportPlaceModel(workspace: workspace, course: course, files: [URL(filePath: "/tmp/a.pdf"), URL(filePath: "/tmp/b.pdf")],
+        let model = ImportPlaceModel(workspace: workspace, course: course,
+                                     files: ["HW2.pdf", "01_Vectors.pdf", "Notes.pdf"].map { URL(filePath: "/tmp/\($0)") },
                                      places: MaterialIntake.places(assignmentFolders: ["HW01", "HW02"]))
-        #expect(model.title == "파일 2개 넣기")
-        let assignments = try #require(model.kinds.first { $0.places.contains("Assignments/HW01") })
-        #expect(assignments.places == ["Assignments/HW01", "Assignments/HW02"] && assignments.perItem)
-        #expect(model.shown(assignments) == "Assignments/…")
-        model.pick(assignments.places)
-        #expect(model.place == "Assignments/HW02")
-        #expect(model.shown(assignments) == "Assignments/HW02")
-        #expect(model.kinds.first?.isLecture == true)
+        #expect(model.title == "파일 3개 넣기" && model.confirmTitle == "3개 넣기")
+        #expect(model.rows.map(\.folder) == ["Assignments/HW02", "Lectures", "Lectures"])
+        #expect(model.kindLabel(model.rows[0]) == "과제 HW02")
+        #expect(model.kindWhy(model.rows[0]) == "추측: 이름의 HW2")
+        // Nothing about Notes.pdf pointed anywhere: it sits in Lectures without a ✦.
+        #expect(model.kindWhy(model.rows[2]) == nil)
+        let placements = model.placements
+        #expect(placements[1].path == "Lectures/01_Vectors 2.pdf" && placements[1].suffix == " 2")
+        #expect(model.nameNote(placements[1]) == "같은 이름이 있어 뒤에 2를 붙입니다")
+        // A changed row loses its ✦.
+        model.setFolder("Assignments/HW01", for: [0])
+        #expect(model.kindWhy(model.rows[0]) == nil)
     }
 
-    /// `10주차-3` said nothing about which class; the day and what it covered do, newest first.
+    /// ⇧ widens from the last pick, ⌘ adds one, and a menu or number key on a selected row changes every selected row.
+    @Test func severalSelectedRowsChangeTogether() throws {
+        let (workspace, course) = try fixtureCourse()
+        let model = ImportPlaceModel(workspace: workspace, course: course, files: (1...4).map { URL(filePath: "/tmp/\($0).pdf") },
+                                     places: MaterialIntake.places(assignmentFolders: ["HW01", "HW02"]))
+        model.click(1)
+        model.click(2, extend: true)
+        model.click(0, toggle: true)
+        #expect(model.selection == [0, 1, 2])
+        let textbooks = try #require(model.kinds.first { $0.places == ["Textbooks"] })
+        model.setKind(textbooks, for: model.targets(model.rows[1]))
+        #expect(model.rows.map(\.folder) == ["Textbooks", "Textbooks", "Textbooks", "Lectures"])
+        // A row outside the selection changes alone.
+        #expect(model.targets(model.rows[3]) == [3])
+        let assignments = try #require(model.kinds.firstIndex { $0.perItem })
+        #expect(model.applyKind(number: assignments + 1))
+        // The newest assignment: the likely one.
+        #expect(model.rows.prefix(3).allSatisfy { $0.folder == "Assignments/HW02" })
+        model.step(1, extend: false)
+        #expect(model.selection == [1])
+        model.step(1, extend: true)
+        #expect(model.selection == [1, 2])
+    }
+
+    /// The day said what the class was, where `10주차-3` didn't; newest first, today's marked as today.
     @Test func importSessionsReadByDayNewestFirst() throws {
         let workspace = try fixtureWorkspace()
         // A makeup set up first, then the class before it: made out of date order on purpose.
@@ -211,12 +241,14 @@ struct MaterialsModelTests {
         }
         let course = try #require(workspace.course(graphTheory))
         let model = ImportPlaceModel(workspace: workspace, course: course, files: [URL(filePath: "/tmp/a.pdf")], places: [])
-        let options = model.sessionOptions.dropFirst()
-        let sessions = options.map { id in course.file.sessions.first { $0.id == id.0 }! }
-        #expect(sessions.count >= 2 && options.first?.1.hasSuffix(": 보강") == true)
-        #expect(model.session == sessions.first?.id)
+        let sessions = model.sessions
+        #expect(sessions.count >= 2 && model.sessionTitle(sessions[0]).hasSuffix(": 보강"))
         #expect(sessions.map(\.date) == sessions.map(\.date).sorted(by: >))
-        #expect(options.allSatisfy { $0.1.wholeMatch(of: #/\d{1,2}/\d{1,2}\([월화수목금토일]\)(: .+)?/#) != nil })
+        #expect(sessions.map(model.sessionTitle).allSatisfy { $0.wholeMatch(of: #/\d{1,2}/\d{1,2}\([월화수목금토일]\)(: .+)?/#) != nil })
+        // A file with nothing to say goes to the latest class.
+        #expect(model.rows[0].session == sessions[0].id && model.sessionLabel(model.rows[0]).hasSuffix(": 보강"))
+        model.setSession(nil, for: [0])
+        #expect(model.sessionLabel(model.rows[0]) == "회차 없음")
     }
 
     @Test func trackingFillsTheTreeAndFoldersOpenOnToggle() throws {
