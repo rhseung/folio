@@ -375,7 +375,7 @@ struct RootView: View {
         }
         // The row is the window's top: the hidden title bar's safe area would push it down under the window's buttons.
         .ignoresSafeArea(.container, edges: .top)
-        .background { TrafficLights(center: Theme.Size.toolbarRow / 2) { fullScreen = $0 } }
+        .background { TrafficLights(center: TitleRowEdges.lights) { fullScreen = $0 } }
         .background(Theme.Palette.frameTint.ignoresSafeArea())
         // Thinner in light: the regular material whitened the frame into milk over a light wallpaper. Not ultra-thin:
         // with the wallpaper showing through that clearly, the sidebar's text lost its contrast.
