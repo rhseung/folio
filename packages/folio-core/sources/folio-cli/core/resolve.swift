@@ -61,7 +61,7 @@ final class Resolver {
         try pick(ref, courses, what: "과목", names: { [$0.code, $0.course.title, $0.store.url.lastPathComponent] }, ref: \.code)
     }
 
-    /// `EC4207/9주차-1`, or the item alone when `course` is given separately. An empty ref, or a course alone, leaves
+    /// `EC4207/11-03`, or the item alone when `course` is given separately. An empty ref, or a course alone, leaves
     /// the item empty so the kind's lookup picks it with fzf.
     func split(_ ref: String, course: String? = nil) throws -> (CourseRef, String) {
         if let course { return (try self.course(course), ref) }
@@ -72,17 +72,20 @@ final class Resolver {
         return (try self.course(String(ref[..<slash])), String(ref[ref.index(after: slash)...]))
     }
 
-    /// By name (`10주차-1`), by day (`11/3`, `11-03`, `2026-11-03`), or by what it covered. Two classes on one day
-    /// match the day together, so the error lists their names.
+    /// By reference (`11-03`, `11-03 14:00`), by day (`11/3`, `2026-11-03`), or by what it covered. Two classes on one
+    /// day match the day together, so the error lists their references.
     func session(_ name: String, in c: CourseRef) throws -> Session {
         let f = c.file
-        let cal = ctx.calendar
-        func days(_ s: Session) -> [String] {
-            let d = cal.dateComponents([.year, .month, .day], from: s.date)
-            return ["\(d.month!)/\(d.day!)", String(format: "%02d-%02d", d.month!, d.day!), String(format: "%04d-%02d-%02d", d.year!, d.month!, d.day!)]
-        }
-        return try pick(name, f.sessions, what: "회차", names: { [f.name(of: $0)] + days($0) + [f.subject(of: $0) ?? ""] },
-                        ref: { "\(c.code)/\(f.name(of: $0))" })
+        return try pick(name, f.sessions, what: "회차", names: { f.references(of: $0, calendar: self.ctx.calendar) },
+                        ref: { "\(c.code)/\(f.reference(of: $0, calendar: self.ctx.calendar))" })
+    }
+
+    /// By its class, as a session is (`11-03`), or by its file.
+    func recording(_ name: String, in c: CourseRef) throws -> Recording {
+        let f = c.file
+        let session = { (r: Recording) in r.sessionId.flatMap { id in f.sessions.first { $0.id == id } }.map { f.references(of: $0, calendar: self.ctx.calendar) } ?? [] }
+        return try pick(name, f.recordings, what: "녹음", names: { session($0) + [$0.file, ($0.file as NSString).lastPathComponent] },
+                        ref: { "\(c.code)/\(($0.file as NSString).lastPathComponent)" })
     }
 
     func exam(_ name: String, in c: CourseRef) throws -> Exam {

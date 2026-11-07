@@ -69,7 +69,7 @@ public struct TabStrip<ID: Hashable & Sendable>: Equatable, Sendable {
 }
 
 /// How the tabs share the toolbar row. The tab in front shows the whole place it is at and is never narrowed for the
-/// others: they give way first, down to their icons, and then into a "탭 n개 더" menu at the row's end.
+/// others: they give way first, down to their icons, and then into a "+n" menu at the row's end.
 public enum TabFit {
     public struct Layout: Equatable, Sendable {
         /// The other tabs show only their icons.
@@ -114,6 +114,39 @@ public enum TabFit {
         while shown > 0, width(icon * Double(shown), count: shown, menu: true) > room { shown -= 1 }
         return Layout(iconsOnly: true, shown: shown, hidden: n - shown)
     }
+
+    /// The width the tab in front's trail is held to, or nil while the tab fits at its own width (`selected`, its
+    /// `chrome` included). Nil for every width with room to spare, so a window resized there leaves the tabs alone.
+    /// Held, it takes what the row leaves, however little: a strip wider than the row pushes the toolbar's own items
+    /// (the search field and the buttons) into its overflow menu.
+    public static func trail(room: Double, selected: Double, others: [Double], layout: Layout, icon: Double, gap: Double,
+                             more: Double, chrome: Double) -> Double? {
+        let rest = room - beside(others, layout: layout, icon: icon, gap: gap, more: more) - chrome
+        return selected <= rest + chrome ? nil : max(0, rest)
+    }
+
+    /// What the strip takes: the tab in front (held to `trail` with its `chrome`, else at its own width), the tabs
+    /// shown beside it and the menu, with the gaps between them. No more than `room` whenever the tab in front's
+    /// capsule and the menu fit in it at all.
+    public static func width(selected: Double, others: [Double], layout: Layout, trail: Double?, icon: Double, gap: Double,
+                             more: Double, chrome: Double) -> Double {
+        (trail.map { $0 + chrome } ?? selected) + beside(others, layout: layout, icon: icon, gap: gap, more: more)
+    }
+
+    /// Before the new-tab button after the last capsule: its bare glyph, centered in a button `button` wide, sits
+    /// `gap` after it, as the capsules sit among themselves. At the plain gap the button's margin around the glyph
+    /// read as a wider gap. Negative when that margin is wider than `gap`: the button's hit area then reaches under
+    /// the capsule's edge.
+    public static func newTabSpacing(gap: Double, button: Double, glyph: Double) -> Double {
+        gap - (button - glyph) / 2
+    }
+
+    /// The tabs beside the one in front and the menu, each with the gap before it.
+    private static func beside(_ others: [Double], layout: Layout, icon: Double, gap: Double, more: Double) -> Double {
+        let shown = others.prefix(layout.shown)
+        let tabs = layout.iconsOnly ? icon * Double(shown.count) : shown.reduce(0, +)
+        return tabs + gap * Double(shown.count) + (layout.hidden > 0 ? more + gap : 0)
+    }
 }
 
 /// Which tabs keep their screens alive behind the one in front, as Safari and Chrome keep recent tabs and let the rest
@@ -134,19 +167,22 @@ public enum TabKeep {
 
     /// The tabs whose screens stay alive. The tab in front always does; behind it, only tabs alive already (a dropped
     /// tab isn't brought back until it is in front), the `limit` most recently in front, each in front within `idle`.
-    /// Under memory pressure only the tab in front is kept.
+    /// Under memory pressure only the tab in front is kept, and the playing ones.
     ///
     /// - Parameters:
     ///   - alive: the tabs whose screens are alive now.
     ///   - left: when each tab last went behind another. A tab alive without one is treated as just left.
+    ///   - playing: tabs playing a recording. Dropping one would stop what is being listened to, so they stay however
+    ///     long or under whatever pressure, outside the `limit` the others share (#317).
     public static func alive<ID: Hashable>(selected: ID, alive: Set<ID>, left: [ID: Date], now: Date, policy: Policy,
-                                          pressure: Bool = false) -> Set<ID> {
-        guard !pressure else { return [selected] }
-        let behind = alive.subtracting([selected])
+                                          pressure: Bool = false, playing: Set<ID> = []) -> Set<ID> {
+        let playing = playing.intersection(alive).union([selected])
+        guard !pressure else { return playing }
+        let behind = alive.subtracting(playing)
             .map { (id: $0, left: left[$0] ?? now) }
             .filter { now.timeIntervalSince($0.left) < policy.idle }
             .sorted { $0.left > $1.left }
             .prefix(max(0, policy.limit))
-        return Set(behind.map(\.id)).union([selected])
+        return Set(behind.map(\.id)).union(playing)
     }
 }

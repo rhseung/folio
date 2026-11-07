@@ -40,3 +40,75 @@ public struct RecordingTrim {
         }
     }
 }
+
+/// Renames recordings still named `3주차-1.m4a` after their class's day, as new ones are named (#325). The audio and
+/// its transcript move as one `moves.jsonl` batch (`made`); `cleanup undo` of it puts them back, and the entries follow
+/// both ways. The course may be left out, which generated commands can't take, so the command is written by hand.
+@Action("recording retitle", "예전 이름(3주차-1)의 녹음 파일을 날짜 이름(11-03(화))으로 바꾸기. 받아쓰기 파일도 함께 바뀐다",
+        effect: .moves, confirm: "녹음 파일의 이름을 날짜로 바꿉니다.", done: "녹음 파일의 이름을 바꿨습니다",
+        phrases: ["녹음 이름 날짜로", "예전 녹음 이름 바꾸기", "주차 이름 녹음"], cli: .manual)
+public struct RecordingRetitleLegacy {
+    /// 과목. 빼면 모든 과목
+    @Arg var course: Course.ID?
+
+    public func run(_ ctx: ActionContext) throws {
+        let courses = try course.map { [$0] } ?? ctx.gist.courseStores().map { try $0.load().model.course.id }
+        var moves: [PlannedMove] = []
+        let name = { (path: String) in (path as NSString).lastPathComponent }
+        for course in courses {
+            let store = try ctx.store(course)
+            let file = try ctx.file(course)
+            let onDisk = (try? FileManager.default.contentsOfDirectory(atPath: store.recordingsURL.path)) ?? []
+            var taken = Set(onDisk + file.recordings.flatMap { [name($0.file), name($0.transcriptFile)] })
+            for r in file.legacyRecordingRetitles(calendar: ctx.calendar) {
+                guard let recording = file.recordings.first(where: { $0.id == r.recording }) else { continue }
+                // Trimmed audio is in the Trash, and audio still being compressed isn't in the folder yet: only the
+                // files that are there move, and with neither there is nothing to rename.
+                let parts = [r.file, recording.transcriptFile].filter { FileManager.default.fileExists(atPath: store.fileURL($0).path) }
+                guard !parts.isEmpty else { continue }
+                var target = Recording.file(named: r.name, taken: taken)
+                while taken.contains(name(Recording.transcriptFile(of: target))) {
+                    taken.insert(name(target))
+                    target = Recording.file(named: r.name, taken: taken)
+                }
+                taken.formUnion([name(target), name(Recording.transcriptFile(of: target))])
+                for part in parts {
+                    let to = part == r.file ? target : Recording.transcriptFile(of: target)
+                    moves.append(PlannedMove(from: try ctx.relative(course, part), to: try ctx.relative(course, to)))
+                }
+            }
+        }
+        guard !moves.isEmpty else { return }
+        for move in moves { ctx.record(Change(.moved, move.from, to: move.to)) }
+        let batch = ctx.dryRun ? nil : try MoveJournal.apply(moves, in: ctx.gist.url, device: ctx.device, now: ctx.now)
+        try RecordingFiles.follow(moves, ctx)
+        if let batch { ctx.made(batch) }
+    }
+}
+
+/// A recording's entry names its audio, so moving the audio or its transcript renames the entry.
+enum RecordingFiles {
+    /// Points each recording whose audio or transcript is in `moves` (GIST-relative, as `moves.jsonl` keeps them) at
+    /// its new place, keeping the audio's extension. Courses no move reaches aren't loaded.
+    static func follow(_ moves: [PlannedMove], _ ctx: ActionContext) throws {
+        for store in try ctx.gist.courseStores() {
+            let prefix = ctx.relative(store.url) + "/"
+            let byPath = Dictionary(moves.filter { $0.from.hasPrefix(prefix) && $0.to.hasPrefix(prefix) }
+                .map { (String($0.from.dropFirst(prefix.count)), String($0.to.dropFirst(prefix.count))) }, uniquingKeysWith: { a, _ in a })
+            guard !byPath.isEmpty else { continue }
+            let course = try store.load().model.course.id
+            try ctx.edit(course) { f in
+                for i in f.recordings.indices {
+                    let r = f.recordings[i]
+                    let file = byPath[r.file] ?? byPath[r.transcriptFile].flatMap { to in
+                        to.hasSuffix(Recording.transcriptSuffix)
+                            ? String(to.dropLast(Recording.transcriptSuffix.count)) + "." + (r.file as NSString).pathExtension : nil
+                    }
+                    guard let file, file != r.file else { continue }
+                    f.recordings[i].file = file
+                    f.recordings[i].touch(by: ctx.device, at: ctx.now)
+                }
+            }
+        }
+    }
+}

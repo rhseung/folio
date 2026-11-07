@@ -40,7 +40,8 @@ struct FileView: View {
         if model.editsInPlace, let course = model.course {
             // The editor brings its own bar, crumb and saving.
             switch model.subject {
-            case .material(let id): TextFileView(workspace: model.workspace, course: course, material: id)
+            case .material(let id):
+                TextFileView(workspace: model.workspace, course: course, material: id, requestedPage: $requestedPage, shownPage: $shownPage)
             case .note(let note): TextFileView(workspace: model.workspace, course: course, note: note)
             case .file: EmptyView()
             }

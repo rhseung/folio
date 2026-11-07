@@ -34,6 +34,26 @@ struct RecordingPlayerModelTests {
         #expect(model.hasLines)
     }
 
+    /// The address names the moment: a link seeks the player there, and the moment the player reports back doesn't
+    /// seek it again. The audio here can't be read, so the length is the one the recording kept.
+    @Test func theAddressFollowsThePlayer() throws {
+        let model = try recorded(try fixtureWorkspace(), lines: [.init(start: 0, end: 20, text: "가"), .init(start: 20, end: 60, text: "나")])
+        let link = AppLink(.recording, model.recording.id)
+        model.follow(link.with(.time(30)))
+        #expect(model.player.time == 30 && model.player.duration == 60)
+        #expect(model.viewedLink == link.with(.time(30)))
+        #expect(model.seekedTo == 30 && model.seekedTo.flatMap(model.lineIndex) == 1)
+        model.player.seek(42)
+        model.follow(link.with(.time(30)))
+        #expect(model.player.time == 30)
+        model.player.seek(42)
+        model.follow(model.viewedLink)
+        #expect(model.player.time == 42)
+        // Another recording's moment is not this one's.
+        model.follow(AppLink(.recording, UUID(), anchor: .time(5)))
+        #expect(model.player.time == 42)
+    }
+
     func picking(_ texts: [String]) throws -> RecordingPlayerModel {
         let f = try QuizFixture()
         let recording = Recording(device: f.workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a")

@@ -80,6 +80,33 @@ struct TabScreensTests {
         #expect(scroll.contentView.bounds.origin.y == 600)
     }
 
+    @Test func aKeptTabIsNotLaidOutAsTheWindowResizes() async throws {
+        try await settle(2)
+        let editor = try #require(views(NoteTextView.self).first)
+        let scroll = try #require(editor.enclosingScrollView)
+        let before = scroll.frame.size
+        tabs.open(Navigator(Navigator.Entry(link: .place(.grades))))
+        try await settle()
+
+        // Behind, the note keeps its size: its text doesn't reflow out of sight on every frame of a resize (#310).
+        window.setContentSize(NSSize(width: 1500, height: 900))
+        try await settle()
+        #expect(scroll.frame.size == before)
+
+        // In front again, it takes the window's.
+        tabs.select(number: 1)
+        try await settle()
+        #expect(views(NoteTextView.self).first === editor)
+        #expect(scroll.frame.width > before.width)
+
+        // Narrower than the grades screen behind it was left at, the window still holds the note in front: a screen
+        // behind sized the stack to itself and pushed the one in front past the window's edge.
+        window.setContentSize(NSSize(width: 1250, height: 900))
+        try await settle()
+        let content = try #require(window.contentView)
+        #expect(scroll.convert(scroll.bounds, to: nil).maxX <= content.bounds.width)
+    }
+
     @Test func aKeptTabKeepsItsViewMode() async throws {
         try await settle(2)
         // Reading only, as ⌘E or the bar's 미리보기 leaves it.

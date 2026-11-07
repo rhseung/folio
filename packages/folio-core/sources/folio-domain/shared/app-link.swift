@@ -1,6 +1,6 @@
 import Foundation
 
-/// The address of anything the app shows: `folio://<kind>/<ID>[#page=N|#^block|#heading]`, or a place that needs no
+/// The address of anything the app shows: `folio://<kind>/<ID>[#page=N|#^block|#heading|#t=12:30]`, or a place that needs no
 /// ID (`folio://today`, `folio://settings/claude`). Every way in (a note's link, the search palette, the sidebar, the CLI, a window's history)
 /// names its target with this one value, so there is one place that opens it.
 public struct AppLink: Hashable, Sendable {
@@ -8,7 +8,7 @@ public struct AppLink: Hashable, Sendable {
         case today, grades, requirements, people, codes, settings
         case semester, course, session, unit, note, material, assignment, exam, card
         case problemSet = "problem-set"
-        case person
+        case person, recording
 
         /// Where what a link of this kind names is kept, so where it is looked for.
         public enum Home: Sendable {
@@ -31,18 +31,19 @@ public struct AppLink: Hashable, Sendable {
             case .today, .grades, .requirements, .people, .codes, .settings: .app
             case .semester: .transcript
             case .person: .catalog
-            case .course, .session, .unit, .note, .material, .assignment, .exam, .problemSet: .course
+            case .course, .session, .unit, .note, .material, .assignment, .exam, .problemSet, .recording: .course
             case .card: .quiz
             }
         }
 
         public var isPlace: Bool { home == .app }
 
-        /// What may follow `#`: a material's page, a note's block or heading.
+        /// What may follow `#`: a material's page, a note's block or heading, a recording's moment.
         public var anchors: Set<Anchor.Kind> {
             switch self {
             case .material: [.page]
             case .note: [.block, .heading]
+            case .recording: [.time]
             case .today, .grades, .requirements, .people, .codes, .settings, .semester, .person, .course, .session, .unit,
                  .assignment, .exam, .problemSet, .card: []
             }
@@ -53,7 +54,7 @@ public struct AppLink: Hashable, Sendable {
             switch self {
             case .course, .settings: true
             case .today, .grades, .requirements, .people, .codes, .semester, .person, .session, .unit, .note, .material,
-                 .assignment, .exam, .problemSet, .card: false
+                 .assignment, .exam, .problemSet, .card, .recording: false
             }
         }
     }
@@ -63,9 +64,11 @@ public struct AppLink: Hashable, Sendable {
         case page(Int)
         case block(String)
         case heading(String)
+        /// Whole seconds into the audio: the address follows playback, and a fraction would make every tick a new link.
+        case time(Int)
 
         public enum Kind: Hashable, Sendable {
-            case page, block, heading
+            case page, block, heading, time
         }
 
         public var kind: Kind {
@@ -73,6 +76,7 @@ public struct AppLink: Hashable, Sendable {
             case .page: .page
             case .block: .block
             case .heading: .heading
+            case .time: .time
             }
         }
 
@@ -81,6 +85,7 @@ public struct AppLink: Hashable, Sendable {
             case .page(let n): n >= 1
             case .block(let b): AppLink.isBlockID(b)
             case .heading(let h): !h.isEmpty
+            case .time(let t): t >= 0
             }
         }
     }
@@ -149,6 +154,7 @@ public struct AppLink: Hashable, Sendable {
         case .page(let n): s += "#page=\(n)"
         case .block(let b): s += "#^\(b)"
         case .heading(let h): s += "#" + (h.addingPercentEncoding(withAllowedCharacters: Self.headingAllowed) ?? h)
+        case .time(let t): s += "#t=" + Self.clock(t)
         case nil: break
         }
         return s
@@ -203,15 +209,29 @@ public struct AppLink: Hashable, Sendable {
         } else if parts.count != 2 {
             return nil
         }
-        self.init(kind: kind, id: id, page: page, anchor: Self.anchor(fragment))
+        self.init(kind: kind, id: id, page: page, anchor: Self.anchor(fragment, of: kind))
     }
 
-    static func anchor(_ fragment: String) -> Anchor? {
+    /// A note's heading may read `t=1:00`, which the preview hands over raw, so only a kind that takes a moment reads one.
+    static func anchor(_ fragment: String, of kind: Kind) -> Anchor? {
         guard !fragment.isEmpty else { return nil }
         if let m = fragment.wholeMatch(of: /page=(\d{1,6})/), let n = Int(m.1) { return .page(n) }
+        if kind.anchors.contains(.time), let m = fragment.wholeMatch(of: /t=(?:(\d{1,3}):)?(?:(\d{1,4}):)?(\d{1,6})/) { return time(m.1, m.2, m.3) }
         if fragment.hasPrefix("^") { return .block(String(fragment.dropFirst())) }
         let heading = fragment.removingPercentEncoding ?? fragment
         return heading.isEmpty ? nil : .heading(heading)
+    }
+
+    /// `12:30`, `1:02:03`: how a player shows the moment, so the address reads like it.
+    static func clock(_ seconds: Int) -> String {
+        seconds >= 3600 ? String(format: "%d:%02d:%02d", seconds / 3600, seconds / 60 % 60, seconds % 60)
+            : String(format: "%d:%02d", seconds / 60, seconds % 60)
+    }
+
+    /// `t=750`, `t=12:30` and `t=1:02:03` all name a moment; with one colon the first part is minutes.
+    static func time(_ a: Substring?, _ b: Substring?, _ c: Substring) -> Anchor? {
+        let parts = [a, b].compactMap { $0 }.compactMap { Int($0) } + [Int(c) ?? 0]
+        return .time(parts.reduce(0) { $0 * 60 + $1 })
     }
 
     /// The `^id` a note writes after a block (`BlockID` in FolioMarkdown).
@@ -287,6 +307,7 @@ extension AppLink {
         case .exam: holds = { $0.exams.contains { $0.id == id } }
         case .problemSet: holds = { $0.problemSets.contains { $0.id == id } }
         case .note: holds = { $0.notes.contains { $0.id == id } }
+        case .recording: holds = { $0.recordings.contains { $0.id == id } }
         case .today, .grades, .requirements, .people, .codes, .settings, .semester, .person, .card: return nil
         }
         return files.first(where: holds)?.course.id

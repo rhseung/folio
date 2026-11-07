@@ -143,7 +143,7 @@ struct ActionTests {
 
     @Test func aNoteChangedElsewhereIsNotOverwritten() throws {
         let store = try ActionContext(gist: gist, device: device).store(Self.graphTheory)
-        let path = "Notes/2주차-1.md"
+        let path = "Notes/09-08(화) 매칭.md"
         let read = try String(contentsOf: store.fileURL(path), encoding: .utf8)
         try run(NoteWrite(course: Self.graphTheory, note: path, text: read + "\n바깥에서 고침", expected: read))
         #expect(throws: ActionError.conflict("노트가 다른 곳에서 바뀌었습니다: \(path)")) {
@@ -154,7 +154,7 @@ struct ActionTests {
 
     @Test func aNoteEditReplacesInOrderAndAppendsOnANewLine() throws {
         let store = try ActionContext(gist: gist, device: device).store(Self.graphTheory)
-        let path = "Notes/2주차-1.md"
+        let path = "Notes/09-08(화) 매칭.md"
         let url = store.fileURL(path)
         try "# 매칭\n\n짝짓기는 간선 집합이다".write(to: url, atomically: true, encoding: .utf8)
         let edits = [NoteEdit.Replacement(old: "짝짓기는", new: "매칭은"), NoteEdit.Replacement(old: "# 매칭\n\n매칭", new: "# 매칭\n\n최대 매칭")]
@@ -169,7 +169,7 @@ struct ActionTests {
     /// Nothing is written when any replacement fails, and a missing `old` reads as a change made elsewhere.
     @Test func aNoteEditRefusesAnOldThatIsMissingOrNotUnique() throws {
         let store = try ActionContext(gist: gist, device: device).store(Self.graphTheory)
-        let path = "Notes/2주차-1.md"
+        let path = "Notes/09-08(화) 매칭.md"
         let url = store.fileURL(path)
         try "a b a\n".write(to: url, atomically: true, encoding: .utf8)
         #expect(throws: ActionError.conflict("2번째 바꿀 원문 'c'이(가) 노트에 없습니다. 노트가 바뀌었을 수 있으니 다시 읽고 고치세요: \(path)")) {

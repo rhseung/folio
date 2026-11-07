@@ -1,16 +1,17 @@
 import FolioDomain
 import SwiftUI
 
-/// A saved class's menu, the same on every screen. What needs a sheet or a dialog of the host (playing, editing,
-/// deleting) shows only where the host passes it; elsewhere 회차에서 보기 leads to the page that has them.
+/// A saved class's menu, the same on every screen. What needs a sheet or a dialog of the host (editing, deleting)
+/// shows only where the host passes it; elsewhere 회차에서 보기 leads to the page that has them. A recording is a page
+/// of its own, so it plays from any of them.
 struct SessionMenu: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.openURL) private var openURL
+    @Environment(\.openLink) private var openLink
     let courseId: UUID
     let sessionId: UUID
     let openNote: (UUID) -> Void
     var showSessions: (() -> Void)?
-    var play: ((Recording) -> Void)?
     var edit: (() -> Void)?
     /// Asks how far the class went in its lecture files.
     var progress: (() -> Void)?
@@ -45,10 +46,8 @@ struct SessionMenu: View {
             }
             Divider()
             Button(.sessionsRecord, systemImage: "record.circle") { model.record(session) }.disabled(model.isRecording)
-            if let play {
-                ForEach(Array(model.recordings(of: session).enumerated()), id: \.element.id) { i, r in
-                    Button(model.playLabel(i, r), systemImage: "play") { play(r) }
-                }
+            ForEach(Array(model.recordings(of: session).enumerated()), id: \.element.id) { i, r in
+                Button(model.playLabel(i, r), systemImage: "play") { openLink(AppLink(.recording, r.id), course: courseId) }
             }
             Divider()
             if let edit { Button(.commonEditEllipsis, systemImage: "pencil", action: edit) }

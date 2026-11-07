@@ -37,11 +37,12 @@ extension CourseFile {
         return sessions.filter { $0.roughNoteId == note || $0.reviewNoteId == note }.sorted(by: Session.inOrder)
     }
 
-    /// `9주차-1 – 10주차-1`: the first and last of the note's sessions, or the one alone. Nil with none.
-    public func sessionSpan(of note: UUID?) -> String? {
+    /// `11/3(화) – 11/10(화)`: the days of the note's first and last sessions, or the one alone. Nil with none.
+    public func sessionSpan(of note: UUID?, calendar: Calendar) -> String? {
         let linked = sessions(pointingAt: note)
         guard let first = linked.first, let last = linked.last else { return nil }
-        return first.id == last.id ? name(of: first) : String(localized: .sessionSpan(name(of: first), name(of: last)))
+        let day = { (s: Session) in self.day(of: s, calendar: calendar) }
+        return first.id == last.id ? day(first) : String(localized: .sessionSpan(day(first), day(last)))
     }
 }
 

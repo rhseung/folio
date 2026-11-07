@@ -4,7 +4,7 @@ import SwiftUI
 import Testing
 @testable import Folio
 
-/// 선형대수학 in the standard fixture, with its rough note 1주차-1.
+/// 선형대수학 in the standard fixture, with its rough note 03-03(화).
 private let linearAlgebra = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
 
 /// Hangul typed into the edit view as the Korean input method types it, with SwiftUI updating the view and the note
@@ -42,7 +42,7 @@ struct NoteHangulTests {
         let workspace = try fixtureWorkspace()
         let course = try #require(workspace.course(linearAlgebra))
         let notes = NotesModel(workspace: workspace, course: course)
-        let file = try #require(notes.note(try #require(notes.noteId(titled: "1주차-1"))))
+        let file = try #require(notes.note(try #require(notes.noteId(titled: "03-03(화)"))))
         let model = NoteEditorModel(workspace: workspace, course: course, note: file)
         model.load()
         if !model.body.contains("\n") { model.body += "\n둘째 줄" }

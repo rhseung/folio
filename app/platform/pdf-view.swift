@@ -36,8 +36,12 @@ final class PDFController {
         if let observer { NotificationCenter.default.removeObserver(observer) }
     }
 
+    /// Also kept as the page, for a view not yet in the hierarchy: PDFKit ignores `go(to:)` before layout, and the
+    /// `restore()` that follows would otherwise go back to the page it had.
     func go(to index: Int) {
-        if let target = view.document?.page(at: index) { view.go(to: target) }
+        guard let target = view.document?.page(at: index) else { return }
+        page = min(max(index, 0), max(pageCount - 1, 0))
+        view.go(to: target)
     }
 
     /// Jumps to the remembered page once the view has a size; before layout PDFKit ignores `go(to:)`.

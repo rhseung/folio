@@ -87,7 +87,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
 | --- | --- | --- |
 | 액션 `@Action` | 데이터를 바꾸는 모든 동작. 앱, CLI, MCP가 같은 선언을 쓴다 | 있음 |
 | 표준 구조 `standard-layout.swift` | 폴더와 파일 이름 | 있음 |
-| 앱 링크 `AppLink` | 앱 안의 모든 대상을 가리키는 `folio://<종류>/<ID>[#page=N\|#^블록\|#제목]` 주소. 과목의 페이지는 `folio://course/<ID>/<페이지>`, 설정 탭은 `folio://settings/<탭>`이다. 종류마다 담는 곳(`home`), 받는 앵커(`anchors`), 페이지 경로(`hasPages`)는 `AppLink.Kind` 한 곳에 있고 주소 해석, CLI 검사, `Workspace.entry`가 그 값을 읽는다. 종류별 `switch`에는 `default:`를 두지 않아 새 종류는 모든 곳이 다룰 때까지 컴파일되지 않는다. 앱은 `\.openLink`(여는 위치는 여기·옆 칸·새 탭·새 창)로만 열고, 탭마다 `Navigator`가 뒤로·앞으로 기록을 둔다. 새 탭은 macOS 창 탭이 아니라 창이 툴바 줄에 직접 그리는 탭이다(`WindowTabs`, 탭 목록과 고른 탭은 값 `TabStrip`). 회차, 과제, 시험, 카드, 문제집 링크는 그 목록 페이지를 열고 그 항목으로 스크롤해 표시한다(`\.linkFocus`, `.linkTarget`). 자료의 쪽은 주소에 실려 기록의 지금 걸음을 고친다. 사이드바, 검색, 노트와 파일의 링크, Claude 패널의 답, 바깥에서 온 `folio://`(앞에 있는 창의 새 탭에서 열고 그 탭을 고르며 앱을 앞으로 가져온다), `folio open`이 쓴다. 같은 scheme의 두 주소는 `AppLink`가 아니다. 손으로 쓴 `[[제목]]`이 되는 `folio://note/<제목>`은 그 노트가 있는 과목에서 `[NoteFile].linked`로 찾고(`AppLink.noteTitle`), `folio://action/…`은 Claude 패널의 버튼이라 종류 이름으로 쓸 수 없다(`AppLink.actionHost`) | 있음 |
+| 앱 링크 `AppLink` | 앱 안의 모든 대상을 가리키는 `folio://<종류>/<ID>[#page=N\|#^블록\|#제목\|#t=12:30]` 주소(`t`는 녹음의 재생 위치). 과목의 페이지는 `folio://course/<ID>/<페이지>`, 설정 탭은 `folio://settings/<탭>`이다. 종류마다 담는 곳(`home`), 받는 앵커(`anchors`), 페이지 경로(`hasPages`)는 `AppLink.Kind` 한 곳에 있고 주소 해석, CLI 검사, `Workspace.entry`가 그 값을 읽는다. 종류별 `switch`에는 `default:`를 두지 않아 새 종류는 모든 곳이 다룰 때까지 컴파일되지 않는다. 앱은 `\.openLink`(여는 위치는 여기·옆 칸·새 탭·새 창)로만 열고, 탭마다 `Navigator`가 뒤로·앞으로 기록을 둔다. 새 탭은 macOS 창 탭이 아니라 창이 툴바 줄에 직접 그리는 탭이다(`WindowTabs`, 탭 목록과 고른 탭은 값 `TabStrip`). 회차, 과제, 시험, 카드, 문제집 링크는 그 목록 페이지를 열고 그 항목으로 스크롤해 표시한다(`\.linkFocus`, `.linkTarget`). 자료의 쪽은 주소에 실려 기록의 지금 걸음을 고친다. 사이드바, 검색, 노트와 파일의 링크, Claude 패널의 답, 바깥에서 온 `folio://`(앞에 있는 창의 새 탭에서 열고 그 탭을 고르며 앱을 앞으로 가져온다), `folio open`이 쓴다. 같은 scheme의 두 주소는 `AppLink`가 아니다. 손으로 쓴 `[[제목]]`이 되는 `folio://note/<제목>`은 그 노트가 있는 과목에서 `[NoteFile].linked`로 찾고(`AppLink.noteTitle`), `folio://action/…`은 Claude 패널의 버튼이라 종류 이름으로 쓸 수 없다(`AppLink.actionHost`) | 있음 |
 | 화면 계약 `ScreenView` | 모든 화면이 주소 하나를 그리고 전체·칸·좁은 폭(1440·720·390)에서 넘치거나 잘리지 않는다. 주소에서 화면을 고르는 곳은 `Screen(entry)` 하나이고, `ScreenFitTests`가 세 폭을 검사한다 | 있음 |
 | 제안 | Claude가 내놓는 분류, 추출, 일정을 승인 화면으로 받는 공통 구조 | #90 |
 | 파일 보기 렌더러 | 형식 판단과 형식별 보기. `FolioDomain`의 `MaterialFormat`이 확장자로 형식을 정하고(`material show`도 같은 값을 쓴다) `renderer`가 보기를 고른다. `app/platform/file-view/`의 `FileView` 하나가 그 보기를 그린다: PDF는 PDFKit(`PDFPane`), 마크다운은 노트 미리보기, `.tex`·코드·텍스트는 편집기(자료와 노트) 또는 읽기 전용 소스, 이미지와 오디오는 네이티브 보기, 나머지는 같은 칸 안의 Quick Look, 그것도 못 보이면 "열 수 없음"과 다른 앱으로 열기. 자료는 `folio://material` 링크로 자료 탭에서 열고(과제, 문제집, 시험, 단원, 검색이 모두 이 길), 복습의 원본과 학기의 `_Admin` 파일도 `FileView`로 보인다. 화면이 파일을 따로 열지 않는다 | 있음 |
@@ -185,7 +185,7 @@ Me/GIST/
       Notes/                   # Folio 노트(마크다운 .md, LaTeX .tex)
         assets/                # 노트에 넣은 그림과 파일
       Ink/                     # PencilKit 필기 (.drawing)
-      Recordings/              # 강의 녹음(.m4a)과 받아쓰기(.transcript.json). 2주차-1.m4a
+      Recordings/              # 강의 녹음(.m4a)과 받아쓰기(.transcript.json). 11-03(화).m4a
       Archive/                 # 이전 필기 (노타빌리티 PDF, 예전 노트 폴더)
       .folio/
         course.json            # 과목 정보, 단원, 강의 회차, 평가 기준, 과제, 파일 연결
@@ -207,7 +207,9 @@ Me/GIST/
 - `Inherited`에는 선배와 이전 학기에서 받은 자료를 종류와 상관없이 원래 이름으로 둔다. 출처별 하위 폴더(`Inherited/관훈 선배 리포트/`)는 써도 되고, 낱개 파일은 `Inherited`에 바로 둔다. 족보 시험지(해설 포함)인지는 이름이 아니라 `course.json`의 자료 종류(`pastExam`)로 표시하고, 시험에 쓸 자료는 그 시험에 연결한다(`material link-exam`). `Exams/Past`는 없앴다.
 - `Exercises`에는 교수가 준 채점 없는 연습 문제만 둔다.
 - `Study`에는 직접 만든 파일을 둔다. 문제집, 모의고사, 요약 PDF와 `.tex` 원본, 노트를 빌드한 PDF(`Study/<제목>.pdf`)가 여기 온다. 어느 시험·단원용인지는 `material link-exam`, `material link-unit`으로 연결하고(앱에서는 자료 연결 편집기, 단원 페이지, 시험 카드), 시험 화면은 시험 폴더의 파일과 연결된 자료를 함께 센다. 어떤 자료가 회차, 단원, 시험에 딸리는지는 `CourseFile.routes(of:to:)` 하나가 정한다. 회차는 그 단원과 상위 단원의 자료를, 단원은 그 회차의 자료를 함께 본다. Folio 마크다운 노트는 `Notes`에 둔다.
-- 회차 노트는 수업 날짜와 주제로 이름을 짓는다(`Notes/11-05(목) Principles of reliable data transfer.md`, 복습 노트는 뒤에 ` 정리`). 규칙은 `CourseFile.noteTitle(for:kind:calendar:)` 하나다. 그 전에 `10주차-2`로 만든 노트는 저절로 바뀌지 않고, `note retitle`로 한 번에 바꾼다. `N주차-M`은 CLI의 회차 이름과 녹음 파일에 그대로 쓴다.
+- 회차 노트는 수업 날짜와 주제로 이름을 짓는다(`Notes/11-05(목) Principles of reliable data transfer.md`, 복습 노트는 뒤에 ` 정리`). 규칙은 `CourseFile.noteTitle(for:kind:calendar:)` 하나다. 그 전에 `10주차-2`로 만든 노트는 저절로 바뀌지 않고, `note retitle`로 한 번에 바꾼다.
+- 회차는 `N주차-M`으로 부르지 않는다. 화면에 보이는 이름은 `CourseFile.title(of:calendar:)`(`11/3(화): 주제`) 하나이고, CLI가 회차를 가리키고 출력하는 이름은 `CourseFile.reference(of:calendar:)`(`EC4207/11-03`, 하루에 수업이 둘이면 `11-03 14:00`)다. 날짜(`11/3`, `2026-11-03`)와 주제로도 찾는다(`references`). 날짜는 공부일이 아니라 달력 날짜라 노트 파일 이름의 날짜와 같다. 학기의 주차(`Lectures`의 `05_`, "지금 9주차", 시험 주차, 회차 목록의 주차 묶음)는 회차 이름이 아니라 그대로 쓴다.
+- 녹음 파일은 수업 날짜로 이름을 짓는다(`Recordings/11-03(화).m4a`, 같은 날 둘째는 ` 2`). 그 전의 `2주차-1.m4a`는 저절로 바뀌지 않고, `recording retitle`로 한 번에 바꾼다. 예전 이름(`10주차-2`)을 알아보는 규칙은 이 두 이름 바꾸기 도구에만 둔다.
 - 노트 링크는 노트 ID로 건다: `[[note:<ID>|제목]]`, `[[note:<ID>#제목|표시]]`, `[[note:<ID>#^블록|표시]]`. 앱 링크 `folio://note/<ID>`로 열고 이름이 바뀌어도 깨지지 않는다. 손으로 쓴 `[[제목]]`은 과목 안에서 제목으로 찾고 ID 꼴로 바꾸지 않는다. 링크를 열 때와 미리보기가 그 노트를 그리거나 깨진 링크로 그릴 때 모두 `[NoteFile].linked` 하나로 찾는다. 블록 ID는 원문의 `^id`라 같은 노트 안에서 옮긴 블록은 따라가고, 다른 노트로 옮기면 찾지 못한다.
 - 링크 자동 완성은 고른 항목을 ID 꼴로 넣고 이름을 `|` 뒤에 붙인다: 노트 `[[note:<ID>|제목]]`, 자료 `[[material:<ID>#page=N|파일 이름]]`, 그 밖은 앱 링크 종류 이름 그대로(`[[exam:<ID>|중간고사]]`). 이미 쓴 `|이름`은 그대로 둔다. ID가 없는 블록을 고르면 대상 노트 끝 줄에 `^id`를 붙이는데, 다른 노트면 `note write`(읽은 글과 다르면 거절)로, 쓰고 있는 노트면 편집 보기에서 쓴다.
 - 앱 밖의 파일은 복사해서 들여오고, 같은 이름이 있으면 ` 2`를 붙여 덮어쓰지 않는다.
@@ -248,7 +250,7 @@ Me/GIST/
 - 화면 모델 테스트와 노트 보기 회귀 검사: `mise run test-app`. macOS에서 앱을 호스트로 `app-tests/`를 돌린다. 테스트 중에는 앱이 기억해 둔 GIST 폴더를 열지 않고, 창을 띄우거나 포커스를 가져가지 않는다
 - 노트 보기 기준 이미지 다시 만들기: `test-app`은 없거나 달라진 이미지를 새 이미지와 차이 이미지(`-diff.png`)로 `FOLIO_NOTE_SCREENS`(기본 `.build/note-screens`)에 남기고, CI는 실패할 때 이것을 `note-screens` 아티팩트로 올린다. 차이 이미지로 의도한 변화인지 확인한 뒤 `mise run note-screens -- <CI 실행 ID>`로 기준 이미지에 들인다. 로컬에서 그린 이미지는 기준으로 쓰지 않는다
 - iPad 테스트: `mise run test-ipad`. 첫 번째 iPad 시뮬레이터에서 `FolioPad` 스킴으로 앱을 호스트 삼아 `app-tests/ipad/`를 돌린다. 이 파일들은 `#if os(iOS)`로 감싸서 Mac의 `FolioTests`에서는 비어 있다
-- 화면 밖 렌더: `mise run render`. `FolioFixtures`의 상황마다 모든 페이지(오늘, 학기, 과목의 각 탭, 성적, 졸업 요건, 사람, 코드, 설정의 각 탭)와 시트(입력 폼, 검색)를 라이트·다크 PNG로 `FOLIO_RENDER_DIR`(기본 `.build/renders`)의 `<상황>/`에 쓴다. 폭과 높이는 `FOLIO_RENDER_SIZES=1180,720,1440x900`(높이를 빼면 페이지 끝까지), 고르기는 `FOLIO_RENDER_SCREENS=today,course-`(이름 앞부분)와 `FOLIO_RENDER_SCENARIOS=busyDay`. 창이 뜨지 않고 실제 GIST 폴더와 시계를 쓰지 않는다. 리퀴드 글라스, 노트 보기와 `WKWebView`, 뷰 안에서 여는 시트, 창 틀은 그리지 못하니 `FOLIO_SNAPSHOT_DIR` 창 스냅숏(`docs/DESIGN.md` 마지막 절)으로 본다
+- 화면 밖 렌더: `mise run render`. `FolioFixtures`의 상황마다 모든 페이지(오늘, 학기, 과목의 각 탭과 다시 듣기, 성적, 졸업 요건, 사람, 코드, 설정의 각 탭)와 시트(입력 폼, 검색)를 라이트·다크 PNG로 `FOLIO_RENDER_DIR`(기본 `.build/renders`)의 `<상황>/`에 쓴다. 폭과 높이는 `FOLIO_RENDER_SIZES=1180,720,1440x900`(높이를 빼면 페이지 끝까지), 고르기는 `FOLIO_RENDER_SCREENS=today,course-`(이름 앞부분)와 `FOLIO_RENDER_SCENARIOS=busyDay`. 창이 뜨지 않고 실제 GIST 폴더와 시계를 쓰지 않는다. 리퀴드 글라스, 노트 보기와 `WKWebView`, 뷰 안에서 여는 시트, 창 틀은 그리지 못하니 `FOLIO_SNAPSHOT_DIR` 창 스냅숏(`docs/DESIGN.md` 마지막 절)으로 본다
 - 가짜 GIST 폴더: `mise run fixture -- <폴더> [standard|legacy|<상황>]`. 상황(`busyDay` 등)은 `Scenario`로 회차와 마감이 채워진 폴더다. 이미 있는 폴더에는 쓰지 않는다
 - 웹 번들: `mise run build-web`. `web/src/`를 고친 뒤 실행한다. 노트 미리보기와 Claude 패널의 색은 `theme.swift`의 값을, 크기와 간격은 `app/design/note-look.swift`의 값을 `NoteStyle`이 CSS 변수로 넘기므로 CSS에 색과 크기를 적지 않는다
 - 노트 보기 렌더: `TEST_RUNNER_FOLIO_NOTE_RENDER=<폴더>`를 주고 `NoteSourceTests`를 돌리면 `app-tests/fixtures/all-markdown.md`(모든 문법을 쓴 노트)를 편집 보기로 그린 PNG가 그 폴더에 남는다. 미리보기 그림은 `NoteScreenTests`가 `FOLIO_NOTE_SCREENS`에 남긴다
@@ -266,7 +268,8 @@ Me/GIST/
 - 노션 강의 정리와 점수: `import notes <덤프 폴더>`. 덤프 폴더는 과목마다 `<노션 페이지 ID>/index.json`, `notes/`, `assets/`를 가진다(`NotionCourseDump`). 노트 ID는 노션 페이지 ID라 다시 실행해도 중복되지 않고, 기존 항목은 덧붙이기만 한다
 - 자료 등록과 과제 폴더 반영: `material track [<과목>]`. 과목을 빼면 모든 과목의 파일을 추적 목록에 넣고, `Assignments/` 폴더 중 과제가 없는 것에 과제를 만든다
 - 시험 일정: `import exams <exams.json>`. `exams.json`은 구글 캘린더 "시험" 캘린더에서 읽은 `CalendarExam` 목록이며 저장소에 넣지 않는다. 같은 날 시험은 빈 칸만 채우고, 다른 날이면 바꾸지 않고 알린다
-- 단원: `import units <units.json>...`. 과목마다 `{"course": <과목 폴더 이름>, "units": [{"title", "sessions": ["3주차-1"], "children"}]}`. 제목으로 맞춰 없는 단원만 더하고 회차 연결은 더하기만 한다
+- 단원: `import units <units.json>...`. 과목마다 `{"course": <과목 폴더 이름>, "units": [{"title", "sessions": ["11-03"], "children"}]}`. 제목으로 맞춰 없는 단원만 더하고 회차 연결은 더하기만 한다
+- 예전 녹음 이름: `recording retitle [<과목>]`. 회차에 연결된 녹음 중 파일 이름이 `3주차-1.m4a`인 것만 수업 날짜(`11-03(화).m4a`)로 바꾸고 받아쓰기도 함께 옮긴다. 이동은 `moves.jsonl`의 한 묶음이고 `cleanup undo`가 파일과 `course.json`의 녹음 경로를 함께 되돌린다. 실제 GIST 폴더에는 사용자 승인 뒤에만 돌린다
 - 렉처 진도: `session progress <과목>/<회차> <자료>:<시작>-<끝>...`. 적은 자료의 쪽을 한 번에 회차에 연결하고 나머지 연결은 그대로 둔다. 앱은 녹음을 멈출 때 지난 수업이 끝난 다음 쪽부터 녹음 중 본 가장 뒤 쪽까지로 미리 채워 묻는다(`CourseFile.suggestedProgress`). 녹음이 끝나도 앱은 본 쪽을 회차에 저절로 연결하지 않는다. 그 시트가 회차 진도를 쓰는 유일한 곳이라, 저장하지 않고 닫으면 진도는 비고 본 쪽은 녹음(`recordings[].pages`)에만 남아 나중에 회차 메뉴로 다시 열 때 같은 값으로 채운다. `session link-viewed`는 CLI와 MCP용으로 남는다. 자료 연결 팝오버에서 렉처를 회차에 새로 연결해도 같은 규칙으로 시작 쪽을 채운다(`CourseFile.suggestedLink`).
 - 시험 범위: `exam scope <과목>/<시험> --taught`. 그 시험 전에 지난 회차에 연결된 단원(과 상위 단원)을 범위에 더한다. 빼지는 않는다
 - 졸업 요건과 학생 정보: `import requirements <requirements.json>`. 학사편람 분류 표: `import handbook <handbook.json> [--accept]`. 두 파일 모두 실제 학업 데이터라 저장소에 넣지 않는다
@@ -274,7 +277,7 @@ Me/GIST/
 - 노트 이름 바꾸기와 옮기기: `note mv <과목>/<노트> <새 이름>`. 새 이름은 `Notes` 기준이고 하위 폴더를 앞에 쓴다(`정리/증명`). 과목의 다른 노트(어느 폴더든)가 같은 이름이면 ` 2`를 붙인다. 제목 링크가 제목만으로 노트를 찾기 때문이다. `note retitle`처럼 course.json 경로, 첫 제목, 제목 링크와 ID 링크의 이름이 따라 바뀌고, 다른 폴더로 옮기면 노트 안의 상대 경로(그림)도 새 자리에 맞춘다. `cleanup undo`가 함께 되돌린다. `.tex` 노트는 Folio가 빌드한 PDF(`builtHash`가 맞는 `Study/<제목>.pdf`)도 같은 묶음으로 새 이름을 따라간다(자료 경로도). 새 이름의 PDF가 이미 있으면 덮어쓰지 않고 그대로 두고, Folio가 만들지 않은 같은 이름의 PDF는 옮기지 않는다. 앱은 노트 목록의 메뉴와 노트 화면의 위치 표시(노트 이름)에서 이름을 바꾸고(새 파일 이름을 보여 주는 시트가 승인), 메뉴의 "옮기기"로 `Notes`의 다른 폴더에 옮기거나(확인을 받는다) "새 폴더…"로 `Notes` 바로 안에 새 폴더를 만들어 옮긴다(옮길 경로와 만들 폴더를 보여 주는 시트가 승인). 노트를 둘 수 있는 폴더 이름(빈 이름, `/`, 숨은 폴더, `assets`, `Exports` 금지)은 `StandardLayout.noteFolderProblem` 하나가 정한다. 옮기거나 이름을 바꾼 뒤에는 노트 목록 위에 자료 화면과 같은 "방금 옮긴 것 되돌리기"가 나온다(같은 `MoveUndo`와 `UndoMoveButton`, `cleanup undo`)
 - 폴더 없는 과목 옮기기: `transcript move`. 스키마 1의 `transcript.json`에 있던 과목을 같은 ID로 과목 폴더에 옮긴다. 인정학기 과목이 있으면 먼저 `semester source <학기> <출처>`로 출처를 정한다. `cleanup undo`로 되돌린다
 - 학기별 학점과 GPA: `gpa`
-- 앱 링크: `link <종류> [<대상>] [--page N | --heading <제목> | --block <ID> | --section <구역>]`이 `folio://` 주소를 쓰고, `open`이 같은 인자로 앱에서 연다. 노트, `.tex`의 `\href{…}`, 다른 앱에 붙여 쓴다
+- 앱 링크: `link <종류> [<대상>] [--page N | --heading <제목> | --block <ID> | --time <m:ss> | --section <구역>]`이 `folio://` 주소를 쓰고, `open`이 같은 인자로 앱에서 연다. 노트, `.tex`의 `\href{…}`, 다른 앱에 붙여 쓴다
 
 작업을 끝냈다고 보고하기 전에 관련 테스트와 빌드가 통과하는지 확인한다.
 

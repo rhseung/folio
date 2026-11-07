@@ -80,7 +80,7 @@ public enum NotionNotesImporter {
         return s.split(whereSeparator: \.isWhitespace).joined(separator: " ")
     }
 
-    /// `7주차-2` or `7주차-2 정리`.
+    /// `7주차-2` or `7주차-2 정리`: how the Notion pages are titled, which this import has to read.
     static func session(of title: String) -> (week: Int, index: Int, review: Bool)? {
         guard let m = title.trimmingCharacters(in: .whitespaces).wholeMatch(of: /(\d+)주차-(\d+)(\s*정리)?/) else { return nil }
         return (Int(m.1)!, Int(m.2)!, m.3 != nil)
@@ -113,7 +113,7 @@ public enum NotionNotesImporter {
                 if let existing = file.sessions.firstIndex(where: { $0.roughNoteId == row.id || $0.reviewNoteId == row.id })
                     ?? named[key].flatMap({ id in file.sessions.firstIndex { $0.id == id } })
                     ?? day.flatMap({ d in file.sessions.firstIndex { !claimed.contains($0.id) && $0.week == s.week && calendar.isDate($0.date, inSameDayAs: d) } })
-                    ?? file.sessions.firstIndex(where: { !claimed.contains($0.id) && file.name(of: $0) == key }) {
+                    ?? file.sessions.firstIndex(where: { !claimed.contains($0.id) && ordinal(of: $0, in: file.sessions) == (s.week, s.index) }) {
                     index = existing
                 } else {
                     file.sessions.append(Session(device: device, at: now, week: s.week, date: day ?? now))
@@ -128,7 +128,7 @@ public enum NotionNotesImporter {
                     let s = file.sessions[index]
                     let taken = s.note(of: kind).map { $0 != row.id } ?? false
                     if taken {
-                        let name = file.name(of: s)
+                        let name = file.title(of: s, calendar: calendar)
                         result.warnings.append(String(localized: review ? .importNotesSessionHasReview(row.title, name) : .importNotesSessionHasRough(row.title, name)))
                     } else {
                         if review { file.sessions[index].reviewNoteId = row.id } else { file.sessions[index].roughNoteId = row.id }
@@ -146,6 +146,12 @@ public enum NotionNotesImporter {
         mergeScores(dump.scores, into: &file, result: &result, device: device, now: now)
         result.file = file
         return result
+    }
+
+    /// Notion's number for a class: its week and its place in that week by date. Only for matching Notion's titles.
+    static func ordinal(of session: Session, in sessions: [Session]) -> (Int, Int) {
+        let week = sessions.filter { $0.week == session.week }.sorted(by: Session.inOrder)
+        return (session.week, (week.firstIndex { $0.id == session.id } ?? week.count) + 1)
     }
 
     static func cleaned(_ dump: NotionCourseDump) -> NotionCourseDump {

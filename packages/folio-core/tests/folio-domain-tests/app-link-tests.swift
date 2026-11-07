@@ -15,6 +15,23 @@ struct AppLinkTests {
         #expect(AppLink(.problemSet, id).string.hasPrefix("folio://problem-set/"))
     }
 
+    /// A recording's address carries where it is playing, written as the player shows it.
+    @Test func aRecordingKeepsItsMoment() {
+        #expect(AppLink(.recording, id, anchor: .time(750)).string.hasSuffix("#t=12:30"))
+        #expect(AppLink(.recording, id, anchor: .time(3723)).string.hasSuffix("#t=1:02:03"))
+        #expect(AppLink(.recording, id, anchor: .time(5)).string.hasSuffix("#t=0:05"))
+        let r = "folio://recording/\(id.uuidString)"
+        #expect(AppLink(string: r + "#t=12:30") == AppLink(.recording, id, anchor: .time(750)))
+        #expect(AppLink(string: r + "#t=750") == AppLink(.recording, id, anchor: .time(750)))
+        #expect(AppLink(string: r + "#t=1:02:03") == AppLink(.recording, id, anchor: .time(3723)))
+        #expect(AppLink(string: r + "#t=") == AppLink(.recording, id))
+        #expect(AppLink(string: r + "#t=12:30")?.withoutAnchor == AppLink(.recording, id))
+        // A moment means nothing to a note, and a note's heading that reads like one stays a heading.
+        #expect(AppLink(string: "folio://note/\(id.uuidString)#t=1:00") == AppLink(.note, id, anchor: .heading("t=1:00")))
+        let heading = AppLink(.note, id, anchor: .heading("t=1:00"))
+        #expect(AppLink(string: heading.string) == heading)
+    }
+
     @Test func headingsAreEscapedSoTheyEndWhereLinksInTextEnd() {
         let link = AppLink(.note, id, anchor: .heading("매칭 (정의)"))
         #expect(!link.string.contains(" ") && !link.string.contains("(") && !link.string.contains(")"))
@@ -67,7 +84,7 @@ struct AppLinkTests {
     /// Each kind's facts agree with how its links are read and written: an anchor survives only on a kind that takes
     /// it, a page only on a kind that has pages, and only places go without an ID.
     @Test func eachKindsFactsShapeItsLinks() {
-        let anchors: [AppLink.Anchor] = [.page(2), .block("b-1"), .heading("정의")]
+        let anchors: [AppLink.Anchor] = [.page(2), .block("b-1"), .heading("정의"), .time(90)]
         for kind in AppLink.Kind.allCases {
             #expect(kind.isPlace == (kind.home == .app))
             if kind.isPlace {
@@ -171,7 +188,7 @@ struct AppLinkPropertyTests {
     }
     /// Hangul, Latin, digits, the characters links stop at, and the ones that mean block or page.
     static let text = Gen.oneOf(Gen.character(in: "가"..."힣"), Gen.character(in: " "..."~")).string(of: 0...12)
-    static let anchor = Gen.int(in: 0...3).map { i -> Int in i }
+    static let anchor = Gen.int(in: 0...4).map { i -> Int in i }
 
     static func link(_ kind: AppLink.Kind, _ id: UUID, _ page: AppLink.CoursePage, _ choice: Int, _ n: Int, _ text: String) -> AppLink {
         if kind == .settings {
@@ -185,6 +202,7 @@ struct AppLinkPropertyTests {
         case 2: .block(text.filter { $0.isASCII && ($0.isLetter || $0.isNumber || $0 == "-") })
         // A heading starting with `^` would read as a block from a URL (see `init(url:)`).
         case 3: .heading(text.hasPrefix("^") ? "x" + text : text)
+        case 4: .time(n * 37)
         default: nil
         }
         return AppLink(kind, id, anchor: anchor)

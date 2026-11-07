@@ -26,9 +26,9 @@ Folio의 모든 데이터 변경은 `folio` 명령으로 한다. `course.json`�
 
 ## 가리키기
 
-과목은 강의 코드(`EC4207`), 폴더 이름, 과목 이름, UUID로 가리킨다. 과목 안의 항목은 `<과목>/<항목>`이다. 회차는 `9주차-1`(주 안에서 날짜 순서)이나 날짜(`11/3`, `2026-11-03`)나 주제, 시험과 과제와 단원은 제목, 노트와 자료는 경로나 파일 이름이다. 정확히 맞는 이름이 없으면 포함하는 이름을 찾는다.
+과목은 강의 코드(`EC4207`), 폴더 이름, 과목 이름, UUID로 가리킨다. 과목 안의 항목은 `<과목>/<항목>`이다. 회차는 날짜(`11-03`, `11/3`, `2026-11-03`. 하루에 수업이 둘이면 `11-03 14:00`)나 주제, 시험과 과제와 단원은 제목, 노트와 자료는 경로나 파일 이름이다. 정확히 맞는 이름이 없으면 포함하는 이름을 찾는다.
 
-답에서 항목을 가리킬 때는 `folio link <종류> <항목>`이 주는 `folio://` 링크를 붙인다. 사용자가 누르면 Folio에서 그 화면이 열린다(`folio link exam EC4207/중간고사`, 자료의 쪽은 `--page 12`, 노트의 제목은 `--heading 정의`). 노트에는 `[글](링크)`, `.tex`에는 `\href{링크}{글}`로 넣는다. `folio open`은 같은 대상을 사용자의 앱에서 바로 연다. 사용자가 열어 달라고 할 때만 쓴다.
+답에서 항목을 가리킬 때는 `folio link <종류> <항목>`이 주는 `folio://` 링크를 붙인다. 사용자가 누르면 Folio에서 그 화면이 열린다(`folio link exam EC4207/중간고사`, 자료의 쪽은 `--page 12`, 노트의 제목은 `--heading 정의`, 녹음의 재생 위치는 `--time 12:30`). 노트에는 `[글](링크)`, `.tex`에는 `\href{링크}{글}`로 넣는다. `folio open`은 같은 대상을 사용자의 앱에서 바로 연다. 사용자가 열어 달라고 할 때만 쓴다.
 
 ## 자주 하는 일
 
@@ -46,13 +46,13 @@ folio assignment status EC4207/HW3 submitted --dry-run
 # 노트
 folio note add EC4207 "매칭 정리" --kind topic --dry-run
 folio note link "EC4207/매칭 정리" --kind topic --unit 매칭 --dry-run
-folio note edit EC4207/2주차-1 --old "non-adjacent" --new "서로 이웃하지 않는" --dry-run
+folio note edit EC4207/09-08 --old "non-adjacent" --new "서로 이웃하지 않는" --dry-run
 # 밀린 몇 회차를 복습 노트 하나로 복습했을 때. 회차 하나를 뗄 때는 note unlink-session
-folio note link-sessions "EC4207/9주차 정리" 9주차-1 9주차-2 --dry-run
+folio note link-sessions "EC4207/10-26(월) 정리" 10-26 10-28 --dry-run
 
 # 회차와 출석
 folio session add EC4207 --date "2026-11-02 10:30" --dry-run
-folio attendance set EC4207/2주차-1 absent --dry-run
+folio attendance set EC4207/09-08 absent --dry-run
 # 아직 없는 회차의 결석은 회차와 함께 만든다
 folio session add EC4207 --date "2026-11-11 10:30" --attendance absent --dry-run
 

@@ -166,7 +166,7 @@ extension Workspace {
         case .semester: return transcript.semesters.first { $0.id == link.id }?.title ?? ""
         case .person: return item ?? String(localized: .rootNavPeople)
         // A course's item whose course is gone: the address, as its screen says it can't be found.
-        case .course, .session, .unit, .note, .material, .assignment, .exam, .problemSet, .card: return link.string
+        case .course, .session, .unit, .note, .material, .assignment, .exam, .problemSet, .card, .recording: return link.string
         }
     }
 
@@ -187,6 +187,7 @@ extension Workspace {
         case .assignment: return file?.assignments.first { $0.id == link.id }?.title
         case .exam: return file?.exams.first { $0.id == link.id }?.title
         case .problemSet: return file?.problemSets.first { $0.id == link.id }?.title
+        case .recording: return file.flatMap { f in f.recordings.first { $0.id == link.id }.map { RecordingPlayerModel.name(of: $0, in: f, calendar: calendar) } }
         // A card's prompt is a sentence in a quiz file read only on a click; the page it is on names it well enough.
         case .card: return file.map { _ in CourseSection.quizCards.title }
         }
@@ -203,7 +204,7 @@ extension AppLink.Anchor {
         switch self {
         case .heading(let heading): ParsedNote.location(in: text, heading: heading, block: nil)
         case .block(let block): ParsedNote.location(in: text, heading: nil, block: block)
-        case .page: nil
+        case .page, .time: nil
         }
     }
 }

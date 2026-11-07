@@ -34,15 +34,15 @@ struct ReviewNoteSessionsTests {
         f.linkNote(note, to: s[0].id, as: .review)
         #expect(f.sessions.map(\.reviewNoteId) == [note, nil, note, nil])
         #expect(f.sessions(pointingAt: note).map(\.id) == [s[0].id, s[2].id])
-        #expect(f.sessionSpan(of: note) == "9주차-1 – 10주차-1")
+        #expect(f.sessionSpan(of: note, calendar: calendar) == "\(f.day(of: s[0], calendar: calendar)) – \(f.day(of: s[2], calendar: calendar))")
         #expect(f.meta(of: f.notes[0]).sessionIds == [s[0].id, s[2].id] && f.meta(of: f.notes[0]).sessionId == s[0].id)
         #expect(violations(f).isDisjoint(with: ["NoteEntry.session", "Session.noteKind"]))
 
         f.unlinkNote(note, from: s[0].id)
-        #expect(f.sessions(pointingAt: note).map(\.id) == [s[2].id] && f.sessionSpan(of: note) == "10주차-1")
+        #expect(f.sessions(pointingAt: note).map(\.id) == [s[2].id] && f.sessionSpan(of: note, calendar: calendar) == f.day(of: s[2], calendar: calendar))
         f.linkNote(note, to: s[3].id, as: .review)
         f.forgetNote(note)
-        #expect(f.sessions(pointingAt: note).isEmpty && f.sessionSpan(of: note) == nil)
+        #expect(f.sessions(pointingAt: note).isEmpty && f.sessionSpan(of: note, calendar: calendar) == nil)
         #expect(f.sessions(pointingAt: nil).isEmpty)
     }
 
@@ -128,8 +128,9 @@ struct ReviewNoteSessionsTests {
             #expect(f.sessions(pointingAt: note).map(\.id) == chosen.map { s[$0].id })
             #expect(violations(f).isDisjoint(with: ["NoteEntry.session", "Session.noteKind"]))
             if let first = chosen.first, let last = chosen.last {
-                let span = f.sessionSpan(of: note)
-                #expect(first == last ? span == f.name(of: s[first]) : span == "\(f.name(of: s[first])) – \(f.name(of: s[last]))")
+                let span = f.sessionSpan(of: note, calendar: calendar)
+                let day = { (i: Int) in f.day(of: s[i], calendar: calendar) }
+                #expect(first == last ? span == day(first) : span == "\(day(first)) – \(day(last))")
             }
             if let dropped = chosen.min(by: { order[$0] < order[$1] }) {
                 f.unlinkNote(note, from: s[dropped].id)

@@ -64,9 +64,9 @@ struct SessionKindMigrationTests {
     @Test func weeksAreNumberedByDate() throws {
         let file = try StoredDocument<CourseFile>.read(from: url).model
         let s = file.sessions
-        // The stored 1, 3, 2 gives way to the dates.
-        #expect(s[2...4].map(file.name(of:)) == ["5주차-1", "5주차-2", "5주차-3"])
-        #expect(file.name(of: s[0]) == "2주차-1" && file.name(of: s[1]) == "2주차-2")
+        // The stored 1, 3, 2 is dropped: classes go by their dates, in their weeks.
+        #expect(s[2...4].map(\.week) == [5, 5, 5] && s[2...4].map(\.date) == s[2...4].map(\.date).sorted())
+        #expect(s[0].week == 2 && s[1].week == 2)
     }
 
     @Test func readingTwiceMakesTheSameUnit() throws {

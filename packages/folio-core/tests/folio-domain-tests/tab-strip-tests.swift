@@ -163,6 +163,56 @@ struct TabFitTests {
         #expect(TabFit.lead(panelEdge: 4, after: 189, gap: 8) == 8)
     }
 
+    func trail(_ room: Double, selected: Double = 300, others: [Double]) -> Double? {
+        let fit = layout(room, selected: selected, others: others)
+        return TabFit.trail(room: room, selected: selected, others: others, layout: fit, icon: 32, gap: 8, more: 80, chrome: 40)
+    }
+
+    @Test func theFrontTrailIsFreeWhileItFits() {
+        // Room to spare at any width: nothing the window's width changes, so a resize there redraws nothing.
+        #expect(trail(516, others: [100, 100]) == nil)
+        #expect(trail(2000, others: [100, 100]) == nil)
+        // Icons only, 300 + 32 + 32 + 2 gaps = 380 still fits.
+        #expect(trail(380, others: [100, 100]) == nil)
+    }
+
+    @Test func theFrontTrailIsHeldWhenTheRowRunsOut() {
+        // The menu alone at 200: 200 - (80 + 8) - 40 = 72, however short, so the strip stays inside the row.
+        #expect(trail(200, others: [100, 100]) == 72)
+        // A front tab of 400 (a trail of 360) beside one icon in 460: 460 - 32 - 8 - 40 = 380 still holds it.
+        #expect(trail(460, selected: 400, others: [100]) == nil)
+        // In 400 the other tab goes to the menu: 400 - (80 + 8) - 40 = 272 for a trail that needs 360.
+        #expect(trail(400, selected: 400, others: [100]) == 272)
+    }
+
+    @Test func theNewTabGlyphSitsOneGapAfterTheLastCapsule() {
+        // A 12-point plus centered in a 32-point button has 10 on each side: the button starts 2 under the capsule.
+        #expect(TabFit.newTabSpacing(gap: 8, button: 32, glyph: 12) == -2)
+        #expect(TabFit.newTabSpacing(gap: 8, button: 32, glyph: 16) == 0)
+        // The glyph's own start, wherever the button puts it.
+        for glyph in stride(from: 8.0, through: 32, by: 2) {
+            let spacing = TabFit.newTabSpacing(gap: 8, button: 32, glyph: glyph)
+            #expect(spacing + (32 - glyph) / 2 == 8)
+        }
+    }
+
+    @Test func theStripNeverOutgrowsTheRow() async {
+        // Wider than the row, the strip pushes the toolbar's search field and buttons into its overflow menu (#310).
+        // It may only when not even the front tab's capsule and the menu fit.
+        await propertyCheck(input: Gen.int(in: 32...200).array(of: 0...20), Gen.int(in: 0...2000), Gen.int(in: 60...600)) { others, room, selected in
+            let o = others.map(Double.init)
+            let r = Double(room)
+            let fit = TabFit.layout(room: r, selected: Double(selected), others: o, icon: 32, gap: 8, more: 80)
+            let trail = TabFit.trail(room: r, selected: Double(selected), others: o, layout: fit, icon: 32, gap: 8, more: 80, chrome: 40)
+            let width = TabFit.width(selected: Double(selected), others: o, layout: fit, trail: trail, icon: 32, gap: 8, more: 80, chrome: 40)
+            let least = 40 + (fit.hidden > 0 ? 88 : 0)
+            #expect(width <= r || r < Double(least))
+        }
+        // By hand: the menu alone beside a front tab held to 200 - 88 - 40 = 72, which with its capsule fills the row.
+        let fit = TabFit.layout(room: 200, selected: 300, others: [100, 100], icon: 32, gap: 8, more: 80)
+        #expect(TabFit.width(selected: 300, others: [100, 100], layout: fit, trail: 72, icon: 32, gap: 8, more: 80, chrome: 40) == 200)
+    }
+
     @Test func aLoneTabNeverNeedsTheMenu() {
         #expect(layout(100, others: []) == TabFit.Layout(iconsOnly: false, shown: 0, hidden: 0))
     }
@@ -213,23 +263,36 @@ struct TabKeepTests {
         #expect(TabKeep.alive(selected: "c", alive: ["a", "b", "c"], left: left, now: now, policy: policy, pressure: true) == ["c"])
     }
 
+    /// A tab playing a recording stays past the limit, the idle time and memory pressure, and takes no other tab's room.
+    @Test func aPlayingTabIsNeverDropped() {
+        let left = ["a": now - 30, "b": now - 10, "c": now - 20, "p": now - 9_000]
+        let kept = TabKeep.alive(selected: "d", alive: ["a", "b", "c", "d", "p"], left: left, now: now, policy: policy, playing: ["p"])
+        #expect(kept == ["d", "b", "c", "p"])
+        #expect(TabKeep.alive(selected: "d", alive: ["a", "d", "p"], left: left, now: now, policy: policy, pressure: true, playing: ["p"]) == ["d", "p"])
+        // Playing doesn't bring back a tab already dropped: its screen, and so its audio, is gone.
+        #expect(TabKeep.alive(selected: "d", alive: ["d"], left: left, now: now, policy: policy, playing: ["p"]) == ["d"])
+    }
+
     @Test func aTabWithoutATimeCountsAsJustLeft() {
         #expect(TabKeep.alive(selected: "b", alive: ["a", "b"], left: [:], now: now, policy: policy) == ["a", "b"])
     }
 
     @Test func holdsItsBounds() async {
-        await propertyCheck(input: Gen.int(in: 0...9).array(of: 0...12), Gen.int(in: 0...12), Gen.int(in: 0...4), Gen.bool) { ages, selected, limit, pressure in
+        await propertyCheck(input: Gen.int(in: 0...9).array(of: 0...12), Gen.int(in: 0...12), Gen.int(in: 0...4), Gen.bool,
+                            Gen.int(in: 0...12).array(of: 0...3)) { ages, selected, limit, pressure, played in
             let left = Dictionary(uniqueKeysWithValues: ages.enumerated().map { ($0.offset, now - Double($0.element) * 100) })
             let alive = Set(left.keys)
             let p = TabKeep.Policy(limit: limit, idle: 500)
-            let kept = TabKeep.alive(selected: selected, alive: alive, left: left, now: now, policy: p, pressure: pressure)
-            #expect(kept.contains(selected))
+            let playing = Set(played)
+            let kept = TabKeep.alive(selected: selected, alive: alive, left: left, now: now, policy: p, pressure: pressure, playing: playing)
+            let held = playing.intersection(alive).union([selected])
+            #expect(held.isSubset(of: kept))
             #expect(kept.subtracting([selected]).isSubset(of: alive))
-            #expect(kept.count <= (pressure ? 1 : limit + 1))
-            for id in kept where id != selected { #expect(now.timeIntervalSince(left[id]!) < 500) }
+            #expect(kept.subtracting(held).count <= (pressure ? 0 : limit))
+            for id in kept.subtracting(held) { #expect(now.timeIntervalSince(left[id]!) < 500) }
             // Nothing kept is older than something dropped that was within the time.
-            let dropped = alive.subtracting(kept).subtracting([selected]).filter { now.timeIntervalSince(left[$0]!) < 500 }
-            if !pressure, let oldestKept = kept.subtracting([selected]).map({ left[$0]! }).min(), let newestDropped = dropped.map({ left[$0]! }).max() {
+            let dropped = alive.subtracting(kept).filter { now.timeIntervalSince(left[$0]!) < 500 }
+            if !pressure, let oldestKept = kept.subtracting(held).map({ left[$0]! }).min(), let newestDropped = dropped.map({ left[$0]! }).max() {
                 #expect(oldestKept >= newestDropped)
             }
         }

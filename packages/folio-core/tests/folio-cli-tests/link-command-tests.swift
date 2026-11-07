@@ -1,4 +1,5 @@
 @testable import FolioCLI
+import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
@@ -55,6 +56,25 @@ struct LinkCommandTests {
         #expect(h.cli(["link", "exam", "EC4207/매칭 정리"], gist: gist).code == Exit.notFound.rawValue)
         #expect(h.cli(["link", "material", "EC4207/05_Matchings.pdf", "--heading", "정의"], gist: gist).code == Exit.usage.rawValue)
         #expect(h.cli(["link", "note", "EC4207/매칭 정리", "--page", "2"], gist: gist).code == Exit.usage.rawValue)
+    }
+
+    /// A recording is named by its class, as its file is, and its link carries a moment written as the player shows it.
+    @Test func aRecordingLinkCarriesItsMoment() throws {
+        let gist = try Harness.fixtureCopy()
+        #expect(h.cli(["session", "add", "EC4207", "--date", "2026-10-20 10:30"], gist: gist).code == 0)
+        let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
+        let session = try #require(try ctx.file(Harness.graphTheory).sessions.first)
+        let name = try ctx.file(Harness.graphTheory).recordingName(of: session, calendar: ctx.calendar)
+        let recording = Recording(device: h.device, at: h.now, sessionId: session.id, file: "Recordings/\(name).m4a", duration: 3000)
+        try ctx.edit(Harness.graphTheory) { $0.recordings = [recording] }
+
+        let r = h.cli(["link", "recording", "EC4207/10-20", "--time", "12:30"], gist: gist)
+        #expect(r.code == 0, "\(r.err)")
+        #expect(r.out == AppLink(.recording, recording.id, anchor: .time(750)).string)
+        #expect(r.out.hasSuffix("#t=12:30"))
+        #expect(h.cli(["link", "recording", "EC4207/\(name).m4a", "--time", "750"], gist: gist).out == r.out)
+        #expect(h.cli(["link", "recording", "EC4207/\(name)", "--time", "soon"], gist: gist).code == Exit.usage.rawValue)
+        #expect(h.cli(["link", "note", "EC4207/\(name)", "--time", "1:00"], gist: gist).code == Exit.usage.rawValue)
     }
 
     @Test func placesTakeNoItemAndAnchorsBelongToTheirKind() {

@@ -10,7 +10,7 @@ extension Workspace {
         var started: UUID?
         do {
             // Names of recordings still being compressed are taken too, though their audio isn't in the folder yet.
-            let file = try course.store.newRecordingFile(named: course.file.name(of: session), reserved: course.file.recordings.map(\.file))
+            let file = try course.store.newRecordingFile(named: course.file.recordingName(of: session, calendar: calendar), reserved: course.file.recordings.map(\.file))
             let recording = Recording(device: device, at: .now, sessionId: session.id, file: file)
             started = recording.id
             // folio:not-an-action recording is not an action

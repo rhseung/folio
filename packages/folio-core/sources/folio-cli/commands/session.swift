@@ -22,14 +22,14 @@ struct SessionCommand: ParsableCommand {
             let sessions = f.sessions.sorted { $0.date < $1.date }.filter { all || !$0.isCancelled }
             if g.json { return try printJSON(sessions) }
             if lines {
-                for s in sessions { line(["\(c.code)/\(f.name(of: s))", s.date.formatted(date: .numeric, time: .shortened), s.isCancelled ? String(localized: .sessionListCancelled) : "", s.topic]) }
+                for s in sessions { line(["\(c.code)/\(f.reference(of: s, calendar: r.ctx.calendar))", s.date.formatted(date: .numeric, time: .shortened), s.isCancelled ? String(localized: .sessionListCancelled) : "", s.topic]) }
                 return
             }
             courseHeader(c, catalog: try? r.ctx.catalog())
             var t = Table(header: [String(localized: .sessionListHeaderSession), String(localized: .sessionListHeaderDate), String(localized: .sessionListCancelled), String(localized: .sessionListHeaderTopic), String(localized: .sessionListHeaderNotes)], shrink: [3])
             for s in sessions {
                 let notes = [s.roughNoteId.map { _ in String(localized: .sessionListRough) }, s.reviewNoteId.map { _ in s.reviewNoteUnfinished == true ? String(localized: .sessionListReviewUnfinished) : String(localized: .sessionListReview) }].compactMap { $0 }
-                let cells = [f.name(of: s), when(s.date, now: r.ctx.now, time: true), s.isCancelled ? String(localized: .sessionListCancelled).toned : "", s.topic, notes.joined(separator: " · ")]
+                let cells = [f.reference(of: s, calendar: r.ctx.calendar), when(s.date, now: r.ctx.now, time: true), s.isCancelled ? String(localized: .sessionListCancelled).toned : "", s.topic, notes.joined(separator: " · ")]
                 t.rows.append(s.date < r.ctx.now ? cells.map { $0.styled(.dim) } : cells)
             }
             t.print()
@@ -49,7 +49,7 @@ struct SessionCommand: ParsableCommand {
             if g.json { return try printJSON(s) }
             let f = c.file
             courseHeader(c, catalog: try? r.ctx.catalog())
-            say(f.name(of: s).styled(.bold))
+            say(f.title(of: s, calendar: r.ctx.calendar).styled(.bold))
             say(String(localized: .sessionShowDate(when(s.date, now: r.ctx.now, time: true))))
             if s.isCancelled { say(String(localized: .sessionShowCancelled)) }
             if let end = s.end(schedule: f.course.schedule, calendar: r.ctx.calendar) {
@@ -121,5 +121,19 @@ struct AttendanceCommand: ParsableCommand {
 }
 
 struct RecordingCommand: ParsableCommand {
-    static let configuration = CommandConfiguration(commandName: "recording", abstract: String(localized: .recordingAbstract), subcommands: GeneratedCommands.recording)
+    static let configuration = CommandConfiguration(commandName: "recording", abstract: String(localized: .recordingAbstract),
+                                                    subcommands: GeneratedCommands.recording + [Retitle.self])
+
+    struct Retitle: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: String(localized: .recordingRetitleAbstract), discussion: String(localized: .recordingRetitleDiscussion))
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp(String(localized: .recordingRetitleHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String?
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let id = try course.map { try Resolver(ctx).course($0).id }
+            let result = try perform(spec: RecordingRetitleLegacy(course: id), g, ctx: ctx)
+            if !g.json, let batch = result.made { say(String(localized: .noteRetitleUndo(batch.uuidString)).styled(.dim)) }
+        }
+    }
 }

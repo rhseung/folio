@@ -3120,7 +3120,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "과목은 강의 코드(EC4207), 폴더 이름, 과목 이름, UUID로 가리킨다. 대소문자와 띄어쓰기는 가리지 않는다.\n과목 안의 항목은 <과목>/<항목>으로 쓴다. 회차는 9주차-1, 시험과 과제와 단원은 제목, 자료와 노트는 경로나 파일 이름.\n정확히 맞는 이름이 없으면 그 글자를 포함한 이름을 찾는다. 여러 개에 맞으면 실행하지 않고 후보를 보여 준다(종료 코드 3).\n학기를 생략하면 오늘이 든 학기를 쓴다.\nset 명령에서 값을 지우려면 none을 준다(--due none). 여러 번 받는 옵션에 none만 주면 목록을 비운다.\n\n  folio session show EC4207/9주차-1\n  folio exam show 그래프/Quiz1"
+            "value": "과목은 강의 코드(EC4207), 폴더 이름, 과목 이름, UUID로 가리킨다. 대소문자와 띄어쓰기는 가리지 않는다.\n과목 안의 항목은 <과목>/<항목>으로 쓴다. 회차는 날짜(11-03, 하루에 둘이면 11-03 14:00)나 주제, 시험과 과제와 단원은 제목, 자료와 노트는 경로나 파일 이름.\n정확히 맞는 이름이 없으면 그 글자를 포함한 이름을 찾는다. 여러 개에 맞으면 실행하지 않고 후보를 보여 준다(종료 코드 3).\n학기를 생략하면 오늘이 든 학기를 쓴다.\nset 명령에서 값을 지우려면 none을 준다(--due none). 여러 번 받는 옵션에 none만 주면 목록을 비운다.\n\n  folio session show EC4207/10-26\n  folio exam show 그래프/Quiz1"
           }
         }
       }
@@ -3406,7 +3406,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "파일마다 {\"course\": <과목 폴더 이름>, \"units\": [{\"title\", \"sessions\": [\"3주차-1\"], \"children\"}]}. 제목으로 맞춰\n없는 단원만 더하고, 회차 연결은 더하기만 한다.\n\n예시:\n  folio import units ~/Downloads/EC4207-units.json --dry-run"
+            "value": "파일마다 {\"course\": <과목 폴더 이름>, \"units\": [{\"title\", \"sessions\": [\"11-03\"], \"children\"}]}. 제목으로 맞춰\n없는 단원만 더하고, 회차 연결은 더하기만 한다.\n\n예시:\n  folio import units ~/Downloads/EC4207-units.json --dry-run"
           }
         }
       }
@@ -3527,7 +3527,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "--week를 주면 Lectures 규칙대로 이름 앞에 주차를 붙인다. 이미 과목 안에 있는 파일은 복사하지 않고 연결만 한다.\n\n예시:\n  folio material import EC4207 ~/Downloads/06_Coloring.pdf --folder Lectures --week 6 --session 6주차-1\n  folio material import EC4207 ~/Downloads/HW4.pdf --folder Assignments/HW04 --dry-run"
+            "value": "--week를 주면 Lectures 규칙대로 이름 앞에 주차를 붙인다. 이미 과목 안에 있는 파일은 복사하지 않고 연결만 한다.\n\n예시:\n  folio material import EC4207 ~/Downloads/06_Coloring.pdf --folder Lectures --week 6 --session 10-06\n  folio material import EC4207 ~/Downloads/HW4.pdf --folder Assignments/HW04 --dry-run"
           }
         }
       }
@@ -3593,7 +3593,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "예시:\n  folio material link EC4207/05_Matchings.pdf 9주차-1 --pages 3-12\n  folio material link EC4207/05_Matchings.pdf 9주차-1 --off"
+            "value": "예시:\n  folio material link EC4207/05_Matchings.pdf 10-26 --pages 3-12\n  folio material link EC4207/05_Matchings.pdf 10-26 --off"
           }
         }
       }
@@ -3626,7 +3626,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "같은 과목의 회차. 예: 9주차-1"
+            "value": "같은 과목의 회차. 예: 10-26"
           }
         }
       }
@@ -4099,7 +4099,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "러프 노트와 복습 노트는 --session, 시험 종합 정리는 --exam, 주제 노트는 --unit을 받는다. 종류를 바꾸면 예전 연결은 떨어진다.\n복습 노트는 --session의 회차를 옮기지 않고 더한다. 여러 회차를 한 번에 더할 때는 note link-sessions, 회차 하나를 뗄 때는 note unlink-session을 쓴다.\n\n예시:\n  folio note link EC4207/2주차-1 --kind review --session 2주차-1\n  folio note link \"EC4207/매칭 정리\" --kind topic --unit 매칭 --unit \"이분 그래프\""
+            "value": "러프 노트와 복습 노트는 --session, 시험 종합 정리는 --exam, 주제 노트는 --unit을 받는다. 종류를 바꾸면 예전 연결은 떨어진다.\n복습 노트는 --session의 회차를 옮기지 않고 더한다. 여러 회차를 한 번에 더할 때는 note link-sessions, 회차 하나를 뗄 때는 note unlink-session을 쓴다.\n\n예시:\n  folio note link EC4207/09-08 --kind review --session 09-08\n  folio note link \"EC4207/매칭 정리\" --kind topic --unit 매칭 --unit \"이분 그래프\""
           }
         }
       }
@@ -4220,7 +4220,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "새 이름은 Notes 폴더 기준이고 확장자는 노트 그대로다. 과목의 다른 노트가 같은 이름이면 뒤에 \" 2\"를 붙인다. course.json의 노트 경로, 노트의 첫 제목(아직 예전 이름일 때), 다른 노트의 [[제목]] 링크와 [[note:<ID>|제목]]의 이름(아직 예전 이름일 때)이 함께 바뀌고, 다른 폴더로 옮기면 노트 안의 상대 경로(그림)도 새 자리에 맞춘다. 이동은 moves.jsonl에 남고 folio cleanup undo로 함께 되돌린다. .tex 노트는 Folio가 빌드한 PDF(Study/<제목>.pdf)도 같은 묶음으로 새 이름을 따라가고, 새 이름의 PDF가 이미 있으면 덮어쓰지 않고 그대로 둔다. Folio가 만들지 않은 같은 이름의 PDF는 옮기지 않는다. 확인을 받는다.\n\n예시:\n  folio note mv \"EC4207/시험 메모\" \"중간 대비\" --dry-run\n  folio note mv EC4207/2주차-1 정리/2주차-1"
+            "value": "새 이름은 Notes 폴더 기준이고 확장자는 노트 그대로다. 과목의 다른 노트가 같은 이름이면 뒤에 \" 2\"를 붙인다. course.json의 노트 경로, 노트의 첫 제목(아직 예전 이름일 때), 다른 노트의 [[제목]] 링크와 [[note:<ID>|제목]]의 이름(아직 예전 이름일 때)이 함께 바뀌고, 다른 폴더로 옮기면 노트 안의 상대 경로(그림)도 새 자리에 맞춘다. 이동은 moves.jsonl에 남고 folio cleanup undo로 함께 되돌린다. .tex 노트는 Folio가 빌드한 PDF(Study/<제목>.pdf)도 같은 묶음으로 새 이름을 따라가고, 새 이름의 PDF가 이미 있으면 덮어쓰지 않고 그대로 둔다. Folio가 만들지 않은 같은 이름의 PDF는 옮기지 않는다. 확인을 받는다.\n\n예시:\n  folio note mv \"EC4207/시험 메모\" \"중간 대비\" --dry-run\n  folio note mv EC4207/09-08 정리/09-08"
           }
         }
       }
@@ -4275,7 +4275,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "예시:\n  folio note show EC4207/2주차-1\n  folio note show EC4207/Notes/2주차-1.md"
+            "value": "예시:\n  folio note show EC4207/09-08\n  folio note show \"EC4207/Notes/09-08(화) 매칭.md\""
           }
         }
       }
@@ -4330,7 +4330,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "--expect에 `folio note show --json`의 hash를 주면, 그 뒤에 앱이나 다른 기기에서 노트가 바뀌었을 때 쓰지 않고 종료 코드 6으로 끝난다.\n에이전트는 읽고 고쳐 쓸 때 항상 --expect를 준다.\n\n예시:\n  folio note write EC4207/2주차-1 --file 2주차-1.md\n  folio note show EC4207/2주차-1 | sed 's/매칭/짝짓기/' | folio note write EC4207/2주차-1 --file -\n  folio note write EC4207/2주차-1 --file 2주차-1.md --expect 9f2c…"
+            "value": "--expect에 `folio note show --json`의 hash를 주면, 그 뒤에 앱이나 다른 기기에서 노트가 바뀌었을 때 쓰지 않고 종료 코드 6으로 끝난다.\n에이전트는 읽고 고쳐 쓸 때 항상 --expect를 준다.\n\n예시:\n  folio note write EC4207/09-08 --file 09-08.md\n  folio note show EC4207/09-08 | sed 's/매칭/짝짓기/' | folio note write EC4207/09-08 --file -\n  folio note write EC4207/09-08 --file 09-08.md --expect 9f2c…"
           }
         }
       }
@@ -4848,6 +4848,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "강의 녹음"
+          }
+        }
+      }
+    },
+    "recording.retitle.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "예전 이름(3주차-1)의 녹음 파일을 날짜 이름(11-03(화))으로 바꾸기. 받아쓰기 파일도 함께 바뀐다"
+          }
+        }
+      }
+    },
+    "recording.retitle.discussion": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차에 연결된 녹음 중 파일 이름이 아직 `3주차-1.m4a`, `3주차-1 2.m4a`인 것만 그 수업 날짜(`11-03(화).m4a`)로 바꾼다. 같은 날 녹음이 둘이면 뒤에 \" 2\"를 붙인다. 직접 지은 이름과 회차 없는 녹음은 그대로 둔다. 오디오와 받아쓰기(.transcript.json)는 moves.jsonl에 한 묶음으로 남고, folio cleanup undo로 함께 되돌린다. 실제 폴더에서는 folio backup create로 백업한 뒤 --dry-run으로 먼저 본다.\n\n예시:\n  folio recording retitle --dry-run\n  folio recording retitle EC4207"
+          }
+        }
+      }
+    },
+    "recording.retitle.help.course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목. 빼면 모든 과목"
           }
         }
       }
@@ -6376,7 +6409,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "노트, 녹음, 출석, 자료, 단원이 연결된 회차는 지우지 않는다(종료 코드 4). 수업이 없던 날이면 --cancelled true로 휴강 표시한다.\n확인을 받는다.\n\n예시:\n  folio session rm EC4207/9주차-3 --dry-run"
+            "value": "노트, 녹음, 출석, 자료, 단원이 연결된 회차는 지우지 않는다(종료 코드 4). 수업이 없던 날이면 --cancelled true로 휴강 표시한다.\n확인을 받는다.\n\n예시:\n  folio session rm EC4207/10-30 --dry-run"
           }
         }
       }
@@ -6442,7 +6475,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "예시:\n  folio session show EC4207/9주차-1"
+            "value": "예시:\n  folio session show EC4207/10-26"
           }
         }
       }
@@ -6453,7 +6486,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "<과목>/<회차>. 예: EC4207/9주차-1"
+            "value": "<과목>/<회차>. 예: EC4207/10-26"
           }
         }
       }
@@ -7608,7 +7641,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "과목, 회차, 단원, 노트(제목·블록), 자료(쪽), 과제, 시험, 카드, 문제 묶음, 학기, 교수, 앱의 페이지를 folio:// 주소 하나로 가리킨다.\n이 링크를 노트나 답에 넣으면 누를 때 Folio에서 그 항목이 열린다. 노트에서는 [글](링크), .tex에서는 \\href{링크}{글}로 쓴다.\n\n예시:\n  folio link course EC4207\n  folio link course EC4207 --section materials\n  folio link settings --section claude\n  folio link exam EC4207/중간고사\n  folio link assignment EC4207/HW3\n  folio link material EC4207/05_Matchings.pdf --page 12\n  folio link note \"EC4207/매칭 정리\" --heading 정의\n  folio link today --json"
+            "value": "과목, 회차, 단원, 노트(제목·블록), 자료(쪽), 녹음(재생 위치), 과제, 시험, 카드, 문제 묶음, 학기, 교수, 앱의 페이지를 folio:// 주소 하나로 가리킨다.\n이 링크를 노트나 답에 넣으면 누를 때 Folio에서 그 항목이 열린다. 노트에서는 [글](링크), .tex에서는 \\href{링크}{글}로 쓴다.\n\n예시:\n  folio link course EC4207\n  folio link course EC4207 --section materials\n  folio link settings --section claude\n  folio link exam EC4207/중간고사\n  folio link assignment EC4207/HW3\n  folio link material EC4207/05_Matchings.pdf --page 12\n  folio link note \"EC4207/매칭 정리\" --heading 정의\n  folio link recording EC4207/10-26 --time 12:30\n  folio link today --json"
           }
         }
       }
@@ -7619,7 +7652,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "가리킬 종류. today, grades, requirements, people, codes, settings, semester, course, session, unit, note, material, assignment, exam, card, problem-set, person"
+            "value": "가리킬 종류. today, grades, requirements, people, codes, settings, semester, course, session, unit, note, material, assignment, exam, card, problem-set, person, recording"
           }
         }
       }
@@ -7630,7 +7663,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "항목. 과목은 EC4207, 과목 안의 항목은 EC4207/중간고사, 카드는 ID. 앱의 페이지(today 등)는 비운다"
+            "value": "항목. 과목은 EC4207, 과목 안의 항목은 EC4207/중간고사, 녹음은 EC4207/10-26처럼 회차나 파일 이름, 카드는 ID. 앱의 페이지(today 등)는 비운다"
           }
         }
       }
@@ -7679,6 +7712,17 @@
         }
       }
     },
+    "link.help.time": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음의 재생 위치(12:30, 1:02:03, 초)"
+          }
+        }
+      }
+    },
     "link.page-only-material": {
       "extractionState": "manual",
       "localizations": {
@@ -7686,6 +7730,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "--page는 자료(material)에만 쓴다"
+          }
+        }
+      }
+    },
+    "link.time-only-recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "--time은 녹음(recording)에만 쓴다"
           }
         }
       }
@@ -7730,6 +7785,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "쪽은 1 이상, 블록 ID는 영문·숫자·-로만 쓴다"
+          }
+        }
+      }
+    },
+    "link.bad-time": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "재생 위치 '%@'를 읽지 못했다. 12:30, 1:02:03이나 초로 쓴다"
           }
         }
       }
@@ -7795,7 +7861,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "--old와 --new를 짝지어 주면 순서대로 찾아 바꾼다. --old는 그때의 노트에 꼭 한 번 나와야 한다. 없으면 노트가 바뀐 것으로 보고 쓰지 않고 종료 코드 6으로 끝나고, 여러 번 나오면 앞뒤 글을 더 넣으라고 알린다. --append는 노트 끝의 새 줄에 붙인다.\n노트 전체를 보내지 않으니, 일부만 고칠 때는 note write 대신 이것을 쓴다.\n\n예시:\n  folio note edit EC4207/2주차-1 --old \"non-adjacent\" --new \"서로 이웃하지 않는\"\n  folio note edit EC4207/2주차-1 --append \"질문: 최대 매칭은 어떻게 찾나\""
+            "value": "--old와 --new를 짝지어 주면 순서대로 찾아 바꾼다. --old는 그때의 노트에 꼭 한 번 나와야 한다. 없으면 노트가 바뀐 것으로 보고 쓰지 않고 종료 코드 6으로 끝나고, 여러 번 나오면 앞뒤 글을 더 넣으라고 알린다. --append는 노트 끝의 새 줄에 붙인다.\n노트 전체를 보내지 않으니, 일부만 고칠 때는 note write 대신 이것을 쓴다.\n\n예시:\n  folio note edit EC4207/09-08 --old \"non-adjacent\" --new \"서로 이웃하지 않는\"\n  folio note edit EC4207/09-08 --append \"질문: 최대 매칭은 어떻게 찾나\""
           }
         }
       }
@@ -7894,7 +7960,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "자료마다 <자료>:<시작>-<끝>으로 쓴다. 한 쪽이면 <자료>:<쪽>. 적지 않은 자료의 연결은 그대로 둔다.\n\n예시:\n  folio session progress EC4207/9주차-1 05_Matchings.pdf:3-12\n  folio session progress EC4207/9주차-1 05_Matchings.pdf:18-24 --dry-run"
+            "value": "자료마다 <자료>:<시작>-<끝>으로 쓴다. 한 쪽이면 <자료>:<쪽>. 적지 않은 자료의 연결은 그대로 둔다.\n\n예시:\n  folio session progress EC4207/10-26 05_Matchings.pdf:3-12\n  folio session progress EC4207/10-26 05_Matchings.pdf:18-24 --dry-run"
           }
         }
       }

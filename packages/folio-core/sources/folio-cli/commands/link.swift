@@ -12,6 +12,7 @@ struct LinkTarget: ParsableArguments {
     @Option(help: ArgumentHelp(String(localized: .linkHelpPage), valueName: "n")) var page: Int?
     @Option(help: ArgumentHelp(String(localized: .linkHelpHeading), valueName: "heading")) var heading: String?
     @Option(help: ArgumentHelp(String(localized: .linkHelpBlock), valueName: "id")) var block: String?
+    @Option(help: ArgumentHelp(String(localized: .linkHelpTime), valueName: "m:ss")) var time: String?
     // A string, not an enum: which names it takes depends on the kind, a course's pages or settings' tabs.
     @Option(help: ArgumentHelp(String(localized: .linkHelpSection), valueName: "page")) var section: String?
 
@@ -26,6 +27,7 @@ struct LinkTarget: ParsableArguments {
         if page != nil, !kind.anchors.contains(.page) { throw usage(.linkPageOnlyMaterial) }
         if heading != nil, !kind.anchors.contains(.heading) { throw usage(.linkAnchorOnlyNote) }
         if block != nil, !kind.anchors.contains(.block) { throw usage(.linkAnchorOnlyNote) }
+        if time != nil, !kind.anchors.contains(.time) { throw usage(.linkTimeOnlyRecording) }
         if section != nil, !kind.hasPages { throw usage(.linkSectionOnlyCourse) }
         if kind.isPlace, !ref.isEmpty { throw usage(.linkPlaceTakesNoRef(kind.rawValue)) }
         // No default: one sent every kind it didn't name to the note lookup, which then printed a link of the new kind
@@ -47,7 +49,7 @@ struct LinkTarget: ParsableArguments {
         case .card:
             return try card(r)
         case .session:
-            return try item(r) { c, name in let s = try r.session(name, in: c); return (s.id, c.file.name(of: s)) }
+            return try item(r) { c, name in let s = try r.session(name, in: c); return (s.id, c.file.title(of: s, calendar: r.ctx.calendar)) }
         case .unit:
             return try item(r) { c, name in let u = try r.unit(name, in: c); return (u.id, u.title) }
         case .exam:
@@ -60,6 +62,8 @@ struct LinkTarget: ParsableArguments {
             return try item(r) { c, name in let m = try r.material(name, in: c); return (m.id, m.path) }
         case .note:
             return try item(r) { c, name in try note(r, name, in: c) }
+        case .recording:
+            return try item(r) { c, name in let rec = try r.recording(name, in: c); return (rec.id, (rec.file as NSString).lastPathComponent) }
         }
     }
 
@@ -67,10 +71,18 @@ struct LinkTarget: ParsableArguments {
     func item(_ r: Resolver, find: (CourseRef, String) throws -> (UUID, String)) throws -> Resolved {
         let (c, name) = try r.split(ref)
         let (id, title) = try find(c, name)
-        let anchor: AppLink.Anchor? = page.map { .page($0) } ?? block.map { .block($0) } ?? heading.map { .heading($0) }
+        let anchor: AppLink.Anchor? = try page.map { .page($0) } ?? block.map { .block($0) } ?? heading.map { .heading($0) } ?? time.map(moment)
         let link = AppLink(kind, id, anchor: anchor)
         if anchor != nil, link.anchor == nil { throw usage(.linkBadAnchor) }
         return done(link, title: "\(c.code)/\(title)")
+    }
+
+    /// Read as the address reads it, so `--time 12:30` and `#t=12:30` name the same moment.
+    func moment(_ written: String) throws -> AppLink.Anchor {
+        guard let link = AppLink(string: "folio://recording/\(UUID().uuidString)#t=\(written)"), let anchor = link.anchor else {
+            throw usage(.linkBadTime(written))
+        }
+        return anchor
     }
 
     func note(_ r: Resolver, _ name: String, in c: CourseRef) throws -> (UUID, String) {

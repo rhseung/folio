@@ -162,6 +162,7 @@ private struct Builder {
         func s(_ course: UUID, _ m: Int, _ d: Int) -> UUID { held[course]![at(m, d)]! }
 
         let matching = try unit(graph, "매칭", [s(graph, 10, 19), s(graph, 10, 21)], at: at(10, 21, 11))
+        try recording(graph, session: s(graph, 11, 2), start: at(11, 2, 9))
         let coloring = try unit(graph, "그래프 채색", [s(graph, 10, 26), s(graph, 10, 28)], at: at(10, 28, 11))
         let scheduling = try unit(os, "프로세스 스케줄링", [s(os, 10, 19), s(os, 10, 21)], at: at(10, 21, 15))
         _ = try unit(os, "교착 상태", [s(os, 10, 26)], at: at(10, 26, 15))
@@ -204,6 +205,33 @@ private struct Builder {
             try run(ExamAdd(course: graph, title: "Quiz 4", start: at(11, 25, 9), end: at(11, 25, 9, 30), location: "A101"), at: setup)
         }
         try run(ExamPlanAdd(course: prob, exam: quiz, title: "조건부 확률 연습문제 풀기", day: LocalDate(at(11, 4), in: Scenario.calendar), unit: conditional), at: at(11, 1, 10))
+    }
+
+    /// Monday's class recorded with the slides open, so its replay has a transcript and the pages it was on. The audio
+    /// isn't written: a fixture has no sound to play, and the player shows the length the recording kept.
+    func recording(_ course: UUID, session: UUID, start: Date) throws {
+        try run(MaterialTrack(course: course), at: start)
+        let ctx = ActionContext(gist: gist, device: device, now: start, calendar: Scenario.calendar)
+        let store = try ctx.store(course)
+        guard let slides = try ctx.file(course).materials.first(where: { $0.path.hasPrefix("Lectures/") }) else { return }
+        let lines: [(Int, String)] = [
+            (0, "지난 시간에 이분 그래프에서 최대 매칭을 정의했습니다."), (95, "오늘은 홀의 정리를 증명하고 시작하겠습니다."),
+            (240, "집합 S의 이웃 N(S)가 S보다 작으면 S를 모두 짝지을 수 없겠죠."), (410, "그 반대가 성립한다는 것이 홀의 정리입니다."),
+            (620, "증명은 S의 크기에 대한 귀납법으로 합니다."), (905, "여기서 경우를 둘로 나눕니다."),
+            (1180, "이제 증가 경로를 봅시다. 매칭에 들지 않은 꼭짓점에서 시작해서"), (1420, "매칭 간선과 아닌 간선을 번갈아 지나는 경로입니다."),
+            (1700, "베르주의 정리: 최대 매칭이 아니면 증가 경로가 있다."), (2050, "이 정리가 헝가리안 방법의 바탕입니다."),
+            (2380, "쾨니그의 정리로 넘어가면, 이분 그래프에서 최대 매칭의 크기는"), (2610, "최소 꼭짓점 덮개의 크기와 같습니다."),
+            (3020, "과제 5번에 이것을 쓰는 문제가 있습니다."), (3400, "다음 시간에는 일반 그래프의 매칭, 터트의 정리를 봅니다."),
+        ]
+        let transcript = LectureTranscript(locale: "ko-KR", lines: zip(lines, lines.dropFirst().map(\.0) + [3700]).map { line, end in
+            .init(start: TimeInterval(line.0), end: TimeInterval(end - 5), text: line.1)
+        })
+        let pages = [(0, 2), (230, 4), (600, 6), (1150, 9), (1690, 12), (2370, 15)].map { PageVisit(at: TimeInterval($0.0), materialId: slides.id, page: $0.1) }
+        let recording = Recording(id: UUID(uuidString: "B0000000-0000-4000-8000-000000000001")!, device: device, at: start, sessionId: session,
+                                  file: "Recordings/11-02(월).m4a", duration: 4500, bookmarks: [1700, 2610], pages: pages)
+        try FileManager.default.createDirectory(at: store.recordingsURL, withIntermediateDirectories: true)
+        try store.saveTranscript(transcript, of: recording)
+        try ctx.edit(course) { $0.recordings.append(recording) }
     }
 
     /// A syllabus with scores in so far, so the course's grade page has a curve and a projection to draw.

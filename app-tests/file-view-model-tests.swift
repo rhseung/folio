@@ -35,6 +35,18 @@ struct FileViewModelTests {
         ((try? course.store.log.readAll()) ?? []).events(MaterialViewEvent.self).filter { $0.event.materialId == id }.count
     }
 
+    /// A `.tex` asked for a page while showing only its source has no PDF view on screen yet; the page must survive
+    /// until the view is laid out and `restore()` goes to it.
+    @Test func aPageAskedBeforeLayoutIsKept() throws {
+        let (_, course) = try course()
+        let document = try #require(PDFDocument(url: course.store.fileURL("Study/Problems.pdf")))
+        let controller = PDFController(document: document, page: 0)
+        controller.go(to: 2)
+        #expect(controller.page == 2)
+        controller.go(to: 9)
+        #expect(controller.page == 2)
+    }
+
     @Test func picksTheRendererByFormat() async throws {
         let (workspace, course) = try course()
         func loaded(_ path: String) async throws -> FileViewModel.Loaded {

@@ -53,13 +53,13 @@ struct MaterialNoteStudyTests {
     }
 
     @Test func linkSession() throws {
-        try h.expectSame(["material", "link", "EC4207/05_Matchings.pdf", "9주차-1", "--pages", "3-12"], setup: [Self.track, SessionCommandTests.add]) { gist in
+        try h.expectSame(["material", "link", "EC4207/05_Matchings.pdf", "10-28", "--pages", "3-12"], setup: [Self.track, SessionCommandTests.add]) { gist in
             MaterialLinkSession(course: course, material: try material(gist, "05_Matchings.pdf"), session: SessionCommandTests.id, firstPage: 3, lastPage: 12)
         }
     }
 
     @Test func sessionProgress() throws {
-        try h.expectSame(["session", "progress", "EC4207/9주차-1", "05_Matchings.pdf:3-12", "Problems.pdf:7"], setup: [Self.track, SessionCommandTests.add]) { gist in
+        try h.expectSame(["session", "progress", "EC4207/10-28", "05_Matchings.pdf:3-12", "Problems.pdf:7"], setup: [Self.track, SessionCommandTests.add]) { gist in
             SessionProgress(course: course, session: SessionCommandTests.id, ranges: [
                 SessionMaterial(materialId: try material(gist, "05_Matchings.pdf"), firstPage: 3, lastPage: 12),
                 SessionMaterial(materialId: try material(gist, "Study/Problems.pdf"), firstPage: 7, lastPage: 7),
@@ -67,12 +67,12 @@ struct MaterialNoteStudyTests {
         }
         let gist = try Harness.fixtureCopy()
         for setup in [Self.track, SessionCommandTests.add] { _ = h.cli(setup, gist: gist) }
-        #expect(h.cli(["session", "progress", "EC4207/9주차-1", "05_Matchings.pdf"], gist: gist).code == Exit.usage.rawValue)
+        #expect(h.cli(["session", "progress", "EC4207/10-28", "05_Matchings.pdf"], gist: gist).code == Exit.usage.rawValue)
         // A backward range is refused whole: the other file isn't written either.
-        #expect(h.cli(["session", "progress", "EC4207/9주차-1", "Problems.pdf:1-2", "05_Matchings.pdf:12-3"], gist: gist).code != 0)
+        #expect(h.cli(["session", "progress", "EC4207/10-28", "Problems.pdf:1-2", "05_Matchings.pdf:12-3"], gist: gist).code != 0)
         #expect(try h.file(GISTStore(url: gist)).sessions.first { $0.id == SessionCommandTests.id }?.materials.isEmpty == true)
-        #expect(h.cli(["session", "progress", "EC4207/9주차-1", "05_Matchings.pdf:3-12"], gist: gist).code == 0)
-        #expect(h.cli(["session", "show", "EC4207/9주차-1"], gist: gist).out.contains("05_Matchings.pdf p.3-12"))
+        #expect(h.cli(["session", "progress", "EC4207/10-28", "05_Matchings.pdf:3-12"], gist: gist).code == 0)
+        #expect(h.cli(["session", "show", "EC4207/10-28"], gist: gist).out.contains("05_Matchings.pdf p.3-12"))
     }
 
     @Test func linkUnit() throws {
@@ -176,7 +176,7 @@ struct MaterialNoteStudyTests {
 
     @Test func importCopiesAndLinks() throws {
         let file = try scratch("06_Coloring.pdf", "pdf")
-        try h.expectSame(["material", "import", "EC4207", file, "--folder", "Lectures", "--week", "6", "--session", "9주차-1"],
+        try h.expectSame(["material", "import", "EC4207", file, "--folder", "Lectures", "--week", "6", "--session", "10-28"],
                          setup: [Self.track, SessionCommandTests.add]) { _ in
             MaterialImport(course: course, files: [file], folder: "Lectures", week: 6, session: SessionCommandTests.id)
         }
@@ -276,21 +276,21 @@ struct MaterialNoteStudyTests {
     }
 
     @Test func noteWrite() throws {
-        let text = "# 2주차-1\n\n고쳐 씀\n"
-        try h.expectSame(["note", "write", "EC4207/2주차-1", "--file", try scratch("note.md", text)]) { _ in
-            NoteWrite(course: course, note: "Notes/2주차-1.md", text: text)
+        let text = "# 09-08(화) 매칭\n\n고쳐 씀\n"
+        try h.expectSame(["note", "write", "EC4207/09-08", "--file", try scratch("note.md", text)]) { _ in
+            NoteWrite(course: course, note: "Notes/09-08(화) 매칭.md", text: text)
         }
     }
 
     @Test func noteEdit() throws {
-        try h.expectSame(["note", "edit", "EC4207/2주차-1", "--old", "Matching", "--new", "매칭", "--old", "pairwise", "--new", "서로",
+        try h.expectSame(["note", "edit", "EC4207/09-08", "--old", "Matching", "--new", "매칭", "--old", "pairwise", "--new", "서로",
                           "--append", "질문"]) { _ in
-            NoteEdit(course: course, note: "Notes/2주차-1.md",
+            NoteEdit(course: course, note: "Notes/09-08(화) 매칭.md",
                      replacements: [.init(old: "Matching", new: "매칭"), .init(old: "pairwise", new: "서로")], append: "질문")
         }
         let gist = try Harness.fixtureCopy()
-        #expect(h.cli(["note", "edit", "EC4207/2주차-1", "--old", "Matching"], gist: gist).code == Exit.usage.rawValue)
-        #expect(h.cli(["note", "edit", "EC4207/2주차-1", "--old", "없는 글", "--new", "x"], gist: gist).code == Exit.conflict.rawValue)
+        #expect(h.cli(["note", "edit", "EC4207/09-08", "--old", "Matching"], gist: gist).code == Exit.usage.rawValue)
+        #expect(h.cli(["note", "edit", "EC4207/09-08", "--old", "없는 글", "--new", "x"], gist: gist).code == Exit.conflict.rawValue)
     }
 
     /// Writes a note file straight into Notes/, as another editor would, so it has no entry in course.json.
@@ -326,45 +326,47 @@ struct MaterialNoteStudyTests {
     }
 
     @Test func noteRetitle() throws {
-        let setup = [SessionCommandTests.add, ["note", "link", "EC4207/2주차-1", "--kind", "rough", "--session", "9주차-1"]]
+        // The fixture's note as notes were named before #273.
+        let setup = [SessionCommandTests.add, ["note", "mv", "EC4207/09-08", "2주차-1", "--yes"],
+                     ["note", "link", "EC4207/2주차-1", "--kind", "rough", "--session", "10-28"]]
         try h.expectSame(["note", "retitle", "EC4207", "--yes"], setup: setup) { _ in
             NoteRetitleSessions(course: course)
         }
     }
 
     @Test func noteLink() throws {
-        try h.expectSame(["note", "link", "EC4207/2주차-1", "--kind", "review", "--session", "9주차-1"], setup: [SessionCommandTests.add]) { _ in
+        try h.expectSame(["note", "link", "EC4207/09-08", "--kind", "review", "--session", "10-28"], setup: [SessionCommandTests.add]) { _ in
             NoteLink(course: course, note: Self.noteID, kind: .review, session: SessionCommandTests.id)
         }
     }
 
     static let laterSession = UUID(uuidString: "A0000000-0000-4000-8000-000000000002")!
     static let reviewSetup = [SessionCommandTests.add, ["session", "add", "EC4207", "--date", "2026-10-30 10:30", "--id", laterSession.uuidString],
-                              ["note", "link", "EC4207/2주차-1", "--kind", "review", "--session", "9주차-1"]]
+                              ["note", "link", "EC4207/09-08", "--kind", "review", "--session", "10-28"]]
 
     @Test func noteLinkSessions() throws {
-        try h.expectSame(["note", "link-sessions", "EC4207/2주차-1", "9주차-1", "9주차-2"], setup: Self.reviewSetup) { _ in
+        try h.expectSame(["note", "link-sessions", "EC4207/09-08", "10-28", "10-30"], setup: Self.reviewSetup) { _ in
             NoteLinkSessions(course: course, note: Self.noteID, sessions: [SessionCommandTests.id, Self.laterSession])
         }
     }
 
     @Test func noteUnlinkSession() throws {
-        try h.expectSame(["note", "unlink-session", "EC4207/2주차-1", "9주차-1"], setup: Self.reviewSetup) { _ in
+        try h.expectSame(["note", "unlink-session", "EC4207/09-08", "10-28"], setup: Self.reviewSetup) { _ in
             NoteUnlinkSession(course: course, note: Self.noteID, session: SessionCommandTests.id)
         }
     }
 
     @Test func noteRemove() throws {
         let gist = try Harness.fixtureCopy()
-        #expect(h.cli(["note", "rm", "EC4207/2주차-1"], gist: gist).code == Exit.needsConfirmation.rawValue)
-        try h.expectSame(["note", "rm", "EC4207/2주차-1", "--yes"]) { _ in NoteRemove(course: course, note: "Notes/2주차-1.md") }
+        #expect(h.cli(["note", "rm", "EC4207/09-08"], gist: gist).code == Exit.needsConfirmation.rawValue)
+        try h.expectSame(["note", "rm", "EC4207/09-08", "--yes"]) { _ in NoteRemove(course: course, note: "Notes/09-08(화) 매칭.md") }
     }
 
     @Test func noteMove() throws {
         let gist = try Harness.fixtureCopy()
-        #expect(h.cli(["note", "mv", "EC4207/2주차-1", "정리/매칭"], gist: gist).code == Exit.needsConfirmation.rawValue)
-        try h.expectSame(["note", "mv", "EC4207/2주차-1", "정리/매칭", "--yes"]) { _ in
-            NoteMove(course: course, note: "Notes/2주차-1.md", to: "정리/매칭")
+        #expect(h.cli(["note", "mv", "EC4207/09-08", "정리/매칭"], gist: gist).code == Exit.needsConfirmation.rawValue)
+        try h.expectSame(["note", "mv", "EC4207/09-08", "정리/매칭", "--yes"]) { _ in
+            NoteMove(course: course, note: "Notes/09-08(화) 매칭.md", to: "정리/매칭")
         }
     }
 

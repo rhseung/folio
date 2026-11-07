@@ -37,8 +37,8 @@ struct TodayView: View {
         }
         .navigationSubtitle(summary.studyDay.description)
         .sheet(item: $model.editing) { item in
-            AssignmentSheet(workspace: model.workspace, course: item.course, assignment: item.assignment) { id in
-                openLink(AppLink(.material, id), course: item.course.id)
+            AssignmentSheet(workspace: model.workspace, course: item.course, assignment: item.assignment) { id, placement in
+                openLink(AppLink(.material, id), in: placement, course: item.course.id)
             }
         }
         .confirming($model.pending)

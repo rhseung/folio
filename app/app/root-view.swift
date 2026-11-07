@@ -25,17 +25,13 @@ struct RootView: View {
     @State private var showingRecording = false
     @State private var quickAdding = false
     @Environment(\.colorScheme) private var colorScheme
-    @State private var windowWidth: CGFloat = 1200
     #if os(macOS)
     /// When this window was made, which tells a window made for a link from outside from one already in use.
     @State private var madeAt = Date.now
     @State private var host = WindowHost()
-    /// The search field and the buttons after it, measured: what's left of the row goes to the tabs.
-    @State private var trailingWidth = RootView.trailingEstimate
-    /// Where the toolbar row put its first item (the sidebar button) and its last (the search field), across the
-    /// window: the tabs start at the panel's corner and end before the search field.
-    @State private var leadingX: CGFloat?
-    @State private var trailingX: CGFloat?
+    @State private var row = ToolbarRow()
+    #else
+    @State private var windowWidth: CGFloat = 1200
     #endif
 
     init(request: WindowRequest? = nil) {
@@ -132,7 +128,9 @@ struct RootView: View {
                 .toolbar { globalTools }
                 .environment(\.openLink, openLink)
                 .sessionProgressPrompt(workspace)
+                #if os(iOS)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { windowWidth = $0 }
+                #endif
                 // A size up from the compact row's default: plain icons at its own size read too small.
                 .controlSize(.regular)
                 .overlay {
@@ -169,6 +167,8 @@ struct RootView: View {
                         tabs.closeWindow = { [weak window] in window?.performClose(nil) }
                     }
                 }
+                .background { WindowWidth { row.windowWidth = $0 } }
+                .onChange(of: sidebarOpen, initial: true) { row.panelEdge = panelEdge }
                 #endif
                 #if DEBUG && os(macOS)
                 .onChange(of: SnapshotDriver.shared.searchQuery) { _, query in searching = query != nil }
@@ -182,6 +182,14 @@ struct RootView: View {
         .fileImporter(isPresented: $pickingFolder, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result { workspace.open(url) }
         }
+        // Also in a Release build made with RESIZE_PROBE: a debug build's SwiftUI timings say little about the app's.
+        #if os(macOS) && (DEBUG || RESIZE_PROBE)
+        .task {
+            await ResizeProbe.run(window: { host.window }, workspace: workspace,
+                                  openTab: { link, course in tabs.open(Navigator(Navigator.Entry(link: link, course: course))) },
+                                  front: { tabs.select(number: $0) })
+        }
+        #endif
         #if DEBUG && os(macOS)
         .task {
             await TabMemoryProbe.run(tabs: tabs, workspace: workspace)
@@ -205,8 +213,12 @@ struct RootView: View {
             }
             // The exam furthest down its page, so opening it by its link has to scroll.
             let exam = workspace.currentCourses.first?.file.exams.min { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) }
+            // A replay opened at a moment, as a copied link or a tab let go of opens it.
+            let replay = workspace.currentCourses.lazy.compactMap { $0.file.recordings.first }.first
+            let links = (exam.map { [("link-exam", AppLink(.exam, $0.id))] } ?? [])
+                + (replay.map { [("link-recording", AppLink(.recording, $0.id, anchor: .time(1700)))] } ?? [])
             await SnapshotDriver.shared.run(select: { if let link = $0.link { open(link) } }, open: { open($0) }, courses: ids,
-                                            semester: workspace.currentSemester?.id, links: exam.map { [("link-exam", AppLink(.exam, $0.id))] } ?? [])
+                                            semester: workspace.currentSemester?.id, links: links)
         }
         #endif
         .environment(\.gradesLocked, !workspace.gradesUnlocked)
@@ -355,12 +367,17 @@ struct RootView: View {
             HStack(spacing: 0) {
                 HStack(spacing: Self.historyGap) {
                     sidebarButton
+                        #if DEBUG || RESIZE_PROBE
+                        .background { ResizeMarker(name: "sidebar") }
+                        #endif
                     HistoryButtons(navigator: navigator) { workspace.title(of: $0) }
+                        #if DEBUG || RESIZE_PROBE
+                        .background { ResizeMarker(name: "back") }
+                        #endif
                 }
-                TabBar(tabs: tabs, workspace: workspace, crumbs: crumbs, room: tabRoom, moveToWindow: moveToWindow)
-                    .padding(.leading, tabLead)
+                TabBar(tabs: tabs, workspace: workspace, crumbs: crumbs, toolbar: row, moveToWindow: moveToWindow)
             }
-            .background { WindowOffset { leadingX = $0 } }
+            .background { WindowOffset { x, _ in row.leadingX = x } }
         }
         .sharedBackgroundVisibility(.hidden)
         // Pushes the search field and the buttons to the row's end, whatever room the tabs leave.
@@ -371,8 +388,11 @@ struct RootView: View {
                 searchButton
                 tools
             }
-            .onGeometryChange(for: CGFloat.self, of: \.size.width) { trailingWidth = $0 }
-            .background { WindowOffset { trailingX = $0 } }
+            .onGeometryChange(for: CGFloat.self, of: \.size.width) { row.trailingWidth = $0 }
+            .background { WindowOffset { row.placeTrailing($0, in: $1) } }
+            #if DEBUG || RESIZE_PROBE
+            .background { ResizeMarker(name: "trailing") }
+            #endif
         }
         .sharedBackgroundVisibility(.hidden)
         #else
@@ -456,29 +476,7 @@ struct RootView: View {
     /// The content panel's leading edge across the window: beside the sidebar or, folded, the window's edge.
     var panelEdge: CGFloat { sidebarOpen ? Theme.Size.sidebar : Theme.Size.panelInset }
 
-    #if os(macOS)
-    /// Where the back and forward buttons end across the window, the tabs' item placed where the row put it.
-    var historyEnd: CGFloat { (leadingX ?? Self.leadingEstimate) + Theme.Size.toolbarButton + Self.historyGap + HistoryButtons.width }
-
-    /// From the back and forward buttons over to the panel's edge, where the first tab's capsule lines up; with the
-    /// sidebar folded the edge is under the buttons, and the tabs keep a gap after them instead.
-    var tabLead: CGFloat { TabFit.lead(panelEdge: panelEdge, after: historyEnd, gap: Theme.Space.s) }
-
-    /// From the tabs' start to the search field, less a gap before it. Until the row has placed the field, the window's
-    /// width less the field and the gaps the row keeps around it.
-    var tabRoom: CGFloat {
-        let end = trailingX ?? windowWidth - trailingWidth - Self.toolbarGaps
-        return end - historyEnd - tabLead - Theme.Space.s
-    }
-
-    /// The sidebar button's place when the row hasn't said yet: after the window's buttons, measured.
-    static let leadingEstimate: CGFloat = 84
-    /// Between the items and after the last to the window's edge, measured in a window snapshot.
-    static let toolbarGaps: CGFloat = 32
-    /// The search field and five buttons, until the item is measured. Not zero: the tabs then took the whole row and
-    /// pushed the search field into the toolbar's overflow menu, where it was never measured.
-    static let trailingEstimate = Theme.Size.searchField + Theme.Space.s + Theme.Size.toolbarButton * 5 + Theme.Space.xxs * 4
-    #else
+    #if os(iOS)
     /// Where the bare trail starts: `Space.l` in from the panel's edge.
     var panelStart: CGFloat { panelEdge + Theme.Space.l }
 

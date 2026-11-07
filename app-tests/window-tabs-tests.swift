@@ -85,6 +85,27 @@ struct WindowTabsTests {
         #expect(tabs.alive == [tabs.selected])
     }
 
+    @Test func aPlayingTabStaysBehindAndPausesFromTheStrip() {
+        let tabs = WindowTabs(Navigator())
+        let player = tabs.selected
+        var paused = false
+        tabs.play(player, pause: { paused = true })
+        tabs.open()
+        tabs.dropBackground()
+        #expect(tabs.alive == [tabs.selected, player])
+        tabs.pause(player)
+        #expect(paused)
+        // Stopped, it is kept no longer than any other tab.
+        tabs.play(player, pause: nil)
+        tabs.dropBackground()
+        #expect(tabs.alive == [tabs.selected] && tabs.playing.isEmpty)
+        // A closed tab's screen saying it stopped leaves nothing behind.
+        tabs.play(player, pause: {})
+        tabs.close(player)
+        tabs.play(player, pause: nil)
+        #expect(tabs.playing.isEmpty)
+    }
+
     @Test func eachTabHasItsOwnTrail() {
         let tabs = WindowTabs(Navigator())
         let first = tabs.selected
@@ -101,6 +122,87 @@ struct WindowTabsTests {
         let request = WindowRequest(link: .course(graphTheory), course: graphTheory, history: history)
         let back = try JSONDecoder().decode(WindowRequest.self, from: JSONEncoder().encode(request))
         #expect(back.history == history && back.id == request.id)
+    }
+}
+
+/// The tabs' place in the toolbar row as the window resizes: with room to spare it stays the same, so a live resize
+/// doesn't redraw the tabs (#310), and it changes the frame the row runs out.
+@MainActor
+struct ToolbarRowTests {
+    /// `onChange` runs synchronously, on the thread that made the change.
+    final class Changes: @unchecked Sendable { var count = 0 }
+
+    func row(width: CGFloat) -> ToolbarRow {
+        let row = ToolbarRow()
+        row.leadingX = 84
+        row.trailingWidth = 328
+        row.placeTrailing(width - 360, in: width)
+        row.measures = ToolbarRow.Measures(front: 300, others: [120, 120, 32], more: 60, chrome: 44)
+        row.windowWidth = width
+        return row
+    }
+
+    @Test func aRoomyRowHoldsItsPlaceAsTheWindowResizes() {
+        let row = row(width: 1400)
+        let wide = row.placement
+        #expect(wide.fit == TabFit.Layout(iconsOnly: false, shown: 3, hidden: 0) && wide.trail == nil)
+        let changes = Changes()
+        // The names fit down to 1220, where the tabs have just the 596 they take.
+        for width in stride(from: 1400, through: 1220, by: -4) {
+            withObservationTracking { _ = row.placement } onChange: { changes.count += 1 }
+            row.windowWidth = CGFloat(width)
+        }
+        #expect(changes.count == 0)
+        #expect(row.placement == wide)
+    }
+
+    @Test func itFollowsTheWidthAtOnceWhenTheRowRunsOut() throws {
+        let row = row(width: 1400)
+        // The search field stays where the row put it from the trailing edge, so the narrower width counts now, not
+        // a turn later when the row reports the field's new place.
+        row.windowWidth = 1180
+        #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, shown: 3, hidden: 0))
+        // The + takes its 32 and the spacing that sets its glyph one gap after the menu; the rest is the tabs': the
+        // menu alone beside the tab in front, whose trail is held to what is left after the menu, its gap and the chrome.
+        row.windowWidth = 900
+        #expect(row.placement.fit == TabFit.Layout(iconsOnly: true, shown: 0, hidden: 3))
+        let spacing = TabFit.newTabSpacing(gap: TabBar.gap, button: Theme.Size.toolbarButton, glyph: TabBar.plusInk)
+        #expect(row.placement.newTabSpacing == CGFloat(spacing))
+        let held: CGFloat = (row.room - Theme.Size.toolbarButton - CGFloat(spacing) - 68 - 44).rounded(.down)
+        #expect(try #require(row.placement.trail) == held)
+        #expect(row.placement.lead == CGFloat(TabFit.lead(panelEdge: Theme.Size.sidebar, after: row.historyEnd, gap: Theme.Space.s)))
+    }
+
+    @Test func theNewTabGlyphIsMeasuredByItsInk() {
+        // The plus's image is about 17 wide at the toolbar's size; its ink is about 13.
+        #expect((11...14).contains(TabBar.plusInk))
+    }
+
+    @Test func theStripNeverTakesTheSearchFieldsRoom() {
+        // Wider than the row leaves it, the strip pushed the search field and the buttons into the toolbar's overflow
+        // (#310). Down to where the tab in front's capsule, the menu and the + alone fill it.
+        let row = row(width: 1400)
+        let least = 44 + 60 + TabBar.gap * 2 + Theme.Size.toolbarButton
+        for width in stride(from: 1400, through: 600, by: -4) {
+            row.windowWidth = CGFloat(width)
+            guard row.room >= least else { break }
+            #expect(row.placement.width <= row.room, "at \(width)")
+        }
+    }
+
+    @Test func aWiderSearchGroupTakesItsRoomFromTheTabs() {
+        // A course's timer or a recording's clock widens the group without the window. Gone into the overflow menu it
+        // has no place to report, so its width alone has to give the room back, or it never came out again.
+        let row = row(width: 1000)
+        let room = row.room
+        let width = row.placement.width
+        row.trailingWidth += 60
+        row.placeTrailing(nil, in: 1000)
+        #expect(row.room == room - 60)
+        #expect(row.placement.width < width && row.placement.width <= row.room)
+        // Back in the row, its place agrees.
+        row.placeTrailing(1000 - 32 - row.trailingWidth, in: 1000)
+        #expect(row.room == room - 60)
     }
 }
 

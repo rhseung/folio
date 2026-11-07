@@ -148,7 +148,13 @@ struct CourseView: View {
                 Group {
                     switch model.section {
                     case .overview: CourseOverview(model: model, course: course)
-                    case .sessions: SessionsView(workspace: workspace, course: course) { model.show(note: $0) }
+                    case .sessions:
+                        if let recording = model.openRecording {
+                            RecordingPage(workspace: workspace, course: course, recording: recording, place: model.place, moved: model.moved)
+                                .id(recording.id)
+                        } else {
+                            SessionsView(workspace: workspace, course: course) { model.show(note: $0) }
+                        }
                     case .units:
                         UnitsView(workspace: workspace, course: course, place: model.place) { id in
                             model.openUnit = id

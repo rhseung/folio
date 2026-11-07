@@ -3,33 +3,38 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
-struct RecordingPlayer: View {
-    @Environment(\.dismiss) private var dismiss
+/// A class's recording to listen to, with its transcript, as a page of the course's sessions: an hour of listening
+/// beside the slides and notes is no sheet's work (#317). Its address follows playback (`#t=12:30`), so the window
+/// keeps the place through back and forward, a tab let go of opens where it was, and the link can be copied.
+struct RecordingPage: View {
     @Environment(\.accent) private var accent
-    let title: String
     @State private var model: RecordingPlayerModel
     @State private var deleting = false
     @State private var showingContext = false
     @FocusState private var linesFocused: Bool
+    @FocusState private var pageFocused: Bool
     @Environment(\.openLink) private var openLink
+    @Environment(\.tabPlaying) private var tabPlaying
+    let place: AppLink
+    let moved: (AppLink?) -> Void
     private var player: AudioPlayback { model.player }
     private var recording: Recording { model.recording }
 
-    init(workspace: Workspace, courseId: UUID, store: CourseStore, recording: Recording, title: String) {
-        _model = State(initialValue: RecordingPlayerModel(workspace: workspace, courseId: courseId, store: store, recording: recording))
-        self.title = title
+    init(workspace: Workspace, course: LoadedCourse, recording: Recording, place: AppLink, moved: @escaping (AppLink?) -> Void) {
+        _model = State(initialValue: RecordingPlayerModel(workspace: workspace, courseId: course.id, store: course.store, recording: recording))
+        self.place = place
+        self.moved = moved
     }
 
     var body: some View {
         let current = model.current
         VStack(alignment: .leading, spacing: Theme.Space.l) {
-            HStack(alignment: .firstTextBaseline) {
-                VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text(title).font(Theme.Typeface.columnTitle)
-                    Text(model.subtitle)
-                        .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+            HStack(alignment: .firstTextBaseline, spacing: Theme.Space.m) {
+                VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    Text(model.title).font(Theme.Typeface.pageTitle).lineLimit(2)
+                    Text(model.subtitle).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                 }
-                Spacer()
+                .frame(maxWidth: .infinity, alignment: .leading)
                 if model.hasLines {
                     TextField(String(localized: .recordingSearch), text: $model.query).pill(width: 180)
                 }
@@ -54,8 +59,7 @@ struct RecordingPlayer: View {
                             }
                             .padding(Theme.Space.s)
                         }
-                        // Picking a line focuses the list so ⌘A and ⌘C reach it. The sheet still opens on the search
-                        // field: `defaultFocus`, `prefersDefaultFocus` and setting focus in `.task` all lost to it.
+                        // Picking a line focuses the list so ⌘A and ⌘C reach it.
                         .focusable(interactions: .edit)
                         .focusEffectDisabled()
                         .focused($linesFocused)
@@ -64,6 +68,12 @@ struct RecordingPlayer: View {
                         .onChange(of: current) { _, i in
                             guard let i, model.query.isEmpty, player.playing else { return }
                             withAnimation(.snappy(duration: 0.35)) { proxy.scrollTo(i, anchor: .center) }
+                        }
+                        // Opened at a moment, the transcript starts at the line being said then.
+                        .task(id: model.seekedTo) {
+                            guard let line = model.seekedTo.flatMap(model.lineIndex) else { return }
+                            try? await Task.sleep(for: .milliseconds(100))
+                            proxy.scrollTo(line, anchor: .center)
                         }
                     }
                 } else if model.phase == nil {
@@ -76,44 +86,69 @@ struct RecordingPlayer: View {
                     }
                 }
             }
+            // The transcript takes the page's height; without lines the card is a row and the rest stays up top.
+            .frame(maxHeight: model.hasLines ? .infinity : nil, alignment: .top)
             if model.showsContext { contextBlock }
-            HStack {
-                Button(model.copyLabel, systemImage: "doc.on.doc") { writePasteboard(model.copiedText) }.disabled(!model.canCopy)
-                    .buttonStyle(.ghost)
-                    .help(Text(.recordingCopyHelp))
-                if model.hasLines && recording.hasAudio {
-                    Button(.recordingRetranscribe, systemImage: "arrow.clockwise") { model.transcribe() }
-                        .buttonStyle(.ghost).disabled(!model.canTranscribe)
-                        .help(Text(.recordingRetranscribeHelp))
-                }
-                Button(.recordingRemove, systemImage: "trash", role: .destructive) { deleting = true }
-                    .buttonStyle(.ghost)
-                    .disabled(model.removalRefusal != nil)
-                    .help(model.removalRefusal.map { Text($0) } ?? Text(.recordingRemove))
-                    .confirmationDialog(String(localized: .recordingRemoveConfirm), isPresented: $deleting) {
-                        Button(.recordingRemoveAction, role: .destructive) {
-                            model.remove()
-                            dismiss()
-                        }
-                    } message: {
-                        Text(.recordingRemoveMessage)
-                    }
-                Spacer()
-                Button(.commonClose) { dismiss() }.keyboardShortcut(.cancelAction).buttonStyle(.pointing(.borderedProminent))
+            // Words where they fit, the symbols alone in a narrow pane.
+            ViewThatFits(in: .horizontal) {
+                actions
+                actions.labelStyle(.iconOnly)
             }
+            if !model.hasLines { Spacer(minLength: 0) }
         }
-        .padding(Theme.Space.xl)
-        // Tall only with lines to scroll: a recording without a transcript sat in the middle of an empty sheet.
-        .frame(width: 640, height: model.hasLines ? 680 : nil)
-        .background(Theme.Palette.page)
+        .frame(maxWidth: Theme.Size.pageMaxWidth, alignment: .leading)
+        .padding(.horizontal, Theme.Space.xxl)
+        .padding(.top, Theme.Space.xl)
+        // As `Page` leaves it, so the Claude button over the corner doesn't sit on the delete button.
+        .padding(.bottom, Theme.Space.xxl * 2)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        // Holds the focus the space bar needs, which a sheet had from its window and a page has to take.
+        .focusable(interactions: .edit)
+        .focusEffectDisabled()
+        .focused($pageFocused)
+        .defaultFocus($pageFocused, true)
         .font(Theme.Typeface.body)
-        .task {
-            model.load()
-            await model.loadContext()
+        .crumb(model.name, level: 2, symbol: "waveform")
+        // On the page, not the button: the actions are drawn twice for `ViewThatFits`.
+        .confirmationDialog(String(localized: .recordingRemoveConfirm), isPresented: $deleting) {
+            Button(.recordingRemoveAction, role: .destructive) {
+                model.remove()
+                moved(nil)
+            }
+        } message: {
+            Text(.recordingRemoveMessage)
         }
-        .onDisappear { player.stop() }
+        .task { await model.loadContext() }
+        // The window's link seeks the player; the player's moments go back as the window's link, in place of the step
+        // it is on (`Navigator.go`), so listening adds no history.
+        .onChange(of: place, initial: true) { _, link in model.follow(link) }
+        .onChange(of: model.viewedLink) { _, link in moved(link) }
+        .onChange(of: player.playing, initial: true) { _, playing in tabPlaying(playing ? { [player] in player.pause() } : nil) }
+        .onDisappear { player.stop(); tabPlaying(nil) }
         // A finished job (or a cancelled one, which leaves the old transcript) has written what there is to show.
         .onChange(of: model.phase == nil) { _, done in if done { model.reloadTranscript() } }
+    }
+
+    /// A click on a control keeps the space bar on the player; a button takes no focus of its own on the Mac.
+    func hold() {
+        if !linesFocused { pageFocused = true }
+    }
+
+    var actions: some View {
+        HStack {
+            Button(model.copyLabel, systemImage: "doc.on.doc") { writePasteboard(model.copiedText) }.disabled(!model.canCopy)
+                .help(Text(.recordingCopyHelp))
+            if model.hasLines && recording.hasAudio {
+                Button(.recordingRetranscribe, systemImage: "arrow.clockwise") { model.transcribe() }
+                    .disabled(!model.canTranscribe)
+                    .help(Text(.recordingRetranscribeHelp))
+            }
+            Spacer()
+            Button(.recordingRemove, systemImage: "trash", role: .destructive) { deleting = true }
+                .disabled(model.removalRefusal != nil)
+                .help(model.removalRefusal.map { Text($0) } ?? Text(.recordingRemove))
+        }
+        .buttonStyle(.ghost)
     }
 
     /// Folded to one line under the transcript: it explains the transcript, it isn't what the player is for.
@@ -138,7 +173,6 @@ struct RecordingPlayer: View {
                     Card {
                         TranscriptionContextRows(context: context, termsRead: model.contextTermsRead) {
                             openLink(model.materialsLink, course: model.courseId)
-                            dismiss()
                         }
                     }
                     .transition(.opacity)
@@ -169,7 +203,7 @@ struct RecordingPlayer: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: Theme.Space.xs) {
                     ForEach(model.bookmarks, id: \.self) { mark in
-                        Button(RecordingTime.label(mark)) { player.seek(mark); player.play() }
+                        Button(RecordingTime.label(mark)) { model.jump(to: mark); hold() }
                             .monospacedDigit().buttonStyle(.ghost)
                             .help(Text(.recordingBookmarkJump))
                     }
@@ -182,12 +216,14 @@ struct RecordingPlayer: View {
     var transport: some View {
         HStack(spacing: Theme.Space.m) {
             Button { player.skip(-15) } label: { Image(systemName: "gobackward.15") }.help(Text(.recordingBack15))
-            Button { player.toggle() } label: {
+            Button { player.toggle(); hold() } label: {
                 Image(systemName: player.playing ? "pause.circle.fill" : "play.circle.fill")
                     .font(.system(size: 34)).foregroundStyle(accent.color) // design: one-off, play is the player's one large control
                     .contentTransition(.symbolEffect(.replace))
             }
-            .keyboardShortcut(.space, modifiers: [])
+            // Only while the page has the focus: a window-wide space bar would take the spaces typed in the search
+            // field or the Claude panel over it.
+            .keyboardShortcut(pageFocused || linesFocused ? KeyboardShortcut(.space, modifiers: []) : nil)
             .help(Text(player.playing ? .recordingPause : .recordingPlay))
             Button { player.skip(15) } label: { Image(systemName: "goforward.15") }.help(Text(.recordingForward15))
             Text(RecordingTime.label(player.time)).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary).frame(width: 56, alignment: .trailing)
@@ -230,7 +266,7 @@ struct RecordingPlayer: View {
     /// with every pick and Shift-click, losing the place being listened to while choosing what to copy.
     func row(_ index: Int, _ line: LectureTranscript.Line, playing: Bool, selected: Bool, bookmarked: Bool) -> some View {
         HStack(alignment: .firstTextBaseline, spacing: Theme.Space.m) {
-            Button { player.seek(line.start); player.play() } label: {
+            Button { model.jump(to: line.start); hold() } label: {
                 Text(RecordingTime.label(line.start)).font(Theme.Typeface.label).monospacedDigit()
                     .foregroundStyle(playing ? accent.ink : Theme.Palette.textTertiary).frame(width: 52, alignment: .leading)
                     .contentShape(.rect)
@@ -245,10 +281,9 @@ struct RecordingPlayer: View {
                 Text(line.text).foregroundStyle(playing || selected ? Theme.Palette.text : Theme.Palette.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 if let visit = model.page(at: index) {
-                    // The lecture opens in the window under the sheet, as the context's own link does.
+                    // Beside the replay, which keeps playing: the slides are what the class was saying it over.
                     Button(model.pageLabel(visit)) {
-                        openLink(model.pageLink(visit), course: model.courseId)
-                        dismiss()
+                        openLink(model.pageLink(visit), in: .beside, course: model.courseId)
                     }
                     .font(Theme.Typeface.label).monospacedDigit().foregroundStyle(Theme.Palette.textTertiary)
                     .buttonStyle(.pointing(.plain))
@@ -333,11 +368,12 @@ final class AudioPlayback {
     @ObservationIgnored private var player: AVAudioPlayer?
     @ObservationIgnored private var clock: Task<Void, Never>?
 
-    func load(_ url: URL) {
+    /// `expected`: the length the recording kept, shown while the audio can't be read (still downloading from iCloud).
+    func load(_ url: URL, expected: TimeInterval = 0) {
         player = try? AVAudioPlayer(contentsOf: url)
         player?.enableRate = true
         player?.prepareToPlay()
-        duration = player?.duration ?? 0
+        duration = player?.duration ?? expected
     }
 
     func play() {

@@ -35,7 +35,7 @@ public struct NoteAdd {
         guard !title.isEmpty else { throw ActionError.rule(String(localized: .errorNoteTitleEmpty)) }
         let settings = try ctx.settings()
         var meta = NoteMeta(id: id, kind: kind, math: settings.newNoteMath)
-        try NoteLinks(kind: kind, session: session, exam: exam, units: units).apply(to: &meta, in: try ctx.file(course))
+        try NoteLinks(kind: kind, session: session, exam: exam, units: units).apply(to: &meta, in: try ctx.file(course), calendar: ctx.calendar)
         let body = body ?? NoteTemplate.body(for: kind, title: title, sections: settings.noteSections(for: kind), format: format)
         let made = try ctx.createNote(course, title: title, meta: meta, format: format, body: body)
         if let session = meta.sessionId {
@@ -57,13 +57,13 @@ struct NoteLinks {
     var units: [FolioDomain.Unit.ID]
 
     /// Checked here as well as by the model, for an error that names what is missing.
-    func apply(to meta: inout NoteMeta, in course: CourseFile) throws {
+    func apply(to meta: inout NoteMeta, in course: CourseFile, calendar: Calendar) throws {
         if kind == .rough || kind == .review, let session {
             guard let s = course.sessions.first(where: { $0.id == session }) else { throw ActionError.notFound(String(localized: .errorNotFoundSession)) }
             if s.isCancelled { throw ActionError.rule(String(localized: .errorNoteCancelledSession)) }
             // Taking it would leave the other note pointing at a session that no longer points back.
             if let other = s.note(of: kind), other != meta.id {
-                let name = course.name(of: s)
+                let name = course.title(of: s, calendar: calendar)
                 throw ActionError.rule(String(localized: kind == .rough ? .errorNoteSessionHasRough(name) : .errorNoteSessionHasReview(name)))
             }
         }
@@ -99,7 +99,7 @@ public struct NoteWrite {
 /// once in the text the replacements before it left, which also does `expected`'s job: text changed elsewhere no
 /// longer matches. The command pairs `--old` and `--new` by order, so it is written by hand.
 @Action("note edit", "노트 일부 고치기. 찾아 바꾸거나 끝에 붙인다. 노트 전체를 다시 쓰지 않는다", done: "노트 '{note}'을(를) 고쳤습니다",
-        examples: [#"folio note edit EC4207/2주차-1 --old "non-adjacent" --new "서로 이웃하지 않는""#, #"folio note edit EC4207/2주차-1 --append "질문: 최대 매칭은 어떻게 찾나""#],
+        examples: [#"folio note edit EC4207/09-08 --old "non-adjacent" --new "서로 이웃하지 않는""#, #"folio note edit EC4207/09-08 --append "질문: 최대 매칭은 어떻게 찾나""#],
         phrases: ["노트 일부 수정", "노트에 덧붙이기", "노트 끝에 추가", "노트 찾아 바꾸기"], cli: .manual)
 public struct NoteEdit {
     public struct Replacement: Codable, Sendable, Equatable {
@@ -190,7 +190,7 @@ public struct NoteLink {
 
     public func run(_ ctx: ActionContext) throws {
         var meta = try FolioActions.note(ctx, course: self.course, id: note).meta
-        try NoteLinks(kind: kind, session: session, exam: exam, units: units).apply(to: &meta, in: try ctx.file(self.course))
+        try NoteLinks(kind: kind, session: session, exam: exam, units: units).apply(to: &meta, in: try ctx.file(self.course), calendar: ctx.calendar)
         meta.math = math ?? meta.math
         try ctx.edit(self.course) { f in
             guard let i = f.notes.firstIndex(where: { $0.id == note }) else { return }
@@ -205,21 +205,21 @@ public struct NoteLink {
 /// own note does, so course.json keeps its shape. Sessions already linked stay; one holding another review note is
 /// refused before anything is written, as `note link` refuses it.
 @Action("note link-sessions", "복습 노트를 회차 여러 개에 연결하기. 이미 연결된 회차는 그대로 둔다", done: "노트 '{note}'에 회차를 연결했습니다",
-        examples: [#"folio note link-sessions "EC4207/9주차 정리" 9주차-1 9주차-2"#],
+        examples: [#"folio note link-sessions "EC4207/10-26(월) 정리" 10-26 10-28"#],
         phrases: ["복습 노트 여러 회차", "밀린 수업 한 번에 복습", "회차 여러 개 복습 노트"])
 public struct NoteLinkSessions {
     /// 과목
     @Arg var course: Course.ID
     /// 복습 노트
     @Arg var note: Note.ID
-    /// 회차. 예: 9주차-1
+    /// 회차. 예: 10-26
     @Arg var sessions: [Session.ID]
 
     public func run(_ ctx: ActionContext) throws {
         var meta = try FolioActions.note(ctx, course: course, id: note).meta
         guard meta.kind == .review else { throw ActionError.rule(String(localized: .errorNoteLinkSessionsKind)) }
         let file = try ctx.file(course)
-        for session in sessions { try NoteLinks(kind: .review, session: session, exam: nil, units: []).apply(to: &meta, in: file) }
+        for session in sessions { try NoteLinks(kind: .review, session: session, exam: nil, units: []).apply(to: &meta, in: file, calendar: ctx.calendar) }
         try ctx.edit(course) { f in
             for session in sessions { f.linkNote(note, to: session, as: .review) }
         }
@@ -228,7 +228,7 @@ public struct NoteLinkSessions {
 
 /// Takes one session off a note; the other sessions a review note covers keep it.
 @Action("note unlink-session", "회차 하나에서 노트 떼기. 노트가 맡은 다른 회차는 그대로 둔다", done: "회차 '{session}'에서 노트 '{note}'을(를) 뗐습니다",
-        examples: [#"folio note unlink-session "EC4207/9주차 정리" 9주차-1"#], phrases: ["복습 노트 회차 빼기", "노트 회차 연결 풀기"])
+        examples: [#"folio note unlink-session "EC4207/10-26(월) 정리" 10-26"#], phrases: ["복습 노트 회차 빼기", "노트 회차 연결 풀기"])
 public struct NoteUnlinkSession {
     /// 과목
     @Arg var course: Course.ID
@@ -243,7 +243,7 @@ public struct NoteUnlinkSession {
             let s = f.sessions[try index(session, in: f.sessions, .valueSession)]
             // A mistyped session would otherwise report the note taken off a class it was never on.
             guard s.roughNoteId == note || s.reviewNoteId == note else {
-                throw ActionError.rule(String(localized: .errorNoteSessionNotLinked(f.name(of: s))))
+                throw ActionError.rule(String(localized: .errorNoteSessionNotLinked(f.title(of: s, calendar: ctx.calendar))))
             }
             f.unlinkNote(note, from: session)
         }
