@@ -226,7 +226,8 @@ final class SessionsModel {
     }
 
     /// Only a class held, in a course with lecture files, has progress to record.
-    func offersProgress(_ session: Session, in file: CourseFile) -> Bool { !session.isCancelled && !file.lectureFiles.isEmpty }
+    /// Once the class has begun: before it there is nothing to wrap up.
+    func offersWrapUp(_ session: Session) -> Bool { !session.isCancelled && session.date <= workspace.now }
 
     // MARK: A session's actions
 

@@ -28,6 +28,7 @@ struct TodayView: View {
             TodayHeader(model: model, summary: summary, classes: classes, reviews: reviews)
             DayRibbonCard(model: model, summary: summary, classes: classes, go: go, openNote: openNote)
             QuickAddField(workspace: model.workspace)
+            wrapUpBlock(model.wrapUps(now: model.workspace.liveNow))
             AttendanceWarnings(model: model)
             UnfiledCoursesNotice(workspace: model.workspace)
             agenda(summary)
@@ -41,7 +42,45 @@ struct TodayView: View {
                 openLink(AppLink(.material, id), in: placement, course: item.course.id)
             }
         }
+        .sheet(item: $model.wrappingUp) { item in
+            ClassWrapUpSheet(workspace: model.workspace, course: item.courseId, session: item.session.id)
+        }
         .confirming($model.pending)
+    }
+
+    // MARK: Wrap-up
+
+    /// Classes that ended with something missing. Only until the course's next class: past that, each class's menu.
+    @ViewBuilder func wrapUpBlock(_ items: [TodayModel.WrapUp]) -> some View {
+        if !items.isEmpty {
+            Block(String(localized: .todayWrapUp), note: "\(items.count)") {
+                Card {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
+                        CardRow(last: i == items.count - 1) {
+                            CourseMark(model.workspace, item.courseId)
+                            VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                                Text(model.wrapUpName(item)).font(Theme.Typeface.bodyStrong).lineLimit(1)
+                                // Five chips don't fit a phone's row; the same words as one line do.
+                                ViewThatFits(in: .horizontal) {
+                                    HStack(spacing: Theme.Space.xs) {
+                                        ForEach(item.gaps, id: \.self) { Chip($0.label) }
+                                    }
+                                    Text(item.gaps.map(\.label).joined(separator: " · ")).font(Theme.Typeface.caption)
+                                        .foregroundStyle(Theme.Palette.textSecondary).lineLimit(1).truncationMode(.tail)
+                                }
+                            }
+                            Spacer(minLength: Theme.Space.s)
+                            Button(.todayWrapUpGo) { model.wrappingUp = item }.buttonStyle(.pointing(.bordered))
+                        }
+                        .help(Text(.todayWrapUpHelp))
+                        .contextMenu {
+                            SessionMenu(courseId: item.courseId, sessionId: item.session.id, openNote: openNote(in: item.courseId),
+                                        showSessions: { go(item.courseId, .sessions) }, wrapUp: { model.wrappingUp = item })
+                        }
+                    }
+                }
+            }
+        }
     }
 
     /// Two lists side by side from here: a deadline's chips need about half of it.

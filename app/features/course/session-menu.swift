@@ -13,8 +13,8 @@ struct SessionMenu: View {
     let openNote: (UUID) -> Void
     var showSessions: (() -> Void)?
     var edit: (() -> Void)?
-    /// Asks how far the class went in its lecture files.
-    var progress: (() -> Void)?
+    /// The class's wrap-up: progress, units, topic, note, attendance.
+    var wrapUp: (() -> Void)?
     var remove: (() -> Void)?
 
     var body: some View {
@@ -51,7 +51,7 @@ struct SessionMenu: View {
             }
             Divider()
             if let edit { Button(.commonEditEllipsis, systemImage: "pencil", action: edit) }
-            if let progress { Button(.sessionsProgressEllipsis, systemImage: "book.pages", action: progress) }
+            if let wrapUp, !session.isCancelled { Button(.wrapUpEllipsis, systemImage: "checklist", action: wrapUp) }
             Toggle(isOn: Binding(get: { session.isCancelled }, set: { model.setCancelled($0, of: session) })) {
                 Label(.sessionsCancelled, systemImage: "calendar.badge.minus")
             }

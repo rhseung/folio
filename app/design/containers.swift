@@ -189,12 +189,19 @@ struct SheetForm<Rows: View>: View {
     /// A destructive button at the footer's leading end, in every sheet that deletes; the sheet asks to confirm.
     var deleteTitle: String?
     var onDelete: (() -> Void)?
+    /// The course's icon before the title, for a sheet about one of its classes.
+    var mark: CourseMark?
+    /// For a sheet that comes back later (a class's wrap-up), "나중에" rather than "취소".
+    var cancel: String?
     @ViewBuilder var rows: Rows
     let onConfirm: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.l) {
-            Text(title).font(Theme.Typeface.columnTitle)
+            HStack(spacing: Theme.Space.s) {
+                if let mark { mark }
+                Text(title).font(Theme.Typeface.columnTitle)
+            }
             if carded { Card { rows } } else { rows }
             if let note { Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).padding(.horizontal, Theme.Space.m) }
             HStack {
@@ -202,7 +209,7 @@ struct SheetForm<Rows: View>: View {
                     Button(deleteTitle, role: .destructive, action: onDelete).buttonStyle(.pointing(.bordered)).foregroundStyle(Theme.Palette.danger)
                 }
                 Spacer()
-                Button(.commonCancel) { dismiss() }.keyboardShortcut(.cancelAction)
+                Button(cancel ?? String(localized: .commonCancel)) { dismiss() }.keyboardShortcut(.cancelAction)
                 Button(confirm, action: onConfirm).buttonStyle(.pointing(.borderedProminent)).keyboardShortcut(.defaultAction).disabled(disabled)
             }
         }

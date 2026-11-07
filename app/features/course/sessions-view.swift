@@ -583,7 +583,7 @@ struct SessionCard: View {
     let openNote: (UUID) -> Void
     @Environment(\.openLink) private var openLink
     @State private var editing = false
-    @State private var askingProgress = false
+    @State private var wrappingUp = false
 
     /// The day line and its units, which the pills must leave beside them.
     static let linesRoom: CGFloat = 240
@@ -637,7 +637,7 @@ struct SessionCard: View {
         .contentShape(.rect)
         .contextMenu { menuItems }
         .sheet(isPresented: $editing) { SessionFormSheet(workspace: model.workspace, course: course, session: session) }
-        .sheet(isPresented: $askingProgress) { SessionProgressSheet(workspace: model.workspace, course: course.id, session: session.id) }
+        .sheet(isPresented: $wrappingUp) { ClassWrapUpSheet(workspace: model.workspace, course: course.id, session: session.id) }
     }
 
     func lines(_ file: CourseFile, live: Bool) -> some View {
@@ -715,7 +715,7 @@ struct SessionCard: View {
 
     var menuItems: some View {
         SessionMenu(courseId: course.id, sessionId: session.id, openNote: openNote, edit: { editing = true },
-                    progress: model.offersProgress(session, in: course.file) ? { askingProgress = true } : nil) {
+                    wrapUp: model.offersWrapUp(session) ? { wrappingUp = true } : nil) {
             model.remove(session)
         }
     }

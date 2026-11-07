@@ -18459,39 +18459,6 @@
         }
       }
     },
-    "sessions.progress.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수업 진도"
-          }
-        }
-      }
-    },
-    "sessions.progress.title-of": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@ 수업 진도"
-          }
-        }
-      }
-    },
-    "sessions.progress-ellipsis": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "진도 기록…"
-          }
-        }
-      }
-    },
     "sessions.progress.from-recording": {
       "extractionState": "manual",
       "localizations": {
@@ -18543,17 +18510,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@의 시작 쪽과 끝 쪽을 적어 주세요"
-          }
-        }
-      }
-    },
-    "sessions.progress.nothing": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "기록할 자료를 하나 이상 고르세요"
           }
         }
       }
@@ -18818,6 +18774,336 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$lld쪽 · %2$@"
+          }
+        }
+      }
+    },
+    "wrap-up.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 정리"
+          }
+        }
+      }
+    },
+    "wrap-up.title-of": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@ 수업 정리"
+          }
+        }
+      }
+    },
+    "wrap-up.ellipsis": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 정리…"
+          }
+        }
+      }
+    },
+    "wrap-up.later": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나중에"
+          }
+        }
+      }
+    },
+    "wrap-up.progress": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "진도"
+          }
+        }
+      }
+    },
+    "wrap-up.units": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원"
+          }
+        }
+      }
+    },
+    "wrap-up.topic": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "주제"
+          }
+        }
+      }
+    },
+    "wrap-up.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 노트"
+          }
+        }
+      }
+    },
+    "wrap-up.attendance": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출석"
+          }
+        }
+      }
+    },
+    "wrap-up.progress-line": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$lld–%3$lld쪽"
+          }
+        }
+      }
+    },
+    "wrap-up.attendance-recorded": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 녹음이 있어 채움"
+          }
+        }
+      }
+    },
+    "wrap-up.filled": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "채운 것"
+          }
+        }
+      }
+    },
+    "wrap-up.filled-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확인만"
+          }
+        }
+      }
+    },
+    "wrap-up.change": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "바꾸기"
+          }
+        }
+      }
+    },
+    "wrap-up.topic-prompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이번 수업의 주제"
+          }
+        }
+      }
+    },
+    "wrap-up.attendance-none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 수업은 출결을 적을 수 없습니다"
+          }
+        }
+      }
+    },
+    "wrap-up.units-pick": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 고르기"
+          }
+        }
+      }
+    },
+    "wrap-up.units-recent-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지난 수업의 단원. 누르면 이번 수업에도 넣는다"
+          }
+        }
+      }
+    },
+    "wrap-up.units-new": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 단원"
+          }
+        }
+      }
+    },
+    "wrap-up.note-make": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "저장할 때 수업 노트 만들기"
+          }
+        }
+      }
+    },
+    "wrap-up.note-link": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기존 노트 연결"
+          }
+        }
+      }
+    },
+    "wrap-up.announcements": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 중 공지"
+          }
+        }
+      }
+    },
+    "wrap-up.announcements-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "있었다면"
+          }
+        }
+      }
+    },
+    "wrap-up.assignment-prompt": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제: 금요일까지 HW4"
+          }
+        }
+      }
+    },
+    "wrap-up.assignment-add": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제 추가"
+          }
+        }
+      }
+    },
+    "wrap-up.exam-add": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시험"
+          }
+        }
+      }
+    },
+    "today.wrap-up": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 정리"
+          }
+        }
+      }
+    },
+    "today.wrap-up.class": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "today.wrap-up.go": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정리"
+          }
+        }
+      }
+    },
+    "today.wrap-up.help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "같은 과목의 다음 수업이 시작하면 여기서 빠지고, 회차 메뉴의 \"수업 정리…\"로 연다"
           }
         }
       }

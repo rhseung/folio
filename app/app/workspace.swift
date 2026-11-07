@@ -42,7 +42,7 @@ final class Workspace {
     /// Recordings being compressed into their course folder; each runs once even when a reload asks again.
     var finishingRecordings = Set<UUID>()
     /// The class whose recording just stopped, until a window asks how far it went.
-    var progressAsk: SessionProgressAsk?
+    var wrapUpAsk: ClassWrapUpAsk?
     @ObservationIgnored var recoveryTried = Set<UUID>()
     /// Lazy so tests, previews and renders can give a folder of their own before the first use; one that forgets
     /// stops there (`LocalFolders`) instead of recovering this Mac's unfinished recordings into a fixture.
