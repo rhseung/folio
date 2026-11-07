@@ -664,8 +664,7 @@ struct RootView: View {
         }
     }
 
-    /// The window's panel draws its front tab's link as anything else that holds a screen does. Only the front tab is
-    /// drawn, and afresh when it changes, as when its own history moves: a tab behind keeps where it is, not its view.
+    /// The front tab's screen, with the recent tabs' screens kept alive behind it (`TabScreens`, `TabKeep`).
     var detail: some View { TabScreens(tabs: tabs, workspace: workspace, openLink: openLink(from:)) }
 
     /// Nil opens the tab last picked.
