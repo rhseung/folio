@@ -334,6 +334,42 @@ public struct SessionProgress {
     }
 }
 
+/// Everything the end-of-class wrap-up saves, in one action so a part the rules refuse leaves the rest unwritten too.
+/// Marks the class wrapped up, which is what stops it being asked about: what was left empty stays so on purpose. The
+/// command takes each lecture file with its pages, as `session progress` does, so it is written by hand.
+@Action("session wrap-up", "수업 정리. 회차의 렉처 진도, 단원, 주제, 출결을 한 번에 적고 정리했다고 표시한다",
+        done: "회차 '{session}'을(를) 정리했습니다",
+        examples: [#"folio session wrap-up EC4207/10-26 05_Matchings.pdf:3-12 --unit 매칭 --topic "홀의 정리" --dry-run"#],
+        phrases: ["수업 정리", "수업 끝", "오늘 수업 정리", "수업 마무리"], cli: .manual)
+public struct SessionWrapUp {
+    @Arg var course: Course.ID
+    @Arg var session: Session.ID
+    /// 렉처 파일마다 이번 수업이 다룬 쪽. 적지 않은 파일의 연결은 그대로 둔다
+    var ranges: [SessionMaterial]
+    /// 회차의 단원. 이것으로 바뀐다
+    var units: [FolioDomain.Unit.ID]
+    /// 주제
+    var topic: String
+    /// 출결
+    var attendance: AttendanceState
+
+    public func run(_ ctx: ActionContext) throws {
+        try ctx.edit(course) { f in
+            let i = try index(session, in: f.sessions, .valueSession)
+            for range in ranges {
+                _ = try index(range.materialId, in: f.materials, .valueMaterial)
+                f.linkMaterial(range.materialId, session: session, firstPage: range.firstPage, lastPage: range.lastPage)
+            }
+            for unit in units { _ = try index(unit, in: f.units, .valueUnit) }
+            for unit in Set(f.sessions[i].unitIds).symmetricDifference(units) { f.toggle(session: session, unit: unit) }
+            f.sessions[i].topic = topic.trimmingCharacters(in: .whitespaces)
+            f.attendance.removeAll { $0.sessionId == session }
+            if attendance != .present { f.attendance.append(Attendance(device: ctx.device, at: ctx.now, sessionId: session, state: attendance)) }
+            f.sessions[i].isWrappedUp = true
+        }
+    }
+}
+
 /// Called by the app when a recording ends. Only files the session has no link to are linked: a range the user set
 /// stays, and a lecture that returned to an earlier file would otherwise shrink its range to what this class saw.
 @Action("session link-viewed", "녹음 중 본 강의 페이지를 회차에 연결하기. 연결이 없는 자료만 더하고 있는 연결은 그대로 둔다",
