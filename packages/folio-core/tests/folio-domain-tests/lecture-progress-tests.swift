@@ -189,6 +189,24 @@ struct LectureProgressTests {
         #expect(f.suggestedLink(of: m, for: session, pageCount: nil) == SessionMaterial(materialId: m, firstPage: 7, lastPage: 11))
     }
 
+    /// The recording was stopped and restarted in one class. The prompt the second stop raises sees both recordings,
+    /// as a prompt opened again later will, though the one just stopped isn't saved yet.
+    @Test func thePromptAtStopSeesTheClassesEarlierRecordingsToo() {
+        var f = course()
+        let m = matchings(f)
+        let session = f.sessions[1]
+        let first = Recording(device: device, at: now, sessionId: session.id, file: "Recordings/a.m4a", duration: 600,
+                              pages: [PageVisit(at: 0, materialId: m, page: 6), PageVisit(at: 100, materialId: m, page: 9)])
+        let second = Recording(device: device, at: now, sessionId: session.id, file: "Recordings/b.m4a", duration: 600,
+                               pages: [PageVisit(at: 0, materialId: m, page: 10), PageVisit(at: 100, materialId: m, page: 11)])
+        f.recordings = [first]
+        let atStop = f.viewedPages(of: session, including: second)
+        #expect(atStop == [SessionMaterial(materialId: m, firstPage: 6, lastPage: 11)])
+        f.recordings = [first, second]
+        #expect(f.viewedPages(of: session) == atStop)
+        #expect(f.viewedPages(of: session, including: second) == atStop)
+    }
+
     @Test func movingOneEndPushesTheOther() {
         let range = PageRange(first: 5, last: 9)
         #expect(range.moving(.first, to: 12, pages: nil) == PageRange(first: 12, last: 12))

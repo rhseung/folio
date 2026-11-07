@@ -296,7 +296,10 @@ struct PageRangeField: View {
                 .padding(.horizontal, Theme.Space.xxs)
                 .contentShape(.rect)
                 .onTapGesture {
-                    typed = value
+                    // Both numbers share one focus, so leaving the other one for this never blurs it: what was typed
+                    // there is kept here or it's lost. Its push may move this end, hence the committed range's value.
+                    let now = commitTyped()
+                    typed = now[end] ?? value
                     typing = end
                 }
                 .help(Text(.designDragOrTypeHelp))
@@ -459,15 +462,16 @@ struct PageRangeField: View {
         withAnimation(Self.spring) { set(next) }
     }
 
-    private func commitTyped() {
-        guard let end = typing else { return }
+    @discardableResult private func commitTyped() -> PageRange {
+        guard let end = typing else { return range }
         typing = nil
         defer { typed = nil }
-        guard let typed else { return }
+        guard let typed else { return range }
         let next = range.moving(end, to: typed, pages: pages)
-        guard next != range else { return }
+        guard next != range else { return range }
         feel(from: range, to: next, end: end)
         withAnimation(Self.spring) { set(next) }
+        return next
     }
 }
 

@@ -159,10 +159,12 @@ extension CourseFile {
     }
 
     /// What the session's recordings saw, one range per file across all of them. Only the recordings keep these
-    /// until the prompt is saved, so a prompt opened again later starts from them.
-    public func viewedPages(of session: Session) -> [SessionMaterial] {
+    /// until the prompt is saved, so a prompt opened again later starts from them. `stopped` is a recording that has
+    /// just ended and isn't saved to the course yet: the prompt it raises has to see the same pages a reopened one will.
+    public func viewedPages(of session: Session, including stopped: Recording? = nil) -> [SessionMaterial] {
         var ranges: [SessionMaterial] = []
-        for recording in recordings where recording.sessionId == session.id {
+        let saved = recordings.filter { $0.sessionId == session.id && $0.id != stopped?.id }
+        for recording in saved + [stopped].compactMap({ $0 }) {
             for seen in recording.viewedPages() {
                 guard let pages = seen.pages else { continue }
                 if let i = ranges.firstIndex(where: { $0.materialId == seen.materialId }), let had = ranges[i].pages {

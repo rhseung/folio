@@ -38,7 +38,7 @@ final class SessionProgressModel {
         // A recording just stopped isn't in course.json yet, so the ask passes its pages; opened later, the session's
         // recordings have them.
         let file = workspace.course(course)?.file
-        self.viewed = viewed.isEmpty ? file.flatMap { f in f.sessions.first { $0.id == session }.map(f.viewedPages(of:)) } ?? [] : viewed
+        self.viewed = viewed.isEmpty ? file.flatMap { f in f.sessions.first { $0.id == session }.map { f.viewedPages(of: $0) } } ?? [] : viewed
         suggest()
     }
 
