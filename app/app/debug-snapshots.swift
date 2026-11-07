@@ -40,6 +40,8 @@ final class SnapshotDriver {
     var materialsOpenFile = false
     /// Asks Claude about the open PDF's page, as its button would.
     var askPage = false
+    /// The view an open `.tex` switches to, as its bar's switch would.
+    var texMode: NoteViewMode?
     var searchQuery: String?
 
     /// `links` are opened by their address at the end, each drawn as its step: what a click on such a link shows.
@@ -95,7 +97,7 @@ final class SnapshotDriver {
 
             section = .materials
             // A format the fixture lacks leaves the list on screen and gets no picture.
-            for ext in ["pdf", "md", "py", "png", "m4a", "docx", "hwp"] {
+            for ext in ["pdf", "tex", "md", "py", "png", "m4a", "docx", "hwp"] {
                 openFile = ext
                 try? await Task.sleep(for: .seconds(2.5))
                 if materialsOpenFile { capture(to: directory.appending(path: "course-materials-\(ext).png")) }
@@ -109,6 +111,15 @@ final class SnapshotDriver {
                     claudePanel = true
                     try? await Task.sleep(for: .seconds(0.3))
                     claudePanel = false
+                }
+                if materialsOpenFile, ext == "tex" {
+                    // Split first, so it is also what the `.tex` is left remembering.
+                    for mode in [NoteViewMode.read, .write, .split] {
+                        texMode = mode
+                        try? await Task.sleep(for: .seconds(1.5))
+                        if mode != .split { capture(to: directory.appending(path: "course-materials-tex-\(mode.rawValue).png")) }
+                    }
+                    texMode = nil
                 }
                 if Self.holdStep == "course-materials-\(ext)" { try? await Task.sleep(for: .seconds(6)) }
                 openFile = nil

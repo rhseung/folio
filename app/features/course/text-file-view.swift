@@ -64,6 +64,9 @@ struct TextFileView: View {
         .onAppear(perform: model.load)
         .rememberingPanes($panes, id: model.isTex ? model.paneId : nil)
         .onChange(of: controller?.page) { _, page in if let page { shownPage = page } }
+        #if DEBUG && os(macOS)
+        .onChange(of: SnapshotDriver.shared.texMode) { _, mode in if let mode { panes.choose(mode) } }
+        #endif
         // A link to a page of this `.tex` is a page of its PDF, so the PDF comes into view.
         .onChange(of: requestedPage) { _, page in
             guard page != nil, let controller, let page = takeRequestedPage() else { return }
