@@ -39,10 +39,7 @@ final class SessionFormModel {
         if session == nil { kind = guessedKind(at: start) }
     }
 
-    var kindOptions: [(Session.Kind, String)] {
-        [(.lecture, String(localized: .sessionsLecture)), (.cancelled, String(localized: .sessionsCancelled)),
-         (.makeup, String(localized: .sessionsMakeup))]
-    }
+    var kindOptions: [(Session.Kind, String)] { Session.Kind.options }
 
     func setKind(_ kind: Session.Kind) {
         self.kind = kind
