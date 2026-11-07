@@ -18272,13 +18272,13 @@
         }
       }
     },
-    "tabs.more-help": {
+    "tabs.more-count": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "줄에 들어가지 않은 탭"
+            "value": "+%lld"
           }
         }
       }

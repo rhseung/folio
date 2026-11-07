@@ -358,17 +358,17 @@ struct TabBar: View {
         .buttonStyle(.pointing(.plain))
         .menuIndicator(.hidden)
         .fixedSize()
-        .help(Text(.tabsMoreHelp))
+        .help(Text(.tabsMore(hidden.count)))
+        .accessibilityLabel(Text(.tabsMore(hidden.count)))
     }
 
+    /// "+n" alone: the room it leaves goes to the tabs. Its hover and VoiceOver say what it holds.
     func moreLabel(_ n: Int) -> some View {
-        HStack(spacing: Theme.Space.tight) {
-            Text(.tabsMore(n))
-            Image(systemName: "chevron.down").font(Theme.Glyph.small)
-        }
-        .font(Theme.Typeface.body)
-        .foregroundStyle(Theme.Palette.chromeText)
-        .toolbarField()
+        Text(.tabsMoreCount(n))
+            .monospacedDigit()
+            .font(Theme.Typeface.body)
+            .foregroundStyle(Theme.Palette.chromeText)
+            .toolbarField()
     }
 
     func menu(_ id: UUID) -> some View {

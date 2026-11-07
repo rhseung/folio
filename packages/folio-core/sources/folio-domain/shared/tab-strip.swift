@@ -69,7 +69,7 @@ public struct TabStrip<ID: Hashable & Sendable>: Equatable, Sendable {
 }
 
 /// How the tabs share the toolbar row. The tab in front shows the whole place it is at and is never narrowed for the
-/// others: they give way first, down to their icons, and then into a "탭 n개 더" menu at the row's end.
+/// others: they give way first, down to their icons, and then into a "+n" menu at the row's end.
 public enum TabFit {
     public struct Layout: Equatable, Sendable {
         /// The other tabs show only their icons.
