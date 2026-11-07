@@ -10,11 +10,50 @@ public struct AppLink: Hashable, Sendable {
         case problemSet = "problem-set"
         case person
 
-        /// A page of the app itself, with no ID.
-        public var isPlace: Bool {
+        /// Where what a link of this kind names is kept, so where it is looked for.
+        public enum Home: Sendable {
+            /// A page of the app itself, with no ID.
+            case app
+            /// `transcript.json`: a semester.
+            case transcript
+            /// `catalog.json`: a person.
+            case catalog
+            /// A course's `course.json`.
+            case course
+            /// A unit's quiz file in a course, read only when a link to it is opened.
+            case quiz
+        }
+
+        // No default in the switches below: a new kind doesn't compile until it says where it lives, what may follow
+        // its `#` and whether it has pages, and every switch over these facts (or over the kind) then has to place it.
+        public var home: Home {
             switch self {
-            case .today, .grades, .requirements, .people, .codes, .settings: true
-            default: false
+            case .today, .grades, .requirements, .people, .codes, .settings: .app
+            case .semester: .transcript
+            case .person: .catalog
+            case .course, .session, .unit, .note, .material, .assignment, .exam, .problemSet: .course
+            case .card: .quiz
+            }
+        }
+
+        public var isPlace: Bool { home == .app }
+
+        /// What may follow `#`: a material's page, a note's block or heading.
+        public var anchors: Set<Anchor.Kind> {
+            switch self {
+            case .material: [.page]
+            case .note: [.block, .heading]
+            case .today, .grades, .requirements, .people, .codes, .settings, .semester, .person, .course, .session, .unit,
+                 .assignment, .exam, .problemSet, .card: []
+            }
+        }
+
+        /// Whether a path part after it names a page of its own: a course's pages, settings' tabs.
+        public var hasPages: Bool {
+            switch self {
+            case .course, .settings: true
+            case .today, .grades, .requirements, .people, .codes, .semester, .person, .session, .unit, .note, .material,
+                 .assignment, .exam, .problemSet, .card: false
             }
         }
     }
@@ -24,6 +63,26 @@ public struct AppLink: Hashable, Sendable {
         case page(Int)
         case block(String)
         case heading(String)
+
+        public enum Kind: Hashable, Sendable {
+            case page, block, heading
+        }
+
+        public var kind: Kind {
+            switch self {
+            case .page: .page
+            case .block: .block
+            case .heading: .heading
+            }
+        }
+
+        var isValid: Bool {
+            switch self {
+            case .page(let n): n >= 1
+            case .block(let b): AppLink.isBlockID(b)
+            case .heading(let h): !h.isEmpty
+            }
+        }
     }
 
     /// A course's own pages. Overview is the course itself and is never written.
@@ -45,18 +104,13 @@ public struct AppLink: Hashable, Sendable {
     public private(set) var anchor: Anchor?
 
     /// Parts that don't belong to the kind are dropped, so two links to the same thing are equal: a place has no ID,
-    /// only a course and settings have pages, only a material has page numbers and only a note has blocks and headings.
+    /// only a course and settings have pages, and anchors are the kind's own (`Kind.anchors`).
     private init(kind: Kind, id: UUID?, page: CoursePage?, settingsPage: SettingsPage? = nil, anchor: Anchor?) {
         self.kind = kind
         self.id = kind.isPlace ? nil : id
         self.page = kind == .course && page != .overview ? page : nil
         self.settingsPage = kind == .settings ? settingsPage : nil
-        self.anchor = switch anchor {
-        case .page(let n) where kind == .material && n >= 1: anchor
-        case .block(let b) where kind == .note && Self.isBlockID(b): anchor
-        case .heading(let h) where kind == .note && !h.isEmpty: anchor
-        default: nil
-        }
+        self.anchor = anchor.flatMap { kind.anchors.contains($0.kind) && $0.isValid ? $0 : nil }
     }
 
     public static func place(_ kind: Kind) -> AppLink {
@@ -220,21 +274,43 @@ extension AppLink {
     }
 
     /// The course whose `course.json` holds the target. Cards live in quiz files of their own, which the caller
-    /// reads; for them, and for what no course holds, this is nil.
+    /// reads; for them, and for what no course holds (`Kind.home` other than `.course`), this is nil.
     public func course(in files: [CourseFile]) -> UUID? {
         guard let id else { return nil }
-        let holds: (CourseFile) -> Bool = switch kind {
-        case .course: { $0.course.id == id }
-        case .session: { $0.sessions.contains { $0.id == id } }
-        case .unit: { $0.units.contains { $0.id == id } }
-        case .material: { $0.materials.contains { $0.id == id } }
-        case .assignment: { $0.assignments.contains { $0.id == id } }
-        case .exam: { $0.exams.contains { $0.id == id } }
-        case .problemSet: { $0.problemSets.contains { $0.id == id } }
-        case .note: { $0.notes.contains { $0.id == id } }
-        default: { _ in false }
+        let holds: (CourseFile) -> Bool
+        switch kind {
+        case .course: holds = { $0.course.id == id }
+        case .session: holds = { $0.sessions.contains { $0.id == id } }
+        case .unit: holds = { $0.units.contains { $0.id == id } }
+        case .material: holds = { $0.materials.contains { $0.id == id } }
+        case .assignment: holds = { $0.assignments.contains { $0.id == id } }
+        case .exam: holds = { $0.exams.contains { $0.id == id } }
+        case .problemSet: holds = { $0.problemSets.contains { $0.id == id } }
+        case .note: holds = { $0.notes.contains { $0.id == id } }
+        case .today, .grades, .requirements, .people, .codes, .settings, .semester, .person, .card: return nil
         }
         return files.first(where: holds)?.course.id
+    }
+}
+
+// MARK: Other addresses under the scheme
+
+extension AppLink {
+    /// `folio://action/…`: the Claude panel's buttons (copy, apply a proposal), links because its page runs no script.
+    /// Never a kind, so a button can't be read as something to open, and a link can't press a button.
+    public static let actionHost = "action"
+
+    public static func isAction(_ url: URL) -> Bool {
+        url.scheme?.lowercased() == scheme && url.host?.lowercased() == actionHost
+    }
+
+    /// `folio://note/<title>`, which a hand-written `[[제목]]` renders to. Not an `AppLink`: a title names a note only
+    /// within the course of the note it is written in, so the view showing that note looks it up (`[NoteFile].linked`).
+    /// Nil for anything else, an ID link to a note included.
+    public static func noteTitle(_ url: URL) -> String? {
+        guard url.scheme?.lowercased() == scheme, url.host?.lowercased() == Kind.note.rawValue, AppLink(url: url) == nil else { return nil }
+        let title = String(url.path.dropFirst())
+        return title.isEmpty ? nil : title
     }
 }
 

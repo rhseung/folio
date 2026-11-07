@@ -17,6 +17,15 @@ struct AppLinkWikiTests {
         }
     }
 
+    /// Every kind a link names by ID can be written in a note (`[[semester:<ID>]]`, `[[person:<ID>]]`), unless it is
+    /// left out here on purpose.
+    @Test func everyKindWithAnIDIsAnObjectLink() {
+        let leftOut: Set<AppLink.Kind> = []
+        let withID = Set(AppLink.Kind.allCases.filter { !$0.isPlace })
+        #expect(Set(WikiLink.objectKinds) == Set(withID.subtracting(leftOut).map(\.rawValue)))
+        #expect(leftOut.isSubset(of: withID))
+    }
+
     @Test func aPageLinkKeepsItsPage() throws {
         let id = UUID()
         let html = HTMLRenderer.render(markdown: "[[material:\(id.uuidString)#page=12]]")

@@ -189,7 +189,8 @@ extension Workspace {
         switch entry.link.kind {
         case .today: nil
         case .session, .unit, .note, .material, .assignment, .exam, .problemSet, .person: itemName(of: entry) ?? placeCrumb(of: entry).title
-        default: placeCrumb(of: entry).title
+        // A card names only its page ("카드"), which says less than the course.
+        case .grades, .requirements, .people, .codes, .settings, .semester, .course, .card: placeCrumb(of: entry).title
         }
     }
 }

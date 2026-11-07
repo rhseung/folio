@@ -39,6 +39,24 @@ struct LinkCommandTests {
         #expect(AppLink(string: material.out)?.anchor == .page(12))
     }
 
+    /// Each kind is looked up as itself: a kind the lookup forgot fell through to the notes and printed a note's ID.
+    @Test func eachKindLinksAsItself() throws {
+        let gist = try Harness.fixtureCopy()
+        #expect(h.cli(["exam", "add", "EC4207", "중간고사"], gist: gist).code == 0)
+        #expect(h.cli(["note", "add", "EC4207", "매칭 정리", "--kind", "topic"], gist: gist).code == 0)
+        #expect(h.cli(["material", "track", "EC4207"], gist: gist).code == 0)
+        let refs: [(AppLink.Kind, String)] = [(.course, "EC4207"), (.exam, "EC4207/중간고사"), (.note, "EC4207/매칭 정리"),
+                                              (.material, "EC4207/05_Matchings.pdf"), (.grades, "")]
+        for (kind, ref) in refs {
+            let r = h.cli(["link", kind.rawValue] + (ref.isEmpty ? [] : [ref]), gist: gist)
+            #expect(r.code == 0, "\(kind): \(r.err)")
+            #expect(AppLink(string: r.out)?.kind == kind, "\(kind): \(r.out)")
+        }
+        #expect(h.cli(["link", "exam", "EC4207/매칭 정리"], gist: gist).code == Exit.notFound.rawValue)
+        #expect(h.cli(["link", "material", "EC4207/05_Matchings.pdf", "--heading", "정의"], gist: gist).code == Exit.usage.rawValue)
+        #expect(h.cli(["link", "note", "EC4207/매칭 정리", "--page", "2"], gist: gist).code == Exit.usage.rawValue)
+    }
+
     @Test func placesTakeNoItemAndAnchorsBelongToTheirKind() {
         let gist = try! Harness.fixtureCopy()
         #expect(h.cli(["link", "today"], gist: gist).out == "folio://today")

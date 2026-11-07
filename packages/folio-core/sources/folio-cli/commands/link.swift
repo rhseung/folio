@@ -23,15 +23,18 @@ struct LinkTarget: ParsableArguments {
     }
 
     func resolve(_ r: Resolver) throws -> Resolved {
-        if page != nil, kind != .material { throw usage(.linkPageOnlyMaterial) }
-        if heading != nil || block != nil, kind != .note { throw usage(.linkAnchorOnlyNote) }
-        if section != nil, kind != .course, kind != .settings { throw usage(.linkSectionOnlyCourse) }
-        if kind.isPlace {
-            guard ref.isEmpty else { throw usage(.linkPlaceTakesNoRef(kind.rawValue)) }
-            if kind == .settings { return done(.settings(try page(AppLink.SettingsPage.self)), title: section ?? kind.rawValue) }
-            return done(.place(kind), title: kind.rawValue)
-        }
+        if page != nil, !kind.anchors.contains(.page) { throw usage(.linkPageOnlyMaterial) }
+        if heading != nil, !kind.anchors.contains(.heading) { throw usage(.linkAnchorOnlyNote) }
+        if block != nil, !kind.anchors.contains(.block) { throw usage(.linkAnchorOnlyNote) }
+        if section != nil, !kind.hasPages { throw usage(.linkSectionOnlyCourse) }
+        if kind.isPlace, !ref.isEmpty { throw usage(.linkPlaceTakesNoRef(kind.rawValue)) }
+        // No default: one sent every kind it didn't name to the note lookup, which then printed a link of the new kind
+        // carrying a note's ID.
         switch kind {
+        case .today, .grades, .requirements, .people, .codes:
+            return done(.place(kind), title: kind.rawValue)
+        case .settings:
+            return done(.settings(try page(AppLink.SettingsPage.self)), title: section ?? kind.rawValue)
         case .semester:
             let s = try r.semester(ref.isEmpty ? nil : ref)
             return done(AppLink(.semester, s.id), title: s.folder?.name ?? s.source ?? s.id.uuidString)
@@ -43,37 +46,31 @@ struct LinkTarget: ParsableArguments {
             return done(AppLink(.person, p.id), title: p.name)
         case .card:
             return try card(r)
-        default:
-            break
-        }
-        let (c, name) = try r.split(ref)
-        let item: (id: UUID, name: String)
-        switch kind {
         case .session:
-            let s = try r.session(name, in: c)
-            item = (s.id, c.file.name(of: s))
+            return try item(r) { c, name in let s = try r.session(name, in: c); return (s.id, c.file.name(of: s)) }
         case .unit:
-            let u = try r.unit(name, in: c)
-            item = (u.id, u.title)
+            return try item(r) { c, name in let u = try r.unit(name, in: c); return (u.id, u.title) }
         case .exam:
-            let e = try r.exam(name, in: c)
-            item = (e.id, e.title)
+            return try item(r) { c, name in let e = try r.exam(name, in: c); return (e.id, e.title) }
         case .assignment:
-            let a = try r.assignment(name, in: c)
-            item = (a.id, a.title)
+            return try item(r) { c, name in let a = try r.assignment(name, in: c); return (a.id, a.title) }
         case .problemSet:
-            let p = try r.problemSet(name, in: c)
-            item = (p.id, p.title)
+            return try item(r) { c, name in let p = try r.problemSet(name, in: c); return (p.id, p.title) }
         case .material:
-            let m = try r.material(name, in: c)
-            item = (m.id, m.path)
-        default:
-            item = try note(r, name, in: c)
+            return try item(r) { c, name in let m = try r.material(name, in: c); return (m.id, m.path) }
+        case .note:
+            return try item(r) { c, name in try note(r, name, in: c) }
         }
+    }
+
+    /// Something a course holds, named `<course>/<name>`.
+    func item(_ r: Resolver, find: (CourseRef, String) throws -> (UUID, String)) throws -> Resolved {
+        let (c, name) = try r.split(ref)
+        let (id, title) = try find(c, name)
         let anchor: AppLink.Anchor? = page.map { .page($0) } ?? block.map { .block($0) } ?? heading.map { .heading($0) }
-        let link = AppLink(kind, item.id, anchor: anchor)
+        let link = AppLink(kind, id, anchor: anchor)
         if anchor != nil, link.anchor == nil { throw usage(.linkBadAnchor) }
-        return done(link, title: "\(c.code)/\(item.name)")
+        return done(link, title: "\(c.code)/\(title)")
     }
 
     func note(_ r: Resolver, _ name: String, in c: CourseRef) throws -> (UUID, String) {

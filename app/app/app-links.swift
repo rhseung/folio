@@ -117,20 +117,19 @@ final class Navigator {
 
 extension Workspace {
     /// Where a link points, or nil when nothing it names is here (a deleted exam, a link from another GIST folder).
+    /// Looked for where its kind lives (`AppLink.Kind.home`), so a new kind is found as soon as it says where that is.
     func entry(for link: AppLink, hint: UUID? = nil) -> Navigator.Entry? {
-        switch link.kind {
-        case .today, .grades, .requirements, .people, .codes:
-            return Navigator.Entry(link: link)
-        case .settings:
-            // Filled in here, so every step in a history names its tab and going back to one shows that tab.
-            return Navigator.Entry(link: .settings(link.settingsPage ?? SettingsTab.remembered.page))
-        case .semester:
+        switch link.kind.home {
+        case .app:
+            // Settings' tab is filled in here, so every step in a history names its tab and going back to one shows that tab.
+            return Navigator.Entry(link: link.kind == .settings ? .settings(link.settingsPage ?? SettingsTab.remembered.page) : link)
+        case .transcript:
             return transcript.semesters.contains { $0.id == link.id } ? Navigator.Entry(link: link) : nil
-        case .person:
+        case .catalog:
             return catalog.people.contains { $0.id == link.id } ? Navigator.Entry(link: link) : nil
-        case .card:
+        case .quiz:
             return course(holdingCard: link.id, hint: hint).map { Navigator.Entry(link: link, course: $0) }
-        default:
+        case .course:
             // The hint first: the course a screen links from usually holds what it links to.
             let files = (hint.flatMap(course).map { [$0] } ?? []) + courses
             return link.course(in: files.map(\.file)).map { Navigator.Entry(link: link, course: $0) }
@@ -166,27 +165,30 @@ extension Workspace {
             return [String(localized: .rootNavSettings), link.settingsPage.map { SettingsTab($0).label }].compactMap { $0 }.joined(separator: " · ")
         case .semester: return transcript.semesters.first { $0.id == link.id }?.title ?? ""
         case .person: return item ?? String(localized: .rootNavPeople)
-        default: return link.string
+        // A course's item whose course is gone: the address, as its screen says it can't be found.
+        case .course, .session, .unit, .note, .material, .assignment, .exam, .problemSet, .card: return link.string
         }
     }
 
-    /// What a step shows inside its screen: a course's section, or the session, note or file it opened, or a person.
-    /// Nil for the screen itself.
+    /// What a step shows inside its screen: a course's section, or the session, note, file, exam or card it opened, or
+    /// a person. Nil for the screen itself.
     func itemName(of entry: Navigator.Entry) -> String? {
         let link = entry.link
-        if link.kind == .person { return catalog.people.first { $0.id == link.id }?.name }
-        guard let file = entry.course.flatMap(course)?.file else { return nil }
+        let file = entry.course.flatMap(course)?.file
         let name = { (path: String) in ((path as NSString).lastPathComponent as NSString).deletingPathExtension }
-        return switch link.kind {
-        case .course: link.page.map { CourseSection($0).title }
-        case .session: file.sessions.first { $0.id == link.id }.map { file.title(of: $0, calendar: calendar) }
-        case .unit: file.units.first { $0.id == link.id }?.title
-        case .note: file.notes.first { $0.id == link.id }.map { name($0.path) }
-        case .material: file.materials.first { $0.id == link.id }.map { ($0.path as NSString).lastPathComponent }
-        case .assignment: file.assignments.first { $0.id == link.id }?.title
-        case .exam: file.exams.first { $0.id == link.id }?.title
-        case .problemSet: file.problemSets.first { $0.id == link.id }?.title
-        default: CourseSection.quizCards.title
+        switch link.kind {
+        case .today, .grades, .requirements, .people, .codes, .settings, .semester: return nil
+        case .person: return catalog.people.first { $0.id == link.id }?.name
+        case .course: return file.flatMap { _ in link.page.map { CourseSection($0).title } }
+        case .session: return file.flatMap { f in f.sessions.first { $0.id == link.id }.map { f.title(of: $0, calendar: calendar) } }
+        case .unit: return file?.units.first { $0.id == link.id }?.title
+        case .note: return file?.notes.first { $0.id == link.id }.map { name($0.path) }
+        case .material: return file?.materials.first { $0.id == link.id }.map { ($0.path as NSString).lastPathComponent }
+        case .assignment: return file?.assignments.first { $0.id == link.id }?.title
+        case .exam: return file?.exams.first { $0.id == link.id }?.title
+        case .problemSet: return file?.problemSets.first { $0.id == link.id }?.title
+        // A card's prompt is a sentence in a quiz file read only on a click; the page it is on names it well enough.
+        case .card: return file.map { _ in CourseSection.quizCards.title }
         }
     }
 }
@@ -242,18 +244,18 @@ extension CourseSection {
     }
 }
 
-/// Where a click on a link written in a note or a file goes, from every view that shows one.
+/// Where a click on a link written in a note, a file or a Claude answer goes, from every view that shows one.
 @MainActor enum NoteLinks {
     static func open(_ href: String, base: URL?, in placement: LinkPlacement = .here, openNote: (String) -> Void, openLink: OpenLinkAction) {
-        if let link = AppLink(string: href) {
+        // A web view hands its links over as URLs, with a block's `^` escaped, which only the URL reading takes back.
+        if let link = URL(string: href).flatMap(AppLink.init(url:)) ?? AppLink(string: href) {
             openLink(link, in: placement)
             return
         }
         guard let url = URL(string: href, relativeTo: base) ?? URL(string: href.addingPercentEncoding(withAllowedCharacters: .urlFragmentAllowed) ?? "") else { return }
-        switch url.scheme {
         // `[[노트 제목]]` written by hand names a note by its title; a link by ID (`[[note:<ID>]]`) is an app link above.
-        case "folio" where url.host == "note":
-            openNote(String(url.path.dropFirst()))
+        if let title = AppLink.noteTitle(url) { return openNote(title) }
+        switch url.scheme {
         case "file" where url.pathExtension == "md":
             openNote(url.deletingPathExtension().lastPathComponent)
         case "http", "https", "obsidian", "mailto":

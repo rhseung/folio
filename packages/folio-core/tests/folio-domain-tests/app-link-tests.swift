@@ -64,6 +64,43 @@ struct AppLinkTests {
         #expect(AppLink(string: "folio://note/\(id.uuidString)#^not a block") == AppLink(.note, id))
     }
 
+    /// Each kind's facts agree with how its links are read and written: an anchor survives only on a kind that takes
+    /// it, a page only on a kind that has pages, and only places go without an ID.
+    @Test func eachKindsFactsShapeItsLinks() {
+        let anchors: [AppLink.Anchor] = [.page(2), .block("b-1"), .heading("정의")]
+        for kind in AppLink.Kind.allCases {
+            #expect(kind.isPlace == (kind.home == .app))
+            if kind.isPlace {
+                #expect(AppLink(string: "folio://\(kind.rawValue)/\(id.uuidString)") == nil)
+                continue
+            }
+            for anchor in anchors {
+                let kept = AppLink(kind, id, anchor: anchor).anchor != nil
+                #expect(kept == kind.anchors.contains(anchor.kind), "\(kind) \(anchor)")
+            }
+            let paged = AppLink(string: "folio://\(kind.rawValue)/\(id.uuidString)/materials")
+            #expect((paged != nil) == kind.hasPages, "\(kind)")
+        }
+        #expect(AppLink(string: "folio://settings/claude") != nil && AppLink.Kind.settings.hasPages)
+    }
+
+    /// The Claude panel's buttons share the scheme; none of them may read as something to open.
+    @Test func theActionHostIsNoKind() throws {
+        #expect(AppLink.Kind(rawValue: AppLink.actionHost) == nil)
+        let button = try #require(URL(string: "folio://action/copy/\(id.uuidString)"))
+        #expect(AppLink(url: button) == nil && AppLink.isAction(button))
+        #expect(!AppLink.isAction(AppLink(.exam, id).url))
+    }
+
+    @Test func aNoteNamedByTitleIsNoAppLink() throws {
+        let titled = try #require(URL(string: "folio://note/%EB%A7%A4%EC%B9%AD%20%EC%A0%95%EB%A6%AC#%EC%A0%95%EC%9D%98"))
+        #expect(AppLink(url: titled) == nil)
+        #expect(AppLink.noteTitle(titled) == "매칭 정리")
+        #expect(AppLink.noteTitle(AppLink(.note, id).url) == nil)
+        #expect(AppLink.noteTitle(AppLink(.exam, id).url) == nil)
+        #expect(AppLink.noteTitle(try #require(URL(string: "folio://action/copy/x"))) == nil)
+    }
+
     @Test func refusesWhatIsNotALink() {
         for bad in ["", "folio://", "folio:/today", "https://today", "folio://nothing", "folio://today/\(id.uuidString)",
                     "folio://note/매칭 정리", "folio://note", "folio://exam/\(id.uuidString)/more", "folio://course/\(id.uuidString)/nowhere",
@@ -106,6 +143,13 @@ struct AppLinkTests {
         #expect(AppLink.course(b.course.id).course(in: [a, b]) == b.course.id)
         #expect(AppLink(.exam, UUID()).course(in: [a, b]) == nil)
         #expect(AppLink(.card, UUID()).course(in: [a, b]) == nil)
+        let set = ProblemSet(device: device, at: now, title: "Exercise 1")
+        a.problemSets.append(set)
+        #expect(AppLink(.problemSet, set.id).course(in: [b, a]) == a.course.id)
+        // What lives outside a course is never found in one, even by an ID a course happens to use.
+        for kind in AppLink.Kind.allCases where !kind.isPlace && kind.home != .course {
+            #expect(AppLink(kind, a.course.id).course(in: [a, b]) == nil, "\(kind)")
+        }
     }
 
     @Test func codesAsItsAddress() throws {
