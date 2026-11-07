@@ -1,4 +1,4 @@
-import AppKit
+import CoreGraphics
 import FolioActions
 import FolioDomain
 import FolioStorage
@@ -14,9 +14,13 @@ struct FileViewModelTests {
     func course() throws -> (Workspace, LoadedCourse) {
         let workspace = try fixtureWorkspace()
         let folder = try #require(workspace.course(graphTheory)).store.url
-        let pdf = PDFDocument()
-        for i in 0..<3 { pdf.insert(try #require(PDFPage(image: NSImage(size: NSSize(width: 60, height: 80)))), at: i) }
-        #expect(pdf.write(to: folder.appending(path: "Study/Problems.pdf")))
+        var box = CGRect(x: 0, y: 0, width: 60, height: 80)
+        let pdf = try #require(CGContext(folder.appending(path: "Study/Problems.pdf") as CFURL, mediaBox: &box, nil))
+        for _ in 0..<3 {
+            pdf.beginPDFPage(nil)
+            pdf.endPDFPage()
+        }
+        pdf.closePDF()
         try Data("# 요약".utf8).write(to: folder.appending(path: "Study/summary.md"))
         try Data([1, 2, 3]).write(to: folder.appending(path: "Study/data.zzq"))
         workspace.run(MaterialTrack(course: graphTheory))

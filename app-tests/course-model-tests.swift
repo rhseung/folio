@@ -77,14 +77,16 @@ struct CourseModelTests {
         let pdf = try #require(course.file.materials.first { $0.isPDF })
         let model = MaterialsModel(workspace: workspace, course: course)
         #expect(model.follow(AppLink(.material, pdf.id, anchor: .page(3)))?.id == pdf.id)
-        #expect(model.takeRequestedPage() == 2)
+        #expect(model.requestedPage == 2)
+        // The file view takes the page once its PDF has it.
+        model.requestedPage = nil
         model.open(pdf)
         model.shownPage = 2
         #expect(model.viewedLink == AppLink(.material, pdf.id, anchor: .page(3)))
         _ = model.follow(AppLink(.material, pdf.id, anchor: .page(3)))
         #expect(model.requestedPage == nil)
         _ = model.follow(AppLink(.material, pdf.id, anchor: .page(7)))
-        #expect(model.takeRequestedPage() == 6)
+        #expect(model.requestedPage == 6)
         // Another file starts with no page until its viewer has one.
         model.viewing = UUID()
         #expect(model.shownPage == nil)
