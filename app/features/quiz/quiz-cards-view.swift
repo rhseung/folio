@@ -173,6 +173,7 @@ struct GenerateCardsSheet: View {
                         }
                     }
                 }
+                .overflowFade(.vertical)
                 .frame(maxHeight: 420)
             }
         } onConfirm: {

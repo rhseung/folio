@@ -224,6 +224,7 @@ struct RequirementsView: View {
                 }
             }
             .scrollBounceBehavior(.basedOnSize)
+            .overflowFade(.vertical)
             .frame(maxHeight: 320)
             .fixedSize(horizontal: false, vertical: true)
             // The sheet can't open over a popover still on screen, so the popover closes first.

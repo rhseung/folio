@@ -92,6 +92,7 @@ struct PeopleView: View {
                     if groups.isEmpty { EmptyLine(model.emptyList).padding(.top, Theme.Space.s) }
                 }
             }
+            .overflowFade(.vertical)
         }
         .padding(.horizontal, Theme.Inset.panel)
         .padding(.vertical, Theme.Space.l)

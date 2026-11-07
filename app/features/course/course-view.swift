@@ -68,70 +68,13 @@ enum CourseTab: CaseIterable, Identifiable {
 
 struct CourseView: View {
     @State private var model: CourseModel
-    @State private var showClaude = false
-    @State private var claudeAsk: ContextItem?
-    @State private var claudeWidth = Theme.Size.claudePanel
     @State private var pageReset = 0
-    @State private var claudeDragBase: CGFloat?
+    @Environment(\.paneInsert) private var paneInsert
     @Environment(\.place) private var place
     @Environment(\.openLink) private var openLink
 
     init(workspace: Workspace, courseID: UUID) {
         _model = State(initialValue: CourseModel(workspace: workspace, courseId: courseID))
-    }
-
-    func claude(_ course: LoadedCourse) -> some View {
-        ClaudePanel(workspace: model.workspace, course: course, openNote: model.section == .notes ? model.openNote : nil,
-                    openUnit: model.section == .units ? model.openUnit : nil, incoming: $claudeAsk, insertIntoNote: { model.noteInsert = $0 }) {
-            model.show(note: $0)
-        }
-    }
-
-    /// Past this the panel stops growing with the window: a full-height panel read as a sidebar laid over the page.
-    static let claudeMaxHeight: CGFloat = 720
-
-    func claudeFloat(_ course: LoadedCourse) -> some View {
-        VStack(alignment: .trailing, spacing: Theme.Space.m) {
-            if showClaude {
-                claude(course)
-                    // Inside the glass, controls wash instead of standing on it as solid fills. Set inside
-                    // `floatingGlass()`, which would otherwise draw a wash instead of the glass itself.
-                    .environment(\.onGlass, true)
-                    // At most this wide, narrower when the page is: a fixed width ran past a narrow page's edge.
-                    .frame(maxWidth: claudeWidth, maxHeight: Self.claudeMaxHeight)
-                    .floatingGlass()
-                    .shadow(color: .black.opacity(0.18), radius: 24, y: 12)
-                    .overlay(alignment: .leading) { claudeResizeHandle }
-                    .transition(.scale(scale: 0.9, anchor: .bottomTrailing).combined(with: .opacity))
-            }
-            Button { showClaude.toggle() } label: {
-                Image(systemName: showClaude ? "xmark" : "sparkle")
-                    .font(Theme.Glyph.fab)
-                    .foregroundStyle(showClaude ? Theme.Palette.textSecondary : model.accent.color)
-                    .contentTransition(.symbolEffect(.replace))
-                    .frame(width: Theme.Size.fab, height: Theme.Size.fab)
-                    .glassEffect(.regular.interactive(), in: .circle)
-                    .contentShape(.circle)
-            }
-            .buttonStyle(.pointing(.plain))
-            .help(String(localized: showClaude ? .courseClaudeClose : .courseClaudeAsk))
-            .accessibilityLabel(showClaude ? String(localized: .courseClaudeClose) : "Claude")
-        }
-        .padding(Theme.Space.l)
-    }
-
-    var claudeResizeHandle: some View {
-        Color.clear.frame(width: Theme.Space.s).contentShape(.rect)
-            #if os(macOS)
-            .pointerStyle(.columnResize)
-            #endif
-            .gesture(DragGesture(minimumDistance: 0)
-                .onChanged { drag in
-                    let base = claudeDragBase ?? claudeWidth
-                    claudeDragBase = base
-                    claudeWidth = min(640, max(300, base - drag.translation.width))
-                }
-                .onEnded { _ in claudeDragBase = nil })
     }
 
     var body: some View {
@@ -173,13 +116,6 @@ struct CourseView: View {
                 // A new identity drops what the page opened (a file, a unit), which is all its section crumb asks for.
                 .id(pageReset)
                 .paperList()
-                // Over the page, not beside it: a sidebar (or the iPad's inspector) squeezed the page to a strip in a
-                // narrow window.
-                .overlay(alignment: .bottomTrailing) { claudeFloat(course) }
-                .environment(\.askClaude) { item in
-                    claudeAsk = item
-                    showClaude = true
-                }
             }
             // On the split, not the column: folded, the column is gone and the section still heads the trail.
             // Back to the section's first screen from a file or unit opened in it.
@@ -187,7 +123,6 @@ struct CourseView: View {
                 model.resetPage()
                 pageReset += 1
             }
-            .animation(.snappy(duration: 0.25), value: showClaude)
             .environment(\.accent, model.accent)
             .tint(model.accent.ink)
             .navigationTitle(course.title)
@@ -196,9 +131,14 @@ struct CourseView: View {
             // The window's link drives the page, and the page's own moves go back into the window's history.
             .onChange(of: place, initial: true) { _, entry in if let entry { model.follow(entry) } }
             .onChange(of: model.place) { _, link in openLink(link, course: model.courseId) }
+            // An answer the window's Claude puts into this pane's note (`WindowClaude`).
+            .onChange(of: paneInsert?.text) { _, text in
+                guard let text else { return }
+                model.noteInsert = text
+                paneInsert?.text = nil
+            }
             #if DEBUG && os(macOS)
             .onChange(of: SnapshotDriver.shared.section, initial: true) { _, new in if let new { model.section = new } }
-            .onChange(of: SnapshotDriver.shared.claudePanel, initial: true) { _, new in showClaude = new }
             #endif
         } else {
             ContentUnavailableView(String(localized: .courseNotFound), systemImage: "questionmark.folder")
@@ -288,6 +228,7 @@ struct CourseColumn: View {
             .padding(.horizontal, Theme.Inset.panel)
             .padding(.vertical, Theme.Space.l)
         }
+        .overflowFade(.vertical)
         .font(Theme.Typeface.body)
         .foregroundStyle(Theme.Palette.text)
         .background(Theme.Palette.window)
@@ -334,6 +275,7 @@ struct CourseNotesPage: View {
                     .padding(.horizontal, Theme.Inset.panel)
                     .padding(.vertical, Theme.Space.l)
             }
+            .overflowFade(.vertical)
         } else {
             NotesView(workspace: model.workspace, course: course, selection: model.openNote, anchor: model.noteAnchor, insert: $model.noteInsert,
                       moves: model.noteMoves) { model.openNote = $0 }

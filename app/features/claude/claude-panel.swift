@@ -14,19 +14,26 @@ struct ClaudePanel: View {
     @State private var model: ClaudeModel
     @Environment(\.accent) private var accent
     @Environment(\.showSettings) private var showSettings
+    @State private var conversationEdges = Edge.Set()
     let course: LoadedCourse
     let openNote: UUID?
+    /// The notes the tab's other panes show.
+    var alsoOpen: [UUID] = []
+    /// The tab's panes, when it has several (`ContextBuilder.panes`).
+    var panes: ContextItem?
     let openUnit: UUID?
     /// Context asked for from elsewhere (`askClaude`), taken into the panel's own list once it arrives.
     @Binding var incoming: ContextItem?
     let insertIntoNote: (String) -> Void
     let showNote: (UUID) -> Void
 
-    init(workspace: Workspace, course: LoadedCourse, openNote: UUID?, openUnit: UUID?, incoming: Binding<ContextItem?> = .constant(nil),
-         insertIntoNote: @escaping (String) -> Void, showNote: @escaping (UUID) -> Void) {
+    init(workspace: Workspace, course: LoadedCourse, openNote: UUID?, alsoOpen: [UUID] = [], panes: ContextItem? = nil, openUnit: UUID?,
+         incoming: Binding<ContextItem?> = .constant(nil), insertIntoNote: @escaping (String) -> Void, showNote: @escaping (UUID) -> Void) {
         _model = State(initialValue: ClaudeModel(workspace: workspace))
         self.course = course
         self.openNote = openNote
+        self.alsoOpen = alsoOpen
+        self.panes = panes
         self.openUnit = openUnit
         _incoming = incoming
         self.insertIntoNote = insertIntoNote
@@ -48,7 +55,8 @@ struct ClaudePanel: View {
         .font(Theme.Typeface.body)
         .foregroundStyle(Theme.Palette.text)
         .task(id: course.id) { model.load(course) }
-        .task(id: openNote) { model.loadOpenNote(openNote, course: course) }
+        .task(id: [openNote] + alsoOpen.map(Optional.some)) { model.loadOpenNote(openNote, alsoOpen: alsoOpen, course: course) }
+        .onChange(of: panes, initial: true) { _, panes in model.panes = panes }
         .onChange(of: incoming, initial: true) { _, item in
             guard let item else { return }
             model.add(item)
@@ -92,6 +100,7 @@ struct ClaudePanel: View {
                     }
                 }
             }
+            .overflowFade(.vertical)
             // About six rows; past that the list scrolls instead of squeezing the conversation below it.
             .frame(maxHeight: 200)
             .fixedSize(horizontal: false, vertical: true)
@@ -136,7 +145,9 @@ struct ClaudePanel: View {
         if let chat = model.chat, !chat.messages.isEmpty {
             HTMLView(body: model.page(chat, cards: !course.file.units.isEmpty),
                      openNote: { title in if let id = model.noteId(titled: title, course: course) { showNote(id) } },
-                     onAction: { model.handle($0, course: course, openNote: openNote, openUnit: openUnit, insertIntoNote: insertIntoNote, showNote: showNote) })
+                     onAction: { model.handle($0, course: course, openNote: openNote, openUnit: openUnit, insertIntoNote: insertIntoNote, showNote: showNote) },
+                     onEdges: { edges in withAnimation(.easeOut(duration: 0.15)) { conversationEdges = edges } })
+                .mask { OverflowFadeMask(axis: .vertical, edges: conversationEdges) }
         } else {
             VStack(spacing: Theme.Space.s) {
                 Image(systemName: model.hasKey ? "sparkle" : "key")

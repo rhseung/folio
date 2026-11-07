@@ -81,9 +81,13 @@ public struct PaneLayout: Hashable, Sendable {
     }
 
     /// The focused pane goes to `link`, as a click in it does. A new address keeps no note mode from the old one.
-    public mutating func open(_ link: AppLink) {
-        if panes[focus].link.withoutAnchor != link.withoutAnchor { panes[focus].noteMode = nil }
-        panes[focus].link = link
+    public mutating func open(_ link: AppLink) { open(link, in: focus) }
+
+    /// Pane `i` goes to `link`, as its own history moves it.
+    public mutating func open(_ link: AppLink, in i: Int) {
+        guard panes.indices.contains(i) else { return }
+        if panes[i].link.withoutAnchor != link.withoutAnchor { panes[i].noteMode = nil }
+        panes[i].link = link
     }
 
     public mutating func show(_ mode: NoteViewMode, in i: Int) {
@@ -167,12 +171,29 @@ public struct PaneLayout: Hashable, Sendable {
     /// place. Open panes split what the strips and gaps leave by their shares, none below `minWidth`; a lone open
     /// pane takes what there is, even less.
     public func fit(room: Double, minWidth: Double, strip: Double, gap: Double) -> Fit {
-        let n = panes.count
-        var open = n
-        while open > 1, Double(open) * minWidth + Double(n - open) * strip + Double(n - 1) * gap > room { open -= 1 }
-        let byAge = panes.indices.filter { $0 != focus }.sorted { panes[$0].pressed < panes[$1].pressed }
-        let folded = Set(byAge.prefix(n - open))
+        let folded = folded(open: Self.openCount(panes.count, room: room, minWidth: minWidth, strip: strip, gap: gap))
+        return Fit(folded: folded, widths: widths(room: room, folded: folded, minWidth: minWidth, strip: strip, gap: gap))
+    }
 
+    /// How many of `count` panes stay open in `room`: as many as fit at `minWidth` beside the others' strips, and
+    /// always one. It hangs on the width and the count alone, so a window resized between two counts asks for nothing
+    /// else.
+    public static func openCount(_ count: Int, room: Double, minWidth: Double, strip: Double, gap: Double) -> Int {
+        var open = count
+        while open > 1, Double(open) * minWidth + Double(count - open) * strip + Double(count - 1) * gap > room { open -= 1 }
+        return open
+    }
+
+    /// The panes folded when `open` of them stay open: the ones pressed longest ago, never the focused one.
+    public func folded(open: Int) -> Set<Int> {
+        let byAge = panes.indices.filter { $0 != focus }.sorted { panes[$0].pressed < panes[$1].pressed }
+        return Set(byAge.prefix(max(0, panes.count - max(1, open))))
+    }
+
+    /// Each pane's width in `room`, the gaps between them taken out: `strip` for the folded ones, and the rest by
+    /// their shares, none below `minWidth`; a lone open pane takes what there is, even less.
+    public func widths(room: Double, folded: Set<Int>, minWidth: Double, strip: Double, gap: Double = 0) -> [Double] {
+        let n = panes.count
         var widths = panes.indices.map { folded.contains($0) ? strip : 0 }
         var left = max(0, room - Double(folded.count) * strip - Double(n - 1) * gap)
         // Shares first; a pane they'd leave under `minWidth` is held there and the rest share again.
@@ -181,7 +202,7 @@ public struct PaneLayout: Hashable, Sendable {
             let total = sharing.map { panes[$0].share }.reduce(0, +)
             let under = sharing.filter { left * panes[$0].share / total < minWidth }
             if under.isEmpty || sharing.count == 1 {
-                for i in sharing { widths[i] = sharing.count == 1 ? left : left * panes[i].share / total }
+                for i in sharing { widths[i] = max(0, sharing.count == 1 ? left : left * panes[i].share / total) }
                 break
             }
             for i in under {
@@ -190,7 +211,7 @@ public struct PaneLayout: Hashable, Sendable {
             }
             sharing.removeAll(where: under.contains)
         }
-        return Fit(folded: folded, widths: widths)
+        return widths
     }
 }
 

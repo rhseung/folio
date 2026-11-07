@@ -175,6 +175,7 @@ private struct TranscriptFeed: View {
                 }
                 .padding([.horizontal, .bottom], Theme.Space.m)
             }
+            .overflowFade(.vertical)
             .frame(maxHeight: 200)
             .transition(.opacity)
         }
@@ -202,6 +203,7 @@ private struct TranscriptFeed: View {
                 }
                 .padding(Theme.Space.l)
             }
+            .overflowFade(.vertical)
             .font(Theme.Typeface.body)
             .onAppear { proxy.scrollTo("end", anchor: .bottom) }
             .onChange(of: recorder.lines.count) { proxy.scrollTo("end", anchor: .bottom) }

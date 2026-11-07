@@ -27,10 +27,40 @@ extension ContextBuilder {
                     text: "경로: \(path)\nID: \(id.uuidString)\n쪽: \(page)\n\n\(text)", images: image.map { [$0] } ?? [])
     }
 
-    public static func chatItems(course: CourseFile, rules: String, openNote: ContextItem?, added: [ContextItem],
-                                 removed: Set<String>, now: Date) -> [ContextItem] {
+    /// A pane of the window's tab (#62), as the chat panel sees it: the panel is the window's one, so it has to say
+    /// which pane is meant by "this". `shows` is nil for a folded pane, which goes by its address alone.
+    public struct Pane: Sendable, Equatable {
+        public var address: String
+        public var shows: String?
+        public var focused: Bool
+
+        public init(address: String, shows: String?, focused: Bool) {
+            self.address = address
+            self.shows = shows
+            self.focused = focused
+        }
+    }
+
+    /// The tab's panes, the focused one first and marked, then the rest left to right. Nil for a lone pane, which
+    /// the open note or page already is.
+    public static func panes(_ panes: [Pane]) -> ContextItem? {
+        guard panes.count > 1 else { return nil }
+        let ordered = panes.filter(\.focused) + panes.filter { !$0.focused }
+        let lines = ordered.map { pane in
+            guard let shows = pane.shows else { return "- (접힘) \(pane.address)" }
+            return "- \(pane.focused ? "[초점] " : "")\(shows): \(pane.address)"
+        }
+        return ContextItem(id: "panes", title: "열린 칸 \(panes.count)개", tier: .focus,
+                           text: "창의 탭에 나란히 열린 칸이다. 초점 칸이 사용자가 지금 보는 칸이다.\n" + lines.joined(separator: "\n"))
+    }
+
+    /// `openNote` is the focused pane's note (or the first open one), `alsoOpen` the notes the other panes show.
+    public static func chatItems(course: CourseFile, rules: String, panes: ContextItem? = nil, openNote: ContextItem?,
+                                 alsoOpen: [ContextItem] = [], added: [ContextItem], removed: Set<String>, now: Date) -> [ContextItem] {
         var items = [courseSummary(course, now: now), Self.rules(rules)]
+        if let panes { items.append(panes) }
         if let openNote { items.append(openNote) }
+        for item in alsoOpen where !items.contains(where: { $0.id == item.id }) { items.append(item) }
         for item in added where !items.contains(where: { $0.id == item.id }) { items.append(item) }
         return items.filter { !removed.contains($0.id) }
     }

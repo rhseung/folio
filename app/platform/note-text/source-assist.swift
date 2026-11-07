@@ -165,7 +165,7 @@ struct CompletionMenuView: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView { rows }
-                .scrollIndicators(.never)
+                .overflowFade(.vertical)
                 .onChange(of: menu.selected) { _, i in proxy.scrollTo(i) }
         }
         .frame(width: Self.width, height: Self.height(rows: menu.items.count))
