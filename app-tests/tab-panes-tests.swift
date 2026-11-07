@@ -77,6 +77,22 @@ struct TabPanesTests {
         #expect(abs(panes.shares[0] - 0.3) < 1e-9)
     }
 
+    @Test func evenSharesTheWidthWithoutRedrawingTheTabs() {
+        let panes = TabPanes(Navigator(), limit: 3)
+        panes.openBeside(grades)
+        panes.openBeside(people)
+        panes.resize(divider: 0, to: 0.2)
+        final class Changes: @unchecked Sendable { var count = 0 }
+        let changes = Changes()
+        withObservationTracking {
+            _ = panes.focus
+            _ = panes.ids
+        } onChange: { changes.count += 1 }
+        panes.even()
+        #expect(panes.shares.allSatisfy { abs($0 - 1.0 / 3) < 1e-9 })
+        #expect(changes.count == 0 && panes.focus == 2)
+    }
+
     @Test func theWindowFollowsTheFocusedPane() {
         let tabs = WindowTabs(Navigator())
         let panes = tabs.front!

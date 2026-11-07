@@ -105,6 +105,12 @@ final class TabPanes {
         publish()
     }
 
+    /// A double click on a divider: every pane as wide as the others.
+    func even() {
+        layout.even()
+        publish()
+    }
+
     /// The links each pane's history went on to since; the layout keeps them only for what compares them.
     private func follow() {
         for (i, navigator) in navigators.enumerated() { layout.open(navigator.current.link, in: i) }

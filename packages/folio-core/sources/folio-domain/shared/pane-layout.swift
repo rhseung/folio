@@ -145,6 +145,11 @@ public struct PaneLayout: Hashable, Sendable {
         panes[d + 1].share = pair - left
     }
 
+    /// A double click on any divider: every pane takes the same share, however many there are (2026-11-08 사용자).
+    public mutating func even() {
+        for i in panes.indices { panes[i].share = 1 / Double(panes.count) }
+    }
+
     /// What a layout from another device, or from before the limit changed, keeps here: the panes pressed most
     /// recently, in their order, their shares made whole again.
     public func limited(to limit: Int) -> PaneLayout {

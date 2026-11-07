@@ -122,6 +122,23 @@ struct PaneLayoutTests {
         #expect(approx(l.shares[0], PaneLayout.minShare))
     }
 
+    @Test func aDoubleClickEvensEveryPane() {
+        var l = Self.three()
+        l.resize(divider: 0, to: 0.2)
+        l.resize(divider: 1, to: 0.9)
+        l.even()
+        #expect(l.shares.allSatisfy { approx($0, 1.0 / 3) })
+        // Only the widths: the focus and which pane folds first stay.
+        #expect(l.focus == 1 && l.links == [lecture, note, quiz])
+        #expect(Self.fit(l, 776).folded == [0])
+        var two = PaneLayout(links: [lecture, note], shares: [0.9, 0.1], limit: 2)!
+        two.even()
+        #expect(two.shares == [0.5, 0.5])
+        var one = PaneLayout(lecture)
+        one.even()
+        #expect(one.shares == [1])
+    }
+
     @Test func aPaneKeepsItsNoteModeUntilItShowsAnotherNote() {
         var l = PaneLayout(note)
         l.show(.read, in: 0)
@@ -224,7 +241,7 @@ struct PaneMemoryTests {
 struct PaneLayoutPropertyTests {
     static let links = [lecture, note, quiz, other, AppLink(.exam, UUID()), AppLink.place(.today)]
     // An action, which pane or link, and a fraction for a drag.
-    static let steps = zip(Gen.int(in: 0...5), Gen.int(in: 0...5), Gen.double(in: -0.5...1.5)).array(of: 0...30)
+    static let steps = zip(Gen.int(in: 0...6), Gen.int(in: 0...5), Gen.double(in: -0.5...1.5)).array(of: 0...30)
 
     static func run(_ steps: [(Int, Int, Double)], limit: Int) -> PaneLayout {
         var l = PaneLayout(links[0])
@@ -235,6 +252,7 @@ struct PaneLayoutPropertyTests {
             case 2: l.close(k % l.panes.count)
             case 3: l.swap(k % l.panes.count, (k + 1) % l.panes.count)
             case 4: l.resize(divider: k % max(1, l.panes.count - 1), to: x)
+            case 5: l.even()
             default: l.open(links[k])
             }
         }
