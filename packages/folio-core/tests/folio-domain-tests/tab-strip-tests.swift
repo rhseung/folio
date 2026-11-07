@@ -252,23 +252,36 @@ struct TabKeepTests {
         #expect(TabKeep.alive(selected: "c", alive: ["a", "b", "c"], left: left, now: now, policy: policy, pressure: true) == ["c"])
     }
 
+    /// A tab playing a recording stays past the limit, the idle time and memory pressure, and takes no other tab's room.
+    @Test func aPlayingTabIsNeverDropped() {
+        let left = ["a": now - 30, "b": now - 10, "c": now - 20, "p": now - 9_000]
+        let kept = TabKeep.alive(selected: "d", alive: ["a", "b", "c", "d", "p"], left: left, now: now, policy: policy, playing: ["p"])
+        #expect(kept == ["d", "b", "c", "p"])
+        #expect(TabKeep.alive(selected: "d", alive: ["a", "d", "p"], left: left, now: now, policy: policy, pressure: true, playing: ["p"]) == ["d", "p"])
+        // Playing doesn't bring back a tab already dropped: its screen, and so its audio, is gone.
+        #expect(TabKeep.alive(selected: "d", alive: ["d"], left: left, now: now, policy: policy, playing: ["p"]) == ["d"])
+    }
+
     @Test func aTabWithoutATimeCountsAsJustLeft() {
         #expect(TabKeep.alive(selected: "b", alive: ["a", "b"], left: [:], now: now, policy: policy) == ["a", "b"])
     }
 
     @Test func holdsItsBounds() async {
-        await propertyCheck(input: Gen.int(in: 0...9).array(of: 0...12), Gen.int(in: 0...12), Gen.int(in: 0...4), Gen.bool) { ages, selected, limit, pressure in
+        await propertyCheck(input: Gen.int(in: 0...9).array(of: 0...12), Gen.int(in: 0...12), Gen.int(in: 0...4), Gen.bool,
+                            Gen.int(in: 0...12).array(of: 0...3)) { ages, selected, limit, pressure, played in
             let left = Dictionary(uniqueKeysWithValues: ages.enumerated().map { ($0.offset, now - Double($0.element) * 100) })
             let alive = Set(left.keys)
             let p = TabKeep.Policy(limit: limit, idle: 500)
-            let kept = TabKeep.alive(selected: selected, alive: alive, left: left, now: now, policy: p, pressure: pressure)
-            #expect(kept.contains(selected))
+            let playing = Set(played)
+            let kept = TabKeep.alive(selected: selected, alive: alive, left: left, now: now, policy: p, pressure: pressure, playing: playing)
+            let held = playing.intersection(alive).union([selected])
+            #expect(held.isSubset(of: kept))
             #expect(kept.subtracting([selected]).isSubset(of: alive))
-            #expect(kept.count <= (pressure ? 1 : limit + 1))
-            for id in kept where id != selected { #expect(now.timeIntervalSince(left[id]!) < 500) }
+            #expect(kept.subtracting(held).count <= (pressure ? 0 : limit))
+            for id in kept.subtracting(held) { #expect(now.timeIntervalSince(left[id]!) < 500) }
             // Nothing kept is older than something dropped that was within the time.
-            let dropped = alive.subtracting(kept).subtracting([selected]).filter { now.timeIntervalSince(left[$0]!) < 500 }
-            if !pressure, let oldestKept = kept.subtracting([selected]).map({ left[$0]! }).min(), let newestDropped = dropped.map({ left[$0]! }).max() {
+            let dropped = alive.subtracting(kept).filter { now.timeIntervalSince(left[$0]!) < 500 }
+            if !pressure, let oldestKept = kept.subtracting(held).map({ left[$0]! }).min(), let newestDropped = dropped.map({ left[$0]! }).max() {
                 #expect(oldestKept >= newestDropped)
             }
         }

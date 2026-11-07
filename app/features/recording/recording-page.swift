@@ -14,6 +14,7 @@ struct RecordingPage: View {
     @FocusState private var linesFocused: Bool
     @FocusState private var pageFocused: Bool
     @Environment(\.openLink) private var openLink
+    @Environment(\.tabPlaying) private var tabPlaying
     let place: AppLink
     let moved: (AppLink?) -> Void
     private var player: AudioPlayback { model.player }
@@ -122,7 +123,8 @@ struct RecordingPage: View {
         // it is on (`Navigator.go`), so listening adds no history.
         .onChange(of: place, initial: true) { _, link in model.follow(link) }
         .onChange(of: model.viewedLink) { _, link in moved(link) }
-        .onDisappear { player.stop() }
+        .onChange(of: player.playing, initial: true) { _, playing in tabPlaying(playing ? { [player] in player.pause() } : nil) }
+        .onDisappear { player.stop(); tabPlaying(nil) }
         // A finished job (or a cancelled one, which leaves the old transcript) has written what there is to show.
         .onChange(of: model.phase == nil) { _, done in if done { model.reloadTranscript() } }
     }

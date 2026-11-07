@@ -85,6 +85,27 @@ struct WindowTabsTests {
         #expect(tabs.alive == [tabs.selected])
     }
 
+    @Test func aPlayingTabStaysBehindAndPausesFromTheStrip() {
+        let tabs = WindowTabs(Navigator())
+        let player = tabs.selected
+        var paused = false
+        tabs.play(player, pause: { paused = true })
+        tabs.open()
+        tabs.dropBackground()
+        #expect(tabs.alive == [tabs.selected, player])
+        tabs.pause(player)
+        #expect(paused)
+        // Stopped, it is kept no longer than any other tab.
+        tabs.play(player, pause: nil)
+        tabs.dropBackground()
+        #expect(tabs.alive == [tabs.selected] && tabs.playing.isEmpty)
+        // A closed tab's screen saying it stopped leaves nothing behind.
+        tabs.play(player, pause: {})
+        tabs.close(player)
+        tabs.play(player, pause: nil)
+        #expect(tabs.playing.isEmpty)
+    }
+
     @Test func eachTabHasItsOwnTrail() {
         let tabs = WindowTabs(Navigator())
         let first = tabs.selected

@@ -159,19 +159,22 @@ public enum TabKeep {
 
     /// The tabs whose screens stay alive. The tab in front always does; behind it, only tabs alive already (a dropped
     /// tab isn't brought back until it is in front), the `limit` most recently in front, each in front within `idle`.
-    /// Under memory pressure only the tab in front is kept.
+    /// Under memory pressure only the tab in front is kept, and the playing ones.
     ///
     /// - Parameters:
     ///   - alive: the tabs whose screens are alive now.
     ///   - left: when each tab last went behind another. A tab alive without one is treated as just left.
+    ///   - playing: tabs playing a recording. Dropping one would stop what is being listened to, so they stay however
+    ///     long or under whatever pressure, outside the `limit` the others share (#317).
     public static func alive<ID: Hashable>(selected: ID, alive: Set<ID>, left: [ID: Date], now: Date, policy: Policy,
-                                          pressure: Bool = false) -> Set<ID> {
-        guard !pressure else { return [selected] }
-        let behind = alive.subtracting([selected])
+                                          pressure: Bool = false, playing: Set<ID> = []) -> Set<ID> {
+        let playing = playing.intersection(alive).union([selected])
+        guard !pressure else { return playing }
+        let behind = alive.subtracting(playing)
             .map { (id: $0, left: left[$0] ?? now) }
             .filter { now.timeIntervalSince($0.left) < policy.idle }
             .sorted { $0.left > $1.left }
             .prefix(max(0, policy.limit))
-        return Set(behind.map(\.id)).union([selected])
+        return Set(behind.map(\.id)).union(playing)
     }
 }
