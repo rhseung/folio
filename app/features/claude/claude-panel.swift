@@ -14,7 +14,6 @@ struct ClaudePanel: View {
     @State private var model: ClaudeModel
     @Environment(\.accent) private var accent
     @Environment(\.showSettings) private var showSettings
-    @State private var conversationEdges = Edge.Set()
     let course: LoadedCourse
     let openNote: UUID?
     /// The notes the tab's other panes show.
@@ -145,9 +144,7 @@ struct ClaudePanel: View {
         if let chat = model.chat, !chat.messages.isEmpty {
             HTMLView(body: model.page(chat, cards: !course.file.units.isEmpty),
                      openNote: { title in if let id = model.noteId(titled: title, course: course) { showNote(id) } },
-                     onAction: { model.handle($0, course: course, openNote: openNote, openUnit: openUnit, insertIntoNote: insertIntoNote, showNote: showNote) },
-                     onEdges: { edges in withAnimation(.easeOut(duration: 0.15)) { conversationEdges = edges } })
-                .mask { OverflowFadeMask(axis: .vertical, edges: conversationEdges) }
+                     onAction: { model.handle($0, course: course, openNote: openNote, openUnit: openUnit, insertIntoNote: insertIntoNote, showNote: showNote) })
         } else {
             VStack(spacing: Theme.Space.s) {
                 Image(systemName: model.hasKey ? "sparkle" : "key")

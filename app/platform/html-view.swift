@@ -14,30 +14,8 @@ struct HTMLView {
     var openNote: (String) -> Void = { _ in }
     /// Called with `folio://action/…` links, which a page uses for buttons since JavaScript is off.
     var onAction: (URL) -> Void = { _ in }
-    /// Which edges have more past them, for the panel's `OverflowFadeMask` in place of the page's scroll bar.
-    var onEdges: (Edge.Set) -> Void = { _ in }
-
-    // The page's scroller is WebKit's own, which SwiftUI's scroll geometry can't see, so the reader's world reports it.
-    static let edgesScript = """
-    (() => {
-      let last = "";
-      const post = () => {
-        const s = document.scrollingElement;
-        if (!s) return;
-        const edges = [s.scrollTop > 1, s.scrollTop + innerHeight < s.scrollHeight - 1];
-        if (String(edges) === last) return;
-        last = String(edges);
-        webkit.messageHandlers.edges.postMessage(edges);
-      };
-      addEventListener("scroll", post, { passive: true });
-      addEventListener("resize", post);
-      new ResizeObserver(post).observe(document.documentElement);
-      post();
-    })();
-    """
-
     func head(accent: CourseAccent) -> String {
-        "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: accent))\(NoteStyle.css)html{scrollbar-width:none}</style></head>"
+        "<!doctype html><html><head><meta charset=utf-8><style>\(NoteStyle.variables(accent: accent))\(NoteStyle.css)</style></head>"
             + "<body class=\"note\" data-math=\"\(mathSyntax)\">"
     }
 
@@ -50,9 +28,6 @@ struct HTMLView {
         config.defaultWebpagePreferences.allowsContentJavaScript = false
         config.userContentController.addUserScript(WKUserScript(source: NoteStyle.reader, injectionTime: .atDocumentEnd,
                                                                 forMainFrameOnly: true, in: .defaultClient))
-        config.userContentController.addUserScript(WKUserScript(source: Self.edgesScript, injectionTime: .atDocumentEnd,
-                                                                forMainFrameOnly: true, in: .defaultClient))
-        config.userContentController.add(coordinator, contentWorld: .defaultClient, name: "edges")
         config.setURLSchemeHandler(coordinator.files, forURLScheme: LocalFileScheme.scheme)
         let view = WKWebView(frame: .zero, configuration: config)
         view.navigationDelegate = coordinator
@@ -61,7 +36,6 @@ struct HTMLView {
         #else
         view.isOpaque = false
         view.backgroundColor = .clear
-        view.scrollView.showsVerticalScrollIndicator = false
         #endif
         return view
     }
@@ -71,7 +45,6 @@ struct HTMLView {
     @MainActor func update(_ view: WKWebView, _ coordinator: Coordinator, accent: CourseAccent, openLink: OpenLinkAction) {
         coordinator.openNote = openNote
         coordinator.onAction = onAction
-        coordinator.onEdges = onEdges
         coordinator.openLink = openLink
         let page = page(accent: accent)
         guard coordinator.loaded != page else { return }
@@ -88,24 +61,15 @@ struct HTMLView {
     }
 
     /// Keeps clicks out of the web view: app and note links open in the app, the rest in the app they belong to.
-    @MainActor final class Coordinator: NSObject, WKNavigationDelegate, WKScriptMessageHandler {
+    @MainActor final class Coordinator: NSObject, WKNavigationDelegate {
         var openNote: (String) -> Void = { _ in }
         var onAction: (URL) -> Void = { _ in }
-        var onEdges: (Edge.Set) -> Void = { _ in }
         var openLink = OpenLinkAction()
         var loaded: String?
         var ready = false
         let files = LocalFileScheme()
 
         func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) { ready = true }
-
-        func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
-            guard let flags = message.body as? [Bool], flags.count == 2 else { return }
-            var edges = Edge.Set()
-            if flags[0] { edges.insert(.top) }
-            if flags[1] { edges.insert(.bottom) }
-            onEdges(edges)
-        }
 
         func webView(_ webView: WKWebView, decidePolicyFor action: WKNavigationAction) async -> WKNavigationActionPolicy {
             guard action.navigationType == .linkActivated, let url = action.request.url else { return .allow }

@@ -1,7 +1,8 @@
 /* Note typography, shared by the note preview, the Claude panel and PDF export.
    Colors and sizes come from the app as variables (note-style.swift, from theme.swift and note-look.swift): --text,
    --text-2, --text-3, --line, --line-soft, --fill, --card, --accent, --accent-ink, the callout kinds --c-*, and
-   --measure, --margin, --body, --paragraph-gap, --block-gap, --radius, --code-size, --label-size, --h1 to --h6. */
+   --measure, --margin, --body, --paragraph-gap, --block-gap, --radius, --code-size, --label-size, --h1 to --h6, and --fade
+   (the edge fade's length, Theme.Space.xl). */
 
 :root {
   color-scheme: light dark;
@@ -173,3 +174,16 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note a.footnote-back:hover { color: var(--accent-ink); }
 .note [id^="^"]:target { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 6px; transition: background 1s; }
 
+
+/* A scroller that fades its edges in place of a scroll bar, as `overflowFade` does in the app: reader.js marks the
+   edges with more past them. Both the bar and the mask belong on the box that scrolls: the Claude panel's page holds
+   still and only its `.chat` moves, so `html { scrollbar-width: none }` and edges read from the document did nothing.
+   Masking here rather than in SwiftUI keeps the fade on that box with no round trip to the app. The ends are
+   registered colors so they ease in over the same 0.15s. */
+@property --fade-start { syntax: "<color>"; inherits: false; initial-value: #000; }
+@property --fade-end { syntax: "<color>"; inherits: false; initial-value: #000; }
+.edge-fade { scrollbar-width: none; transition: --fade-start .15s ease-out, --fade-end .15s ease-out;
+  mask-image: linear-gradient(to bottom, var(--fade-start), #000 var(--fade), #000 calc(100% - var(--fade)), var(--fade-end)); }
+.edge-fade::-webkit-scrollbar { display: none; }
+.edge-fade.past-start { --fade-start: transparent; }
+.edge-fade.past-end { --fade-end: transparent; }
