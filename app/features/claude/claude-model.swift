@@ -500,7 +500,7 @@ final class ClaudeModel {
                 """#
             }
         }
-        return "<style>\(css)</style><div class=\"chat\">\(messages.joined())</div>"
+        return "<style>\(css)</style><div class=\"chat edge-fade\">\(messages.joined())</div>"
     }
 
     static let css = """

@@ -20,11 +20,31 @@ export function typeset(root) {
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", () => typeset(document.body));
 else typeset(document.body);
 
+// Marks which edges of an `.edge-fade` scroller have more past them (note.css fades those). The panel's conversation
+// scrolls in its own `.chat` box, not the document, so watching the document's scroll never saw it move. Scroll events
+// don't bubble, hence the capture; the box is replaced on every update, so nothing is bound to it.
+function markEdges(el) {
+  const max = el.scrollHeight - el.clientHeight;
+  // `column-reverse` starts at the end, and its scrollTop runs from -max at the top to 0 at the bottom.
+  const reversed = getComputedStyle(el).flexDirection === "column-reverse";
+  const fromStart = reversed ? max + el.scrollTop : el.scrollTop;
+  el.classList.toggle("past-start", fromStart > 1);
+  el.classList.toggle("past-end", fromStart < max - 1);
+}
+const markAll = () => document.querySelectorAll(".edge-fade").forEach(markEdges);
+document.addEventListener("scroll", (e) => e.target.classList?.contains("edge-fade") && markEdges(e.target), { capture: true, passive: true });
+// Images and diagrams grow the content after it lands.
+document.addEventListener("load", markAll, { capture: true });
+addEventListener("resize", markAll);
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", markAll);
+else markAll();
+
 // The Claude panel swaps its page in place, so it keeps its scroll while an answer streams in.
 window.folioReader = {
   update(html) {
     document.body.innerHTML = html;
     typeset(document.body);
+    markAll();
   },
 };
 

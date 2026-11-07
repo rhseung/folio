@@ -619,8 +619,8 @@ private struct OverflowFade: ViewModifier {
     }
 }
 
-/// The fade alone, for a scroller SwiftUI can't watch (the Claude panel's web view), told its edges by the view.
-struct OverflowFadeMask: View {
+// The Claude panel's web view fades its own scroller in the page (`.edge-fade` in note.css) with the same length.
+private struct OverflowFadeMask: View {
     let axis: Axis
     let edges: Edge.Set
 

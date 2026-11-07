@@ -29,6 +29,7 @@ enum NoteStyle {
             ("measure", NoteLook.measure), ("margin", NoteLook.margin), ("body", NoteLook.body), ("paragraph-gap", NoteLook.paragraphGap),
             ("block-gap", NoteLook.blockGap), ("radius", NoteLook.radius), ("code-size", NoteLook.codeSize), ("label-size", NoteLook.labelSize),
         ] + NoteLook.headingSizes.enumerated().map { ("h\($0.offset + 1)", $0.element) }
+            + [("fade", Theme.Space.xl)]
         return ":root{" + values.map { String(format: "--%@:%gpx;", $0.0, Double($0.1)) }.joined() + "}"
     }()
 

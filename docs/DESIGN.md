@@ -91,7 +91,7 @@ Folio가 아닌 앱에서 같은 느낌을 만들 때도 이 문서를 쓴다. "
 | | `PageBar` | 화면 고유의 도구 줄. 그 화면 패널의 위쪽에 둔다 |
 | | `\.onGlass` | 유리 위에 놓였음을 구성 요소에 알리는 환경값(Claude 패널 안) |
 | | `paperList()`, `floatingGlass()`, `surface(_:in:)`, `pill()` | 시스템 `List`·`Form`을 종이 배경으로, 떠 있는 요소에 유리, 유리 위에서 옅어지는 카드·채움 바탕, 짧은 숫자 입력 |
-| | `overflowFade(_:)` | 넘기는 영역의 스크롤 막대를 숨기고, 넘길 것이 남은 쪽 가장자리만 `Space.xl`만큼 흐린다. `Page`가 직접 켜고, 열, 패널, 시트, 팝오버, 팔레트, 목록에도 붙인다. 스크롤 위치를 SwiftUI가 볼 수 없는 Claude 패널의 대화(`WKWebView`)는 페이지가 알려 준 가장자리로 `OverflowFadeMask`만 쓴다 |
+| | `overflowFade(_:)` | 넘기는 영역의 스크롤 막대를 숨기고, 넘길 것이 남은 쪽 가장자리만 `Space.xl`만큼 흐린다. `Page`가 직접 켜고, 열, 패널, 시트, 팝오버, 팔레트, 목록에도 붙인다. Claude 패널의 대화(`WKWebView`)는 페이지 안의 스크롤 칸(`.chat`)에 `edge-fade` 클래스를 붙여 같은 일을 CSS로 한다. 막대는 `scrollbar-width: none`으로 숨기고, `reader.js`가 넘길 것이 남은 쪽을 표시해 `mask-image`로 `--fade`(`Space.xl`)만큼 흐린다. 막대와 흐림은 문서가 아니라 실제로 넘어가는 칸에 걸어야 한다 |
 | `containers.swift` | `Card`, `CardRow` | 행을 담는 흰 카드. 행 사이 구분선은 글자 시작점부터 그어진다 |
 | | `NoticeCard` | 결정이 필요한 알림. 행이 없으면 배너만 쓴다 |
 | | `EmptyCard` | 묶음 전체가 비었을 때 한 줄 카드: 기호, 무엇이 없는지, 무엇이 채우는지. 옆 열이 차 있어도 빈 열이 높게 비지 않는다 |
