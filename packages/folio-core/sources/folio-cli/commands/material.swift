@@ -79,6 +79,9 @@ struct MaterialCommand: ParsableCommand {
                     say("    \(f.name(of: s))\(pages)")
                 }
             }
+            if !m.confusingPages.isEmpty {
+                say(String(localized: .materialShowConfusing(m.confusingPages.map(String.init).joined(separator: ", "))))
+            }
             let units = m.unitIds.compactMap { id in f.units.first { $0.id == id }?.title }
             if !units.isEmpty {
                 say(String(localized: .materialShowUnits))

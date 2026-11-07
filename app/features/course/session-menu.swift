@@ -12,6 +12,8 @@ struct SessionMenu: View {
     var showSessions: (() -> Void)?
     var play: ((Recording) -> Void)?
     var edit: (() -> Void)?
+    /// Asks how far the class went in its lecture files.
+    var progress: (() -> Void)?
     var remove: (() -> Void)?
 
     var body: some View {
@@ -50,6 +52,7 @@ struct SessionMenu: View {
             }
             Divider()
             if let edit { Button(.commonEditEllipsis, systemImage: "pencil", action: edit) }
+            if let progress { Button(.sessionsProgressEllipsis, systemImage: "book.pages", action: progress) }
             Toggle(isOn: Binding(get: { session.isCancelled }, set: { model.setCancelled($0, of: session) })) {
                 Label(.sessionsCancelled, systemImage: "calendar.badge.minus")
             }

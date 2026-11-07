@@ -263,6 +263,19 @@ final class MaterialsModel {
         workspace.run(MaterialLinkSession(course: course.id, material: material, session: session, firstPage: first, lastPage: last))
     }
 
+    // MARK: Lecture progress
+
+    func isLecture(_ material: UUID) -> Bool { materials.first { $0.id == material }?.role == .lecture }
+
+    /// `page` is 1-based.
+    func isConfusing(_ page: Int, of material: UUID) -> Bool {
+        materials.first { $0.id == material }?.confusingPages.contains(page) ?? false
+    }
+
+    func toggleConfusing(_ page: Int, of material: UUID) {
+        workspace.run(MaterialConfusing(course: course.id, material: material, page: page, marked: !isConfusing(page, of: material)))
+    }
+
     func link(_ material: UUID, unit: UUID, linked: Bool) {
         workspace.run(MaterialLinkUnit(course: course.id, material: material, unit: unit, linked: linked))
     }

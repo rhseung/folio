@@ -1,0 +1,120 @@
+import FolioActions
+import FolioDomain
+import FolioStorage
+import Foundation
+import Testing
+@testable import Folio
+
+/// Two classes of graph theory a week apart, with the matchings slides tracked.
+@MainActor
+struct LectureProgressModelTests {
+    let workspace: Workspace
+    let earlier: UUID
+    let session: UUID
+    let slides: FolioDomain.Material
+
+    init() throws {
+        workspace = try fixtureWorkspace()
+        workspace.run(MaterialTrack(course: graphTheory))
+        earlier = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now.addingTimeInterval(-7 * 86_400)))?.made)
+        session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now))?.made)
+        slides = try #require(workspace.course(graphTheory)?.file.materials.first { $0.path == "Lectures/05_Matchings.pdf" })
+    }
+
+    var file: CourseFile { workspace.course(graphTheory)!.file }
+    func links(_ id: UUID) -> [SessionMaterial] { file.sessions.first { $0.id == id }?.materials ?? [] }
+
+    // MARK: The end-of-class prompt
+
+    @Test func stoppingARecordingAsksFromTheLastClassToTheLastPageSeen() throws {
+        workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: earlier, firstPage: 1, lastPage: 6))
+        let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a", duration: 600,
+                                  pages: [PageVisit(at: 0, materialId: slides.id, page: 6), PageVisit(at: 100, materialId: slides.id, page: 11)])
+        workspace.askProgress(after: recording, course: graphTheory)
+        let ask = try #require(workspace.progressAsk)
+        #expect(ask.session == session && ask.viewed == [SessionMaterial(materialId: slides.id, firstPage: 6, lastPage: 11)])
+
+        let model = SessionProgressModel(workspace: workspace, course: graphTheory, session: session, viewed: ask.viewed)
+        #expect(model.rows == [.init(id: slides.id, first: 7, last: 11)])
+        #expect(model.detail(slides.id).hasPrefix("지난 수업 6쪽까지 · 녹음 중 6–11쪽"))
+        #expect(model.refusal == nil && model.note == String(localized: .sessionsProgressFromRecording))
+        model.record()
+        #expect(links(session) == [SessionMaterial(materialId: slides.id, firstPage: 7, lastPage: 11)])
+    }
+
+    @Test func aRecordingWithoutASessionOrLecturesAsksNothing() throws {
+        workspace.askProgress(after: Recording(device: workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a"), course: graphTheory)
+        #expect(workspace.progressAsk == nil)
+        // Linear algebra's files aren't tracked in the fixture, so it has no lecture files yet.
+        let linearAlgebra = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
+        let other = try #require(workspace.run(SessionAdd(course: linearAlgebra, date: .now.addingTimeInterval(-200 * 86_400)))?.made)
+        workspace.askProgress(after: Recording(device: workspace.device, at: .now, sessionId: other, file: "Recordings/a.m4a"), course: linearAlgebra)
+        #expect(workspace.progressAsk == nil)
+    }
+
+    @Test func aKeptFileNeedsBothPagesAndOnlyKeptFilesAreSaved() throws {
+        let model = SessionProgressModel(workspace: workspace, course: graphTheory, session: session)
+        #expect(model.rows.isEmpty)
+        #expect(model.refusal == String(localized: .sessionsProgressNothing))
+        #expect(model.addable.map(\.id) == [slides.id])
+        model.add(slides.id)
+        #expect(model.rows == [.init(id: slides.id, first: 1, last: nil)])
+        #expect(model.refusal == String(localized: .sessionsProgressMissingPages("05_Matchings.pdf")))
+        model.setLast(slides.id, 4)
+        #expect(model.refusal == nil)
+        // The rules' own refusal: an end before the start.
+        model.setFirst(slides.id, 9)
+        #expect(model.refusal != nil)
+        model.toggle(slides.id)
+        #expect(model.refusal == String(localized: .sessionsProgressNothing))
+        model.toggle(slides.id)
+        model.setFirst(slides.id, 2)
+        model.record()
+        #expect(links(session) == [SessionMaterial(materialId: slides.id, firstPage: 2, lastPage: 4)])
+    }
+
+    // MARK: A file's progress
+
+    @Test func aFilesProgressNamesTheClassesAndMarksConfusingPages() throws {
+        workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: earlier, firstPage: 1, lastPage: 3))
+        workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: 4, lastPage: 5))
+        let materials = MaterialsModel(workspace: workspace, course: try #require(workspace.course(graphTheory)))
+        materials.toggleConfusing(5, of: slides.id)
+        #expect(materials.isConfusing(5, of: slides.id))
+        #expect(materials.isLecture(slides.id))
+
+        let model = LectureProgressModel(workspace: workspace, course: graphTheory, material: slides.id)
+        let days = [earlier, session].map { id in file.day(of: file.sessions.first { $0.id == id }!, calendar: workspace.calendar) }
+        #expect(model.rows.map(\.pages) == ["p.1–3", "p.4–5"])
+        #expect(model.rows.map(\.classes) == days)
+        #expect(model.rows.map(\.confusing) == [[], [5]])
+        #expect(model.summary == String(localized: .materialsProgressCovered(5)))
+        #expect(model.unranged == nil)
+
+        materials.toggleConfusing(5, of: slides.id)
+        #expect(!materials.isConfusing(5, of: slides.id))
+    }
+
+    // MARK: Replay
+
+    @Test func aLineShowsThePageWhereItTurns() throws {
+        let store = workspace.course(graphTheory)!.store
+        let recording = Recording(device: workspace.device, at: .now, sessionId: session, file: "Recordings/a.m4a", duration: 300,
+                                  pages: [PageVisit(at: 0, materialId: slides.id, page: 4), PageVisit(at: 60, materialId: slides.id, page: 6)])
+        try FileManager.default.createDirectory(at: store.recordingsURL, withIntermediateDirectories: true)
+        try Data("audio".utf8).write(to: store.fileURL(recording.file))
+        try store.saveTranscript(LectureTranscript(locale: "ko-KR", lines: [
+            .init(start: 0, end: 20, text: "매칭"), .init(start: 20, end: 60, text: "증가 경로"), .init(start: 61, end: 80, text: "홀의 정리"),
+        ]), of: recording)
+        let ctx = ActionContext(gist: try #require(workspace.gist), device: workspace.device, now: workspace.now)
+        try ctx.edit(graphTheory) { $0.recordings = [recording] }
+        workspace.reload()
+        let model = RecordingPlayerModel(workspace: workspace, courseId: graphTheory, store: store, recording: recording)
+        #expect((0..<3).map { model.page(at: $0)?.page } == [4, nil, 6])
+        #expect(model.pageLabel(try #require(model.page(at: 2))) == "p.6")
+        #expect(model.pageLink(try #require(model.page(at: 2))) == AppLink(.material, slides.id, anchor: .page(6)))
+        // A search leaves lines out, so each one left says its page.
+        model.query = "경로"
+        #expect(model.page(at: 1)?.page == 4)
+    }
+}

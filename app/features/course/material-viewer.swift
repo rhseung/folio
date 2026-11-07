@@ -56,6 +56,19 @@ struct MaterialViewer: View {
             Button(.materialsViewerZoomOut, systemImage: "minus.magnifyingglass") { c.zoomOut() }.keyboardShortcut("-")
             Button(.materialsViewerFit, systemImage: "arrow.up.left.and.arrow.down.right") { c.fit() }.help(Text(.materialsViewerFit)).keyboardShortcut("0")
             Button(.materialsViewerZoomIn, systemImage: "plus.magnifyingglass") { c.zoomIn() }.keyboardShortcut("=")
+            if model.isLecture(material.id) {
+                let marked = model.isConfusing(c.page + 1, of: material.id)
+                // The icon's own color: the bar paints every other icon the chrome's gray.
+                Button { model.toggleConfusing(c.page + 1, of: material.id) } label: {
+                    Label {
+                        Text(.materialsViewerConfusing)
+                    } icon: {
+                        Image(systemName: marked ? "questionmark.circle.fill" : "questionmark.circle")
+                            .foregroundStyle(marked ? Theme.Palette.warning : Theme.Palette.chromeIcon)
+                    }
+                }
+                .help(Text(marked ? .materialsViewerConfusingClear : .materialsViewerConfusingMark))
+            }
         } trailing: {
             // A see-through capsule like the window's search field.
             HStack(spacing: Theme.Space.xs) {

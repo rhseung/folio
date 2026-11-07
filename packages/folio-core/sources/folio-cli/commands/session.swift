@@ -6,7 +6,7 @@ import Foundation
 struct SessionCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "session", abstract: String(localized: .sessionAbstract),
-        subcommands: [List.self, Show.self] + GeneratedCommands.session + [Remove.self])
+        subcommands: [List.self, Show.self] + GeneratedCommands.session + [Progress.self, Remove.self])
 
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .sessionListAbstract), discussion: String(localized: .sessionListDiscussion))
@@ -63,6 +63,40 @@ struct SessionCommand: ParsableCommand {
                 say(String(localized: .sessionShowUnits))
                 for u in units { say("    \(u)") }
             }
+            let materials = s.materials.compactMap { link in f.materials.first { $0.id == link.materialId }.map { ($0, link) } }
+            if !materials.isEmpty {
+                say(String(localized: .sessionShowMaterials))
+                for (m, link) in materials {
+                    let pages = link.pages.map { " p.\($0.lowerBound)\($0.count > 1 ? "-\($0.upperBound)" : "")" } ?? ""
+                    say("    \((m.path as NSString).lastPathComponent)\(pages)")
+                }
+            }
+        }
+    }
+
+    struct Progress: ParsableCommand {
+        static let configuration = CommandConfiguration(abstract: String(localized: .sessionProgressAbstract), discussion: String(localized: .sessionProgressDiscussion))
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp(String(localized: .sessionShowHelpSession), valueName: "session"), completion: Complete.sessions) var session: String
+        @Argument(help: ArgumentHelp(String(localized: .sessionProgressHelpRanges), valueName: "material:pages")) var ranges: [String]
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, name) = try r.split(session)
+            let s = try r.session(name, in: c)
+            guard !ranges.isEmpty else { throw CLIError(exit: .usage, message: String(localized: .sessionProgressMissing)) }
+            let links = try ranges.map { arg in
+                // The last colon: a file name may hold one, the pages never do.
+                guard let colon = arg.lastIndex(of: ":") else { throw CLIError(exit: .usage, message: String(localized: .sessionProgressFormat(arg))) }
+                let bounds = arg[arg.index(after: colon)...].split(separator: "-", omittingEmptySubsequences: false).map { Int($0) }
+                guard (1...2).contains(bounds.count), let first = bounds.first ?? nil, let last = bounds.last ?? nil else {
+                    throw CLIError(exit: .usage, message: String(localized: .sessionProgressFormat(arg)))
+                }
+                let m = try r.material(c.local(String(arg[..<colon])), in: c)
+                return SessionMaterial(materialId: m.id, firstPage: first, lastPage: last)
+            }
+            try perform(spec: SessionProgress(course: c.id, session: s.id, ranges: links), g, ctx: ctx)
         }
     }
 

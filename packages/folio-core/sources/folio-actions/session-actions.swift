@@ -311,6 +311,29 @@ public struct ExamScope {
     }
 }
 
+/// What one class went through, every lecture file at once, as the end-of-class prompt saves it: one action, so a
+/// range the rules refuse leaves the other files unwritten too. Files left out keep their links. The command reads
+/// each file with its pages (`05_Matchings.pdf:3-12`), so it is written by hand.
+@Action("session progress", "수업의 렉처 진도 기록하기. 자료마다 이번 수업이 다룬 쪽을 회차에 연결한다",
+        done: "회차 '{session}'의 진도를 기록했습니다",
+        examples: ["folio session progress EC4207/9주차-1 05_Matchings.pdf:3-12 06_Flows.pdf:1-4"],
+        phrases: ["렉처 진도", "수업 진도", "어디까지 나갔", "진도 기록"], cli: .manual)
+public struct SessionProgress {
+    @Arg var course: Course.ID
+    @Arg var session: Session.ID
+    var ranges: [SessionMaterial]
+
+    public func run(_ ctx: ActionContext) throws {
+        try ctx.edit(course) { f in
+            _ = try index(session, in: f.sessions, .valueSession)
+            for range in ranges {
+                _ = try index(range.materialId, in: f.materials, .valueMaterial)
+                f.linkMaterial(range.materialId, session: session, firstPage: range.firstPage, lastPage: range.lastPage)
+            }
+        }
+    }
+}
+
 /// Called by the app when a recording ends. Only files the session has no link to are linked: a range the user set
 /// stays, and a lecture that returned to an earlier file would otherwise shrink its range to what this class saw.
 @Action("session link-viewed", "녹음 중 본 강의 페이지를 회차에 연결하기. 연결이 없는 자료만 더하고 있는 연결은 그대로 둔다",

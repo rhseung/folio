@@ -92,6 +92,7 @@ extension CourseFile: Document {
             Refs(\.sessionIds, to: Session.self, onDelete: .nullify)
             Refs(\.unitIds, to: Unit.self, onDelete: .nullify)
             Refs(\.examIds, to: Exam.self, onDelete: .nullify)
+            Check("Material.confusing", String(localized: .ruleMaterialConfusing)) { m, _ in m.confusingPages.allSatisfy { $0 >= 1 } }
         }
         Items(\.units, noun: String(localized: .modelNounUnit), name: \.title) {
             NonEmpty(\.title, String(localized: .ruleUnitTitleEmpty))

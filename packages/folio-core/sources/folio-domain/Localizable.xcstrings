@@ -1364,6 +1364,17 @@
           }
         }
       }
+    },
+    "rule.material.confusing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료 '{name}'의 헷갈림 표시가 잘못되었습니다: 쪽은 1부터입니다"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

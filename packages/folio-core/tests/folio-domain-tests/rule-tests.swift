@@ -28,6 +28,11 @@ struct RuleTests {
         ("Unit.title.empty", { $0.units[0].title = "" }),
         ("Unit.parentId", { $0.units[0].parentId = UUID() }),
         ("Session.pages", { $0.sessions[0].materials = [SessionMaterial(materialId: UUID(), firstPage: 12, lastPage: 3)] }),
+        ("Material.confusing", { f in
+            var m = Material(device: device, at: now, path: "Lectures/05_Matchings.pdf", role: .lecture, status: .classified)
+            m.confusingPages = [0]
+            f.materials = [m]
+        }),
         ("Exam.title.empty", { $0.exams[0].title = "" }),
         ("Exam.time", { $0.exams[0].end = $0.exams[0].start }),
         ("Exam.scopeUnitIds", { $0.exams[0].scopeUnitIds = [UUID()] }),

@@ -583,6 +583,7 @@ struct SessionCard: View {
     let openNote: (UUID) -> Void
     @State private var playing: Recording?
     @State private var editing = false
+    @State private var askingProgress = false
 
     /// The day line and its units, which the pills must leave beside them.
     static let linesRoom: CGFloat = 240
@@ -637,6 +638,7 @@ struct SessionCard: View {
         .contextMenu { menuItems }
         .sheet(item: $playing) { RecordingPlayer(workspace: model.workspace, courseId: course.id, store: course.store, recording: $0, title: model.playerTitle(session, in: file)) }
         .sheet(isPresented: $editing) { SessionFormSheet(workspace: model.workspace, course: course, session: session) }
+        .sheet(isPresented: $askingProgress) { SessionProgressSheet(workspace: model.workspace, course: course.id, session: session.id) }
     }
 
     func lines(_ file: CourseFile, live: Bool) -> some View {
@@ -713,7 +715,8 @@ struct SessionCard: View {
     }
 
     var menuItems: some View {
-        SessionMenu(courseId: course.id, sessionId: session.id, openNote: openNote, play: { playing = $0 }, edit: { editing = true }) {
+        SessionMenu(courseId: course.id, sessionId: session.id, openNote: openNote, play: { playing = $0 }, edit: { editing = true },
+                    progress: model.offersProgress(session, in: course.file) ? { askingProgress = true } : nil) {
             model.remove(session)
         }
     }

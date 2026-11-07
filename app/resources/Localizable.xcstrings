@@ -18183,6 +18183,259 @@
           }
         }
       }
+    },
+    "sessions.progress.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 진도"
+          }
+        }
+      }
+    },
+    "sessions.progress.title-of": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 수업 진도"
+          }
+        }
+      }
+    },
+    "sessions.progress-ellipsis": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "진도 기록…"
+          }
+        }
+      }
+    },
+    "sessions.progress.from-recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "끝 쪽은 녹음하는 동안 20초 넘게 본 쪽으로 채웠습니다"
+          }
+        }
+      }
+    },
+    "sessions.progress.last-class": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지난 수업 %lld쪽까지"
+          }
+        }
+      }
+    },
+    "sessions.progress.recorded": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 중 %1$lld–%2$lld쪽"
+          }
+        }
+      }
+    },
+    "sessions.progress.page-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체 %lld쪽"
+          }
+        }
+      }
+    },
+    "sessions.progress.missing-pages": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@의 시작 쪽과 끝 쪽을 적어 주세요"
+          }
+        }
+      }
+    },
+    "sessions.progress.nothing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기록할 자료를 하나 이상 고르세요"
+          }
+        }
+      }
+    },
+    "sessions.progress.add-file": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료 추가"
+          }
+        }
+      }
+    },
+    "sessions.progress.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 고른 렉처가 없습니다"
+          }
+        }
+      }
+    },
+    "materials.progress.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "진도"
+          }
+        }
+      }
+    },
+    "materials.progress.summary": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld쪽 중 %2$lld쪽 나감"
+          }
+        }
+      }
+    },
+    "materials.progress.covered": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld쪽 나감"
+          }
+        }
+      }
+    },
+    "materials.progress.unranged": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쪽 없이 연결: %@"
+          }
+        }
+      }
+    },
+    "materials.progress.confusing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "헷갈림 %@"
+          }
+        }
+      }
+    },
+    "materials.progress.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 이 파일의 쪽을 적은 수업이 없습니다"
+          }
+        }
+      }
+    },
+    "materials.progress.not-yet": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 안 나감"
+          }
+        }
+      }
+    },
+    "materials.viewer.confusing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "헷갈림"
+          }
+        }
+      }
+    },
+    "materials.viewer.confusing-mark": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 쪽을 헷갈림으로 표시"
+          }
+        }
+      }
+    },
+    "materials.viewer.confusing-clear": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 쪽의 헷갈림 표시 지우기"
+          }
+        }
+      }
+    },
+    "recording.line-page": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "p.%lld"
+          }
+        }
+      }
+    },
+    "recording.line-page-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ %2$lld쪽 열기"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
