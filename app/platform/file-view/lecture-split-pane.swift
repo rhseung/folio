@@ -25,6 +25,7 @@ struct LectureSplitPane: View {
                 ScrollView {
                     SectionEditor(split: $split, units: units, page: controller.page + 1) { controller.go(to: $0 - 1) }
                 }
+                .overflowFade(.vertical)
                 if let note { Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).fixedSize(horizontal: false, vertical: true) }
                 HStack {
                     Spacer()
@@ -77,6 +78,7 @@ private struct SplitThumbnails: View {
                 }
                 .padding(.vertical, Theme.Space.s)
             }
+            .overflowFade(.vertical)
             .onChange(of: controller.page) { _, page in withAnimation(.snappy(duration: 0.2)) { proxy.scrollTo(page + 1) } }
         }
     }
