@@ -48,6 +48,7 @@ struct QuizCardsView: View {
                     if model.isOpen(card) { Chip(String(localized: .quizWrong), tone: .danger) }
                 }
                 .padding(.leading, CGFloat(depth) * Theme.Space.xl)
+                .linkTarget(card.id)
                 .opens { model.editing = CardDraft(card) }
                 .help(Text(.quizCardEdit))
                 .contextMenu {

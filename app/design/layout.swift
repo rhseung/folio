@@ -7,17 +7,28 @@ struct Page<Content: View, Backdrop: View>: View {
     // Behind the content's top across the page's full width, scrolling away with it: Today's course wash.
     @ViewBuilder var backdrop: Backdrop
     @ViewBuilder var content: Content
+    // Not private: a private property would make the memberwise init private too.
+    @Environment(\.linkFocus) var focus
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Theme.Space.section) { content }
-                .frame(maxWidth: maxWidth, alignment: .leading)
-                .padding(.horizontal, Theme.Space.xxl)
-                .padding(.top, Theme.Space.xl)
-                .padding(.bottom, Theme.Space.xxl * 2)
-                .frame(maxWidth: .infinity)
-                .background(alignment: .top) { backdrop }
-                .pageScrollWithoutBounce()
+        ScrollViewReader { proxy in
+            ScrollView {
+                VStack(alignment: .leading, spacing: Theme.Space.section) { content }
+                    .frame(maxWidth: maxWidth, alignment: .leading)
+                    .padding(.horizontal, Theme.Space.xxl)
+                    .padding(.top, Theme.Space.xl)
+                    .padding(.bottom, Theme.Space.xxl * 2)
+                    .frame(maxWidth: .infinity)
+                    .background(alignment: .top) { backdrop }
+                    .pageScrollWithoutBounce()
+            }
+            // To the row a link named (`linkTarget`), a little below the top. Rows a page reads in after it appears
+            // (the exams' review state) aren't laid out on the first pass, so the scroll waits for one.
+            .task(id: focus) {
+                guard let focus else { return }
+                try? await Task.sleep(for: .milliseconds(100))
+                withAnimation(.snappy) { proxy.scrollTo(focus, anchor: UnitPoint(x: 0.5, y: 0.2)) }
+            }
         }
         .background(Theme.Palette.page)
         // No edge effect under the toolbar: on this flat paper it reads as a header band with a rule across the page.

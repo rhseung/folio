@@ -60,7 +60,7 @@ struct MaterialsView: View {
         .onChange(of: place, initial: true) { _, link in
             if let m = model.follow(link), !m.isFolder { open(m) }
         }
-        .onChange(of: model.viewing) { _, id in moved(id.map { AppLink(.material, $0) }) }
+        .onChange(of: model.viewedLink) { _, link in moved(link) }
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.openPDF, initial: true) { _, new in
             // Fixtures ship without tracked files; register them so there is a PDF to show.

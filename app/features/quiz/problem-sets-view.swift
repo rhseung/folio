@@ -15,7 +15,7 @@ struct ProblemSetsView: View {
                 Spacer()
                 Button(.quizProblemsAdd) { adding = true }.buttonStyle(.pointing(.borderedProminent))
             }
-            ForEach(sets) { set in setBlock(set, units: units) }
+            ForEach(sets) { set in setBlock(set, units: units).linkTarget(set.id) }
 
             if sets.isEmpty {
                 EmptyLine(String(localized: .quizProblemsEmpty))

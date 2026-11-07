@@ -39,7 +39,8 @@ final class CourseModel {
         section = .notes
     }
 
-    /// Shows what the window's link names. A material or a unit opens on its own page, which reads `place`.
+    /// Shows what the window's link names. A material or a unit opens on its own page, which reads `place`; an item
+    /// of a list page (a session, an exam) is the page's `focus`.
     func follow(_ entry: Navigator.Entry) {
         guard entry.course == courseId, entry.link != place else { return }
         let link = entry.link
@@ -60,16 +61,29 @@ final class CourseModel {
         case .exam: section = .exams
         case .card: section = .quizCards
         case .problemSet: section = .quizProblems
-        default: break
+        // Not in a course: `Screen` never hands these to one.
+        case .today, .grades, .requirements, .people, .codes, .settings, .semester, .person: break
         }
     }
 
-    /// A page opened something of its own (a file, a unit) or closed it, which is a move too. The same item at
-    /// another page or heading is the same place.
+    /// The item a list page scrolls to and marks (`.linkTarget`): what the window's link named, until the page moves on.
+    var focus: UUID? {
+        guard let id = place.id else { return nil }
+        switch place.kind {
+        case .session, .assignment, .exam, .card, .problemSet: return id
+        // A note, a file and a unit open on a page of their own; the rest are no item of a page.
+        case .note, .material, .unit, .course, .today, .grades, .requirements, .people, .codes, .settings, .semester, .person: return nil
+        }
+    }
+
+    /// A page opened something of its own (a file, a unit) or closed it, which is a move too. The same file at
+    /// another page takes the place over, and the window keeps it on the step it is on (`Navigator.go`).
     func moved(_ link: AppLink?) {
         guard !following else { return }
         guard let link else { return settle() }
-        if link.withoutAnchor != place.withoutAnchor { place = link }
+        // A file reported before its viewer is on a page keeps the page the link opened it at.
+        if link.anchor == nil, link == place.withoutAnchor { return }
+        if link != place { place = link }
     }
 
     /// The section's first screen again, for its crumb: what the section had open is closed.

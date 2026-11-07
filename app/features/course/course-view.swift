@@ -161,6 +161,7 @@ struct CourseView: View {
                     case .exams: ExamsView(workspace: workspace, course: course) { model.show(note: $0) }
                     }
                 }
+                .environment(\.linkFocus, model.focus)
                 // A new identity drops what the page opened (a file, a unit), which is all its section crumb asks for.
                 .id(pageReset)
                 .paperList()

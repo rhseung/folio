@@ -30,13 +30,14 @@ struct ExamsView: View {
                 Card { CardRow(last: true) { EmptyLine(String(localized: .examsEmpty)) } }
             }
             ForEach(coming) { exam in
-                section(exam, states: states)
+                section(exam, states: states).linkTarget(exam.id)
             }
             if !past.isEmpty {
                 Block(String(localized: .examsPast), note: "\(past.count)") {
                     Card {
                         ForEach(Array(past.enumerated()), id: \.element.id) { i, exam in
                             CardRow(last: i == past.count - 1) { pastRow(exam) }
+                                .linkTarget(exam.id)
                                 .contentShape(.rect)
                                 .contextMenu { actions(exam) }
                                 .fileDrop { model.drop($0, on: exam) }

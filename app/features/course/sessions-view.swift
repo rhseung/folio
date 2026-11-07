@@ -74,6 +74,7 @@ struct SessionsView: View {
                 SessionCard(model: model, course: course, session: session, now: now, openNote: openNote)
                     .modifier(ClassExamCard(model: model, exams: exams, now: now))
             }
+            .linkTarget(session.id)
             .fileDrop { model.importFiles($0, into: session) }
         case .planned(_, let exams):
             if let item = row.planned {

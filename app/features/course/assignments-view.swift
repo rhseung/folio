@@ -24,6 +24,7 @@ struct AssignmentsView: View {
                         ForEach(Array(items.enumerated()), id: \.element.id) { i, a in
                             // Not a Button: the status menu and the submit suggestion inside would lose their clicks to it.
                             CardRow(last: i == items.count - 1) { row(a, now: now) }
+                                .linkTarget(a.id)
                                 .opens { model.editing = a }
                                 .accessibilityAction(named: Text(.commonEdit)) { model.editing = a }
                                 .contextMenu {

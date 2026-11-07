@@ -35,7 +35,11 @@ struct MaterialViewer: View {
         .crumb((material.path as NSString).lastPathComponent, level: 2, symbol: "doc")
         .task(id: material.id) { await load() }
         // While a class is being recorded, the pages it goes through are kept with the recording.
-        .onChange(of: controller?.page) { _, page in if let page { model.showing(page + 1, of: material) } }
+        .onChange(of: controller?.page) { _, page in
+            guard let page else { return }
+            model.showing(page + 1, of: material)
+            model.shownPage = page
+        }
         // A page already open when recording starts doesn't change, so it is told then.
         .onChange(of: model.recording) { _, recording in if recording != nil, let page = controller?.page { model.showing(page + 1, of: material) } }
         // Another link to this file at another page, while it is open.

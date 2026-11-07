@@ -40,11 +40,54 @@ struct CourseModelTests {
         let file = AppLink(.material, UUID())
         model.moved(file)
         #expect(model.place == file)
-        // The same file at another page is the same place.
+        // The page goes with the file, for the window to keep on the step it is on.
         model.moved(file.with(.page(9)))
-        #expect(model.place == file)
+        #expect(model.place == file.with(.page(9)))
+        // Reported again before its viewer is on a page (opened from the history), the file keeps the page.
+        model.moved(file)
+        #expect(model.place == file.with(.page(9)))
         model.moved(nil)
         #expect(model.place == .course(graphTheory, page: .materials))
+    }
+
+    /// A link to an item of a list page opens that page with the item as its focus, which the page scrolls to and
+    /// marks. Units, notes and files open on a page of their own instead.
+    @Test func anItemLinkOpensItsPageAtTheItem() throws {
+        let model = CourseModel(workspace: try fixtureWorkspace(), courseId: graphTheory)
+        let pages: [(AppLink.Kind, CourseSection)] = [(.session, .sessions), (.assignment, .assignments), (.exam, .exams),
+                                                      (.card, .quizCards), (.problemSet, .quizProblems)]
+        for (kind, section) in pages {
+            let id = UUID()
+            model.follow(Navigator.Entry(link: AppLink(kind, id), course: graphTheory))
+            #expect(model.section == section && model.focus == id, "\(kind)")
+        }
+        model.section = .grades
+        #expect(model.focus == nil)
+        for kind in [AppLink.Kind.unit, .note, .material] {
+            model.follow(Navigator.Entry(link: AppLink(kind, UUID()), course: graphTheory))
+            #expect(model.focus == nil, "\(kind)")
+        }
+    }
+
+    /// The page the viewer is on comes back as the window's link; following it again must not jump the viewer.
+    @Test func aFileFollowsOnlyAPageItIsNotOn() throws {
+        let workspace = try fixtureWorkspace()
+        workspace.run(MaterialTrack(course: graphTheory))
+        let course = try #require(workspace.course(graphTheory))
+        let pdf = try #require(course.file.materials.first { $0.isPDF })
+        let model = MaterialsModel(workspace: workspace, course: course)
+        #expect(model.follow(AppLink(.material, pdf.id, anchor: .page(3)))?.id == pdf.id)
+        #expect(model.takeRequestedPage() == 2)
+        model.open(pdf)
+        model.shownPage = 2
+        #expect(model.viewedLink == AppLink(.material, pdf.id, anchor: .page(3)))
+        _ = model.follow(AppLink(.material, pdf.id, anchor: .page(3)))
+        #expect(model.requestedPage == nil)
+        _ = model.follow(AppLink(.material, pdf.id, anchor: .page(7)))
+        #expect(model.takeRequestedPage() == 6)
+        // Another file starts with no page until its viewer has one.
+        model.viewing = UUID()
+        #expect(model.shownPage == nil)
     }
 
     @Test func noteStateFollowsTheReviewNote() throws {

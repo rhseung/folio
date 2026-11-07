@@ -13,9 +13,12 @@ final class MaterialsModel {
     private(set) var suggestions: [PlannedMove]?
     let moves = MoveUndo()
     private var assignmentFolders: [String] = []
-    var viewing: UUID?
+    var viewing: UUID? { didSet { if viewing != oldValue { shownPage = nil } } }
     /// The 0-based page a link asked the viewer for, taken once by it.
     var requestedPage: Int?
+    /// The 0-based page the viewer is on, which the window's link carries, so back, forward and a tab moved to its own
+    /// window come back to it.
+    var shownPage: Int?
     var preview: URL?
     var linking: UUID?
     var relinking: UUID?
@@ -39,6 +42,8 @@ final class MaterialsModel {
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
     var materials: [FolioDomain.Material] { course.file.materials }
     var viewed: FolioDomain.Material? { viewing.flatMap { id in materials.first { $0.id == id } } }
+    /// What the page shows, as a link: the file open, at its page once the viewer has one.
+    var viewedLink: AppLink? { viewing.map { AppLink(.material, $0, anchor: shownPage.map { .page($0 + 1) }) } }
 
     func load() async {
         assignmentFolders = (try? course.store.assignmentFolders()) ?? []
@@ -191,7 +196,9 @@ final class MaterialsModel {
             return nil
         }
         guard let m = materials.first(where: { $0.id == link.id }) else { return nil }
-        if case .page(let n) = link.anchor { requestedPage = n - 1 }
+        // The page the viewer reported comes back as the window's link: going to it again would jump to the page's
+        // top from wherever it was scrolled.
+        if case .page(let n) = link.anchor, viewing != m.id || shownPage != n - 1 { requestedPage = n - 1 }
         return m
     }
 
