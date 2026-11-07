@@ -84,10 +84,11 @@ struct SectionEditor: View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             SectionBar(split: $split, selected: $selected, label: label, page: page, pick: pick)
             VStack(spacing: 0) {
-                ForEach(Array(split.sections.enumerated()), id: \.element.id) { i, _ in
-                    SectionRow(split: $split, index: i, units: units, selected: selected == i, label: label(i))
+                ForEach(Array(split.sections.enumerated()), id: \.element.id) { i, section in
+                    SectionRow(split: $split, id: section.id, units: units, selected: selected == i, label: label(i))
                         .contentShape(.rect)
                         .onTapGesture {
+                            guard let i = split.sections.firstIndex(where: { $0.id == section.id }) else { return }
                             selected = i
                             pick(split.sections[i].firstPage)
                         }
@@ -183,6 +184,7 @@ struct SectionBar: View {
                 let r = rect(i, w)
                 Color.clear
                     .frame(width: r.width, height: r.height)
+                    .overlay(alignment: .leading) { text(i, width: r.width) }
                     .contentShape(.rect)
                     .help(tip(i))
                     .position(x: r.midX, y: r.midY)
@@ -261,7 +263,6 @@ struct SectionBar: View {
             } else if selected == i {
                 context.stroke(shape(i).inset(by: 0.5).path(in: r), with: .color(accent.color.opacity(Theme.Opacity.liveEdge)), lineWidth: 1)
             }
-            text(context, i, in: r)
         }
         if let page, page >= 1, page <= split.pageCount {
             let px = x(page - 1, w) + x(1, w) / 2
@@ -269,24 +270,24 @@ struct SectionBar: View {
         }
     }
 
-    /// The name and, where there's room, the pages; a zone too narrow for its name shows it only on hover.
-    private func text(_ context: GraphicsContext, _ i: Int, in r: CGRect) {
-        let s = split.sections[i]
-        let room = r.insetBy(dx: Theme.Space.s, dy: 0)
-        guard room.width > 12 else { return }
-        let name = label(i)
-        let ink = s.unit == nil ? Theme.Palette.textTertiary : accent.ink
-        let pages = context.resolve(Text(pagesText(s)).font(Theme.Typeface.label.weight(.regular)).foregroundStyle(Theme.Palette.textTertiary))
-        let pagesSize = pages.measure(in: room.size)
-        let title = context.resolve(Text(name).font(Theme.Typeface.label).foregroundStyle(ink))
-        let titleSize = title.measure(in: CGSize(width: .infinity, height: room.height))
-        if titleSize.width + Theme.Space.xs + pagesSize.width <= room.width {
-            context.draw(title, at: CGPoint(x: room.minX, y: room.midY), anchor: .leading)
-            context.draw(pages, at: CGPoint(x: room.minX + titleSize.width + Theme.Space.xs, y: room.midY), anchor: .leading)
-        } else if !name.isEmpty {
-            context.draw(context.resolve(Text(name).font(Theme.Typeface.label).foregroundStyle(ink)), in: room)
-        } else if pagesSize.width <= room.width {
-            context.draw(pages, at: CGPoint(x: room.minX, y: room.midY), anchor: .leading)
+    /// The name and, where there's room, the pages. A zone too narrow for both cuts its name short on one line, and the
+    /// tile's tooltip has it whole: wrapped in the Canvas, a name filled the tile two lines tall.
+    @ViewBuilder private func text(_ i: Int, width: CGFloat) -> some View {
+        let room = width - 2 * Theme.Space.s
+        if room > 12, split.sections.indices.contains(i) {
+            let s = split.sections[i]
+            let name = label(i)
+            let title = Text(name).font(Theme.Typeface.label).foregroundStyle(s.unit == nil ? Theme.Palette.textTertiary : accent.ink)
+            let pages = Text(pagesText(s)).font(Theme.Typeface.label.weight(.regular)).foregroundStyle(Theme.Palette.textTertiary)
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Theme.Space.xs) { title; pages }.fixedSize()
+                // Pages cut short read as other pages: left out, as on a zone too narrow for anything.
+                if name.isEmpty { pages.fixedSize(); Color.clear } else { title.lineLimit(1).truncationMode(.tail) }
+            }
+            .frame(width: room, alignment: .leading)
+            .clipped()
+            .padding(.horizontal, Theme.Space.s)
+            .allowsHitTesting(false)
         }
     }
 
@@ -330,33 +331,46 @@ struct SectionBar: View {
 }
 
 /// One zone as a row: its name (typed for a new unit), its pages, and the unit it goes to.
+///
+/// A row holds its zone's id, not its place: a merge, or the screen closing, shrinks the split while the row is drawn
+/// once more, and a row reading its old place ran past the end (#179). Each edit finds the place as it runs.
 private struct SectionRow: View {
     @Binding var split: LectureSplit
-    let index: Int
+    let id: LectureSplit.Section.ID
     let units: [FolioDomain.Unit]
     let selected: Bool
     let label: String
 
     @Environment(\.accent) private var accent
 
-    private var section: LectureSplit.Section { split.sections[index] }
+    private var index: Int? { split.sections.firstIndex { $0.id == id } }
 
     var body: some View {
+        if let index { row(split.sections[index], at: index) }
+    }
+
+    private func row(_ section: LectureSplit.Section, at index: Int) -> some View {
         HStack(spacing: Theme.Space.s) {
-            name.frame(maxWidth: .infinity, alignment: .leading)
+            name(section).frame(maxWidth: .infinity, alignment: .leading)
             Text(section.firstPage == section.lastPage ? "\(section.firstPage)" : "\(section.firstPage)–\(section.lastPage)")
                 .font(Theme.Typeface.mono).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
                 .frame(width: 56, alignment: .trailing)
-            unitMenu.frame(width: 152, alignment: .trailing)
+            unitMenu(section, at: index).frame(width: 152, alignment: .trailing)
         }
         .padding(.horizontal, Theme.Space.s)
         .frame(height: 32)
         .background(selected ? Theme.Palette.fill : .clear, in: .rect(cornerRadius: Theme.Radius.control))
     }
 
-    @ViewBuilder private var name: some View {
+    /// On the zone where it stands when the edit runs; once it's gone, nothing.
+    private func edit(_ change: (Int) -> Void) {
+        if let index { change(index) }
+    }
+
+    @ViewBuilder private func name(_ section: LectureSplit.Section) -> some View {
         if section.isNew {
-            TextField(String(localized: .designSectionsNamePlaceholder), text: Binding(get: { section.title }, set: { split.rename(index, to: $0) }))
+            TextField(String(localized: .designSectionsNamePlaceholder),
+                      text: Binding(get: { section.title }, set: { title in edit { split.rename($0, to: title) } }))
                 .textFieldStyle(.plain)
         } else {
             let own = section.title.isEmpty ? label : section.title
@@ -366,12 +380,12 @@ private struct SectionRow: View {
         }
     }
 
-    private var unitMenu: some View {
+    private func unitMenu(_ section: LectureSplit.Section, at index: Int) -> some View {
         Menu {
             Section(String(localized: .designSectionsCourseUnits)) {
                 ForEach(UnitTree.outline(units), id: \.unit.id) { item in
                     Button {
-                        split.setUnit(item.unit.id, of: index)
+                        edit { split.setUnit(item.unit.id, of: $0) }
                     } label: {
                         if section.unit == item.unit.id && !section.isNew { Image(systemName: "checkmark") }
                         Text(String(repeating: "    ", count: item.depth) + item.unit.title)
@@ -379,25 +393,25 @@ private struct SectionRow: View {
                 }
             }
             Button(section.title.isEmpty ? String(localized: .designSectionsNewUnit) : String(localized: .designSectionsNewUnitNamed(section.title))) {
-                split.makeNew(index)
+                edit { split.makeNew($0) }
             }
-            Button(String(localized: .designSectionsNoUnit)) { split.setUnit(nil, of: index) }
+            Button(String(localized: .designSectionsNoUnit)) { edit { split.setUnit(nil, of: $0) } }
             Divider()
-            Button(String(localized: .designSectionsMergeBefore)) { split.merge(after: index - 1) }.disabled(index == 0)
-            Button(String(localized: .designSectionsMergeAfter)) { split.merge(after: index) }.disabled(index == split.sections.count - 1)
+            Button(String(localized: .designSectionsMergeBefore)) { edit { split.merge(after: $0 - 1) } }.disabled(index == 0)
+            Button(String(localized: .designSectionsMergeAfter)) { edit { split.merge(after: $0) } }.disabled(index == split.sections.count - 1)
         } label: {
             HStack(spacing: Theme.Space.tight) {
                 if section.match != nil { Image(systemName: "sparkle").font(Theme.Glyph.small).foregroundStyle(accent.color) }
-                menuText.lineLimit(1).truncationMode(.tail)
+                menuText(section).lineLimit(1).truncationMode(.tail)
                 Image(systemName: "chevron.up.chevron.down").font(Theme.Glyph.small).foregroundStyle(Theme.Palette.textTertiary)
             }
             .contentShape(.rect)
         }
         .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).pointingHand()
-        .help(matchHelp)
+        .help(matchHelp(section))
     }
 
-    @ViewBuilder private var menuText: some View {
+    @ViewBuilder private func menuText(_ section: LectureSplit.Section) -> some View {
         if section.isNew {
             Text(.designSectionsNewUnitLabel).foregroundStyle(accent.ink)
         } else if let unit = section.unit {
@@ -407,7 +421,7 @@ private struct SectionRow: View {
         }
     }
 
-    private var matchHelp: String {
+    private func matchHelp(_ section: LectureSplit.Section) -> String {
         switch section.match {
         case .name: String(localized: .designSectionsMatchName)
         case .claude: String(localized: .designSectionsMatchClaude)

@@ -32,6 +32,7 @@ struct LectureSplitPane: View {
                     Button(String(localized: .commonCancel), action: cancel).buttonStyle(.ghost).keyboardShortcut(.cancelAction)
                     Button(String(localized: .commonSave), action: save).buttonStyle(.pointing(.borderedProminent)).keyboardShortcut(.defaultAction)
                 }
+                .clearOfClaudeButton(inset: Theme.Space.l)
             }
             .padding(Theme.Space.l)
             .frame(width: Self.panel)
@@ -60,20 +61,23 @@ private struct SplitThumbnails: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
+                    // A page is one view with its zone's header: scrolled to, the header and the page come into view
+                    // together. As siblings the header took the page's id, and a jump showed it with the page below.
                     ForEach(1...split.pageCount, id: \.self) { page in
                         let zone = split.section(at: page)
-                        if split.sections[zone].firstPage == page { header(zone) }
-                        Thumbnail(document: controller.view.document, page: page, current: controller.page + 1 == page)
-                            .padding(.horizontal, Theme.Space.m)
-                            .background(alignment: .leading) {
-                                // The zone's band down the left edge, so a long zone still reads as one.
-                                (split.sections[zone].unit == nil ? Theme.Palette.fill : accent.color.opacity(zone % 2 == 0 ? Theme.Opacity.onTint : Theme.Opacity.zonePicked))
-                                    .frame(width: 4)
-                            }
-                            .contentShape(.rect)
-                            .onTapGesture { controller.go(to: page - 1) }
-                            .id(page)
-                        if page < split.pageCount { gap(after: page) }
+                        VStack(alignment: .leading, spacing: 0) {
+                            if split.sections[zone].firstPage == page { header(zone) }
+                            Thumbnail(document: controller.view.document, page: page, current: controller.page + 1 == page)
+                                .padding(.horizontal, Theme.Space.m)
+                                .background(alignment: .leading) {
+                                    // The zone's band down the left edge, so a long zone still reads as one.
+                                    (split.sections[zone].unit == nil ? Theme.Palette.fill : accent.color.opacity(zone % 2 == 0 ? Theme.Opacity.onTint : Theme.Opacity.zonePicked))
+                                        .frame(width: 4)
+                                }
+                                .contentShape(.rect)
+                                .onTapGesture { controller.go(to: page - 1) }
+                            if page < split.pageCount { gap(after: page) }
+                        }
                     }
                 }
                 .padding(.vertical, Theme.Space.s)

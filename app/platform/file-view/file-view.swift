@@ -89,14 +89,7 @@ struct FileView: View {
         case .failed:
             ContentUnavailableView(String(localized: .fileViewCannotRead), systemImage: "doc.questionmark", description: Text(model.name))
         case .pdf(let controller):
-            if model.splitting != nil, let course = model.course {
-                LectureSplitPane(controller: controller, split: Binding(get: { model.splitting ?? LectureSplit(pageCount: controller.pageCount) },
-                                                                         set: { model.splitting = $0 }),
-                                 units: course.file.units, note: model.splitNote, save: model.saveSplit, cancel: model.cancelSplit)
-                    .environment(\.accent, model.workspace.accent(course.id))
-            } else {
-                PDFPane(controller: controller, thumbnails: thumbnails)
-            }
+            PDFContent(model: model, controller: controller, thumbnails: thumbnails)
         case .markdown(let text):
             NotePreview(text: text, baseURL: model.url.deletingLastPathComponent(), math: model.math, embeds: model.embeds,
                         revision: model.workspace.notesRevision)
@@ -176,6 +169,27 @@ struct FileView: View {
     func takeRequestedPage() -> Int? {
         defer { requestedPage = nil }
         return requestedPage
+    }
+}
+
+/// A PDF, or the split screen over it while a split is edited (#321).
+struct PDFContent: View {
+    let model: FileViewModel
+    let controller: PDFController
+    var thumbnails = true
+
+    var body: some View {
+        if let shown = model.splitting, let course = model.course {
+            // Closing leaves the screen's views drawn once more through this binding: they read the split as it was
+            // shown, and a write after closing doesn't open it again. A stand-in split here had one zone, and a row
+            // still holding the third ran off its end (#179).
+            LectureSplitPane(controller: controller, split: Binding(get: { model.splitting ?? shown },
+                                                                     set: { if model.splitting != nil { model.splitting = $0 } }),
+                             units: course.file.units, note: model.splitNote, save: model.saveSplit, cancel: model.cancelSplit)
+                .environment(\.accent, model.workspace.accent(course.id))
+        } else {
+            PDFPane(controller: controller, thumbnails: thumbnails)
+        }
     }
 }
 
