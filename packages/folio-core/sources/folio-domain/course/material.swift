@@ -63,14 +63,6 @@ public struct Material: Entity {
     /// Exams this file was made or kept for. A file in an exam's own folder belongs to it without a link.
     public var examIds: [UUID]
     public var status: MaterialStatus
-    // Optional so the key is written only once a page is marked; files from before it decode as none.
-    private var confusing: [Int]?
-
-    /// Lecture pages marked 헷갈림 while reading, in page order. Quizzes and unit review take them first.
-    public var confusingPages: [Int] {
-        get { confusing ?? [] }
-        set { confusing = newValue.isEmpty ? nil : Array(Set(newValue)).sorted() }
-    }
 
     public init(
         id: UUID = UUID(), device: DeviceID, at date: Date,
@@ -131,6 +123,5 @@ extension Material {
         unitIds = try c.decode([UUID].self, forKey: .unitIds)
         examIds = try c.decodeIfPresent([UUID].self, forKey: .examIds) ?? []
         status = try c.decode(MaterialStatus.self, forKey: .status)
-        confusing = try c.decodeIfPresent([Int].self, forKey: .confusing)
     }
 }

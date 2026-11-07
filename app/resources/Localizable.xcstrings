@@ -18349,17 +18349,6 @@
         }
       }
     },
-    "materials.progress.confusing": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "헷갈림 %@"
-          }
-        }
-      }
-    },
     "materials.progress.empty": {
       "extractionState": "manual",
       "localizations": {
@@ -18378,39 +18367,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "아직 안 나감"
-          }
-        }
-      }
-    },
-    "materials.viewer.confusing": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "헷갈림"
-          }
-        }
-      }
-    },
-    "materials.viewer.confusing-mark": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 쪽을 헷갈림으로 표시"
-          }
-        }
-      }
-    },
-    "materials.viewer.confusing-clear": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 쪽의 헷갈림 표시 지우기"
           }
         }
       }

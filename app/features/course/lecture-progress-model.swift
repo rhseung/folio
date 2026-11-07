@@ -2,8 +2,7 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// One lecture file's progress: which classes went through which pages, what no class has reached yet, and the
-/// pages marked 헷갈림.
+/// One lecture file's progress: which classes went through which pages, and what no class has reached yet.
 @MainActor @Observable
 final class LectureProgressModel {
     struct Row: Identifiable, Equatable {
@@ -13,7 +12,6 @@ final class LectureProgressModel {
         let pages: String
         /// The classes' days, or nil for pages no class has reached.
         let classes: String?
-        let confusing: [Int]
     }
 
     let workspace: Workspace
@@ -37,14 +35,12 @@ final class LectureProgressModel {
 
     var rows: [Row] {
         guard let file else { return [] }
-        let confusing = material?.confusingPages ?? []
         return file.lectureProgress(of: materialId, pageCount: pageCount).map { span in
             let classes = span.sessions.compactMap { id in file.sessions.first { $0.id == id } }
                 .map { file.day(of: $0, calendar: workspace.calendar) }
             return Row(firstPage: span.firstPage, lastPage: span.lastPage,
                        pages: span.firstPage == span.lastPage ? "p.\(span.firstPage)" : "p.\(span.firstPage)–\(span.lastPage)",
-                       classes: classes.isEmpty ? nil : classes.joined(separator: " · "),
-                       confusing: confusing.filter { (span.firstPage...span.lastPage).contains($0) })
+                       classes: classes.isEmpty ? nil : classes.joined(separator: " · "))
         }
     }
 

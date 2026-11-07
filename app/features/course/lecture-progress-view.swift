@@ -21,9 +21,6 @@ struct LectureProgressBlock: View {
                         Text(row.classes ?? String(localized: .materialsProgressNotYet)).lineLimit(1)
                             .foregroundStyle(row.classes == nil ? Theme.Palette.textTertiary : Theme.Palette.text)
                         Spacer(minLength: Theme.Space.s)
-                        if !row.confusing.isEmpty {
-                            Chip(String(localized: .materialsProgressConfusing(row.confusing.map(String.init).joined(separator: ", "))), tone: .warning)
-                        }
                     }
                 }
                 if let unranged {

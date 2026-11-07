@@ -106,14 +106,6 @@ extension CourseFile {
         materials.filter { $0.role == .lecture && !$0.isFolder && $0.status == .classified }
             .sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
     }
-
-    /// Marks or clears 헷갈림 on one page of a lecture file.
-    public mutating func setConfusing(_ material: UUID, page: Int, _ marked: Bool) {
-        guard let i = materials.firstIndex(where: { $0.id == material }) else { return }
-        var pages = Set(materials[i].confusingPages)
-        if marked { pages.insert(page) } else { pages.remove(page) }
-        materials[i].confusingPages = Array(pages)
-    }
 }
 
 extension Recording {

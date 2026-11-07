@@ -7931,17 +7931,6 @@
           }
         }
       }
-    },
-    "material.show.confusing": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "  헷갈림: %@쪽"
-          }
-        }
-      }
     }
   },
   "version": "1.0"

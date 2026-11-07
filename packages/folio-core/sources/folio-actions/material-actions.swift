@@ -67,27 +67,6 @@ public struct MaterialLinkUnit {
     }
 }
 
-@Action("material confusing", "렉처의 한 쪽에 헷갈림 표시하기, --off면 지우기. 퀴즈와 단원 복습이 먼저 다룬다",
-        done: "자료 '{material}'의 {page}쪽 헷갈림 표시를 바꿨습니다",
-        examples: ["folio material confusing EC4207/05_Matchings.pdf 12", "folio material confusing EC4207/05_Matchings.pdf 12 --off"],
-        phrases: ["헷갈림", "헷갈린 페이지", "이해 안 된 슬라이드", "다시 볼 쪽"])
-public struct MaterialConfusing {
-    /// 과목
-    @Arg var course: Course.ID
-    /// 자료
-    @Arg var material: Material.ID
-    /// 쪽. 1부터
-    @Arg var page: Int
-    /// 표시 지우기
-    @Off("off") var marked = true
-
-    public func run(_ ctx: ActionContext) throws {
-        try ctx.edit(course) { f in
-            _ = try index(material, in: f.materials, .valueMaterial)
-            f.setConfusing(material, page: page, marked)
-        }
-    }
-}
 
 /// The status comes before the materials on the command line, so the command is written by hand.
 @Action("material status", "자료의 상태 바꾸기. 여러 개면 확인을 받는다", confirm: "자료 {materials}의 상태를 {status}(으)로 바꿉니다.",

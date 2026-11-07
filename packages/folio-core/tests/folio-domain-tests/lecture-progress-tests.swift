@@ -167,22 +167,4 @@ struct LectureProgressTests {
         #expect(r.visit(at: 12)?.page == 4)
         #expect(r.visit(at: 150) == nil)
     }
-
-    // MARK: 헷갈림
-
-    @Test func confusingPagesAreASortedSetWrittenOnlyWhenMarked() throws {
-        var f = course()
-        let m = matchings(f)
-        let plain = String(decoding: try JSONEncoder().encode(f.materials[1]), as: UTF8.self)
-        #expect(!plain.contains("confusing"))
-        f.setConfusing(m, page: 12, true)
-        f.setConfusing(m, page: 3, true)
-        f.setConfusing(m, page: 12, true)
-        #expect(f.materials[1].confusingPages == [3, 12])
-        let decoded = try JSONDecoder().decode(Material.self, from: JSONEncoder().encode(f.materials[1]))
-        #expect(decoded.confusingPages == [3, 12])
-        f.setConfusing(m, page: 3, false)
-        f.setConfusing(m, page: 12, false)
-        #expect(!String(decoding: try JSONEncoder().encode(f.materials[1]), as: UTF8.self).contains("confusing"))
-    }
 }

@@ -75,24 +75,18 @@ struct LectureProgressModelTests {
 
     // MARK: A file's progress
 
-    @Test func aFilesProgressNamesTheClassesAndMarksConfusingPages() throws {
+    @Test func aFilesProgressNamesTheClasses() throws {
         workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: earlier, firstPage: 1, lastPage: 3))
         workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: 4, lastPage: 5))
         let materials = MaterialsModel(workspace: workspace, course: try #require(workspace.course(graphTheory)))
-        materials.toggleConfusing(5, of: slides.id)
-        #expect(materials.isConfusing(5, of: slides.id))
         #expect(materials.isLecture(slides.id))
 
         let model = LectureProgressModel(workspace: workspace, course: graphTheory, material: slides.id)
         let days = [earlier, session].map { id in file.day(of: file.sessions.first { $0.id == id }!, calendar: workspace.calendar) }
         #expect(model.rows.map(\.pages) == ["p.1–3", "p.4–5"])
         #expect(model.rows.map(\.classes) == days)
-        #expect(model.rows.map(\.confusing) == [[], [5]])
         #expect(model.summary == String(localized: .materialsProgressCovered(5)))
         #expect(model.unranged == nil)
-
-        materials.toggleConfusing(5, of: slides.id)
-        #expect(!materials.isConfusing(5, of: slides.id))
     }
 
     // MARK: Replay

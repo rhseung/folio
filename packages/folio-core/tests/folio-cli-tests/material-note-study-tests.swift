@@ -58,20 +58,6 @@ struct MaterialNoteStudyTests {
         }
     }
 
-    @Test func markConfusing() throws {
-        try h.expectSame(["material", "confusing", "EC4207/05_Matchings.pdf", "12"], setup: [Self.track]) { gist in
-            MaterialConfusing(course: course, material: try material(gist, "05_Matchings.pdf"), page: 12, marked: true)
-        }
-        let gist = try Harness.fixtureCopy()
-        _ = h.cli(Self.track, gist: gist)
-        for page in ["12", "3"] { #expect(h.cli(["material", "confusing", "EC4207/05_Matchings.pdf", page], gist: gist).code == 0) }
-        #expect(h.cli(["material", "show", "EC4207/05_Matchings.pdf"], gist: gist).out.contains("헷갈림: 3, 12쪽"))
-        #expect(h.cli(["material", "confusing", "EC4207/05_Matchings.pdf", "12", "--off"], gist: gist).code == 0)
-        #expect(try h.file(GISTStore(url: gist)).materials.first { $0.path == "Lectures/05_Matchings.pdf" }?.confusingPages == [3])
-        // Pages count from 1.
-        #expect(h.cli(["material", "confusing", "EC4207/05_Matchings.pdf", "0"], gist: gist).code != 0)
-    }
-
     @Test func sessionProgress() throws {
         try h.expectSame(["session", "progress", "EC4207/9주차-1", "05_Matchings.pdf:3-12", "Problems.pdf:7"], setup: [Self.track, SessionCommandTests.add]) { gist in
             SessionProgress(course: course, session: SessionCommandTests.id, ranges: [

@@ -10,7 +10,7 @@ enum GeneratedCommands {
     static let component: [any ParsableCommand.Type] = [ComponentAdd.self, ComponentSet.self, ComponentRemove.self]
     static let exam: [any ParsableCommand.Type] = [ExamAdd.self, ExamSet.self, ExamRemove.self, ExamSummary.self]
     static let examPlan: [any ParsableCommand.Type] = [ExamPlanAdd.self]
-    static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialLinkExam.self, MaterialUntrack.self, MaterialConfusing.self, MaterialTrash.self, MaterialNew.self, MaterialBuild.self]
+    static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialLinkExam.self, MaterialUntrack.self, MaterialTrash.self, MaterialNew.self, MaterialBuild.self]
     static let note: [any ParsableCommand.Type] = [NoteAdopt.self, NoteLinkSessions.self, NoteUnlinkSession.self, NoteRemove.self, NoteBuild.self]
     static let problemSet: [any ParsableCommand.Type] = [ProblemSetRemove.self, ProblemLinkUnit.self]
     static let recording: [any ParsableCommand.Type] = [RecordingTrim.self]
@@ -874,31 +874,6 @@ enum GeneratedCommands {
             let action = FolioActions.MaterialUntrack(
                 course: c.id,
                 material: try r.id("Material", materialName, in: c)
-            )
-            try perform(spec: action, g, ctx: ctx)
-        }
-    }
-
-    struct MaterialConfusing: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "confusing", abstract: "렉처의 한 쪽에 헷갈림 표시하기, --off면 지우기. 퀴즈와 단원 복습이 먼저 다룬다", discussion: """
-            예시:
-              folio material confusing EC4207/05_Matchings.pdf 12
-              folio material confusing EC4207/05_Matchings.pdf 12 --off
-            """)
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp("<과목>/<자료>", valueName: "material"), completion: Complete.ref("Material")) var material: String
-        @Argument(help: "쪽. 1부터") var page: Int
-        @Flag(name: .customLong("off"), help: "표시 지우기") var off = false
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            let r = Resolver(ctx)
-            let (c, materialName) = try r.split(material)
-            let action = FolioActions.MaterialConfusing(
-                course: c.id,
-                material: try r.id("Material", materialName, in: c),
-                page: page,
-                marked: !off
             )
             try perform(spec: action, g, ctx: ctx)
         }
