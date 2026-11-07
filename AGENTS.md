@@ -267,6 +267,7 @@ Me/GIST/
 - 자료 등록과 과제 폴더 반영: `material track [<과목>]`. 과목을 빼면 모든 과목의 파일을 추적 목록에 넣고, `Assignments/` 폴더 중 과제가 없는 것에 과제를 만든다
 - 시험 일정: `import exams <exams.json>`. `exams.json`은 구글 캘린더 "시험" 캘린더에서 읽은 `CalendarExam` 목록이며 저장소에 넣지 않는다. 같은 날 시험은 빈 칸만 채우고, 다른 날이면 바꾸지 않고 알린다
 - 단원: `import units <units.json>...`. 과목마다 `{"course": <과목 폴더 이름>, "units": [{"title", "sessions": ["3주차-1"], "children"}]}`. 제목으로 맞춰 없는 단원만 더하고 회차 연결은 더하기만 한다
+- 렉처 진도: `session progress <과목>/<회차> <자료>:<시작>-<끝>...`. 적은 자료의 쪽을 한 번에 회차에 연결하고 나머지 연결은 그대로 둔다. 앱은 녹음을 멈출 때 지난 수업이 끝난 다음 쪽부터 녹음 중 본 가장 뒤 쪽까지로 미리 채워 묻는다(`CourseFile.suggestedProgress`)
 - 시험 범위: `exam scope <과목>/<시험> --taught`. 그 시험 전에 지난 회차에 연결된 단원(과 상위 단원)을 범위에 더한다. 빼지는 않는다
 - 졸업 요건과 학생 정보: `import requirements <requirements.json>`. 학사편람 분류 표: `import handbook <handbook.json> [--accept]`. 두 파일 모두 실제 학업 데이터라 저장소에 넣지 않는다
 - 예전 회차 노트 이름: `note retitle [<과목>]`. 회차에 연결된 노트 중 이름이 `10주차-2`, `10주차-2 정리`인 것만 날짜와 주제 이름으로 바꾸고, 템플릿이 쓴 첫 제목과 과목 노트의 제목 링크(`[[10주차-2]]`), 모든 과목 노트에서 옛 이름을 보이던 ID 링크(`[[note:<ID>|10주차-2]]`)의 이름도 따라 바꾼다. 다른 이름을 붙인 ID 링크는 그대로 둔다. 이동은 `moves.jsonl`의 한 묶음이고 `cleanup undo`가 이름, 제목, 링크를 함께 되돌린다

@@ -316,6 +316,7 @@ struct MaterialLinksEditor: View {
         let exams = model.exams
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Space.l) {
+                if model.isLecture(materialId) { LectureProgressBlock(workspace: model.workspace, course: model.course.id, material: materialId) }
                 Block(String(localized: .materialsLinksSessions), note: String(localized: .materialsLinksSessionsNote)) {
                     Card {
                         if sessions.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .materialsLinksNoSessions)) } }
@@ -378,8 +379,7 @@ struct MaterialLinksEditor: View {
     }
 
     func pageField(_ prompt: String, _ value: Int?, set: @escaping (Int?) -> Void) -> some View {
-        TextField(prompt, value: Binding(get: { value }, set: { set($0.flatMap { $0 > 0 ? $0 : nil }) }), format: .number)
-            .pill(width: 64)
+        PageField(prompt: prompt, value: value, set: set)
     }
 }
 

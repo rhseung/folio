@@ -7865,6 +7865,72 @@
           }
         }
       }
+    },
+    "session.progress.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업의 렉처 진도 기록하기. 자료마다 이번 수업이 다룬 쪽을 회차에 연결한다"
+          }
+        }
+      }
+    },
+    "session.progress.discussion": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료마다 <자료>:<시작>-<끝>으로 쓴다. 한 쪽이면 <자료>:<쪽>. 적지 않은 자료의 연결은 그대로 둔다.\n\n예시:\n  folio session progress EC4207/9주차-1 05_Matchings.pdf:3-12\n  folio session progress EC4207/9주차-1 05_Matchings.pdf:18-24 --dry-run"
+          }
+        }
+      }
+    },
+    "session.progress.help.ranges": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료와 쪽. 예: 05_Matchings.pdf:3-12"
+          }
+        }
+      }
+    },
+    "session.progress.missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료와 쪽을 하나 이상 적어 주세요. 예: 05_Matchings.pdf:3-12"
+          }
+        }
+      }
+    },
+    "session.progress.format": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: <자료>:<시작>-<끝> 또는 <자료>:<쪽> 형식이어야 합니다"
+          }
+        }
+      }
+    },
+    "session.show.materials": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "  진도"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

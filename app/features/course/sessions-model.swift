@@ -228,6 +228,9 @@ final class SessionsModel {
 
     func playerTitle(_ session: Session, in file: CourseFile) -> String { "\(file.course.title) · \(file.title(of: session, calendar: calendar))" }
 
+    /// Only a class held, in a course with lecture files, has progress to record.
+    func offersProgress(_ session: Session, in file: CourseFile) -> Bool { !session.isCancelled && !file.lectureFiles.isEmpty }
+
     // MARK: A session's actions
 
     /// The menu every screen shows for a class; the page adds playing, editing and deleting to it.

@@ -244,6 +244,16 @@ struct RecordingPlayer: View {
             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.m) {
                 Text(line.text).foregroundStyle(playing || selected ? Theme.Palette.text : Theme.Palette.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
+                if let visit = model.page(at: index) {
+                    // The lecture opens in the window under the sheet, as the context's own link does.
+                    Button(model.pageLabel(visit)) {
+                        openLink(model.pageLink(visit), course: model.courseId)
+                        dismiss()
+                    }
+                    .font(Theme.Typeface.label).monospacedDigit().foregroundStyle(Theme.Palette.textTertiary)
+                    .buttonStyle(.pointing(.plain))
+                    .help(Text(model.pageHelp(visit)))
+                }
                 if bookmarked { Image(systemName: "bookmark.fill").font(Theme.Typeface.label).foregroundStyle(Theme.Palette.warning) }
             }
             .padding(.vertical, Theme.Inset.listRow.top)

@@ -131,6 +131,7 @@ struct RootView: View {
                 }
                 .toolbar { globalTools }
                 .environment(\.openLink, openLink)
+                .sessionProgressPrompt(workspace)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { windowWidth = $0 }
                 // A size up from the compact row's default: plain icons at its own size read too small.
                 .controlSize(.regular)

@@ -147,6 +147,26 @@ final class RecordingPlayerModel {
 
     var bookmarks: [TimeInterval] { recording.bookmarks.sorted() }
 
+    // MARK: Lecture pages
+
+    /// The lecture page on screen as line `index` began, where it differs from the line before's: on every line,
+    /// the same `p.12` down a whole slide's worth of sentences hid the turns. A search shows it on every line left.
+    func page(at index: Int) -> PageVisit? {
+        guard let lines = transcript?.lines, lines.indices.contains(index), let visit = listed.visit(at: lines[index].start) else { return nil }
+        if query.isEmpty, index > 0, let before = listed.visit(at: lines[index - 1].start),
+           before.materialId == visit.materialId, before.page == visit.page { return nil }
+        return visit
+    }
+
+    func pageLabel(_ visit: PageVisit) -> String { String(localized: .recordingLinePage(visit.page ?? 0)) }
+
+    func pageHelp(_ visit: PageVisit) -> String {
+        let name = courseFile?.materials.first { $0.id == visit.materialId }.map { ($0.path as NSString).lastPathComponent } ?? ""
+        return String(localized: .recordingLinePageHelp(name, visit.page ?? 0))
+    }
+
+    func pageLink(_ visit: PageVisit) -> AppLink { AppLink(.material, visit.materialId, anchor: visit.page.map { .page($0) }) }
+
     // MARK: Transcription context
 
     /// Made from the course as it is, terms read from the slides; only for a transcript that kept no context.

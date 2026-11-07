@@ -58,6 +58,23 @@ struct MaterialNoteStudyTests {
         }
     }
 
+    @Test func sessionProgress() throws {
+        try h.expectSame(["session", "progress", "EC4207/9주차-1", "05_Matchings.pdf:3-12", "Problems.pdf:7"], setup: [Self.track, SessionCommandTests.add]) { gist in
+            SessionProgress(course: course, session: SessionCommandTests.id, ranges: [
+                SessionMaterial(materialId: try material(gist, "05_Matchings.pdf"), firstPage: 3, lastPage: 12),
+                SessionMaterial(materialId: try material(gist, "Study/Problems.pdf"), firstPage: 7, lastPage: 7),
+            ])
+        }
+        let gist = try Harness.fixtureCopy()
+        for setup in [Self.track, SessionCommandTests.add] { _ = h.cli(setup, gist: gist) }
+        #expect(h.cli(["session", "progress", "EC4207/9주차-1", "05_Matchings.pdf"], gist: gist).code == Exit.usage.rawValue)
+        // A backward range is refused whole: the other file isn't written either.
+        #expect(h.cli(["session", "progress", "EC4207/9주차-1", "Problems.pdf:1-2", "05_Matchings.pdf:12-3"], gist: gist).code != 0)
+        #expect(try h.file(GISTStore(url: gist)).sessions.first { $0.id == SessionCommandTests.id }?.materials.isEmpty == true)
+        #expect(h.cli(["session", "progress", "EC4207/9주차-1", "05_Matchings.pdf:3-12"], gist: gist).code == 0)
+        #expect(h.cli(["session", "show", "EC4207/9주차-1"], gist: gist).out.contains("05_Matchings.pdf p.3-12"))
+    }
+
     @Test func linkUnit() throws {
         try h.expectSame(["material", "link-unit", "EC4207/05_Matchings.pdf", "매칭"], setup: [Self.track, Self.addUnit]) { gist in
             MaterialLinkUnit(course: course, material: try material(gist, "05_Matchings.pdf"), unit: Self.unit, linked: true)

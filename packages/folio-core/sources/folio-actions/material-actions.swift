@@ -67,6 +67,7 @@ public struct MaterialLinkUnit {
     }
 }
 
+
 /// The status comes before the materials on the command line, so the command is written by hand.
 @Action("material status", "자료의 상태 바꾸기. 여러 개면 확인을 받는다", confirm: "자료 {materials}의 상태를 {status}(으)로 바꿉니다.",
         done: "자료 {materials}을(를) {status}(으)로 바꿨습니다", phrases: ["자료 분류", "자료 무시"], cli: .manual)
