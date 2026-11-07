@@ -30,6 +30,10 @@ struct RootView: View {
     @State private var madeAt = Date.now
     @State private var host = WindowHost()
     @State private var row = ToolbarRow()
+    #if os(macOS)
+    /// `TitleRow.extra` for this window's toolbar.
+    @State private var titleExtra: CGFloat = 0
+    #endif
     #else
     @State private var windowWidth: CGFloat = 1200
     #endif
@@ -375,9 +379,17 @@ struct RootView: View {
                 .padding([.trailing, .bottom], Theme.Size.panelInset)
                 .padding(.leading, sidebarOpen ? 0 : Theme.Size.panelInset)
         }
-        .padding(.top, window.safeAreaInsets.top)
-        .ignoresSafeArea(.container, edges: .top)
+        .padding(.top, window.safeAreaInsets.top + TitleRow.extra(toolbar: window.safeAreaInsets.top))
+        // The band the 48pt row adds under the toolbar is still the row: it drags and zooms the window.
+        .overlay(alignment: .top) {
+            TitleDrag()
+                .frame(height: TitleRow.extra(toolbar: window.safeAreaInsets.top))
+                .padding(.top, window.safeAreaInsets.top)
         }
+        .ignoresSafeArea(.container, edges: .top)
+        .onChange(of: TitleRow.extra(toolbar: window.safeAreaInsets.top), initial: true) { _, extra in titleExtra = extra }
+        }
+        .background { TrafficLights(center: Theme.Size.toolbarRow / 2) }
         .background(Theme.Palette.frameTint.ignoresSafeArea())
         // Thinner in light: the regular material whitened the frame into milk over a light wallpaper. Not ultra-thin:
         // with the wallpaper showing through that clearly, the sidebar's text lost its contrast.
@@ -412,6 +424,9 @@ struct RootView: View {
                 }
                 TabBar(tabs: tabs, workspace: workspace, crumbs: crumbs, toolbar: row, moveToWindow: moveToWindow)
             }
+            // Down onto the 48pt row's middle (`TitleRow`): the compact toolbar centers the item, so padding its top by
+            // the row's extra moves the capsules down by half of it.
+            .padding(.top, titleExtra)
             .background { WindowOffset { x, _ in row.leadingX = x } }
         }
         .sharedBackgroundVisibility(.hidden)
@@ -423,6 +438,7 @@ struct RootView: View {
                 searchButton
                 tools
             }
+            .padding(.top, titleExtra)
             .onGeometryChange(for: CGFloat.self, of: \.size.width) { row.trailingWidth = $0 }
             .background { WindowOffset { row.placeTrailing($0, in: $1) } }
             #if DEBUG || RESIZE_PROBE

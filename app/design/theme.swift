@@ -174,6 +174,8 @@ enum Theme {
         static let rowHeight: CGFloat = 44
         static let tile: CGFloat = 22
         static let toolbarButton: CGFloat = 32
+        /// The window's top row on the Mac, which the toolbar's capsules sit in the middle of (`TitleRow`).
+        static let toolbarRow: CGFloat = 48
         /// The window's search field, after the tabs: wide enough for "검색 ⌘K", the tabs taking the row's room.
         static let searchField: CGFloat = 120
         /// The longest name on a tab behind the front one, which shows where it is in full.

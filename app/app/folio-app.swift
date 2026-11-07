@@ -39,11 +39,8 @@ struct FolioApp: App {
             WindowPlacement(.center, size: WindowSize.opening(in: context.defaultDisplay.visibleRect.size))
         }
         .defaultLaunchBehavior(Self.hostingTests ? .suppressed : .automatic)
-        // The full row (52pt), not the compact one (40pt): holding a tab's segments and the trail, the compact row left
-        // its 32pt capsules 4pt from the frame's edges and read cramped (#62). It centers the capsules and the traffic
-        // lights, 10pt from the frame's edge and from the panels. The row's height is the style's: taller items don't
-        // grow the compact row, they are clipped.
-        .windowToolbarStyle(.unified(showsTitle: false))
+        // The compact row (40pt), which `TitleRow` makes up to 48pt: neither style has the 48pt row (#62).
+        .windowToolbarStyle(.unifiedCompact(showsTitle: false))
         #endif
         .commands {
             SettingsCommands()

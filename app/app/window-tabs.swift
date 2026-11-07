@@ -830,7 +830,7 @@ private struct SegmentRule: View {
     }
 
     /// The sidebar button's place when the row hasn't said yet: after the window's buttons, measured.
-    static let leadingEstimate: CGFloat = 92
+    static let leadingEstimate: CGFloat = 84
     /// Between the items and after the last to the window's edge, measured in a window snapshot.
     static let toolbarGaps: CGFloat = 32
     /// The search field and five buttons, until the item is measured. Not zero: the tabs then took the whole row and
