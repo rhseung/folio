@@ -56,6 +56,14 @@ final class TextFileModel {
         }
     }
 
+    /// What `PaneMemory` keeps this file's view under: a `.tex` opens the way it was left, as a markdown note does.
+    var paneId: UUID? {
+        switch source {
+        case let .material(id): id
+        case let .note(note): note.meta.id
+        }
+    }
+
     var name: String { (path as NSString).lastPathComponent }
     var format: MaterialFormat { MaterialFormat(path: path) }
     var isTex: Bool { format == .tex }
