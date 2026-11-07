@@ -276,12 +276,14 @@ struct PaneMenu: View {
 /// The icon a place or a pane goes by: a course's mark in its color, else the line icon.
 struct PlaceIcon: View {
     let place: Crumb
+    /// In place of the course's color, for a mark that steps back (a tab segment out of focus).
+    var tint: Color?
 
     var body: some View {
         if let dot = place.dot {
-            CourseMark(icon: place.symbol, color: dot)
+            CourseMark(icon: place.symbol, color: tint ?? dot)
         } else {
-            LineIcon(symbol: place.symbol ?? "questionmark.folder").foregroundStyle(Theme.Palette.chromeIcon)
+            LineIcon(symbol: place.symbol ?? "questionmark.folder").foregroundStyle(tint ?? Theme.Palette.chromeIcon)
         }
     }
 }

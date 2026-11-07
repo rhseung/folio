@@ -419,15 +419,16 @@ struct TabBar: View {
         }
     }
 
-    /// The tab in front with several panes: a segment for each, the focused one raised in paper with the breadcrumb,
-    /// the others an icon and a short name (icons alone at `compact`); the close button at the end closes the tab.
+    /// The tab in front with several panes: a segment for each, the focused one the breadcrumb in full ink, the others
+    /// a gray icon and a dimmed short name (icons alone at `compact`); the close button at the end closes the tab.
     func joined(_ panes: TabPanes, crumbRoom: CGFloat, compact: Bool) -> some View {
         HStack(spacing: 0) {
             ForEach(Array(panes.ids.enumerated()), id: \.element) { i, _ in
                 if i > 0 { SegmentRule() }
                 TabSegment(mark: workspace.paneMark(of: panes.navigators[i].current, trail: panes.trails[i]),
                            crumbs: i == panes.focus ? crumbs : nil, crumbRoom: crumbRoom, iconOnly: compact,
-                           select: { panes.press(i) }, close: { panes.close(i) })
+                           playing: tabs.playingPanes.contains(panes.ids[i]),
+                           select: { panes.press(i) }, close: { panes.close(i) }, pause: { [tabs] in tabs.pause(pane: panes.ids[i]) })
                     .contextMenu { PaneMenu(panes: panes, index: i) { [tabs] navigator in tabs.open(navigator, fromLink: true) } }
             }
             if tabs.count > 1 { closeButton(tabs.selected).padding(.leading, Theme.Space.xxs) }
@@ -683,8 +684,11 @@ private struct TabSegment: View {
     let crumbs: [Crumb]?
     let crumbRoom: CGFloat
     let iconOnly: Bool
+    /// The pane plays a recording: its icon slot is a speaker that pauses it.
+    let playing: Bool
     let select: () -> Void
     let close: () -> Void
+    let pause: () -> Void
     @State private var hovering = false
 
     static let height = Theme.Size.toolbarButton - Theme.Space.s
@@ -692,20 +696,31 @@ private struct TabSegment: View {
 
     var body: some View {
         HStack(spacing: Theme.Space.xxs) {
+            // The focused segment is told by its ink alone, no capsule of its own: a capsule inside the tab's capsule
+            // inside the row made three boxes and left the inner one 3pt to spare (#62). Fading in place as the focus
+            // moves: the segments change their ink, they don't slide.
             if let crumbs {
-                Breadcrumb(crumbs: crumbs, foldWidth: crumbRoom, maxWidth: crumbRoom)
-            } else {
-                Button(action: select) {
-                    HStack(spacing: Theme.Space.tight) {
-                        PlaceIcon(place: mark)
-                        if !iconOnly { CappedWidth(width: Theme.Size.tabName) { Text(mark.title).lineLimit(1) } }
-                    }
-                    .contentShape(.capsule)
+                HStack(spacing: Theme.Space.s) {
+                    if playing { speakerButton.foregroundStyle(mark.dot ?? Theme.Palette.chromeSelected) }
+                    Breadcrumb(crumbs: crumbs, foldWidth: crumbRoom, maxWidth: crumbRoom)
                 }
-                .buttonStyle(.pointing(.plain))
-                .foregroundStyle(Theme.Palette.chromeText)
-                .help(mark.title)
-                .accessibilityLabel(mark.title)
+                .transition(.asymmetric(insertion: .opacity.animation(.snappy), removal: .identity))
+            } else {
+                HStack(spacing: Theme.Space.tight) {
+                    if playing { speakerButton }
+                    Button(action: select) {
+                        HStack(spacing: Theme.Space.tight) {
+                            if !playing { PlaceIcon(place: mark, tint: Theme.Palette.textSecondary) }
+                            if !iconOnly { CappedWidth(width: Theme.Size.tabName) { Text(mark.title).lineLimit(1) } }
+                        }
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.pointing(.plain))
+                    .help(mark.title)
+                    .accessibilityLabel(mark.title)
+                }
+                .foregroundStyle(Theme.Palette.textSecondary)
+                .transition(.asymmetric(insertion: .opacity.animation(.snappy), removal: .identity))
             }
             Button(action: close) {
                 Image(systemName: "xmark").font(Theme.Glyph.small)
@@ -720,15 +735,22 @@ private struct TabSegment: View {
             .accessibilityLabel(Text(.panesClose))
         }
         .font(Theme.Typeface.body)
-        .padding(.leading, crumbs == nil ? Theme.Space.s : Theme.Space.m)
+        .padding(.leading, Theme.Space.s)
         .padding(.trailing, Theme.Space.xs)
         .frame(height: Self.height)
-        .background {
-            if crumbs != nil {
-                Capsule().fill(Theme.Palette.page).overlay { Capsule().strokeBorder(Theme.Palette.line) }
-            }
-        }
+        .contentShape(.rect)
+        .onTapGesture(perform: select)
         .onHover { hovering = $0 }
+    }
+
+    /// Gray on a segment behind, in the course's color on the focused one, like the icon it stands in for.
+    var speakerButton: some View {
+        Button(action: pause) {
+            LineIcon(symbol: TabBar.speakerSymbol).contentShape(.rect)
+        }
+        .buttonStyle(.pointing(.plain))
+        .help(Text(.tabsPause))
+        .accessibilityLabel(Text(.tabsPause))
     }
 }
 
