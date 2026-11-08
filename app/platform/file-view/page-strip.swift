@@ -4,7 +4,8 @@ import SwiftUI
 /// A PDF's pages small, down the side of its file view. Pressing one goes to it. On a course's lecture file the pages
 /// fall into sections, one per class that went through them, each under a one-line header that folds it; a range
 /// picked on the plain pages (⇧-click on a Mac, a long press then taps on iPad) is saved as a class's progress from a
-/// row above it, and a header pressed changes that class's range the same way (#147).
+/// row above it, and a header pressed changes that class's range the same way (#147). The iPad also has a button over
+/// the pages that starts picking, since nothing shows that a long press does.
 ///
 /// Drawn here rather than with PDFKit's `PDFThumbnailView`, which picks no more than one page on iPad and takes nothing
 /// laid over or beside its pages.
@@ -25,18 +26,23 @@ struct PageStrip: View {
 
     var body: some View {
         let picks = model.picks
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(model.items) { item in
-                        PageStripItem(item: item, model: model, controller: controller, gutter: picks)
-                            .id(item.id)
+        VStack(spacing: 0) {
+            #if os(iOS)
+            if picks { PickBar(model: model) }
+            #endif
+            ScrollViewReader { proxy in
+                ScrollView {
+                    LazyVStack(alignment: .leading, spacing: 0) {
+                        ForEach(model.items) { item in
+                            PageStripItem(item: item, model: model, controller: controller, gutter: picks)
+                                .id(item.id)
+                        }
                     }
+                    .padding(.vertical, Theme.Space.s)
                 }
-                .padding(.vertical, Theme.Space.s)
+                .overflowFade(.vertical)
+                .onChange(of: controller.page, initial: true) { _, page in proxy.scrollTo(model.itemID(showing: page + 1)) }
             }
-            .overflowFade(.vertical)
-            .onChange(of: controller.page, initial: true) { _, page in proxy.scrollTo(model.itemID(showing: page + 1)) }
         }
         .animation(.snappy(duration: 0.2), value: model.items)
         .frame(width: picks ? Self.lectureColumn : Self.column)
@@ -102,13 +108,47 @@ private struct PageStripItem: View {
             case nil: EmptyView()
             }
             if let page = item.page {
-                StripPage(controller: controller, page: page, picked: item.mark == .picked, gutter: gutter, ranging: model.selection != nil,
+                StripPage(controller: controller, page: page, picked: item.mark == .picked, gutter: gutter, ranging: model.pickingShown,
                           press: { page, extend in extend ? model.extend(to: page) : model.press(page) },
                           start: { model.start(at: $0) })
             }
         }
     }
 }
+
+#if os(iOS)
+/// A touch screen's visible way into picking a range, over the pages: a long press does the same, but nothing says so
+/// there, and the Mac's ⇧-click has no finger to match. While it is on, a line says what the next tap does.
+private struct PickBar: View {
+    let model: PageStripModel
+    @Environment(\.accent) private var accent
+
+    var body: some View {
+        let on = model.pickingShown
+        VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+            Button { withAnimation(.snappy(duration: 0.2)) { model.togglePicking() } } label: {
+                Label(String(localized: .fileViewProgressPick), systemImage: "rectangle.stack.badge.plus")
+                    .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    .padding(.horizontal, Theme.Space.s)
+                    .background(on ? accent.tint : .clear, in: .rect(cornerRadius: Theme.Radius.control))
+                    .contentShape(.rect)
+            }
+            .buttonStyle(.ghost)
+            .tint(accent.ink)
+            .accessibilityAddTraits(on ? .isSelected : [])
+            if on {
+                Text(model.selection == nil ? .fileViewProgressPickFirst : .fileViewProgressPickEnd)
+                    .font(Theme.Typeface.caption)
+                    .foregroundStyle(Theme.Palette.textSecondary)
+                    .padding(.horizontal, Theme.Space.s)
+                    .transition(.opacity)
+            }
+        }
+        .padding(.horizontal, Theme.Space.s)
+        .padding(.top, Theme.Space.s)
+    }
+}
+#endif
 
 /// The row a range is saved from: above a new range, which class it was; in place of a section's header, its range
 /// changed. Saving is `material link`, the same action as the wrap-up's.

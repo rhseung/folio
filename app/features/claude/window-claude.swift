@@ -62,8 +62,16 @@ struct WindowClaude: View {
         }
     }
 
+    /// The panel's leading edge. A finger needs 44pt, which stands mostly outside the panel so its first words and
+    /// field still take a press.
     var resizeHandle: some View {
-        Color.clear.frame(width: Theme.Space.s).contentShape(.rect)
+        #if os(iOS)
+        let reach: CGFloat = 44, inside = Theme.Space.s
+        #else
+        let reach = Theme.Space.s, inside = Theme.Space.s
+        #endif
+        return Color.clear.frame(width: reach).contentShape(.rect)
+            .offset(x: inside - reach)
             #if os(macOS)
             .pointerStyle(.columnResize)
             #endif

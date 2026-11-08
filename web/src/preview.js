@@ -50,6 +50,23 @@ export function preview({ typeset, redraw }) {
     });
   }, true);
 
+  // A long press on a touch screen selects the words under the finger and opens the edit menu, which the app gives
+  // the same heading and block links as the pointer's menu: the edit menu is asked for the selection, not a point,
+  // so the page says where the selection starts whenever that changes.
+  let selected = null;
+  document.addEventListener("selectionchange", () => {
+    const node = document.getSelection()?.anchorNode;
+    const el = node?.nodeType === Node.ELEMENT_NODE ? node : node?.parentElement;
+    const at = (selector) => el?.closest?.(selector);
+    const own = el && !at(".embed, .ref-popover");
+    const heading = own ? at("h1, h2, h3, h4, h5, h6")?.textContent ?? null : null;
+    const block = el ? at("[id^='^']")?.id.slice(1) ?? null : null;
+    const key = JSON.stringify([heading, block]);
+    if (key === selected) return;
+    selected = key;
+    post({ type: "selection", heading, block });
+  });
+
   // A block reference shows the block it names while the pointer rests on it. The renderer puts the block in a
   // template right after the link; the card stays while the pointer moves onto it, so its links can be clicked.
   let card = null, cardFor = null, showing = 0, hiding = 0;

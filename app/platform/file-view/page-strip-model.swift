@@ -33,6 +33,9 @@ final class PageStripModel {
     private(set) var selection: ClosedRange<Int>?
     /// The class whose pages are being changed, from its section's header.
     private(set) var editing: UUID?
+    /// Picking turned on from the strip's button, a touch screen's way in that it can see: the next tap starts a range
+    /// as a long press does.
+    private(set) var picking = false
     /// The class menu of a new range is open.
     var choosing = false
     var chosen: UUID?
@@ -131,6 +134,7 @@ final class PageStripModel {
     /// stops at another class's pages, which a range never shares (`Session.progressOverlap`).
     func extend(to page: Int) {
         guard picks else { return }
+        if picking, selection == nil { return start(at: page) }
         if editing != nil, let selection {
             guard let room = PageRange.room(at: selection.lowerBound, besides: taken, pages: pageCount) else { return }
             let wanted = page >= selection.lowerBound ? selection.lowerBound...page : page...selection.upperBound
@@ -168,7 +172,18 @@ final class PageStripModel {
         selection = nil
         editing = nil
         choosing = false
+        picking = false
     }
+
+    /// The strip's button: on, the next tap starts a range; on again while a range is up, it is let go.
+    func togglePicking() {
+        if picking || selection != nil { return clear() }
+        anchor = nil
+        picking = true
+    }
+
+    /// Picking from the button, or a range up from a long press or a header: what the button shows as on.
+    var pickingShown: Bool { picking || selection != nil }
 
     private func clamp(_ pages: ClosedRange<Int>, to room: ClosedRange<Int>) -> ClosedRange<Int> {
         max(pages.lowerBound, room.lowerBound)...min(pages.upperBound, room.upperBound)

@@ -147,6 +147,24 @@ struct PageStripModelTests {
         #expect(model.selection == nil)
     }
 
+    /// iPad: the strip's button turns picking on, so the next tap starts a range as a long press does, on a section's
+    /// page changing that class's range; pressed again, it lets the range go.
+    @Test func theButtonStartsPickingATapBegins() {
+        link(earlier, 5...8)
+        let model = model()
+        model.togglePicking()
+        #expect(model.pickingShown && model.selection == nil)
+        model.extend(to: 12)
+        #expect(model.selection == 12...12 && model.editing == nil)
+        model.extend(to: 14)
+        #expect(model.selection == 12...14)
+        model.togglePicking()
+        #expect(!model.pickingShown && model.selection == nil)
+        model.togglePicking()
+        model.extend(to: 6)
+        #expect(model.editing == earlier && model.selection == 5...8)
+    }
+
     /// The candidates are the classes held so far with no pages of this file, latest first, today's picked. Saving
     /// writes the range as that class's pages, and the row becomes its section, open.
     @Test func savingWritesTheRangeToTheChosenClass() {

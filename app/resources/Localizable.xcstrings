@@ -19064,6 +19064,28 @@
         }
       }
     },
+    "design.page-range.seen-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음하는 동안 본 쪽 %1$lld–%2$lld"
+          }
+        }
+      }
+    },
+    "design.page-range.seen-apply": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 구간으로 맞추기"
+          }
+        }
+      }
+    },
     "design.page-range.seen-help": {
       "extractionState": "manual",
       "localizations": {
@@ -19577,6 +19599,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "눌러서 이 쪽으로 가고, ⇧-클릭하면 앞서 누른 쪽부터 여기까지 고릅니다"
+          }
+        }
+      }
+    },
+    "file-view.progress.pick": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "진도 고르기"
+          }
+        }
+      }
+    },
+    "file-view.progress.pick-first": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첫 쪽을 누르면 시작합니다"
+          }
+        }
+      }
+    },
+    "file-view.progress.pick-end": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쪽을 누르면 끝을 옮깁니다"
           }
         }
       }
