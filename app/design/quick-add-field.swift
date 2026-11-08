@@ -58,7 +58,6 @@ struct QuickAddField: View {
     }
 
     private let font = Theme.Typeface.bodyLarge
-    /// The + gets a fixed slot so the chips can start under the typed words by padding alone.
     private let plusWidth: CGFloat = 16
 
     var body: some View {
@@ -109,10 +108,11 @@ struct QuickAddField: View {
             .floatingGlass()
             let chips = model.chips
             if !chips.isEmpty {
+                // From the field's own left edge and across its whole width: indented under the typed words, the
+                // row read as cut in and wrapped a chip early.
                 FlowLayout(spacing: Theme.Space.s, centered: true) {
                     ForEach(chips, id: \.self) { chip in QuickAddChip(model: model, chip: chip) }
                 }
-                .padding(.leading, Theme.Inset.panel + plusWidth + Theme.Space.m)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
