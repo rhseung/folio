@@ -79,25 +79,6 @@ struct ColumnDivider: View {
 extension EnvironmentValues {
     /// Set by the screen fit check only: pages that would clip what doesn't fit them push their window out instead.
     @Entry var revealsOverflow = false
-    /// How far from the pane's trailing edge the tab's Claude button reaches over its bottom; zero in a pane it isn't over.
-    @Entry var claudeButtonRoom: CGFloat = 0
-}
-
-extension View {
-    /// For actions along a pane's bottom edge, `inset` in from its trailing end: they stop short of the Claude button,
-    /// on its line, instead of lying under it. The button floats over the panes and takes no room of its own.
-    func clearOfClaudeButton(inset: CGFloat) -> some View { modifier(ClearOfClaudeButton(inset: inset)) }
-}
-
-private struct ClearOfClaudeButton: ViewModifier {
-    let inset: CGFloat
-    @Environment(\.claudeButtonRoom) private var room
-
-    func body(content: Content) -> some View {
-        content
-            .padding(.trailing, max(room - inset, 0))
-            .frame(minHeight: room > 0 ? Theme.Size.fab : nil)
-    }
 }
 
 /// One step of the window's breadcrumb. A step with an action goes back to it; the last step is where the window is,

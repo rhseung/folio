@@ -80,7 +80,7 @@ enum FormSnapshots {
         if let document = PDFDocument(data: SampleLecture.data()) {
             let split = LectureSplit(file: file, material: slides.id, pageCount: document.pageCount)
             forms.append(("lecture-split", AnyView(LectureSplitPane(controller: PDFController(document: document, page: 8), split: .constant(split),
-                                                                     units: file.units, note: String(localized: .fileViewSplitFound), save: {}, cancel: {})
+                                                                     units: file.units, note: nil, save: {}, cancel: {})
                     .frame(width: 1180, height: 720).background(Theme.Palette.card).environment(\.accent, accent))))
         }
         if let session = file.sessions.first(where: { file.splitProgress(of: $0) != nil }) {

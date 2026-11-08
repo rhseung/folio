@@ -4995,6 +4995,17 @@
         }
       }
     },
+    "file-view.split-apply": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "적용"
+          }
+        }
+      }
+    },
     "file-view.split-cut-help": {
       "extractionState": "manual",
       "localizations": {
@@ -5006,24 +5017,13 @@
         }
       }
     },
-    "file-view.split-found": {
+    "file-view.split-edit-help": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "목차와 슬라이드 제목에서 찾은 구간입니다. 고친 뒤 저장하세요"
-          }
-        }
-      }
-    },
-    "file-view.split-from-claude": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claude가 제안한 구간입니다. 고친 뒤 저장하세요"
+            "value": "눌러서 이 구역의 쪽을 고치고, ⇧-클릭으로 끝 쪽을 옮깁니다"
           }
         }
       }
@@ -5045,7 +5045,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "목차와 슬라이드 제목을 찾지 못했습니다. 썸네일 사이를 눌러 나누세요"
+            "value": "목차와 슬라이드 제목을 찾지 못했습니다"
           }
         }
       }

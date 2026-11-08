@@ -47,19 +47,11 @@ struct PaneRow: View {
         panes.count > 1 ? panes.layout.folded(open: open[min(panes.count, 3) - 2]) : []
     }
 
-    /// The open pane at the row's trailing end, which the Claude button lies over, while there is a button.
-    func underClaude(folded: Set<Int>) -> Int? {
-        guard WindowClaude.target(panes: panes, folded: folded, workspace: workspace) != nil else { return nil }
-        return panes.ids.indices.last { !folded.contains($0) }
-    }
-
     var body: some View {
         let folded = folded
-        let underClaude = underClaude(folded: folded)
         PaneStack(layout: panes.layout, shares: panes.shares, folded: folded) {
             ForEach(Array(panes.ids.enumerated()), id: \.element) { i, id in
                 pane(i, id: id, folded: folded.contains(i))
-                    .environment(\.claudeButtonRoom, i == underClaude ? WindowClaude.buttonRoom : 0)
                 if i + 1 < panes.count {
                     divider(after: i, folded: folded)
                 }

@@ -111,9 +111,10 @@ final class FileViewModel {
         // Left alone while it was read: a cut made meanwhile is the user's and stays.
         guard let current = splitting, current.sections.count == 1, current.sections[0].unit == nil else { return }
         switch found {
-        case .found(let split, let source):
+        case .found(let split, _):
+            // Found sections need no line saying so: each row's ✦ marks what was matched, and its tooltip says how.
             splitting = split
-            splitNote = String(localized: source == .claude ? .fileViewSplitFromClaude : .fileViewSplitFound)
+            splitNote = nil
         case .nothing, .unreadable:
             splitNote = String(localized: .fileViewSplitNothing)
         }

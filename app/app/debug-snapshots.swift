@@ -41,6 +41,10 @@ final class SnapshotDriver {
     /// The moment the strip walk is drawn at (`2026-11-04T10:00:00+09:00`), so today's class is the one a fixture's
     /// copy was given.
     static let stripNow = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP_NOW"].flatMap { try? Date($0, strategy: .iso8601) }
+    /// Only the split screen of a split lecture (#321): as it opens, then with a section's pages being changed from
+    /// the thumbnails, as `split-*.png`. Set to `section-page` (`1-9`): the section whose header is pressed and the
+    /// page ⇧-clicked after.
+    static let split = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_SPLIT"]
 
     var section: CourseSection?
     /// Inside the units section: `detail` opens the first unit, `review` also opens its review sheet.
@@ -64,6 +68,13 @@ final class SnapshotDriver {
     var columnOpen = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_COLUMN"] == "open"
     /// What the open PDF's page strip does next, as a click on it would.
     var strip: StripStep?
+    /// The split screen's section to take up from its header and the page its edge goes to, as clicks would.
+    var splitEdit: SplitEdit?
+
+    struct SplitEdit: Equatable {
+        let section: Int
+        let page: Int
+    }
 
     enum StripStep: Equatable {
         case page(Int)
@@ -238,6 +249,36 @@ final class SnapshotDriver {
             await shot(name)
         }
         strip = nil
+        NSApp.terminate(nil)
+    }
+
+    /// The split walk (`FOLIO_SNAPSHOT_SPLIT`): opens `lecture`'s split screen, then changes a section from its header.
+    func runSplit(open: (AppLink) -> Void, lecture: AppLink, ask: () -> Void) async {
+        guard let directory = Self.directory else { return }
+        // folio:not-an-action debug screenshots, outside the GIST folder
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        if let window = NSApp.windows.first(where: { $0.isVisible }) {
+            window.setContentSize(NSSize(width: Self.width, height: 900))
+            window.center()
+        }
+        let bounds = (Self.split ?? "").split(separator: "-").compactMap { Int($0) }
+        let edit = bounds.count == 2 ? SplitEdit(section: bounds[0], page: bounds[1]) : SplitEdit(section: 1, page: 9)
+        open(lecture)
+        try? await Task.sleep(for: .seconds(3))
+        ask()
+        func shot(_ name: String) async {
+            capture(to: directory.appending(path: "\(name).png"), popovers: true)
+            guard ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP_SCREEN"] != nil else { return }
+            // folio:not-an-action debug screenshots, outside the GIST folder
+            try? Data().write(to: directory.appending(path: "\(name).ready"))
+            try? await Task.sleep(for: .seconds(3))
+        }
+        try? await Task.sleep(for: .seconds(3))
+        await shot("split-idle")
+        splitEdit = edit
+        try? await Task.sleep(for: .seconds(2))
+        await shot("split-edit")
+        splitEdit = nil
         NSApp.terminate(nil)
     }
 
