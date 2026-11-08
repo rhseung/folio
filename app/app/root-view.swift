@@ -100,9 +100,7 @@ struct RootView: View {
     /// For one pane's screen: kept alive behind the front tab, or beside the focused pane, it must still move its own
     /// pane.
     func openLink(from pane: Navigator) -> OpenLinkAction {
-        OpenLinkAction { link, placement, course in open(link, in: placement, course: course, from: pane) } upHandler: { link in
-            if let entry = workspace.entry(for: link) { pane.up(to: entry) }
-        }
+        OpenLinkAction { link, placement, course in open(link, in: placement, course: course, from: pane) }
     }
 
     #if os(macOS)
@@ -232,6 +230,14 @@ struct RootView: View {
                                          paused: SnapshotDriver.recordingPaused, level: SnapshotDriver.recordingLevel)
             }
             let ids = workspace.currentCourses.map(\.id)
+            // The first lecture file some class names pages of.
+            if SnapshotDriver.strip != nil, let lecture = workspace.currentCourses.lazy.compactMap({ c in
+                c.file.lectureFiles.first { m in c.file.sessions.contains { $0.materials.contains { $0.materialId == m.id && $0.pages != nil } } }
+            }).first {
+                if let now = SnapshotDriver.stripNow { workspace.pinnedNow = now }
+                await SnapshotDriver.shared.runStrip(open: { open($0) }, lecture: AppLink(.material, lecture.id))
+                return
+            }
             if SnapshotDriver.tabs > 1 {
                 // Tabs of every kind behind the first, which the walk below then moves through.
                 let notes = workspace.currentCourses.compactMap { c in c.file.notes.first.map { AppLink(.note, $0.id) } }

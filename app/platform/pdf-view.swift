@@ -13,6 +13,7 @@ final class PDFController {
     private(set) var matches: [PDFSelection] = []
     private(set) var matchIndex = 0
     @ObservationIgnored private var observer: (any NSObjectProtocol)?
+    @ObservationIgnored lazy var thumbnails = PageThumbnails(url: view.document?.documentURL)
     #if os(macOS)
     @ObservationIgnored private var lightBackground: NSColor?
     @ObservationIgnored private var commandClick: CommandClick?
@@ -193,21 +194,6 @@ struct PDFKitView {
     let controller: PDFController
 }
 
-struct PDFThumbnails {
-    let controller: PDFController
-
-    @MainActor func make() -> PDFThumbnailView {
-        let thumbnails = PDFThumbnailView()
-        thumbnails.pdfView = controller.view
-        thumbnails.thumbnailSize = CGSize(width: 96, height: 128)
-        thumbnails.backgroundColor = .clear
-        #if os(iOS)
-        thumbnails.layoutMode = .vertical
-        #endif
-        return thumbnails
-    }
-}
-
 #if os(macOS)
 extension PDFKitView: NSViewRepresentable {
     func makeNSView(context: Context) -> PDFView {
@@ -217,11 +203,6 @@ extension PDFKitView: NSViewRepresentable {
     }
     func updateNSView(_ view: PDFView, context: Context) {}
 }
-
-extension PDFThumbnails: NSViewRepresentable {
-    func makeNSView(context: Context) -> PDFThumbnailView { make() }
-    func updateNSView(_ view: PDFThumbnailView, context: Context) {}
-}
 #else
 extension PDFKitView: UIViewRepresentable {
     func makeUIView(context: Context) -> PDFView {
@@ -230,10 +211,5 @@ extension PDFKitView: UIViewRepresentable {
         return controller.view
     }
     func updateUIView(_ view: PDFView, context: Context) {}
-}
-
-extension PDFThumbnails: UIViewRepresentable {
-    func makeUIView(context: Context) -> PDFThumbnailView { make() }
-    func updateUIView(_ view: PDFThumbnailView, context: Context) {}
 }
 #endif

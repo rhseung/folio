@@ -1,6 +1,6 @@
 # Folio
 
-과목을 중심으로 강의 자료, 노트, 손필기, 복습, 퀴즈, 과제, 성적을 관리하는 macOS와 iPadOS용 네이티브 앱입니다. 무엇을 만들지와 남은 일은 GitHub 이슈와 [Project](https://github.com/users/rhseung/projects/10)에 있습니다. 이 파일에는 어떻게 만들지에 대한 규칙을 적습니다. 작업을 시작하기 전에 해당 이슈와 그 상위 이슈를 먼저 읽습니다.
+과목을 중심으로 강의 자료, 노트, 손필기, 복습, 퀴즈, 과제, 성적을 관리하는 Apple 기기용 네이티브 앱입니다. 무엇을 만들지와 남은 일은 GitHub 이슈와 [Project](https://github.com/users/rhseung/projects/10)에 있습니다. 이 파일에는 어떻게 만들지에 대한 규칙을 적습니다. 작업을 시작하기 전에 해당 이슈와 그 상위 이슈를 먼저 읽습니다.
 
 ## 소통 규칙
 
@@ -272,7 +272,7 @@ Me/GIST/
 - 시험 일정: `import exams <exams.json>`. `exams.json`은 구글 캘린더 "시험" 캘린더에서 읽은 `CalendarExam` 목록이며 저장소에 넣지 않는다. 같은 날 시험은 빈 칸만 채우고, 다른 날이면 바꾸지 않고 알린다
 - 단원: `import units <units.json>...`. 과목마다 `{"course": <과목 폴더 이름>, "units": [{"title", "sessions": ["11-03"], "children"}]}`. 제목으로 맞춰 없는 단원만 더하고 회차 연결은 더하기만 한다
 - 예전 녹음 이름: `recording retitle [<과목>]`. 회차에 연결된 녹음 중 파일 이름이 `3주차-1.m4a`인 것만 수업 날짜(`11-03(화).m4a`)로 바꾸고 받아쓰기도 함께 옮긴다. 이동은 `moves.jsonl`의 한 묶음이고 `cleanup undo`가 파일과 `course.json`의 녹음 경로를 함께 되돌린다. 실제 GIST 폴더에는 사용자 승인 뒤에만 돌린다
-- 렉처 진도: `session progress <과목>/<회차> <자료>:<시작>-<끝>...`. 적은 자료의 쪽을 한 번에 회차에 연결하고 나머지 연결은 그대로 둔다. 앱은 녹음을 멈출 때 수업 정리 시트에서 지난 수업이 끝난 다음 쪽부터 녹음 중 본 가장 뒤 쪽까지로 미리 채워 묻는다(`CourseFile.suggestedProgress`). 녹음이 끝나도 앱은 본 쪽을 회차에 저절로 연결하지 않는다. 그 시트가 회차 진도를 쓰는 유일한 곳이라, 저장하지 않고 닫으면 진도는 비고 본 쪽은 녹음(`recordings[].pages`)에만 남아 나중에 회차 메뉴로 다시 열 때 같은 값으로 채운다. `session link-viewed`는 CLI와 MCP용으로 남는다. 자료 연결 팝오버에서 렉처를 회차에 새로 연결해도 같은 규칙으로 시작 쪽을 채운다(`CourseFile.suggestedLink`).
+- 렉처 진도: `session progress <과목>/<회차> <자료>:<시작>-<끝>...`. 적은 자료의 쪽을 한 번에 회차에 연결하고 나머지 연결은 그대로 둔다. 앱은 녹음을 멈출 때 수업 정리 시트에서 지난 수업이 끝난 다음 쪽부터 녹음 중 본 가장 뒤 쪽까지로 미리 채워 묻는다(`CourseFile.suggestedProgress`). 녹음이 끝나도 앱은 본 쪽을 회차에 저절로 연결하지 않는다. 그 시트가 회차 진도를 쓰는 유일한 곳이라, 저장하지 않고 닫으면 진도는 비고 본 쪽은 녹음(`recordings[].pages`)에만 남아 나중에 회차 메뉴로 다시 열 때 같은 값으로 채운다. `session link-viewed`는 CLI와 MCP용으로 남는다. 자료 연결 팝오버에서 렉처를 회차에 새로 연결해도 같은 규칙으로 시작 쪽을 채운다(`CourseFile.suggestedLink`). 렉처 PDF의 쪽 열에서 쪽을 골라 저장하거나 회차 구획의 범위를 고쳐도 같은 액션(`material link`의 `MaterialLinkSession`)으로 회차 진도를 쓴다. 렉처 파일의 한 쪽은 한 회차의 진도라, 휴강하지 않은 두 회차의 범위가 겹치는 저장은 모델 규칙(`Session.progressOverlap`)이 막는다. 그래서 쪽 열은 회차마다 한 구획(`CourseFile.progressSections`)으로 나뉘고, 제안(`suggestedProgress`, `suggestedLink`)과 `session link-viewed`도 다른 회차가 가진 쪽을 빼고 채운다.
 - 수업 정리: `session wrap-up <과목>/<회차> [<자료>:<시작>-<끝>...] [--unit <단원>...] [--attendance <출결>]`. 진도, 단원, 출결을 한 번에 쓰고 회차에 정리했다고 남긴다. 주지 않은 것은 그대로 둔다. 앱은 녹음을 멈출 때, 오늘 화면의 "수업 정리" 카드(수업이 끝난 뒤 같은 과목의 다음 수업 전까지, 빠진 것이 있는 회차), 회차 메뉴에서 같은 시트를 연다. 이번 학기 과목의 "수업" 페이지는 지난 공부일의 정리하지 않은 수업을 알림 카드로 모아 차례로 연다. 빠진 것과 그 기간의 규칙은 `CourseFile.wrapUpGaps`, `classesToWrapUp`, `unwrappedPastSessions`이다
 - 시험 범위: `exam scope <과목>/<시험> --taught`. 그 시험 전에 지난 회차에 연결된 단원(과 상위 단원)을 범위에 더한다. 빼지는 않는다
 - 졸업 요건과 학생 정보: `import requirements <requirements.json>`. 학사편람 분류 표: `import handbook <handbook.json> [--accept]`. 두 파일 모두 실제 학업 데이터라 저장소에 넣지 않는다
@@ -306,6 +306,7 @@ Me/GIST/
     - 그림은 본문에 바로 보이게 넣는다. 브랜치에 `pr-renders/<이슈>/`로 커밋하고 `<img src="https://raw.githubusercontent.com/rhseung/folio/<커밋>/pr-renders/…" width="…">`처럼 커밋 해시로 가리킨 뒤, 머지 전에 그 폴더를 브랜치에서 지운다. 디자인이 바뀌면 이전과 이후를 나란히 두고, 라이트·다크와 바뀐 폭을 함께 보인다. 그림마다 무엇을 보면 되는지 한 줄을 붙인다.
 - 무엇을 보여 줄지, 언제 막을지, 날짜와 개수를 어떻게 셀지 같은 규칙을 뷰나 모델에 다시 적지 않았는지 본다. 규칙은 `FolioDomain`에 두고 `swift test`로 검사한다.
 - `#if os(macOS)`나 `#if os(iOS)` 안에 넣은 기능에 다른 플랫폼 쪽(`#else`)이 있는지 본다. 없다면 그 플랫폼에 필요 없는 이유가 분명해야 한다. `mise run build-ipad`도 돌린다.
+- 더하거나 바꾼 화면 요소를 포인터와 터치 둘 다로 쓸 수 있는지 본다. 마우스 올림, 도움말, 두 번 클릭, 수식 키 클릭, 오른쪽 클릭, 키보드만으로 되는 일이 없고, 터치 표적이 44pt 이상이어야 한다(`docs/DESIGN.md` "입력 기기").
 - 날짜가 공부일(`Settings.studyDay`, 하루 경계 새벽 4시)인지 달력 날짜인지 구분한다. 오늘 할 일, 마감까지 남은 날, 복습 날짜는 공부일로 센다. 경계 직전과 직후를 테스트한다.
 - 테스트와 미리보기가 실제 `Application Support` 폴더나 GIST 폴더를 읽거나 쓰지 않는지 본다.
 - 동작이나 규칙이 바뀌었으면 이 파일, `docs/DESIGN.md`, 해당 이슈 본문을 같은 PR에서 고친다.
