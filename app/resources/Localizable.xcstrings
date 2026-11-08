@@ -19306,6 +19306,17 @@
         }
       }
     },
+    "panes.even": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "칸 폭 맞추기"
+          }
+        }
+      }
+    },
     "panes.expand": {
       "extractionState": "manual",
       "localizations": {

@@ -48,6 +48,7 @@ struct FolioApp: App {
             SettingsCommands()
             NavigationCommands()
             ColumnCommands()
+            PaneCommands()
             #if os(macOS)
             TabCommands()
             #endif
@@ -64,6 +65,19 @@ private struct SettingsCommands: Commands {
             Button(.appSettingsMenu) { showSettings?(nil) }
                 .keyboardShortcut(",")
                 .disabled(showSettings == nil)
+        }
+    }
+}
+
+/// 보기 › 칸 폭 맞추기, as a divider's double click (Mac) or long press (iPad) does (2026-11-08 사용자). No key yet:
+/// keys come with the table of them (#116).
+private struct PaneCommands: Commands {
+    @FocusedValue(\.frontPanes) private var panes
+
+    var body: some Commands {
+        CommandGroup(after: .sidebar) {
+            Button(.panesEven) { panes?.evenOut() }
+                .disabled((panes?.count ?? 0) < 2)
         }
     }
 }

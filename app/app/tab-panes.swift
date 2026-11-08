@@ -105,7 +105,7 @@ final class TabPanes {
         publish()
     }
 
-    /// A double click on a divider: every pane as wide as the others.
+    /// 칸 폭 맞추기: every pane as wide as the others (`evenOut` moves them there).
     func even() {
         layout.even()
         publish()

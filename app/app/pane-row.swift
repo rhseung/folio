@@ -132,14 +132,15 @@ struct PaneRow: View {
     /// Dragged, it moves the boundary between the two panes beside it; not beside a strip, which has no width to give.
     func divider(after d: Int, folded: Set<Int>) -> some View {
         let enabled = !folded.contains(d) && !folded.contains(d + 1)
-        return PaneDivider(enabled: enabled, front: front) {
-            withAnimation(reduceMotion ? nil : .smooth(duration: 0.34)) { panes.even() }
-        }
+        return PaneDivider(enabled: enabled, front: front, even: panes.evenOut)
             #if os(macOS) && (DEBUG || RESIZE_PROBE)
             .background { if front && d == 0 { ResizeMarker(name: "divider") } }
             #endif
-            // The panes' own menus, for the two either side: nothing is laid over a pane to hold them.
+            // The panes' own menus, for the two either side: nothing is laid over a pane to hold them. On the iPad a long
+            // press is how the panes are evened: a double tap on so thin a target was hard to hit and to find.
             .contextMenu {
+                Button(.panesEven, systemImage: "rectangle.split.3x1", action: panes.evenOut)
+                Divider()
                 ForEach([d, d + 1], id: \.self) { i in
                     Menu(workspace.paneMark(of: panes.navigators[i].current, trail: panes.trails[i]).title) {
                         PaneMenu(panes: panes, index: i, newTab: newTab)
@@ -275,7 +276,7 @@ private struct PaneScreen: View {
 }
 
 /// The gap between two panes, which takes a drag a little past its edges: at its own width it was hard to catch.
-/// Clicked twice, it evens the panes.
+/// Clicked twice on the Mac, it evens the panes.
 private struct PaneDivider: View {
     let enabled: Bool
     /// In the tab in front: one behind sees no clicks.
@@ -294,7 +295,7 @@ private struct PaneDivider: View {
             .accessibilityHidden(true)
         #else
         Theme.Palette.line
-            .overlay { Color.clear.frame(width: Theme.Space.l).contentShape(.rect).onTapGesture(count: 2, perform: even) }
+            .overlay { Color.clear.frame(width: Theme.Space.l).contentShape(.rect) }
             .accessibilityHidden(true)
         #endif
     }
@@ -405,6 +406,19 @@ extension Workspace {
         let steps = if case .course = Screen(entry) { trail?.crumbs ?? [] } else { [Crumb]() }
         let symbol = steps.last { $0.symbol != nil }?.symbol ?? place.symbol
         return Crumb(title: tabTitle(of: entry) ?? place.title, symbol: symbol, dot: place.dot)
+    }
+}
+
+extension TabPanes {
+    /// 칸 폭 맞추기, from a divider or the 보기 menu: every pane as wide as the others, moving there unless the system
+    /// asks for less motion. Read from the system, not the environment: the menu bar's commands have none.
+    func evenOut() {
+        #if os(macOS)
+        let reduced = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        #else
+        let reduced = UIAccessibility.isReduceMotionEnabled
+        #endif
+        withAnimation(reduced ? nil : .smooth(duration: 0.34)) { even() }
     }
 }
 

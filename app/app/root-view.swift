@@ -182,6 +182,7 @@ struct RootView: View {
                 .focusedSceneValue(\.showSettings) { showSettings($0) }
                 .focusedSceneValue(\.navigator, navigator)
                 .focusedSceneValue(\.columnCommand, tabs.trail(tabs.selected)?.column)
+                .focusedSceneValue(\.frontPanes, tabs.front)
                 .onAppear { MemoryPressure.start() }
                 .onReceive(MemoryPressure.publisher) { _ in tabs.dropBackground() }
                 // Minute by minute, for the screens that have waited behind too long.
