@@ -195,6 +195,9 @@ struct SheetForm<Rows: View>: View {
     var cancel: String?
     /// Where a run through several sheets is, at the title's trailing end.
     var step: String?
+    /// False for a sheet whose rows write as they change (a file's links): nothing is left to cancel, so the one button
+    /// closes it and Esc does the same.
+    var cancellable = true
     @ViewBuilder var rows: Rows
     let onConfirm: () -> Void
 
@@ -215,10 +218,13 @@ struct SheetForm<Rows: View>: View {
                     Button(deleteTitle, role: .destructive, action: onDelete).buttonStyle(.pointing(.bordered)).foregroundStyle(Theme.Palette.danger)
                 }
                 Spacer()
-                Button(cancel ?? String(localized: .commonCancel)) { dismiss() }.keyboardShortcut(.cancelAction)
+                if cancellable { Button(cancel ?? String(localized: .commonCancel)) { dismiss() }.keyboardShortcut(.cancelAction) }
                 Button(confirm, action: onConfirm).buttonStyle(.prominent).keyboardShortcut(.defaultAction).disabled(disabled)
             }
         }
+        #if os(macOS)
+        .onExitCommand(perform: cancellable ? nil : onConfirm)
+        #endif
         .padding(Theme.Space.xl)
         .frame(width: width)
         .background(Theme.Palette.page)

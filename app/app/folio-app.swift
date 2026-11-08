@@ -24,7 +24,9 @@ struct FolioApp: App {
         WindowGroup(id: Self.mainWindow, for: WindowRequest.self) { $request in
             RootView(request: request)
                 #if os(macOS)
-                .frame(minWidth: Theme.Size.windowMin.width, minHeight: Theme.Size.windowMin.height)
+                // Bounded both ways, so the window's least size is this frame's own: with only a least size the
+                // hosting view measured the whole window's content for it on every layout of a resize or a drag (#62).
+                .frame(minWidth: Theme.Size.windowMin.width, maxWidth: .infinity, minHeight: Theme.Size.windowMin.height, maxHeight: .infinity)
                 #endif
                 .appServices()
                 .followsAppearance()
@@ -46,6 +48,7 @@ struct FolioApp: App {
             SettingsCommands()
             NavigationCommands()
             ColumnCommands()
+            PaneCommands()
             #if os(macOS)
             TabCommands()
             #endif
@@ -62,6 +65,21 @@ private struct SettingsCommands: Commands {
             Button(.appSettingsMenu) { showSettings?(nil) }
                 .keyboardShortcut(",")
                 .disabled(showSettings == nil)
+        }
+    }
+}
+
+/// 보기 › 칸 폭 맞추기, as a divider's double click (Mac) or long press (iPad) does, and 칸 접기 for the focused pane,
+/// as its menu does (2026-11-08 사용자). No keys yet: keys come with the table of them (#116).
+private struct PaneCommands: Commands {
+    @FocusedValue(\.frontPanes) private var panes
+
+    var body: some Commands {
+        CommandGroup(after: .sidebar) {
+            Button(.panesEven) { panes?.even() }
+                .disabled((panes?.count ?? 0) < 2)
+            Button(.panesCollapse) { if let panes { panes.collapse(panes.focus) } }
+                .disabled(!(panes.map { $0.canCollapse($0.focus) } ?? false))
         }
     }
 }

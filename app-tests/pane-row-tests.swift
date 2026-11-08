@@ -31,9 +31,11 @@ struct PaneRowTests {
         host.layoutSubtreeIfNeeded()
     }
 
-    /// The panes left to right, by the press probe each lies over.
+    /// The panes left to right, by the press probe each lies over (the dividers' take double clicks).
     var probes: [PanePress.Probe] {
-        func find(_ view: NSView) -> [PanePress.Probe] { ((view as? PanePress.Probe).map { [$0] } ?? []) + view.subviews.flatMap(find) }
+        func find(_ view: NSView) -> [PanePress.Probe] {
+            ((view as? PanePress.Probe).flatMap { $0.clicks == 1 ? [$0] : nil } ?? []) + view.subviews.flatMap(find)
+        }
         return find(host).sorted { $0.convert(NSPoint.zero, to: nil).x < $1.convert(NSPoint.zero, to: nil).x }
     }
 
@@ -73,6 +75,67 @@ struct PaneRowTests {
         panes.press(0)
         try await settle(1)
         #expect(widths[2] == Theme.Size.paneStrip && widths[0] >= Theme.Size.paneMin)
+    }
+
+    @Test func aDragMovesThePanelsAndTellsTheTabOnDrop() async throws {
+        let panes = try #require(tabs.front)
+        panes.openBeside(Navigator.Entry(link: .place(.people)))
+        try await settle()
+        let start = widths
+        // What the divider's gesture calls, by how far it went: off screen and never key, the window can't take a press.
+        let drag = try #require(PaneDragHook.shared.row)
+        drag.dragged(0, by: 100, folded: [])
+        try await settle(0.05)
+        #expect(abs(widths[0] - (start[0] + 100)) <= 1 && abs(widths[1] - (start[1] - 100)) <= 1)
+        // The tab hears nothing until the drop.
+        #expect(panes.shares == [0.5, 0.5])
+        drag.dropped()
+        try await settle()
+        #expect(abs(panes.shares[0] - (start[0] + 100) / (start[0] + start[1])) < 1e-6)
+        #expect(abs(widths[0] - (start[0] + 100)) <= 1)
+        // A second drop, as when the gesture ends and its state resets, changes nothing.
+        drag.dropped()
+        #expect(abs(panes.shares[0] - (start[0] + 100) / (start[0] + start[1])) < 1e-6)
+    }
+
+    @Test func aDoubleClickOnADividerEvensThePanes() async throws {
+        let panes = try #require(tabs.front)
+        panes.openBeside(Navigator.Entry(link: .place(.people)))
+        panes.openBeside(Navigator.Entry(link: .place(.codes)))
+        panes.resize(divider: 0, to: 0.3)
+        try await settle()
+        let left = probes[0].convert(NSPoint(x: probes[0].bounds.maxX, y: probes[0].bounds.midY), to: nil)
+        // Past the gap, in the margin either side that catches the pointer too.
+        let at = NSPoint(x: left.x + PaneRow.gap + 2, y: left.y)
+        for clicks in 1...2 {
+            for type in [NSEvent.EventType.leftMouseDown, .leftMouseUp] {
+                let event = try #require(NSEvent.mouseEvent(with: type, location: at, modifierFlags: [], timestamp: 0, windowNumber: window.windowNumber,
+                                                            context: nil, eventNumber: 0, clickCount: clicks, pressure: type == .leftMouseUp ? 0 : 1))
+                if type == .leftMouseUp { NSApp.postEvent(event, atStart: false) } else { NSApp.sendEvent(event) }
+            }
+        }
+        try await settle(1)
+        #expect(panes.shares.allSatisfy { abs($0 - 1.0 / 3) < 1e-9 })
+        let widths = widths
+        // Each rounded to the screen's pixels.
+        #expect(widths.allSatisfy { abs($0 - widths[0]) <= 1 })
+    }
+
+    @Test func aPaneFoldedByHandStaysAStripAsTheWindowWidens() async throws {
+        let panes = try #require(tabs.front)
+        panes.openBeside(Navigator.Entry(link: .place(.people)))
+        try await settle()
+        panes.collapse(1)
+        try await settle(1)
+        // The other pane takes what the strip leaves.
+        #expect(widths[1] == Theme.Size.paneStrip && abs(widths[0] - (1200 - Theme.Size.paneStrip - PaneRow.gap)) <= 1)
+        window.setContentSize(NSSize(width: 1600, height: 800))
+        try await settle()
+        #expect(widths[1] == Theme.Size.paneStrip)
+        // Pressing the strip opens it at its share again.
+        panes.press(1)
+        try await settle(1)
+        #expect(widths.allSatisfy { abs($0 - widths[0]) <= 1 })
     }
 
     @Test func aLonePaneTakesTheWholeRow() async throws {

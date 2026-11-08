@@ -56,6 +56,8 @@ final class SnapshotDriver {
     var openFile: String?
     /// Set by the materials page when it found a file for `openFile`.
     var materialsOpenFile = false
+    /// Opens the links sheet of a lecture file on the materials page, as its row's menu would.
+    var linkFile = false
     /// Asks Claude about the open PDF's page, as its button would.
     var askPage = false
     /// The view an open `.tex` switches to, as its bar's switch would.
@@ -155,6 +157,13 @@ final class SnapshotDriver {
                 openFile = nil
                 try? await Task.sleep(for: .seconds(0.5))
             }
+            linkFile = true
+            try? await Task.sleep(for: .seconds(2))
+            capture(to: directory.appending(path: "course-materials-links.png"))
+            if Self.holdSteps.contains("course-materials-links") { try? await Task.sleep(for: .seconds(6)) }
+            // An open sheet keeps the app from terminating.
+            linkFile = false
+            try? await Task.sleep(for: .seconds(1))
             searchQuery = ""
             try? await Task.sleep(for: .seconds(1))
             capture(to: directory.appending(path: "search-empty.png"))

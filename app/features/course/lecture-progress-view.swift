@@ -5,7 +5,7 @@ import SwiftUI
 struct LectureProgressBlock: View {
     @State private var model: LectureProgressModel
     @Environment(\.openLink) private var openLink
-    /// Closes the popover this sits in, so the class opened isn't left under it.
+    /// Closes the sheet this sits in, so the class opened isn't left under it.
     let close: () -> Void
 
     init(workspace: Workspace, course: UUID, material: UUID, close: @escaping () -> Void = {}) {

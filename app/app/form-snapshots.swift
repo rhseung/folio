@@ -86,6 +86,8 @@ enum FormSnapshots {
         if let session = file.sessions.first(where: { file.splitProgress(of: $0) != nil }) {
             forms.append(("class-wrap-up", AnyView(ClassWrapUpSheet(workspace: workspace, course: course.id, session: session.id))))
         }
+        forms.append(("material-links", AnyView(MaterialLinksEditor(model: MaterialsModel(workspace: workspace, course: course), materialId: slides.id)
+            .courseAccent(accent))))
         return forms
     }
 
