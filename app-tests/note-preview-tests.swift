@@ -276,6 +276,24 @@ struct NotePreviewTests {
         #expect(rig.page.menuAnchor == .block("proof"))
     }
 
+    /// The selection says where it starts: on a touch screen a long press selects, and the edit menu links to that
+    /// heading or block.
+    @Test func theSelectionKnowsItsHeadingAndBlock() async throws {
+        let rig = PreviewRig("# Matchings\n\nKept ^proof\n\nPlain")
+        defer { rig.close() }
+        await rig.settle()
+        func select(_ selector: String) async throws {
+            _ = try await rig.js("getSelection().selectAllChildren([...document.querySelectorAll(s)].at(-1))", ["s": selector])
+            try? await Task.sleep(for: .milliseconds(150))
+        }
+        try await select("h1")
+        #expect(rig.page.selectionAnchor == .heading("Matchings"))
+        try await select("[id='^proof']")
+        #expect(rig.page.selectionAnchor == .block("proof"))
+        try await select("p")
+        #expect(rig.page.selectionAnchor == nil)
+    }
+
     /// Opened at a heading, the page shows the heading at its top.
     @Test func aLinkToAHeadingScrollsToIt() async throws {
         let filler = (1...60).map { "Paragraph \($0)" }.joined(separator: "\n\n")

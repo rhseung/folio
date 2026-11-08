@@ -112,6 +112,9 @@ extension NotePreview: UIViewRepresentable {
     /// heading or block, which they link to.
     fileprivate(set) var menuHref: String?
     fileprivate(set) var menuAnchor: AppLink.Anchor?
+    /// The heading or block the text selection starts in: on a touch screen a long press selects, and the edit menu it
+    /// opens links to them as the pointer's menu does.
+    fileprivate(set) var selectionAnchor: AppLink.Anchor?
     private var revealed: AppLink.Anchor?
     private var revealing: AppLink.Anchor?
     var edit: (@MainActor (Int, Int, String, String) -> Bool)?
@@ -164,6 +167,7 @@ extension NotePreview: UIViewRepresentable {
         openLink = OpenLinkAction()
         menuHref = nil
         menuAnchor = nil
+        selectionAnchor = nil
         noteLink = nil
         embeds = nil
         revealed = nil
@@ -342,10 +346,12 @@ extension NotePreview: UIViewRepresentable {
             guard let body = message.body as? [String: Any], message.frameInfo.isMainFrame else { return }
             // Boxes carry their line in the note's body, below any frontmatter.
             if body["type"] as? String == "task", let line = body["line"] as? Int, let page { page.tick(line: page.offset + line) }
+            let anchor = (body["block"] as? String).map(AppLink.Anchor.block) ?? (body["heading"] as? String).map(AppLink.Anchor.heading)
             if body["type"] as? String == "menu" {
                 page?.menuHref = body["href"] as? String
-                page?.menuAnchor = (body["block"] as? String).map(AppLink.Anchor.block) ?? (body["heading"] as? String).map(AppLink.Anchor.heading)
+                page?.menuAnchor = anchor
             }
+            if body["type"] as? String == "selection" { page?.selectionAnchor = anchor }
         }
     }
 
@@ -466,6 +472,23 @@ final class PreviewWebView: WKWebView {
     var toggleMode: (@MainActor () -> Void)?
     /// For tests, which find the view in SwiftUI's and reach the page through it.
     weak var page: NotePreviewPage?
+
+    /// A long press on a heading or block selects its words rather than opening a context menu (WebKit asks its
+    /// delegate for one only on links and pictures), so the link to it goes first in the edit menu that opens, as the
+    /// Mac's right-click menu has it.
+    override func buildMenu(with builder: any UIMenuBuilder) {
+        super.buildMenu(with: builder)
+        guard builder.system == .context, let action = Self.anchorAction(page) else { return }
+        builder.insertChild(UIMenu(options: .displayInline, children: [action]), atStartOfMenu: .root)
+    }
+
+    static func anchorAction(_ page: NotePreviewPage?) -> UIAction? {
+        guard let note = page?.noteLink, let anchor = page?.selectionAnchor, note.with(anchor) != note else { return nil }
+        let link = note.with(anchor)
+        return UIAction(title: String(localized: anchor.isBlock ? .linkCopyBlock : .linkCopyHeading), image: UIImage(systemName: "link")) { _ in
+            copyLink(link)
+        }
+    }
 }
 
 extension NotePreviewPage: WKUIDelegate {
