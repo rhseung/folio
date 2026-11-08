@@ -53,6 +53,13 @@ struct DateArg: ExpressibleByArgument {
     static var defaultCompletionKind: CompletionKind { .default }
 }
 
+/// JSON when it reads as JSON, otherwise the word as a string: `300`, `"[1, 3]"`, `asciimath`.
+extension JSONValue: ExpressibleByArgument {
+    public init?(argument: String) {
+        self = (try? JSONDecoder().decode(JSONValue.self, from: Data(argument.utf8))) ?? .string(argument)
+    }
+}
+
 extension LocalDate: ExpressibleByArgument {
     public init?(argument: String) { self.init(argument) }
 }

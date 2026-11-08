@@ -6,7 +6,7 @@ import Foundation
 struct AssignmentCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "assignment", abstract: String(localized: .assignmentAbstract),
-        subcommands: [List.self, Show.self, Set.self] + GeneratedCommands.assignment)
+        subcommands: [List.self, Show.self] + GeneratedCommands.assignment)
 
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .assignmentListAbstract), discussion: String(localized: .assignmentListDiscussion))
@@ -65,64 +65,6 @@ struct AssignmentCommand: ParsableCommand {
                     say("    \(comp)  \(GradesLock.masked("\(s.score.formatted())/\(s.max.formatted())"))")
                 }
             }
-        }
-    }
-
-    struct Set: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .assignmentSetAbstract), discussion: String(localized: .assignmentSetDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .assignmentSetHelpAssignment), valueName: "assignment"), completion: Complete.assignments) var assignment: String = ""
-        @Option(help: ArgumentHelp(String(localized: .assignmentSetHelpTitle), valueName: "title")) var title: String?
-        @Option(help: ArgumentHelp(String(localized: .assignmentSetHelpDue), valueName: "when")) var due: Clearable<DateArg>?
-        @Option(help: ArgumentHelp(String(localized: .commonHelpStatus))) var status: AssignmentStatus?
-        @Option(help: ArgumentHelp(String(localized: .assignmentSetHelpRepeats))) var repeats: Clearable<AssignmentRepeat>?
-        @Option(help: ArgumentHelp(String(localized: .assignmentSetHelpComponent), valueName: "item")) var component: Clearable<String>?
-        @Option(help: ArgumentHelp(String(localized: .assignmentSetHelpGroup), valueName: "group")) var group: Clearable<String>?
-        @Option(help: ArgumentHelp(String(localized: .assignmentSetHelpScore), valueName: "score")) var score: [String] = []
-        @Option(help: ArgumentHelp(String(localized: .commonHelpMemo), valueName: "memo")) var memo: String?
-
-        func run() throws {
-            guard component == nil || group == nil else { throw CLIError(exit: .usage, message: String(localized: .assignmentSetComponentOrGroup)) }
-            let ctx = try CLI.context(g)
-            let r = Resolver(ctx)
-            let (c, name) = try r.split(assignment)
-            let a = try r.assignment(name, in: c)
-            let f = c.file
-            var componentId = a.componentId, componentGroup = a.componentGroup
-            if let component { componentId = try component.value.map { try r.component($0, in: c).id }; componentGroup = nil }
-            if let group {
-                guard group.value.map({ g in f.components.contains { $0.group == g } }) ?? true else {
-                    throw CLIError(exit: .notFound, message: String(localized: .assignmentSetGroupNotFound(group.value ?? "")),
-                                   candidates: Array(Swift.Set(f.components.compactMap(\.group))).sorted())
-                }
-                (componentGroup, componentId) = (group.value, group.value == nil ? componentId : nil)
-            }
-            // Like the sheet, the old target's components go along with the new ones, so retargeting drops the old
-            // target's scores; scores elsewhere (moved on the grades page) are left alone.
-            func components(group: String?, id: UUID?) -> [UUID] {
-                group.map { g in f.components.filter { $0.group == g }.map(\.id) } ?? id.map { [$0] } ?? []
-            }
-            let covered = components(group: componentGroup, id: componentId)
-            let shown = covered + components(group: a.componentGroup, id: a.componentId).filter { !covered.contains($0) }
-            var scores = f.scores.filter { $0.assignmentId == a.id && covered.contains($0.componentId) }
-                .map { AssignmentSave.Score(component: $0.componentId, score: $0.score, max: $0.max) }
-            if score == ["none"] { scores = [] }
-            for s in score where s != "none" {
-                let (target, value) = s.firstIndex(of: ":").map { (String(s[..<$0]), String(s[s.index(after: $0)...])) } ?? (nil, s)
-                let parts = value.split(separator: "/").compactMap { Double($0) }
-                guard parts.count == 2 else { throw CLIError(exit: .usage, message: String(localized: .assignmentSetScoreFormat(s))) }
-                let id: UUID
-                if let target { id = try r.component(target, in: c).id } else if covered.count == 1 { id = covered[0] } else {
-                    throw CLIError(exit: .usage, message: covered.isEmpty ? String(localized: .assignmentSetNoComponent) : String(localized: .assignmentSetGroupScoreFormat))
-                }
-                guard covered.contains(id) else { throw CLIError(exit: .rule, message: String(localized: .assignmentSetNotCovered(target ?? ""))) }
-                scores.removeAll { $0.component == id }
-                scores.append(AssignmentSave.Score(component: id, score: parts[0], max: parts[1]))
-            }
-            try perform(spec: AssignmentSave(course: c.id, assignment: a.id, title: title ?? a.title, due: due.map(\.value?.date) ?? a.due, status: status ?? a.status,
-                                       repeats: repeats.map(\.value) ?? a.repeats, componentId: componentId, componentGroup: componentGroup, memo: memo ?? a.memo,
-                                       components: shown, scores: scores),
-                        g, ctx: ctx)
         }
     }
 }

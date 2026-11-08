@@ -17,16 +17,14 @@ struct WriteCommandTests {
     @Test func policyCapsCutoffsAndClearing() throws {
         try h.expectSame(["component", "policy", "EC4207", "--cap", "6:A+", "--cutoff", "A+:95", "--lates-per-absence", "none"],
                          setup: [["catalog", "set", "--file", try grades.catalogFile()], ["component", "policy", "EC4207", "--lates-per-absence", "3"]]) { _ in
-            var p = GradePolicy()
-            p.attendanceCap = [AttendanceCap(absences: 6, maxGrade: G.grade)]
-            p.cutoffs = [GradeCutoff(grade: G.grade, minScore: 95)]
-            return PolicySet(course: gt, policy: p)
+            PolicySet(course: gt, latesPerAbsence: .set(nil), attendanceCap: .set([AttendanceCap(absences: 6, maxGrade: G.grade)]),
+                      cutoffs: .set([GradeCutoff(grade: G.grade, minScore: 95)]))
         }
     }
 
     @Test func requirementPrograms() throws {
         try h.expectSame(["requirement", "set", "--program", "major:EC"], setup: [["catalog", "set", "--file", try grades.catalogFile()]]) { _ in
-            GraduationSet(rule: GraduationRule(programs: [StudentProgram(codeId: G.code, kind: .major)]))
+            GraduationSet(programs: .set([StudentProgram(codeId: G.code, kind: .major)]))
         }
         let gist = try Harness.fixtureCopy()
         #expect(h.cli(["requirement", "set", "--program", "major"], gist: gist).code == 2)
@@ -39,6 +37,10 @@ struct WriteCommandTests {
     }
 
     @Test func settingsField() throws {
+        try h.expectSame(["settings", "set", "review.intervals", "[1, 2, 4]"]) { _ in
+            SettingsSet(field: "review.intervals", value: .array([1.0, 2, 4].map { .number($0) }))
+        }
+        // The whole file, as the app's settings screen sends it, writes the same.
         try h.expectSame(["settings", "set", "review.intervals", "[1, 2, 4]"]) { gist in
             var s = try ActionContext(gist: gist, device: h.device).settings()
             s.review.intervals = [1, 2, 4]
@@ -47,6 +49,30 @@ struct WriteCommandTests {
         let gist = try Harness.fixtureCopy()
         #expect(h.cli(["settings", "set", "review.intervalz", "[1]"], gist: gist).code == 2)
         #expect(h.cli(["settings", "set", "dayBoundaryMinutes", "새벽"], gist: gist).code == 2)
+    }
+
+    /// One setting changed by its key path leaves every other setting, including one changed just before.
+    @Test func settingsFieldKeepsTheOthers() throws {
+        let gist = try Harness.fixtureCopy()
+        #expect(h.cli(["settings", "set", "dayBoundaryMinutes", "300"], gist: gist).code == 0)
+        #expect(h.cli(["run", "settings", "set", "--input", #"{"field":"classMinutes","value":80}"#], gist: gist).code == 0)
+        let s = try ActionContext(gist: GISTStore(url: gist), device: h.device).settings()
+        #expect(s.dayBoundaryMinutes == 300 && s.classMinutes == 80 && s.review == Settings().review)
+        #expect(h.cli(["settings", "set", "classMinutes"], gist: gist).code == 2)
+        let file = FileManager.default.temporaryDirectory.appending(path: "settings-\(UUID()).json")
+        try JSONEncoder.folio.encode(Settings()).write(to: file)
+        #expect(h.cli(["settings", "set", "classMinutes", "80", "--file", file.path], gist: gist).code == 2)
+    }
+
+    @Test func policyFieldKeepsTheOthers() throws {
+        let gist = try Harness.fixtureCopy()
+        for line in [["catalog", "set", "--file", try grades.catalogFile()], ["component", "policy", "EC4207", "--cap", "6:A+", "--notes", "원문"],
+                     ["component", "policy", "EC4207", "--lates-per-absence", "3"]] {
+            #expect(h.cli(line, gist: gist).code == 0, "\(line)")
+        }
+        let p = try ActionContext(gist: GISTStore(url: gist), device: h.device).file(gt).policy
+        #expect(p.attendanceCap == [AttendanceCap(absences: 6, maxGrade: G.grade)] && p.notes == "원문" && p.latesPerAbsence == 3)
+        #expect(h.cli(["component", "policy", "EC4207"], gist: gist).code == 2)
     }
 
     @Test func sidebarCourseOrder() throws {
@@ -61,8 +87,7 @@ struct WriteCommandTests {
     @Test func assignmentScoreAndClearedDue() throws {
         try h.expectSame(["assignment", "set", "EC4207/HW 3", "--component", "과제", "--score", "9/10", "--due", "none"],
                          setup: [G.addComponent, U.addHW]) { _ in
-            AssignmentSave(course: gt, assignment: U.hw, title: "HW 3", due: nil, status: .todo, repeats: nil, componentId: G.component,
-                           componentGroup: nil, memo: "", components: [G.component], scores: [.init(component: G.component, score: 9, max: 10)])
+            AssignmentSave(course: gt, assignment: U.hw, due: .set(nil), componentId: .set(G.component), scores: .set([.init(component: nil, score: 9, max: 10)]))
         }
     }
 
@@ -71,9 +96,8 @@ struct WriteCommandTests {
         let report = ["component", "add", "EC4207", "고찰", "--weight", "10", "--group", "실험", "--id", G.quiz.uuidString]
         try h.expectSame(["assignment", "set", "EC4207/HW 3", "--group", "실험", "--score", "재료:8/10", "--repeats", "weekly"],
                          setup: [lab, report, U.addHW]) { _ in
-            AssignmentSave(course: gt, assignment: U.hw, title: "HW 3", due: U().date("2026-11-04 23:59"), status: .todo, repeats: .weekly,
-                           componentId: nil, componentGroup: "실험", memo: "", components: [G.component, G.quiz],
-                           scores: [.init(component: G.component, score: 8, max: 10)])
+            AssignmentSave(course: gt, assignment: U.hw, repeats: .set(.weekly), componentGroup: .set("실험"),
+                           scores: .set([.init(component: G.component, score: 8, max: 10)]))
         }
         let gist = try Harness.fixtureCopy()
         for line in [lab, report, U.addHW] { _ = h.cli(line, gist: gist) }

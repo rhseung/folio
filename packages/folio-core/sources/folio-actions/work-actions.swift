@@ -234,31 +234,43 @@ public struct AssignmentAdd {
 }
 
 /// Everything the assignment sheet edits, with its scores: one per component it counts toward.
-@Action("assignment set", "과제의 제목, 마감, 상태, 성적 항목, 메모 바꾸기. 준 것만 바뀐다", done: "과제 '{assignment}'을(를) 바꿨습니다",
-        phrases: ["미뤄졌", "연기", "마감일", "마감 변경", "기한 연장", "과제 메모", "과제 이름"],
-        cli: .manual(reason: "준 것만 바꾸도록 지금 과제 값으로 빈 칸을 채우고, --score <항목>:<점수>/<만점>을 과제가 들어가는 성적 항목에 맞춰 읽는다. 액션은 앱 시트처럼 전체 값을 받는다"))
+@Action("assignment set", "과제의 제목, 마감, 상태, 성적 항목, 메모 바꾸기. 준 것만 바뀐다", discussion: """
+        성적 항목이나 묶음을 바꾸면 이전 항목에 매긴 점수는 지워진다. 점수를 주면 상태는 graded가 된다.
+        값을 지우려면 none을 준다.
+        """,
+        done: "과제 '{assignment}'을(를) 바꿨습니다", examples: [#"folio assignment set EC4207/HW3 --due "2026-11-06 23:59""#, #"folio assignment set EC4207/HW3 --component 과제 --memo "3번 질문함""#,
+                   "folio assignment set EC4207/HW3 --component 과제 --score 9/10", "folio assignment set EC4207/HW3 --due none --repeats weekly --dry-run"],
+        phrases: ["미뤄졌", "연기", "마감일", "마감 변경", "기한 연장", "과제 메모", "과제 이름"])
 public struct AssignmentSave {
     public struct Score: Codable, Sendable, Equatable {
-        public var component: UUID
+        /// Nil for the one component the assignment counts toward.
+        public var component: UUID?
         public var score: Double
         public var max: Double
-        public init(component: UUID, score: Double, max: Double) {
+        public init(component: UUID?, score: Double, max: Double) {
             (self.component, self.score, self.max) = (component, score, max)
         }
     }
+    /// 과목
     @Arg var course: Course.ID
+    /// 과제
     @Arg var assignment: Assignment.ID
-    var title: String
-    var due: Date?
-    var status: AssignmentStatus
-    var repeats: AssignmentRepeat?
-    var componentId: GradeComponent.ID?
-    var componentGroup: String?
-    var memo: String
-    /// The components the sheet showed fields for. A score of the assignment in one of them that `scores` leaves out
-    /// is removed; scores in other components, such as one moved on the grades page, are left as they are.
-    var components: [GradeComponent.ID]
-    var scores: [Score]
+    /// 새 제목
+    var title: Patch<String>
+    /// 마감 일시
+    var due: Patch<Date?>
+    /// 상태
+    var status: Patch<AssignmentStatus>
+    /// 반복
+    var repeats: Patch<AssignmentRepeat?>
+    /// 반영되는 성적 항목. 주면 묶음은 풀린다
+    @CLIName("component") var componentId: Patch<GradeComponent.ID?>
+    /// 한꺼번에 점수를 매기는 성적 항목 묶음. 주면 성적 항목 하나는 풀린다
+    @CLIName("group") var componentGroup: Patch<String?>
+    /// 메모
+    var memo: Patch<String>
+    /// 과제가 반영되는 성적 항목마다의 점수. 적지 않은 항목의 점수는 지운다
+    @CLIName("score") @Parsed("score", "9/10. 묶음이면 <항목>:9/10") var scores: Patch<[Score]>
 
     // A weekly series shares one title, so each score is told apart by its date.
     static func scoreTitle(_ title: String, repeats: AssignmentRepeat?, due: Date?) -> String {
@@ -266,23 +278,52 @@ public struct AssignmentSave {
     }
 
     public func run(_ ctx: ActionContext) throws {
-        guard !title.isEmpty else { throw ActionError.rule(String(localized: .errorAssignmentTitleEmpty)) }
-        guard scores.allSatisfy({ $0.max > 0 }) else { throw ActionError.rule(String(localized: .errorAssignmentMaxScore)) }
+        if case .set(_?) = componentId, case .set(_?) = componentGroup {
+            throw ActionError.input(String(localized: .errorAssignmentComponentOrGroup))
+        }
+        if title.value?.isEmpty == true { throw ActionError.rule(String(localized: .errorAssignmentTitleEmpty)) }
+        guard (scores.value ?? []).allSatisfy({ $0.max > 0 }) else { throw ActionError.rule(String(localized: .errorAssignmentMaxScore)) }
         let end = try repeatEnd(ctx, course: course)
-        let entryTitle = Self.scoreTitle(title, repeats: repeats, due: due)
         try ctx.edit(course) { f in
             let i = try index(assignment, in: f.assignments, .valueAssignment)
             let old = f.assignments[i]
+            var a = old
+            title.apply(&a.title)
+            due.apply(&a.due)
+            repeats.apply(&a.repeats)
+            memo.apply(&a.memo)
+            // A component and a group are two ways to say where the assignment counts, so giving one drops the other.
+            if case .set(let id) = componentId { (a.componentId, a.componentGroup) = (id, nil) }
+            if case .set(let g) = componentGroup { (a.componentId, a.componentGroup) = (g == nil ? a.componentId : nil, g) }
+            if let g = a.componentGroup, g != old.componentGroup, !f.components.contains(where: { $0.group == g }) {
+                throw ActionError.notFound(String(localized: .errorAssignmentGroupNotFound(g)))
+            }
+            func covered(_ group: String?, _ id: UUID?) -> [UUID] {
+                group.map { g in f.components.filter { $0.group == g }.map(\.id) } ?? id.map { [$0] } ?? []
+            }
+            let own = f.scores.filter { $0.assignmentId == assignment }
+            let target = covered(a.componentGroup, a.componentId)
+            // What the sheet showed before: with no target it shows the component of the first score. A score there
+            // that the new target leaves out goes; one moved elsewhere on the grades page stays.
+            let shown = target + covered(old.componentGroup, old.componentId ?? own.first?.componentId).filter { !target.contains($0) }
+            let given: [(component: UUID, score: Double, max: Double)] = try scores.value.map { list in
+                try list.map { s in
+                    guard let id = s.component ?? (target.count == 1 ? target[0] : nil) else {
+                        throw ActionError.input(String(localized: target.isEmpty ? .errorAssignmentNoComponent : .errorAssignmentGroupScoreFormat))
+                    }
+                    guard target.contains(id) else {
+                        throw ActionError.rule(String(localized: .errorAssignmentNotCovered(f.components.first { $0.id == id }?.name ?? id.uuidString)))
+                    }
+                    return (id, s.score, s.max)
+                }
+            } ?? own.filter { target.contains($0.componentId) }.map { ($0.componentId, $0.score, $0.max) }
+
+            let entryTitle = Self.scoreTitle(a.title, repeats: a.repeats, due: a.due)
             let oldTitle = Self.scoreTitle(old.title, repeats: old.repeats, due: old.due)
-            f.assignments[i].title = title
-            f.assignments[i].due = due
-            f.assignments[i].repeats = repeats
-            f.assignments[i].componentId = componentId
-            f.assignments[i].componentGroup = componentGroup
-            f.assignments[i].memo = memo
-            f.assignments[i].touch(by: ctx.device, at: ctx.now)
+            a.touch(by: ctx.device, at: ctx.now)
+            f.assignments[i] = a
             var kept = Set<UUID>()
-            for s in scores where components.contains(s.component) {
+            for s in given {
                 kept.insert(s.component)
                 if let j = f.scores.firstIndex(where: { $0.assignmentId == assignment && $0.componentId == s.component }) {
                     // The title follows the assignment until it is named on the grades page.
@@ -296,8 +337,8 @@ public struct AssignmentSave {
                     f.scores.append(entry)
                 }
             }
-            f.scores.removeAll { $0.assignmentId == assignment && components.contains($0.componentId) && !kept.contains($0.componentId) }
-            f.assignments[i].status = status
+            f.scores.removeAll { $0.assignmentId == assignment && shown.contains($0.componentId) && !kept.contains($0.componentId) }
+            status.apply(&f.assignments[i].status)
             f.markGraded(assignment, device: ctx.device, now: ctx.now)
             f.continueRepeating(assignment, until: end, calendar: ctx.calendar, device: ctx.device, now: ctx.now)
         }
@@ -569,17 +610,40 @@ public struct ComponentMove {
 }
 
 /// Attendance caps, minimum attendance, late rule, top-grade share and the syllabus's own words.
-@Action("component policy", "성적 규칙 바꾸기", done: "성적 규칙을 바꿨습니다",
-        cli: .manual(reason: "준 것만 바꾸도록 지금 성적 규칙을 읽어 고치고, --cap <결석>:<등급>과 --cutoff <등급>:<점수>를 읽는다. 액션은 규칙 전체를 받는다"))
+@Action("component policy", "성적 규칙 바꾸기. 준 것만 바꾼다", discussion: "값을 지우려면 none을 준다. --cap과 --cutoff는 주면 기존 목록을 바꾸고, none이면 비운다.",
+        done: "성적 규칙을 바꿨습니다", examples: ["folio component policy EC4207 --min-attendance-ratio 0.75 --lates-per-absence 3",
+                   #"folio component policy EC4207 --notes "Quiz 최저 점수 1회 제외""#,
+                   "folio component policy EC4207 --cap 6:B0 --cap 9:F",
+                   "folio component policy EC4207 --cutoff A+:95 --cutoff A0:90 --top-grade-ratio none --dry-run"])
 public struct PolicySet {
+    /// 과목
     @Arg var course: Course.ID
-    /// 성적 규칙 전체
-    var policy: GradePolicy
+    /// 최소 출석 비율. 0.75
+    var minAttendanceRatio: Patch<Double?>
+    /// 지각 규칙 설명
+    var latePolicy: Patch<String?>
+    /// 지각 몇 번이 결석 한 번인지
+    var latesPerAbsence: Patch<Int?>
+    /// 상대평가에서 A를 받는 비율. 0.5
+    var topGradeRatio: Patch<Double?>
+    /// 결석 횟수마다 받을 수 있는 최대 성적
+    @CLIName("cap") @Parsed("cap", "결석 횟수:최대 성적. 6:B0") var attendanceCap: Patch<[AttendanceCap]>
+    /// 절대평가의 성적별 최저 점수
+    @CLIName("cutoff") @Parsed("cutoff", "성적:최저 점수. A+:95") var cutoffs: Patch<[GradeCutoff]>
+    /// 구조로 옮기지 못한 규칙 원문
+    var notes: Patch<String>
 
     public func run(_ ctx: ActionContext) throws {
-        var policy = policy
-        policy.attendanceCap.sort { $0.absences < $1.absences }
-        try ctx.edit(course) { $0.policy = policy }
+        try ctx.edit(course) { f in
+            minAttendanceRatio.apply(&f.policy.minAttendanceRatio)
+            latePolicy.apply(&f.policy.latePolicy)
+            latesPerAbsence.apply(&f.policy.latesPerAbsence)
+            topGradeRatio.apply(&f.policy.topGradeRatio)
+            attendanceCap.apply(&f.policy.attendanceCap)
+            cutoffs.apply(&f.policy.cutoffs)
+            notes.apply(&f.policy.notes)
+            f.policy.attendanceCap.sort { $0.absences < $1.absences }
+        }
     }
 }
 

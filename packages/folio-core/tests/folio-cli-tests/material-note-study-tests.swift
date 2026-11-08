@@ -80,7 +80,7 @@ struct MaterialNoteStudyTests {
                          setup: [Self.track, SessionCommandTests.add, Self.addUnit]) { gist in
             SessionWrapUp(course: course, session: SessionCommandTests.id,
                           ranges: [SessionMaterial(materialId: try material(gist, "05_Matchings.pdf"), firstPage: 3, lastPage: 12)],
-                          units: [Self.unit], attendance: .late)
+                          units: .set([Self.unit]), attendance: .set(.late))
         }
         // Given nothing, what the class has stays and it is only marked wrapped up.
         let gist = try Harness.fixtureCopy()

@@ -142,3 +142,12 @@ public struct Semester: Entity {
         folder?.name ?? source.flatMap(StandardLayout.creditedFolder(source:))
     }
 }
+
+extension [Semester] {
+    /// The term `today` falls in; before or between terms, the last one started; with none started, the last one.
+    public func current(on today: LocalDate) -> Semester? {
+        let terms = sorted { $0.order < $1.order }
+        return terms.last { ($0.start.map { $0 <= today } ?? false) && ($0.end.map { today <= $0 } ?? true) }
+            ?? terms.last { $0.start.map { $0 <= today } ?? false } ?? terms.last
+    }
+}

@@ -111,8 +111,7 @@ struct UnitExamAssignmentTests {
 
     @Test func assignmentSet() throws {
         try h.expectSame(["assignment", "set", "EC4207/HW 3", "--memo", "3번 질문함"], setup: [Self.addHW]) { _ in
-            AssignmentSave(course: course, assignment: Self.hw, title: "HW 3", due: date("2026-11-04 23:59"), status: .todo, repeats: nil,
-                           componentId: nil, componentGroup: nil, memo: "3번 질문함", components: [], scores: [])
+            AssignmentSave(course: course, assignment: Self.hw, memo: .set("3번 질문함"))
         }
     }
 

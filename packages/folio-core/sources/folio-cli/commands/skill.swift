@@ -104,10 +104,11 @@ folio help 단원 순서 바꾸기 --json
 - `folio help`, `folio <대상> --help`: 사람이 읽는 도움말과 예시.
 - `folio help --json`: 모든 명령, 인자, 옵션을 JSON으로.
 - `folio actions --schema`: 모든 액션의 입력 형식(JSON Schema). 항목을 가리키는 필드는 UUID와 이름을 모두 받는다.
-- `folio run <액션> --input '<JSON>'`: 액션 하나를 JSON 입력으로 실행한다. 명령 옵션으로 표현하기 어려운 입력에 쓴다.
+- `folio run <액션> --input '<JSON>'`: 액션 하나를 JSON 입력으로 실행한다. 명령 옵션으로 표현하기 어려운 입력에 쓴다. 바꾸는 액션(`set`, `rename`, `policy`, `wrap-up`)에는 바꿀 필드만 준다. 빠진 필드는 그대로이고 `null`이면 지운다.
 
 ```sh
 folio run assignment add --input '{"course":"EC4207","title":"HW 5","due":"2026-11-18T23:59:00+09:00"}' --dry-run
+folio run assignment set --input '{"course":"EC4207","assignment":"HW3","memo":"3번 질문함"}' --dry-run
 ```
 """#
 

@@ -120,10 +120,10 @@ private struct Builder {
             Person(id: UUID(uuidString: "A0000000-0000-4000-8000-000000000004")!, device: device, at: setup, name: "최하은", email: "haeun@example.com", role: .assistant, office: "A동 405", memo: "그래프 이론 조교"),
         ]
         try run(CatalogSet(catalog: Catalog(codes: codes, categories: [major, science, humanities], letterGrades: grades, people: people)), at: setup)
-        let os = try run(CourseAdd(semester: fall, title: "운영체제", code: codes[0].id, number: "3204", credits: 3, mode: .relative), at: setup)
-        let prob = try run(CourseAdd(semester: fall, title: "확률과 통계", code: codes[1].id, number: "2004", credits: 3, mode: .relative), at: setup)
-        let physics = try run(CourseAdd(semester: fall, title: "일반물리학", code: codes[2].id, number: "1102", credits: 3, mode: .absolute), at: setup)
-        let writing = try run(CourseAdd(semester: fall, title: "글쓰기의 기초", code: codes[3].id, number: "1511", credits: 2, mode: .passFail), at: setup)
+        let os = try run(CourseAdd(code: codes[0].id, number: "3204", title: "운영체제", credits: 3, mode: .relative, semester: fall), at: setup)
+        let prob = try run(CourseAdd(code: codes[1].id, number: "2004", title: "확률과 통계", credits: 3, mode: .relative, semester: fall), at: setup)
+        let physics = try run(CourseAdd(code: codes[2].id, number: "1102", title: "일반물리학", credits: 3, mode: .absolute, semester: fall), at: setup)
+        let writing = try run(CourseAdd(code: codes[3].id, number: "1511", title: "글쓰기의 기초", credits: 2, mode: .passFail, semester: fall), at: setup)
 
         // Mon/Wed back to back, the way a full GIST timetable runs, and an evening class on Wednesdays.
         let timetable: [(UUID, [ClassTime], String)] = [
@@ -138,7 +138,7 @@ private struct Builder {
             try run(CourseSet(course: course, fields: [.schedule(schedule), .icon(icon)]), at: setup)
         }
         // A colloquium carries no credits and nothing to study, but still meets every week; graphite keeps it quiet.
-        let colloquium = try run(CourseAdd(semester: fall, title: "콜로퀴움", code: codes[3].id, number: "9331", credits: 0, mode: .passFail), at: setup)
+        let colloquium = try run(CourseAdd(code: codes[3].id, number: "9331", title: "콜로퀴움", credits: 0, mode: .passFail, semester: fall), at: setup)
         try run(CourseSet(course: colloquium, fields: [.schedule(slots([3], 1050, 1110, "Lecture Hall")), .color(CourseColor.neutral)]), at: setup)
 
         let staffed: [(UUID, [UUID], FolioDomain.Category)] = [

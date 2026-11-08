@@ -68,7 +68,7 @@ struct ScoreCommand: ParsableCommand {
 struct ComponentCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "component", abstract: String(localized: .componentAbstract),
-        subcommands: [List.self] + GeneratedCommands.component + [Move.self, Policy.self])
+        subcommands: [List.self] + GeneratedCommands.component + [Move.self])
 
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .componentListAbstract), discussion: String(localized: .componentListDiscussion))
@@ -116,51 +116,6 @@ struct ComponentCommand: ParsableCommand {
             try perform(spec: ComponentMove(course: c.id, component: x.id, by: up ? -1 : 1), g, ctx: ctx)
         }
     }
-
-    struct Policy: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "policy", abstract: String(localized: .componentPolicyAbstract), discussion: String(localized: .componentPolicyDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
-        @Option(help: ArgumentHelp(String(localized: .componentPolicyHelpMinAttendanceRatio))) var minAttendanceRatio: Clearable<Double>?
-        @Option(help: ArgumentHelp(String(localized: .componentPolicyHelpLatePolicy))) var latePolicy: Clearable<String>?
-        @Option(help: ArgumentHelp(String(localized: .componentPolicyHelpLatesPerAbsence))) var latesPerAbsence: Clearable<Int>?
-        @Option(help: ArgumentHelp(String(localized: .componentPolicyHelpTopGradeRatio))) var topGradeRatio: Clearable<Double>?
-        @Option(help: ArgumentHelp(String(localized: .componentPolicyHelpCap), valueName: "cap")) var cap: [String] = []
-        @Option(help: ArgumentHelp(String(localized: .componentPolicyHelpCutoff), valueName: "cutoff")) var cutoff: [String] = []
-        @Option(help: ArgumentHelp(String(localized: .componentPolicyHelpNotes))) var notes: String?
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            let r = Resolver(ctx)
-            let c = try r.course(course)
-            var p = c.file.policy
-            if let minAttendanceRatio { p.minAttendanceRatio = minAttendanceRatio.value }
-            if let latePolicy { p.latePolicy = latePolicy.value }
-            if let latesPerAbsence { p.latesPerAbsence = latesPerAbsence.value }
-            if let topGradeRatio { p.topGradeRatio = topGradeRatio.value }
-            if let notes { p.notes = notes }
-            /// `6:B0`, `A+:95`: the left side before the last colon, read as `T`; the right side a letter grade or score.
-            func pair(_ s: String) throws -> (String, String) {
-                guard let i = s.lastIndex(of: ":") else { throw CLIError(exit: .usage, message: String(localized: .componentPolicyBadPair(s))) }
-                return (String(s[..<i]), String(s[s.index(after: i)...]))
-            }
-            if !cap.isEmpty {
-                p.attendanceCap = try cap.clearing.map { s in
-                    let (n, grade) = try pair(s)
-                    guard let absences = Int(n) else { throw CLIError(exit: .usage, message: String(localized: .componentPolicyBadAbsences(s))) }
-                    return AttendanceCap(absences: absences, maxGrade: try r.letterGrade(grade).id)
-                }
-            }
-            if !cutoff.isEmpty {
-                p.cutoffs = try cutoff.clearing.map { s in
-                    let (grade, n) = try pair(s)
-                    guard let min = Double(n) else { throw CLIError(exit: .usage, message: String(localized: .componentPolicyBadMinScore(s))) }
-                    return GradeCutoff(grade: try r.letterGrade(grade).id, minScore: min)
-                }
-            }
-            try perform(spec: PolicySet(course: c.id, policy: p), g, ctx: ctx)
-        }
-    }
 }
 
 struct GPACommand: ParsableCommand {
@@ -196,7 +151,7 @@ struct GPACommand: ParsableCommand {
 
 struct RequirementCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "requirement", abstract: String(localized: .requirementAbstract), subcommands: [Show.self, Set.self, Check.self, Accept.self])
+        commandName: "requirement", abstract: String(localized: .requirementAbstract), subcommands: [Show.self] + GeneratedCommands.requirement + [Check.self, Accept.self])
 
     struct Show: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .requirementShowAbstract), discussion: String(localized: .requirementShowDiscussion))
@@ -216,39 +171,6 @@ struct RequirementCommand: ParsableCommand {
                 say(String(localized: .requirementShowPrograms))
                 for p in rule.programs { say("    \(p.kind.rawValue)  \(codes.first { $0.id == p.codeId }?.prefix ?? p.codeId.uuidString)") }
             }
-        }
-    }
-
-    struct Set: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .requirementSetAbstract), discussion: String(localized: .requirementSetDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Option(help: ArgumentHelp(String(localized: .requirementSetHelpTotalCredits))) var totalCredits: Double?
-        @Option(help: ArgumentHelp(String(localized: .requirementSetHelpMinGpa))) var minGPA: Double?
-        @Option(help: ArgumentHelp(String(localized: .requirementSetHelpAdmissionYear))) var admissionYear: Clearable<Int>?
-        @Option(help: ArgumentHelp(String(localized: .requirementSetHelpEmail))) var email: String?
-        @Option(help: ArgumentHelp(String(localized: .requirementSetHelpProgram), valueName: "program")) var program: [String] = []
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            var rule = try ctx.transcript().graduation
-            if let totalCredits { rule.totalCredits = totalCredits }
-            if let minGPA { rule.minGPA = minGPA }
-            if let admissionYear { rule.admissionYear = admissionYear.value }
-            if let email { rule.email = email }
-            if !program.isEmpty {
-                let codes = try ctx.catalog().codes
-                rule.programs = try program.clearing.map { s in
-                    let parts = s.split(separator: ":", maxSplits: 1).map(String.init)
-                    guard parts.count == 2, let kind = StudentProgram.Kind(rawValue: parts[0]) else {
-                        throw CLIError(exit: .usage, message: String(localized: .requirementSetBadProgram(s)), hints: [String(localized: .requirementSetProgramKinds) + StudentProgram.Kind.allCases.map(\.rawValue).joined(separator: ", ")])
-                    }
-                    guard let code = codes.first(where: { $0.prefix.caseInsensitiveCompare(parts[1]) == .orderedSame }) else {
-                        throw CLIError(exit: .notFound, message: String(localized: .requirementSetUnknownCode(parts[1])), candidates: codes.map(\.prefix))
-                    }
-                    return StudentProgram(codeId: code.id, kind: kind)
-                }
-            }
-            try perform(spec: GraduationSet(rule: rule), g, ctx: ctx)
         }
     }
 
