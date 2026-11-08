@@ -103,6 +103,12 @@ final class QuickAddModel {
         text = QuickAdd.renumbered(text, at: range, kind: kind, number: number)
     }
 
+    /// Return is the only way to add: the field holds the line and nothing else (2026-11-08 user). An empty line, or
+    /// one without a course or title, does nothing; the chips below already say what is missing.
+    func submit() {
+        if let parsed, canAdd(parsed) { add(parsed) }
+    }
+
     /// Whether it went in; the line clears only then.
     @discardableResult
     func add(_ parsed: QuickAdd) -> Bool {

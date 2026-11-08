@@ -62,26 +62,37 @@ struct QuickAddField: View {
 
     /// Takes the keyboard as it appears, as in the toolbar's popover.
     private let focusOnAppear: Bool
+    /// In the toolbar's popover, a floating thing, the field is glass; on the page it is paper like the page's other
+    /// fields (`Card`), since glass belongs only to the frame and what floats over it.
+    private let floating: Bool
 
-    init(workspace: Workspace, fixedCourse: UUID? = nil, defaultCourse: UUID? = nil, focusOnAppear: Bool = false) {
+    init(workspace: Workspace, fixedCourse: UUID? = nil, defaultCourse: UUID? = nil, focusOnAppear: Bool = false,
+         floating: Bool = false) {
         _model = State(initialValue: QuickAddModel(workspace: workspace, fixedCourse: fixedCourse, defaultCourse: defaultCourse))
         self.focusOnAppear = focusOnAppear
+        self.floating = floating
     }
 
     private let font = Theme.Typeface.bodyLarge
-    private let plusWidth: CGFloat = 16
+    /// Inside the field, as inside a card's padded field (the memo): at less, a pill on the first word sat against the
+    /// field's wall. The Mac's text view keeps `QuickAddTextView.room` before the first letter for a pill there, so
+    /// the letters start at the same inset on both.
+    private let inset = Theme.Space.l
+    #if os(macOS)
+    private let leading = Theme.Space.l - QuickAddTextView.room
+    #else
+    private let leading = Theme.Space.l
+    #endif
 
     var body: some View {
         let parsed = model.parsed
         VStack(alignment: .leading, spacing: Theme.Space.m) {
-            HStack(alignment: .firstTextBaseline, spacing: Theme.Space.m) {
-                Image(systemName: "plus").foregroundStyle(Theme.Palette.textSecondary).frame(width: plusWidth)
+            Group {
                 // Wraps instead of running sideways, so every word it read keeps its pill in sight; past three lines
                 // it scrolls.
                 #if os(macOS)
                 QuickAddTextView(text: $model.text, prompt: String(localized: .quickAddPrompt), marks: textMarks(parsed),
-                                 focusOnAppear: focusOnAppear) { if let parsed { model.add(parsed) } }
-                    .alignmentGuide(.firstTextBaseline) { _ in QuickAddTextView.baseline }
+                                 focusOnAppear: focusOnAppear) { model.submit() }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 #else
                 TextField(String(localized: .quickAddPrompt), text: $model.text, axis: .vertical)
@@ -114,25 +125,32 @@ struct QuickAddField: View {
                         .fixedSize()
                         .hidden()
                     }
-                    .onSubmit { if let parsed { model.add(parsed) } }
+                    // The keyboard's Return is the touch path to add.
+                    .submitLabel(.done)
+                    .onSubmit { model.submit() }
+                    // A field that wraps takes Return as a new line rather than a submit: a line ending in one is
+                    // the Return key, and lines pasted in join into the one line.
+                    .onChange(of: model.text) { _, text in
+                        guard text.contains(where: \.isNewline) else { return }
+                        let returned = text.last?.isNewline == true
+                        model.text = text.split(whereSeparator: \.isNewline).joined(separator: " ")
+                        if returned { model.submit() }
+                    }
                 #endif
-                if let parsed {
-                    Button(.quickAddAdd) { model.add(parsed) }
-                        .buttonStyle(.pointing(.glassProminent))
-                        .disabled(!model.canAdd(parsed))
-                }
             }
-            .padding(.horizontal, Theme.Inset.panel)
-            .padding(.vertical, Theme.Space.m)
-            .frame(minHeight: 44)
-            .floatingGlass()
+            .padding(.leading, leading)
+            .padding(.trailing, inset)
+            .padding(.vertical, inset)
+            .frame(minHeight: 52)
+            .modifier(QuickAddSurface(floating: floating))
             let chips = model.chips
             if !chips.isEmpty {
-                // From the field's own left edge and across its whole width: indented under the typed words, the
-                // row read as cut in and wrapped a chip early.
+                // Each chip's icon under the field's first letter, and across the field's width: indented further
+                // the row read as cut in and wrapped a chip early.
                 FlowLayout(spacing: Theme.Space.s, centered: true) {
                     ForEach(chips, id: \.self) { chip in QuickAddChip(model: model, chip: chip) }
                 }
+                .padding(.leading, inset - QuickAddChip.inset)
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
@@ -204,6 +222,21 @@ struct QuickAddField: View {
     }
 }
 
+private struct QuickAddSurface: ViewModifier {
+    let floating: Bool
+
+    func body(content: Content) -> some View {
+        if floating {
+            content.floatingGlass()
+        } else {
+            let shape = RoundedRectangle(cornerRadius: Theme.Radius.card)
+            content
+                .surface(Theme.Palette.card, in: shape)
+                .overlay(shape.strokeBorder(Theme.Palette.lineSoft))
+        }
+    }
+}
+
 private extension Character {
     var isHangul: Bool { unicodeScalars.first.map { (0xAC00...0xD7A3).contains($0.value) } ?? false }
 }
@@ -211,6 +244,7 @@ private extension Character {
 /// One value the line will save, which opens to change it: the course from a list, the deadline from a calendar, the
 /// repeat, the kind and number. Each is a button or menu, so a tap opens it as a click does.
 struct QuickAddChip: View {
+    static let inset = Theme.Space.m
     let model: QuickAddModel
     let chip: QuickAddModel.Chip
     @State private var pickingDue = false
@@ -352,7 +386,7 @@ struct QuickAddChip: View {
         HStack(spacing: Theme.Space.tight) { content() }
             .font(Theme.Typeface.caption)
             .lineLimit(1)
-            .padding(.horizontal, Theme.Space.m)
+            .padding(.horizontal, Self.inset)
             .frame(height: 28)
             .background(fill, in: .capsule)
             .contentShape(.capsule)

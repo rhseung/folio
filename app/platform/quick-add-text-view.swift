@@ -25,8 +25,6 @@ struct QuickAddTextView {
     static let room: CGFloat = 4
     static let maxLines = 3
     static var font: NSFont { .systemFont(ofSize: Theme.Typeface.bodyLargeSize) }
-    /// Where the first line's baseline sits, for the + and the add button to line up with it.
-    static var baseline: CGFloat { QuickAddLine.overhang + ceil(font.ascender) }
     static var base: [NSAttributedString.Key: Any] {
         let paragraph = NSMutableParagraphStyle()
         paragraph.lineSpacing = QuickAddLine.spacing

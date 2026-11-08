@@ -15951,17 +15951,6 @@
         }
       }
     },
-    "quick-add.add": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "추가"
-          }
-        }
-      }
-    },
     "quick-add.weekly": {
       "extractionState": "manual",
       "localizations": {

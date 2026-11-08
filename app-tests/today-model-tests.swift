@@ -222,6 +222,20 @@ struct QuickAddModelTests {
         #expect(model.parsed?.due == nil && model.parsed?.repeats == nil)
         #expect(model.chips == [.course(graphTheory), .due(nil), .folder("Lab03")])
     }
+
+    /// Return adds only a line with a course and a title; anything else stays as typed.
+    @Test func returnAddsOnlyALineItCanSave() throws {
+        let workspace = try fixtureWorkspace()
+        let model = QuickAddModel(workspace: workspace)
+        model.submit()
+        #expect(model.text.isEmpty)
+        model.text = "HW5 금"
+        model.submit()
+        #expect(model.text == "HW5 금")
+        model.pickCourse(graphTheory)
+        model.submit()
+        #expect(model.text.isEmpty)
+    }
 }
 
 @MainActor
