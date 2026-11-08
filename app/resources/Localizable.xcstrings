@@ -5006,6 +5006,17 @@
         }
       }
     },
+    "file-view.split-apply": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "적용"
+          }
+        }
+      }
+    },
     "file-view.split-cut-help": {
       "extractionState": "manual",
       "localizations": {
@@ -5017,24 +5028,13 @@
         }
       }
     },
-    "file-view.split-found": {
+    "file-view.split-edit-help": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "목차와 슬라이드 제목에서 찾은 구간입니다. 고친 뒤 저장하세요"
-          }
-        }
-      }
-    },
-    "file-view.split-from-claude": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claude가 제안한 구간입니다. 고친 뒤 저장하세요"
+            "value": "눌러서 이 구역의 쪽을 고치고, ⇧-클릭으로 끝 쪽을 옮깁니다"
           }
         }
       }
@@ -5056,7 +5056,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "목차와 슬라이드 제목을 찾지 못했습니다. 썸네일 사이를 눌러 나누세요"
+            "value": "목차와 슬라이드 제목을 찾지 못했습니다"
           }
         }
       }
@@ -15863,7 +15863,7 @@
         }
       }
     },
-    "today.quick-add.no-course": {
+    "quick-add.no-course": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -15874,7 +15874,7 @@
         }
       }
     },
-    "today.quick-add.prompt": {
+    "quick-add.prompt": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -15885,18 +15885,18 @@
         }
       }
     },
-    "today.quick-add.save": {
+    "quick-add.add": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "저장"
+            "value": "추가"
           }
         }
       }
     },
-    "today.quick-add.weekly": {
+    "quick-add.weekly": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -18855,50 +18855,6 @@
         }
       }
     },
-    "sessions.progress.from-recording": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "끝 쪽은 녹음하는 동안 20초 넘게 본 쪽으로 채웠습니다"
-          }
-        }
-      }
-    },
-    "sessions.progress.last-class": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지난 수업 %lld쪽까지"
-          }
-        }
-      }
-    },
-    "sessions.progress.recorded": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음 중 %1$lld–%2$lld쪽"
-          }
-        }
-      }
-    },
-    "sessions.progress.page-count": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "전체 %lld쪽"
-          }
-        }
-      }
-    },
     "sessions.progress.missing-range": {
       "extractionState": "manual",
       "localizations": {
@@ -18950,17 +18906,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "자료 추가"
-          }
-        }
-      }
-    },
-    "sessions.progress.empty": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아직 고른 렉처가 없습니다"
           }
         }
       }
@@ -19075,17 +19020,6 @@
         }
       }
     },
-    "design.page-range.fine-hint": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "⌥ 누른 채 끌면 쪽 단위"
-          }
-        }
-      }
-    },
     "design.page-range.first": {
       "extractionState": "manual",
       "localizations": {
@@ -19119,72 +19053,6 @@
         }
       }
     },
-    "design.page-range.from": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "쪽부터"
-          }
-        }
-      }
-    },
-    "design.page-range.to": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "쪽까지"
-          }
-        }
-      }
-    },
-    "design.page-range.hint": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "막대를 눌러 쪽을 고르세요"
-          }
-        }
-      }
-    },
-    "design.page-range.open-last": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "손잡이를 끌거나 막대를 눌러 끝 쪽까지 고르세요"
-          }
-        }
-      }
-    },
-    "design.page-range.open-first": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "손잡이를 끌거나 막대를 눌러 시작 쪽부터 고르세요"
-          }
-        }
-      }
-    },
-    "design.page-range.seen": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음 중 봄 %1$lld–%2$lld"
-          }
-        }
-      }
-    },
     "design.page-range.seen-short": {
       "extractionState": "manual",
       "localizations": {
@@ -19207,39 +19075,6 @@
         }
       }
     },
-    "design.page-range.resume": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지난 수업 다음부터"
-          }
-        }
-      }
-    },
-    "design.page-range.total": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "전체 %lld쪽"
-          }
-        }
-      }
-    },
-    "design.page-range.span": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld–%2$lld쪽"
-          }
-        }
-      }
-    },
     "design.page-range.split": {
       "extractionState": "manual",
       "localizations": {
@@ -19258,17 +19093,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "파일 보기에서 렉처를 단원 구간으로 나눕니다"
-          }
-        }
-      }
-    },
-    "design.page-range.summary": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ (%2$@)"
           }
         }
       }
@@ -19515,24 +19339,13 @@
         }
       }
     },
-    "wrap-up.progress-line": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ %2$lld–%3$lld쪽"
-          }
-        }
-      }
-    },
     "wrap-up.note-make": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "저장할 때 수업 노트 만들기"
+            "value": "저장할 때 러프 노트 만들기"
           }
         }
       }
@@ -19592,50 +19405,6 @@
         }
       }
     },
-    "wrap-up.filled": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "채운 것"
-          }
-        }
-      }
-    },
-    "wrap-up.assignment-add": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과제 추가"
-          }
-        }
-      }
-    },
-    "wrap-up.change": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "바꾸기"
-          }
-        }
-      }
-    },
-    "wrap-up.assignment-prompt": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과제: 금요일까지 HW4"
-          }
-        }
-      }
-    },
     "today.wrap-up.class": {
       "extractionState": "manual",
       "localizations": {
@@ -19691,24 +19460,13 @@
         }
       }
     },
-    "wrap-up.units-none": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아직 고른 단원이 없습니다"
-          }
-        }
-      }
-    },
     "wrap-up.left-detail": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "진도, 단원, 수업 노트, 출석 중 빈 것이 있는 수업이에요. 한 번 저장한 수업은 빈 칸이 남아도 다시 묻지 않아요."
+            "value": "진도, 단원, 러프 노트, 출석 중 빈 것이 있는 수업이에요. 한 번 저장한 수업은 빈 칸이 남아도 다시 묻지 않아요."
           }
         }
       }
@@ -19719,18 +19477,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "수업 노트"
-          }
-        }
-      }
-    },
-    "wrap-up.filled-note": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "확인만"
+            "value": "러프 노트"
           }
         }
       }
@@ -19753,28 +19500,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "정리하기"
-          }
-        }
-      }
-    },
-    "wrap-up.exam-add": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시험"
-          }
-        }
-      }
-    },
-    "wrap-up.announcements-note": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "있었다면"
           }
         }
       }
@@ -19812,17 +19537,6 @@
         }
       }
     },
-    "wrap-up.attendance-none": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 수업은 출결을 적을 수 없습니다"
-          }
-        }
-      }
-    },
     "wrap-up.ellipsis": {
       "extractionState": "manual",
       "localizations": {
@@ -19830,17 +19544,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "수업 정리…"
-          }
-        }
-      }
-    },
-    "wrap-up.announcements": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수업 중 공지"
           }
         }
       }

@@ -12,6 +12,9 @@ public struct QuickAdd: Equatable, Sendable {
 
     static let weekdays: [String: Int] = ["월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6, "일": 7]
     static let relativeDays: [String: Int] = ["오늘": 0, "내일": 1, "모레": 2]
+    /// What Korean puts after a deadline word (`금요일까지`, `11/14까지`) or after the whole deadline as a word of its own
+    /// (`금 마감`). They belong to the deadline, never the title.
+    static let dueEndings = ["까지", "마감"]
     /// Deadline time when only a day is given.
     static let defaultMinute = 23 * 60 + 59
 
@@ -26,10 +29,22 @@ public struct QuickAdd: Equatable, Sendable {
         var detected: (date: Date, phrase: String)?
         var inPhrase = false
         var weekly = false
+        /// `까지` or `마감` standing after a deadline word.
+        var trailer = false
         var normalized: String
-        var isDue: Bool { inPhrase || weekly || day != nil || weekday != nil || minute != nil }
+        var isDue: Bool { inPhrase || weekly || trailer || day != nil || weekday != nil || minute != nil }
 
         init(_ text: String, range: Range<String.Index>, today: LocalDate, year: Int) {
+            self.init(reading: text, range: range, today: today, year: year)
+            // `금요일까지` reads as `금요일`: the ending stays in the highlighted word, out of what the detector sees.
+            guard !isDue, let ending = QuickAdd.dueEndings.first(where: { text.hasSuffix($0) && text.count > $0.count }) else { return }
+            let core = Word(reading: String(text.dropLast(ending.count)), range: range, today: today, year: year)
+            guard core.isDue else { return }
+            self = core
+            self.text = text
+        }
+
+        private init(reading text: String, range: Range<String.Index>, today: LocalDate, year: Int) {
             self.text = text
             self.range = range
             normalized = text
@@ -53,10 +68,12 @@ public struct QuickAdd: Equatable, Sendable {
 
     static let detector = try! NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
 
-    /// - Parameter fixedCourse: set when adding from a course screen, so the line need not name the course.
+    /// - Parameter fixedCourse: set when adding from a course's own assignments, so the line need not name the course.
+    /// - Parameter defaultCourse: the course the window shows; a course named in the line wins over it.
     /// Apple's detector reads Korean phrases (`다음 주 화요일`, `모레 오후 3시`, `11월 3일 밤 11시`) against the real clock, so
     /// days the rules know (weekdays, `내일`, `3/2`) and `HH:MM` times come from the rules and `now` instead.
-    public static func parse(_ line: String, courses: [Course], codes: [CourseCode] = [], fixedCourse: UUID? = nil, now: Date, calendar: Calendar) -> QuickAdd {
+    public static func parse(_ line: String, courses: [Course], codes: [CourseCode] = [], fixedCourse: UUID? = nil, defaultCourse: UUID? = nil,
+                             now: Date, calendar: Calendar) -> QuickAdd {
         var found = line.ranges(of: /\S+/).map { (String(line[$0]), $0) }
         var course = fixedCourse
         // The course can sit anywhere (`내일 7시 컴퓨터네트워킹에다`). Past the first word, short words and ones with digits
@@ -70,6 +87,7 @@ public struct QuickAdd: Equatable, Sendable {
                 break
             }
         }
+        if course == nil { course = defaultCourse }
         let today = LocalDate(now, in: calendar)
         var words = found.map { Word($0.0, range: $0.1, today: today, year: calendar.component(.year, from: now)) }
 
@@ -89,6 +107,9 @@ public struct QuickAdd: Equatable, Sendable {
             words[first].detected = (date, (text as NSString).substring(with: m.range))
         }
 
+        for i in words.indices.dropFirst() where dueEndings.contains(words[i].text) && words[i - 1].isDue {
+            words[i].trailer = true
+        }
         let due = words.filter(\.isDue)
         var minute = due.compactMap(\.minute).first
         if minute == nil, let d = due.compactMap(\.detected).first(where: { $0.phrase.contains(/시|자정|정오/) }) {

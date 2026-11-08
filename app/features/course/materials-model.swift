@@ -264,11 +264,6 @@ final class MaterialsModel {
         PageRangeField.Section.list(course.file, material: material, pageCount: pageCounts[material])
     }
 
-    func reads(_ material: UUID) -> (ClosedRange<Int>) -> String? {
-        let file = course.file
-        return { file.sectionLabel(of: material, pages: $0) }
-    }
-
     func seen(_ material: UUID, in session: Session) -> ClosedRange<Int>? {
         course.file.viewedPages(of: session).first { $0.materialId == material }?.pages
     }
