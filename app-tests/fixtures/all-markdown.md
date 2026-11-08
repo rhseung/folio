@@ -266,6 +266,11 @@ sequenceDiagram
 | $K_{m,n}$ | $\min\{m,n\}$ | $\min\{m,n\}$ | 줄바꿈되지 않는 수식이 칸 폭을 정하고, 나머지 열이 그만큼 줄어드는지 보는 긴 설명 |
 | $H_{k,n}$ | $k$ | $k$ | edge 수 $\lceil kn/2 \rceil$, 정점 $0, \dots, n-1$을 원 위에, 번호는 $\bmod n$ |
 
+| 날짜 | 회차 | 다룬 것 | 슬라이드 |
+|---|---|---|---|
+| 10/26(월) | 9주차-1 | augmenting path로 최대 매칭을 찾는 법, Berge 정리와 그 증명에 쓰는 대칭차의 정의 | [[material:00000000-0000-0000-0000-000000000000#page=1|week9.pdf p.1]]–[[material:00000000-0000-0000-0000-000000000000#page=8|p.8]] |
+| 10/28(수) | 9주차-2 | [[2주차-1\|지난 강의]]에 이어 Hall 정리 | [[2주차-1#^def-graph|그래프 정의]] |
+
 ```cb-table
 {"columns": [{"width": 120}, {"align": "center"}], "rows": [{"header": true, "cells": [{"text": "항목"}, {"text": "설명"}]}, {"cells": [{"text": "병합", "colspan": 2}]}, {"cells": [{"text": "목록"}, {"text": "- 하나\n- 둘"}]}]}
 ```

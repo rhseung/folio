@@ -52,6 +52,14 @@ struct TableEditingTests {
         #expect(Self.run(.format, "|a|b \\| c|\n|-|-:|\n|‸x||") == "| a   | b \\| c |\n| --- | -----: |\n| x‸   |        |")
     }
 
+    /// A link's `|` is not a cell's: the row keeps its cells, and the link stays as written, escaped or not.
+    @Test func linksKeepTheirBars() {
+        #expect(Self.run(.format, "|a|b|\n|-|-|\n|[[note:x|이름]]‸|[[y\\|z]] c|") == "| a               | b          |\n| --------------- | ---------- |\n| [[note:x|이름]]‸ | [[y\\|z]] c |")
+        #expect(Self.run(.moveColumnRight, "|a|b|\n|-|-|\n|[[m#page=1|p.1]]–[[m#page=8|p.8]]‸|2|") == "| b   | a                                 |\n| --- | --------------------------------- |\n| 2   | [[m#page=1|p.1]]–[[m#page=8|p.8]]‸ |")
+        let source = TableSource("|a|b|\n|-|-|\n|[[n|m]]|x|" as NSString, NSRange(location: 14, length: 0))
+        #expect(source?.grid.rows == [["a", "b"], ["[[n|m]]", "x"]])
+    }
+
     @Test func aTableInAQuoteKeepsItsMarks() {
         #expect(Self.run(.rowBelow, "> | a |\n> |---|\n> | ‸1 |") == "> | a   |\n> | --- |\n> | 1   |\n> | ‸    |")
     }
@@ -82,7 +90,7 @@ struct TableEditingTests {
 
 /// What every table edit keeps, on random tables and random runs of edits.
 struct TablePropertyTests {
-    static let words = ["", "a", "가나", "x \\| y", "**b**", "$x$"]
+    static let words = ["", "a", "가나", "x \\| y", "**b**", "$x$", "[[note:n|이름]]"]
     static let commands = TableCommand.allCases
 
     static func gfm(rows: Int, columns: Int, words: [Int]) -> String {
@@ -97,7 +105,7 @@ struct TablePropertyTests {
     }
 
     @Test func everyEditLeavesATableThatReadsBackAsItWasWritten() async {
-        await propertyCheck(input: Gen.int(in: 2...4), Gen.int(in: 1...4), Gen.int(in: 0...5).array(of: 16), Gen.int(in: 0...10).array(of: 1...8)) { rows, columns, words, steps in
+        await propertyCheck(input: Gen.int(in: 2...4), Gen.int(in: 1...4), Gen.int(in: 0...6).array(of: 16), Gen.int(in: 0...10).array(of: 1...8)) { rows, columns, words, steps in
             var text = ("앞\n\n" + Self.gfm(rows: rows, columns: columns, words: words) + "\n\n뒤") as NSString
             var caret = text.range(of: "| ", options: [], range: NSRange(location: 3, length: text.length - 3)).location + 2
             for step in steps {
