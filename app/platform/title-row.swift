@@ -38,12 +38,12 @@ enum TitleRowEdges {
 
     /// From the window's leading edge to the first item: past the window's buttons, at the gap the compact toolbar
     /// left after them (84pt with the buttons where AppKit puts them), plus the 8pt they move right (`lights`). In
-    /// full screen the buttons are in the menu bar's reveal, so the row starts as far in as the content panel.
-    static func lead(fullScreen: Bool) -> CGFloat { fullScreen ? Theme.Size.panelInset : 92 }
+    /// full screen the buttons are in the menu bar's reveal, so the row starts at `trailing`, mirroring its end.
+    static func lead(fullScreen: Bool) -> CGFloat { fullScreen ? trailing : 92 }
 
-    /// The last capsule ends as far from the window's right edge as the capsules sit below its top (8pt), as the
-    /// window's buttons do on the left (`lights`). Ended at the content panel's edge (`panelInset`, 4pt), the
-    /// capsules crowded the window's corner, half as far from the side as from the top.
+    /// The capsules sit as far from the window's sides as below its top (8pt), as the window's buttons do on the
+    /// left (`lights`). At the content panel's edge (`panelInset`, 4pt), the capsules crowded the window's corners,
+    /// half as far from the side as from the top.
     static let trailing = (Theme.Size.toolbarRow - Theme.Size.toolbarButton) / 2
 }
 
