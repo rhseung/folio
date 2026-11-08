@@ -27,7 +27,6 @@ struct ClassWrapUpSheet: View {
             ForEach(model.items, id: \.self) { item in
                 Block(model.label(item)) { Card { row(item) } }
             }
-            announcements
         } onConfirm: {
             guard model.wrapUp() else { return }
             if let saved { saved() } else { dismiss() }
@@ -45,12 +44,6 @@ struct ClassWrapUpSheet: View {
             Text(.sessionsProgressSplitUnsaved)
         }
         .environment(\.accent, model.accent)
-        .sheet(item: $model.addingExam, onDismiss: nil) { exam in
-            if let course = model.course {
-                ExamEditor(workspace: model.workspace, course: course, exam: exam)
-                    .onDisappear { model.examClosed(exam) }
-            }
-        }
     }
 
     /// To the file's split screen (#321). With nothing changed here the sheet closes and the file opens in this tab;
@@ -222,27 +215,6 @@ struct ClassWrapUpSheet: View {
         .menuStyle(.button)
         .buttonStyle(.pointing(.plain))
         .menuIndicator(.hidden)
-    }
-
-    // MARK: Announcements
-
-    var announcements: some View {
-        Block(String(localized: .wrapUpAnnouncements)) {
-            Card {
-                ForEach(model.announced, id: \.self) { line in
-                    CardRow {
-                        Image(systemName: "checkmark").foregroundStyle(Theme.Palette.success)
-                        Text(line).lineLimit(1)
-                    }
-                }
-                CardRow(last: true) {
-                    QuickAddField(workspace: model.workspace, fixedCourse: model.courseId, prompt: String(localized: .wrapUpAssignmentPrompt),
-                                  surface: .row, added: model.announce) {
-                        Button { model.addExam() } label: { Label(.wrapUpExamAdd, systemImage: "plus") }.buttonStyle(.ghost)
-                    }
-                }
-            }
-        }
     }
 }
 

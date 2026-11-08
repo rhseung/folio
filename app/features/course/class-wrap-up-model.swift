@@ -41,9 +41,6 @@ final class ClassWrapUpModel {
     /// The class's rough note is made on saving, after the units are, so the note is named after them.
     var makesNote = false
     var newUnit = ""
-    /// Assignments added from the announcements line, to show they went in.
-    private(set) var announced: [String] = []
-    var addingExam: Exam?
 
     init(workspace: Workspace, course: UUID, session: UUID, viewed: [SessionMaterial] = [], recorded: Bool = false) {
         self.workspace = workspace
@@ -68,7 +65,7 @@ final class ClassWrapUpModel {
         edited || makesNote || units != initial.units || attendance != initial.attendance
     }
 
-    var course: LoadedCourse? { workspace.course(courseId) }
+    private var course: LoadedCourse? { workspace.course(courseId) }
     private var file: CourseFile? { course?.file }
     private var session: Session? { file?.sessions.first { $0.id == sessionId } }
 
@@ -232,25 +229,6 @@ final class ClassWrapUpModel {
     // MARK: Attendance
 
     var takesAttendance: Bool { workspace.can(AttendanceSet(course: courseId, session: sessionId, state: .absent)) }
-
-    // MARK: Announcements
-
-    /// An assignment the quick-add line put in, listed above it to show it went in.
-    func announce(_ parsed: QuickAdd) {
-        let due = parsed.due.map { " · " + $0.formatted(.dateTime.month(.defaultDigits).day().weekday(.abbreviated)) } ?? ""
-        announced.append(parsed.title + due)
-    }
-
-    func addExam() {
-        let c = workspace.calendar
-        let start = c.date(byAdding: .hour, value: 24 + 9, to: c.startOfDay(for: workspace.now)) ?? workspace.now
-        addingExam = Exam(device: workspace.device, at: .now, title: "", start: start)
-    }
-
-    /// The exam editor saves on its own; a title in the file afterwards means it went in.
-    func examClosed(_ exam: Exam) {
-        if let saved = file?.exams.first(where: { $0.id == exam.id }) { announced.append(saved.title) }
-    }
 
     // MARK: Saving
 

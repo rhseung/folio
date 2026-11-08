@@ -19372,17 +19372,6 @@
         }
       }
     },
-    "wrap-up.assignment-prompt": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "HW4 금요일까지"
-          }
-        }
-      }
-    },
     "today.wrap-up.class": {
       "extractionState": "manual",
       "localizations": {
@@ -19482,17 +19471,6 @@
         }
       }
     },
-    "wrap-up.exam-add": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시험"
-          }
-        }
-      }
-    },
     "wrap-up.left-title": {
       "extractionState": "manual",
       "localizations": {
@@ -19533,17 +19511,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "수업 정리…"
-          }
-        }
-      }
-    },
-    "wrap-up.announcements": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수업 중 공지"
           }
         }
       }

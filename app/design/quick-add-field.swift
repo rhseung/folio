@@ -28,67 +28,45 @@ struct DateMarkRenderer: TextRenderer {
     }
 }
 
-enum QuickAddSurface {
-    /// A floating field of its own, as on Today and in the toolbar's popover.
-    case glass
-    /// Inside a card row of a sheet: glass belongs only to what floats.
-    case row
-}
-
-/// One line that adds an assignment (`선대 HW5 금 23:59`), read as it is typed: pills behind the words taken as the
-/// deadline, and under the line what will be saved. The same field everywhere; only its surface follows where it sits.
-struct QuickAddField<Trailing: View>: View {
+/// One floating line that adds an assignment (`선대 HW5 금 23:59`), read as it is typed: pills behind the words taken
+/// as the deadline, and under the line what will be saved. Today, the toolbar's popover and the assignments screen
+/// share it, so the line reads the same wherever it is typed.
+struct QuickAddField: View {
     @State private var model: QuickAddModel
     @Environment(\.quickAddTypedSample) private var typedSample
-    let prompt: String
-    let surface: QuickAddSurface
-    let added: ((QuickAdd) -> Void)?
-    let trailing: Trailing
 
-    init(workspace: Workspace, fixedCourse: UUID? = nil, prompt: String? = nil, surface: QuickAddSurface = .glass,
-         added: ((QuickAdd) -> Void)? = nil, @ViewBuilder trailing: () -> Trailing) {
+    init(workspace: Workspace, fixedCourse: UUID? = nil) {
         _model = State(initialValue: QuickAddModel(workspace: workspace, fixedCourse: fixedCourse))
-        self.prompt = prompt ?? String(localized: .quickAddPrompt)
-        self.surface = surface
-        self.added = added
-        self.trailing = trailing()
     }
 
-    private var font: Font { surface == .glass ? Theme.Typeface.bodyLarge : Theme.Typeface.body }
+    private let font = Theme.Typeface.bodyLarge
 
     var body: some View {
         let parsed = model.parsed
         VStack(alignment: .typedLine, spacing: Theme.Space.s) {
             HStack(spacing: Theme.Space.m) {
                 Image(systemName: "plus").foregroundStyle(Theme.Palette.textSecondary)
-                TextField(prompt, text: $model.text)
+                TextField(String(localized: .quickAddPrompt), text: $model.text)
                     .textFieldStyle(.plain)
                     .font(font)
                     // The marks are drawn behind the field instead of styling its text: rewriting the text while
                     // typing breaks Korean composition and eats characters.
                     .background(alignment: .leading) { marks(parsed?.dueRanges ?? []).allowsHitTesting(false) }
                     .alignmentGuide(.typedLine) { $0[.leading] }
-                    .onSubmit { if let parsed { add(parsed) } }
-                if let parsed { saveButton(parsed) }
-                trailing
+                    .onSubmit { if let parsed { model.add(parsed) } }
+                if let parsed {
+                    Button(.quickAddAdd) { model.add(parsed) }
+                        .buttonStyle(.pointing(.glassProminent))
+                        .disabled(!model.canAdd(parsed))
+                }
             }
-            .modifier(FieldSurface(surface: surface))
+            .padding(.horizontal, Theme.Inset.panel)
+            .frame(height: 44)
+            .floatingGlass()
             // Under the field, not inside it: beside the typed line it ran out of room and cut off the deadline.
             if let parsed { summary(parsed).alignmentGuide(.typedLine) { $0[.leading] } }
         }
         .onAppear { if let typedSample, model.text.isEmpty { model.text = typedSample } }
-    }
-
-    @ViewBuilder private func saveButton(_ parsed: QuickAdd) -> some View {
-        let button = Button(.quickAddAdd) { add(parsed) }.disabled(!model.canAdd(parsed))
-        switch surface {
-        case .glass: button.buttonStyle(.pointing(.glassProminent))
-        case .row: button.buttonStyle(.ghost)
-        }
-    }
-
-    private func add(_ parsed: QuickAdd) {
-        if model.add(parsed) { added?(parsed) }
     }
 
     /// The course leads unless the field belongs to one; then the line starts at the deadline.
@@ -129,24 +107,6 @@ struct QuickAddField<Trailing: View>: View {
         }
         mirror = mirror + Text(text[at...])
         return mirror.font(font).lineLimit(1).fixedSize().textRenderer(DateMarkRenderer())
-    }
-}
-
-extension QuickAddField where Trailing == EmptyView {
-    init(workspace: Workspace, fixedCourse: UUID? = nil, prompt: String? = nil, surface: QuickAddSurface = .glass,
-         added: ((QuickAdd) -> Void)? = nil) {
-        self.init(workspace: workspace, fixedCourse: fixedCourse, prompt: prompt, surface: surface, added: added) { EmptyView() }
-    }
-}
-
-private struct FieldSurface: ViewModifier {
-    let surface: QuickAddSurface
-
-    func body(content: Content) -> some View {
-        switch surface {
-        case .glass: content.padding(.horizontal, Theme.Inset.panel).frame(height: 44).floatingGlass()
-        case .row: content
-        }
     }
 }
 
