@@ -2,6 +2,7 @@
 import AppKit
 import FolioDomain
 import Observation
+import SwiftUI
 import WebKit
 
 /// Debug-only: with `FOLIO_SNAPSHOT_DIR` set, the app walks through its screens, draws its own window into
@@ -214,12 +215,6 @@ final class SnapshotDriver {
             let room = (window.screen ?? NSScreen.main)?.visibleFrame.height ?? 900
             window.setFrame(NSRect(origin: window.frame.origin, size: NSSize(width: Self.width, height: min(900, room))), display: true)
             window.center()
-            // A window that isn't key draws its prominent buttons grey, so the save row's button read as it never does
-            // in use. Opt-in, as it takes the focus from whatever the Mac is doing.
-            if ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_KEY"] != nil {
-                NSApp.activate()
-                window.makeKeyAndOrderFront(nil)
-            }
         }
         func pair(_ text: String?, _ fallback: (Int, Int)) -> (Int, Int) {
             let bounds = (text ?? "").split(separator: "-").compactMap { Int($0) }
@@ -314,5 +309,17 @@ final class SnapshotDriver {
 }
 extension NSWindow {
     fileprivate var isPopover: Bool { className.contains("Popover") }
+}
+
+extension View {
+    /// Drawn as in a key window (`FOLIO_SNAPSHOT_KEY`). The walk's windows are rarely key, since the Mac is in use
+    /// while it runs, and a window that isn't draws its prominent buttons grey, a look they never have in use.
+    @ViewBuilder func snapshotKey() -> some View {
+        if ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_KEY"] != nil {
+            environment(\.controlActiveState, .key)
+        } else {
+            self
+        }
+    }
 }
 #endif

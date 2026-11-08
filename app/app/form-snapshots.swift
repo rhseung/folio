@@ -91,7 +91,7 @@ enum FormSnapshots {
 
     @MainActor static func capture(_ workspace: Workspace, into directory: URL) async {
         for (name, view) in forms(workspace) {
-            let host = NSHostingView(rootView: view.environment(workspace))
+            let host = NSHostingView(rootView: view.environment(workspace).snapshotKey())
             let size = host.fittingSize
             let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled], backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false
