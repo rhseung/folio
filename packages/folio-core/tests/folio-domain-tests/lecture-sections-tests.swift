@@ -227,13 +227,20 @@ struct LectureSectionsTests {
         // From a section's start: it keeps its unit and takes the pages after.
         #expect(s.carve(5...10) == 1)
         #expect(s.sections.map(\.pages) == [1...4, 5...10, 11...12] && s.sections[1].unit == b)
-        // Out of a section's middle: a section for no unit, and the rest of that section after it.
+        // Out of a section's middle: a section for no unit, and the rest of that section after it, still its unit's.
         #expect(s.carve(2...3) == 1)
         #expect(s.sections.map(\.pages) == [1...1, 2...3, 4...4, 5...10, 11...12])
-        #expect(s.sections.map(\.unit) == [a, nil, nil, b, nil])
+        #expect(s.sections.map(\.unit) == [a, nil, a, b, nil])
+        #expect(Set(s.sections.map(\.id)).count == 5)
+        // Ending inside a section: the pages after the range stay that section's, under its id and title.
+        let tail = s.sections[3]
+        #expect(s.carve(4...6) == 2)
+        #expect(s.sections.map(\.pages) == [1...1, 2...3, 4...6, 7...10, 11...12])
+        #expect(s.sections.map(\.unit) == [a, nil, a, b, nil])
+        #expect(s.sections[3].id == tail.id && s.sections[3].title == tail.title)
         // A range that is already a section stays as it is.
         let before = s
-        #expect(s.carve(5...10) == 3 && s == before)
+        #expect(s.carve(7...10) == 3 && s == before)
     }
 
     @Test func cutsJoinTouchingSectionsOfOneUnitAndSkipTheUnclaimed() throws {

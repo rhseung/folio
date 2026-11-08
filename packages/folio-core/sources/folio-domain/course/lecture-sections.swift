@@ -301,12 +301,25 @@ public struct LectureSplit: Equatable, Sendable {
 
     /// `pages` as one section: cut where they start and after where they end, and every section between joined into the
     /// first. It keeps that section's unit when `pages` start where it does; cut out of a section's middle, it goes to
-    /// no unit, as a cut's tail does. Returns its index.
+    /// no unit, as a cut's tail does. The pages left after `pages` stay what they were: `split(at:)` would give them to
+    /// no unit, and a range ending inside a section would quietly take the rest of that section out of its unit.
+    /// Returns its index.
     @discardableResult
     public mutating func carve(_ pages: ClosedRange<Int>) -> Int {
         let lo = min(max(pages.lowerBound, 1), pageCount), hi = min(max(pages.upperBound, lo), pageCount)
+        if hi < pageCount {
+            let j = section(at: hi + 1)
+            if sections[j].firstPage <= hi {
+                var rest = sections[j]
+                rest.firstPage = hi + 1
+                // Its id goes with it unless the pages before keep that section on: a section joined into the range
+                // is gone, but one cut at `lo` or starting the range stays.
+                if sections[j].firstPage <= lo { rest.id = UUID() }
+                sections[j].lastPage = hi
+                sections.insert(rest, at: j + 1)
+            }
+        }
         split(at: lo)
-        if hi < pageCount { split(at: hi + 1) }
         let first = section(at: lo)
         while sections.indices.contains(first + 1), sections[first + 1].lastPage <= hi { merge(after: first) }
         return first
