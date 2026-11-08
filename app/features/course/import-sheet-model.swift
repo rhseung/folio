@@ -99,13 +99,13 @@ final class ImportPlaceModel {
 
     var confirmTitle: String { String(localized: many ? .materialsImportConfirmMany(rows.count) : .materialsImportConfirm) }
 
-    var hint: String {
+    /// The keys a Mac picks and fills rows with. A touch screen gets no line: the rows show what is picked.
+    var hint: String? {
         guard many else { return String(localized: .materialsImportNote) }
-        if picking { return String(localized: .materialsImportPicking) }
         #if os(macOS)
         return String(localized: .materialsImportKeys)
         #else
-        return String(localized: .materialsImportHold)
+        return nil
         #endif
     }
 

@@ -246,7 +246,6 @@ struct MaterialsModelTests {
         model.press(3, .toggle)
         model.press(2, .toggle)
         #expect(model.selection == [0, 3])
-        #expect(model.hint == String(localized: .materialsImportPicking))
         model.press(0, .toggle)
         model.press(3, .toggle)
         #expect(!model.picking)

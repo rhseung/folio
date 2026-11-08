@@ -6183,17 +6183,6 @@
         }
       }
     },
-    "materials.import-hold": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "길게 눌러 여러 줄 고르기"
-          }
-        }
-      }
-    },
     "materials.import-keys": {
       "extractionState": "manual",
       "localizations": {
@@ -6267,17 +6256,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%@ 넣기"
-          }
-        }
-      }
-    },
-    "materials.import-picking": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "줄을 눌러 더하거나 빼기"
           }
         }
       }
@@ -11293,7 +11271,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "다른 줄을 눌러 범위 넓히기"
+            "value": "범위 고르는 중"
           }
         }
       }

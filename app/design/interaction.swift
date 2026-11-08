@@ -220,7 +220,7 @@ private struct KeyProbe: UIGestureRecognizerRepresentable {
 }
 #endif
 
-/// While a touch pick is under way: what a tap does now, and the way out of it.
+/// While a touch pick that a tap can't end is under way: that it is, in a word, and the way out of it.
 struct PickingLine: View {
     let text: String
     let done: () -> Void
