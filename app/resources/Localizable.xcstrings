@@ -19833,6 +19833,61 @@
           }
         }
       }
+    },
+    "file-view.progress.pick-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "눌러서 이 쪽으로 가고, ⇧-클릭하면 앞서 누른 쪽부터 여기까지 고릅니다"
+          }
+        }
+      }
+    },
+    "file-view.progress.new": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 진도"
+          }
+        }
+      }
+    },
+    "file-view.progress.today": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오늘"
+          }
+        }
+      }
+    },
+    "file-view.progress.pick-class": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 진도 선택"
+          }
+        }
+      }
+    },
+    "file-view.progress.no-class": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "고를 수업 없음"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

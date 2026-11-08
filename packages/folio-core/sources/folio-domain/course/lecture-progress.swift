@@ -43,10 +43,34 @@ public struct PageRange: Equatable, Sendable {
         }
     }
 
-    /// `end` moved to `page` (nil empties it), kept within 1…`pages`; the other end is pushed along past it. The
-    /// other end is also brought into the file, for a count learned after it was set.
-    public func moving(_ end: End, to page: Int?, pages: Int?) -> PageRange {
+    /// The run of pages around `page` that no range in `taken` holds, within the file. Nil when `page` itself is
+    /// taken: there is no room there at all.
+    public static func room(at page: Int, besides taken: [ClosedRange<Int>], pages: Int?) -> ClosedRange<Int>? {
         let bounds = Self.bounds(pages)
+        guard bounds.contains(page), !taken.contains(where: { $0.contains(page) }) else { return nil }
+        let lo = taken.filter { $0.upperBound < page }.map { $0.upperBound + 1 }.max() ?? bounds.lowerBound
+        let hi = taken.filter { $0.lowerBound > page }.map { $0.lowerBound - 1 }.min() ?? bounds.upperBound
+        return max(lo, bounds.lowerBound)...min(hi, bounds.upperBound)
+    }
+
+    /// Where this range may go: the free run around its set end. Other classes' pages are walls a range stops at
+    /// rather than crosses, so the walls are the room's ends. Without either end, or with one already on a taken page
+    /// (a range saved before the rule), the file's bounds.
+    func room(besides taken: [ClosedRange<Int>], pages: Int?) -> ClosedRange<Int> {
+        guard let anchor = first ?? last, let room = Self.room(at: anchor, besides: taken, pages: pages) else { return Self.bounds(pages) }
+        return room
+    }
+
+    /// `end` moved to `page` (nil empties it), kept within 1…`pages` and clear of the pages in `taken`; the other end
+    /// is pushed along past it. The other end is also brought into the file, for a count learned after it was set.
+    public func moving(_ end: End, to page: Int?, pages: Int?, besides taken: [ClosedRange<Int>] = []) -> PageRange {
+        var bounds = room(besides: taken, pages: pages)
+        // An empty range has no room yet: the page it is given decides it, and a taken page sets nothing.
+        if first == nil, last == nil, let page {
+            let file = Self.bounds(pages)
+            guard let around = Self.room(at: min(max(page, file.lowerBound), file.upperBound), besides: taken, pages: pages) else { return self }
+            bounds = around
+        }
         let clamp = { (p: Int) in min(max(p, bounds.lowerBound), bounds.upperBound) }
         let moved = page.map(clamp)
         switch end {
@@ -57,32 +81,51 @@ public struct PageRange: Equatable, Sendable {
 
     /// A tap on `page` of the file's bar. A missing end is filled first, so a range set by taps never keeps one end
     /// empty for good; with both set, the nearer end comes to the page (the start on a tie, `moving` doing the push).
-    public func tapping(_ page: Int, pages: Int?) -> PageRange {
+    /// A first tap on a page another class took sets nothing.
+    public func tapping(_ page: Int, pages: Int?, besides taken: [ClosedRange<Int>] = []) -> PageRange {
         switch (first, last) {
-        case (nil, nil): return moving(.first, to: page, pages: pages).moving(.last, to: page, pages: pages)
-        case let (f?, nil): return page >= f ? moving(.last, to: page, pages: pages) : PageRange(first: page, last: f).moving(.first, to: page, pages: pages)
-        case let (nil, l?): return page <= l ? moving(.first, to: page, pages: pages) : PageRange(first: l, last: page).moving(.last, to: page, pages: pages)
-        case let (f?, l?): return moving(abs(page - f) <= abs(page - l) ? .first : .last, to: page, pages: pages)
+        case (nil, nil):
+            return moving(.first, to: page, pages: pages, besides: taken).moving(.last, to: page, pages: pages, besides: taken)
+        case let (f?, nil): return page >= f ? moving(.last, to: page, pages: pages, besides: taken) : PageRange(first: page, last: f).clamped(to: room(besides: taken, pages: pages))
+        case let (nil, l?): return page <= l ? moving(.first, to: page, pages: pages, besides: taken) : PageRange(first: l, last: page).clamped(to: room(besides: taken, pages: pages))
+        case let (f?, l?): return moving(abs(page - f) <= abs(page - l) ? .first : .last, to: page, pages: pages, besides: taken)
         }
     }
 
-    /// The whole range moved `pages` later (earlier when negative), its length kept and stopped at the file's ends.
-    /// A range missing an end has no length to keep and stays where it is.
-    public func shifted(by delta: Int, pages: Int?) -> PageRange {
+    /// This range clear of `taken`: its start moved past any range it falls in, its end stopped before the next one.
+    /// Empty when nothing is left, as for a class that only went back over pages taught before.
+    public func fitted(besides taken: [ClosedRange<Int>], pages: Int?) -> PageRange {
+        guard var start = first ?? last else { return self }
+        while let wall = taken.first(where: { $0.contains(start) }) { start = wall.upperBound + 1 }
+        guard let room = Self.room(at: start, besides: taken, pages: pages) else { return PageRange() }
+        guard let end = last else { return PageRange(first: start) }
+        guard end >= start else { return PageRange() }
+        return PageRange(first: first == nil ? nil : start, last: min(end, room.upperBound))
+    }
+
+    private func clamped(to bounds: ClosedRange<Int>) -> PageRange {
+        let clamp = { (p: Int) in min(max(p, bounds.lowerBound), bounds.upperBound) }
+        return PageRange(first: first.map(clamp), last: last.map(clamp))
+    }
+
+    /// The whole range moved `pages` later (earlier when negative), its length kept and stopped at the file's ends and
+    /// at other classes' pages. A range missing an end has no length to keep and stays where it is.
+    public func shifted(by delta: Int, pages: Int?, besides taken: [ClosedRange<Int>] = []) -> PageRange {
         guard let f = first, let l = last else { return self }
-        let bounds = Self.bounds(pages)
+        let bounds = room(besides: taken, pages: pages)
         let length = min(l - f, bounds.upperBound - bounds.lowerBound)
         let start = min(max(f + delta, bounds.lowerBound), bounds.upperBound - length)
         return PageRange(first: start, last: start + length)
     }
 
-    /// `end` rests against a bound of the file or against the other end: where a drag stops giving, and a firmer
-    /// tick tells so.
-    public func touches(_ end: End, pages: Int?) -> Bool {
+    /// `end` rests against a bound of the file, against another class's pages, or against the other end: where a drag
+    /// stops giving, and a firmer tick tells so.
+    public func touches(_ end: End, pages: Int?, besides taken: [ClosedRange<Int>] = []) -> Bool {
         guard let page = self[end] else { return false }
-        let bounds = Self.bounds(pages)
+        let bounds = room(besides: taken, pages: pages)
         let other = end == .first ? last : first
-        return page == bounds.lowerBound || (pages != nil && page == bounds.upperBound) || page == other
+        let wall = taken.contains { $0.lowerBound == page + 1 || $0.upperBound == page - 1 }
+        return page == bounds.lowerBound || ((pages != nil || wall) && page == bounds.upperBound) || page == other
     }
 }
 
@@ -129,6 +172,45 @@ extension CourseFile {
         return spans
     }
 
+    /// Each class's pages of `material` in page order, as `lectureProgress` cuts them at the count: the sections of
+    /// the file's page strip. Classes never share a page (`progressOverlaps`), so one range per class is the whole of it.
+    public func progressSections(of material: UUID, pageCount: Int?) -> [(session: UUID, pages: ClosedRange<Int>)] {
+        var ranges: [(session: UUID, pages: ClosedRange<Int>)] = []
+        for span in lectureProgress(of: material, pageCount: pageCount) {
+            for session in span.sessions {
+                if let i = ranges.firstIndex(where: { $0.session == session }) {
+                    ranges[i].pages = ranges[i].pages.lowerBound...span.lastPage
+                } else {
+                    ranges.append((session, span.firstPage...span.lastPage))
+                }
+            }
+        }
+        return ranges
+    }
+
+    /// Two classes naming the same pages of one lecture file, each pair once with the later class second. A page is
+    /// taught once: the second time is a recap, and counting it twice would make the progress read further back than
+    /// the class went. Cancelled classes taught nothing and never overlap.
+    public func progressOverlaps() -> [(material: UUID, earlier: (session: Session, pages: ClosedRange<Int>), later: (session: Session, pages: ClosedRange<Int>))] {
+        var out: [(material: UUID, earlier: (session: Session, pages: ClosedRange<Int>), later: (session: Session, pages: ClosedRange<Int>))] = []
+        for material in materials where material.role == .lecture {
+            let covered = coverage(of: material.id).sorted { Session.inOrder($0.session, $1.session) }
+            for (i, a) in covered.enumerated() {
+                for b in covered[(i + 1)...] where a.pages.overlaps(b.pages) {
+                    out.append((material.id, a, b))
+                }
+            }
+        }
+        return out
+    }
+
+    /// Pages of `material` the classes other than `session` took, in page order: where a range of `session` may not go.
+    public func pagesTaken(in material: UUID, besides session: UUID) -> [ClosedRange<Int>] {
+        pagesTaught(in: material, besides: session).map(\.pages).sorted { $0.lowerBound < $1.lowerBound }
+    }
+}
+
+extension CourseFile {
     /// The pages each other class took through `material`, in class order: what a page bar lays under the class being
     /// edited.
     public func pagesTaught(in material: UUID, besides session: UUID) -> [(session: Session, pages: ClosedRange<Int>)] {
@@ -193,19 +275,18 @@ extension CourseFile {
     public func suggestedRange(of id: UUID, for session: Session, seen: SessionMaterial?, pageCount: Int?) -> SessionMaterial {
         let saved = session.materials.first { $0.materialId == id }
         var last = saved?.lastPage ?? seen?.lastPage
-        var first: Int
-        if let given = saved?.firstPage {
-            first = given
-        } else {
-            first = resumePage(of: id, for: session) ?? 1
-            // The class only went back over pages covered before (a recap): those pages, not an empty range.
-            if let end = last, first > end { first = min(seen?.firstPage ?? end, end) }
-        }
+        var first = saved?.firstPage ?? resumePage(of: id, for: session) ?? 1
         if let count = pageCount {
             first = min(first, count)
             last = last.map { min($0, count) }
         }
-        return SessionMaterial(materialId: id, firstPage: first, lastPage: last)
+        var range = PageRange(first: first, last: last)
+        // Saved pages already passed the rule. Anything guessed is kept off other classes' pages: a class that only
+        // went back over pages taught before (a recap) is suggested no pages rather than those.
+        if saved?.firstPage == nil || saved?.lastPage == nil {
+            range = range.fitted(besides: pagesTaken(in: id, besides: session.id), pages: pageCount)
+        }
+        return SessionMaterial(materialId: id, firstPage: range.first, lastPage: range.last)
     }
 
     /// The file the most recent ranged class before `session` stopped in. Once its count says the class reached the
@@ -234,5 +315,12 @@ extension Recording {
     public func visit(at time: TimeInterval) -> PageVisit? {
         guard let last = pages.last(where: { $0.at <= time }), last.page != nil else { return nil }
         return last
+    }
+}
+
+extension Session {
+    /// `16–18쪽`, or `16쪽` for one page: how a class's pages of a file are written wherever they are shown.
+    public static func pagesLabel(_ pages: ClosedRange<Int>) -> String {
+        pages.count == 1 ? String(localized: .sessionPage(pages.lowerBound)) : String(localized: .sessionPages(pages.lowerBound, pages.upperBound))
     }
 }

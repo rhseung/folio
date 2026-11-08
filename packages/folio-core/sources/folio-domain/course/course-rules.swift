@@ -204,6 +204,16 @@ extension CourseFile: Document {
             let counts = Dictionary(pointers.map { ($0, 1) }, uniquingKeysWith: +)
             return f.notes.filter { (counts[$0.id] ?? 0) > 1 }.map { ($0.id, String(localized: .ruleNoteSession($0.path))) }
         }
+        // One violation per pair, on the later class: a save that adds a range fails on that pair alone, and the
+        // message names both classes, so whichever the user was editing, the other one is in it.
+        Rule("Session.progressOverlap") { f, _ in
+            f.progressOverlaps().map { o in
+                let file = f.materials.first { $0.id == o.material }.map { URL(fileURLWithPath: $0.path).lastPathComponent } ?? ""
+                return (o.later.session.id, String(localized: .ruleSessionProgressOverlap(
+                    file, f.day(of: o.earlier.session, calendar: .current), Session.pagesLabel(o.earlier.pages),
+                    f.day(of: o.later.session, calendar: .current), Session.pagesLabel(o.later.pages))))
+            }
+        }
         Pair(\.exams, \.scopeUnitIds, \.units, \.examIds)
         Pair(\.sessions, \.unitIds, \.units, \.sessionIds)
         Pair(\.sessions, \.materialIds, \.materials, \.sessionIds)

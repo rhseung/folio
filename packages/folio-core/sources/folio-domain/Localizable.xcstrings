@@ -1441,6 +1441,39 @@
           }
         }
       }
+    },
+    "rule.session.progress-overlap": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@에서 %2$@ 수업의 %3$@과 %4$@ 수업의 %5$@이 겹칩니다"
+          }
+        }
+      }
+    },
+    "session.pages": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld–%2$lld쪽"
+          }
+        }
+      }
+    },
+    "session.page": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld쪽"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

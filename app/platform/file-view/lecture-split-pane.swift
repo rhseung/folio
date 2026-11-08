@@ -67,7 +67,7 @@ private struct SplitThumbnails: View {
                         let zone = split.section(at: page)
                         VStack(alignment: .leading, spacing: 0) {
                             if split.sections[zone].firstPage == page { header(zone) }
-                            Thumbnail(document: controller.view.document, page: page, current: controller.page + 1 == page)
+                            PageThumbnail(thumbnails: controller.thumbnails, page: page, current: controller.page + 1 == page)
                                 .padding(.horizontal, Theme.Space.m)
                                 .background(alignment: .leading) {
                                     // The zone's band down the left edge, so a long zone still reads as one.
@@ -142,40 +142,5 @@ private struct Gap: View {
         .onTapGesture(perform: action)
         .pointingHand()
         .help(Text(boundary ? .fileViewSplitJoinHelp : .fileViewSplitCutHelp))
-    }
-}
-
-private struct Thumbnail: View {
-    let document: PDFDocument?
-    let page: Int
-    let current: Bool
-    @State private var image: Image?
-
-    var body: some View {
-        VStack(spacing: Theme.Space.xxs) {
-            Group {
-                if let image {
-                    image.resizable().scaledToFit()
-                } else {
-                    Theme.Palette.fill
-                }
-            }
-            .frame(height: 84)
-            .clipShape(.rect(cornerRadius: Theme.Radius.small))
-            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.small).strokeBorder(current ? Theme.Palette.text : Theme.Palette.lineSoft, lineWidth: current ? 2 : 1))
-            Text("\(page)").font(Theme.Typeface.label.weight(.regular)).monospacedDigit().foregroundStyle(Theme.Palette.textTertiary)
-        }
-        .padding(.vertical, Theme.Space.xxs)
-        .task(id: page) { image = render() }
-    }
-
-    private func render() -> Image? {
-        guard let pdfPage = document?.page(at: page - 1) else { return nil }
-        let thumb = pdfPage.thumbnail(of: CGSize(width: 288, height: 168), for: .mediaBox)
-        #if os(macOS)
-        return Image(nsImage: thumb)
-        #else
-        return Image(uiImage: thumb)
-        #endif
     }
 }
