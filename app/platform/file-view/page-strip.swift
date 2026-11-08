@@ -344,7 +344,7 @@ struct PageThumbnail: View {
             // width keeps its pages as wide as they were. Its corner is the page's plus the reach, to run alongside it.
             if current {
                 RoundedRectangle(cornerRadius: Theme.Radius.small + Theme.Space.s)
-                    .fill(Theme.Palette.fill)
+                    .fill(Theme.Palette.currentPage)
                     .padding(.horizontal, -Theme.Space.s)
             }
         }

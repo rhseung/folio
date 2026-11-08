@@ -13,6 +13,10 @@ enum Theme {
         static let column = Color(light: 0xE9E7E2, dark: 0x21201E)
         static let window = Color(light: 0xF7F6F3, dark: 0x22211F)
         static let fill = Swatch.fill.color
+        /// The wash behind the page a PDF is on, in its page strip. `fill` in light; in dark `fill` sat a shade off the
+        /// strip and the white page drew the eye from it, so it is lifted to read at a glance, still a grey so it never
+        /// passes for the course's line or the picked ring.
+        static let currentPage = Color(light: Swatch.fill.light, dark: 0x4A4743)
         static let line = Swatch.line.color
         static let lineSoft = Swatch.lineSoft.color
         /// Dashed outlines of rows not made yet: a plain line vanishes against the page in light mode.
