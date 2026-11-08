@@ -107,7 +107,7 @@ struct ClassWrapUpSheet: View {
                             .help(Text(.designPageRangeSplitHelp))
                     }
                 }
-                .frame(width: 152, alignment: .leading)
+                .frame(width: 136, alignment: .leading)
                 // All the rest of the row: the tiles' names need every point the bar can get.
                 PageRangeField(range: row.range, pages: model.pageCounts[row.id], taught: model.taught(row.id),
                                seen: model.seen(row.id), sections: model.sections(row.id)) { model.setRange(row.id, $0) }

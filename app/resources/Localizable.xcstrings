@@ -19075,17 +19075,6 @@
         }
       }
     },
-    "design.page-range.span": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$lld–%2$lld쪽"
-          }
-        }
-      }
-    },
     "design.page-range.split": {
       "extractionState": "manual",
       "localizations": {
@@ -19588,28 +19577,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "수업 정리"
-          }
-        }
-      }
-    },
-    "design.page-range.from-page": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld쪽부터"
-          }
-        }
-      }
-    },
-    "design.page-range.to-page": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld쪽까지"
           }
         }
       }

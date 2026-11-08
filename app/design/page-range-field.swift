@@ -1,10 +1,10 @@
 import FolioDomain
 import SwiftUI
 
-/// A lecture file's pages as a thin bar, with one class's range on it in the course accent and one line under it that
-/// reads the range. Pages other classes took lie faintly in the bar, and the pages seen while recording are a dotted
-/// line under it to take in one tap. The numbers ride the handles only while one is dragged, pointed at or keyed:
-/// at rest they would crowd the bar, and the line under it already says them. Every change goes through `PageRange`
+/// A lecture file's pages as a thin bar, with one class's range on it in the course accent. Pages other classes took
+/// lie faintly in the bar, and the pages seen while recording are a dotted line under it to take in one tap. The
+/// numbers float over the handles only while one is dragged, pointed at, keyed or tapped; nothing under the bar
+/// repeats them, so the row stays as tall as a form row. Every change goes through `PageRange`
 /// (`moving`, `tapping`, `shifted`), so the range stays within the file and in order during a drag as much as after.
 ///
 /// A lecture split into units (#321) draws its zones as named tiles instead of the thin rail (the section bar, e2): the
@@ -53,6 +53,10 @@ struct PageRangeField: View {
     /// The numbers over the handles, kept up a moment after the pointer leaves so it can reach them to type.
     @State private var pillsUp = false
     @State private var pillHover = false
+    /// The end whose handle was tapped, not dragged: its number stays up until focus leaves it, so a finger with no
+    /// pointer to hover can reach it to type.
+    @State private var pinned: PageRange.End?
+    @State private var pressed: PageRange.End?
     @FocusState private var focused: PageRange.End?
     @FocusState private var typingFocused: Bool
 
@@ -64,12 +68,16 @@ struct PageRangeField: View {
     /// Room left and right of the bar for a handle at either end.
     private static let inset: CGFloat = 12
     private static let bar: CGFloat = 8
-    /// Above the bar, for the numbers while a handle moves: a 24pt pill and 8pt clear of the range's box under it.
-    private static let pillRow: CGFloat = 32
-    private static let pillY: CGFloat = 12
+    /// The field's height, the bar in its middle: about a form row's content, a file name and the split button beside it.
+    private static let height: CGFloat = 40
+    /// The numbers float this far above the bar, over the row's top padding rather than a row of their own: a 20pt
+    /// pill ending 2pt above the range's box or a grabbed handle, clear of the tiles' names.
+    private static let pillRise: CGFloat = 24
+    private static let pillHeight: CGFloat = 20
     /// The bar's row, taller than the bar so it is easy to grab.
     private static let hitRow: CGFloat = 24
-    /// The recording's dotted line under the bar, tall enough to press.
+    /// The recording's dotted line, this far under the bar's middle, and the height of its press target.
+    private static let seenDrop: CGFloat = 16
     private static let seenRow: CGFloat = 12
     /// Closer than this, the two pills would overlap and read as one: they merge.
     private static let mergeBelow: CGFloat = 56
@@ -78,6 +86,10 @@ struct PageRangeField: View {
     private static let zone: CGFloat = 20
     /// How far a zone's name keeps from a handle's middle: half the handle, and 8pt.
     private static let handleClear: CGFloat = 14
+    /// A handle this close to a zone edge stands in the gap between two tiles, 4pt into each, so a name keeps only 4pt
+    /// from it: the full clearance there truncated the names of the very units the range picked.
+    private static let onEdge: CGFloat = 2
+    private static let edgeClear: CGFloat = 10
     /// Narrower than this, a name would be a letter and an ellipsis; the tile goes without.
     private static let minLabel: CGFloat = 24
     /// Within this much of a zone's edge, a dragged end settles on it.
@@ -98,27 +110,13 @@ struct PageRangeField: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            GeometryReader { proxy in track(width: proxy.size.width) }
-                .frame(height: Self.pillRow + Self.hitRow)
-            if let seen {
-                GeometryReader { proxy in seenLine(seen, width: proxy.size.width) }
-                    .frame(height: Self.seenRow)
-            }
-            if let readout {
-                Text(readout)
-                    .font(Theme.Typeface.caption)
-                    .monospacedDigit()
-                    // An end still to pick reads in the course ink: the row's cue, with no sentence for it.
-                    .foregroundStyle(shown.lone == nil ? Theme.Palette.textSecondary : accent.ink)
-                    .lineLimit(1)
-                    .truncationMode(.middle)
-                    .padding(.horizontal, Self.inset)
-                    .padding(.top, Theme.Space.s)
-            }
-        }
+        GeometryReader { proxy in track(width: proxy.size.width) }
+        .frame(height: Self.height)
         .frame(minWidth: compact ? 200 : 240)
         .onAppear { if numbersShown { pillsUp = true } }
+        .onChange(of: focused) { was, now in
+            if let pinned, was == pinned, now != pinned { self.pinned = nil }
+        }
         .onChange(of: wantsPills) { _, want in
             if want { pillsUp = true; return }
             Task {
@@ -138,7 +136,7 @@ struct PageRangeField: View {
     private func x(_ edge: Int, _ w: CGFloat) -> CGFloat { Self.inset + CGFloat(edge) * unit(w) }
     private func edge(at x: CGFloat, _ w: CGFloat) -> CGFloat { (x - Self.inset) / unit(w) }
     private func page(at x: CGFloat, _ w: CGFloat) -> Int { min(max(Int(edge(at: x, w).rounded(.down)) + 1, 1), extent) }
-    private var barY: CGFloat { Self.pillRow + Self.hitRow / 2 }
+    private var barY: CGFloat { Self.height / 2 }
 
     private func handleX(_ end: PageRange.End, _ r: PageRange, _ w: CGFloat) -> CGFloat? {
         end == .first ? r.first.map { x($0 - 1, w) } : r.last.map { x($0, w) }
@@ -182,7 +180,6 @@ struct PageRangeField: View {
             }
             if let xa { handle(.first, x: xa) }
             if let xb { handle(.last, x: xb) }
-            pills(r, xa: xa, xb: xb, width: w)
             Color.clear
                 .contentShape(.rect)
                 .frame(width: w, height: Self.hitRow)
@@ -202,9 +199,11 @@ struct PageRangeField: View {
                 .pointerStyle(hovered != nil || grab != nil ? .columnResize : nil)
                 #endif
                 .accessibilityHidden(true)
+            if let seen { seenLine(seen, width: w) }
+            pills(r, xa: xa, xb: xb, width: w)
             if let p = hoverPage, !pillsUp { tip(p, width: w) }
         }
-        .frame(width: w, height: Self.pillRow + Self.hitRow)
+        .frame(width: w, height: Self.height)
     }
 
     private func rail(_ context: GraphicsContext, width w: CGFloat) {
@@ -279,8 +278,10 @@ struct PageRangeField: View {
         let lo = x(section.pages.lowerBound - 1, w) + Theme.Space.s, hi = x(min(section.pages.upperBound, extent), w) - Theme.Space.s
         guard lo < hi else { return nil }
         var free = [lo...hi]
+        let edges = zoneEdges.map { x($0, w) }
         for h in handles {
-            let cut = (h - Self.handleClear)...(h + Self.handleClear)
+            let clear = edges.contains { abs($0 - h) <= Self.onEdge } ? Self.edgeClear : Self.handleClear
+            let cut = (h - clear)...(h + clear)
             free = free.flatMap { stretch -> [ClosedRange<CGFloat>] in
                 guard stretch.overlaps(cut) else { return [stretch] }
                 return [stretch.lowerBound...max(stretch.lowerBound, cut.lowerBound), min(stretch.upperBound, cut.upperBound)...stretch.upperBound]
@@ -291,19 +292,8 @@ struct PageRangeField: View {
         return ((best.lowerBound + best.upperBound) / 2, best.upperBound - best.lowerBound)
     }
 
-    /// Pages only, `14–20쪽`: the tiles above already name the units. `7쪽부터` while an end is still to pick.
-    private var readout: String? {
-        switch (shown.first, shown.last) {
-        case let (f?, l?):
-            return String(localized: f == l ? .designPageRangeLength(f) : .designPageRangeSpan(f, l))
-        case let (f?, nil): return String(localized: .designPageRangeFromPage(f))
-        case let (nil, l?): return String(localized: .designPageRangeToPage(l))
-        default: return nil
-        }
-    }
-
     private var wantsPills: Bool {
-        numbersShown || grab != nil || typing != nil || hovered != nil || pillHover || (keyed && focused != nil)
+        numbersShown || grab != nil || typing != nil || hovered != nil || pillHover || pinned != nil || (keyed && focused != nil)
     }
 
     private var grabbedEnd: PageRange.End? { if case let .end(end, _) = grab { end } else { nil } }
@@ -312,9 +302,11 @@ struct PageRangeField: View {
     private func handle(_ end: PageRange.End, x hx: CGFloat) -> some View {
         let scale: CGFloat = grabbedEnd == end ? 1.3 : hovered == end ? 1.15 : 1
         let value = shown[end]
+        // The only handle while an end is missing wears the course color: the row's cue, with no sentence under it.
+        let lone = shown.lone == end
         return Capsule()
             .fill(Color.white)
-            .overlay(Capsule().strokeBorder(Color.black.opacity(0.12), lineWidth: 0.5))
+            .overlay(Capsule().strokeBorder(lone ? accent.color : Color.black.opacity(0.12), lineWidth: lone ? 1.5 : 0.5))
             .shadow(color: .black.opacity(0.28), radius: 1.5, y: 1)
             .frame(width: 12, height: 22)
             .overlay {
@@ -351,7 +343,7 @@ struct PageRangeField: View {
 
     @ViewBuilder
     private func pills(_ r: PageRange, xa: CGFloat?, xb: CGFloat?, width w: CGFloat) -> some View {
-        let y = Self.pillY
+        let y = barY - Self.pillRise
         let clamp = { (x: CGFloat, half: CGFloat) in min(max(x, half), w - half) }
         switch (r.first, r.last, xa, xb) {
         case let (f?, l?, xa?, xb?):
@@ -399,11 +391,16 @@ struct PageRangeField: View {
             .font(Theme.Typeface.label)
             .monospacedDigit()
             .padding(.horizontal, Theme.Space.s)
-            .frame(height: 24)
-            .background(Theme.Palette.card, in: .capsule)
-            .overlay(Capsule().strokeBorder(Theme.Palette.lineStrong, lineWidth: 0.5))
-            .shadow(color: .black.opacity(0.12), radius: 1, y: 1)
+            .frame(height: Self.pillHeight)
             .fixedSize()
+            // Drawn as one flattened shape with the shadow outside it: left to the layers, the hairline capsule came out
+            // with straight cut ends at the pill's sides.
+            .background {
+                Capsule().fill(Theme.Palette.card)
+                    .overlay(Capsule().strokeBorder(Theme.Palette.lineStrong, lineWidth: 0.5))
+                    .drawingGroup()
+                    .shadow(color: .black.opacity(0.12), radius: 1, y: 1)
+            }
             .onHover { pillHover = $0 }
             .animation(.easeOut(duration: 0.18), value: moved)
             .animation(.easeOut(duration: 0.15), value: pillsUp)
@@ -449,14 +446,14 @@ struct PageRangeField: View {
         .background(Theme.Palette.card, in: .capsule)
         .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
         .fixedSize()
-        .position(x: x(p - 1, w) + unit(w) / 2, y: Self.pillY)
+        .position(x: x(p - 1, w) + unit(w) / 2, y: barY - Self.pillRise)
         .allowsHitTesting(false)
     }
 
     // MARK: Below the bar
 
     /// The pages seen while recording as a dotted line under them; pressing it takes them as the range. A line rather
-    /// than a labelled box: the box and its words sat against the bar and the readout, and the tooltip says the rest.
+    /// than a labelled box: the box and its words sat against the bar, and the tooltip says the rest.
     private func seenLine(_ seen: ClosedRange<Int>, width w: CGFloat) -> some View {
         let lo = x(seen.lowerBound - 1, w), hi = x(min(seen.upperBound, extent), w)
         let applied = shown.first == seen.lowerBound && shown.last == seen.upperBound
@@ -474,7 +471,7 @@ struct PageRangeField: View {
         .buttonStyle(.pointing(.plain))
         .help(Text(.designPageRangeSeenHelp))
         .accessibilityLabel(Text(.designPageRangeSeenShort(seen.lowerBound, seen.upperBound)))
-        .position(x: (lo + hi) / 2, y: Self.seenRow / 2)
+        .position(x: (lo + hi) / 2, y: barY + Self.seenDrop)
     }
 
     // MARK: Changes
@@ -510,6 +507,8 @@ struct PageRangeField: View {
                 }
             }
             .onEnded { _ in
+                pinned = moved ? nil : pressed
+                pressed = nil
                 if let draft, draft != range { set(draft) }
                 withAnimation(Self.spring) { rubber = 0 }
                 draft = nil
@@ -535,6 +534,7 @@ struct PageRangeField: View {
         let r = shown
         if let end = nearHandle(px, r, w) {
             grab = .end(end, from: r)
+            pressed = end
             focused = end
         } else if let f = r.first, let l = r.last, px > x(f - 1, w), px < x(l, w) {
             grab = .span(from: r, at: px)
