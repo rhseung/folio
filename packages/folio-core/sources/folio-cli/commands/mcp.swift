@@ -40,8 +40,21 @@ struct MCPServer {
     init(gist: String?, propose: Bool) {
         self.gist = gist
         self.propose = propose
-        let all = Self.writeTools(propose: propose) + Self.readTools()
+        let all = Self.writeTools(propose: propose) + Self.readTools().map { Self.builds[$0.command] == nil ? $0 : Self.writing($0, propose: propose) }
         tools = propose ? all.filter { Self.inPanel($0.command) } : all
+    }
+
+    /// Commands written by hand that write by building one action (`add` reads a quick-add line into `assignment add`).
+    /// Read off the help like a read command, they would otherwise be marked read-only and skip `--dry-run` under
+    /// `--propose`. The action they build is the one proposed.
+    static let builds: [String: String] = ["add": "assignment add"]
+
+    static func writing(_ tool: Tool, propose: Bool) -> Tool {
+        var t = tool
+        t.write = true
+        t.spec["annotations"] = ["readOnlyHint": .bool(false), "destructiveHint": .bool(false), "openWorldHint": .bool(false)]
+        if !propose { t.spec["inputSchema"]?["properties"]?["dryRun"] = ["type": "boolean", "description": .string(String(localized: .mcpDryRunHelp))] }
+        return t
     }
 
     /// What the app's Claude panel (`--propose`) opens: the tools for talking about one course. Every tool's
@@ -106,10 +119,10 @@ struct MCPServer {
         let text = Self.compact((code == 0 ? out.lines("out") : out.lines("err") + out.lines("out")).joined(separator: "\n"))
         var content: [JSONValue] = [["type": "text", "text": .string(text)]]
         // What the panel shows an approve button for: the action with every name already resolved to its UUID.
-        if code == 0, tool.write, propose, let input = built.items.first(where: { $0.0 == tool.command })?.1 {
+        if code == 0, tool.write, propose, let input = built.items.first(where: { $0.0 == (Self.builds[tool.command] ?? tool.command) })?.1 {
             // In the result too: the app replaces the system prompt, so the server's instructions may never reach Claude.
             content.insert(["type": "text", "text": .string(String(localized: .mcpInstructionsPropose))], at: 0)
-            content.append(["type": "text", "text": .string(ActionProposal(command: tool.command, input: input).text)])
+            content.append(["type": "text", "text": .string(ActionProposal(command: Self.builds[tool.command] ?? tool.command, input: input).text)])
         }
         return ["content": .array(content), "isError": .bool(code != 0)]
     }

@@ -169,14 +169,14 @@ extension Complete {
 }
 
 @discardableResult
-func perform<A: Action>(spec action: A, _ options: GlobalOptions, ctx: ActionContext) throws -> ActionContext {
+func perform<A: Action>(spec action: A, _ options: GlobalOptions, ctx: ActionContext, read: JSONValue? = nil) throws -> ActionContext {
     let spec = A.spec
     if let record = Built.record { record(A.command, try JSONValue(action)) }
     let confirm = spec.asks(action) ? spec.confirm.map { spec.render($0, action, ctx: ctx) } : nil
     // Rendered before running so the name of an item the action removes still shows; an item it makes has a name
     // only after.
     let before = spec.effect == .creates ? nil : spec.render(spec.done, action, ctx: ctx)
-    let result = try perform(action, options, ctx: ctx, done: before ?? spec.render(spec.done, action, ctx: ctx), confirm: confirm)
+    let result = try perform(action, options, ctx: ctx, done: before ?? spec.render(spec.done, action, ctx: ctx), confirm: confirm, read: read)
     if spec.undoable, !options.json, let batch = result.made { say(String(localized: .performUndoHint(batch.uuidString)).styled(.dim)) }
     return result
 }

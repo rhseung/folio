@@ -177,6 +177,204 @@
         }
       }
     },
+    "add.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빠른 추가 한 줄로 과제 추가. 앱의 빠른 추가와 같이 읽는다"
+          }
+        }
+      }
+    },
+    "add.discussion": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "줄에서 과목, 제목, 마감, 반복(매주), 과제 번호(HW5)를 읽어 보여 준 뒤 과제를 추가한다. 과목은 이번 학기 과목에서 찾는다. --course, --due, --repeats는 앱의 칩처럼 줄에서 읽은 값 대신 쓴다. 과목이나 제목을 읽지 못하면 쓰지 않는다.\n\n예시:\n  folio add \"그래프 HW5 금 23:59\" --dry-run\n  folio add \"HW6 다음 주 수요일\" --course EC4207\n  folio add \"로봇 Lab3 11/12 9시\" --json"
+          }
+        }
+      }
+    },
+    "add.field.course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목"
+          }
+        }
+      }
+    },
+    "add.field.due": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마감"
+          }
+        }
+      }
+    },
+    "add.field.folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더"
+          }
+        }
+      }
+    },
+    "add.field.repeats": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "반복"
+          }
+        }
+      }
+    },
+    "add.field.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제목"
+          }
+        }
+      }
+    },
+    "add.help.course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "줄에서 읽은 과목 대신 쓸 과목"
+          }
+        }
+      }
+    },
+    "add.help.due": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "줄에서 읽은 마감 대신 쓸 마감 일시. none이면 마감과 반복을 지운다"
+          }
+        }
+      }
+    },
+    "add.help.line": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빠른 추가 줄. 따옴표로 묶는다"
+          }
+        }
+      }
+    },
+    "add.help.repeats": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "줄에서 읽은 반복 대신 쓸 반복. none이면 반복하지 않는다"
+          }
+        }
+      }
+    },
+    "add.no-course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "줄에서 이번 학기 과목을 읽지 못했습니다: '%@'"
+          }
+        }
+      }
+    },
+    "add.no-course-hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "folio add \"%@\" --course <과목>"
+          }
+        }
+      }
+    },
+    "add.no-due": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "없음"
+          }
+        }
+      }
+    },
+    "add.no-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "줄에서 과제 제목을 읽지 못했습니다: '%@'"
+          }
+        }
+      }
+    },
+    "add.read": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "읽은 내용"
+          }
+        }
+      }
+    },
+    "add.unread": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "읽지 못함"
+          }
+        }
+      }
+    },
+    "add.weekly": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "매주"
+          }
+        }
+      }
+    },
     "assignment.abstract": {
       "extractionState": "manual",
       "localizations": {
