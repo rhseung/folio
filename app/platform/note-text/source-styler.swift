@@ -86,7 +86,7 @@ extension NSAttributedString.Key {
         }
         for m in text.matches(of: WikiLink.pattern) {
             let r = NSRange(m.range, in: text)
-            guard !w.inCode(r), !math.covers(r) else { continue }
+            guard !w.inCode(r, orTable: false), !math.covers(r) else { continue }
             let open = m.1.isEmpty ? 2 : 3
             w.set(r, [.foregroundColor: accent.inkNative, Self.weight: PlatformFont.Weight.medium.rawValue,
                       .noteWiki: WikiLink(m).target, .underlineStyle: NSUnderlineStyle.single.rawValue,
@@ -105,7 +105,7 @@ extension NSAttributedString.Key {
         }
         // A bare address, which the preview links and ⌘-click opens, reads as a link here too; one that is already a
         // link's target is left to that link.
-        for (r, link) in AppLink.links(in: text) where !w.inCode(r) && !math.covers(r) {
+        for (r, link) in AppLink.links(in: text) where !w.inCode(r, orTable: false) && !math.covers(r) {
             let taken = storage.attribute(.noteWiki, at: r.location, effectiveRange: nil) != nil
                 || storage.attribute(.noteHref, at: r.location, effectiveRange: nil) != nil
             guard !taken else { continue }
@@ -206,7 +206,12 @@ extension NSAttributedString.Key {
             storage.addAttributes(attributes, range: range)
         }
 
-        func inCode(_ r: NSRange) -> Bool { code.contains { NSIntersectionRange($0, r).length > 0 } }
+        /// A table is drawn as written, in the code font, but its links still read and open as links.
+        var tables: [NSRange] = []
+
+        func inCode(_ r: NSRange, orTable: Bool = true) -> Bool {
+            (orTable ? code + tables : code).contains { NSIntersectionRange($0, r).length > 0 }
+        }
 
         func lineRanges(_ r: NSRange) -> [NSRange] {
             var out: [NSRange] = []
@@ -311,7 +316,7 @@ extension NSAttributedString.Key {
                 }
             }
         case is Markdown.Table:
-            w.code.append(r)
+            w.tables.append(r)
             for line in w.lineRanges(r) { w.set(line, [Self.mono: true]) }
         case is ThematicBreak:
             w.marks.append(r)
