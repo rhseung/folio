@@ -234,6 +234,7 @@ struct RootView: View {
             if SnapshotDriver.strip != nil, let lecture = workspace.currentCourses.lazy.compactMap({ c in
                 c.file.lectureFiles.first { m in c.file.sessions.contains { $0.materials.contains { $0.materialId == m.id && $0.pages != nil } } }
             }).first {
+                if let now = SnapshotDriver.stripNow { workspace.pinnedNow = now }
                 await SnapshotDriver.shared.runStrip(open: { open($0) }, lecture: AppLink(.material, lecture.id))
                 return
             }

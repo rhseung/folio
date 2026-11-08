@@ -33,9 +33,14 @@ final class SnapshotDriver {
     /// `courses`: the first tab holds two courses side by side, the walk moving the left one and the second course's
     /// overview beside it, so both fold their section columns (#62).
     static let coursePanes = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_PANES"] == "courses"
-    /// Only the page strip of a lecture with classes' pages (#147): its brackets, a range picked, the class popover and
-    /// the range saved, as `strip-*.png`. Set to `from-to` (`9-12`) for the range picked.
+    /// Only the page strip of a lecture with classes' pages (#147): its sections, a class's range changed, a range
+    /// picked, the class menu and the range saved, as `strip-*.png`. Set to `from-to` (`19-21`) for the range picked.
     static let strip = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP"]
+    /// The page a section's range is changed from and the page its end goes to (`16-19`), for `strip-edit`.
+    static let stripEdit = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP_EDIT"]
+    /// The moment the strip walk is drawn at (`2026-11-04T10:00:00+09:00`), so today's class is the one a fixture's
+    /// copy was given.
+    static let stripNow = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP_NOW"].flatMap { try? Date($0, strategy: .iso8601) }
 
     var section: CourseSection?
     /// Inside the units section: `detail` opens the first unit, `review` also opens its review sheet.
@@ -61,6 +66,8 @@ final class SnapshotDriver {
     var strip: StripStep?
 
     enum StripStep: Equatable {
+        case page(Int)
+        case edit(Int, Int)
         case range(Int, Int)
         case choose
         case save
@@ -205,8 +212,11 @@ final class SnapshotDriver {
             window.setContentSize(NSSize(width: Self.width, height: 900))
             window.center()
         }
-        let bounds = (Self.strip ?? "").split(separator: "-").compactMap { Int($0) }
-        let range = bounds.count == 2 ? (bounds[0], bounds[1]) : (9, 12)
+        func pair(_ text: String?, _ fallback: (Int, Int)) -> (Int, Int) {
+            let bounds = (text ?? "").split(separator: "-").compactMap { Int($0) }
+            return bounds.count == 2 ? (bounds[0], bounds[1]) : fallback
+        }
+        let range = pair(Self.strip, (19, 21)), edit = pair(Self.stripEdit, (16, 19))
         open(lecture)
         try? await Task.sleep(for: .seconds(3))
         // Glass and popovers draw only on screen: a `<step>.ready` file tells a script outside to capture the screen then.
@@ -217,10 +227,14 @@ final class SnapshotDriver {
             try? Data().write(to: directory.appending(path: "\(name).ready"))
             try? await Task.sleep(for: .seconds(3))
         }
-        await shot("strip-brackets")
-        for (name, step) in [("strip-range", StripStep.range(range.0, range.1)), ("strip-popover", .choose), ("strip-saved", .save)] {
+        let steps: [(String, StripStep)] = [
+            ("strip-idle", .page(edit.0)), ("strip-edit", .edit(edit.0, edit.1)), ("strip-pick", .range(range.0, range.1)),
+            ("strip-menu", .choose), ("strip-saved", .save),
+        ]
+        for (name, step) in steps {
             strip = step
-            try? await Task.sleep(for: .seconds(2))
+            // The section just saved is lit for 1.6 seconds: drawn sooner, it still is.
+            try? await Task.sleep(for: .seconds(step == .save ? 0.6 : 2))
             await shot(name)
         }
         strip = nil
