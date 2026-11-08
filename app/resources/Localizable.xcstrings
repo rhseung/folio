@@ -1585,6 +1585,17 @@
         }
       }
     },
+    "common.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "완료"
+          }
+        }
+      }
+    },
     "common.edit": {
       "extractionState": "manual",
       "localizations": {
@@ -6392,17 +6403,6 @@
         }
       }
     },
-    "materials.link": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "연결"
-          }
-        }
-      }
-    },
     "materials.link-ellipsis": {
       "extractionState": "manual",
       "localizations": {
@@ -6502,13 +6502,13 @@
         }
       }
     },
-    "materials.links.sessions-note": {
+    "materials.links.title": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "페이지를 비우면 전체"
+            "value": "%@ 연결"
           }
         }
       }

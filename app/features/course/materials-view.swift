@@ -40,6 +40,10 @@ struct MaterialsView: View {
         .sheet(isPresented: Binding(get: { !model.incoming.isEmpty }, set: { if !$0 { model.incoming = [] } })) {
             ImportPlaceSheet(workspace: model.workspace, course: model.course, files: model.incoming, places: model.places)
         }
+        // By item, so the sheet keeps its file while it slides away after `linking` clears.
+        .sheet(item: Binding(get: { model.linking.map(LinkedFile.init) }, set: { model.linking = $0?.id })) { file in
+            MaterialLinksEditor(model: model, materialId: file.id)
+        }
         .sheet(isPresented: $model.creatingFile) {
             NewMaterialFileSheet(workspace: model.workspace, course: model.course, folder: model.newFileFolder) { model.created($0) }
         }
@@ -66,6 +70,10 @@ struct MaterialsView: View {
                 model.materials.first { !$0.isFolder && ($0.path as NSString).pathExtension.lowercased() == ext && $0.status == .classified }?.id
             }
             SnapshotDriver.shared.materialsOpenFile = model.viewing != nil
+        }
+        .onChange(of: SnapshotDriver.shared.linkFile) { _, on in
+            if on, model.materials.isEmpty { model.workspace.run(MaterialTrack(course: model.course.id)) }
+            model.linking = on ? (model.materials.first { $0.role == .lecture && $0.isPDF } ?? model.materials.first)?.id : nil
         }
         #endif
     }
@@ -243,13 +251,6 @@ struct MaterialsView: View {
             Button(.materialsRelink) { model.relinking = m.id }.buttonStyle(.ghost)
             Button(.materialsUntrack) { model.disconnecting = m }.buttonStyle(.ghost).tint(Theme.Palette.danger)
         } else {
-            Button(.materialsLink) { model.linking = m.id }
-                .buttonStyle(.ghost)
-                // The hidden PDF's links are edited from its `.tex` row, the only place left to anchor them.
-                .popover(isPresented: Binding(get: { model.linking == m.id || model.linking != nil && model.linking == pdf?.id },
-                                              set: { if !$0 { model.linking = nil } })) {
-                    MaterialLinksEditor(model: model, materialId: model.linking ?? m.id)
-                }
             // The list shows a `.tex` and its PDF as one row (#109); the PDF opens from here.
             if let pdf {
                 Button(.materialsPairedPdf) { model.open(pdf) }.buttonStyle(.ghost).help(Text(.materialsOpenPdf))
@@ -261,6 +262,9 @@ struct MaterialsView: View {
             if !m.isFolder { Button(.materialsOpen) { open(m) }.buttonStyle(.ghost) }
             #endif
             Menu {
+                // Also here, not only on a long press, so a touch finds it.
+                Button(.materialsLinkEllipsis) { model.linking = m.id }
+                Divider()
                 fileMenuItems(m)
                 if let pdf { pdfMenu(pdf) }
             } label: {
@@ -336,11 +340,28 @@ struct MaterialsView: View {
     }
 }
 
+private struct LinkedFile: Identifiable {
+    let id: UUID
+}
+
 struct MaterialLinksEditor: View {
+    @Environment(\.dismiss) private var dismiss
     let model: MaterialsModel
     let materialId: UUID
 
+    static let width: CGFloat = 560
+
     var body: some View {
+        // Every row writes as it is toggled, so there is nothing to cancel.
+        SheetForm(title: model.linksTitle(materialId), confirm: String(localized: .commonDone), carded: false, width: Self.width, cancellable: false) {
+            links
+        } onConfirm: {
+            dismiss()
+        }
+        .task(id: materialId) { await model.loadPageCount(materialId) }
+    }
+
+    @ViewBuilder private var links: some View {
         let unitIds = model.unitIds(of: materialId)
         let viaSessions = model.unitsViaSessions(of: materialId)
         let sessions = model.sessions(linking: materialId)
@@ -349,14 +370,16 @@ struct MaterialLinksEditor: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Space.l) {
                 if model.isLecture(materialId) { LectureProgressBlock(workspace: model.workspace, course: model.course.id, material: materialId) { model.linking = nil } }
-                Block(String(localized: .materialsLinksSessions), note: String(localized: .materialsLinksSessionsNote)) {
+                Block(String(localized: .materialsLinksSessions)) {
                     Card {
                         if sessions.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .materialsLinksNoSessions)) } }
                         ForEach(Array(sessions.enumerated()), id: \.element.id) { i, s in
                             let link = s.materials.first { $0.materialId == materialId }
                             CardRow(last: i == sessions.count - 1) {
                                 CheckCircle(on: link != nil) { model.link(materialId, session: s.id, linked: link == nil) }
-                                Text(model.sessionTitle(s)).lineLimit(1)
+                                // First to the room the page bar's least width leaves, so a long title shortens instead
+                                // of pushing the row past the sheet's edge, which an even share with the bar did.
+                                Text(model.sessionTitle(s)).lineLimit(1).layoutPriority(1)
                                 Spacer(minLength: Theme.Space.s)
                                 if let link {
                                     PageRangeField(range: link.pageRange, pages: model.pageCounts[materialId],
@@ -405,13 +428,9 @@ struct MaterialLinksEditor: View {
                     }
                 }
             }
-            .padding(Theme.Space.l)
         }
         .overflowFade(.vertical)
-        .frame(width: 440, height: 480)
-        .background(Theme.Palette.page)
-        .font(Theme.Typeface.body)
-        .task(id: materialId) { await model.loadPageCount(materialId) }
+        .frame(height: 520)
     }
 }
 
