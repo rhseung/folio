@@ -214,6 +214,12 @@ final class SnapshotDriver {
             let room = (window.screen ?? NSScreen.main)?.visibleFrame.height ?? 900
             window.setFrame(NSRect(origin: window.frame.origin, size: NSSize(width: Self.width, height: min(900, room))), display: true)
             window.center()
+            // A window that isn't key draws its prominent buttons grey, so the save row's button read as it never does
+            // in use. Opt-in, as it takes the focus from whatever the Mac is doing.
+            if ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_KEY"] != nil {
+                NSApp.activate()
+                window.makeKeyAndOrderFront(nil)
+            }
         }
         func pair(_ text: String?, _ fallback: (Int, Int)) -> (Int, Int) {
             let bounds = (text ?? "").split(separator: "-").compactMap { Int($0) }
