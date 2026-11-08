@@ -154,8 +154,9 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .ref-popover > :first-child { margin-top: 0; }
 .ref-popover > :last-child { margin-bottom: 0; }
 .note .cb-widget { border: 1px dashed var(--line); border-radius: var(--radius); }
-/* A widget runs in a frame of its own, as tall as its page says, up to most of the screen; past that it scrolls. */
-.note iframe.cb-widget { display: block; box-sizing: border-box; width: 100%; max-height: 80vh; margin: var(--block-gap) 0; border: 0; border-radius: 0; }
+/* A widget runs in a frame of its own, as tall as its page says, however tall, so the note scrolls as one page. A page
+   sized by its frame would grow with it for ever; `WidgetSizer` in the app catches that and keeps the block's height. */
+.note iframe.cb-widget { display: block; box-sizing: border-box; width: 100%; margin: var(--block-gap) 0; border: 0; border-radius: 0; }
 
 /* Diagrams: drawn to their own size, never wider than the column, which scrolls them sideways if they can't shrink. */
 .note figure.mermaid { margin: var(--block-gap) 0; overflow-x: auto; text-align: center; }
