@@ -1,10 +1,18 @@
 import FolioDomain
 import SwiftUI
 
+/// How the quick add line sets its rows, shared by the Mac's text view and the iPad's field and its mirror, so the
+/// pills land where the words are.
+enum QuickAddLine {
+    /// Between wrapped rows: room for a pill to reach `overhang` above and below its row and still leave 4pt to the
+    /// pill on the next row. At the font's own spacing the two pills touched.
+    static let spacing: CGFloat = 6
+    static let overhang: CGFloat = 1
+}
+
 /// A word the line read: the deadline, the course (in its color) or the assignment's kind and number.
 struct ReadMark: TextAttribute {
     var fill: Color
-    var stroke: Color?
 }
 
 /// Draws only rounded pills behind runs marked `ReadMark`; the glyphs come from the field on top.
@@ -18,9 +26,8 @@ struct ReadMarkRenderer: TextRenderer {
                     // No wider than the glyphs: the one space between a read word and the next is all the room
                     // there is, and a pill reaching into it touched the neighbor (or the next pill). Widening the gap
                     // itself would mean kerning the field's own text, which rewrites it under Korean composition.
-                    let shape = RoundedRectangle(cornerRadius: Theme.Radius.small).path(in: pill.rect.insetBy(dx: 0, dy: -2))
+                    let shape = RoundedRectangle(cornerRadius: Theme.Radius.small).path(in: pill.rect.insetBy(dx: 0, dy: -QuickAddLine.overhang))
                     context.fill(shape, with: .color(pill.mark.fill))
-                    if let stroke = pill.mark.stroke { context.stroke(shape, with: .color(stroke), lineWidth: 1) }
                 }
                 pill = nil
             }
@@ -53,8 +60,12 @@ struct QuickAddField: View {
     @State private var lineHeights = (one: CGFloat(0), three: CGFloat(0))
     @Environment(\.quickAddTypedSample) private var typedSample
 
-    init(workspace: Workspace, fixedCourse: UUID? = nil, defaultCourse: UUID? = nil) {
+    /// Takes the keyboard as it appears, as in the toolbar's popover.
+    private let focusOnAppear: Bool
+
+    init(workspace: Workspace, fixedCourse: UUID? = nil, defaultCourse: UUID? = nil, focusOnAppear: Bool = false) {
         _model = State(initialValue: QuickAddModel(workspace: workspace, fixedCourse: fixedCourse, defaultCourse: defaultCourse))
+        self.focusOnAppear = focusOnAppear
     }
 
     private let font = Theme.Typeface.bodyLarge
@@ -66,11 +77,18 @@ struct QuickAddField: View {
             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.m) {
                 Image(systemName: "plus").foregroundStyle(Theme.Palette.textSecondary).frame(width: plusWidth)
                 // Wraps instead of running sideways, so every word it read keeps its pill in sight; past three lines
-                // it scrolls, and the pills step aside since they would sit under other words.
+                // it scrolls.
+                #if os(macOS)
+                QuickAddTextView(text: $model.text, prompt: String(localized: .quickAddPrompt), marks: textMarks(parsed),
+                                 focusOnAppear: focusOnAppear) { if let parsed { model.add(parsed) } }
+                    .alignmentGuide(.firstTextBaseline) { _ in QuickAddTextView.baseline }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                #else
                 TextField(String(localized: .quickAddPrompt), text: $model.text, axis: .vertical)
                     .lineLimit(1...3)
                     .textFieldStyle(.plain)
                     .font(font)
+                    .lineSpacing(QuickAddLine.spacing)
                     // The height comes from the mirror: a field being edited does not tell SwiftUI it grew when the
                     // line is set from code (a chip's pick), and keeps one line while three show.
                     .frame(height: lineHeights.one == 0 ? nil : min(max(lineSize.height, lineHeights.one), lineHeights.three))
@@ -92,10 +110,12 @@ struct QuickAddField: View {
                             Text(verbatim: "A\nA\nA").onGeometryChange(for: CGFloat.self) { $0.size.height } action: { lineHeights.three = $0 }
                         }
                         .font(font)
+                        .lineSpacing(QuickAddLine.spacing)
                         .fixedSize()
                         .hidden()
                     }
                     .onSubmit { if let parsed { model.add(parsed) } }
+                #endif
                 if let parsed {
                     Button(.quickAddAdd) { model.add(parsed) }
                         .buttonStyle(.pointing(.glassProminent))
@@ -131,16 +151,33 @@ struct QuickAddField: View {
         }
     }
 
+    #if os(macOS)
+    /// The words the line read, for the Mac's text view to give room and a pill.
+    private func textMarks(_ parsed: QuickAdd?) -> [QuickAddMark] {
+        guard let parsed else { return [] }
+        let text = model.text
+        func range(_ r: Range<String.Index>) -> NSRange? {
+            r.upperBound <= text.endIndex ? NSRange(r, in: text) : nil
+        }
+        var marks = parsed.dueRanges.compactMap { r in range(r).map { QuickAddMark(range: $0, fill: Theme.Palette.readDue) } }
+        if let id = parsed.courseId {
+            marks += parsed.courseRanges.compactMap { r in range(r).map { QuickAddMark(range: $0, fill: model.accent(id).read) } }
+        }
+        if let r = parsed.kindRange.flatMap(range) { marks.append(QuickAddMark(range: r, fill: Theme.Palette.readFolder)) }
+        return marks
+    }
+    #endif
+
     /// The line laid out again under the field, invisible, so `ReadMarkRenderer` can draw a pill behind each word read.
     private func marks(_ parsed: QuickAdd?) -> some View {
         let text = model.text
         var ranges: [(Range<String.Index>, ReadMark)] = []
         if let parsed {
-            ranges += parsed.dueRanges.map { ($0, ReadMark(fill: Theme.Palette.highlightFill)) }
+            ranges += parsed.dueRanges.map { ($0, ReadMark(fill: Theme.Palette.readDue)) }
             if let id = parsed.courseId {
-                ranges += parsed.courseRanges.map { ($0, ReadMark(fill: model.accent(id).tint)) }
+                ranges += parsed.courseRanges.map { ($0, ReadMark(fill: model.accent(id).read)) }
             }
-            if let r = parsed.kindRange { ranges.append((r, ReadMark(fill: .clear, stroke: Theme.Palette.lineStrong))) }
+            if let r = parsed.kindRange { ranges.append((r, ReadMark(fill: Theme.Palette.readFolder))) }
         }
         var mirror = Text("")
         var at = text.startIndex
@@ -149,7 +186,7 @@ struct QuickAddField: View {
             at = r.upperBound
         }
         mirror = mirror + Text(Self.breakable(text[at...]))
-        return mirror.font(font).textRenderer(ReadMarkRenderer())
+        return mirror.font(font).lineSpacing(QuickAddLine.spacing).textRenderer(ReadMarkRenderer())
     }
 
     /// The field breaks a Korean line between any two letters while `Text` keeps Korean words whole, so on a wrapped
@@ -206,7 +243,7 @@ struct QuickAddChip: View {
         } label: {
             if let id, let title = model.courseTitle(id) {
                 let accent = model.accent(id)
-                label(fill: accent.tint) {
+                label(fill: accent.read) {
                     CourseMark(model.workspace, id, inline: true)
                     Text(title).foregroundStyle(accent.ink)
                 }
@@ -226,17 +263,18 @@ struct QuickAddChip: View {
 
     private func dueChip(_ date: Date?) -> some View {
         Button { pickingDue = true } label: {
-            label(fill: Theme.Palette.fill) {
-                Image(systemName: "clock").foregroundStyle(Theme.Palette.textSecondary)
+            label(fill: Theme.Palette.readDue) {
+                Image(systemName: "clock")
                 if let date, let parsed = model.parsed, let text = model.due(parsed) {
-                    Text(text).foregroundStyle(Theme.Palette.text)
+                    Text(text)
                     if let left = model.left(date) {
-                        Text(left.text).foregroundStyle(left.overdue ? Theme.Palette.danger : Theme.Palette.textSecondary)
+                        Text(left.text).foregroundStyle(left.overdue ? Theme.Palette.danger : Theme.Palette.readDueInk.opacity(Theme.Opacity.secondaryInk))
                     }
                 } else {
-                    Text(.quickAddAddDue).foregroundStyle(Theme.Palette.textSecondary)
+                    Text(.quickAddAddDue)
                 }
             }
+            .foregroundStyle(Theme.Palette.readDueInk)
             .monospacedDigit()
         }
         .buttonStyle(.pointing(.plain))
@@ -268,10 +306,11 @@ struct QuickAddChip: View {
             Button { model.pickRepeats(.weekly) } label: { Label(String(localized: .quickAddWeekly), systemImage: "checkmark") }
             Button(.quickAddNoRepeat) { model.pickRepeats(nil) }
         } label: {
-            label(fill: Theme.Palette.fill) {
-                Image(systemName: "repeat").foregroundStyle(Theme.Palette.textSecondary)
-                Text(.quickAddWeekly).foregroundStyle(Theme.Palette.text)
+            label(fill: Theme.Palette.readDue) {
+                Image(systemName: "repeat")
+                Text(.quickAddWeekly)
             }
+            .foregroundStyle(Theme.Palette.readDueInk)
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)
@@ -297,10 +336,11 @@ struct QuickAddChip: View {
                 }
             }
         } label: {
-            label(fill: Theme.Palette.fill) {
-                Image(systemName: "folder").foregroundStyle(Theme.Palette.textSecondary)
-                Text(verbatim: name).foregroundStyle(Theme.Palette.text)
+            label(fill: Theme.Palette.readFolder) {
+                Image(systemName: "folder")
+                Text(verbatim: name)
             }
+            .foregroundStyle(Theme.Palette.readFolderInk)
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)

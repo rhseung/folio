@@ -503,7 +503,7 @@ struct RootView: View {
             Button(.rootQuickAdd, systemImage: "plus") { quickAdding = true }
                 .help(Text(.rootQuickAddHelp))
                 .popover(isPresented: $quickAdding, arrowEdge: .bottom) {
-                    QuickAddField(workspace: workspace, defaultCourse: navigator.current.course).padding(Theme.Space.l).frame(width: 440)
+                    QuickAddField(workspace: workspace, defaultCourse: navigator.current.course, focusOnAppear: true).padding(Theme.Space.l).frame(width: 440)
                         // A popover proposes the height it opened with; at its own height it grows as the line wraps.
                         .fixedSize(horizontal: false, vertical: true)
                 }
