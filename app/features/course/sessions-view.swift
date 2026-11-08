@@ -653,6 +653,7 @@ struct SessionCard: View {
     @State private var editing = false
     @State private var wrappingUp = false
     @State private var showsGaps = false
+    @State private var wrapUpAfterGaps = false
 
     /// The day line and its units, which the pills must leave beside them.
     static let linesRoom: CGFloat = 240
@@ -757,8 +758,8 @@ struct SessionCard: View {
             }
             if model.offersWrapUp(session) {
                 Button(.wrapUpEllipsis) {
+                    wrapUpAfterGaps = true
                     showsGaps = false
-                    wrappingUp = true
                 }
                 .buttonStyle(.ghost)
                 .padding(.top, Theme.Space.xs)
@@ -766,6 +767,14 @@ struct SessionCard: View {
         }
         .padding(Theme.Space.l)
         .presentationCompactAdaptation(.popover)
+        // The sheet waits for the popover to be gone: opened in the same update, the iPad still presents the popover
+        // from this card and drops the sheet.
+        .onDisappear {
+            if wrapUpAfterGaps {
+                wrapUpAfterGaps = false
+                wrappingUp = true
+            }
+        }
     }
 
     @ViewBuilder func trailing(_ file: CourseFile, live: Bool, expected: Date) -> some View {
