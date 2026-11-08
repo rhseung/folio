@@ -164,10 +164,7 @@ final class Workspace {
     }
 
     /// The latest semester that has started (or the earliest upcoming one if none has).
-    var currentSemester: Semester? {
-        let today = LocalDate(now, in: calendar)
-        return semesters.first { ($0.start ?? today) <= today } ?? semesters.last
-    }
+    var currentSemester: Semester? { semesters.current(on: LocalDate(now, in: calendar)) }
 
     var currentCourses: [LoadedCourse] { currentSemester.map { courses(in: $0) } ?? [] }
 

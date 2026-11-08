@@ -81,9 +81,9 @@ enum CommandSource {
 
         out.append("")
         out.append("    func run() throws {")
-        let patches = fields.filter { $0.patch }
+        let patches = fields.filter { $0.patch && $0.role != .hidden }
         // A command that only changes what it is given has nothing to do without one; the items it points at don't count.
-        if !patches.isEmpty, patches.count == fields.filter({ !($0.role == .argument && $0.ref != nil) }).count {
+        if !patches.isEmpty, patches.count == fields.filter({ !($0.role == .argument && $0.ref != nil) && $0.role != .hidden }).count {
             let given = patches.map { $0.many ? "!\($0.name).isEmpty" : "\($0.name) != nil" }.joined(separator: " || ")
             let flags = patches.map { "--" + flag($0) }.joined(separator: ", ")
             out.append("        guard \(given) else { throw CLIError(exit: .usage, message: \(q("바꿀 것을 하나 이상 주세요: \(flags)"))) }")
@@ -152,7 +152,9 @@ enum CommandSource {
         if f.patch, f.optional { text += text.isEmpty ? "none이면 지운다" : ". none이면 지운다" }
         // Unless read one file per item, a list's file holds all of it, so it is given once.
         if f.many, f.file == nil || f.filePerItem {
-            text += (text.isEmpty ? "" : ". ") + (f.patch ? "여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다" : "여러 번 줄 수 있다")
+            // What a parsed list given does (replace or merge) is the field's own to say.
+            let given = f.parsed != nil ? "none이면 비운다" : "주면 목록 전체를 바꾸고, none이면 비운다"
+            text += (text.isEmpty ? "" : ". ") + (f.patch ? "여러 번 줄 수 있다. " + given : "여러 번 줄 수 있다")
         }
         let valueName = given ?? f.parsed ?? (f.ref != nil ? flag(f) : f.type == "LocalDate" || f.type == "Date" ? "date" : nil)
         return valueName.map { "ArgumentHelp(\(q(text)), valueName: \(q($0)))" } ?? q(text)
@@ -193,7 +195,7 @@ enum CommandSource {
 
     static func value(_ f: FieldSpec, scope: String, parent: String? = nil) -> String {
         switch f.role {
-        case .hidden: return f.defaultValue ?? "nil"
+        case .hidden: return f.defaultValue ?? (f.patch ? ".keep" : "nil")
         case .new: return "\(f.name) ?? UUID()"
         case .off(let flag): return "!\(camel(flag))"
         default: break

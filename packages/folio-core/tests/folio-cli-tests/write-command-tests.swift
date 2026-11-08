@@ -87,7 +87,7 @@ struct WriteCommandTests {
     @Test func assignmentScoreAndClearedDue() throws {
         try h.expectSame(["assignment", "set", "EC4207/HW 3", "--component", "과제", "--score", "9/10", "--due", "none"],
                          setup: [G.addComponent, U.addHW]) { _ in
-            AssignmentSave(course: gt, assignment: U.hw, due: .set(nil), componentId: .set(G.component), scores: .set([.init(component: nil, score: 9, max: 10)]))
+            AssignmentSave(course: gt, assignment: U.hw, due: .set(nil), componentId: .set(G.component), score: .set([.init(component: nil, score: 9, max: 10)]))
         }
     }
 
@@ -97,10 +97,26 @@ struct WriteCommandTests {
         try h.expectSame(["assignment", "set", "EC4207/HW 3", "--group", "실험", "--score", "재료:8/10", "--repeats", "weekly"],
                          setup: [lab, report, U.addHW]) { _ in
             AssignmentSave(course: gt, assignment: U.hw, repeats: .set(.weekly), componentGroup: .set("실험"),
-                           scores: .set([.init(component: G.component, score: 8, max: 10)]))
+                           score: .set([.init(component: G.component, score: 8, max: 10)]))
         }
         let gist = try Harness.fixtureCopy()
         for line in [lab, report, U.addHW] { _ = h.cli(line, gist: gist) }
+        // One component's score leaves the other's: an agent setting 재료 must not wipe 고찰.
+        for line in [["assignment", "set", "EC4207/HW 3", "--group", "실험", "--score", "재료:8/10", "--score", "고찰:7/10"],
+                     ["assignment", "set", "EC4207/HW 3", "--score", "재료:9/10"]] {
+            #expect(h.cli(line, gist: gist).code == 0, "\(line)")
+        }
+        func scores() throws -> [UUID: Double] {
+            Dictionary(uniqueKeysWithValues: try ActionContext(gist: GISTStore(url: gist), device: h.device).file(gt).scores
+                .filter { $0.assignmentId == U.hw }.map { ($0.componentId, $0.score) })
+        }
+        #expect(try scores() == [G.component: 9, G.quiz: 7])
+        // The JSON input's whole list replaces them all.
+        #expect(h.cli(["run", "assignment", "set", "--input", #"{"course":"EC4207","assignment":"HW 3","scores":[{"component":"\#(G.quiz)","score":6,"max":10}]}"#],
+                      gist: gist).code == 0)
+        #expect(try scores() == [G.quiz: 6])
+        #expect(h.cli(["assignment", "set", "EC4207/HW 3", "--score", "none"], gist: gist).code == 0)
+        #expect(try scores().isEmpty)
         #expect(h.cli(["assignment", "set", "EC4207/HW 3", "--group", "실험", "--score", "8/10"], gist: gist).code == 2)
         #expect(h.cli(["assignment", "set", "EC4207/HW 3", "--group", "없는 묶음"], gist: gist).code == 3)
     }
