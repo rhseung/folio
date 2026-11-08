@@ -7,7 +7,7 @@
 
 <h1 align="center">Folio</h1>
 
-<p align="center">과목을 중심으로 학업을 관리하는 macOS, iPadOS 앱</p>
+<p align="center">Mac, iPad, iPhone, Apple Watch에서 과목을 중심으로 학업을 관리하는 앱</p>
 
 ## 기능
 
@@ -22,7 +22,7 @@
 
 ## 개발
 
-앱은 macOS 26, iPadOS 26 이상에서 실행됩니다. 개발에는 Xcode 27과 [mise](https://mise.jdx.dev)가 필요합니다.
+지금은 Mac과 iPad(macOS 26, iPadOS 26 이상)를 먼저 만들고 있고, iPhone과 Apple Watch는 [플랫폼 확장(#28)](https://github.com/rhseung/folio/issues/28)에서 만듭니다. 개발에는 Xcode 27과 [mise](https://mise.jdx.dev)가 필요합니다.
 
 ```bash
 mise run generate
