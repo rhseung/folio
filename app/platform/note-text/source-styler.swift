@@ -96,7 +96,11 @@ extension NSAttributedString.Key {
             // An ID is for Folio to find the note by, not to read: it and the `|` before the name go with the brackets.
             if WikiLink(m).noteID != nil {
                 w.marks.append(NSRange(m.2.startIndex..<m.2.endIndex, in: text))
-                if let alias = m.5 { w.marks.append(NSRange(text.index(before: alias.startIndex)..<alias.startIndex, in: text)) }
+                if let alias = m.5 {
+                    let bar = text.index(before: alias.startIndex)
+                    let escaped = bar > m.range.lowerBound && text[text.index(before: bar)] == "\\"
+                    w.marks.append(NSRange((escaped ? text.index(before: bar) : bar)..<alias.startIndex, in: text))
+                }
             }
         }
         // A bare address, which the preview links and ⌘-click opens, reads as a link here too; one that is already a
