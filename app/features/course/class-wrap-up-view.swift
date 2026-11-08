@@ -129,19 +129,13 @@ struct ClassWrapUpSheet: View {
     /// Nothing is put forward: which unit the class covered is the user's call (#147).
     @ViewBuilder var units: some View {
         let options = model.unitOptions
-        if !options.isEmpty {
+        // No chips is no units, so no row for them: an empty row held only the picker.
+        if !model.linkedUnits.isEmpty {
             CardRow {
-                // No chips is no units: the empty row needs no sentence for it.
                 FlowLayout(spacing: Theme.Space.tight, centered: true) {
                     ForEach(model.linkedUnits) { unitChip($0) }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                // Outside the chips, at the row's end: placed after them it moved with every pick, and the open
-                // popover, anchored to it, jumped away from the pointer.
-                SearchPicker(options: options, isSelected: { model.units.contains($0) }, pick: { model.pick($0) }, multiple: true,
-                             prompt: String(localized: .wrapUpUnitsSearch)) {
-                    Label(.wrapUpUnitsAdd, systemImage: "plus").labelStyle(GhostLabelStyle()).foregroundStyle(.tint)
-                }
             }
         }
         CardRow(last: true) {
@@ -149,6 +143,14 @@ struct ClassWrapUpSheet: View {
             TextField(String(localized: .wrapUpUnitsNew), text: $model.newUnit).textFieldStyle(.plain).onSubmit { model.addUnit() }
             if !model.newUnit.trimmingCharacters(in: .whitespaces).isEmpty {
                 Button(.commonAdd) { model.addUnit() }.buttonStyle(.ghost)
+            }
+            // At the end of the one row that is always there, not after the chips: there it moved with every pick,
+            // and the open popover, anchored to it, jumped away from the pointer.
+            if !options.isEmpty {
+                SearchPicker(options: options, isSelected: { model.units.contains($0) }, pick: { model.pick($0) }, multiple: true,
+                             prompt: String(localized: .wrapUpUnitsSearch)) {
+                    Label(.wrapUpUnitsAdd, systemImage: "plus").labelStyle(GhostLabelStyle()).foregroundStyle(.tint)
+                }
             }
         }
     }

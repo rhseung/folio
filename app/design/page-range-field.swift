@@ -72,12 +72,14 @@ struct PageRangeField: View {
     /// Room left and right of the bar for a handle at either end.
     private static let inset: CGFloat = 12
     private static let bar: CGFloat = 8
-    /// The field's height, the bar in its middle: about a form row's content, a file name and the split button beside it.
-    private static let height: CGFloat = 40
-    /// The numbers float this far above the bar, over the row's top padding rather than a row of their own: a 20pt
-    /// pill ending 2pt above the range's box or a grabbed handle, clear of the tiles' names.
+    /// The field's height, and the bar's middle 20pt above its bottom: the room above the bar is the numbers'. Floated
+    /// further up, over the row's padding, they covered the divider and the row above, or the card's top edge.
+    private static let height: CGFloat = 48
+    private static let barMiddle: CGFloat = 28
+    /// The numbers stand this far above the bar: a 16pt pill ending 2pt above a grabbed handle, 6pt inside the row's
+    /// top edge.
     private static let pillRise: CGFloat = 24
-    private static let pillHeight: CGFloat = 20
+    private static let pillHeight: CGFloat = 16
     /// The bar's row, taller than the bar so it is easy to grab.
     private static let hitRow: CGFloat = 24
     /// The recording's dotted line, this far under the bar's middle, and the height of its press target.
@@ -140,7 +142,7 @@ struct PageRangeField: View {
     private func x(_ edge: Int, _ w: CGFloat) -> CGFloat { Self.inset + CGFloat(edge) * unit(w) }
     private func edge(at x: CGFloat, _ w: CGFloat) -> CGFloat { (x - Self.inset) / unit(w) }
     private func page(at x: CGFloat, _ w: CGFloat) -> Int { min(max(Int(edge(at: x, w).rounded(.down)) + 1, 1), extent) }
-    private var barY: CGFloat { Self.height / 2 }
+    private var barY: CGFloat { Self.barMiddle }
 
     private func handleX(_ end: PageRange.End, _ r: PageRange, _ w: CGFloat) -> CGFloat? {
         end == .first ? r.first.map { x($0 - 1, w) } : r.last.map { x($0, w) }
