@@ -7,7 +7,7 @@
 
 <h1 align="center">Folio</h1>
 
-<p align="center">Mac, iPad, iPhone, Apple Watch에서 과목을 중심으로 학업을 관리하는 앱</p>
+<p align="center">과목을 중심으로 학업을 관리하는 앱</p>
 
 ## 기능
 
@@ -16,13 +16,21 @@
 - **복습과 퀴즈**: 단원 단위로 간격을 두고 복습하고, 서술형 답은 Claude가 채점합니다.
 - **성적**: 평가 기준으로 환산 점수, 평점, 졸업 요건을 계산합니다.
 - **녹음**: 강의를 녹음하고 기기 안에서 글로 받아씁니다.
-- **파일**: 모든 데이터는 iCloud Drive의 파일로 남고, 명령줄 도구 `folio`로도 다룹니다.
+- **파일**: 모든 데이터는 iCloud Drive의 파일로 남습니다.
 
 남은 일과 진행 상황은 [GitHub Project](https://github.com/users/rhseung/projects/10)에 있습니다.
 
-## 개발
+## 명령줄 도구
 
-지금은 Mac과 iPad(macOS 26, iPadOS 26 이상)를 먼저 만들고 있고, iPhone과 Apple Watch는 [플랫폼 확장(#28)](https://github.com/rhseung/folio/issues/28)에서 만듭니다. 개발에는 Xcode 27과 [mise](https://mise.jdx.dev)가 필요합니다.
+앱에서 하는 모든 데이터 변경을 터미널과 AI 에이전트에서도 `folio`로 할 수 있습니다. `folio mcp`는 같은 동작을 MCP 도구로 엽니다.
+
+```bash
+mise run install-cli          # ~/.local/bin에 설치
+folio today
+folio help "과제 추가"         # 하고 싶은 일로 명령 찾기
+```
+
+## 개발
 
 ```bash
 mise run generate

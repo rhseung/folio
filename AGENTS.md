@@ -1,6 +1,6 @@
 # Folio
 
-과목을 중심으로 강의 자료, 노트, 손필기, 복습, 퀴즈, 과제, 성적을 관리하는 macOS, iPadOS, iOS, watchOS용 네이티브 앱입니다. 지금은 Mac과 iPad를 먼저 만들고, iPhone과 Apple Watch는 [플랫폼 확장(#28)](https://github.com/rhseung/folio/issues/28)에서 만듭니다. 무엇을 만들지와 남은 일은 GitHub 이슈와 [Project](https://github.com/users/rhseung/projects/10)에 있습니다. 이 파일에는 어떻게 만들지에 대한 규칙을 적습니다. 작업을 시작하기 전에 해당 이슈와 그 상위 이슈를 먼저 읽습니다.
+과목을 중심으로 강의 자료, 노트, 손필기, 복습, 퀴즈, 과제, 성적을 관리하는 Apple 기기용 네이티브 앱입니다. 무엇을 만들지와 남은 일은 GitHub 이슈와 [Project](https://github.com/users/rhseung/projects/10)에 있습니다. 이 파일에는 어떻게 만들지에 대한 규칙을 적습니다. 작업을 시작하기 전에 해당 이슈와 그 상위 이슈를 먼저 읽습니다.
 
 ## 소통 규칙
 
