@@ -75,27 +75,32 @@ struct SectionEditor: View {
     let units: [FolioDomain.Unit]
     /// The page the split screen shows, marked on the bar.
     var page: Int?
+    /// The section picked, when the screen shares it (the split screen's thumbnails change the one picked here).
+    var selected: Binding<Int?>?
     /// A section picked, for the split screen to show its first page.
     var pick: (Int) -> Void = { _ in }
 
-    @State private var selected: Int?
+    @State private var own: Int?
+
+    private var picked: Binding<Int?> { selected ?? $own }
 
     var body: some View {
+        let selected = picked
         VStack(alignment: .leading, spacing: Theme.Space.s) {
-            SectionBar(split: $split, selected: $selected, label: label, page: page, pick: pick)
+            SectionBar(split: $split, selected: selected, label: label, page: page, pick: pick)
             VStack(spacing: 0) {
                 ForEach(Array(split.sections.enumerated()), id: \.element.id) { i, section in
-                    SectionRow(split: $split, id: section.id, units: units, selected: selected == i, label: label(i))
+                    SectionRow(split: $split, id: section.id, units: units, selected: selected.wrappedValue == i, label: label(i))
                         .contentShape(.rect)
                         .onTapGesture {
                             guard let i = split.sections.firstIndex(where: { $0.id == section.id }) else { return }
-                            selected = i
+                            selected.wrappedValue = i
                             pick(split.sections[i].firstPage)
                         }
                 }
             }
         }
-        .onChange(of: split.sections.count) { _, count in if let s = selected, s >= count { selected = nil } }
+        .onChange(of: split.sections.count) { _, count in if let s = selected.wrappedValue, s >= count { selected.wrappedValue = nil } }
     }
 
     /// What a zone reads as: its unit's title, a new unit's name, or nothing for pages left out.
