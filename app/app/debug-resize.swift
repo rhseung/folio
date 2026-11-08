@@ -65,10 +65,16 @@ import SwiftUI
     }
 
     static func run(window: () -> NSWindow?, workspace: Workspace, openTab: ((AppLink, UUID) -> Void)?, front: (Int) -> Void,
-                    openBeside: (AppLink, UUID) -> Void) async {
+                    openBeside: (AppLink, UUID) -> Void, frontPanes: () -> TabPanes?) async {
         guard let file else { return }
         try? await Task.sleep(for: .seconds(4))
         guard let window = window() ?? NSApp.windows.first(where: { $0.isVisible && $0.canBecomeMain }) else { return }
+        if let folder = environment["FOLIO_RESIZE_RECORD"] {
+            await record(in: folder, window: window, workspace: workspace, openTab: openTab, front: front, openBeside: openBeside, frontPanes: frontPanes)
+            // folio:not-an-action debug measurements, outside the GIST folder
+            try? "done\n".write(to: file, atomically: true, encoding: .utf8)
+            return NSApp.terminate(nil)
+        }
         let count = environment["FOLIO_RESIZE_TABS"].flatMap(Int.init) ?? 6
         let courses = workspace.currentCourses
         let notes = courses.flatMap { c in c.file.notes.map { (AppLink(.note, $0.id), c.id) } }
@@ -268,6 +274,56 @@ import SwiftUI
         }
         try? await Task.sleep(for: .seconds(1))
         capture("\(folder)/\(act)-rest.png")
+    }
+
+    /// With `FOLIO_RESIZE_RECORD=<folder>`, a course page put through moves that change its width while a recorder
+    /// outside the app films the window (a ScreenCaptureKit stream of its window): `screencapture` per frame holds the
+    /// main thread and can't keep up with a 0.25s move. `FOLIO_RESIZE_COURSE` (part of a title, else the first course)
+    /// is opened at `FOLIO_RESIZE_PAGE` (a `CoursePage`, else the overview) in a tab of its own, or beside Today with
+    /// `FOLIO_RESIZE_BESIDE=overview`, in a window `FOLIO_RESIZE_WIDTH` by `FOLIO_RESIZE_HEIGHT`. The probe writes
+    /// `<folder>/ready`, waits for the recorder to write `<folder>/recording`, then runs `FOLIO_RESIZE_ACT` by commas,
+    /// a second and a half apart: `column` (the focused pane's column button), `wide` (the first divider dragged
+    /// `FOLIO_RESIZE_SPAN` points left), `even`, `tab` (the page again in a new tab).
+    private static func record(in folder: String, window: NSWindow, workspace: Workspace, openTab: ((AppLink, UUID) -> Void)?,
+                               front: (Int) -> Void, openBeside: (AppLink, UUID) -> Void, frontPanes: () -> TabPanes?) async {
+        let courses = workspace.currentCourses
+        guard let course = environment["FOLIO_RESIZE_COURSE"].flatMap({ name in courses.first { $0.title.contains(name) } }) ?? courses.first else { return }
+        let screen = window.screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
+        let wide = environment["FOLIO_RESIZE_WIDTH"].flatMap(Double.init).map { min(CGFloat($0), screen.width) } ?? screen.width
+        let high = environment["FOLIO_RESIZE_HEIGHT"].flatMap(Double.init).map { min(CGFloat($0), screen.height) } ?? min(900, screen.height)
+        window.setFrame(NSRect(x: screen.minX, y: screen.maxY - high, width: wide, height: high), display: true)
+        let page = AppLink.course(course.id, page: environment["FOLIO_RESIZE_PAGE"].flatMap(AppLink.CoursePage.init(rawValue:)))
+        if environment["FOLIO_RESIZE_BESIDE"] == "overview" {
+            front(1)
+            openBeside(page, course.id)
+        } else {
+            openTab?(page, course.id)
+        }
+        try? await Task.sleep(for: .seconds(environment["FOLIO_RESIZE_SETTLE"].flatMap(Double.init) ?? 6))
+        let fm = FileManager.default
+        // folio:not-an-action debug measurements, outside the GIST folder
+        try? "window \(window.frame) panes \(frontPanes()?.count ?? 0) column \(frontPanes()?.focusedTrail.column != nil)\n".write(toFile: "\(folder)/setup.txt", atomically: true, encoding: .utf8)
+        // folio:not-an-action debug handshake with the recorder, outside the GIST folder
+        fm.createFile(atPath: "\(folder)/ready", contents: nil)
+        for _ in 0..<200 where !fm.fileExists(atPath: "\(folder)/recording") { try? await Task.sleep(for: .milliseconds(50)) }
+        try? await Task.sleep(for: .milliseconds(500))
+        for step in (environment["FOLIO_RESIZE_ACT"] ?? "column").split(separator: ",") {
+            let panes = frontPanes()
+            switch step {
+            case "column": panes?.focusedTrail.column?.toggle()
+            case "even": panes?.even()
+            case "wide":
+                if let row = PaneDragHook.shared.row {
+                    row.dragged(0, by: -CGFloat(environment["FOLIO_RESIZE_SPAN"].flatMap(Double.init) ?? 300), folded: row.folded)
+                    row.dropped()
+                }
+            case "tab": openTab?(page, course.id)
+            default: break
+            }
+            try? await Task.sleep(for: .milliseconds(1500))
+        }
+        // Past the recorder's end: a window gone mid-recording stalls it.
+        try? await Task.sleep(for: .seconds(3))
     }
 
     /// Opens the menu a right click at `point` (the window's own coordinates) would, and holds it open for 6 seconds
