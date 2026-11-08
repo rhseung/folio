@@ -171,7 +171,15 @@ struct LinkTests {
 
     @Test func pipeTableRendersItsRows() {
         let out = HTMLRenderer.render(markdown: "| 기호 | 뜻 |\n| --- | --- |\n| a | 하나 |\n| b | 둘 |")
-        #expect(out.contains("<tbody><tr><td>a</td><td>하나</td></tr><tr><td>b</td><td>둘</td></tr></tbody>"))
+        #expect(out.contains("<tbody><tr><td class=\"word\">a</td><td class=\"word\">하나</td></tr><tr><td class=\"word\">b</td><td class=\"word\">둘</td></tr></tbody>"))
+    }
+
+    /// A one-word cell keeps to one line: WebKit broke `10/26(월)` after `/` and `(` beside a long column.
+    @Test func oneShortWordCellsKeepToOneLine() {
+        let out = HTMLRenderer.render(markdown: "| 날짜 | 다룬 것 |\n|---|---|\n| 10/26(월) | augmenting path로 최대 매칭 찾기 |\n| [[n\\|9주차-1]] | ExtraordinarilyLongUnbrokenName |")
+        #expect(out.contains("<th class=\"word\">날짜</th><th>다룬 것</th>"))
+        #expect(out.contains("<td class=\"word\">10/26(월)</td><td>augmenting"))
+        #expect(out.contains("<td class=\"word\"><a class=\"wikilink\" href=\"folio://note/n\">9주차-1</a></td><td>ExtraordinarilyLongUnbrokenName</td>"))
     }
 
     /// A link's `|` is not a cell's, as in Obsidian; link completion always writes one.
@@ -185,15 +193,15 @@ struct LinkTests {
         | 11/2 | ![[note:\(id)#^b1|블록]] |
         """)
         #expect(out.contains("<td><a class=\"wikilink\" href=\"folio://material/\(id)#page=1\">26_week9.pdf p.1</a>–<a class=\"wikilink\" href=\"folio://material/\(id)#page=8\">p.8</a></td></tr>"))
-        #expect(out.contains("<td><a class=\"wikilink\" href=\"folio://note/\(id)\">정리</a></td></tr>"))
-        #expect(out.contains("<td><a class=\"embed\" href=\"folio://note/\(id)#^b1\">블록</a></td></tr>"))
+        #expect(out.contains("<td class=\"word\"><a class=\"wikilink\" href=\"folio://note/\(id)\">정리</a></td></tr>"))
+        #expect(out.contains("<td class=\"word\"><a class=\"embed\" href=\"folio://note/\(id)#^b1\">블록</a></td></tr>"))
         #expect(!out.contains("[["))
     }
 
     /// Obsidian escapes the bar in a table row; elsewhere `\|` is markdown's escape and reads the same.
     @Test func escapedBarsSplitNoCellAndNameTheLink() {
         let out = HTMLRenderer.render(markdown: "| a | b |\n|---|---|\n| [[노트\\|이름]] | x \\| y |\n\n[[노트\\|밖]]")
-        #expect(out.contains("<td><a class=\"wikilink\" href=\"folio://note/%EB%85%B8%ED%8A%B8\">이름</a></td><td>x | y</td>"))
+        #expect(out.contains("<td class=\"word\"><a class=\"wikilink\" href=\"folio://note/%EB%85%B8%ED%8A%B8\">이름</a></td><td>x | y</td>"))
         #expect(out.contains("<p><a class=\"wikilink\" href=\"folio://note/%EB%85%B8%ED%8A%B8\">밖</a></p>"))
         let links = WikiLink.all(in: "[[노트\\|이름]] [[material:x#page=2\\|p.2]]")
         #expect(links.map(\.target) == ["노트", "material:x"])
@@ -204,7 +212,7 @@ struct LinkTests {
     /// A code span's bar still splits a cell, as in GFM, and a link written in code stays code.
     @Test func codeInATableKeepsGFMRules() {
         let out = HTMLRenderer.render(markdown: "| a | b |\n|---|---|\n| `x \\| y` | `[[n|m]]` |")
-        #expect(out.contains("<td><code>x | y</code></td><td>`[[n</td></tr>"))
+        #expect(out.contains("<td><code>x | y</code></td><td class=\"word\">`[[n</td></tr>"))
         #expect(!out.contains("wikilink"))
     }
 
@@ -245,7 +253,7 @@ struct BlockTests {
 
     @Test func gfmTablesTasksAndStrikethrough() {
         let out = HTMLRenderer.render(markdown: "| a | b |\n|:-|-:|\n| 1 | 2 |\n\n- [x] done\n- [ ] todo\n\n~~old~~")
-        #expect(out.contains("<th style=\"text-align:left\">a</th>"))
+        #expect(out.contains("<th class=\"word\" style=\"text-align:left\">a</th>"))
         #expect(out.contains("<input type=\"checkbox\" disabled checked> done"))
         #expect(out.contains("<del>old</del>"))
     }

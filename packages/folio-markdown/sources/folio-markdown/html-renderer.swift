@@ -167,13 +167,23 @@ public struct HTMLRenderer {
             row.children.enumerated().map { i, cell in
                 let align = i < aligns.count ? aligns[i].map { " style=\"text-align:\($0)\"" } ?? "" : ""
                 var r = inner()
-                return "<\(tag)\(align)>\(r.inlines(Array((cell as! Markdown.Table.Cell).inlineChildren)))</\(tag)>"
+                let html = r.inlines(Array((cell as! Markdown.Table.Cell).inlineChildren))
+                let word = Self.isShortWord(Self.unescape(html.replacing(/<[^>]*>/, with: ""))) ? " class=\"word\"" : ""
+                return "<\(tag)\(word)\(align)>\(html)</\(tag)>"
             }.joined()
         }
         let head = "<thead><tr>\(cells(t.head, tag: "th"))</tr></thead>"
         // `rows` is lazy: mapped and joined as is, it interpolates as the sequence's type name, not the rows.
         let body = Array(t.body.rows).map { "<tr>\(cells($0, tag: "td"))</tr>" }.joined()
         return "<table>\(head)<tbody>\(body)</tbody></table>\n"
+    }
+
+    /// A cell showing one short word (`10/26(월)`, `9주차-1`) is drawn on one line. WebKit breaks such a word after `/` and
+    /// `(` even with `keep-all` and `overflow-wrap: normal`, so beside a long column a date stood as `10/` `26(` `월)`.
+    /// A longer word may still wrap, so one long name or address doesn't push the table past the column.
+    static func isShortWord(_ text: String) -> Bool {
+        let t = text.trimmingCharacters(in: .whitespaces)
+        return !t.isEmpty && t.count <= 16 && !t.contains(where: \.isWhitespace)
     }
 
     // MARK: Callouts
