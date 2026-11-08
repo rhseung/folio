@@ -211,11 +211,9 @@ private struct Gap: View {
         }
         .frame(maxWidth: .infinity)
         .frame(height: Theme.Space.s)
-        // A finger's 44pt across the gap, centered on it, over the blank under one page's number and above the next
-        // page. A join stays thin: there the next section's header takes the press, and the page's menu joins.
-        .frame(height: touch && !boundary ? Theme.Size.touchTarget : Theme.Space.s)
-        .offset(y: touch && !boundary ? (Theme.Size.touchTarget - Theme.Space.s) / 2 : 0)
-        .contentShape(.rect)
+        // A finger's 44pt across a cut, over the blank under one page's number and above the next page. A join stays
+        // thin: there the next section's header takes the press, and the page's menu joins.
+        .contentShape(TouchTarget(side: boundary ? 0 : Theme.Size.touchTarget))
         .onHover { hovering = $0 }
         .onTapGesture(perform: action)
         .pointingHand()
