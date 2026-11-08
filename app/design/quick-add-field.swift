@@ -177,12 +177,15 @@ struct QuickAddField: View {
         func range(_ r: Range<String.Index>) -> NSRange? {
             r.upperBound <= text.endIndex ? NSRange(r, in: text) : nil
         }
-        var marks = parsed.dueRanges.compactMap { r in range(r).map { QuickAddMark(range: $0, fill: Theme.Palette.readDue) } }
-        if let id = parsed.courseId {
-            marks += parsed.courseRanges.compactMap { r in range(r).map { QuickAddMark(range: $0, fill: model.accent(id).read) } }
+        return parsed.spans.compactMap { span in
+            range(span.range).map { r in
+                switch span.field {
+                case .due: QuickAddMark(range: r, fill: Theme.Palette.readDue)
+                case .course(let id): QuickAddMark(range: r, fill: model.accent(id).read)
+                case .kind: QuickAddMark(range: r, fill: Theme.Palette.readFolder)
+                }
+            }
         }
-        if let r = parsed.kindRange.flatMap(range) { marks.append(QuickAddMark(range: r, fill: Theme.Palette.readFolder)) }
-        return marks
     }
     #endif
 
@@ -190,12 +193,12 @@ struct QuickAddField: View {
     private func marks(_ parsed: QuickAdd?) -> some View {
         let text = model.text
         var ranges: [(Range<String.Index>, ReadMark)] = []
-        if let parsed {
-            ranges += parsed.dueRanges.map { ($0, ReadMark(fill: Theme.Palette.readDue)) }
-            if let id = parsed.courseId {
-                ranges += parsed.courseRanges.map { ($0, ReadMark(fill: model.accent(id).read)) }
+        for span in parsed?.spans ?? [] {
+            switch span.field {
+            case .due: ranges.append((span.range, ReadMark(fill: Theme.Palette.readDue)))
+            case .course(let id): ranges.append((span.range, ReadMark(fill: model.accent(id).read)))
+            case .kind: ranges.append((span.range, ReadMark(fill: Theme.Palette.readFolder)))
             }
-            if let r = parsed.kindRange { ranges.append((r, ReadMark(fill: Theme.Palette.readFolder))) }
         }
         var mirror = Text("")
         var at = text.startIndex

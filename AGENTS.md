@@ -96,6 +96,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
 | 단축키 | 명령마다 한 번 등록하고 메뉴, 설정, 팔레트가 읽는 표와 키 녹음 검사 | #116 |
 | 자동 완성 메뉴 `CompletionMenu` | 편집 보기의 모든 자동 완성(`/` 블록, 콜아웃 종류, 코드 언어, TeX 명령과 환경, AsciiMath 기호, 스니펫, 링크). 무엇을 완성할지는 `FolioMarkdown`의 `Completion`이 원문에서 읽고, 메뉴는 캐럿 옆에 하나만 뜬다. 늦게 오는 후보(링크)는 `more`로 더한다. 링크 후보는 `NoteLinkCompletion`이 FolioIndex 검색 색인과 파일에서 찾고, 보일 것과 순서는 `FolioDomain`의 `LinkCandidates`가 정한다. 한글 조합 중에는 메뉴, 짝 기호, 목록 이어 쓰기가 끼어들지 않는다 | 있음(Mac). iPad 메뉴는 #31 |
 | 라이브 시계 `LiveClock` | 화면이 그리는 지금 시각. 분이 바뀔 때, 앱이 앞으로 오거나 Mac이 깨어날 때 갱신한다. 분 단위로 바뀌는 뷰는 `TimelineView` 대신 `workspace.liveNow`나 `LiveTime`으로 읽는다. 초를 세는 타이머만 `TimelineView`를 쓴다 | 있음 |
+| 빠른 추가 인식기 `QuickAdd` | 빠른 추가 한 줄을 읽는 법. 낱말마다 인식기(`lexicon.swift`. 요일, 날짜, 시각, 매주는 `Recognizer`의 경우, 과목은 `readCourse`, 과제 번호는 `AssignmentKind.match`)가 읽고, 결합 규칙(`grammar.swift`의 `Rule`: [주][요일], [오전·오후][시각], [시각][분], [월][일], [마감][어미])이 이웃을 묶고, 해석(`resolve.swift`)이 줄의 구간 `spans`(마감, 과목, 과제 종류와 번호)와 저장할 값을 낸다. 제목은 어느 구간에도 들지 않은 글이다. 칸의 알약과 칸 아래 칩이 `spans`와 그 값만 읽는다. 새 종류(시험, 메모)는 인식기와 `Span.Field` 하나씩을 더한다. Apple의 날짜 인식기는 실제 시계로 읽으므로 표가 못 읽은 나머지에만 쓴다 | 있음 |
 
 축을 새로 만들면 이 표에 적는다.
 
