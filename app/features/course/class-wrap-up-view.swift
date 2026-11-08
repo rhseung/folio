@@ -236,13 +236,10 @@ struct ClassWrapUpSheet: View {
                     }
                 }
                 CardRow(last: true) {
-                    Image(systemName: "plus").foregroundStyle(Theme.Palette.textTertiary)
-                    TextField(String(localized: .wrapUpAssignmentPrompt), text: $model.assignmentText).textFieldStyle(.plain)
-                        .onSubmit { model.addAssignment() }
-                    if let parsed = model.parsedAssignment, !parsed.title.isEmpty {
-                        Button(.wrapUpAssignmentAdd) { model.addAssignment() }.buttonStyle(.ghost)
+                    QuickAddField(workspace: model.workspace, fixedCourse: model.courseId, prompt: String(localized: .wrapUpAssignmentPrompt),
+                                  surface: .row, added: model.announce) {
+                        Button { model.addExam() } label: { Label(.wrapUpExamAdd, systemImage: "plus") }.buttonStyle(.ghost)
                     }
-                    Button { model.addExam() } label: { Label(.wrapUpExamAdd, systemImage: "plus") }.buttonStyle(.ghost)
                 }
             }
         }

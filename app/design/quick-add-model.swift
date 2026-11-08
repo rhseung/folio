@@ -28,9 +28,27 @@ final class QuickAddModel {
         parsed.due?.formatted(.dateTime.month(.defaultDigits).day().weekday(.abbreviated).hour().minute())
     }
 
-    func add(_ parsed: QuickAdd) {
-        guard let id = parsed.courseId, !parsed.title.isEmpty else { return }
-        guard workspace.run(AssignmentAdd(course: id, title: parsed.title, due: parsed.due, repeats: parsed.repeats)) != nil else { return }
+    enum Summary: Hashable {
+        case due(String)
+        case weekly
+        case title(String)
+    }
+
+    /// What the line will save, after the course: the deadline, 매주, and the title as it goes in.
+    func summary(_ parsed: QuickAdd) -> [Summary] {
+        var items: [Summary] = []
+        if let due = due(parsed) { items.append(.due(due)) }
+        if parsed.repeats == .weekly { items.append(.weekly) }
+        if !parsed.title.isEmpty { items.append(.title(parsed.title)) }
+        return items
+    }
+
+    /// Whether it went in; the line clears only then.
+    @discardableResult
+    func add(_ parsed: QuickAdd) -> Bool {
+        guard let id = parsed.courseId, !parsed.title.isEmpty,
+              workspace.run(AssignmentAdd(course: id, title: parsed.title, due: parsed.due, repeats: parsed.repeats)) != nil else { return false }
         text = ""
+        return true
     }
 }

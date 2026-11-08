@@ -64,6 +64,9 @@ enum FormSnapshots {
         var forms: [(String, AnyView)] = []
         if let empty = held.last(where: { $0.gaps == WrapUpItem.allCases.count }) {
             forms.append(("class-wrap-up-empty", AnyView(ClassWrapUpSheet(workspace: workspace, course: course.id, session: empty.session.id))))
+            // The announcements line mid-typing: the deadline's pill and what will be saved under it.
+            forms.append(("class-wrap-up-typing", AnyView(ClassWrapUpSheet(workspace: workspace, course: course.id, session: empty.session.id)
+                .environment(\.quickAddTypedSample, "과제: Lab3 보고서 금 마감"))))
         }
         if let filled = held.min(by: { $0.gaps < $1.gaps }), filled.gaps < WrapUpItem.allCases.count {
             forms.append(("class-wrap-up-filled", AnyView(ClassWrapUpSheet(workspace: workspace, course: course.id, session: filled.session.id))))

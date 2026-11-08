@@ -15863,7 +15863,7 @@
         }
       }
     },
-    "today.quick-add.no-course": {
+    "quick-add.no-course": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -15874,7 +15874,7 @@
         }
       }
     },
-    "today.quick-add.prompt": {
+    "quick-add.prompt": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -15885,18 +15885,18 @@
         }
       }
     },
-    "today.quick-add.save": {
+    "quick-add.add": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "저장"
+            "value": "추가"
           }
         }
       }
     },
-    "today.quick-add.weekly": {
+    "quick-add.weekly": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
@@ -19372,24 +19372,13 @@
         }
       }
     },
-    "wrap-up.assignment-add": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과제 추가"
-          }
-        }
-      }
-    },
     "wrap-up.assignment-prompt": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "과제: 금요일까지 HW4"
+            "value": "HW4 금요일까지"
           }
         }
       }

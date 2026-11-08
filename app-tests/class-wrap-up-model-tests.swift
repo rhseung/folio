@@ -133,10 +133,23 @@ struct ClassWrapUpModelTests {
 
     @Test func anAssignmentAnnouncedInClassIsAddedToTheCourse() throws {
         let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
-        model.assignmentText = "금요일까지 HW9"
-        model.addAssignment()
+        // The sheet's line is the shared quick-add field, fixed to the course; what it adds is listed above it.
+        let line = QuickAddModel(workspace: workspace, fixedCourse: graphTheory)
+        line.text = "과제: 금요일까지 HW9"
+        let parsed = try #require(line.parsed)
+        #expect(line.summary(parsed).last == .title("HW9"))
+        #expect(line.add(parsed))
+        model.announce(parsed)
         #expect(file.assignments.contains { $0.title == "HW9" && $0.due != nil })
-        #expect(model.assignmentText.isEmpty && model.announced.count == 1)
+        #expect(line.text.isEmpty && model.announced.count == 1)
+    }
+
+    /// The placeholder is an example of the line, so it must read as it shows.
+    @Test func theAnnouncementPlaceholderReadsAsItShows() throws {
+        let line = QuickAddModel(workspace: workspace, fixedCourse: graphTheory)
+        line.text = String(localized: .wrapUpAssignmentPrompt)
+        let parsed = try #require(line.parsed)
+        #expect(parsed.title == "HW4" && parsed.due != nil && parsed.dueRanges.count == 1)
     }
 
     @Test func theTodayCardListsTheClassUntilItIsWrappedUp() throws {

@@ -43,7 +43,6 @@ final class ClassWrapUpModel {
     var newUnit = ""
     /// Assignments added from the announcements line, to show they went in.
     private(set) var announced: [String] = []
-    var assignmentText = ""
     var addingExam: Exam?
 
     init(workspace: Workspace, course: UUID, session: UUID, viewed: [SessionMaterial] = [], recorded: Bool = false) {
@@ -236,19 +235,10 @@ final class ClassWrapUpModel {
 
     // MARK: Announcements
 
-    var parsedAssignment: QuickAdd? {
-        let text = assignmentText.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty, let file else { return nil }
-        return QuickAdd.parse(text, courses: [file.course], codes: workspace.catalog.codes, fixedCourse: courseId,
-                              now: workspace.now, calendar: workspace.calendar)
-    }
-
-    func addAssignment() {
-        guard let parsed = parsedAssignment, !parsed.title.isEmpty,
-              workspace.run(AssignmentAdd(course: courseId, title: parsed.title, due: parsed.due, repeats: parsed.repeats)) != nil else { return }
+    /// An assignment the quick-add line put in, listed above it to show it went in.
+    func announce(_ parsed: QuickAdd) {
         let due = parsed.due.map { " · " + $0.formatted(.dateTime.month(.defaultDigits).day().weekday(.abbreviated)) } ?? ""
         announced.append(parsed.title + due)
-        assignmentText = ""
     }
 
     func addExam() {
