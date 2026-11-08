@@ -15,7 +15,10 @@ struct ReadMarkRenderer: TextRenderer {
             var pill: (rect: CGRect, mark: ReadMark)?
             func flush() {
                 if let pill {
-                    let shape = RoundedRectangle(cornerRadius: Theme.Radius.small).path(in: pill.rect.insetBy(dx: -4, dy: -2))
+                    // No wider than the glyphs: the one space between a read word and the next is all the room
+                    // there is, and a pill reaching into it touched the neighbor (or the next pill). Widening the gap
+                    // itself would mean kerning the field's own text, which rewrites it under Korean composition.
+                    let shape = RoundedRectangle(cornerRadius: Theme.Radius.small).path(in: pill.rect.insetBy(dx: 0, dy: -2))
                     context.fill(shape, with: .color(pill.mark.fill))
                     if let stroke = pill.mark.stroke { context.stroke(shape, with: .color(stroke), lineWidth: 1) }
                 }
