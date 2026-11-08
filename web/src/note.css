@@ -90,7 +90,8 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 /* Tables: rounded frame, tinted header, hover row. */
 .note table { border-collapse: separate; border-spacing: 0; margin: var(--block-gap) 0; font-size: 14.5px; line-height: 1.6; max-width: 100%;
   border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: block; overflow-x: auto; width: fit-content; }
-.note th, .note td { padding: 9px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line-soft); }
+/* `anywhere` would let a column shrink to one letter (min-content) under a wide one; the table scrolls instead. */
+.note th, .note td { padding: 9px 14px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line-soft); overflow-wrap: break-word; }
 .note th { background: var(--fill); font-weight: 650; font-size: 13.5px; color: var(--text-2); }
 .note tr:last-child td { border-bottom: 0; }
 .note tbody tr:hover td { background: color-mix(in srgb, var(--fill) 55%, transparent); }
