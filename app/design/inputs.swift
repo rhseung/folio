@@ -515,12 +515,9 @@ private struct TimeDial: View {
 
 /// A date (and time) chip that opens a calendar.
 struct DateChip: View {
-    @Environment(Workspace.self) private var workspace
     @Binding var date: Date
     var showsTime = true
     @State private var open = false
-
-    static let presets = [9 * 60, 12 * 60, 18 * 60, 23 * 60 + 59]
 
     var body: some View {
         Button { open = true } label: {
@@ -530,33 +527,48 @@ struct DateChip: View {
         }
         .buttonStyle(.pointing(.plain))
         .popover(isPresented: $open, arrowEdge: .bottom) {
-            VStack(alignment: .leading, spacing: Theme.Space.m) {
-                MonthCalendar(date: Binding(get: { date }, set: { day in
-                    date = workspace.calendar.date(byAdding: .minute, value: minuteOfDay, to: workspace.calendar.startOfDay(for: day)) ?? day
-                    if !showsTime { open = false }
-                }))
-                if showsTime {
-                    Divider()
-                    HStack(spacing: Theme.Space.s) {
-                        Text(.designTime).foregroundStyle(Theme.Palette.textSecondary)
-                        Spacer()
-                        TimeMenu(minute: Binding(get: { minuteOfDay }, set: { setMinute($0) }))
-                    }
-                    HStack(spacing: Theme.Space.tight) {
-                        ForEach(Self.presets, id: \.self) { m in
-                            Button(TimeMenu.label(m)) { setMinute(m) }
-                                .buttonStyle(.pointing(.plain))
-                                .font(Theme.Typeface.caption.monospacedDigit())
-                                .foregroundStyle(m == minuteOfDay ? Theme.Palette.text : Theme.Palette.textSecondary)
-                                .padding(.horizontal, Theme.Space.s)
-                                .padding(.vertical, Theme.Space.xs)
-                                .background(m == minuteOfDay ? Theme.Palette.fill : .clear, in: .capsule)
-                        }
+            DatePanel(date: $date, showsTime: showsTime) { if !showsTime { open = false } }
+                .padding(Theme.Space.l)
+                .frame(width: 280)
+        }
+    }
+}
+
+/// The calendar and, with `showsTime`, the time menu and its presets: what a date chip opens.
+struct DatePanel: View {
+    @Environment(Workspace.self) private var workspace
+    @Binding var date: Date
+    var showsTime = true
+    /// After a day is picked, for a date-only chip that closes then.
+    var picked: () -> Void = {}
+
+    static let presets = [9 * 60, 12 * 60, 18 * 60, 23 * 60 + 59]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.m) {
+            MonthCalendar(date: Binding(get: { date }, set: { day in
+                date = workspace.calendar.date(byAdding: .minute, value: minuteOfDay, to: workspace.calendar.startOfDay(for: day)) ?? day
+                picked()
+            }))
+            if showsTime {
+                Divider()
+                HStack(spacing: Theme.Space.s) {
+                    Text(.designTime).foregroundStyle(Theme.Palette.textSecondary)
+                    Spacer()
+                    TimeMenu(minute: Binding(get: { minuteOfDay }, set: { setMinute($0) }))
+                }
+                HStack(spacing: Theme.Space.tight) {
+                    ForEach(Self.presets, id: \.self) { m in
+                        Button(TimeMenu.label(m)) { setMinute(m) }
+                            .buttonStyle(.pointing(.plain))
+                            .font(Theme.Typeface.caption.monospacedDigit())
+                            .foregroundStyle(m == minuteOfDay ? Theme.Palette.text : Theme.Palette.textSecondary)
+                            .padding(.horizontal, Theme.Space.s)
+                            .padding(.vertical, Theme.Space.xs)
+                            .background(m == minuteOfDay ? Theme.Palette.fill : .clear, in: .capsule)
                     }
                 }
             }
-            .padding(Theme.Space.l)
-            .frame(width: 280)
         }
     }
 
