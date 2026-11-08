@@ -590,9 +590,24 @@ struct CourseWorkTests {
         #expect(r.title == "과제 3" && r.due == date("2026-10-23 23:59"))
     }
 
-    @Test func aDeadlineReadsAsTheShortDayAndA24HourMinute() {
-        #expect(CourseFile.deadline(date("2026-11-13 23:59"), calendar: calendar) == "11/13(금) 23:59")
-        #expect(CourseFile.deadline(date("2026-11-03 09:05"), calendar: calendar) == "11/3(화) 09:05")
+    @Test func aDeadlineFollowsTheClockSetting() {
+        let h24 = Locale(identifier: "ko_KR@hours=h23")
+        #expect(CourseFile.deadline(date("2026-11-13 23:59"), calendar: calendar, locale: h24) == "11/13(금) 23:59")
+        #expect(CourseFile.deadline(date("2026-11-03 09:05"), calendar: calendar, locale: h24) == "11/3(화) 09:05")
+        let h12 = Locale(identifier: "ko_KR@hours=h12")
+        #expect(CourseFile.deadline(date("2026-11-13 23:59"), calendar: calendar, locale: h12) == "11/13(금) 오후 11:59")
+        #expect(CourseFile.deadline(date("2026-11-03 09:05"), calendar: calendar, locale: h12) == "11/3(화) 오전 9:05")
+    }
+
+    /// The course the window shows fills in only when the line names none.
+    @Test func theShownCourseIsTheDefaultUntilTheLineNamesAnother() {
+        let now = date("2026-10-22 15:00")
+        let shown = QuickAdd.parse("HW5 금", courses: courses, codes: [gsCode], defaultCourse: courses[0].id, now: now, calendar: calendar)
+        #expect(shown.courseId == courses[0].id && shown.title == "HW5")
+        let named = QuickAdd.parse("EC4207 HW5 금", courses: courses, codes: [gsCode], defaultCourse: courses[0].id, now: now, calendar: calendar)
+        #expect(named.courseId == courses[1].id && named.title == "HW5")
+        let fixed = QuickAdd.parse("EC4207 HW5", courses: courses, codes: [gsCode], fixedCourse: courses[0].id, defaultCourse: courses[1].id, now: now, calendar: calendar)
+        #expect(fixed.courseId == courses[0].id)
     }
 
     @Test func theTitleNeverHoldsTheHighlightedDeadline() async {

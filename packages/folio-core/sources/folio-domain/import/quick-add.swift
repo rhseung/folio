@@ -68,10 +68,12 @@ public struct QuickAdd: Equatable, Sendable {
 
     static let detector = try! NSDataDetector(types: NSTextCheckingResult.CheckingType.date.rawValue)
 
-    /// - Parameter fixedCourse: set when adding from a course screen, so the line need not name the course.
+    /// - Parameter fixedCourse: set when adding from a course's own assignments, so the line need not name the course.
+    /// - Parameter defaultCourse: the course the window shows; a course named in the line wins over it.
     /// Apple's detector reads Korean phrases (`다음 주 화요일`, `모레 오후 3시`, `11월 3일 밤 11시`) against the real clock, so
     /// days the rules know (weekdays, `내일`, `3/2`) and `HH:MM` times come from the rules and `now` instead.
-    public static func parse(_ line: String, courses: [Course], codes: [CourseCode] = [], fixedCourse: UUID? = nil, now: Date, calendar: Calendar) -> QuickAdd {
+    public static func parse(_ line: String, courses: [Course], codes: [CourseCode] = [], fixedCourse: UUID? = nil, defaultCourse: UUID? = nil,
+                             now: Date, calendar: Calendar) -> QuickAdd {
         var found = line.ranges(of: /\S+/).map { (String(line[$0]), $0) }
         var course = fixedCourse
         // The course can sit anywhere (`내일 7시 컴퓨터네트워킹에다`). Past the first word, short words and ones with digits
@@ -85,6 +87,7 @@ public struct QuickAdd: Equatable, Sendable {
                 break
             }
         }
+        if course == nil { course = defaultCourse }
         let today = LocalDate(now, in: calendar)
         var words = found.map { Word($0.0, range: $0.1, today: today, year: calendar.component(.year, from: now)) }
 

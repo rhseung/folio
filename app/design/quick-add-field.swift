@@ -33,26 +33,38 @@ struct DateMarkRenderer: TextRenderer {
 /// share it, so the line reads the same wherever it is typed.
 struct QuickAddField: View {
     @State private var model: QuickAddModel
+    @State private var fieldWidth: CGFloat = 0
+    @State private var lineWidth: CGFloat = 0
     @Environment(\.quickAddTypedSample) private var typedSample
 
-    init(workspace: Workspace, fixedCourse: UUID? = nil) {
-        _model = State(initialValue: QuickAddModel(workspace: workspace, fixedCourse: fixedCourse))
+    init(workspace: Workspace, fixedCourse: UUID? = nil, defaultCourse: UUID? = nil) {
+        _model = State(initialValue: QuickAddModel(workspace: workspace, fixedCourse: fixedCourse, defaultCourse: defaultCourse))
     }
 
     private let font = Theme.Typeface.bodyLarge
+    /// The + gets a fixed slot so the summary can start under the typed words by padding alone. Aligning it by a
+    /// guide instead shifted it right of the field, and a long summary then widened the whole field past its frame.
+    private let plusWidth: CGFloat = 16
 
     var body: some View {
         let parsed = model.parsed
-        VStack(alignment: .typedLine, spacing: Theme.Space.s) {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
             HStack(spacing: Theme.Space.m) {
-                Image(systemName: "plus").foregroundStyle(Theme.Palette.textSecondary)
+                Image(systemName: "plus").foregroundStyle(Theme.Palette.textSecondary).frame(width: plusWidth)
                 TextField(String(localized: .quickAddPrompt), text: $model.text)
                     .textFieldStyle(.plain)
                     .font(font)
                     // The marks are drawn behind the field instead of styling its text: rewriting the text while
-                    // typing breaks Korean composition and eats characters.
-                    .background(alignment: .leading) { marks(parsed?.dueRanges ?? []).allowsHitTesting(false) }
-                    .alignmentGuide(.typedLine) { $0[.leading] }
+                    // typing breaks Korean composition and eats characters. Past the field's width the field scrolls
+                    // its text and the marks would sit under other words, so they show only while the line fits.
+                    .background(alignment: .leading) {
+                        marks(parsed?.dueRanges ?? [])
+                            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { lineWidth = $0 }
+                            .opacity(lineWidth <= fieldWidth ? 1 : 0)
+                            .allowsHitTesting(false)
+                    }
+                    .frame(maxWidth: .infinity)
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { fieldWidth = $0 }
                     .onSubmit { if let parsed { model.add(parsed) } }
                 if let parsed {
                     Button(.quickAddAdd) { model.add(parsed) }
@@ -64,30 +76,45 @@ struct QuickAddField: View {
             .frame(height: 44)
             .floatingGlass()
             // Under the field, not inside it: beside the typed line it ran out of room and cut off the deadline.
-            if let parsed { summary(parsed).alignmentGuide(.typedLine) { $0[.leading] } }
+            if parsed != nil || model.defaultCourse != nil {
+                summary(parsed)
+                    .padding(.leading, Theme.Inset.panel + plusWidth + Theme.Space.m)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         }
-        .onAppear { if let typedSample, model.text.isEmpty { model.text = typedSample } }
+        .onAppear {
+            var sample = typedSample
+            #if DEBUG && os(macOS)
+            sample = sample ?? SnapshotDriver.shared.quickAddText
+            #endif
+            if let sample, model.text.isEmpty { model.text = sample }
+        }
     }
 
-    /// The course leads unless the field belongs to one; then the line starts at the deadline.
-    private func summary(_ parsed: QuickAdd) -> some View {
+    /// The course leads unless the field belongs to one; then the line starts at the deadline. A default course shows
+    /// before anything is typed, so the line says where it will go. The title gives way first when the line is long.
+    private func summary(_ parsed: QuickAdd?) -> some View {
         let leadsWithCourse = model.fixedCourse == nil
+        let items = parsed.map(model.summary) ?? []
         return HStack(spacing: Theme.Space.tight) {
             if leadsWithCourse {
-                if let id = parsed.courseId, let title = model.courseTitle(parsed) {
-                    CourseMark(model.workspace, id, inline: true)
-                    Text(title).foregroundStyle(Theme.Palette.textSecondary)
-                } else {
-                    Text(.quickAddNoCourse).foregroundStyle(Theme.Palette.danger)
+                Group {
+                    if let id = model.course(parsed), let title = model.courseTitle(id) {
+                        CourseMark(model.workspace, id, inline: true)
+                        Text(title).foregroundStyle(Theme.Palette.textSecondary)
+                    } else {
+                        Text(.quickAddNoCourse).foregroundStyle(Theme.Palette.danger)
+                    }
                 }
+                .layoutPriority(1)
             }
-            ForEach(Array(model.summary(parsed).enumerated()), id: \.element) { i, item in
+            ForEach(Array(items.enumerated()), id: \.element) { i, item in
                 Group {
                     if leadsWithCourse || i > 0 { Text(verbatim: "·") }
                     switch item {
-                    case let .due(due): Text(due)
-                    case .weekly: Label(.quickAddWeekly, systemImage: "repeat")
-                    case let .title(title): Text(title)
+                    case let .due(due): Text(due).layoutPriority(1)
+                    case .weekly: Label(.quickAddWeekly, systemImage: "repeat").layoutPriority(1)
+                    case let .title(title): Text(title).truncationMode(.tail)
                     }
                 }
                 .foregroundStyle(Theme.Palette.textTertiary)
@@ -108,15 +135,6 @@ struct QuickAddField: View {
         mirror = mirror + Text(text[at...])
         return mirror.font(font).lineLimit(1).fixedSize().textRenderer(DateMarkRenderer())
     }
-}
-
-private extension HorizontalAlignment {
-    /// Where the typed line starts, so the summary under it lines up with the words rather than the + before them.
-    enum TypedLine: AlignmentID {
-        static func defaultValue(in d: ViewDimensions) -> CGFloat { d[.leading] }
-    }
-
-    static let typedLine = HorizontalAlignment(TypedLine.self)
 }
 
 extension EnvironmentValues {

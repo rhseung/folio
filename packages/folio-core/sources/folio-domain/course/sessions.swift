@@ -446,11 +446,12 @@ extension CourseFile {
         return String(localized: .sessionDay(c.month!, c.day!, ClassTime.weekdayNames[calendar.isoWeekday(of: date) - 1]))
     }
 
-    /// `11/13(금) 23:59`. The minute is 24-hour, as syllabi write deadlines: `오후 11:59` beside the day read as a
-    /// second phrase.
-    public static func deadline(_ date: Date, calendar: Calendar) -> String {
-        let c = calendar.dateComponents([.hour, .minute], from: date)
-        return day(date, calendar: calendar) + " " + String(format: "%02d:%02d", c.hour!, c.minute!)
+    /// `11/13(금) 23:59`, or `11/13(금) 오후 11:59` under a 12-hour setting: the minute follows the system's clock
+    /// setting as every other time in the app does, so a deadline never reads in a different clock than the times
+    /// beside it.
+    public static func deadline(_ date: Date, calendar: Calendar, locale: Locale = .autoupdatingCurrent) -> String {
+        let time = Date.FormatStyle(date: .omitted, time: .shortened, locale: locale, calendar: calendar, timeZone: calendar.timeZone)
+        return day(date, calendar: calendar) + " " + date.formatted(time)
     }
 
     /// `11/3(화): 행복과 습관`, or the day alone when nothing says what the class covered: the one name a

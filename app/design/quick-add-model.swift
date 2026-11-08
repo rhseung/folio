@@ -7,25 +7,33 @@ import Observation
 final class QuickAddModel {
     let workspace: Workspace
     let fixedCourse: UUID?
+    /// The course the window shows when the line was opened; a course typed into the line wins over it.
+    let defaultCourse: UUID?
     var text = ""
+    var locale = Locale.autoupdatingCurrent
 
-    init(workspace: Workspace, fixedCourse: UUID? = nil) {
+    init(workspace: Workspace, fixedCourse: UUID? = nil, defaultCourse: UUID? = nil) {
         self.workspace = workspace
         self.fixedCourse = fixedCourse
+        self.defaultCourse = fixedCourse == nil ? defaultCourse.flatMap { workspace.course($0)?.id } : nil
     }
 
     var parsed: QuickAdd? {
         let courses = workspace.currentCourses.map(\.file.course)
         return text.trimmingCharacters(in: .whitespaces).isEmpty ? nil
-            : QuickAdd.parse(text, courses: courses, codes: workspace.catalog.codes, fixedCourse: fixedCourse, now: workspace.now, calendar: workspace.calendar)
+            : QuickAdd.parse(text, courses: courses, codes: workspace.catalog.codes, fixedCourse: fixedCourse,
+                             defaultCourse: defaultCourse, now: workspace.now, calendar: workspace.calendar)
     }
 
     func canAdd(_ parsed: QuickAdd) -> Bool { parsed.courseId != nil && !parsed.title.isEmpty }
 
-    func courseTitle(_ parsed: QuickAdd) -> String? { parsed.courseId.flatMap { workspace.course($0)?.title } }
+    /// The course the line goes to; before anything is typed, the default one, so the line shows it is already in.
+    func course(_ parsed: QuickAdd?) -> UUID? { parsed.map(\.courseId) ?? defaultCourse }
+
+    func courseTitle(_ id: UUID) -> String? { workspace.course(id)?.title }
 
     func due(_ parsed: QuickAdd) -> String? {
-        parsed.due.map { CourseFile.deadline($0, calendar: workspace.calendar) }
+        parsed.due.map { CourseFile.deadline($0, calendar: workspace.calendar, locale: locale) }
     }
 
     enum Summary: Hashable {

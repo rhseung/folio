@@ -200,6 +200,7 @@ struct RootView: View {
                 #endif
                 #if DEBUG && os(macOS)
                 .onChange(of: SnapshotDriver.shared.searchQuery) { _, query in searching = query != nil }
+                .onChange(of: SnapshotDriver.shared.quickAddOpen) { _, open in quickAdding = open }
                 #endif
             }
         }
@@ -236,6 +237,11 @@ struct RootView: View {
             }).first {
                 if let now = SnapshotDriver.stripNow { workspace.pinnedNow = now }
                 await SnapshotDriver.shared.runStrip(open: { open($0) }, lecture: AppLink(.material, lecture.id))
+                return
+            }
+            if SnapshotDriver.quickAdd, let course = workspace.currentCourses.first {
+                await SnapshotDriver.shared.runQuickAdd(open: { open($0) }, course: course.id,
+                                                        named: String(course.title.split(separator: " ").first ?? ""))
                 return
             }
             if SnapshotDriver.tabs > 1 {
@@ -490,7 +496,7 @@ struct RootView: View {
             Button(.rootQuickAdd, systemImage: "plus") { quickAdding = true }
                 .help(Text(.rootQuickAddHelp))
                 .popover(isPresented: $quickAdding, arrowEdge: .bottom) {
-                    QuickAddField(workspace: workspace).padding(Theme.Space.l).frame(width: 440)
+                    QuickAddField(workspace: workspace, defaultCourse: navigator.current.course).padding(Theme.Space.l).frame(width: 440)
                 }
             recordButton
             timerButton
