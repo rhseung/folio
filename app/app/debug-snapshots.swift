@@ -77,6 +77,8 @@ final class SnapshotDriver {
     /// The line a quick-add field starts typed with when it appears, and whether the toolbar's popover is open.
     var quickAddText: String?
     var quickAddOpen = false
+    /// Opens the deadline chip's calendar as the field appears.
+    var quickAddDueOpen = false
 
     /// The split screen's section to take up from its header and the page its edge goes to, as clicks would.
     var splitEdit: SplitEdit?
@@ -290,30 +292,39 @@ final class SnapshotDriver {
             try? Data().write(to: directory.appending(path: "\(name).ready"))
             try? await Task.sleep(for: .seconds(3))
         }
-        let long = "Lab3 보고서 초안과 실험 데이터 정리, 그래프와 오차 분석까지 모두 끝내고 제출하기 금 마감"
-        // Pages lay the field out wider than the popover, so they get a line long enough to run past theirs too.
-        let longer = "Lab3 보고서 초안과 실험 데이터 정리, 그래프와 오차 분석, 참고 문헌 목록과 부록 표까지 모두 끝내고 조원 검토 받은 뒤 제출하기 금 마감"
+        let long = "Lab3 보고서 초안과 실험 데이터 정리, 그래프와 오차 분석, 참고 문헌 목록과 부록 표까지 모두 끝내고 조원 검토 받은 뒤 제출하기 다음 주 수요일 오후 6시까지"
         // Away first: a page already shown keeps the field it laid out before the line was set.
         open(.course(course))
         section = .overview
         try? await Task.sleep(for: .seconds(1.5))
-        quickAddText = "\(named) \(longer)"
-        open(.place(.today))
-        try? await Task.sleep(for: .seconds(2))
-        await shot("quick-add-today")
-        quickAddText = longer
-        open(.course(course))
+        for (name, text) in [("today-no-course", "HW2 보고서 내일"), ("today-long", "\(named) \(long)")] {
+            quickAddText = text
+            open(.place(.today))
+            try? await Task.sleep(for: .seconds(3))
+            await shot("quick-add-\(name)")
+            open(.course(course))
+            try? await Task.sleep(for: .seconds(1))
+        }
+        quickAddText = long
         section = .assignments
-        try? await Task.sleep(for: .seconds(2))
-        await shot("quick-add-assignments")
+        try? await Task.sleep(for: .seconds(3))
+        await shot("quick-add-assignments-long")
         section = .overview
         try? await Task.sleep(for: .seconds(1.5))
-        for (name, text) in [("empty", nil), ("typed", "HW5 금 23:59"), ("long", long)] as [(String, String?)] {
+        // The popover is 440 wide: a long course name, a deadline, the repeat and a folder run onto a second chip row.
+        let steps: [(String, String?, Bool)] = [
+            ("empty", nil, false), ("short", "HW5 금 23:59", false),
+            ("long", "Lab3 보고서 초안과 실험 데이터 정리, 그래프와 오차 분석까지 끝내고 제출 다음 주 수요일 오후 6시까지", false),
+            ("wrapped", "확률과 통계 Lab3 보고서 매주 금 23:59", false), ("due-open", "HW5 금 23:59", true),
+        ]
+        for (name, text, dueOpen) in steps {
             quickAddText = text
+            quickAddDueOpen = dueOpen
             quickAddOpen = true
-            try? await Task.sleep(for: .seconds(1.5))
+            try? await Task.sleep(for: .seconds(dueOpen ? 3.5 : 3))
             await shot("quick-add-course-\(name)", popovers: true)
             quickAddOpen = false
+            quickAddDueOpen = false
             try? await Task.sleep(for: .seconds(1))
         }
         quickAddText = nil

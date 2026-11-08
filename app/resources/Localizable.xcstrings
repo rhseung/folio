@@ -15962,13 +15962,79 @@
         }
       }
     },
-    "quick-add.no-course": {
+    "quick-add.pick-course": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "과목을 찾지 못함"
+            "value": "과목 선택"
+          }
+        }
+      }
+    },
+    "quick-add.add-due": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마감 추가"
+          }
+        }
+      }
+    },
+    "quick-add.clear-due": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마감 지우기"
+          }
+        }
+      }
+    },
+    "quick-add.no-repeat": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "반복 없음"
+          }
+        }
+      }
+    },
+    "quick-add.repeat-weekly": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "매주 반복"
+          }
+        }
+      }
+    },
+    "quick-add.kind": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "종류"
+          }
+        }
+      }
+    },
+    "quick-add.number": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "번호"
           }
         }
       }
@@ -15980,17 +16046,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "빠른 추가: 선대 HW5 금 23:59"
-          }
-        }
-      }
-    },
-    "quick-add.add": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "추가"
           }
         }
       }
