@@ -1,5 +1,6 @@
 import FolioDomain
 import Foundation
+import PropertyBased
 import Testing
 
 struct CourseWorkTests {
@@ -563,6 +564,55 @@ struct CourseWorkTests {
         #expect(r.courseId == courses[0].id && r.title == "HW5" && r.due == date("2026-10-23 19:00"))
         // Past the first word, a short or numbered word is the title, not an abbreviation.
         #expect(QuickAdd.parse("보고서 선 HW5", courses: courses, now: now, calendar: calendar).courseId == nil)
+    }
+
+    @Test func deadlineWordsKeepTheirKoreanEndingsOutOfTheTitle() {
+        let now = date("2026-10-22 15:00")  // Thursday
+        func read(_ line: String) -> QuickAdd { QuickAdd.parse(line, courses: [], fixedCourse: courses[1].id, now: now, calendar: calendar) }
+        let friday = date("2026-10-23 23:59")
+        for line in ["HW4 금까지", "HW4 금요일까지", "금요일까지 HW4", "HW4 금 마감", "HW4 금요일 까지"] {
+            let r = read(line)
+            #expect(r.title == "HW4" && r.due == friday, "\(line)")
+        }
+        #expect(read("HW4 내일까지").due == friday)
+        #expect(read("HW4 11/14까지").due == date("2026-11-14 23:59"))
+        #expect(read("HW4 금 23:59까지").due == friday)
+        let line = "HW4 금요일까지"
+        #expect(read(line).dueRanges.map { String(line[$0]) } == ["금요일까지"])
+        // Only after a deadline are they its words; on their own they are the title's.
+        #expect(read("마감 정리").title == "마감 정리" && read("마감 정리").due == nil)
+    }
+
+    @Test func aLeadingKindWordIsDroppedOnlyWhenItIsJustALabel() {
+        let now = date("2026-10-22 15:00")
+        func title(_ line: String) -> String { QuickAdd.parse(line, courses: [], fixedCourse: courses[1].id, now: now, calendar: calendar).title }
+        #expect(title("과제: 금요일까지 HW4") == "HW4")
+        #expect(title("과제: 실험 보고서") == "실험 보고서")
+        #expect(title("과제 HW4 금") == "HW4")
+        #expect(title("과제 3 금") == "과제 3")
+        #expect(title("과제 제출 금") == "과제 제출")
+        #expect(title("과제") == "과제")
+    }
+
+    /// The wrap-up sheet's placeholder is an example of the line, so it has to read as it says.
+    @Test func theWrapUpPlaceholderParsesAsShown() {
+        let now = date("2026-10-22 15:00")
+        let r = QuickAdd.parse("HW4 금요일까지", courses: [], fixedCourse: courses[1].id, now: now, calendar: calendar)
+        #expect(r.title == "HW4" && r.due == date("2026-10-23 23:59"))
+    }
+
+    @Test func theTitleNeverHoldsTheHighlightedDeadline() async {
+        let titles = ["HW4", "보고서", "Lab2", "정리", "읽기", "실험", "발표", "준비", "PS", "퀴즈"]
+        let dues = ["금", "금요일까지", "내일까지", "11/14까지", "23:59", "목", "모레까지", "12/1", "토요일", "금까지"]
+        let now = date("2026-10-22 15:00")
+        await propertyCheck(input: zip(Gen.int(in: 0...1), Gen.int(in: 0...9)).array(of: 1...6)) { picks in
+            let words = picks.map { $0.0 == 0 ? titles[$0.1] : dues[$0.1] }
+            let line = words.joined(separator: " ")
+            let r = QuickAdd.parse(line, courses: [], fixedCourse: courses[1].id, now: now, calendar: calendar)
+            let marked = Set(r.dueRanges.flatMap { line[$0].split(separator: " ").map(String.init) })
+            #expect(Set(r.title.split(separator: " ").map(String.init)).isDisjoint(with: marked), "\(line)")
+            #expect(r.title == picks.filter { $0.0 == 0 }.map { titles[$0.1] }.joined(separator: " "), "\(line)")
+        }
     }
 
     @Test func ambiguousAbbreviationMatchesNothing() {

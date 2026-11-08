@@ -12,6 +12,11 @@ public struct QuickAdd: Equatable, Sendable {
 
     static let weekdays: [String: Int] = ["월": 1, "화": 2, "수": 3, "목": 4, "금": 5, "토": 6, "일": 7]
     static let relativeDays: [String: Int] = ["오늘": 0, "내일": 1, "모레": 2]
+    /// What Korean puts after a deadline word (`금요일까지`, `11/14까지`) or after the whole deadline as a word of its own
+    /// (`금 마감`). They belong to the deadline, never the title.
+    static let dueEndings = ["까지", "마감"]
+    /// A leading word that only says what is added (`과제: HW4`); dropped when it can't be the title's own word.
+    static let kindWords = ["과제", "숙제"]
     /// Deadline time when only a day is given.
     static let defaultMinute = 23 * 60 + 59
 
@@ -26,10 +31,22 @@ public struct QuickAdd: Equatable, Sendable {
         var detected: (date: Date, phrase: String)?
         var inPhrase = false
         var weekly = false
+        /// `까지` or `마감` standing after a deadline word.
+        var trailer = false
         var normalized: String
-        var isDue: Bool { inPhrase || weekly || day != nil || weekday != nil || minute != nil }
+        var isDue: Bool { inPhrase || weekly || trailer || day != nil || weekday != nil || minute != nil }
 
         init(_ text: String, range: Range<String.Index>, today: LocalDate, year: Int) {
+            self.init(reading: text, range: range, today: today, year: year)
+            // `금요일까지` reads as `금요일`: the ending stays in the highlighted word, out of what the detector sees.
+            guard !isDue, let ending = QuickAdd.dueEndings.first(where: { text.hasSuffix($0) && text.count > $0.count }) else { return }
+            let core = Word(reading: String(text.dropLast(ending.count)), range: range, today: today, year: year)
+            guard core.isDue else { return }
+            self = core
+            self.text = text
+        }
+
+        private init(reading text: String, range: Range<String.Index>, today: LocalDate, year: Int) {
             self.text = text
             self.range = range
             normalized = text
@@ -70,6 +87,14 @@ public struct QuickAdd: Equatable, Sendable {
                 break
             }
         }
+        // `과제: HW4`, or `과제 HW4` whose rest names its kind itself; `과제 3` keeps the word as its title.
+        if found.count > 1, let first = found.first {
+            let labeled = first.0.hasSuffix(":") || first.0.hasSuffix("：")
+            let word = labeled ? String(first.0.dropLast()) : first.0
+            if kindWords.contains(word), labeled || AssignmentKind.parse(title: found.dropFirst().map(\.0).joined(separator: " ")) != nil {
+                found.removeFirst()
+            }
+        }
         let today = LocalDate(now, in: calendar)
         var words = found.map { Word($0.0, range: $0.1, today: today, year: calendar.component(.year, from: now)) }
 
@@ -89,6 +114,9 @@ public struct QuickAdd: Equatable, Sendable {
             words[first].detected = (date, (text as NSString).substring(with: m.range))
         }
 
+        for i in words.indices.dropFirst() where dueEndings.contains(words[i].text) && words[i - 1].isDue {
+            words[i].trailer = true
+        }
         let due = words.filter(\.isDue)
         var minute = due.compactMap(\.minute).first
         if minute == nil, let d = due.compactMap(\.detected).first(where: { $0.phrase.contains(/시|자정|정오/) }) {
