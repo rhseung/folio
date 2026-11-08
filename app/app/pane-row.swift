@@ -4,7 +4,8 @@ import SwiftUI
 
 /// A tab's panes side by side (#62). Where the row is too narrow for every pane at `Size.paneMin`, the panes pressed
 /// longest ago fold into strips in their place (`PaneLayout.folded`); pressing a strip opens it and folds another.
-/// A folded pane's screen stays alive under its strip at the width it last had, so it opens as it was left.
+/// A pane folded by hand (칸 접기) stays a strip at any width until it is pressed. A folded pane's screen stays alive
+/// under its strip at the width it last had, so it opens as it was left.
 struct PaneRow: View {
     let workspace: Workspace
     let panes: TabPanes
@@ -16,9 +17,6 @@ struct PaneRow: View {
     var play: (UUID, (@MainActor () -> Void)?) -> Void = { _, _ in }
     /// Takes a pane out into a tab of its own.
     var newTab: ((Navigator) -> Void)?
-    /// How many panes stay open at this width with two panes and with three. It changes only where the width crosses
-    /// a count, so a live resize sets it a few times, not every frame.
-    @State private var open = [2, 3]
     @State private var sizes = PaneSizes()
     @State private var drag = PaneDrag()
     /// Back to false however the drag ends: a drag the system cancels (the window losing the pointer) has no end.
@@ -46,9 +44,7 @@ struct PaneRow: View {
         }
     }
 
-    var folded: Set<Int> {
-        panes.count > 1 ? panes.layout.folded(open: open[min(panes.count, 3) - 2]) : []
-    }
+    var folded: Set<Int> { panes.folded }
 
     /// The open pane at the row's trailing end, which the Claude button lies over, while there is a button.
     func underClaude(folded: Set<Int>) -> Int? {
@@ -82,11 +78,12 @@ struct PaneRow: View {
         #endif
         .onGeometryChange(for: [Int].self) { proxy in
             [2, 3].map { PaneLayout.openCount($0, room: proxy.size.width, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: Self.gap) }
-        } action: { open = $0 }
+        } action: { if panes.room != $0 { panes.room = $0 } }
         .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.row = $0 }
         // Pressing a strip opens it as another folds, together; a new or closed pane slides the others over. A pane
         // folding because the window narrowed comes at once: it comes mid-resize, where a moving pane trails the edge.
         .animation(reduceMotion ? nil : .smooth(duration: 0.34), value: panes.focus)
+        .animation(reduceMotion ? nil : .smooth(duration: 0.34), value: panes.collapsed)
         .animation(reduceMotion ? nil : .smooth(duration: 0.34), value: panes.ids)
     }
 
@@ -102,7 +99,7 @@ struct PaneRow: View {
                 .environment(\.paneFocused, i == panes.focus)
                 .environment(\.paneInsert, inserts[id])
                 .environment(\.askClaude, askClaude)
-                .frame(width: kept, alignment: .topLeading)
+                .modifier(PaneScreenWidth(panes: panes, index: i, kept: kept, sizes: sizes))
                 .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { width in
                     if width >= Theme.Size.paneMin || panes.count == 1 { sizes.open[id] = width }
@@ -132,14 +129,14 @@ struct PaneRow: View {
     /// Dragged, it moves the boundary between the two panes beside it; not beside a strip, which has no width to give.
     func divider(after d: Int, folded: Set<Int>) -> some View {
         let enabled = !folded.contains(d) && !folded.contains(d + 1)
-        return PaneDivider(enabled: enabled, front: front, even: panes.evenOut)
+        return PaneDivider(enabled: enabled, front: front, even: panes.even)
             #if os(macOS) && (DEBUG || RESIZE_PROBE)
             .background { if front && d == 0 { ResizeMarker(name: "divider") } }
             #endif
             // The panes' own menus, for the two either side: nothing is laid over a pane to hold them. On the iPad a long
             // press is how the panes are evened: a double tap on so thin a target was hard to hit and to find.
             .contextMenu {
-                Button(.panesEven, systemImage: "rectangle.split.3x1", action: panes.evenOut)
+                Button(.panesEven, systemImage: "rectangle.split.3x1", action: panes.even)
                 Divider()
                 ForEach([d, d + 1], id: \.self) { i in
                     Menu(workspace.paneMark(of: panes.navigators[i].current, trail: panes.trails[i]).title) {
@@ -234,7 +231,12 @@ private struct LivePaneStack<Content: View>: View {
     var body: some View {
         // A pane opened or closed under the drag ends it: its widths were for the panes there were.
         let live = drag.live.flatMap { $0.panes.count == panes.count ? $0 : nil }
-        PaneStack(layout: live ?? panes.layout, shares: live?.shares ?? panes.shares, folded: folded) { content }
+        let glide = live == nil ? panes.glide.flatMap { $0.from.panes.count == panes.count ? $0 : nil } : nil
+        // Always in the timeline, paused but for a glide: put in only for one, the panes would be built anew.
+        TimelineView(.animation(paused: glide == nil)) { context in
+            PaneStack(layout: live ?? panes.layout, shares: live?.shares ?? panes.shares, folded: folded,
+                      from: glide.map { ($0.from, $0.folded) }, progress: glide?.progress(at: context.date) ?? 1) { content }
+        }
     }
 }
 
@@ -245,6 +247,9 @@ private struct PaneStack: Layout {
     /// Only so a new share lays the row out again; `layout` has them.
     let shares: [Double]
     let folded: Set<Int>
+    /// A glide's start, and how far it has come from it to `layout`.
+    var from: (layout: PaneLayout, folded: Set<Int>)?
+    var progress = 1.0
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         proposal.replacingUnspecifiedDimensions()
@@ -257,13 +262,42 @@ private struct PaneStack: Layout {
     func explicitAlignment(of guide: VerticalAlignment, in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGFloat? { nil }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        let widths = layout.widths(room: bounds.width, folded: folded, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap)
+        var widths = layout.widths(room: bounds.width, folded: folded, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap)
+        if let from, progress < 1 {
+            let start = from.layout.widths(room: bounds.width, folded: from.folded, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap)
+            widths = zip(start, widths).map { $0 + ($1 - $0) * progress }
+        }
         var x = bounds.minX
         for (k, view) in subviews.enumerated() {
             let width = k % 2 == 0 ? (widths.indices.contains(k / 2) ? widths[k / 2] : 0) : PaneRow.gap
             view.place(at: CGPoint(x: x, y: bounds.minY), proposal: ProposedViewSize(width: width, height: bounds.height))
             x += width
         }
+    }
+}
+
+/// A pane's screen at a width of its own where the panel's isn't the one to lay it out at: its open width while it is
+/// a strip, so folding doesn't lay it out again, and its end width while a glide opens it, so it is laid out once and
+/// the panel's edge slides over it rather than widening it from a strip's width frame by frame.
+private struct PaneScreenWidth: ViewModifier {
+    let panes: TabPanes
+    let index: Int
+    let kept: CGFloat?
+    let sizes: PaneSizes
+
+    func body(content: Content) -> some View {
+        let width = kept ?? opening
+        // At once: a press animates the row, and a screen animated to a new width animates its own layout with it.
+        content.frame(width: width, alignment: .topLeading).animation(nil, value: width)
+    }
+
+    // Read here rather than in the row, so a glide starting and ending redraws this frame alone.
+    var opening: CGFloat? {
+        guard let glide = panes.glide, glide.folded.contains(index) else { return nil }
+        let folded = panes.folded
+        guard !folded.contains(index) else { return nil }
+        let widths = panes.layout.widths(room: sizes.row, folded: folded, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap)
+        return widths.indices.contains(index) ? widths[index] : nil
     }
 }
 
@@ -365,6 +399,13 @@ struct PaneMenu: View {
     var newTab: ((Navigator) -> Void)?
 
     var body: some View {
+        // 칸 접기 from a segment, a strip, or the divider beside it (2026-11-08 사용자); on a strip, opening it again.
+        if panes.folded.contains(index) {
+            Button(.panesUnfold, systemImage: "arrow.left.and.line.vertical.and.arrow.right") { panes.press(index) }
+        } else {
+            Button(.panesCollapse, systemImage: "arrow.right.and.line.vertical.and.arrow.left") { panes.collapse(index) }
+                .disabled(!panes.canCollapse(index))
+        }
         Button(.panesClose, systemImage: "xmark") { panes.close(index) }
             .disabled(panes.count < 2)
         if let newTab {
@@ -406,19 +447,6 @@ extension Workspace {
         let steps = if case .course = Screen(entry) { trail?.crumbs ?? [] } else { [Crumb]() }
         let symbol = steps.last { $0.symbol != nil }?.symbol ?? place.symbol
         return Crumb(title: tabTitle(of: entry) ?? place.title, symbol: symbol, dot: place.dot)
-    }
-}
-
-extension TabPanes {
-    /// 칸 폭 맞추기, from a divider or the 보기 menu: every pane as wide as the others, moving there unless the system
-    /// asks for less motion. Read from the system, not the environment: the menu bar's commands have none.
-    func evenOut() {
-        #if os(macOS)
-        let reduced = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
-        #else
-        let reduced = UIAccessibility.isReduceMotionEnabled
-        #endif
-        withAnimation(reduced ? nil : .smooth(duration: 0.34)) { even() }
     }
 }
 

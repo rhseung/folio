@@ -121,6 +121,23 @@ struct PaneRowTests {
         #expect(widths.allSatisfy { abs($0 - widths[0]) <= 1 })
     }
 
+    @Test func aPaneFoldedByHandStaysAStripAsTheWindowWidens() async throws {
+        let panes = try #require(tabs.front)
+        panes.openBeside(Navigator.Entry(link: .place(.people)))
+        try await settle()
+        panes.collapse(1)
+        try await settle(1)
+        // The other pane takes what the strip leaves.
+        #expect(widths[1] == Theme.Size.paneStrip && abs(widths[0] - (1200 - Theme.Size.paneStrip - PaneRow.gap)) <= 1)
+        window.setContentSize(NSSize(width: 1600, height: 800))
+        try await settle()
+        #expect(widths[1] == Theme.Size.paneStrip)
+        // Pressing the strip opens it at its share again.
+        panes.press(1)
+        try await settle(1)
+        #expect(widths.allSatisfy { abs($0 - widths[0]) <= 1 })
+    }
+
     @Test func aLonePaneTakesTheWholeRow() async throws {
         try await settle()
         #expect(widths == [1200])

@@ -69,15 +69,17 @@ private struct SettingsCommands: Commands {
     }
 }
 
-/// 보기 › 칸 폭 맞추기, as a divider's double click (Mac) or long press (iPad) does (2026-11-08 사용자). No key yet:
-/// keys come with the table of them (#116).
+/// 보기 › 칸 폭 맞추기, as a divider's double click (Mac) or long press (iPad) does, and 칸 접기 for the focused pane,
+/// as its menu does (2026-11-08 사용자). No keys yet: keys come with the table of them (#116).
 private struct PaneCommands: Commands {
     @FocusedValue(\.frontPanes) private var panes
 
     var body: some Commands {
         CommandGroup(after: .sidebar) {
-            Button(.panesEven) { panes?.evenOut() }
+            Button(.panesEven) { panes?.even() }
                 .disabled((panes?.count ?? 0) < 2)
+            Button(.panesCollapse) { if let panes { panes.collapse(panes.focus) } }
+                .disabled(!(panes.map { $0.canCollapse($0.focus) } ?? false))
         }
     }
 }

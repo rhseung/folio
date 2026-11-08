@@ -126,10 +126,18 @@ import SwiftUI
         try? await Task.sleep(for: .seconds(3))
         let screen = window.screen?.visibleFrame ?? NSRect(x: 0, y: 0, width: 1440, height: 900)
         let least = max(window.minSize.width, window.frameRect(forContentRect: NSRect(origin: .zero, size: window.contentMinSize)).width)
-        window.setFrame(NSRect(x: screen.minX, y: screen.minY, width: screen.width, height: min(900, screen.height)), display: true)
+        // `FOLIO_RESIZE_WIDTH` for a window narrower than the screen.
+        let wide = environment["FOLIO_RESIZE_WIDTH"].flatMap(Double.init).map { min(CGFloat($0), screen.width) } ?? screen.width
+        window.setFrame(NSRect(x: screen.minX, y: screen.minY, width: wide, height: min(900, screen.height)), display: true)
         try? await Task.sleep(for: .seconds(2))
         let probe = ResizeProbe(window: window, least: least, most: screen.width, legs: environment["FOLIO_RESIZE_LEGS"].flatMap(Int.init) ?? 4)
         for name in leading { probe.rest[name] = probe.x(of: name) }
+        if let act = environment["FOLIO_RESIZE_ACT"], let folder = environment["FOLIO_RESIZE_SHOTS"] {
+            if probe.grab() { await probe.act(act, folder: folder) }
+            // folio:not-an-action debug measurements, outside the GIST folder
+            try? probe.note.write(to: file, atomically: true, encoding: .utf8)
+            return NSApp.terminate(nil)
+        }
         if environment["FOLIO_RESIZE_DRAG"] == "1" {
             guard probe.grab() else {
                 // folio:not-an-action debug measurements, outside the GIST folder
@@ -223,6 +231,63 @@ import SwiftUI
         return true
     }
 
+    /// With `FOLIO_RESIZE_ACT` (`even`, `collapse` or `unfold`) and `FOLIO_RESIZE_SHOTS=<folder>`: drags the first
+    /// divider `FOLIO_RESIZE_SPAN` points left so the panes differ, then evens them, folds the right pane by hand, or
+    /// folds and opens it again, shooting the window as fast as it can for a while after: what the move looks like
+    /// part way (the first shot is the frame before). `menu` opens the right pane's segment menu instead, and
+    /// `strip-menu` the menu of its strip once folded, without a click (`menu(at:)`).
+    private func act(_ act: String, folder: String) async {
+        guard let row = PaneDragHook.shared.row, let drag else { return }
+        PaneDragHook.shared.move(by: drag.least - drag.rest)
+        PaneDragHook.shared.end()
+        try? await Task.sleep(for: .seconds(2))
+        if act == "unfold" || act == "strip-menu" {
+            row.panes.collapse(1)
+            try? await Task.sleep(for: .seconds(2))
+        }
+        if act.hasSuffix("menu"), let content = window.contentView {
+            let point: NSPoint
+            if act == "menu" {
+                guard let tab = Self.marked["firstTab"]?.allObjects.first(where: { $0.window === window }) else { return }
+                point = tab.convert(NSPoint(x: tab.bounds.maxX - 48, y: tab.bounds.midY), to: nil)
+            } else {
+                point = content.convert(NSPoint(x: content.bounds.maxX - Theme.Size.panelInset - Theme.Size.paneStrip / 2, y: content.bounds.midY), to: nil)
+            }
+            return menu(at: point)
+        }
+        capture("\(folder)/\(act)-0000.png")
+        let start = CACurrentMediaTime()
+        switch act {
+        case "even": row.panes.even()
+        case "collapse": row.panes.collapse(1)
+        default: row.panes.press(1)
+        }
+        while CACurrentMediaTime() - start < 0.8 {
+            try? await Task.sleep(for: .milliseconds(16))
+            capture("\(folder)/\(act)-\(String(format: "%04d", Int((CACurrentMediaTime() - start) * 1000))).png")
+        }
+        try? await Task.sleep(for: .seconds(1))
+        capture("\(folder)/\(act)-rest.png")
+    }
+
+    /// Opens the menu a right click at `point` (the window's own coordinates) would, and holds it open for 6 seconds
+    /// for `screencapture -l` to shoot from outside: a menu is a window of its own, which the app can't draw itself,
+    /// and the app may not shoot the screen.
+    private func menu(at point: NSPoint) {
+        guard let event = NSEvent.mouseEvent(with: .rightMouseDown, location: point, modifierFlags: [], timestamp: ProcessInfo.processInfo.systemUptime,
+                                             windowNumber: window.windowNumber, context: nil, eventNumber: 0, clickCount: 1, pressure: 1),
+              let frame = window.contentView?.superview else { return }
+        var view = frame.hitTest(frame.convert(point, from: nil))
+        while let v = view, v.menu(for: event) == nil { view = v.superview }
+        guard let view, let menu = view.menu(for: event) else { return note += " no menu" }
+        note += " menu \(menu.items.map(\.title))"
+        // On the run loop's common modes: a menu tracks in its own mode, where the main queue waits.
+        nonisolated(unsafe) let held = menu
+        let close = Timer(timeInterval: 6, repeats: false) { _ in MainActor.assumeIsolated { held.cancelTracking() } }
+        RunLoop.main.add(close, forMode: .common)
+        NSMenu.popUpContextMenu(menu, with: event, for: view)
+    }
+
     /// With `FOLIO_RESIZE_SHOTS=<folder>`, every third frame of the first leg as the window showed it, its buttons
     /// and all (`cacheDisplay` leaves them out): the frames a person sees mid-drag. Taken at the next tick, once the
     /// frame is on screen, with the main thread held: `waitUntilExit` runs the run loop, which drew later frames and
@@ -231,7 +296,10 @@ import SwiftUI
         guard leg == 0, let folder = Self.environment["FOLIO_RESIZE_SHOTS"] else { return }
         frame += 1
         guard frame % 3 == 1 else { return }
-        let path = "\(folder)/\(String(format: "%03d", frame))-\(Int(shown)).png"
+        capture("\(folder)/\(String(format: "%03d", frame))-\(Int(shown)).png")
+    }
+
+    private func capture(_ path: String) {
         let capture = Process()
         capture.executableURL = URL(filePath: "/usr/sbin/screencapture")
         capture.arguments = ["-x", "-o", "-l\(window.windowNumber)", path]

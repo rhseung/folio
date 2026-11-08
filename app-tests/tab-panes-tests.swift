@@ -93,6 +93,29 @@ struct TabPanesTests {
         #expect(changes.count == 0 && panes.focus == 2)
     }
 
+    @Test func aPaneFoldedByHandStaysAStripAtAnyWidth() {
+        let panes = TabPanes(Navigator(), limit: 3)
+        panes.openBeside(grades)
+        panes.openBeside(people)
+        #expect(panes.folded.isEmpty)
+        // The focused pane folds by hand: the focus goes to the pane pressed before it.
+        panes.collapse(2)
+        #expect(panes.collapsed == [2] && panes.folded == [2] && panes.focus == 1)
+        // A row with room for one more open pane still keeps it a strip.
+        panes.room = [2, 3]
+        #expect(panes.folded == [2])
+        // Narrower, the room folds another, never the focus.
+        panes.room = [1, 1]
+        #expect(panes.folded == [0, 2])
+        // The last open pane can't fold.
+        panes.room = [2, 3]
+        panes.collapse(0)
+        #expect(!panes.canCollapse(1))
+        // Pressing a strip opens it.
+        panes.press(2)
+        #expect(panes.collapsed == [0] && panes.focus == 2)
+    }
+
     @Test func theWindowFollowsTheFocusedPane() {
         let tabs = WindowTabs(Navigator())
         let panes = tabs.front!
