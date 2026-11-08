@@ -5,12 +5,13 @@ import FolioDomain
 import Foundation
 
 enum GeneratedCommands {
-    static let assignment: [any ParsableCommand.Type] = [AssignmentAdd.self, AssignmentStatusSet.self, AssignmentRemove.self]
+    static let assignment: [any ParsableCommand.Type] = [AssignmentAdd.self, AssignmentSave.self, AssignmentStatusSet.self, AssignmentRemove.self]
     static let attendance: [any ParsableCommand.Type] = [AttendanceSet.self]
     static let backup: [any ParsableCommand.Type] = [BackupCreate.self, BackupRestore.self]
     static let catalog: [any ParsableCommand.Type] = [CatalogSet.self]
     static let cleanup: [any ParsableCommand.Type] = [CleanupUndo.self]
-    static let component: [any ParsableCommand.Type] = [ComponentAdd.self, ComponentSet.self, ComponentRemove.self]
+    static let component: [any ParsableCommand.Type] = [ComponentAdd.self, ComponentSet.self, ComponentRemove.self, PolicySet.self]
+    static let course: [any ParsableCommand.Type] = [CourseAdd.self, CourseRename.self]
     static let exam: [any ParsableCommand.Type] = [ExamAdd.self, ExamSet.self, ExamRemove.self, ExamSummary.self]
     static let examPlan: [any ParsableCommand.Type] = [ExamPlanAdd.self, ExamPlanRemove.self]
     static let `import`: [any ParsableCommand.Type] = [ImportNotion.self, ImportNotes.self, ImportCalendar.self, ImportExams.self, ImportUnits.self, ImportRequirements.self, ImportHandbook.self]
@@ -19,10 +20,12 @@ enum GeneratedCommands {
     static let problemSet: [any ParsableCommand.Type] = [ProblemSetRemove.self, ProblemLinkUnit.self]
     static let quiz: [any ParsableCommand.Type] = [QuizCardSave.self, QuizCardRemove.self]
     static let recording: [any ParsableCommand.Type] = [RecordingTrim.self, RecordingRetitleLegacy.self]
+    static let requirement: [any ParsableCommand.Type] = [GraduationSet.self]
     static let review: [any ParsableCommand.Type] = [ReviewRecord.self]
     static let score: [any ParsableCommand.Type] = [ScoreAdd.self, ScoreSet.self, ScoreRemove.self]
     static let semester: [any ParsableCommand.Type] = [SemesterAdd.self, SemesterSet.self, SemesterSource.self]
-    static let session: [any ParsableCommand.Type] = [SessionAdd.self, SessionRemove.self, SessionSet.self, SessionNote.self, SessionLinkViewed.self]
+    static let session: [any ParsableCommand.Type] = [SessionAdd.self, SessionRemove.self, SessionSet.self, SessionNote.self, SessionProgress.self, SessionWrapUp.self, SessionLinkViewed.self]
+    static let settings: [any ParsableCommand.Type] = [SettingsSet.self]
     static let transcript: [any ParsableCommand.Type] = [TranscriptAdd.self, TranscriptMove.self]
     static let unit: [any ParsableCommand.Type] = [UnitAdd.self, UnitRemove.self, UnitSet.self, UnitLink.self]
     static let unitPages: [any ParsableCommand.Type] = [UnitPagesAdd.self, UnitPagesSet.self, UnitPagesRemove.self]
@@ -202,6 +205,101 @@ enum GeneratedCommands {
         }
     }
 
+    struct CourseAdd: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "add", abstract: "과목 추가. 과목 폴더와 course.json을 만든다", discussion: """
+            강의 코드는 catalog.json에 있어야 한다. 폴더 이름은 `<코드><번호> <과목 이름>`이다.
+
+            예시:
+              folio course add EC 3101 \"자료 구조\" --credits 3
+              folio course add GS 2004-02 \"전공 글쓰기\" --mode pass_fail --semester 2026-3 --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Option(name: .customLong("id"), help: .hidden) var id: UUID?
+        @Argument(help: ArgumentHelp("강의 코드 앞부분. EC", valueName: "code"), completion: Complete.ref("CourseCode")) var code: String
+        @Argument(help: "일련번호. 4207-01") var number: String
+        @Argument(help: "과목 이름") var title: String
+        @Option(help: "학점") var credits: Double = 3
+        @Option(help: "평가 방식") var mode: GradingMode = .relative
+        @Option(help: ArgumentHelp("학기. 빼면 지금 학기", valueName: "semester"), completion: Complete.ref("Semester")) var semester: String?
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let action = FolioActions.CourseAdd(
+                id: id ?? UUID(),
+                code: try r.id("CourseCode", code, in: nil),
+                number: number,
+                title: title,
+                credits: credits,
+                mode: mode,
+                semester: try semester.map { try r.id("Semester", $0, in: nil) }
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct CourseRename: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "rename", abstract: "과목 이름, 코드, 번호 바꾸기. 폴더 이름도 바뀌므로 확인을 받는다", discussion: """
+            폴더 이동은 .folio/moves.jsonl에 남아 `folio cleanup undo`로 되돌릴 수 있다.
+
+            실행하기 전에 확인을 받는다.
+
+            예시:
+              folio course rename EC4207 --title \"그래프 이론과 응용\" --dry-run
+              folio course rename EC4207 --number 4207-02
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String = ""
+        @Option(help: "과목 이름") var title: String?
+        @Option(name: .customLong("code"), help: ArgumentHelp("강의 코드 앞부분. 여러 개면 첫째가 주 코드. 여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다", valueName: "code"), completion: Complete.ref("CourseCode")) var codes: [String] = []
+        @Option(help: "일련번호") var number: String?
+
+        func run() throws {
+            guard title != nil || !codes.isEmpty || number != nil else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --title, --code, --number") }
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let c = try r.course(course)
+            let action = FolioActions.CourseRename(
+                course: c.id,
+                title: title.map { Patch.set($0) } ?? .keep,
+                codes: codes.isEmpty ? .keep : .set(try codes.clearing.map { try r.id("CourseCode", $0, in: c) }),
+                number: number.map { Patch.set($0) } ?? .keep
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct GraduationSet: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "set", abstract: "졸업 요건과 학생 정보 바꾸기. 준 것만 바꾼다", discussion: """
+            과정은 major, doubleMajor, minor, intensive.
+
+            예시:
+              folio requirement set --admission-year 2023
+              folio requirement set --total-credits 130 --min-gpa 2.0
+              folio requirement set --program major:EC --program minor:GS --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Option(help: "졸업 학점") var totalCredits: Double?
+        @Option(help: "최저 평점") var minGPA: Double?
+        @Option(help: "입학 연도(학번). none이면 지운다") var admissionYear: Clearable<Int>?
+        @Option(help: "교수에게 메일을 보낼 계정") var email: String?
+        @Option(name: .customLong("program"), help: ArgumentHelp("선언한 과정과 그 학과의 강의 코드. 과정:강의 코드 앞부분. major:EC. 여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다", valueName: "program")) var programs: [String] = []
+
+        func run() throws {
+            guard totalCredits != nil || minGPA != nil || admissionYear != nil || email != nil || !programs.isEmpty else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --total-credits, --min-gpa, --admission-year, --email, --program") }
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let action = FolioActions.GraduationSet(
+                totalCredits: totalCredits.map { Patch.set($0) } ?? .keep,
+                minGPA: minGPA.map { Patch.set($0) } ?? .keep,
+                admissionYear: admissionYear.map { p in Patch.set(p.value) } ?? .keep,
+                email: email.map { Patch.set($0) } ?? .keep,
+                programs: programs.isEmpty ? .keep : .set(try programs.clearing.map { try r.parse($0, in: nil) })
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
     struct CatalogSet: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "set", abstract: "catalog.json을 파일 내용으로 바꾸기. 바뀐 행만 수정 시각이 바뀐다", discussion: """
             `folio catalog show --json`으로 받은 파일을 고쳐서 넣는다. 모르는 필드는 남는다.
@@ -216,6 +314,32 @@ enum GeneratedCommands {
             let ctx = try CLI.context(g)
             let action = FolioActions.CatalogSet(
                 catalog: try readJSONFile(Catalog.self, catalog)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct SettingsSet: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "set", abstract: "설정 하나를 바꾸거나 settings.json 전체를 파일 내용으로 바꾸기", discussion: """
+            필드는 settings.json의 이름을 점으로 이어 쓴다(`folio settings show --json`). 값은 JSON으로 읽고, JSON이 아니면 글자로 읽는다.
+            있는 필드만 바꿀 수 있다. 모양이 맞지 않는 값은 쓰지 않는다(종료 코드 2).
+
+            예시:
+              folio settings set dayBoundaryMinutes 300
+              folio settings set review.intervals \"[1, 3, 7, 14, 30]\" --dry-run
+              folio settings set --file settings.json --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: "필드. 예: review.intervals") var field: String?
+        @Argument(help: "새 값") var value: JSONValue?
+        @Option(name: .customLong("file"), help: ArgumentHelp("settings.json 형식의 파일. 필드 대신 설정 전체를 바꾼다", valueName: "path"), completion: .file(extensions: ["json"])) var settings: String?
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let action = FolioActions.SettingsSet(
+                field: field,
+                value: value,
+                settings: try settings.map { try readJSONFile(Settings.self, $0) }
             )
             try perform(spec: action, g, ctx: ctx)
         }
@@ -335,6 +459,60 @@ enum GeneratedCommands {
                 course: c.id,
                 session: try r.id("Session", sessionName, in: c),
                 kind: kind
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct SessionProgress: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "progress", abstract: "수업의 렉처 진도 기록하기. 자료마다 이번 수업이 다룬 쪽을 회차에 연결한다", discussion: """
+            자료마다 <자료>:<시작>-<끝>으로 쓴다. 한 쪽이면 <자료>:<쪽>. 적지 않은 자료의 연결은 그대로 둔다.
+
+            예시:
+              folio session progress EC4207/10-26 05_Matchings.pdf:3-12
+              folio session progress EC4207/10-26 05_Matchings.pdf:18-24 --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref("Session")) var session: String
+        @Argument(help: ArgumentHelp("렉처 파일마다 이번 수업이 다룬 쪽. 05_Matchings.pdf:3-12. 여러 번 줄 수 있다", valueName: "material:pages")) var ranges: [String]
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, sessionName) = try r.split(session)
+            let action = FolioActions.SessionProgress(
+                course: c.id,
+                session: try r.id("Session", sessionName, in: c),
+                ranges: try ranges.map { try r.parse($0, in: c) }
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct SessionWrapUp: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "wrap-up", abstract: "수업 정리: 회차의 렉처 진도, 단원, 출결을 한 번에 적고 정리했다고 표시한다", discussion: """
+            렉처 파일은 <자료>:<시작>-<끝>으로 쓴다. 주지 않은 것은 그대로 두고, 정리했다고 표시해 오늘 화면의 수업 정리에서 뺀다.
+
+            예시:
+              folio session wrap-up EC4207/10-26 05_Matchings.pdf:7-11 --unit 매칭
+              folio session wrap-up EC4207/10-26 --attendance late --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref("Session")) var session: String
+        @Argument(help: ArgumentHelp("렉처 파일마다 이번 수업이 다룬 쪽. 적지 않은 파일의 연결은 그대로 둔다. 05_Matchings.pdf:3-12. 여러 번 줄 수 있다", valueName: "material:pages")) var ranges: [String] = []
+        @Option(name: .customLong("unit"), help: ArgumentHelp("회차의 단원. 주면 이것으로 바뀐다. 여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다", valueName: "unit"), completion: Complete.ref("Unit")) var units: [String] = []
+        @Option(help: "출결") var attendance: AttendanceState?
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, sessionName) = try r.split(session)
+            let action = FolioActions.SessionWrapUp(
+                course: c.id,
+                session: try r.id("Session", sessionName, in: c),
+                ranges: try ranges.map { try r.parse($0, in: c) },
+                units: units.isEmpty ? .keep : .set(try units.clearing.map { try r.id("Unit", $0, in: c) }),
+                attendance: attendance.map { Patch.set($0) } ?? .keep
             )
             try perform(spec: action, g, ctx: ctx)
         }
@@ -760,6 +938,49 @@ enum GeneratedCommands {
         }
     }
 
+    struct AssignmentSave: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "set", abstract: "과제의 제목, 마감, 상태, 성적 항목, 메모 바꾸기. 준 것만 바뀐다", discussion: """
+            성적 항목이나 묶음을 바꾸면 이전 항목에 매긴 점수는 지워진다. 점수를 주면 상태는 graded가 된다.
+            값을 지우려면 none을 준다.
+
+            예시:
+              folio assignment set EC4207/HW3 --due \"2026-11-06 23:59\"
+              folio assignment set EC4207/HW3 --component 과제 --memo \"3번 질문함\"
+              folio assignment set EC4207/HW3 --component 과제 --score 9/10
+              folio assignment set EC4207/HW3 --due none --repeats weekly --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<과제>", valueName: "assignment"), completion: Complete.ref("Assignment")) var assignment: String = ""
+        @Option(help: "새 제목") var title: String?
+        @Option(help: ArgumentHelp("마감 일시. none이면 지운다", valueName: "date")) var due: Clearable<DateArg>?
+        @Option(help: "상태") var status: AssignmentStatus?
+        @Option(help: "반복. none이면 지운다") var repeats: Clearable<AssignmentRepeat>?
+        @Option(name: .customLong("component"), help: ArgumentHelp("반영되는 성적 항목. 주면 묶음은 풀린다. none이면 지운다", valueName: "component"), completion: Complete.ref("GradeComponent")) var componentId: Clearable<String>?
+        @Option(name: .customLong("group"), help: "한꺼번에 점수를 매기는 성적 항목 묶음. 주면 성적 항목 하나는 풀린다. none이면 지운다") var componentGroup: Clearable<String>?
+        @Option(help: "메모") var memo: String?
+        @Option(name: .customLong("score"), help: ArgumentHelp("과제가 반영되는 성적 항목마다의 점수. 적지 않은 항목의 점수는 지운다. 9/10. 묶음이면 <항목>:9/10. 여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다", valueName: "score")) var scores: [String] = []
+
+        func run() throws {
+            guard title != nil || due != nil || status != nil || repeats != nil || componentId != nil || componentGroup != nil || memo != nil || !scores.isEmpty else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --title, --due, --status, --repeats, --component, --group, --memo, --score") }
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, assignmentName) = try r.split(assignment)
+            let action = FolioActions.AssignmentSave(
+                course: c.id,
+                assignment: try r.id("Assignment", assignmentName, in: c),
+                title: title.map { Patch.set($0) } ?? .keep,
+                due: due.map { p in Patch.set(p.value.map { $0.date }) } ?? .keep,
+                status: status.map { Patch.set($0) } ?? .keep,
+                repeats: repeats.map { p in Patch.set(p.value) } ?? .keep,
+                componentId: try componentId.map { p in Patch.set(try p.value.map { try r.id("GradeComponent", $0, in: c) }) } ?? .keep,
+                componentGroup: componentGroup.map { p in Patch.set(p.value) } ?? .keep,
+                memo: memo.map { Patch.set($0) } ?? .keep,
+                scores: scores.isEmpty ? .keep : .set(try scores.clearing.map { try r.parse($0, in: c) })
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
     struct AssignmentStatusSet: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "status", abstract: "과제 상태 바꾸기. 매주 과제를 내면 다음 과제가 생긴다", discussion: """
             예시:
@@ -993,6 +1214,45 @@ enum GeneratedCommands {
             let action = FolioActions.ComponentRemove(
                 course: c.id,
                 component: try r.id("GradeComponent", componentName, in: c)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct PolicySet: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "policy", abstract: "성적 규칙 바꾸기. 준 것만 바꾼다", discussion: """
+            값을 지우려면 none을 준다. --cap과 --cutoff는 주면 기존 목록을 바꾸고, none이면 비운다.
+
+            예시:
+              folio component policy EC4207 --min-attendance-ratio 0.75 --lates-per-absence 3
+              folio component policy EC4207 --notes \"Quiz 최저 점수 1회 제외\"
+              folio component policy EC4207 --cap 6:B0 --cap 9:F
+              folio component policy EC4207 --cutoff A+:95 --cutoff A0:90 --top-grade-ratio none --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String = ""
+        @Option(help: "최소 출석 비율. 0.75. none이면 지운다") var minAttendanceRatio: Clearable<Double>?
+        @Option(help: "지각 규칙 설명. none이면 지운다") var latePolicy: Clearable<String>?
+        @Option(help: "지각 몇 번이 결석 한 번인지. none이면 지운다") var latesPerAbsence: Clearable<Int>?
+        @Option(help: "상대평가에서 A를 받는 비율. 0.5. none이면 지운다") var topGradeRatio: Clearable<Double>?
+        @Option(name: .customLong("cap"), help: ArgumentHelp("결석 횟수마다 받을 수 있는 최대 성적. 결석 횟수:최대 성적. 6:B0. 여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다", valueName: "cap")) var attendanceCap: [String] = []
+        @Option(name: .customLong("cutoff"), help: ArgumentHelp("절대평가의 성적별 최저 점수. 성적:최저 점수. A+:95. 여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다", valueName: "cutoff")) var cutoffs: [String] = []
+        @Option(help: "구조로 옮기지 못한 규칙 원문") var notes: String?
+
+        func run() throws {
+            guard minAttendanceRatio != nil || latePolicy != nil || latesPerAbsence != nil || topGradeRatio != nil || !attendanceCap.isEmpty || !cutoffs.isEmpty || notes != nil else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --min-attendance-ratio, --late-policy, --lates-per-absence, --top-grade-ratio, --cap, --cutoff, --notes") }
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let c = try r.course(course)
+            let action = FolioActions.PolicySet(
+                course: c.id,
+                minAttendanceRatio: minAttendanceRatio.map { p in Patch.set(p.value) } ?? .keep,
+                latePolicy: latePolicy.map { p in Patch.set(p.value) } ?? .keep,
+                latesPerAbsence: latesPerAbsence.map { p in Patch.set(p.value) } ?? .keep,
+                topGradeRatio: topGradeRatio.map { p in Patch.set(p.value) } ?? .keep,
+                attendanceCap: attendanceCap.isEmpty ? .keep : .set(try attendanceCap.clearing.map { try r.parse($0, in: c) }),
+                cutoffs: cutoffs.isEmpty ? .keep : .set(try cutoffs.clearing.map { try r.parse($0, in: c) }),
+                notes: notes.map { Patch.set($0) } ?? .keep
             )
             try perform(spec: action, g, ctx: ctx)
         }

@@ -46,8 +46,7 @@ final class Resolver {
     /// The semester holding today, else the latest that has started, else the latest.
     func currentSemester() throws -> Semester {
         let today = LocalDate(ctx.now, in: ctx.calendar)
-        if let s = semesters.last(where: { ($0.start.map { $0 <= today } ?? false) && ($0.end.map { today <= $0 } ?? true) }) { return s }
-        if let s = semesters.last(where: { $0.start.map { $0 <= today } ?? false }) ?? semesters.last { return s }
+        if let s = semesters.current(on: today) { return s }
         throw CLIError(exit: .notFound, message: String(localized: .resolveNoSemester), hints: [String(localized: .resolveNoSemesterHint)])
     }
 

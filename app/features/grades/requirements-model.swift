@@ -248,7 +248,11 @@ final class ProfileModel {
     func update(_ change: (inout GraduationRule) -> Void) {
         var r = rule
         change(&r)
-        if r != rule { workspace.run(GraduationSet(rule: r)) }
+        guard r != rule else { return }
+        let old = rule
+        workspace.run(GraduationSet(totalCredits: .changed(old.totalCredits, r.totalCredits), minGPA: .changed(old.minGPA, r.minGPA),
+                                    admissionYear: .changed(old.admissionYear, r.admissionYear), email: .changed(old.email, r.email),
+                                    programs: .changed(old.programs, r.programs)))
     }
 
     /// The first program declared is the major; any after it starts as a double major.

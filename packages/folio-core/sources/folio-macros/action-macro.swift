@@ -117,6 +117,7 @@ private struct Field {
     var ref: String?
     var base: String
     var cliName: String?, file: String?, filePerItem = false, folder = false
+    var parsed: String?, parsedForm: String?
 
     init?(_ decl: DeclSyntax) throws {
         guard let v = decl.as(VariableDeclSyntax.self), !v.modifiers.contains(where: { $0.name.text == "static" }),
@@ -149,6 +150,12 @@ private struct Field {
                 file = args?.first(where: { $0.label == nil }) == nil ? "file" : given ?? "file"
                 filePerItem = args?.contains { $0.label?.text == "perItem" && $0.expression.trimmedDescription == "true" } ?? false
             case "Folder": folder = true
+            case "Parsed":
+                let texts = attr.arguments?.as(LabeledExprListSyntax.self)?.map {
+                    $0.expression.as(StringLiteralExprSyntax.self)?.segments.compactMap { $0.as(StringSegmentSyntax.self)?.content.text }.joined()
+                } ?? []
+                guard texts.count == 2, let name = texts[0], let form = texts[1] else { throw MacroError("@Parsed(\"<값 이름>\", \"<쓰는 꼴>\")") }
+                (parsed, parsedForm) = (name, form)
             default: break
             }
         }
@@ -180,6 +187,7 @@ private struct Field {
         if file != nil || folder, ref != nil || patch { throw MacroError("@FromFile, @Folder \(name)은(는) 항목 ID나 Patch가 아닌 값이어야 합니다") }
         if folder, base != "String" || many { throw MacroError("@Folder \(name)은(는) String이어야 합니다") }
         if filePerItem, !many { throw MacroError("@FromFile(perItem:) \(name)은(는) 목록이어야 합니다") }
+        if parsed != nil, ref != nil || file != nil || folder { throw MacroError("@Parsed \(name)은(는) 항목 ID나 파일이 아닌 값이어야 합니다") }
     }
 
     var isHidden: Bool { if case .hidden = role { true } else { false } }
@@ -215,7 +223,8 @@ private struct Field {
         }
         return "FolioActions.FieldSpec(name: \(quoted(name)), help: \(quoted(help)), role: \(role), type: \(quoted(base)), ref: \(ref.map(quoted) ?? "nil"), "
             + "optional: \(optional), many: \(many), patch: \(patch), defaultValue: \(defaultValue.map(quoted) ?? "nil"), "
-            + "cliName: \(cliName.map(quoted) ?? "nil"), file: \(file.map(quoted) ?? "nil"), filePerItem: \(filePerItem), folder: \(folder))"
+            + "cliName: \(cliName.map(quoted) ?? "nil"), file: \(file.map(quoted) ?? "nil"), filePerItem: \(filePerItem), folder: \(folder), "
+            + "parsed: \(parsed.map(quoted) ?? "nil"), parsedForm: \(parsedForm.map(quoted) ?? "nil"))"
     }
 
     func quoted(_ s: String) -> String {

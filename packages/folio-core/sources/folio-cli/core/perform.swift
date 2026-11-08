@@ -21,6 +21,7 @@ func perform<A: Action>(_ action: A, _ options: GlobalOptions, ctx given: Action
         case .notFound(let m): throw CLIError(exit: .notFound, message: m)
         case .rule(let m): throw CLIError(exit: .rule, message: m)
         case .conflict(let m): throw CLIError(exit: .conflict, message: m)
+        case .input(let m): throw CLIError(exit: .usage, message: m)
         }
     }
     if options.json {

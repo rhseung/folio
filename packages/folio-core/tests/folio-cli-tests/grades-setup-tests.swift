@@ -220,14 +220,27 @@ struct GradesSetupTests {
         let id = UUID()
         try h.expectSame(["course", "add", "EC", "4208-01", "네트워크", "--semester", "2026-3", "--id", id.uuidString],
                          setup: [["catalog", "set", "--file", try catalogFile()]]) { _ in
-            CourseAdd(id: id, semester: Self.fall, title: "네트워크", code: Self.code, number: "4208-01", credits: 3, mode: .relative)
+            CourseAdd(id: id, code: Self.code, number: "4208-01", title: "네트워크", credits: 3, mode: .relative, semester: Self.fall)
         }
+    }
+
+    /// Left out, the semester is the one today falls in, for the command and the JSON input alike.
+    @Test func courseAddInTheCurrentSemester() throws {
+        let id = UUID()
+        try h.expectSame(["course", "add", "EC", "4208-01", "네트워크", "--id", id.uuidString],
+                         setup: [["catalog", "set", "--file", try catalogFile()]]) { _ in
+            CourseAdd(id: id, code: Self.code, number: "4208-01", title: "네트워크")
+        }
+        let gist = try Harness.fixtureCopy()
+        #expect(h.cli(["catalog", "set", "--file", try catalogFile()], gist: gist).code == 0)
+        #expect(h.cli(["run", "course", "add", "--input", #"{"code":"EC","number":"4208-01","title":"네트워크","id":"\#(id)"}"#], gist: gist).code == 0)
+        #expect(try ActionContext(gist: GISTStore(url: gist), device: h.device).file(id).course.semesterId == Self.fall)
     }
 
     @Test func courseRename() throws {
         try h.expectSame(["course", "rename", "EC4207", "--code", "EC", "--number", "4207-01", "--title", "그래프 이론과 응용", "--yes"],
                          setup: [["catalog", "set", "--file", try catalogFile()]]) { _ in
-            CourseRename(course: gt, title: "그래프 이론과 응용", codes: [Self.code], number: "4207-01")
+            CourseRename(course: gt, title: .set("그래프 이론과 응용"), codes: .set([Self.code]), number: .set("4207-01"))
         }
     }
 
@@ -256,7 +269,7 @@ struct GradesSetupTests {
     }
 
     @Test func graduationSet() throws {
-        try h.expectSame(["requirement", "set", "--admission-year", "2023"]) { _ in GraduationSet(rule: GraduationRule(admissionYear: 2023)) }
+        try h.expectSame(["requirement", "set", "--admission-year", "2023"]) { _ in GraduationSet(admissionYear: .set(2023)) }
     }
 
     // MARK: Grades
@@ -287,9 +300,7 @@ struct GradesSetupTests {
 
     @Test func policySet() throws {
         try h.expectSame(["component", "policy", "EC4207", "--lates-per-absence", "3"]) { _ in
-            var p = GradePolicy()
-            p.latesPerAbsence = 3
-            return PolicySet(course: gt, policy: p)
+            PolicySet(course: gt, latesPerAbsence: .set(3))
         }
     }
 

@@ -287,160 +287,6 @@
         }
       }
     },
-    "assignment.set.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과제의 제목, 마감, 상태, 성적 항목, 메모 바꾸기. 준 것만 바뀐다"
-          }
-        }
-      }
-    },
-    "assignment.set.component-or-group": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "--component와 --group 중 하나만 주세요"
-          }
-        }
-      }
-    },
-    "assignment.set.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "성적 항목이나 묶음을 바꾸면 이전 항목에 매긴 점수는 지워진다. 점수를 주면 상태는 graded가 된다.\n값을 지우려면 none을 준다.\n\n예시:\n  folio assignment set EC4207/HW3 --due \"2026-11-06 23:59\"\n  folio assignment set EC4207/HW3 --component 과제 --memo \"3번 질문함\"\n  folio assignment set EC4207/HW3 --component 과제 --score 9/10\n  folio assignment set EC4207/HW3 --due none --repeats weekly --dry-run"
-          }
-        }
-      }
-    },
-    "assignment.set.group-not-found": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "성적 항목 묶음을 찾지 못했습니다: %@"
-          }
-        }
-      }
-    },
-    "assignment.set.group-score-format": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "묶음이면 <항목>:9/10 꼴로 주세요"
-          }
-        }
-      }
-    },
-    "assignment.set.help.assignment": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "<과목>/<과제>"
-          }
-        }
-      }
-    },
-    "assignment.set.help.component": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "반영되는 성적 항목. none이면 풀기"
-          }
-        }
-      }
-    },
-    "assignment.set.help.due": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "마감 일시. none이면 지운다"
-          }
-        }
-      }
-    },
-    "assignment.set.help.group": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "한꺼번에 점수를 매기는 성적 항목 묶음. none이면 풀기"
-          }
-        }
-      }
-    },
-    "assignment.set.help.repeats": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "반복. none이면 반복하지 않는다"
-          }
-        }
-      }
-    },
-    "assignment.set.help.score": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "점수 9/10. 묶음이면 <항목>:9/10. 여러 번 줄 수 있고, none이면 점수를 모두 지운다"
-          }
-        }
-      }
-    },
-    "assignment.set.help.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 제목"
-          }
-        }
-      }
-    },
-    "assignment.set.no-component": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "점수를 매길 성적 항목이 없습니다. --component를 함께 주세요"
-          }
-        }
-      }
-    },
-    "assignment.set.not-covered": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과제가 반영되지 않는 성적 항목입니다: %@"
-          }
-        }
-      }
-    },
     "assignment.set.score-format": {
       "extractionState": "manual",
       "localizations": {
@@ -1530,17 +1376,6 @@
         }
       }
     },
-    "component.policy.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "성적 규칙 바꾸기. 준 것만 바꾼다"
-          }
-        }
-      }
-    },
     "component.policy.bad-absences": {
       "extractionState": "manual",
       "localizations": {
@@ -1574,94 +1409,6 @@
         }
       }
     },
-    "component.policy.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio component policy EC4207 --min-attendance-ratio 0.75 --lates-per-absence 3\n  folio component policy EC4207 --notes \"Quiz 최저 점수 1회 제외\"\n  folio component policy EC4207 --cap 6:B0 --cap 9:F\n  folio component policy EC4207 --cutoff A+:95 --cutoff A0:90 --top-grade-ratio none --dry-run\n\n값을 지우려면 none을 준다. --cap과 --cutoff는 주면 기존 목록을 바꾸고, none이면 비운다."
-          }
-        }
-      }
-    },
-    "component.policy.help.cap": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "결석 횟수:최대 성적. 6:B0. 여러 번 줄 수 있다"
-          }
-        }
-      }
-    },
-    "component.policy.help.cutoff": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "성적:최저 점수. A+:95. 여러 번 줄 수 있다"
-          }
-        }
-      }
-    },
-    "component.policy.help.late-policy": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지각 규칙 설명"
-          }
-        }
-      }
-    },
-    "component.policy.help.lates-per-absence": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지각 몇 번이 결석 한 번인지"
-          }
-        }
-      }
-    },
-    "component.policy.help.min-attendance-ratio": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "최소 출석 비율. 0.75"
-          }
-        }
-      }
-    },
-    "component.policy.help.notes": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "구조로 옮기지 못한 규칙 원문"
-          }
-        }
-      }
-    },
-    "component.policy.help.top-grade-ratio": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "상대평가에서 A를 받는 비율. 0.5"
-          }
-        }
-      }
-    },
     "course.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -1669,61 +1416,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "과목: 목록, 추가, 이름 바꾸기, 학점, 평가 방식, 색"
-          }
-        }
-      }
-    },
-    "course.add.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목 추가. 과목 폴더와 course.json을 만든다"
-          }
-        }
-      }
-    },
-    "course.add.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "강의 코드는 catalog.json에 있어야 한다. 폴더 이름은 `<코드><번호> <과목 이름>`이다.\n\n예시:\n  folio course add EC 3101 \"자료 구조\" --credits 3\n  folio course add GS 2004-02 \"전공 글쓰기\" --mode pass_fail --semester 2026-3 --dry-run"
-          }
-        }
-      }
-    },
-    "course.add.help.code": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "강의 코드 앞부분. EC"
-          }
-        }
-      }
-    },
-    "course.add.help.number": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "일련번호. 4207-01"
-          }
-        }
-      }
-    },
-    "course.add.help.semester": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "학기. 생략하면 현재 학기"
           }
         }
       }
@@ -1845,50 +1537,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "--all로 모든 학기"
-          }
-        }
-      }
-    },
-    "course.rename.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목 이름, 코드, 번호 바꾸기. 폴더 이름도 바뀌므로 확인을 받는다"
-          }
-        }
-      }
-    },
-    "course.rename.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "폴더 이동은 .folio/moves.jsonl에 남아 `folio cleanup undo`로 되돌릴 수 있다.\n\n예시:\n  folio course rename EC4207 --title \"그래프 이론과 응용\" --dry-run\n  folio course rename EC4207 --number 4207-02"
-          }
-        }
-      }
-    },
-    "course.rename.help.code": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "강의 코드 앞부분. 여러 개면 첫째가 주 코드"
-          }
-        }
-      }
-    },
-    "course.rename.help.number": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "일련번호"
           }
         }
       }
@@ -4104,28 +3752,6 @@
         }
       }
     },
-    "read-json.bad-format": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "파일이 맞지 않습니다: %@"
-          }
-        }
-      }
-    },
-    "read-json.unreadable": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "파일을 읽지 못했습니다: %@"
-          }
-        }
-      }
-    },
     "recording.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -4555,17 +4181,6 @@
         }
       }
     },
-    "requirement.set.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "졸업 요건과 학생 정보 바꾸기. 준 것만 바꾼다"
-          }
-        }
-      }
-    },
     "requirement.set.bad-program": {
       "extractionState": "manual",
       "localizations": {
@@ -4577,72 +4192,6 @@
         }
       }
     },
-    "requirement.set.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio requirement set --admission-year 2023\n  folio requirement set --total-credits 130 --min-gpa 2.0\n  folio requirement set --program major:EC --program minor:GS --dry-run\n\n--program은 주면 기존 목록을 바꾸고, none이면 비운다. 과정은 major, doubleMajor, minor, intensive."
-          }
-        }
-      }
-    },
-    "requirement.set.help.admission-year": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "입학 연도(학번). none이면 지운다"
-          }
-        }
-      }
-    },
-    "requirement.set.help.email": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "교수에게 메일을 보낼 계정"
-          }
-        }
-      }
-    },
-    "requirement.set.help.min-gpa": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "최저 평점"
-          }
-        }
-      }
-    },
-    "requirement.set.help.program": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과정:강의 코드 앞부분. major:EC. 여러 번 줄 수 있다"
-          }
-        }
-      }
-    },
-    "requirement.set.help.total-credits": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "졸업 학점"
-          }
-        }
-      }
-    },
     "requirement.set.program-kinds": {
       "extractionState": "manual",
       "localizations": {
@@ -4650,17 +4199,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "과정: "
-          }
-        }
-      }
-    },
-    "requirement.set.unknown-code": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "강의 코드를 찾지 못했습니다: %@"
           }
         }
       }
@@ -5002,39 +4540,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "folio actions --schema로 형식 확인"
-          }
-        }
-      }
-    },
-    "run.decode.key-not-found": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@이(가) 없습니다"
-          }
-        }
-      }
-    },
-    "run.decode.type-mismatch": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@의 형식이 %@이 아닙니다"
-          }
-        }
-      }
-    },
-    "run.decode.value-not-found": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@에 %@ 값이 없습니다"
           }
         }
       }
@@ -5750,105 +5255,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "settings.json: 하루 경계, 복습 간격, 알림, 백업"
-          }
-        }
-      }
-    },
-    "settings.set.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "설정 하나를 바꾸거나 settings.json 전체를 파일 내용으로 바꾸기"
-          }
-        }
-      }
-    },
-    "settings.set.bad-value": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%@에 맞지 않는 값입니다: %@"
-          }
-        }
-      }
-    },
-    "settings.set.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "필드는 settings.json의 이름을 점으로 이어 쓴다(`folio settings show --json`). 값은 JSON으로 읽고, JSON이 아니면 글자로 읽는다.\n있는 필드만 바꿀 수 있다. 모양이 맞지 않는 값은 쓰지 않는다(종료 코드 2).\n\n예시:\n  folio settings set dayBoundaryMinutes 300\n  folio settings set review.intervals \"[1, 3, 7, 14, 30]\" --dry-run\n  folio settings set --file settings.json --dry-run"
-          }
-        }
-      }
-    },
-    "settings.set.field-or-file": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "필드와 --file 중 하나만 주세요"
-          }
-        }
-      }
-    },
-    "settings.set.help.field": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "필드. 예: review.intervals"
-          }
-        }
-      }
-    },
-    "settings.set.help.file": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "settings.json 형식의 파일"
-          }
-        }
-      }
-    },
-    "settings.set.help.value": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 값"
-          }
-        }
-      }
-    },
-    "settings.set.needs-field-and-value": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "필드와 값을 주세요: folio settings set <필드> <값>"
-          }
-        }
-      }
-    },
-    "settings.set.unknown-field": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "없는 설정입니다: %@"
           }
         }
       }
@@ -7041,50 +6447,6 @@
         }
       }
     },
-    "session.progress.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수업의 렉처 진도 기록하기. 자료마다 이번 수업이 다룬 쪽을 회차에 연결한다"
-          }
-        }
-      }
-    },
-    "session.progress.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자료마다 <자료>:<시작>-<끝>으로 쓴다. 한 쪽이면 <자료>:<쪽>. 적지 않은 자료의 연결은 그대로 둔다.\n\n예시:\n  folio session progress EC4207/10-26 05_Matchings.pdf:3-12\n  folio session progress EC4207/10-26 05_Matchings.pdf:18-24 --dry-run"
-          }
-        }
-      }
-    },
-    "session.progress.help.ranges": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자료와 쪽. 예: 05_Matchings.pdf:3-12"
-          }
-        }
-      }
-    },
-    "session.progress.missing": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자료와 쪽을 하나 이상 적어 주세요. 예: 05_Matchings.pdf:3-12"
-          }
-        }
-      }
-    },
     "session.progress.format": {
       "extractionState": "manual",
       "localizations": {
@@ -7169,50 +6531,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "렉처 쪽"
-          }
-        }
-      }
-    },
-    "session.wrap-up.help.attendance": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "출결"
-          }
-        }
-      }
-    },
-    "session.wrap-up.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "렉처 파일은 <자료>:<시작>-<끝>으로 쓴다. 주지 않은 것은 그대로 두고, 정리했다고 표시해 오늘 화면의 수업 정리에서 뺀다.\n\n예시:\n  folio session wrap-up EC4207/10-26 05_Matchings.pdf:7-11 --unit 매칭\n  folio session wrap-up EC4207/10-26 --attendance late --dry-run"
-          }
-        }
-      }
-    },
-    "session.wrap-up.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수업 정리: 회차의 렉처 진도, 단원, 출결을 한 번에 적고 정리했다고 표시한다"
-          }
-        }
-      }
-    },
-    "session.wrap-up.help.unit": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원. 여러 번 쓸 수 있고, 주면 회차의 단원이 이것으로 바뀐다"
           }
         }
       }

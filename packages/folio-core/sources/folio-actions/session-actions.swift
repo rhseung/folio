@@ -431,13 +431,17 @@ public struct ExamScope {
 /// What one class went through, every lecture file at once, as the end-of-class prompt saves it: one action, so a
 /// range the rules refuse leaves the other files unwritten too. Files left out keep their links.
 @Action("session progress", "수업의 렉처 진도 기록하기. 자료마다 이번 수업이 다룬 쪽을 회차에 연결한다",
+        discussion: "자료마다 <자료>:<시작>-<끝>으로 쓴다. 한 쪽이면 <자료>:<쪽>. 적지 않은 자료의 연결은 그대로 둔다.",
         done: "회차 '{session}'의 진도를 기록했습니다",
-        examples: ["folio session progress EC4207/10-26 05_Matchings.pdf:3-12 06_Flows.pdf:1-4"],
-        phrases: ["렉처 진도", "수업 진도", "어디까지 나갔", "진도 기록"], cli: .manual(reason: "<자료>:<쪽> 인자를 자료와 쪽 범위로 읽는다"))
+        examples: ["folio session progress EC4207/10-26 05_Matchings.pdf:3-12", "folio session progress EC4207/10-26 05_Matchings.pdf:18-24 --dry-run"],
+        phrases: ["렉처 진도", "수업 진도", "어디까지 나갔", "진도 기록"])
 public struct SessionProgress {
+    /// 과목
     @Arg var course: Course.ID
+    /// 회차
     @Arg var session: Session.ID
-    var ranges: [SessionMaterial]
+    /// 렉처 파일마다 이번 수업이 다룬 쪽
+    @Arg @Parsed("material:pages", "05_Matchings.pdf:3-12") var ranges: [SessionMaterial]
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
@@ -452,20 +456,22 @@ public struct SessionProgress {
 
 /// Everything the end-of-class wrap-up saves, in one action so a part the rules refuse leaves the rest unwritten too.
 /// Marks the class wrapped up, which is what stops it being asked about: what was left empty stays so on purpose.
-@Action("session wrap-up", "수업 정리. 회차의 렉처 진도, 단원, 출결을 한 번에 적고 정리했다고 표시한다",
+@Action("session wrap-up", "수업 정리: 회차의 렉처 진도, 단원, 출결을 한 번에 적고 정리했다고 표시한다",
+        discussion: "렉처 파일은 <자료>:<시작>-<끝>으로 쓴다. 주지 않은 것은 그대로 두고, 정리했다고 표시해 오늘 화면의 수업 정리에서 뺀다.",
         done: "회차 '{session}'을(를) 정리했습니다",
-        examples: [#"folio session wrap-up EC4207/10-26 05_Matchings.pdf:3-12 --unit 매칭 --attendance late --dry-run"#],
-        phrases: ["수업 정리", "수업 끝", "오늘 수업 정리", "수업 마무리"],
-        cli: .manual(reason: "<자료>:<쪽> 인자를 읽고, 주지 않은 단원과 출결은 지금 회차의 것으로 채운다. 액션은 앱 시트처럼 전체 값을 받는다"))
+        examples: ["folio session wrap-up EC4207/10-26 05_Matchings.pdf:7-11 --unit 매칭", "folio session wrap-up EC4207/10-26 --attendance late --dry-run"],
+        phrases: ["수업 정리", "수업 끝", "오늘 수업 정리", "수업 마무리"])
 public struct SessionWrapUp {
+    /// 과목
     @Arg var course: Course.ID
+    /// 회차
     @Arg var session: Session.ID
     /// 렉처 파일마다 이번 수업이 다룬 쪽. 적지 않은 파일의 연결은 그대로 둔다
-    var ranges: [SessionMaterial]
-    /// 회차의 단원. 이것으로 바뀐다
-    var units: [FolioDomain.Unit.ID]
+    @Arg @Parsed("material:pages", "05_Matchings.pdf:3-12") var ranges: [SessionMaterial] = []
+    /// 회차의 단원. 주면 이것으로 바뀐다
+    @CLIName("unit") var units: Patch<[FolioDomain.Unit.ID]>
     /// 출결
-    var attendance: AttendanceState
+    var attendance: Patch<AttendanceState>
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
@@ -474,13 +480,15 @@ public struct SessionWrapUp {
                 _ = try index(range.materialId, in: f.materials, .valueMaterial)
                 f.linkMaterial(range.materialId, session: session, firstPage: range.firstPage, lastPage: range.lastPage)
             }
-            for unit in units { _ = try index(unit, in: f.units, .valueUnit) }
-            for unit in Set(f.sessions[i].unitIds).symmetricDifference(units) { f.toggle(session: session, unit: unit) }
+            if case .set(let units) = units {
+                for unit in units { _ = try index(unit, in: f.units, .valueUnit) }
+                for unit in Set(f.sessions[i].unitIds).symmetricDifference(units) { f.toggle(session: session, unit: unit) }
+            }
             // The sheet always passes the class's attendance, so an entry already in that state keeps its time and device.
             let had = f.attendance.first { $0.sessionId == session }?.state ?? .present
-            if had != attendance {
+            if case .set(let state) = attendance, had != state {
                 f.attendance.removeAll { $0.sessionId == session }
-                if attendance != .present { f.attendance.append(Attendance(device: ctx.device, at: ctx.now, sessionId: session, state: attendance)) }
+                if state != .present { f.attendance.append(Attendance(device: ctx.device, at: ctx.now, sessionId: session, state: state)) }
             }
             f.sessions[i].isWrappedUp = true
         }

@@ -15,7 +15,7 @@ private func kindLabel(_ s: Session) -> String? {
 struct SessionCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "session", abstract: String(localized: .sessionAbstract),
-        subcommands: [List.self, Show.self] + GeneratedCommands.session + [Progress.self, WrapUp.self])
+        subcommands: [List.self, Show.self] + GeneratedCommands.session)
 
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .sessionListAbstract), discussion: String(localized: .sessionListDiscussion))
@@ -85,60 +85,6 @@ struct SessionCommand: ParsableCommand {
             }
         }
     }
-
-    struct Progress: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .sessionProgressAbstract), discussion: String(localized: .sessionProgressDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .sessionShowHelpSession), valueName: "session"), completion: Complete.sessions) var session: String
-        @Argument(help: ArgumentHelp(String(localized: .sessionProgressHelpRanges), valueName: "material:pages")) var ranges: [String]
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            let r = Resolver(ctx)
-            let (c, name) = try r.split(session)
-            let s = try r.session(name, in: c)
-            guard !ranges.isEmpty else { throw CLIError(exit: .usage, message: String(localized: .sessionProgressMissing)) }
-            let links = try Self.links(ranges, r, c)
-            try perform(spec: SessionProgress(course: c.id, session: s.id, ranges: links), g, ctx: ctx)
-        }
-
-        /// `05_Matchings.pdf:3-12`, or `:7` for one page.
-        static func links(_ ranges: [String], _ r: Resolver, _ c: CourseRef) throws -> [SessionMaterial] {
-            try ranges.map { arg in
-                // The last colon: a file name may hold one, the pages never do.
-                guard let colon = arg.lastIndex(of: ":") else { throw CLIError(exit: .usage, message: String(localized: .sessionProgressFormat(arg))) }
-                let bounds = arg[arg.index(after: colon)...].split(separator: "-", omittingEmptySubsequences: false).map { Int($0) }
-                guard (1...2).contains(bounds.count), let first = bounds.first ?? nil, let last = bounds.last ?? nil else {
-                    throw CLIError(exit: .usage, message: String(localized: .sessionProgressFormat(arg)))
-                }
-                let m = try r.material(c.local(String(arg[..<colon])), in: c)
-                return SessionMaterial(materialId: m.id, firstPage: first, lastPage: last)
-            }
-        }
-    }
-
-    /// What isn't given stays as it is, so the command can fill in one thing; the app's sheet always sends everything.
-    struct WrapUp: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "wrap-up", abstract: String(localized: .sessionWrapUpAbstract),
-                                                        discussion: String(localized: .sessionWrapUpDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .sessionShowHelpSession), valueName: "session"), completion: Complete.sessions) var session: String
-        @Argument(help: ArgumentHelp(String(localized: .sessionProgressHelpRanges), valueName: "material:pages")) var ranges: [String] = []
-        @Option(name: .customLong("unit"), help: ArgumentHelp(String(localized: .sessionWrapUpHelpUnit))) var units: [String] = []
-        @Option(help: ArgumentHelp(String(localized: .sessionWrapUpHelpAttendance))) var attendance: AttendanceState?
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            let r = Resolver(ctx)
-            let (c, name) = try r.split(session)
-            let s = try r.session(name, in: c)
-            let links = try Progress.links(ranges, r, c)
-            let unitIds = units.isEmpty ? s.unitIds : try units.map { try r.unit($0, in: c).id }
-            let state = attendance ?? c.file.attendance.first { $0.sessionId == s.id }?.state ?? .present
-            try perform(spec: SessionWrapUp(course: c.id, session: s.id, ranges: links, units: unitIds, attendance: state), g, ctx: ctx)
-        }
-    }
-
 }
 
 struct AttendanceCommand: ParsableCommand {

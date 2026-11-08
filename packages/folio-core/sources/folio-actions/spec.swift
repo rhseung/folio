@@ -39,12 +39,17 @@ public struct FieldSpec: Codable, Sendable, Equatable {
     public var filePerItem: Bool
     /// `@Folder`: a folder path, made absolute on the CLI.
     public var folder: Bool
+    /// `@Parsed`: the value name of the text the CLI reads into the value, and how that text is written.
+    public var parsed: String?
+    public var parsedForm: String?
 
     public init(name: String, help: String = "", role: Role = .option, type: String, ref: String? = nil, optional: Bool = false, many: Bool = false,
-                patch: Bool = false, defaultValue: String? = nil, cliName: String? = nil, file: String? = nil, filePerItem: Bool = false, folder: Bool = false) {
+                patch: Bool = false, defaultValue: String? = nil, cliName: String? = nil, file: String? = nil, filePerItem: Bool = false, folder: Bool = false,
+                parsed: String? = nil, parsedForm: String? = nil) {
         (self.name, self.help, self.role, self.type, self.ref) = (name, help, role, type, ref)
         (self.optional, self.many, self.patch, self.defaultValue) = (optional, many, patch, defaultValue)
         (self.cliName, self.file, self.filePerItem, self.folder) = (cliName, file, filePerItem, folder)
+        (self.parsed, self.parsedForm) = (parsed, parsedForm)
     }
 }
 
@@ -120,6 +125,20 @@ extension JSONValue {
     }
 }
 
+extension DecodingError {
+    /// Where the input went wrong, as a dotted path, for people and agents fixing it.
+    public var summary: String {
+        let path = { (c: DecodingError.Context) in c.codingPath.map { $0.intValue.map { "[\($0)]" } ?? $0.stringValue }.joined(separator: ".") }
+        return switch self {
+        case .keyNotFound(let key, let c): String(localized: .errorDecodeKeyNotFound(([path(c)] + [key.stringValue]).filter { !$0.isEmpty }.joined(separator: ".")))
+        case .typeMismatch(let t, let c): String(localized: .errorDecodeTypeMismatch(path(c), "\(t)"))
+        case .valueNotFound(let t, let c): String(localized: .errorDecodeValueNotFound(path(c), "\(t)"))
+        case .dataCorrupted(let c): "\(path(c)): \(c.debugDescription)"
+        @unknown default: "\(self)"
+        }
+    }
+}
+
 /// A field of a `set` action: left out, it stays as it is. For an optional field, JSON `null` (CLI `none`) clears it.
 public enum Patch<T: Codable & Sendable & Equatable>: Sendable, Equatable {
     case keep
@@ -130,6 +149,9 @@ public enum Patch<T: Codable & Sendable & Equatable>: Sendable, Equatable {
     }
 
     public var value: T? { if case .set(let v) = self { v } else { nil } }
+
+    /// `.set(new)` when it differs from `old`: a sheet that holds a whole value sends only what the user changed.
+    public static func changed(_ old: T, _ new: T) -> Patch { old == new ? .keep : .set(new) }
 
     // A missing key is `.keep` and `null` is `.set(nil)`, which synthesized Codable can't tell apart.
     public static func decode<K: CodingKey>(_ c: KeyedDecodingContainer<K>, _ key: K) throws -> Patch {

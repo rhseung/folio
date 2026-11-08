@@ -56,7 +56,7 @@ struct LectureProgressModelTests {
         workspace.wrapUpAsk = nil
 
         let unit = try #require(workspace.run(UnitAdd(course: linearAlgebra, title: "행렬식"))?.made)
-        workspace.run(SessionWrapUp(course: linearAlgebra, session: other, ranges: [], units: [unit], attendance: .present))
+        workspace.run(SessionWrapUp(course: linearAlgebra, session: other, units: .set([unit]), attendance: .set(.present)))
         _ = workspace.note(.rough, of: other, in: linearAlgebra)
         workspace.askWrapUp(after: recording, course: linearAlgebra)
         #expect(workspace.wrapUpAsk == nil)

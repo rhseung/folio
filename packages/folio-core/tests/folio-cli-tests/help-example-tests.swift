@@ -48,7 +48,7 @@ struct HelpExampleTests {
         // A course schema v1 left without a folder, for `transcript move`.
         try Harness.unfile(Course(device: h.device, at: h.now, semesterId: UUID(uuidString: "5E4F1A00-0000-4000-8000-000000000003")!,
                                   title: "콜로퀴움", codes: [gs.id], number: "9331-01", credits: 1, gradingMode: .passFail), gist: gist)
-        try h.direct(CourseRename(course: Harness.graphTheory, title: "그래프 이론", codes: [ec.id], number: "4207-01"), gist: gist)
+        try h.direct(CourseRename(course: Harness.graphTheory, title: .set("그래프 이론"), codes: .set([ec.id]), number: .set("4207-01")), gist: gist)
         let folder = gist.appending(path: "2026-3/EC4207 그래프 이론")
         try "외부에서 쓴 노트\n".write(to: folder.appending(path: "Notes/외부.md"), atomically: true, encoding: .utf8)
         try FileManager.default.copyItem(at: folder.appending(path: "Lectures/05_Matchings.pdf"), to: folder.appending(path: "Lectures/05_Matchings v2.pdf"))

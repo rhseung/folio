@@ -166,9 +166,8 @@ struct ScoreSourceModelTests {
 
     @Test func savingTheSheetKeepsWhatTheGradesPageChanged() throws {
         let (workspace, homework, lab, assignment, _) = try setUp()
-        workspace.run(AssignmentSave(course: linearAlgebra, assignment: assignment, title: "HW 3", due: nil, status: .submitted, repeats: nil,
-                                     componentId: homework, componentGroup: nil, memo: "", components: [homework],
-                                     scores: [.init(component: homework, score: 9, max: 10)]))
+        workspace.run(AssignmentSave(course: linearAlgebra, assignment: assignment, title: .set("HW 3"), status: .set(.submitted), componentId: .set(homework),
+                                     scores: .set([.init(component: homework, score: 9, max: 10)])))
         let entry = try #require(workspace.course(linearAlgebra)?.file.scores.first { $0.assignmentId == assignment })
 
         // On the grades page: renamed, and moved to 실험.

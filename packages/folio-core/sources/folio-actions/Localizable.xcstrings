@@ -1441,6 +1441,138 @@
           }
         }
       }
+    },
+    "error.decode.key-not-found": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@이(가) 없습니다"
+          }
+        }
+      }
+    },
+    "error.decode.type-mismatch": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@의 형식이 %@이 아닙니다"
+          }
+        }
+      }
+    },
+    "error.decode.value-not-found": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에 %@ 값이 없습니다"
+          }
+        }
+      }
+    },
+    "error.settings.bad-value": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에 맞지 않는 값입니다: %@"
+          }
+        }
+      }
+    },
+    "error.settings.field-or-file": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "필드와 --file 중 하나만 주세요"
+          }
+        }
+      }
+    },
+    "error.settings.needs-field-and-value": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "필드와 값을 주세요: folio settings set <필드> <값>"
+          }
+        }
+      }
+    },
+    "error.settings.unknown-field": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "없는 설정입니다: %1$@ (있는 것: %2$@)"
+          }
+        }
+      }
+    },
+    "error.assignment.component-or-group": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "--component와 --group 중 하나만 주세요"
+          }
+        }
+      }
+    },
+    "error.assignment.group-not-found": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "성적 항목 묶음을 찾지 못했습니다: %@"
+          }
+        }
+      }
+    },
+    "error.assignment.group-score-format": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "묶음이면 <항목>:9/10 꼴로 주세요"
+          }
+        }
+      }
+    },
+    "error.assignment.no-component": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "점수를 매길 성적 항목이 없습니다. --component를 함께 주세요"
+          }
+        }
+      }
+    },
+    "error.assignment.not-covered": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제가 반영되지 않는 성적 항목입니다: %@"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

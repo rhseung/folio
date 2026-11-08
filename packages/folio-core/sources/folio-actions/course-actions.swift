@@ -112,18 +112,30 @@ public struct SemesterSet {
 }
 
 /// Creates the course folder `<code><number> <title>` with its course.json.
-@Action("course add", "과목 추가. 과목 폴더와 course.json을 만든다", effect: .creates, done: "과목 '{title}'을(를) 추가했습니다", phrases: ["과목 추가", "수강 신청한 과목", "새 과목"],
-        cli: .manual(reason: "학기를 빼면 지금 학기로 정한다. 생성한 명령은 빠진 항목을 지금 것으로 채우지 않는다"))
+@Action("course add", "과목 추가. 과목 폴더와 course.json을 만든다",
+        discussion: "강의 코드는 catalog.json에 있어야 한다. 폴더 이름은 `<코드><번호> <과목 이름>`이다.",
+        effect: .creates, done: "과목 '{title}'을(를) 추가했습니다",
+        examples: [#"folio course add EC 3101 "자료 구조" --credits 3"#, #"folio course add GS 2004-02 "전공 글쓰기" --mode pass_fail --semester 2026-3 --dry-run"#],
+        phrases: ["과목 추가", "수강 신청한 과목", "새 과목"])
 public struct CourseAdd {
     @New var id: Course.ID
-    var semester: Semester.ID
-    var title: String
-    var code: CourseCode.ID
-    var number: String
-    var credits: Double
-    var mode: GradingMode
+    /// 강의 코드 앞부분. EC
+    @Arg var code: CourseCode.ID
+    /// 일련번호. 4207-01
+    @Arg var number: String
+    /// 과목 이름
+    @Arg var title: String
+    /// 학점
+    var credits: Double = 3
+    /// 평가 방식
+    var mode: GradingMode = .relative
+    /// 학기. 빼면 지금 학기
+    var semester: Semester.ID?
 
     public func run(_ ctx: ActionContext) throws {
+        guard let semester = try semester ?? ctx.transcript().semesters.current(on: LocalDate(ctx.now, in: ctx.calendar))?.id else {
+            throw ActionError.notFound(String(localized: .errorNotFoundSemester))
+        }
         try Self.create(Course(id: id, device: ctx.device, at: ctx.now, semesterId: semester, title: title, codes: [code], number: number,
                                credits: credits, gradingMode: mode), ctx)
         ctx.made(id)
@@ -149,13 +161,20 @@ public struct CourseAdd {
 
 /// course.json is the source of truth; the folder follows it. The rename goes to `moves.jsonl` so `cleanup undo` can
 /// reverse it.
-@Action("course rename", "과목 이름, 코드, 번호 바꾸기. 폴더 이름도 바뀌므로 확인을 받는다", effect: .moves, confirm: "과목 '{course}'의 폴더 이름을 바꿉니다.", done: "과목 '{course}'의 이름을 바꿨습니다", phrases: ["과목 이름 변경", "과목 코드 변경"],
-        cli: .manual(reason: "준 것만 바꾸도록 지금 과목의 이름, 코드, 번호로 빈 칸을 채운다. 액션은 앱 시트처럼 전체 값을 받는다"))
+@Action("course rename", "과목 이름, 코드, 번호 바꾸기. 폴더 이름도 바뀌므로 확인을 받는다",
+        discussion: "폴더 이동은 .folio/moves.jsonl에 남아 `folio cleanup undo`로 되돌릴 수 있다.",
+        effect: .moves, confirm: "과목 '{course}'의 폴더 이름을 바꿉니다.", done: "과목 '{course}'의 이름을 바꿨습니다",
+        examples: [#"folio course rename EC4207 --title "그래프 이론과 응용" --dry-run"#, "folio course rename EC4207 --number 4207-02"],
+        phrases: ["과목 이름 변경", "과목 코드 변경"])
 public struct CourseRename {
+    /// 과목
     @Arg var course: Course.ID
-    var title: String
-    var codes: [CourseCode.ID]
-    var number: String
+    /// 과목 이름
+    var title: Patch<String>
+    /// 강의 코드 앞부분. 여러 개면 첫째가 주 코드
+    @CLIName("code") var codes: Patch<[CourseCode.ID]>
+    /// 일련번호
+    var number: Patch<String>
 
     /// `<main code><number> <title>`.
     public static func folderName(title: String, codes: [UUID], number: String, catalog: Catalog) throws -> String {
@@ -167,6 +186,8 @@ public struct CourseRename {
     }
 
     public func run(_ ctx: ActionContext) throws {
+        let now = try ctx.file(course).course
+        let (title, codes, number) = (title.value ?? now.title, codes.value ?? now.codes, number.value ?? now.number)
         let name = try Self.folderName(title: title, codes: codes, number: number, catalog: ctx.catalog())
         let from = ctx.relative(try ctx.store(course).url)
         let to = (from as NSString).deletingLastPathComponent + "/" + name
@@ -222,13 +243,30 @@ public struct CourseSet {
     }
 }
 
-@Action("requirement set", "졸업 요건과 학생 정보 바꾸기. 준 것만 바꾼다", done: "졸업 요건을 바꿨습니다", phrases: ["복수전공 추가", "부전공", "전공 추가", "입학 연도", "전공 선언", "복수전공"],
-        cli: .manual(reason: "준 것만 바꾸도록 지금 졸업 요건을 읽어 고치고, --program을 <종류>:<코드>로 읽는다. 액션은 요건 전체를 받는다"))
+@Action("requirement set", "졸업 요건과 학생 정보 바꾸기. 준 것만 바꾼다", discussion: "과정은 major, doubleMajor, minor, intensive.",
+        done: "졸업 요건을 바꿨습니다", examples: ["folio requirement set --admission-year 2023", "folio requirement set --total-credits 130 --min-gpa 2.0",
+                   "folio requirement set --program major:EC --program minor:GS --dry-run"],
+        phrases: ["복수전공 추가", "부전공", "전공 추가", "입학 연도", "전공 선언", "복수전공"])
 public struct GraduationSet {
-    var rule: GraduationRule
+    /// 졸업 학점
+    var totalCredits: Patch<Double>
+    /// 최저 평점
+    var minGPA: Patch<Double>
+    /// 입학 연도(학번)
+    var admissionYear: Patch<Int?>
+    /// 교수에게 메일을 보낼 계정
+    var email: Patch<String>
+    /// 선언한 과정과 그 학과의 강의 코드
+    @CLIName("program") @Parsed("program", "과정:강의 코드 앞부분. major:EC") var programs: Patch<[StudentProgram]>
 
     public func run(_ ctx: ActionContext) throws {
-        try ctx.editTranscript { $0.graduation = rule }
+        try ctx.editTranscript { t in
+            totalCredits.apply(&t.graduation.totalCredits)
+            minGPA.apply(&t.graduation.minGPA)
+            admissionYear.apply(&t.graduation.admissionYear)
+            email.apply(&t.graduation.email)
+            programs.apply(&t.graduation.programs)
+        }
     }
 }
 
@@ -284,13 +322,53 @@ public struct CatalogSet {
     }
 }
 
-@Action("settings set", "설정 하나를 바꾸거나 settings.json 전체를 파일 내용으로 바꾸기", done: "설정을 바꿨습니다", phrases: ["설정 변경", "하루 경계", "복습 간격", "알림 시간"],
-        cli: .manual(reason: "<키 경로> <값>으로 지금 설정의 한 값을 바꾸거나 --file로 전체를 바꾼다. 액션은 설정 전체를 받는다"))
+/// One value by its key path, so a command changes one setting without sending the rest; the app's settings screen
+/// sends the whole file instead.
+@Action("settings set", "설정 하나를 바꾸거나 settings.json 전체를 파일 내용으로 바꾸기", discussion: """
+        필드는 settings.json의 이름을 점으로 이어 쓴다(`folio settings show --json`). 값은 JSON으로 읽고, JSON이 아니면 글자로 읽는다.
+        있는 필드만 바꿀 수 있다. 모양이 맞지 않는 값은 쓰지 않는다(종료 코드 2).
+        """,
+        done: "설정을 바꿨습니다", examples: ["folio settings set dayBoundaryMinutes 300", #"folio settings set review.intervals "[1, 3, 7, 14, 30]" --dry-run"#,
+                   "folio settings set --file settings.json --dry-run"],
+        phrases: ["설정 변경", "하루 경계", "복습 간격", "알림 시간"])
 public struct SettingsSet {
-    var settings: Settings
+    /// 필드. 예: review.intervals
+    @Arg var field: String?
+    /// 새 값
+    @Arg var value: JSONValue?
+    /// settings.json 형식의 파일. 필드 대신 설정 전체를 바꾼다
+    @CLIName("file") @FromFile("path") var settings: Settings?
 
     public func run(_ ctx: ActionContext) throws {
-        try ctx.editSettings { $0 = settings }
+        let new: Settings
+        if let settings {
+            guard field == nil, value == nil else { throw ActionError.input(String(localized: .errorSettingsFieldOrFile)) }
+            new = settings
+        } else {
+            guard let field, let value else { throw ActionError.input(String(localized: .errorSettingsNeedsFieldAndValue)) }
+            var root = try JSONValue(ctx.settings())
+            try root.set(field.split(separator: ".").map(String.init), to: value, path: field)
+            do {
+                new = try JSONDecoder.folio.decode(Settings.self, from: JSONEncoder.folio.encode(root))
+            } catch let e as DecodingError {
+                throw ActionError.input(String(localized: .errorSettingsBadValue(field, e.summary)))
+            }
+        }
+        try ctx.editSettings { $0 = new }
+    }
+}
+
+extension JSONValue {
+    /// Replaces the value at an existing key path; a key that isn't there is a typo, not a new setting.
+    mutating func set(_ keys: [String], to value: JSONValue, path: String) throws {
+        guard let key = keys.first else { self = value; return }
+        guard case .object(var o) = self, var child = o[key] else {
+            let known = if case .object(let o) = self { o.keys.sorted().joined(separator: ", ") } else { "" }
+            throw ActionError.input(String(localized: .errorSettingsUnknownField(path, known)))
+        }
+        try child.set(Array(keys.dropFirst()), to: value, path: path)
+        o[key] = child
+        self = .object(o)
     }
 }
 
