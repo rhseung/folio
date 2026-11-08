@@ -22,11 +22,6 @@ struct PageStrip: View {
     /// A lecture file's column: wide enough for the saving row's "11/4(수) 오늘 19–21쪽" on one line, and for the
     /// gutter its sections' line runs down, under the headers' dots.
     static let lectureColumn: CGFloat = 208
-    static let gutter: CGFloat = 32
-    static let header: CGFloat = Theme.Size.toolbarButton - Theme.Space.xs
-    static let line: CGFloat = 4
-    /// From the column's leading edge to the line's middle: under the header's dot, past its chevron.
-    static let lineCenter: CGFloat = Theme.Space.s + Theme.Space.m + Theme.Space.xs + Theme.Size.dot / 2
 
     var body: some View {
         let picks = model.picks
@@ -78,98 +73,27 @@ struct PageStrip: View {
 
 /// One page of the column, with the header, edit row or draft row heading it, or a folded section's header alone.
 private struct PageStripItem: View {
-    let item: PageStripModel.Item
+    let item: StripItem
     @Bindable var model: PageStripModel
     let controller: PDFController
     let gutter: Bool
-    @Environment(\.accent) private var accent
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
+        StripItemFrame(item: item) {
             switch item.lead {
-            case .header(let section, let open)?: header(section, open: open)
+            case .header(let section, let open)?:
+                StripHeader(section: section, open: open, lit: model.fresh == section.id, help: Text(.fileViewProgressPickHelp),
+                            toggle: { model.toggle(section) }, edit: { model.edit(section) })
             case .edit(let section)?: SaveRow(model: model, editing: section)
             case .draft?: SaveRow(model: model, editing: nil)
             case nil: EmptyView()
             }
-            if let page = item.page { thumbnail(page) }
-        }
-        .padding(.leading, Theme.Space.s)
-        .padding(.trailing, Theme.Space.m)
-        .background(alignment: .topLeading) { line }
-    }
-
-    /// The section's line beside this page: from just under the header's dot on its first page, down to above the
-    /// last page's number. Square where it meets the next page, so the pages' pieces read as one line.
-    @ViewBuilder private var line: some View {
-        if case .line(let last) = item.mark {
-            let first = item.lead != nil
-            let round = PageStrip.line / 2
-            UnevenRoundedRectangle(topLeadingRadius: first ? round : 0, bottomLeadingRadius: last ? round : 0,
-                                   bottomTrailingRadius: last ? round : 0, topTrailingRadius: first ? round : 0)
-                .fill(accent.color)
-                .frame(width: PageStrip.line)
-                .padding(.top, first ? PageStrip.header / 2 + Theme.Size.dot / 2 + Theme.Space.xs : 0)
-                .padding(.bottom, last ? Theme.Space.xl : 0)
-                .offset(x: PageStrip.lineCenter - PageStrip.line / 2)
-        }
-    }
-
-    private func header(_ section: PageStripModel.Section, open: Bool) -> some View {
-        HStack(spacing: Theme.Space.xs) {
-            Button { withAnimation(.snappy(duration: 0.2)) { model.toggle(section) } } label: {
-                Image(systemName: open ? "chevron.down" : "chevron.right")
-                    .font(Theme.Glyph.small)
-                    .foregroundStyle(Theme.Palette.textSecondary)
-                    .frame(width: Theme.Space.m, height: PageStrip.header)
-                    .contentShape(.rect)
+            if let page = item.page {
+                StripPage(controller: controller, page: page, picked: item.mark == .picked, gutter: gutter, ranging: model.selection != nil,
+                          press: { page, extend in extend ? model.extend(to: page) : model.press(page) },
+                          start: { model.start(at: $0) })
             }
-            .buttonStyle(.pointing(.plain))
-            .help(Text(open ? .commonCollapse : .commonExpand))
-            Button { model.edit(section) } label: {
-                HStack(spacing: Theme.Space.tight) {
-                    CourseDot(color: accent.color)
-                    Text(section.day).font(Theme.Typeface.bodyStrong).fixedSize()
-                        .foregroundStyle(open ? Theme.Palette.text : Theme.Palette.textSecondary)
-                    Spacer(minLength: Theme.Space.xs)
-                    Text(section.label).font(Theme.Typeface.caption).monospacedDigit().fixedSize().foregroundStyle(Theme.Palette.textSecondary)
-                }
-                .frame(maxHeight: .infinity)
-                .contentShape(.rect)
-            }
-            .buttonStyle(.pointing(.plain))
-            .help(Text(.fileViewProgressPickHelp))
         }
-        .frame(height: PageStrip.header)
-        .padding(.trailing, Theme.Space.xs)
-        .background(model.fresh == section.id ? accent.tint : .clear, in: .rect(cornerRadius: Theme.Radius.control))
-        .padding(.bottom, open ? Theme.Space.s : Theme.Space.xxs)
-    }
-
-    private func thumbnail(_ page: Int) -> some View {
-        let picked = item.mark == .picked
-        return PageThumbnail(thumbnails: controller.thumbnails, page: page, current: controller.page + 1 == page, picked: picked)
-            .padding(.leading, gutter ? PageStrip.gutter : Theme.Space.xs)
-            .padding(.bottom, Theme.Space.s)
-            .contentShape(.rect)
-            #if os(macOS)
-            .gesture(TapGesture().modifiers(.shift).onEnded { pick(page, extend: true) }
-                .exclusively(before: TapGesture().onEnded { pick(page, extend: false) }))
-            #else
-            .onTapGesture { pick(page, extend: false) }
-            .onLongPressGesture { model.start(at: page) }
-            #endif
-            .pointingHand()
-    }
-
-    /// A Mac picks the range's end with ⇧. A touch screen has no ⇧ to hold, so once a long press has started a range,
-    /// a plain tap moves its end; without one up, a tap only goes to the page.
-    private func pick(_ page: Int, extend: Bool) {
-        #if os(iOS)
-        let extend = extend || model.selection != nil
-        #endif
-        if extend { model.extend(to: page) } else { model.press(page) }
-        controller.go(to: page - 1)
     }
 }
 
@@ -177,58 +101,27 @@ private struct PageStripItem: View {
 /// changed. Saving is `material link`, the same action as the wrap-up's.
 private struct SaveRow: View {
     @Bindable var model: PageStripModel
-    let editing: PageStripModel.Section?
+    let editing: StripSection?
     @Environment(\.accent) private var accent
 
     var body: some View {
         let today = model.onlyToday
-        VStack(alignment: .leading, spacing: Theme.Space.s) {
-            HStack(spacing: Theme.Space.tight) {
-                if editing == nil {
-                    Circle().strokeBorder(accent.color, lineWidth: 2).frame(width: Theme.Size.dot, height: Theme.Size.dot)
+        StripEditRow(kind: editing == nil ? .new : .held, range: model.selectionLabel, confirm: String(localized: .commonSave),
+                     canConfirm: model.canSave, refusal: model.refusal, cancel: { model.clear() }, commit: { model.commit() }) {
+            Group {
+                if let editing {
+                    Text(editing.title).font(Theme.Typeface.bodyStrong).foregroundStyle(Theme.Palette.text)
+                } else if let today {
+                    Text(today.day).font(Theme.Typeface.bodyStrong).foregroundStyle(accent.ink)
+                    Text(.fileViewProgressToday).font(Theme.Typeface.label).foregroundStyle(accent.ink)
                 } else {
-                    CourseDot(color: accent.color)
-                }
-                Group {
-                    if let editing {
-                        Text(editing.day).font(Theme.Typeface.bodyStrong).foregroundStyle(Theme.Palette.text)
-                    } else if let today {
-                        Text(today.day).font(Theme.Typeface.bodyStrong).foregroundStyle(accent.ink)
-                        Text(.fileViewProgressToday).font(Theme.Typeface.label).foregroundStyle(accent.ink)
-                    } else {
-                        Text(.fileViewProgressNew).font(Theme.Typeface.bodyStrong).foregroundStyle(accent.ink)
-                    }
-                }
-                .fixedSize()
-                Spacer(minLength: Theme.Space.xs)
-                if let label = model.selectionLabel {
-                    Text(label).font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit().fixedSize().foregroundStyle(accent.ink)
+                    Text(.fileViewProgressNew).font(Theme.Typeface.bodyStrong).foregroundStyle(accent.ink)
                 }
             }
+            .fixedSize()
+        } extra: {
             if editing == nil, today == nil { classMenu }
-            HStack(spacing: Theme.Space.tight) {
-                Button { withAnimation(.snappy(duration: 0.2)) { model.clear() } } label: {
-                    Text(.commonCancel).frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.ghost)
-                Button { withAnimation(.snappy(duration: 0.2)) { model.commit() } } label: {
-                    Text(.commonSave).frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.pointing(.borderedProminent))
-                .disabled(!model.canSave)
-            }
-            .controlSize(.small)
-            if let refusal = model.refusal {
-                Text(refusal).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.danger)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
         }
-        .padding(Theme.Space.s)
-        // Its dot under the headers' dots, past where their chevrons stand.
-        .padding(.leading, PageStrip.lineCenter - Theme.Size.dot / 2 - Theme.Space.s * 2)
-        .background(accent.tint, in: .rect(cornerRadius: Theme.Radius.control))
-        .padding(.bottom, Theme.Space.m)
-        .transition(.opacity)
     }
 
     /// Opens to the trailing side, over the page rather than the thumbnails the range was picked on.

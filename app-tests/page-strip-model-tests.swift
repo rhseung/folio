@@ -57,7 +57,7 @@ struct PageStripModelTests {
         // Cut at the file's last page, as its progress is.
         #expect(model.sections.map(\.id) == [earlier, session] && model.sections.map(\.pages) == [1...7, 9...24])
         let day = file.day(of: file.sessions.first { $0.id == earlier }!, calendar: workspace.calendar)
-        #expect(model.sections[0].day == day && model.sections[0].label == "1–7쪽")
+        #expect(model.sections[0].title == day && model.sections[0].label == "1–7쪽")
         // Both are among the last two, so both are open; a plain page between them has no header.
         let column = column(model)
         #expect(Array(column.prefix(2)) == ["H1–7쪽 1|", " 2|"] && column[6] == " 7|" && column[7] == " 8")

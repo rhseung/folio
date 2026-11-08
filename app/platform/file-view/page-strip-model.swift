@@ -8,14 +8,10 @@ import Observation
 /// or as a class's pages changed. Saving is `material link`, the same action as the link popover and the wrap-up.
 @MainActor @Observable
 final class PageStripModel {
-    struct Section: Identifiable, Equatable {
-        /// The class's id.
-        let id: UUID
-        let pages: ClosedRange<Int>
-        /// `10/28(수)`.
-        let day: String
-        var label: String { Session.pagesLabel(pages) }
-    }
+    /// A class's section: its id is the class's, its title the day (`10/28(수)`).
+    typealias Section = StripSection
+    typealias Item = StripItem
+    typealias ItemID = StripItem.ID
 
     struct Choice: Identifiable, Equatable {
         let id: UUID
@@ -24,38 +20,6 @@ final class PageStripModel {
         /// `10/14(수)`.
         let day: String
         let today: Bool
-    }
-
-    /// One page with what heads it, or a folded section's header alone. A header is part of its first page's item
-    /// rather than an item of its own: scrolled to, the two come into view together (as in `LectureSplitPane`).
-    struct Item: Identifiable, Equatable {
-        enum Lead: Equatable {
-            case header(Section, open: Bool)
-            /// The section being changed: its header turned into the row that saves it.
-            case edit(Section)
-            /// The row a new range is saved from, above its pages.
-            case draft(ClosedRange<Int>)
-        }
-
-        let lead: Lead?
-        let page: Int?
-        let mark: Mark
-
-        var id: ItemID {
-            if let page { return .page(page) }
-            if case .header(let s, _)? = lead { return .folded(s.id) }
-            return .folded(UUID())
-        }
-    }
-
-    enum ItemID: Hashable { case page(Int), folded(UUID) }
-
-    enum Mark: Equatable {
-        case plain
-        /// In an unfolded section: the course-colour line runs down beside it, ending at the section's last page.
-        case line(last: Bool)
-        /// In the range being picked or changed.
-        case picked
     }
 
     let workspace: Workspace
@@ -110,7 +74,7 @@ final class PageStripModel {
     var sections: [Section] {
         guard picks, let file, let materialId else { return [] }
         return file.progressSections(of: materialId, pageCount: pageCount).compactMap { s in
-            file.sessions.first { $0.id == s.session }.map { Section(id: s.session, pages: s.pages, day: file.day(of: $0, calendar: workspace.calendar)) }
+            file.sessions.first { $0.id == s.session }.map { Section(id: s.session, pages: s.pages, title: file.day(of: $0, calendar: workspace.calendar)) }
         }
     }
 
@@ -138,32 +102,9 @@ final class PageStripModel {
     var items: [Item] {
         var shown = sections
         if let editing, let selection, let i = shown.firstIndex(where: { $0.id == editing }) {
-            shown[i] = Section(id: editing, pages: selection, day: shown[i].day)
+            shown[i] = Section(id: editing, pages: selection, title: shown[i].title)
         }
-        func run(_ pages: ClosedRange<Int>, lead: Item.Lead, mark: (Int) -> Mark) -> [Item] {
-            pages.map { Item(lead: $0 == pages.lowerBound ? lead : nil, page: $0, mark: mark($0)) }
-        }
-        var items: [Item] = []
-        var page = 1
-        while page <= pageCount {
-            if let s = shown.first(where: { $0.pages.lowerBound == page }) {
-                if s.id == editing {
-                    items += run(s.pages, lead: .edit(s)) { _ in .picked }
-                } else if isOpen(s) {
-                    items += run(s.pages, lead: .header(s, open: true)) { .line(last: $0 == s.pages.upperBound) }
-                } else {
-                    items.append(Item(lead: .header(s, open: false), page: nil, mark: .plain))
-                }
-                page = s.pages.upperBound + 1
-            } else if editing == nil, let selection, selection.lowerBound == page {
-                items += run(selection, lead: .draft(selection)) { _ in .picked }
-                page = selection.upperBound + 1
-            } else {
-                items.append(Item(lead: nil, page: page, mark: .plain))
-                page += 1
-            }
-        }
-        return items
+        return Item.column(pageCount: pageCount, sections: shown, editing: editing, draft: editing == nil ? selection : nil, isOpen: isOpen)
     }
 
     /// Where the column scrolls for the PDF's page: the page, or the header of the folded section holding it.

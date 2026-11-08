@@ -279,6 +279,52 @@ public struct LectureSplit: Equatable, Sendable {
         sections.remove(at: i + 1)
     }
 
+    /// A page picked while section `i` is being changed (⇧-click in the thumbnails, a tap on a touch screen), as a
+    /// class's progress is changed in the page strip: at or after its start it moves the end there, before it the
+    /// start. The neighbor on that side gives or takes the pages and keeps at least one. The last section has no
+    /// neighbor to give its end pages to, so they become a section for no unit. Returns where section `i` now is.
+    @discardableResult
+    public mutating func moveEdge(of i: Int, to page: Int) -> Int {
+        guard sections.indices.contains(i) else { return i }
+        let page = min(max(page, 1), pageCount)
+        if page >= sections[i].firstPage {
+            if sections.indices.contains(i + 1) {
+                moveBoundary(after: i, to: page)
+            } else if page < sections[i].lastPage {
+                split(at: page + 1)
+            }
+        } else if i > 0 {
+            moveBoundary(after: i - 1, to: page - 1)
+        }
+        return i
+    }
+
+    /// `pages` as one section: cut where they start and after where they end, and every section between joined into the
+    /// first. It keeps that section's unit when `pages` start where it does; cut out of a section's middle, it goes to
+    /// no unit, as a cut's tail does. The pages left after `pages` stay what they were: `split(at:)` would give them to
+    /// no unit, and a range ending inside a section would quietly take the rest of that section out of its unit.
+    /// Returns its index.
+    @discardableResult
+    public mutating func carve(_ pages: ClosedRange<Int>) -> Int {
+        let lo = min(max(pages.lowerBound, 1), pageCount), hi = min(max(pages.upperBound, lo), pageCount)
+        if hi < pageCount {
+            let j = section(at: hi + 1)
+            if sections[j].firstPage <= hi {
+                var rest = sections[j]
+                rest.firstPage = hi + 1
+                // Its id goes with it unless the pages before keep that section on: a section joined into the range
+                // is gone, but one cut at `lo` or starting the range stays.
+                if sections[j].firstPage <= lo { rest.id = UUID() }
+                sections[j].lastPage = hi
+                sections.insert(rest, at: j + 1)
+            }
+        }
+        split(at: lo)
+        let first = section(at: lo)
+        while sections.indices.contains(first + 1), sections[first + 1].lastPage <= hi { merge(after: first) }
+        return first
+    }
+
     public mutating func setUnit(_ unit: UUID?, of i: Int, match: Match? = nil) {
         guard sections.indices.contains(i) else { return }
         sections[i].unit = unit

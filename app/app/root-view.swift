@@ -239,6 +239,12 @@ struct RootView: View {
                 await SnapshotDriver.shared.runStrip(open: { open($0) }, lecture: AppLink(.material, lecture.id))
                 return
             }
+            if SnapshotDriver.split != nil, let lecture = workspace.currentCourses.lazy.compactMap({ c in
+                c.file.lectureFiles.first { c.file.isSplit($0.id) }
+            }).first {
+                await SnapshotDriver.shared.runSplit(open: { open($0) }, lecture: AppLink(.material, lecture.id)) { workspace.splitAsk = lecture.id }
+                return
+            }
             if SnapshotDriver.tabs > 1 {
                 // Tabs of every kind behind the first, which the walk below then moves through.
                 let notes = workspace.currentCourses.compactMap { c in c.file.notes.first.map { AppLink(.note, $0.id) } }
