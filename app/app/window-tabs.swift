@@ -243,6 +243,8 @@ enum MemoryPressure {
 extension FocusedValues {
     /// The key window's tabs, for the menu bar's tab commands.
     @Entry var windowTabs: WindowTabs?
+    /// The key window's tab in front, for 보기 › 칸 폭 맞추기.
+    @Entry var frontPanes: TabPanes?
 }
 
 extension Workspace {

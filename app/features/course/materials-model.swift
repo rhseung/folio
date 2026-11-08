@@ -284,6 +284,10 @@ final class MaterialsModel {
 
     // MARK: Lecture progress
 
+    func linksTitle(_ material: UUID) -> String {
+        String(localized: .materialsLinksTitle(((materials.first { $0.id == material }?.path ?? "") as NSString).lastPathComponent))
+    }
+
     func isLecture(_ material: UUID) -> Bool { materials.first { $0.id == material }?.role == .lecture }
 
     func link(_ material: UUID, unit: UUID, linked: Bool) {

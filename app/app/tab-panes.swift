@@ -16,6 +16,13 @@ final class TabPanes {
     private(set) var focus = 0
     /// Read only by the panes' row.
     private(set) var shares: [Double] = [1]
+    /// The panes folded by hand (`collapse`).
+    private(set) var collapsed: Set<Int> = []
+    /// How many panes the row has room to keep open with two panes and with three (`PaneLayout.openCount`). The row
+    /// sets it only where its width crosses a count, so a live resize sets it a few times, not every frame.
+    var room = [2, 3]
+    /// The panes' widths moving (`PaneGlide`), which the panes' stack and the screens' widths alone read.
+    private(set) var glide: PaneGlide?
     let limit: Int
 
     static var limit: Int {
@@ -49,6 +56,16 @@ final class TabPanes {
     }
 
     var count: Int { ids.count }
+
+    /// The panes drawn as strips: folded by hand, or for want of room.
+    var folded: Set<Int> {
+        // The layout isn't watched: what it is published as is, so a reader redraws when a press or a fold moves it.
+        _ = (focus, collapsed)
+        return count > 1 ? layout.folded(open: room[min(count, 3) - 2]) : []
+    }
+
+    func canCollapse(_ i: Int) -> Bool { layout.canCollapse(i) }
+
     var focused: Navigator { navigators[focus] }
     var focusedTrail: CrumbTrail { trails[focus] }
 
@@ -58,8 +75,7 @@ final class TabPanes {
     func press(_ i: Int) {
         // The focused pane is always the one pressed last, so pressing it again changes nothing.
         guard i != focus, ids.indices.contains(i) else { return }
-        layout.press(i)
-        publish()
+        moving { layout.press(i) }
     }
 
     /// "옆 칸에 열기" from the pane showing `navigator` (the focused one without it): a new pane right of it while
@@ -105,6 +121,35 @@ final class TabPanes {
         publish()
     }
 
+    /// 칸 접기: pane `i` a strip at any width until it is pressed (`PaneLayout.collapse`).
+    func collapse(_ i: Int) { moving { layout.collapse(i) } }
+
+    /// 칸 폭 맞추기, from a divider or the 보기 menu: every pane as wide as the others.
+    func even() { moving { layout.even() } }
+
+    /// A change to the layout that moves a pane's edge (a strip opening or folding, the widths evened) glides there
+    /// unless the system asks for less motion. Read from the system, not the environment: the menu bar's commands
+    /// have none.
+    private func moving(_ change: () -> Void) {
+        let from = layout
+        let folded = folded
+        change()
+        #if os(macOS)
+        let reduced = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
+        #else
+        let reduced = UIAccessibility.isReduceMotionEnabled
+        #endif
+        if !reduced, from.panes.count == layout.panes.count, from.shares != layout.shares || folded != self.folded {
+            let glide = PaneGlide(from: from, folded: folded)
+            self.glide = glide
+            Task { [weak self] in
+                try? await Task.sleep(for: .seconds(PaneGlide.duration))
+                if self?.glide == glide { self?.glide = nil }
+            }
+        }
+        publish()
+    }
+
     /// The links each pane's history went on to since; the layout keeps them only for what compares them.
     private func follow() {
         for (i, navigator) in navigators.enumerated() { layout.open(navigator.current.link, in: i) }
@@ -113,6 +158,34 @@ final class TabPanes {
     private func publish() {
         if focus != layout.focus { focus = layout.focus }
         if shares != layout.shares { shares = layout.shares }
+        if collapsed != layout.collapsed { collapsed = layout.collapsed }
+    }
+}
+
+/// Panes moving to new widths a frame at a time, from the layout and strips they had. Not an animation of the widths:
+/// under one, each pane's screen animated its own new layout as well, and a lazy page (the course overview) slid its
+/// rows and scroll offset about and bounced (2026-11-08 사용자); a pane widening laid its screen out at the end width
+/// at once, over the pane beside it. Stepped like a divider's drag, each frame lays an open pane's screen out at that
+/// frame's width with nothing inside it animated; a pane folding or opening keeps its screen at its open width, its
+/// panel's edge sliding over it.
+struct PaneGlide: Equatable {
+    static let duration = 0.5
+    static let spring = Spring.smooth(duration: 0.34)
+
+    let from: PaneLayout
+    let folded: Set<Int>
+    let start = Date()
+    private let id = UUID()
+
+    init(from: PaneLayout, folded: Set<Int>) {
+        self.from = from
+        self.folded = folded
+    }
+
+    /// How far along at `date`, 0 to 1, on the curve 0.34s `.smooth` takes; whole once the spring has settled.
+    func progress(at date: Date) -> Double {
+        let t = date.timeIntervalSince(start)
+        return t >= Self.duration ? 1 : min(1, max(0, Self.spring.value(target: 1.0, time: t)))
     }
 }
 
