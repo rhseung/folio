@@ -18,8 +18,6 @@
 - **녹음**: 강의를 녹음하고 기기 안에서 글로 받아씁니다.
 - **파일**: 모든 데이터는 iCloud Drive의 파일로 남습니다.
 
-남은 일과 진행 상황은 [GitHub Project](https://github.com/users/rhseung/projects/10)에 있습니다.
-
 ## 명령줄 도구
 
 앱에서 하는 모든 데이터 변경을 터미널과 AI 에이전트에서도 `folio`로 할 수 있습니다. `folio mcp`는 같은 동작을 MCP 도구로 엽니다.
