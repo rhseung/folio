@@ -652,6 +652,7 @@ struct SessionCard: View {
     @Environment(\.openLink) private var openLink
     @State private var editing = false
     @State private var wrappingUp = false
+    @State private var showsGaps = false
 
     /// The day line and its units, which the pills must leave beside them.
     static let linesRoom: CGFloat = 240
@@ -722,9 +723,14 @@ struct SessionCard: View {
                 if let late { Chip(late.label, tone: late.value == .late ? .warning : late.value == .absent ? .danger : .plain) }
                 let gaps = model.leftGaps(session, in: file, now: now)
                 if !gaps.isEmpty {
-                    Circle().fill(Theme.Palette.warning).frame(width: Theme.Size.dot, height: Theme.Size.dot)
-                        .help(Text(.wrapUpLeftHelp(model.gapsLine(gaps))))
-                        .accessibilityLabel(Text(.wrapUpLeftHelp(model.gapsLine(gaps))))
+                    // What is missing opens on a press too, not only in the tooltip, which touch never shows.
+                    Button { showsGaps = true } label: {
+                        Circle().fill(Theme.Palette.warning).frame(width: Theme.Size.dot, height: Theme.Size.dot).contentShape(TouchTarget())
+                    }
+                    .buttonStyle(.pointing(.plain))
+                    .help(Text(.wrapUpLeftHelp(model.gapsLine(gaps))))
+                    .accessibilityLabel(Text(.wrapUpLeftHelp(model.gapsLine(gaps))))
+                    .popover(isPresented: $showsGaps, arrowEdge: .bottom) { gapsPanel(gaps) }
                 }
             }
             HStack(spacing: Theme.Space.tight) {
@@ -738,6 +744,28 @@ struct SessionCard: View {
         }
         // Takes the room the pills leave, so the title and units truncate before anything else moves.
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    func gapsPanel(_ gaps: [WrapUpItem]) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Space.s) {
+            Text(.wrapUpLeftHeading).font(Theme.Typeface.sectionTitle).foregroundStyle(Theme.Palette.textSecondary)
+            ForEach(gaps, id: \.self) { gap in
+                HStack(spacing: Theme.Space.s) {
+                    Circle().fill(Theme.Palette.warning).frame(width: Theme.Size.dot, height: Theme.Size.dot)
+                    Text(gap.label).font(Theme.Typeface.body).foregroundStyle(Theme.Palette.text)
+                }
+            }
+            if model.offersWrapUp(session) {
+                Button(.wrapUpEllipsis) {
+                    showsGaps = false
+                    wrappingUp = true
+                }
+                .buttonStyle(.ghost)
+                .padding(.top, Theme.Space.xs)
+            }
+        }
+        .padding(Theme.Space.l)
+        .presentationCompactAdaptation(.popover)
     }
 
     @ViewBuilder func trailing(_ file: CourseFile, live: Bool, expected: Date) -> some View {

@@ -675,6 +675,8 @@ struct RootView: View {
         // The course in class right now shows how far the class has gone, from any page: its row fills from the left
         // in its color and the minutes left sit at the end. No ring or dot, so the row keeps the shape of every other.
         let ongoing = workspace.ongoingClass(at: now).flatMap { $0.courseId == course.id ? $0 : nil }
+        let detail = (ongoing.map { String(localized: .rootInClass(course.file.subject(of: $0.session) ?? course.file.day(of: $0.session, calendar: workspace.calendar))) }
+            ?? hint.map(hintHelp)).flatMap { $0.isEmpty ? nil : $0 }
         return Label {
             HStack {
                 Text(course.title).lineLimit(1)
@@ -691,9 +693,9 @@ struct RootView: View {
             // A line icon, not a tile: with twenty-odd courses, tiles turn the sidebar into confetti.
             CourseMark(icon: course.file.course.icon, color: accent.color, filled: selection == .course(course.id), duotone: true)
         }
-        .help(ongoing.map { String(localized: .rootInClass(course.file.subject(of: $0.session) ?? course.file.day(of: $0.session, calendar: workspace.calendar))) } ?? hint.map(hintHelp) ?? "")
+        .help(detail ?? "")
         .padding(.leading, SidebarGuide.indent)
-        .sidebarRow(.course(course.id), selectionBinding, fill: accent.tint, guide: last ? .lastCourse : .course, progress: ongoing?.fraction(at: now))
+        .sidebarRow(.course(course.id), selectionBinding, fill: accent.tint, guide: last ? .lastCourse : .course, progress: ongoing?.fraction(at: now), note: detail)
     }
 
     @ViewBuilder func courseHint(_ hint: TodaySummary.CourseHint) -> some View {
@@ -785,7 +787,8 @@ private struct RowTools: ViewModifier {
                 // pointer); the title opens the page.
                 if let open {
                     Button { open.wrappedValue.toggle() } label: {
-                        Color.clear.frame(width: Theme.Size.tile, height: Theme.Size.tile).contentShape(Rectangle())
+                        // A finger gets the row's height around the folder; the title beside it still opens the page.
+                        Color.clear.frame(width: Theme.Size.tile, height: Theme.Size.tile).contentShape(TouchTarget())
                     }
                     .buttonStyle(.pointing(.plain))
                     .help(Text(open.wrappedValue ? .commonCollapse : .commonExpand))
@@ -799,7 +802,7 @@ private struct RowTools: ViewModifier {
 
     func tool(_ symbol: String, font: Font, help: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
-            Image(systemName: symbol).font(font).frame(width: Theme.Size.tile, height: Theme.Size.tile).contentShape(Rectangle())
+            Image(systemName: symbol).font(font).frame(width: Theme.Size.tile, height: Theme.Size.tile).contentShape(TouchTarget())
         }
         .buttonStyle(.pointing(.plain))
         .foregroundStyle(Theme.Palette.chromeText)
@@ -848,6 +851,15 @@ private extension View {
         modifier(RowTools(add: add, action: action, open: open, folderHover: folderHover))
     }
 
+    /// `note` heads the menu with what the row's tooltip says (what is due, when the class is), which touch never shows.
+    @ViewBuilder func rowMenu(_ destination: Screen, note: String?) -> some View {
+        if let note {
+            Text(note)
+            Divider()
+        }
+        if let link = destination.link { LinkMenu(link: link) }
+    }
+
     /// On the Mac each row picks itself and draws its own fill: the Mac sidebar's selection is one gray whatever the
     /// tint, which turned a chosen course into a gray block. The iPad keeps the list's selection, which also pushes the
     /// detail when the split view folds into one column.
@@ -855,7 +867,7 @@ private extension View {
     /// spacing, so the segments join without overlapping (a see-through line darkens where segments overlap).
     /// `guideShown` fades the line rather than leaving it out: the Mac list doesn't redraw a row background whose views
     /// come and go, only one whose values change, and rebuilding the row instead made it jump as it opened.
-    @ViewBuilder func sidebarRow(_ destination: Screen, _ selection: Binding<Screen?>, fill: Color = Theme.Palette.sidebarSelection, guide: SidebarGuide? = nil, guideShown: Bool = true, progress: Double? = nil) -> some View {
+    @ViewBuilder func sidebarRow(_ destination: Screen, _ selection: Binding<Screen?>, fill: Color = Theme.Palette.sidebarSelection, guide: SidebarGuide? = nil, guideShown: Bool = true, progress: Double? = nil, note: String? = nil) -> some View {
         let line = guide.map { GuideSegment(guide: $0).stroke(Theme.Palette.chromeLine, lineWidth: 1).frame(width: SidebarGuide.reach + 1) }
         #if os(macOS)
         let chosen = selection.wrappedValue == destination
@@ -885,10 +897,10 @@ private extension View {
         )
         .accessibilityAddTraits(chosen ? [.isButton, .isSelected] : .isButton)
         .accessibilityAction { selection.wrappedValue = destination }
-        .contextMenu { if let link = destination.link { LinkMenu(link: link) } }
+        .contextMenu { rowMenu(destination, note: note) }
         #else
         tag(destination)
-            .contextMenu { if let link = destination.link { LinkMenu(link: link) } }
+            .contextMenu { rowMenu(destination, note: note) }
             .background(alignment: .leading) {
                 if guide != .stem, let line { line.padding(.vertical, -Theme.Space.xs).padding(.leading, Theme.Size.tile / 2) }
             }

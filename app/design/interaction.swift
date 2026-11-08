@@ -36,6 +36,20 @@ extension PrimitiveButtonStyle where Self == ProminentButtonStyle {
     static var prominent: ProminentButtonStyle { .init() }
 }
 
+/// A small control's hit area grown to `side` on each side around what is drawn, without moving it or its neighbours. Only
+/// on touch: a pointer aims finer, and on the Mac the wider area would take clicks meant for the views beside it.
+struct TouchTarget: Shape {
+    var side: CGFloat = Theme.Size.touchTarget
+
+    func path(in rect: CGRect) -> Path {
+        #if os(macOS)
+        Path(rect)
+        #else
+        Path(rect.insetBy(dx: min(0, (rect.width - side) / 2), dy: min(0, (rect.height - side) / 2)))
+        #endif
+    }
+}
+
 extension View {
     /// The pointing hand for menus: a custom button style on a `.button`-style menu turns it back into a pop-up.
     func pointingHand() -> some View {

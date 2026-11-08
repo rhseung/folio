@@ -28,7 +28,8 @@ private struct GhostButton: View {
             Capsule().fill(tint).opacity(configuration.isPressed ? 0.2 : hovering && isEnabled ? 0.12 : 0)
                 .padding(.horizontal, -6).padding(.vertical, -4)
         }
-        .contentShape(.rect)
+        // An icon alone is a 16pt target, too small for a finger (the clear ✕, the ⋯ menu).
+        .contentShape(TouchTarget(side: iconOnly ? Theme.Size.touchTarget : 0))
         .opacity(isEnabled ? 1 : 0.45)
         .onHover { hovering = $0 }
         #if os(macOS)

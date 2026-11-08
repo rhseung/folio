@@ -19624,6 +19624,17 @@
           }
         }
       }
+    },
+    "wrap-up.left-heading": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빈 항목"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
