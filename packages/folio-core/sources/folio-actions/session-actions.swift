@@ -49,8 +49,10 @@ public struct SessionAdd {
 
 /// Only sessions nothing points at: a note, recording or other link left pointing at nothing is worse than a stray
 /// session. An unreadable note folder might point at any of them, so none goes then.
-@Action("session rm", "아무것도 연결되지 않은 회차 지우기", effect: .removes, confirm: "회차 {sessions}을(를) 지웁니다.",
-        done: "회차 {sessions}을(를) 지웠습니다", cli: .manual)
+@Action("session rm", "아무것도 연결되지 않은 회차 지우기",
+        discussion: "노트, 녹음, 출석, 자료, 단원이 연결된 회차는 지우지 않는다(종료 코드 4). 수업이 없던 날이면 session set --kind cancelled로 휴강 표시한다.",
+        effect: .removes, confirm: "회차 {sessions}을(를) 지웁니다.",
+        done: "회차 {sessions}을(를) 지웠습니다", examples: ["folio session rm EC4207/10-30 --dry-run"])
 public struct SessionRemove {
     @Arg var course: Course.ID
     /// 회차
@@ -239,7 +241,8 @@ public struct UnitSet {
 }
 
 /// Moves a unit among its siblings (`by` -1 up, 1 down) or under another parent (nil for the top level).
-@Action("unit move", "단원을 형제 사이에서 옮기거나 다른 단원 아래로 옮기기", done: "단원 '{unit}'을(를) 옮겼습니다", cli: .manual)
+@Action("unit move", "단원을 형제 사이에서 옮기거나 다른 단원 아래로 옮기기", done: "단원 '{unit}'을(를) 옮겼습니다",
+        cli: .manual(reason: "--up, --down, --parent, --top 중 하나가 옮길 곳(Target) 하나가 된다"))
 public struct UnitMove {
     public enum Target: Codable, Sendable, Equatable {
         case by(Int), parent(UUID?)
@@ -386,12 +389,11 @@ func checkCuts(_ cuts: [LectureCut], in f: CourseFile) throws {
 }
 
 /// The whole split of one lecture file at once, as the split screen and the add sheet approve it: every unit's
-/// pages of the file become these, and units named only by a title are made. The command names units by title, so it
-/// is written by hand.
+/// pages of the file become these, and units named only by a title are made.
 @Action("material split", "렉처 파일을 단원 구간으로 나누기. 그 파일의 단원 구간을 모두 이 목록으로 바꾸고, 없는 단원은 만든다",
         done: "{material}을(를) 단원 구간으로 나눴습니다",
         examples: [#"folio material split EC4207/05_Matchings.pdf 1-4:매칭 5-8:König 9-13:"Hall의 결혼 정리""#],
-        phrases: ["단원으로 나누기", "렉처 목차 나누기", "렉처를 단원별로"], cli: .manual)
+        phrases: ["단원으로 나누기", "렉처 목차 나누기", "렉처를 단원별로"], cli: .manual(reason: "<쪽>:<단원> 인자를 구간으로 읽고, 없는 단원 이름은 새 단원으로 만든다"))
 public struct MaterialSplit {
     @Arg var course: Course.ID
     @Arg var material: Material.ID
@@ -407,7 +409,8 @@ public struct MaterialSplit {
 }
 
 /// Puts a unit, with the units under it, into an exam's scope or takes it out.
-@Action("exam scope", "시험 범위에 단원 넣기, --off면 빼기", done: "시험 '{exam}'의 범위를 바꿨습니다", cli: .manual)
+@Action("exam scope", "시험 범위에 단원 넣기, --off면 빼기", done: "시험 '{exam}'의 범위를 바꿨습니다",
+        cli: .manual(reason: "--unit마다 액션을 한 번씩 같은 맥락에서 돌려 결과를 하나로 보이고, --taught면 exam scope --taught를 돌린다"))
 public struct ExamScope {
     @Arg var course: Course.ID
     @Arg var exam: Exam.ID
@@ -426,12 +429,11 @@ public struct ExamScope {
 }
 
 /// What one class went through, every lecture file at once, as the end-of-class prompt saves it: one action, so a
-/// range the rules refuse leaves the other files unwritten too. Files left out keep their links. The command reads
-/// each file with its pages (`05_Matchings.pdf:3-12`), so it is written by hand.
+/// range the rules refuse leaves the other files unwritten too. Files left out keep their links.
 @Action("session progress", "수업의 렉처 진도 기록하기. 자료마다 이번 수업이 다룬 쪽을 회차에 연결한다",
         done: "회차 '{session}'의 진도를 기록했습니다",
         examples: ["folio session progress EC4207/10-26 05_Matchings.pdf:3-12 06_Flows.pdf:1-4"],
-        phrases: ["렉처 진도", "수업 진도", "어디까지 나갔", "진도 기록"], cli: .manual)
+        phrases: ["렉처 진도", "수업 진도", "어디까지 나갔", "진도 기록"], cli: .manual(reason: "<자료>:<쪽> 인자를 자료와 쪽 범위로 읽는다"))
 public struct SessionProgress {
     @Arg var course: Course.ID
     @Arg var session: Session.ID
@@ -449,12 +451,12 @@ public struct SessionProgress {
 }
 
 /// Everything the end-of-class wrap-up saves, in one action so a part the rules refuse leaves the rest unwritten too.
-/// Marks the class wrapped up, which is what stops it being asked about: what was left empty stays so on purpose. The
-/// command takes each lecture file with its pages, as `session progress` does, so it is written by hand.
+/// Marks the class wrapped up, which is what stops it being asked about: what was left empty stays so on purpose.
 @Action("session wrap-up", "수업 정리. 회차의 렉처 진도, 단원, 출결을 한 번에 적고 정리했다고 표시한다",
         done: "회차 '{session}'을(를) 정리했습니다",
         examples: [#"folio session wrap-up EC4207/10-26 05_Matchings.pdf:3-12 --unit 매칭 --attendance late --dry-run"#],
-        phrases: ["수업 정리", "수업 끝", "오늘 수업 정리", "수업 마무리"], cli: .manual)
+        phrases: ["수업 정리", "수업 끝", "오늘 수업 정리", "수업 마무리"],
+        cli: .manual(reason: "<자료>:<쪽> 인자를 읽고, 주지 않은 단원과 출결은 지금 회차의 것으로 채운다. 액션은 앱 시트처럼 전체 값을 받는다"))
 public struct SessionWrapUp {
     @Arg var course: Course.ID
     @Arg var session: Session.ID

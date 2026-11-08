@@ -7,20 +7,68 @@ import Foundation
 enum GeneratedCommands {
     static let assignment: [any ParsableCommand.Type] = [AssignmentAdd.self, AssignmentStatusSet.self, AssignmentRemove.self]
     static let attendance: [any ParsableCommand.Type] = [AttendanceSet.self]
+    static let backup: [any ParsableCommand.Type] = [BackupCreate.self, BackupRestore.self]
+    static let catalog: [any ParsableCommand.Type] = [CatalogSet.self]
+    static let cleanup: [any ParsableCommand.Type] = [CleanupUndo.self]
     static let component: [any ParsableCommand.Type] = [ComponentAdd.self, ComponentSet.self, ComponentRemove.self]
     static let exam: [any ParsableCommand.Type] = [ExamAdd.self, ExamSet.self, ExamRemove.self, ExamSummary.self]
-    static let examPlan: [any ParsableCommand.Type] = [ExamPlanAdd.self]
-    static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialLinkExam.self, MaterialUntrack.self, MaterialTrash.self, MaterialNew.self, MaterialBuild.self]
-    static let note: [any ParsableCommand.Type] = [NoteAdopt.self, NoteLinkSessions.self, NoteUnlinkSession.self, NoteRemove.self, NoteBuild.self]
+    static let examPlan: [any ParsableCommand.Type] = [ExamPlanAdd.self, ExamPlanRemove.self]
+    static let `import`: [any ParsableCommand.Type] = [ImportNotion.self, ImportNotes.self, ImportCalendar.self, ImportExams.self, ImportUnits.self, ImportRequirements.self, ImportHandbook.self]
+    static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialLinkExam.self, MaterialStatusSet.self, MaterialKindSet.self, MaterialUntrack.self, MaterialTrack.self, MaterialMove.self, MaterialTrash.self, MaterialNew.self, MaterialBuild.self]
+    static let note: [any ParsableCommand.Type] = [NoteAdd.self, NoteAdopt.self, NoteLink.self, NoteLinkSessions.self, NoteUnlinkSession.self, NoteRemove.self, NoteMigrate.self, NoteRetitleSessions.self, NoteMove.self, NoteBuild.self]
     static let problemSet: [any ParsableCommand.Type] = [ProblemSetRemove.self, ProblemLinkUnit.self]
-    static let recording: [any ParsableCommand.Type] = [RecordingTrim.self]
+    static let quiz: [any ParsableCommand.Type] = [QuizCardSave.self, QuizCardRemove.self]
+    static let recording: [any ParsableCommand.Type] = [RecordingTrim.self, RecordingRetitleLegacy.self]
     static let review: [any ParsableCommand.Type] = [ReviewRecord.self]
     static let score: [any ParsableCommand.Type] = [ScoreAdd.self, ScoreSet.self, ScoreRemove.self]
     static let semester: [any ParsableCommand.Type] = [SemesterAdd.self, SemesterSet.self, SemesterSource.self]
-    static let session: [any ParsableCommand.Type] = [SessionAdd.self, SessionSet.self, SessionNote.self, SessionLinkViewed.self]
+    static let session: [any ParsableCommand.Type] = [SessionAdd.self, SessionRemove.self, SessionSet.self, SessionNote.self, SessionLinkViewed.self]
     static let transcript: [any ParsableCommand.Type] = [TranscriptAdd.self, TranscriptMove.self]
     static let unit: [any ParsableCommand.Type] = [UnitAdd.self, UnitRemove.self, UnitSet.self, UnitLink.self]
     static let unitPages: [any ParsableCommand.Type] = [UnitPagesAdd.self, UnitPagesSet.self, UnitPagesRemove.self]
+
+    struct BackupCreate: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "create", abstract: "오늘 백업을 만든다", discussion: """
+            설정의 백업 폴더(기본 ~/Backups/Folio/auto)에 오늘 백업을 만든다. GIST 폴더와 같은 디스크면 GIST 전체를 APFS 복제로 Folio-<날짜> 폴더에 떠서 바뀐 파일만큼만 공간을 쓴다. iCloud에만 있는 파일은 내려받지 않고 건너뛴다. 다른 디스크면 GIST의 .folio와 각 과목의 Notes, Ink, .folio를 Folio-<날짜>.zip으로 묶는다.
+            오늘 백업이 있으면 바꾼다. 보관 기간이 지난 백업은 지운다. GIST 폴더는 바뀌지 않는다.
+
+            예시:
+              folio backup create --dry-run
+              folio backup create
+            """)
+        @OptionGroup var g: GlobalOptions
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let action = FolioActions.BackupCreate(
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct BackupRestore: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "restore", abstract: "한 과목을 백업에서 새 폴더로 꺼낸다", discussion: """
+            과목을 백업 폴더 옆 restored 폴더에 새로 꺼낸다. 복제 백업이면 과목 폴더 전체, zip 백업이면 Notes, Ink, .folio를 꺼낸다. GIST 폴더는 건드리지 않으니 비교해서 직접 옮긴다.
+
+            예시:
+              folio backup restore EC4207 2026-10-27 --dry-run
+              folio backup restore EC4207 2026-10-27
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
+        @Argument(help: ArgumentHelp("백업 날짜. 2026-10-27", valueName: "date")) var day: LocalDate
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let c = try r.course(course)
+            let action = FolioActions.BackupRestore(
+                course: c.id,
+                day: day
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
 
     struct SemesterAdd: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "add", abstract: "학기 추가. 학기 폴더를 만든다. 인정학기는 출처 이름으로 _Credited/<출처> 폴더를 만든다", discussion: """
@@ -154,6 +202,25 @@ enum GeneratedCommands {
         }
     }
 
+    struct CatalogSet: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "set", abstract: "catalog.json을 파일 내용으로 바꾸기. 바뀐 행만 수정 시각이 바뀐다", discussion: """
+            `folio catalog show --json`으로 받은 파일을 고쳐서 넣는다. 모르는 필드는 남는다.
+
+            예시:
+              folio catalog set --file catalog.json --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Option(name: .customLong("file"), help: ArgumentHelp("catalog.json 형식의 파일", valueName: "path"), completion: .file(extensions: ["json"])) var catalog: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let action = FolioActions.CatalogSet(
+                catalog: try readJSONFile(Catalog.self, catalog)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
     struct SessionAdd: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "add", abstract: "회차 추가. 주차는 학기 시작일에서 정한다", discussion: """
             예시:
@@ -183,6 +250,30 @@ enum GeneratedCommands {
                 link: link,
                 kind: kind,
                 attendance: attendance
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct SessionRemove: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "rm", abstract: "아무것도 연결되지 않은 회차 지우기", discussion: """
+            노트, 녹음, 출석, 자료, 단원이 연결된 회차는 지우지 않는다(종료 코드 4). 수업이 없던 날이면 session set --kind cancelled로 휴강 표시한다.
+
+            실행하기 전에 확인을 받는다.
+
+            예시:
+              folio session rm EC4207/10-30 --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<회차>. 둘째부터는 회차만 써도 된다", valueName: "session"), completion: Complete.ref("Session")) var sessions: [String]
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, sessionsFirst) = try r.split(sessions.first ?? "")
+            let action = FolioActions.SessionRemove(
+                course: c.id,
+                sessions: try ([sessionsFirst] + sessions.dropFirst()).map { try r.id("Session", $0, in: c) }
             )
             try perform(spec: action, g, ctx: ctx)
         }
@@ -595,6 +686,30 @@ enum GeneratedCommands {
         }
     }
 
+    struct ExamPlanRemove: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "rm", abstract: "공부 계획 항목 지우기", discussion: """
+            실행하기 전에 확인을 받는다.
+
+            예시:
+              folio exam plan rm EC4207/중간고사 \"트리 단원 복습\" --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<시험>", valueName: "exam"), completion: Complete.ref("Exam")) var exam: String
+        @Argument(help: ArgumentHelp("항목 제목이나 UUID", valueName: "item"), completion: Complete.ref("ExamPlanItem")) var item: String = ""
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, examName) = try r.split(exam)
+            let action = FolioActions.ExamPlanRemove(
+                course: c.id,
+                exam: try r.id("Exam", examName, in: c),
+                item: try r.id("ExamPlanItem", item, in: c, parent: try r.id("Exam", examName, in: c))
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
     struct ExamSummary: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "summary", abstract: "시험 종합 정리 노트. 없으면 템플릿으로 만든다", discussion: """
             예시:
@@ -933,6 +1048,54 @@ enum GeneratedCommands {
         }
     }
 
+    struct MaterialStatusSet: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "status", abstract: "자료의 상태 바꾸기. 여러 개면 확인을 받는다", discussion: """
+            예시:
+              folio material status ignored EC4207/Seating.pdf
+              folio material status classified EC4207/Problems.pdf Guideline.pdf
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: "상태") var status: MaterialStatus
+        @Argument(help: ArgumentHelp("<과목>/<자료>. 둘째부터는 자료만 써도 된다", valueName: "material"), completion: Complete.ref("Material")) var materials: [String]
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, materialsFirst) = try r.split(materials.first ?? "")
+            let action = FolioActions.MaterialStatusSet(
+                course: c.id,
+                status: status,
+                materials: try ([materialsFirst] + materials.dropFirst()).map { try r.id("Material", $0, in: c) }
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct MaterialKindSet: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "kind", abstract: "자료의 종류(문제, 제출물, 해설 등) 바꾸기. 여러 개면 확인을 받는다", discussion: """
+            과제 폴더의 파일은 종류가 없으면 이름으로 짐작한다(HW3-이름.pdf는 제출물, 나머지는 문제).
+
+            예시:
+              folio material kind submission EC4207/26h3.pdf
+              folio material kind problem EC4207/26h3.pdf
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: "종류") var kind: MaterialKind
+        @Argument(help: ArgumentHelp("<과목>/<자료>. 둘째부터는 자료만 써도 된다", valueName: "material"), completion: Complete.ref("Material")) var materials: [String]
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, materialsFirst) = try r.split(materials.first ?? "")
+            let action = FolioActions.MaterialKindSet(
+                course: c.id,
+                kind: kind,
+                materials: try ([materialsFirst] + materials.dropFirst()).map { try r.id("Material", $0, in: c) }
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
     struct MaterialUntrack: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "untrack", abstract: "자료 추적 그만두기. 파일은 그대로 두고 회차, 문제 묶음, 과제의 연결은 푼다", discussion: """
             예시:
@@ -948,6 +1111,54 @@ enum GeneratedCommands {
             let action = FolioActions.MaterialUntrack(
                 course: c.id,
                 material: try r.id("Material", materialName, in: c)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct MaterialTrack: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "track", abstract: "과목 폴더의 새 파일을 등록하고 과제 폴더에 과제를 만든다", discussion: """
+            옮기거나 이름을 바꾸지 않는다. 과목을 빼면 모든 과목에 한다. 지난 학기의 새 과제는 제출함으로 둔다.
+
+            예시:
+              folio material track EC4207
+              folio material track --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("과목. 빼면 모든 과목", valueName: "course"), completion: Complete.ref("Course")) var course: String?
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let c = try course.map { try r.course($0) }
+            let action = FolioActions.MaterialTrack(
+                course: c?.id
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct MaterialMove: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "mv", abstract: "자료 파일을 옮기거나 이름 바꾸기. ID와 연결은 그대로", discussion: """
+            moves.jsonl에 남겨서 folio cleanup undo로 되돌릴 수 있다.
+
+            실행하기 전에 확인을 받는다.
+
+            예시:
+              folio material mv EC4207/Seating.pdf Exams/Midterm/자리.pdf --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<자료>", valueName: "material"), completion: Complete.ref("Material")) var material: String
+        @Argument(help: "새 경로. 과목 폴더 기준") var to: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, materialName) = try r.split(material)
+            let action = FolioActions.MaterialMove(
+                course: c.id,
+                material: try r.id("Material", materialName, in: c),
+                to: to
             )
             try perform(spec: action, g, ctx: ctx)
         }
@@ -1022,6 +1233,27 @@ enum GeneratedCommands {
         }
     }
 
+    struct CleanupUndo: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "undo", abstract: "cleanup apply, material mv, note retitle, note mv, recording retitle로 옮긴 묶음을 되돌리기", discussion: """
+            실행하기 전에 확인을 받는다.
+
+            예시:
+              folio cleanup undo 6A1F0C2E-3B4D-4E5F-8A9B-0C1D2E3F4A5B --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("묶음 ID", valueName: "batch"), completion: Complete.ref("MoveBatch")) var batch: String = ""
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let action = FolioActions.CleanupUndo(
+                batch: try r.id("MoveBatch", batch, in: nil),
+                course: nil
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
     struct RecordingTrim: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "trim", abstract: "지난 학기 녹음의 오디오를 휴지통으로 옮기고 받아쓰기는 남기기", discussion: """
             받아쓰기가 없는 녹음은 오디오를 남긴다. 휴지통에서 되살릴 수 있다.
@@ -1044,6 +1276,67 @@ enum GeneratedCommands {
         }
     }
 
+    struct RecordingRetitleLegacy: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "retitle", abstract: "예전 이름(3주차-1)의 녹음 파일을 날짜 이름(11-03(화))으로 바꾸기. 받아쓰기 파일도 함께 바뀐다", discussion: """
+            회차에 연결된 녹음 중 파일 이름이 아직 `3주차-1.m4a`, `3주차-1 2.m4a`인 것만 그 수업 날짜(`11-03(화).m4a`)로 바꾼다. 같은 날 녹음이 둘이면 뒤에 \" 2\"를 붙인다. 직접 지은 이름과 회차 없는 녹음은 그대로 둔다. 오디오와 받아쓰기(.transcript.json)는 moves.jsonl에 한 묶음으로 남고, folio cleanup undo로 함께 되돌린다. 실제 폴더에서는 folio backup create로 백업한 뒤 --dry-run으로 먼저 본다.
+
+            실행하기 전에 확인을 받는다.
+
+            예시:
+              folio recording retitle --dry-run
+              folio recording retitle EC4207
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("과목. 빼면 모든 과목", valueName: "course"), completion: Complete.ref("Course")) var course: String?
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let c = try course.map { try r.course($0) }
+            let action = FolioActions.RecordingRetitleLegacy(
+                course: c?.id
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct NoteAdd: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "add", abstract: "Notes 폴더에 마크다운이나 LaTeX 노트 만들기. 본문을 주지 않으면 종류의 템플릿", discussion: """
+            예시:
+              folio note add EC4207 \"매칭 정리\" --kind topic --unit 매칭
+              folio note add EC4207 \"매칭 정리\" --format tex
+              echo \"# 메모\" | folio note add EC4207 \"시험 메모\" --body -
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Option(name: .customLong("id"), help: .hidden) var id: UUID?
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
+        @Argument(help: "제목. 파일 이름이 된다") var title: String
+        @Option(help: "종류") var kind: NoteKind = .free
+        @Option(help: "파일 형식. markdown(.md) 또는 tex(.tex)") var format: NoteFormat = .markdown
+        @Option(help: ArgumentHelp("본문 파일. -이면 표준 입력", valueName: "file"), completion: .file()) var body: String?
+        @Option(help: ArgumentHelp("회차", valueName: "session"), completion: Complete.ref("Session")) var session: String?
+        @Option(help: ArgumentHelp("시험", valueName: "exam"), completion: Complete.ref("Exam")) var exam: String?
+        @Option(name: .customLong("unit"), help: ArgumentHelp("단원. 여러 번 줄 수 있다", valueName: "unit"), completion: Complete.ref("Unit")) var units: [String] = []
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let c = try r.course(course)
+            let action = FolioActions.NoteAdd(
+                id: id ?? UUID(),
+                course: c.id,
+                title: title,
+                kind: kind,
+                format: format,
+                body: try body.map(readText),
+                session: try session.map { try r.id("Session", $0, in: c) },
+                exam: try exam.map { try r.id("Exam", $0, in: c) },
+                units: try units.map { try r.id("Unit", $0, in: c) }
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
     struct NoteAdopt: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "adopt", abstract: "Folio 밖에서 만든 노트에 ID 붙이기", discussion: """
             예시:
@@ -1059,6 +1352,40 @@ enum GeneratedCommands {
             let action = FolioActions.NoteAdopt(
                 course: c.id,
                 note: try r.path("NotePath", noteName, in: c)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct NoteLink: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "link", abstract: "노트의 종류와 회차, 시험, 단원 연결, 수식 문법 정하기", discussion: """
+            러프 노트와 복습 노트는 --session, 시험 종합 정리는 --exam, 단원 노트(topic)는 --unit을 받는다. 종류를 바꾸면 예전 연결은 떨어진다.
+            복습 노트는 --session의 회차를 옮기지 않고 더한다. 여러 회차를 한 번에 더할 때는 note link-sessions, 회차 하나를 뗄 때는 note unlink-session을 쓴다.
+
+            예시:
+              folio note link EC4207/09-08 --kind review --session 09-08
+              folio note link \"EC4207/매칭 정리\" --kind topic --unit 매칭 --unit \"이분 그래프\"
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<노트>", valueName: "note"), completion: Complete.ref("Note")) var note: String = ""
+        @Option(help: "종류") var kind: NoteKind
+        @Option(help: ArgumentHelp("회차", valueName: "session"), completion: Complete.ref("Session")) var session: String?
+        @Option(help: ArgumentHelp("시험", valueName: "exam"), completion: Complete.ref("Exam")) var exam: String?
+        @Option(name: .customLong("unit"), help: ArgumentHelp("단원. 여러 번 줄 수 있다", valueName: "unit"), completion: Complete.ref("Unit")) var units: [String] = []
+        @Option(help: "수식 문법. 빼면 그대로") var math: MathSyntax?
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, noteName) = try r.split(note)
+            let action = FolioActions.NoteLink(
+                course: c.id,
+                note: try r.id("Note", noteName, in: c),
+                kind: kind,
+                session: try session.map { try r.id("Session", $0, in: c) },
+                exam: try exam.map { try r.id("Exam", $0, in: c) },
+                units: try units.map { try r.id("Unit", $0, in: c) },
+                math: math
             )
             try perform(spec: action, g, ctx: ctx)
         }
@@ -1132,6 +1459,79 @@ enum GeneratedCommands {
         }
     }
 
+    struct NoteMigrate: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "migrate", abstract: "노트 frontmatter의 프로퍼티를 course.json으로 옮기고 파일에서 지우기. 예전 노트를 한 번 정리한다", discussion: """
+            Folio가 쓴 키(id, kind, sessionId, unitIds, examId, tags, math)만 옮기고, 다른 키는 파일에 남긴다. course.json에 이미 항목이 있는 노트는 태그를 합치고 나머지는 항목에서 빈 값만 채우며, ID는 항목의 것을 둔다. 실제 폴더에서는 백업한 뒤 --dry-run으로 먼저 본다.
+
+            예시:
+              folio note migrate --dry-run
+              folio note migrate EC4207
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("과목. 빼면 모든 과목", valueName: "course"), completion: Complete.ref("Course")) var course: String?
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let c = try course.map { try r.course($0) }
+            let action = FolioActions.NoteMigrate(
+                course: c?.id
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct NoteRetitleSessions: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "retitle", abstract: "예전 이름(10주차-2)의 회차 노트를 날짜와 단원 이름으로 바꾸기. 노트의 첫 제목과 다른 노트의 링크도 따라 바뀐다", discussion: """
+            회차에 연결된 러프 노트와 복습 노트 중 이름이 아직 `10주차-2`, `10주차-2 정리`인 것만 바꾼다. 직접 지은 이름은 그대로 둔다. 이동은 moves.jsonl에 한 묶음으로 남고, folio cleanup undo로 이름과 제목, 링크를 함께 되돌린다. 실제 폴더에서는 folio backup create로 백업한 뒤 --dry-run으로 먼저 본다.
+
+            실행하기 전에 확인을 받는다.
+
+            예시:
+              folio note retitle --dry-run
+              folio note retitle EC4207
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("과목. 빼면 모든 과목", valueName: "course"), completion: Complete.ref("Course")) var course: String?
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let c = try course.map { try r.course($0) }
+            let action = FolioActions.NoteRetitleSessions(
+                course: c?.id
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct NoteMove: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "mv", abstract: "노트 이름 바꾸기나 Notes 안의 다른 폴더로 옮기기. 노트의 첫 제목과 다른 노트의 링크도 따라 바뀐다", discussion: """
+            새 이름은 Notes 폴더 기준이고 확장자는 노트 그대로다. 과목의 다른 노트가 같은 이름이면 뒤에 \" 2\"를 붙인다. course.json의 노트 경로, 노트의 첫 제목(아직 예전 이름일 때), 다른 노트의 [[제목]] 링크와 [[note:<ID>|제목]]의 이름(아직 예전 이름일 때)이 함께 바뀌고, 다른 폴더로 옮기면 노트 안의 상대 경로(그림)도 새 자리에 맞춘다. 이동은 moves.jsonl에 남고 folio cleanup undo로 함께 되돌린다. .tex 노트는 Folio가 빌드한 PDF(Study/<제목>.pdf)도 같은 묶음으로 새 이름을 따라가고, 새 이름의 PDF가 이미 있으면 덮어쓰지 않고 그대로 둔다. Folio가 만들지 않은 같은 이름의 PDF는 옮기지 않는다.
+
+            실행하기 전에 확인을 받는다.
+
+            예시:
+              folio note mv \"EC4207/시험 메모\" \"중간 대비\" --dry-run
+              folio note mv EC4207/09-08 정리/09-08
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<노트>", valueName: "note"), completion: Complete.ref("NotePath")) var note: String
+        @Argument(help: "새 이름. Notes 폴더 기준이고 하위 폴더를 앞에 쓴다. 예: 정리/증명") var to: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, noteName) = try r.split(note)
+            let action = FolioActions.NoteMove(
+                course: c.id,
+                note: try r.path("NotePath", noteName, in: c),
+                to: to
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
     struct NoteBuild: ParsableCommand {
         static let configuration = CommandConfiguration(commandName: "build", abstract: "LaTeX 노트(.tex)를 Tectonic으로 PDF로 만들어 Study에 둔다", discussion: """
             """)
@@ -1148,6 +1548,56 @@ enum GeneratedCommands {
                 note: try r.path("NotePath", noteName, in: c),
                 pdf: nil,
                 overwrite: overwrite
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct QuizCardSave: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "add", abstract: "JSON 파일의 카드를 넣거나 같은 ID의 카드를 바꾸기", discussion: """
+            파일은 course.json과 같은 필드 이름을 쓰는 QuizCard 배열이다. 단원을 옮긴 카드는 --moved-from에 예전 단원을 준다.
+
+            예시:
+              folio quiz add EC4207 --file cards.json
+              folio quiz add EC4207 --file - --moved-from 매칭 < card.json
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String = ""
+        @Option(name: .customLong("file"), help: ArgumentHelp("카드 JSON 파일. -이면 표준 입력", valueName: "file"), completion: .file(extensions: ["json"])) var cards: String
+        @Option(help: ArgumentHelp("카드가 떠난 단원", valueName: "moved-from"), completion: Complete.ref("Unit")) var movedFrom: String?
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let c = try r.course(course)
+            let action = FolioActions.QuizCardSave(
+                course: c.id,
+                cards: try readJSONFile([QuizCard].self, cards),
+                movedFrom: try movedFrom.map { try r.id("Unit", $0, in: c) }
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct QuizCardRemove: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "rm", abstract: "카드 지우기. 풀이 기록은 남는다", discussion: """
+            실행하기 전에 확인을 받는다.
+
+            예시:
+              folio quiz rm EC4207/매칭 3F2A9C1E-0000-4000-8000-000000000001
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<단원>", valueName: "unit"), completion: Complete.ref("Unit")) var unit: String
+        @Argument(help: ArgumentHelp("카드 ID 또는 문제 글", valueName: "card"), completion: Complete.ref("QuizCard")) var card: String = ""
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, unitName) = try r.split(unit)
+            let action = FolioActions.QuizCardRemove(
+                course: c.id,
+                unit: try r.id("Unit", unitName, in: c),
+                card: try r.id("QuizCard", card, in: c, parent: try r.id("Unit", unitName, in: c))
             )
             try perform(spec: action, g, ctx: ctx)
         }
@@ -1223,6 +1673,148 @@ enum GeneratedCommands {
                 result: result,
                 start: start.date,
                 end: end.date
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct ImportNotion: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "notion", abstract: "노션 학기, 강의, 성적을 transcript.json, catalog.json, course.json으로", discussion: """
+            export.json은 Notion MCP로 읽은 내용을 NotionExport 형식으로 담은 파일이다. transcript.json이나 catalog.json이
+            이미 있으면 실행하지 않고(종료 코드 4), course.json이 있는 과목 폴더는 건너뛴다. 학기별 GPA를 노션 값과 비교한다.
+
+            예시:
+              folio import notion ~/Downloads/export.json --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("NotionExport JSON", valueName: "export.json"), completion: .file(extensions: ["json"])) var export: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let action = FolioActions.ImportNotion(
+                export: try readJSONFile(NotionExport.self, export)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct ImportNotes: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "notes", abstract: "노션 강의 정리와 점수를 노트, 회차, 성적 항목으로", discussion: """
+            덤프 폴더는 과목마다 <노션 페이지 ID>/index.json, notes/, assets/를 가진다. 노트 ID가 노션 페이지 ID라서 다시
+            실행해도 중복되지 않고, 기존 항목에는 덧붙이기만 한다.
+
+            예시:
+              folio import notes ~/Downloads/notion-dump --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("덤프 폴더", valueName: "folder"), completion: .directory) var folder: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let action = FolioActions.ImportNotes(
+                folder: absolute(folder)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct ImportCalendar: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "calendar", abstract: "캘린더의 수업을 회차로", discussion: """
+            meetings.json은 CalendarMeeting 목록이다. 이미 있는 회차는 빈 시각만 채우고, 범위 안에서 수업이 없는 날의
+            회차는 휴강으로 표시하며, 수업 제목과 같은 이름의 복습 노트를 연결한다. lab 번호가 있는 수업은 그 실험의 단원(없으면
+            Lab<번호> <수업 제목>으로 만든다)에 연결한다.
+
+            예시:
+              folio import calendar ~/Downloads/meetings.json --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("CalendarMeeting 목록 JSON", valueName: "meetings.json"), completion: .file(extensions: ["json"])) var meetings: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let action = FolioActions.ImportCalendar(
+                meetings: try readJSONFile([CalendarMeeting].self, meetings)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct ImportExams: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "exams", abstract: "캘린더의 시험을 시험으로", discussion: """
+            exams.json은 구글 캘린더 \"시험\" 캘린더에서 읽은 CalendarExam 목록이다. 같은 날 시험은 빈 칸만 채우고, 다른 날이면
+            바꾸지 않고 알린다.
+
+            예시:
+              folio import exams ~/Downloads/exams.json --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("CalendarExam 목록 JSON", valueName: "exams.json"), completion: .file(extensions: ["json"])) var exams: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let action = FolioActions.ImportExams(
+                exams: try readJSONFile([CalendarExam].self, exams)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct ImportUnits: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "units", abstract: "단원 표를 단원으로", discussion: """
+            파일마다 {\"course\": <과목 폴더 이름>, \"units\": [{\"title\", \"sessions\": [\"11-03\"], \"children\"}]}. 제목으로 맞춰
+            없는 단원만 더하고, 회차 연결은 더하기만 한다.
+
+            예시:
+              folio import units ~/Downloads/EC4207-units.json --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("단원 JSON. 여러 번 줄 수 있다", valueName: "units.json"), completion: .file(extensions: ["json"])) var files: [String]
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let action = FolioActions.ImportUnits(
+                files: try files.map { try readJSONFile(UnitFile.self, $0) }
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct ImportRequirements: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "requirements", abstract: "졸업 요건 분류와 학생 정보", discussion: """
+            강의 코드 표에 없는 코드가 있으면 실행하지 않는다(종료 코드 4).
+
+            예시:
+              folio import requirements ~/Downloads/requirements.json --dry-run
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("RequirementFile JSON", valueName: "requirements.json"), completion: .file(extensions: ["json"])) var file: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let action = FolioActions.ImportRequirements(
+                file: try readJSONFile(RequirementFile.self, file)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct ImportHandbook: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "handbook", abstract: "학사편람 분류 표", discussion: """
+            같은 해 표는 바꾼다. 과목의 분류 제안을 보여 주며, 앱의 졸업 요건 화면에서 승인하거나 --accept로 바로 적용한다.
+
+            예시:
+              folio import handbook ~/Downloads/handbook-2023.json --dry-run
+              folio import handbook ~/Downloads/handbook-2023.json --accept
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("Handbook JSON", valueName: "handbook.json"), completion: .file(extensions: ["json"])) var handbook: String
+        @Flag(help: "분류 제안을 과목에 바로 적용") var accept = false
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let action = FolioActions.ImportHandbook(
+                handbook: try readJSONFile(Handbook.self, handbook),
+                accept: accept
             )
             try perform(spec: action, g, ctx: ctx)
         }

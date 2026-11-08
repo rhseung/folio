@@ -31,11 +31,20 @@ public struct FieldSpec: Codable, Sendable, Equatable {
     public var patch: Bool
     /// The default as Swift source, e.g. `.other`.
     public var defaultValue: String?
+    /// `@CLIName`: the option's name on the CLI, when it isn't the field's.
+    public var cliName: String?
+    /// `@FromFile`: the CLI takes a path, shown as this value name, and reads the value from that file.
+    public var file: String?
+    /// `@FromFile(perItem: true)`: a list read one file per item.
+    public var filePerItem: Bool
+    /// `@Folder`: a folder path, made absolute on the CLI.
+    public var folder: Bool
 
     public init(name: String, help: String = "", role: Role = .option, type: String, ref: String? = nil, optional: Bool = false, many: Bool = false,
-                patch: Bool = false, defaultValue: String? = nil) {
+                patch: Bool = false, defaultValue: String? = nil, cliName: String? = nil, file: String? = nil, filePerItem: Bool = false, folder: Bool = false) {
         (self.name, self.help, self.role, self.type, self.ref) = (name, help, role, type, ref)
         (self.optional, self.many, self.patch, self.defaultValue) = (optional, many, patch, defaultValue)
+        (self.cliName, self.file, self.filePerItem, self.folder) = (cliName, file, filePerItem, folder)
     }
 }
 
@@ -55,12 +64,18 @@ public struct ActionSpec: Codable, Sendable, Equatable {
     public var phrases: [String]
     /// False when the CLI command is written by hand.
     public var generated: Bool
+    /// Why the command is written by hand (`cli: .manual(reason:)`).
+    public var manualReason: String?
+    /// The id it reports as `made` is a batch in moves.jsonl, which `cleanup undo` reverts.
+    public var undoable: Bool
     public var fields: [FieldSpec]
 
     public init(command: String, summary: String, discussion: String = "", effect: Effect = .changes, confirm: String? = nil, done: String,
-                examples: [String] = [], phrases: [String] = [], generated: Bool = true, fields: [FieldSpec] = []) {
+                examples: [String] = [], phrases: [String] = [], generated: Bool = true, manualReason: String? = nil, undoable: Bool = false,
+                fields: [FieldSpec] = []) {
         (self.command, self.summary, self.discussion, self.effect, self.confirm) = (command, summary, discussion, effect, confirm)
         (self.done, self.examples, self.phrases, self.generated, self.fields) = (done, examples, phrases, generated, fields)
+        (self.manualReason, self.undoable) = (manualReason, undoable)
     }
 
     /// Removing and moving always ask; anything else with a confirmation asks only for more than one item at once.

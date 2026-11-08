@@ -15,7 +15,7 @@ private func kindLabel(_ s: Session) -> String? {
 struct SessionCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "session", abstract: String(localized: .sessionAbstract),
-        subcommands: [List.self, Show.self] + GeneratedCommands.session + [Progress.self, WrapUp.self, Remove.self])
+        subcommands: [List.self, Show.self] + GeneratedCommands.session + [Progress.self, WrapUp.self])
 
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .sessionListAbstract), discussion: String(localized: .sessionListDiscussion))
@@ -139,20 +139,6 @@ struct SessionCommand: ParsableCommand {
         }
     }
 
-    struct Remove: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "rm", abstract: String(localized: .sessionRmAbstract), discussion: String(localized: .sessionRmDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .sessionRmHelpSessions), valueName: "session"), completion: Complete.sessions) var sessions: [String]
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            let r = Resolver(ctx)
-            guard let first = sessions.first else { throw CLIError(exit: .usage, message: String(localized: .sessionRmMissing)) }
-            let (c, name) = try r.split(first)
-            let ids = try ([name] + sessions.dropFirst().map { $0.contains("/") ? try r.split($0).1 : $0 }).map { try r.session($0, in: c).id }
-            try perform(spec: SessionRemove(course: c.id, sessions: ids), g, ctx: ctx)
-        }
-    }
 }
 
 struct AttendanceCommand: ParsableCommand {
@@ -161,18 +147,6 @@ struct AttendanceCommand: ParsableCommand {
 
 struct RecordingCommand: ParsableCommand {
     static let configuration = CommandConfiguration(commandName: "recording", abstract: String(localized: .recordingAbstract),
-                                                    subcommands: GeneratedCommands.recording + [Retitle.self])
+                                                    subcommands: GeneratedCommands.recording)
 
-    struct Retitle: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .recordingRetitleAbstract), discussion: String(localized: .recordingRetitleDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .recordingRetitleHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String?
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            let id = try course.map { try Resolver(ctx).course($0).id }
-            let result = try perform(spec: RecordingRetitleLegacy(course: id), g, ctx: ctx)
-            if !g.json, let batch = result.made { say(String(localized: .noteRetitleUndo(batch.uuidString)).styled(.dim)) }
-        }
-    }
 }

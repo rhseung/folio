@@ -121,7 +121,7 @@ struct MaterialNoteStudyTests {
         _ = h.cli(Self.track, gist: gist)
         #expect(h.cli(["material", "status", "ignored", "EC4207/Seating.pdf", "Guideline.pdf"], gist: gist).code == Exit.needsConfirmation.rawValue)
         try h.expectSame(["material", "status", "ignored", "EC4207/Seating.pdf", "Guideline.pdf", "--yes"], setup: [Self.track]) { gist in
-            MaterialStatusSet(course: course, materials: [try material(gist, "Seating.pdf"), try material(gist, "Guideline.pdf")], status: .ignored)
+            MaterialStatusSet(course: course, status: .ignored, materials: [try material(gist, "Seating.pdf"), try material(gist, "Guideline.pdf")])
         }
     }
 
@@ -130,7 +130,7 @@ struct MaterialNoteStudyTests {
         _ = h.cli(Self.track, gist: gist)
         #expect(h.cli(["material", "kind", "submission", "EC4207/Seating.pdf", "Guideline.pdf"], gist: gist).code == Exit.needsConfirmation.rawValue)
         try h.expectSame(["material", "kind", "submission", "EC4207/Seating.pdf", "Guideline.pdf", "--yes"], setup: [Self.track]) { gist in
-            MaterialKindSet(course: course, materials: [try material(gist, "Seating.pdf"), try material(gist, "Guideline.pdf")], kind: .submission)
+            MaterialKindSet(course: course, kind: .submission, materials: [try material(gist, "Seating.pdf"), try material(gist, "Guideline.pdf")])
         }
     }
 

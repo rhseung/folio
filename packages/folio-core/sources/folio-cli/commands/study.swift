@@ -17,7 +17,7 @@ extension Resolver {
 struct QuizCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "quiz", abstract: String(localized: .quizAbstract),
-        subcommands: [List.self, Add.self, Remove.self, Record.self])
+        subcommands: [List.self] + GeneratedCommands.quiz + [Record.self])
 
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .quizListAbstract), discussion: String(localized: .quizListDiscussion))
@@ -42,42 +42,6 @@ struct QuizCommand: ParsableCommand {
             for (u, cards) in decks { for card in cards { t.rows.append([u.title, card.type.rawValue, card.category.rawValue, card.prompt]) } }
             t.print()
             footer(decks.map(\.1.count).reduce(0, +))
-        }
-    }
-
-    struct Add: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .quizAddAbstract), discussion: String(localized: .quizAddDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
-        @Option(help: ArgumentHelp(String(localized: .quizAddHelpFile), valueName: "file"), completion: .file()) var file: String
-        @Option(help: ArgumentHelp(String(localized: .quizAddHelpMovedFrom), valueName: "unit"), completion: Complete.units) var movedFrom: String?
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            let r = Resolver(ctx)
-            let c = try r.course(course)
-            let cards: [QuizCard]
-            do {
-                cards = try JSONDecoder.folio.decode([QuizCard].self, from: Data(try readText(file).utf8))
-            } catch let e as DecodingError {
-                throw CLIError(exit: .usage, message: String(localized: .quizAddBadCards(RunCommand.describe(e))))
-            }
-            try perform(spec: QuizCardSave(course: c.id, cards: cards, movedFrom: try movedFrom.map { try r.unit(c.local($0), in: c).id }), g, ctx: ctx)
-        }
-    }
-
-    struct Remove: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "rm", abstract: String(localized: .quizRmAbstract), discussion: String(localized: .quizRmDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpUnit), valueName: "unit"), completion: Complete.units) var unit: String
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpCard), valueName: "card")) var card: String
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            let r = Resolver(ctx)
-            let (c, name) = try r.split(unit)
-            let u = try r.unit(name, in: c)
-            try perform(spec: QuizCardRemove(course: c.id, unit: u.id, card: try r.card(card, unit: u, in: c).id), g, ctx: ctx)
         }
     }
 

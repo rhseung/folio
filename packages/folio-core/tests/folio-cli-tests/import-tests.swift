@@ -37,7 +37,7 @@ struct ImportCommandTests {
         for gist in [a, b] { try FileManager.default.removeItem(at: GISTStore(url: gist).transcriptURL) }
         let r = h.cli(["import", "notion", path], gist: a)
         #expect(r.code == 0, "\(r.err)")
-        try h.direct(ImportNotion(export: try ImportCommand.read(NotionExport.self, path)), gist: b)
+        try h.direct(ImportNotion(export: try readJSONFile(NotionExport.self, path)), gist: b)
         try expectSameFiles(a, b)
     }
 
@@ -76,7 +76,7 @@ struct ImportCommandTests {
               "room": "A229", "topic": "트리"}]
             """)
         try h.expectSame(["import", "calendar", path]) { _ in
-            ImportCalendar(meetings: try ImportCommand.read([CalendarMeeting].self, path, iso8601: true))
+            ImportCalendar(meetings: try readJSONFile([CalendarMeeting].self, path))
         }
         let r = h.cli(["import", "calendar", path, "--dry-run"], gist: try Harness.fixtureCopy())
         #expect(r.out.contains("회차 +1"), "\(r.out)")
@@ -90,13 +90,13 @@ struct ImportCommandTests {
               "location": "", "memo": ""}]
             """)
         try h.expectSame(["import", "exams", path]) { _ in
-            ImportExams(exams: try ImportCommand.read([CalendarExam].self, path, iso8601: true))
+            ImportExams(exams: try readJSONFile([CalendarExam].self, path))
         }
     }
 
     @Test func units() throws {
         let path = try payload("units.json", #"{"course": "EC4207 그래프 이론", "units": [{"title": "트리", "children": [{"title": "신장 트리"}]}]}"#)
-        try h.expectSame(["import", "units", path]) { _ in ImportUnits(files: [try ImportCommand.read(UnitFile.self, path)]) }
+        try h.expectSame(["import", "units", path]) { _ in ImportUnits(files: [try readJSONFile(UnitFile.self, path)]) }
     }
 
     static let requirements = #"{"admissionYear": 2023, "categories": [{"name": "전공선택", "group": "전공", "isMajor": true}]}"#
@@ -104,7 +104,7 @@ struct ImportCommandTests {
     @Test func requirements() throws {
         let path = try payload("requirements.json", Self.requirements)
         try h.expectSame(["import", "requirements", path]) { _ in
-            ImportRequirements(file: try ImportCommand.read(RequirementFile.self, path))
+            ImportRequirements(file: try readJSONFile(RequirementFile.self, path))
         }
     }
 
@@ -112,7 +112,7 @@ struct ImportCommandTests {
         let req = try payload("requirements.json", Self.requirements)
         let path = try payload("handbook.json", #"{"year": 2023, "source": "2023 학사편람", "areas": {"EC4207": "전공선택"}}"#)
         try h.expectSame(["import", "handbook", path, "--accept"], setup: [["import", "requirements", req]]) { _ in
-            ImportHandbook(handbook: try ImportCommand.read(Handbook.self, path), accept: true)
+            ImportHandbook(handbook: try readJSONFile(Handbook.self, path), accept: true)
         }
         let unknown = try payload("unknown.json", #"{"year": 2023, "source": "", "areas": {"EC4207": "없는 분류"}}"#)
         #expect(h.cli(["import", "handbook", unknown], gist: try Harness.fixtureCopy()).code == Exit.rule.rawValue)

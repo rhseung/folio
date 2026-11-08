@@ -7,7 +7,7 @@ import Foundation
 struct CleanupCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "cleanup", abstract: String(localized: .cleanupAbstract),
-        subcommands: [Plan.self, Apply.self, Undo.self])
+        subcommands: [Plan.self, Apply.self] + GeneratedCommands.cleanup)
 
     static let reasonText: [ReviewReason: String] = [
         .guessedWeek: String(localized: .cleanupReasonGuessedWeek),
@@ -88,18 +88,8 @@ struct CleanupCommand: ParsableCommand {
             }
             var options = g
             options.yes = true
-            let result = try perform(spec: CleanupApply(moves: moves, removals: file.removals), options, ctx: ctx)
-            if !g.json, let batch = result.made { say(String(localized: .cleanupApplyUndoHint(batch.uuidString)).styled(.dim)) }
+            try perform(spec: CleanupApply(moves: moves, removals: file.removals), options, ctx: ctx)
         }
     }
 
-    struct Undo: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .cleanupUndoAbstract), discussion: String(localized: .cleanupUndoDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .cleanupUndoHelpBatch), valueName: "batch"), completion: Complete.problemSets) var batch: UUID
-
-        func run() throws {
-            try perform(spec: CleanupUndo(batch: batch), g, ctx: try CLI.context(g))
-        }
-    }
 }
