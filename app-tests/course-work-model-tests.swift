@@ -232,6 +232,28 @@ struct MaterialsModelTests {
         #expect(model.selection == [1, 2])
     }
 
+    /// A touch screen's way to several rows: a long press starts with that row, a tap adds or takes one away, and taking
+    /// the last one away ends the pick, so a tap picks one row again.
+    @Test func aHoldStartsATouchPick() throws {
+        let (workspace, course) = try fixtureCourse()
+        let model = ImportPlaceModel(workspace: workspace, course: course, files: (1...4).map { URL(filePath: "/tmp/\($0).pdf") },
+                                     places: MaterialIntake.places(assignmentFolders: ["HW01"]))
+        model.click(0)
+        model.hold(2)
+        #expect(model.picking)
+        #expect(model.selection == [2])
+        model.press(0, .toggle)
+        model.press(3, .toggle)
+        model.press(2, .toggle)
+        #expect(model.selection == [0, 3])
+        #expect(model.hint == String(localized: .materialsImportPicking))
+        model.press(0, .toggle)
+        model.press(3, .toggle)
+        #expect(!model.picking)
+        model.press(1, .only)
+        #expect(model.selection == [1])
+    }
+
     /// The day and units say which class it was; newest first.
     @Test func importSessionsReadByDayNewestFirst() throws {
         let workspace = try fixtureWorkspace()

@@ -249,7 +249,8 @@ struct StripPage: View {
     /// A range is up: on a touch screen the next tap moves its end.
     let ranging: Bool
     let press: (_ page: Int, _ extend: Bool) -> Void
-    let start: (_ page: Int) -> Void
+    /// Nil where the long press opens the page's menu instead, which then holds the way in.
+    let start: ((_ page: Int) -> Void)?
 
     var body: some View {
         PageThumbnail(thumbnails: controller.thumbnails, page: page, current: controller.page + 1 == page, picked: picked)
@@ -261,7 +262,7 @@ struct StripPage: View {
                 .exclusively(before: TapGesture().onEnded { pick(extend: false) }))
             #else
             .onTapGesture { pick(extend: ranging) }
-            .onLongPressGesture { start(page) }
+            .modifier(LongPressStart(start: start.map { start in { start(page) } }))
             #endif
             .pointingHand()
     }
@@ -271,3 +272,14 @@ struct StripPage: View {
         controller.go(to: page - 1)
     }
 }
+
+#if os(iOS)
+/// None at all where there's a menu: an empty long press would still race the menu's own.
+private struct LongPressStart: ViewModifier {
+    let start: (() -> Void)?
+
+    func body(content: Content) -> some View {
+        if let start { content.onLongPressGesture(perform: start) } else { content }
+    }
+}
+#endif

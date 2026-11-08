@@ -182,6 +182,8 @@ enum Theme {
         static let paneStrip: CGFloat = 40
         #endif
         static let dot: CGFloat = 8
+        /// The least a finger is given to press, however thin the thing drawn (a boundary, a gap, a grip).
+        static let touchTarget: CGFloat = 44
         static let rowHeight: CGFloat = 44
         static let tile: CGFloat = 22
         static let toolbarButton: CGFloat = 32

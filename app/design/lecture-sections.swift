@@ -134,7 +134,12 @@ struct SectionBar: View {
     /// Room above the tiles for the page bubble a dragged boundary carries.
     static let bubbleRow: CGFloat = 20
     private static let gap: CGFloat = 4
+    /// How far from a boundary a press takes it: a finger needs 44pt across, a pointer much less.
+    #if os(macOS)
     private static let reach: CGFloat = 6
+    #else
+    private static let reach: CGFloat = Theme.Size.touchTarget / 2
+    #endif
 
     var body: some View {
         GeometryReader { proxy in bar(width: proxy.size.width) }
@@ -194,25 +199,25 @@ struct SectionBar: View {
                     .help(tip(i))
                     .position(x: r.midX, y: r.midY)
             }
-            if let b = dragging ?? hoverBoundary, split.sections.indices.contains(b + 1) {
-                let bx = x(split.sections[b].lastPage, w)
+            ForEach(grips, id: \.self) { b in
                 Capsule()
                     .fill(dragging == b ? accent.color : Color.white)
                     .shadow(color: .black.opacity(0.28), radius: 1.5, y: 1)
                     .frame(width: 4, height: 16)
-                    .position(x: bx, y: Self.bubbleRow + Self.tile / 2)
+                    .position(x: x(split.sections[b].lastPage, w), y: Self.bubbleRow + Self.tile / 2)
                     .allowsHitTesting(false)
-                if dragging == b {
-                    Text(.designSectionsBoundary(split.sections[b].lastPage, split.sections[b + 1].firstPage))
-                        .font(Theme.Typeface.label).monospacedDigit()
-                        .padding(.horizontal, Theme.Space.s)
-                        .frame(height: Self.bubbleRow - 2)
-                        .background(Theme.Palette.card, in: .capsule)
-                        .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
-                        .fixedSize()
-                        .position(x: min(max(bx, 32), w - 32), y: Self.bubbleRow / 2)
-                        .allowsHitTesting(false)
-                }
+            }
+            if let b = dragging, split.sections.indices.contains(b + 1) {
+                let bx = x(split.sections[b].lastPage, w)
+                Text(.designSectionsBoundary(split.sections[b].lastPage, split.sections[b + 1].firstPage))
+                    .font(Theme.Typeface.label).monospacedDigit()
+                    .padding(.horizontal, Theme.Space.s)
+                    .frame(height: Self.bubbleRow - 2)
+                    .background(Theme.Palette.card, in: .capsule)
+                    .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
+                    .fixedSize()
+                    .position(x: min(max(bx, 32), w - 32), y: Self.bubbleRow / 2)
+                    .allowsHitTesting(false)
             }
         }
         .frame(width: w, height: Self.bubbleRow + Self.tile)
@@ -296,6 +301,16 @@ struct SectionBar: View {
         }
     }
 
+    /// The boundaries showing a grip: the one under the pointer or being dragged, and on a touch screen, with no
+    /// pointer to show one, both ends of the picked zone.
+    private var grips: [Int] {
+        var out = Set([dragging ?? hoverBoundary].compactMap(\.self))
+        #if os(iOS)
+        if let selected { out.formUnion([selected - 1, selected]) }
+        #endif
+        return out.filter { split.sections.indices.contains($0) && split.sections.indices.contains($0 + 1) }.sorted()
+    }
+
     private func pagesText(_ s: LectureSplit.Section) -> String {
         s.firstPage == s.lastPage ? "\(s.firstPage)" : "\(s.firstPage)–\(s.lastPage)"
     }
@@ -327,7 +342,9 @@ struct SectionBar: View {
                     dragging = nil
                     moved = false
                 }
-                guard dragging == nil, !moved else { return }
+                // A press that didn't move picks the zone, even beside a boundary: on a touch screen the reach of
+                // a narrow zone's two boundaries can cover all of it.
+                guard !moved else { return }
                 let i = split.section(at: page(at: g.location.x, w))
                 selected = i
                 pick(split.sections[i].firstPage)
@@ -347,11 +364,33 @@ private struct SectionRow: View {
     let label: String
 
     @Environment(\.accent) private var accent
+    @State private var cutting = false
+    @State private var cutPage = ""
 
     private var index: Int? { split.sections.firstIndex { $0.id == id } }
 
     var body: some View {
-        if let index { row(split.sections[index], at: index) }
+        if let index {
+            row(split.sections[index], at: index)
+                .alert(String(localized: .designSectionsCutTitle), isPresented: $cutting) {
+                    TextField(String(localized: .designSectionsCutPage), text: $cutPage)
+                        #if os(iOS)
+                        .keyboardType(.numberPad)
+                        #endif
+                    Button(String(localized: .designSectionsCutAction)) { cut() }
+                    Button(String(localized: .commonCancel), role: .cancel) {}
+                } message: {
+                    let s = split.sections[index]
+                    Text(.designSectionsCutRange(s.firstPage + 1, s.lastPage))
+                }
+        }
+    }
+
+    /// The bar's double click, for a screen where a double tap on a thin zone is no way to aim: the page is typed.
+    private func cut() {
+        guard let index, let page = Int(cutPage.trimmingCharacters(in: .whitespaces)),
+              split.sections[index].pages.contains(page) else { return }
+        split.split(at: page)
     }
 
     private func row(_ section: LectureSplit.Section, at index: Int) -> some View {
@@ -387,6 +426,11 @@ private struct SectionRow: View {
 
     private func unitMenu(_ section: LectureSplit.Section, at index: Int) -> some View {
         Menu {
+            // The ✦'s reason, which a touch screen shows no tooltip for.
+            if section.match != nil {
+                Text(matchHelp(section))
+                Divider()
+            }
             Section(String(localized: .designSectionsCourseUnits)) {
                 ForEach(UnitTree.outline(units), id: \.unit.id) { item in
                     Button {
@@ -402,6 +446,11 @@ private struct SectionRow: View {
             }
             Button(String(localized: .designSectionsNoUnit)) { edit { split.setUnit(nil, of: $0) } }
             Divider()
+            Button(String(localized: .designSectionsCut)) {
+                cutPage = ""
+                cutting = true
+            }
+            .disabled(section.firstPage == section.lastPage)
             Button(String(localized: .designSectionsMergeBefore)) { edit { split.merge(after: $0 - 1) } }.disabled(index == 0)
             Button(String(localized: .designSectionsMergeAfter)) { edit { split.merge(after: $0) } }.disabled(index == split.sections.count - 1)
         } label: {

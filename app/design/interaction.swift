@@ -125,3 +125,97 @@ private struct FileDrop: ViewModifier {
             } isTargeted: { targeted = $0 }
     }
 }
+
+/// What a press on a row of a list that picks several rows means: the row alone, the rows from the last pick to it,
+/// or that row added or taken away.
+enum PickPress { case only, range, toggle }
+
+extension View {
+    /// A press on a row of a list that picks several. On a Mac ⇧ widens and ⌘ adds or takes away. A touch screen has
+    /// no keys to hold: a long press starts picking (`hold`), and while `picking` a tap means `touch`. A hardware
+    /// keyboard's ⇧ and ⌘ still work on an iPad. The transcript's lines and the add sheet's rows both pick this way.
+    func picks(picking: Bool, touch: PickPress, hold: @escaping () -> Void, _ press: @escaping (PickPress) -> Void) -> some View {
+        modifier(Picks(picking: picking, touch: touch, hold: hold, press: press))
+    }
+}
+
+private struct Picks: ViewModifier {
+    let picking: Bool
+    let touch: PickPress
+    let hold: () -> Void
+    let press: (PickPress) -> Void
+
+    #if os(macOS)
+    func body(content: Content) -> some View {
+        // The click's own flags: the keyboard's live state (`NSEvent.modifierFlags`) misses a key the click carries
+        // but no key holds, as from Accessibility or a scripted click.
+        content.contentShape(.rect).onTapGesture {
+            let flags = NSApp.currentEvent?.modifierFlags ?? NSEvent.modifierFlags
+            press(flags.contains(.shift) ? .range : flags.contains(.command) ? .toggle : .only)
+        }
+    }
+    #else
+    @State private var keys = HeldKeys()
+    @State private var holds = 0
+
+    func body(content: Content) -> some View {
+        content.contentShape(.rect)
+            // SwiftUI's tap: UIKit's, which carries the keys, would also fire beside the buttons and menus in the row.
+            .onTapGesture {
+                let flags = keys.flags
+                press(flags.contains(.shift) ? .range : flags.contains(.command) ? .toggle : picking ? touch : .only)
+            }
+            .onLongPressGesture {
+                holds += 1
+                hold()
+            }
+            .gesture(KeyProbe(keys: keys))
+            .sensoryFeedback(.selection, trigger: holds)
+    }
+    #endif
+}
+
+#if os(iOS)
+/// The hardware keyboard's keys held as the last touch began. SwiftUI's tap carries no modifier keys and its
+/// `onModifierKeysChanged` is Mac-only, so a recognizer reads them off the touch's event.
+@MainActor private final class HeldKeys {
+    var flags: UIKeyModifierFlags = []
+}
+
+private struct KeyProbe: UIGestureRecognizerRepresentable {
+    let keys: HeldKeys
+
+    func makeUIGestureRecognizer(context: Context) -> Probe { Probe(keys: keys) }
+
+    /// Reads the keys and fails at once, so it never holds back or cancels the touch for anything else.
+    final class Probe: UIGestureRecognizer {
+        let keys: HeldKeys
+
+        init(keys: HeldKeys) {
+            self.keys = keys
+            super.init(target: nil, action: nil)
+            cancelsTouchesInView = false
+            delaysTouchesEnded = false
+        }
+
+        override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+            keys.flags = event.modifierFlags
+            state = .failed
+        }
+    }
+}
+#endif
+
+/// While a touch pick is under way: what a tap does now, and the way out of it.
+struct PickingLine: View {
+    let text: String
+    let done: () -> Void
+
+    var body: some View {
+        HStack(spacing: Theme.Space.s) {
+            Text(text).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+            Spacer(minLength: Theme.Space.s)
+            Button(.commonDone, action: done).buttonStyle(.ghost)
+        }
+    }
+}

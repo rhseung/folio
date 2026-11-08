@@ -26,7 +26,14 @@ struct ImportPlaceSheet: View {
             VStack(spacing: 0) {
                 ForEach(model.rows) { row in
                     ImportRow(model: model, row: row, placement: placements[row.id], kinds: kinds, selected: model.selection.contains(row.id))
-                        .opens { click(row.id) }
+                        .picks(picking: model.picking, touch: .toggle) {
+                            listFocused = true
+                            model.hold(row.id)
+                        } _: { press in
+                            listFocused = true
+                            model.press(row.id, press)
+                        }
+                        .pointingHand()
                     if model.sections(of: row) != nil { ImportSections(model: model, row: row) }
                     if row.id < model.rows.count - 1 { Theme.Palette.lineSoft.frame(height: 1).padding(.leading, Theme.Space.l) }
                 }
@@ -53,17 +60,6 @@ struct ImportPlaceSheet: View {
 
     /// Room for a long file name beside both menus: the sheet is a list to read, not a form to fill.
     static let width: CGFloat = 640
-
-    private func click(_ id: Int) {
-        listFocused = true
-        #if os(macOS)
-        let flags = NSEvent.modifierFlags
-        model.click(id, extend: flags.contains(.shift), toggle: flags.contains(.command))
-        #else
-        // A tap carries no modifier keys; ⇧↑↓ from a hardware keyboard still widen the selection.
-        model.click(id)
-        #endif
-    }
 }
 
 private struct ImportRow: View {
@@ -79,13 +75,19 @@ private struct ImportRow: View {
             VStack(alignment: .leading, spacing: Theme.Space.xs) {
                 Text(row.url.lastPathComponent).lineLimit(1).truncationMode(.middle)
                 // The folder and the week Folio adds always show; only the file's own name gives way, in its middle,
-                // so the ` 2` and the extension stay too.
-                HStack(spacing: 0) {
-                    Text(destinationHead).fixedSize()
-                    Text(destinationName).truncationMode(.middle)
+                // so the ` 2` and the extension stay too. Pressed, it shows the path whole and why the name changed:
+                // a tooltip alone never shows on a touch screen.
+                Button { showingPath = true } label: {
+                    HStack(spacing: 0) {
+                        Text(destinationHead).fixedSize()
+                        Text(destinationName).truncationMode(.middle)
+                    }
+                    .font(Theme.Typeface.mono).lineLimit(1)
+                    .contentShape(.rect)
                 }
-                .font(Theme.Typeface.mono).lineLimit(1)
+                .buttonStyle(.pointing(.plain))
                 .help([placement.path, model.nameNote(placement)].compactMap(\.self).joined(separator: "\n"))
+                .popover(isPresented: $showingPath, arrowEdge: .bottom) { pathDetail }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             HStack(spacing: Theme.Space.xs) {
@@ -103,6 +105,20 @@ private struct ImportRow: View {
     static let height: CGFloat = 64
 
     @Environment(\.accent) private var accent
+    @State private var showingPath = false
+
+    private var pathDetail: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.xs) {
+            Text(placement.path).font(Theme.Typeface.mono).textSelection(.enabled).fixedSize(horizontal: false, vertical: true)
+            if let note = model.nameNote(placement) {
+                Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+            }
+        }
+        .padding(Theme.Space.l)
+        .frame(maxWidth: Self.pathWidth, alignment: .leading)
+    }
+
+    private static let pathWidth: CGFloat = 400
 
     /// The folder in the quiet mono of a path, and only what Folio adds to the name in color: the week in front, the
     /// number past a name the folder holds.
@@ -136,6 +152,7 @@ private struct ImportRow: View {
 
     private var kindMenu: some View {
         Menu {
+            why(model.kindWhy(row))
             ForEach(Array(kinds.enumerated()), id: \.element.id) { i, kind in
                 if kind.perItem {
                     Section(kind.label) {
@@ -158,6 +175,7 @@ private struct ImportRow: View {
 
     private var sessionMenu: some View {
         Menu {
+            why(model.sessionWhy(row))
             choice(String(localized: .materialsImportNoSession), on: row.session == nil) { model.setSession(nil, for: model.targets(row)) }
             Divider()
             ForEach(model.sessions) { s in
@@ -168,6 +186,14 @@ private struct ImportRow: View {
         }
         .menuStyle(.button).buttonStyle(.plain).menuIndicator(.hidden).pointingHand()
         .help(model.sessionWhy(row) ?? String(localized: .materialsImportSession))
+    }
+
+    /// The ✦'s reason at the top of its menu, where a touch screen, which shows no tooltip, can read it.
+    @ViewBuilder private func why(_ text: String?) -> some View {
+        if let text {
+            Text(text)
+            Divider()
+        }
     }
 
     private func choice(_ label: String, detail: String? = nil, on: Bool, _ action: @escaping () -> Void) -> some View {
