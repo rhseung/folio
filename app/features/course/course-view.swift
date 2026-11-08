@@ -279,7 +279,7 @@ struct CourseOverview: View {
         // Two columns that each run as long as their own blocks; a grid row made the short week card as tall as the units.
         let layout = wide ? AnyLayout(HStackLayout(alignment: .top, spacing: Theme.Space.xl)) : AnyLayout(VStackLayout(alignment: .leading, spacing: Theme.Space.xl))
 
-        Page(lazy: true) {
+        Page {
             PageHeader(title: course.title, subtitle: model.subtitle(file)) {
                 let code = course.codeLine(model.workspace)
                 if !code.isEmpty { Chip(code, tone: .accent) }
