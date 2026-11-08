@@ -119,8 +119,7 @@ struct CourseView: View {
                 model.resetPage()
                 pageReset += 1
             }
-            .environment(\.accent, model.accent)
-            .tint(model.accent.ink)
+            .courseAccent(model.accent)
             .navigationTitle(course.title)
             .navigationSubtitle(model.section.title)
             .studyTime(course: model.courseId)

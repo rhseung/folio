@@ -61,7 +61,7 @@ struct TodayView: View {
                             VStack(alignment: .leading, spacing: Theme.Space.xs) {
                                 HStack(spacing: Theme.Space.s) {
                                     Text(model.wrapUpName(item)).font(Theme.Typeface.bodyStrong).lineLimit(1)
-                                    SessionKindChip(kind: item.session.kind).environment(\.accent, model.workspace.accent(item.courseId))
+                                    SessionKindChip(kind: item.session.kind).courseAccent(model.workspace.accent(item.courseId))
                                 }
                                 // Five chips don't fit a phone's row; the same words as one line do.
                                 ViewThatFits(in: .horizontal) {

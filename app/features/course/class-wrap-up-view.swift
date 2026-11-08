@@ -65,7 +65,7 @@ struct ClassWrapUpSheet: View {
         } message: { _ in
             Text(.sessionsProgressSplitUnsaved)
         }
-        .environment(\.accent, model.accent)
+        .courseAccent(model.accent)
         .sheet(item: $model.addingExam, onDismiss: nil) { exam in
             if let course = model.course {
                 ExamEditor(workspace: model.workspace, course: course, exam: exam)

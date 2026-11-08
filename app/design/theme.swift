@@ -307,6 +307,16 @@ extension EnvironmentValues {
     @Entry var accent: CourseAccent = .gray
 }
 
+extension View {
+    /// The one way a course's colour reaches a view: `\.accent` for what reads the course (dots, fills, the main
+    /// button) and the tint for the ghost buttons, which read `.tint`. Set apart, a sheet given only the accent drew its
+    /// main button in the course's colour and its ghost buttons in the system's. `.gray`, no course, leaves the tint to
+    /// the system.
+    func courseAccent(_ accent: CourseAccent) -> some View {
+        environment(\.accent, accent).tint(accent == .gray ? nil : accent.ink)
+    }
+}
+
 extension Color {
     /// A color that follows the light or dark appearance. Hex values keep the tokens readable against the design file.
     init(light: UInt32, dark: UInt32, lightOpacity: CGFloat = 1, darkOpacity: CGFloat = 1) {

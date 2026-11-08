@@ -186,10 +186,10 @@ struct PDFContent: View {
             LectureSplitPane(controller: controller, split: Binding(get: { model.splitting ?? shown },
                                                                      set: { if model.splitting != nil { model.splitting = $0 } }),
                              units: course.file.units, note: model.splitNote, save: model.saveSplit, cancel: model.cancelSplit)
-                .environment(\.accent, model.workspace.accent(course.id))
+                .courseAccent(model.workspace.accent(course.id))
         } else if let course = model.course {
             PDFPane(controller: controller, thumbnails: thumbnails, workspace: model.workspace, course: course.id, material: model.material?.id)
-                .environment(\.accent, model.workspace.accent(course.id))
+                .courseAccent(model.workspace.accent(course.id))
         } else {
             PDFPane(controller: controller, thumbnails: thumbnails, workspace: model.workspace)
         }
