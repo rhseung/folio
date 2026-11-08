@@ -36,11 +36,16 @@ struct SessionsView: View {
             let left = model.leftUnwrapped(file)
             if !left.isEmpty { leftUnwrappedCard(left, file: file) }
             if !model.untouched.isEmpty { untouchedCard }
-            ForEach(model.weeks(file)) { week in
-                VStack(alignment: .leading, spacing: Theme.Space.s) {
+            // Lazy, so a narrower or wider pane lays out only the cards in view: a term's weeks of cards laid out at
+            // every width of a divider's drag kept it near 30 frames a second (#62). The headers and cards go in
+            // flat, each its own item, so a link can scroll to a card no one has scrolled to yet (`linkTarget`).
+            let weeks = model.weeks(file)
+            LazyVStack(alignment: .leading, spacing: 0) {
+                ForEach(weeks) { week in
                     header(week)
-                    VStack(spacing: Theme.Space.xs) {
-                        ForEach(week.rows) { row in self.row(row, file: file) }
+                        .padding(.top, week.id == weeks.first?.id ? 0 : Theme.Space.section)
+                    ForEach(week.rows) { row in
+                        self.row(row, file: file, top: row.id == week.rows.first?.id ? Theme.Space.s : Theme.Space.xs)
                     }
                 }
             }
@@ -71,12 +76,13 @@ struct SessionsView: View {
         .frame(minHeight: 24)
     }
 
-    @ViewBuilder func row(_ row: SessionsModel.TimelineRow, file: CourseFile) -> some View {
+    /// `top`: the room above it, inside the `.id` a link scrolls to.
+    @ViewBuilder func row(_ row: SessionsModel.TimelineRow, file: CourseFile, top: CGFloat) -> some View {
         switch row.item {
         case .week, .month:
             EmptyView()
         case .exam(let exam, let date):
-            ExamMarkerRow(model: model, exam: exam, date: date)
+            ExamMarkerRow(model: model, exam: exam, date: date).padding(.top, top)
         case .session(let session, let exams):
             LiveTime(model.workspace) { now in
                 SessionCard(model: model, course: course, session: session, now: now, openNote: openNote)
@@ -84,10 +90,14 @@ struct SessionsView: View {
             }
             .linkTarget(session.id)
             .fileDrop { model.importFiles($0, into: session) }
+            .padding(.top, top)
+            // Outermost, where the lazy stack finds it before the card is built.
+            .id(session.id)
         case .planned(_, let exams):
             if let item = row.planned {
                 PlannedSessionCard(model: model, item: item, openNote: openNote, editTimes: { editingTimes = true })
                     .modifier(ClassExamCard(model: model, exams: exams, now: model.workspace.now))
+                    .padding(.top, top)
             }
         }
     }

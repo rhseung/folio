@@ -31,7 +31,7 @@ struct PageRangeField: View {
     var taught: [Taught] = []
     var seen: ClosedRange<Int>?
     private var taken: [ClosedRange<Int>] { taught.filter(\.wall).map(\.pages) }
-    /// The page after the last class's, offered as one tap. The sheet passes it; the popover's rows are too tight.
+    /// The page after the last class's, offered as one tap. The wrap-up sheet passes it; the links sheet's rows are too tight.
     var resume: Int?
     var sections: [Section] = []
     /// What a range of a split file reads as (`CourseFile.sectionLabel`): `König–Hall`.
