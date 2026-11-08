@@ -196,6 +196,46 @@ struct LectureSectionsTests {
         #expect(s.sections.count == 1 && s.sections[0].pages == 1...10 && s.sections[0].unit != nil)
     }
 
+    /// The thumbnails' ⇧-click on a section being changed: at or after its start moves its end, before it its start,
+    /// and a neighbor keeps a page.
+    @Test func aPickedPageMovesTheNearEdge() throws {
+        var s = try #require(LectureSplit([.init(title: "A", firstPage: 1, lastPage: 1), .init(title: "B", firstPage: 5, lastPage: 5),
+                                           .init(title: "C", firstPage: 9, lastPage: 9)], pageCount: 12))
+        #expect(s.moveEdge(of: 1, to: 10) == 1)
+        #expect(s.sections.map(\.pages) == [1...4, 5...10, 11...12])
+        s.moveEdge(of: 1, to: 2)
+        #expect(s.sections.map(\.pages) == [1...1, 2...10, 11...12])
+        // Short of its end, its end comes back; past a neighbor's last page, it stops before it.
+        s.moveEdge(of: 1, to: 6)
+        #expect(s.sections.map(\.pages) == [1...1, 2...6, 7...12])
+        s.moveEdge(of: 1, to: 30)
+        #expect(s.sections.map(\.pages) == [1...1, 2...11, 12...12])
+        // The last section's end pages go to no unit.
+        var t = LectureSplit(pageCount: 8)
+        t.setUnit(UUID(), of: 0)
+        t.moveEdge(of: 0, to: 5)
+        #expect(t.sections.map(\.pages) == [1...5, 6...8] && t.sections[1].unit == nil && t.sections[0].unit != nil)
+    }
+
+    /// A range picked across the thumbnails becomes one section.
+    @Test func aPickedRangeBecomesASection() throws {
+        let a = UUID(), b = UUID()
+        var s = try #require(LectureSplit([.init(title: "A", firstPage: 1, lastPage: 1), .init(title: "B", firstPage: 5, lastPage: 5),
+                                           .init(title: "C", firstPage: 9, lastPage: 9)], pageCount: 12))
+        s.setUnit(a, of: 0)
+        s.setUnit(b, of: 1)
+        // From a section's start: it keeps its unit and takes the pages after.
+        #expect(s.carve(5...10) == 1)
+        #expect(s.sections.map(\.pages) == [1...4, 5...10, 11...12] && s.sections[1].unit == b)
+        // Out of a section's middle: a section for no unit, and the rest of that section after it.
+        #expect(s.carve(2...3) == 1)
+        #expect(s.sections.map(\.pages) == [1...1, 2...3, 4...4, 5...10, 11...12])
+        #expect(s.sections.map(\.unit) == [a, nil, nil, b, nil])
+        // A range that is already a section stays as it is.
+        let before = s
+        #expect(s.carve(5...10) == 3 && s == before)
+    }
+
     @Test func cutsJoinTouchingSectionsOfOneUnitAndSkipTheUnclaimed() throws {
         let unit = UUID()
         var s = try #require(LectureSplit([.init(title: "A", firstPage: 1, lastPage: 1), .init(title: "B", firstPage: 4, lastPage: 4),
@@ -224,7 +264,7 @@ struct LectureSectionsTests {
         #expect(LectureSplit(file: course(), material: m, pageCount: 10).sections.map(\.pages) == [1...10])
     }
 
-    static let edits = zip(Gen.int(in: 0...2), Gen.int(in: 0...8), Gen.int(in: 1...40)).array(of: 0...12)
+    static let edits = zip(Gen.int(in: 0...4), Gen.int(in: 0...8), Gen.int(in: 1...40)).array(of: 0...12)
 
     /// Whatever the edits, the sections stay in order, touch, and cover the file.
     @Test func editsKeepTheFileCovered() async {
@@ -234,7 +274,9 @@ struct LectureSectionsTests {
                 switch kind {
                 case 0: s.split(at: page)
                 case 1: s.moveBoundary(after: i % max(s.sections.count, 1), to: page)
-                default: s.merge(after: i % max(s.sections.count, 1))
+                case 2: s.merge(after: i % max(s.sections.count, 1))
+                case 3: s.moveEdge(of: i % max(s.sections.count, 1), to: page)
+                default: s.carve(min(page, i + 1)...max(page, i + 1))
                 }
             }
             #expect(s.sections.first?.firstPage == 1 && s.sections.last?.lastPage == count)
