@@ -221,7 +221,7 @@ struct StripEditRow<Title: View, Extra: View>: View {
                 Button { withAnimation(.snappy(duration: 0.2)) { commit() } } label: {
                     Text(confirm).frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.pointing(.borderedProminent))
+                .buttonStyle(.prominent)
                 .disabled(!canConfirm)
             }
             .controlSize(.small)

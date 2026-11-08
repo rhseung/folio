@@ -60,8 +60,7 @@ struct ReviewView: View {
             .background(Theme.Palette.card)
             .foregroundStyle(Theme.Palette.text)
             .font(Theme.Typeface.body)
-            .environment(\.accent, accent)
-            .tint(accent.ink)
+            .courseAccent(accent)
             .task(id: model.unitId) { model.load(course: course, unit: unit) }
         } else {
             ContentUnavailableView(String(localized: .reviewNotFound), systemImage: "questionmark.folder")

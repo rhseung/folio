@@ -57,8 +57,7 @@ struct WindowClaude: View {
                 .accessibilityLabel(shown ? String(localized: .courseClaudeClose) : "Claude")
             }
             .padding(Theme.Space.l)
-            .environment(\.accent, accent)
-            .tint(accent.ink)
+            .courseAccent(accent)
             .animation(.snappy(duration: 0.25), value: shown)
         }
     }

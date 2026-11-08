@@ -2,6 +2,7 @@
 import AppKit
 import FolioDomain
 import Observation
+import SwiftUI
 import WebKit
 
 /// Debug-only: with `FOLIO_SNAPSHOT_DIR` set, the app walks through its screens, draws its own window into
@@ -236,7 +237,10 @@ final class SnapshotDriver {
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         if let window = NSApp.windows.first(where: { $0.isVisible }) {
-            window.setContentSize(NSSize(width: Self.width, height: 900))
+            // No taller than the screen: the strip scrolls a page to its bottom edge, which was off a short screen and
+            // out of the picture.
+            let room = (window.screen ?? NSScreen.main)?.visibleFrame.height ?? 900
+            window.setFrame(NSRect(origin: window.frame.origin, size: NSSize(width: Self.width, height: min(900, room))), display: true)
             window.center()
         }
         func pair(_ text: String?, _ fallback: (Int, Int)) -> (Int, Int) {
@@ -410,5 +414,17 @@ final class SnapshotDriver {
 }
 extension NSWindow {
     fileprivate var isPopover: Bool { className.contains("Popover") }
+}
+
+extension View {
+    /// Drawn as in a key window (`FOLIO_SNAPSHOT_KEY`). The walk's windows are rarely key, since the Mac is in use
+    /// while it runs, and a window that isn't draws its prominent buttons grey, a look they never have in use.
+    @ViewBuilder func snapshotKey() -> some View {
+        if ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_KEY"] != nil {
+            environment(\.controlActiveState, .key)
+        } else {
+            self
+        }
+    }
 }
 #endif

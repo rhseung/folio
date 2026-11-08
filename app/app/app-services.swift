@@ -41,6 +41,7 @@ private struct AppServices: ViewModifier {
             #endif
             #if DEBUG && os(macOS)
             .onAppear { SnapshotDriver.shared.extraCaptures = { await FormSnapshots.capture(workspace, into: $0) } }
+            .snapshotKey()
             #endif
     }
 }

@@ -679,7 +679,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             return host
         }()
         if host.superview !== scroll { scroll.addSubview(host) }
-        host.rootView = AnyView(CompletionMenuView(menu: completion) { [weak self] i in self?.acceptCompletion(i) }.environment(\.accent, accent))
+        host.rootView = AnyView(CompletionMenuView(menu: completion) { [weak self] i in self?.acceptCompletion(i) }.courseAccent(accent))
         let size = CGSize(width: CompletionMenuView.width, height: CompletionMenuView.height(rows: completion.items.count))
         let screen = firstRect(forCharacterRange: NSRange(location: query.range.location, length: 0), actualRange: nil)
         let line = scroll.convert(window.convertFromScreen(screen), from: nil)

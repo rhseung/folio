@@ -301,7 +301,7 @@ struct MaterialsView: View {
                             }
                         }
                         Spacer()
-                        Button(.materialsApprove) { model.approve(group) }.buttonStyle(.pointing(.borderedProminent))
+                        Button(.materialsApprove) { model.approve(group) }.buttonStyle(.prominent)
                         relocateMenu(group.map(\.from))
                         Button(.materialsIgnore) { model.ignore(files) }.buttonStyle(.ghost)
                     }

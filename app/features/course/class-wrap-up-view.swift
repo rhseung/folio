@@ -43,7 +43,7 @@ struct ClassWrapUpSheet: View {
         } message: { _ in
             Text(.sessionsProgressSplitUnsaved)
         }
-        .environment(\.accent, model.accent)
+        .courseAccent(model.accent)
     }
 
     /// To the file's split screen (#321). With nothing changed here the sheet closes and the file opens in this tab;

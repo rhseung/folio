@@ -76,7 +76,7 @@ enum FormSnapshots {
         // The same bar, compact, in the popover that links a split lecture file to its classes.
         if let lecture = file.lectureFiles.first(where: { !PageRangeField.Section.list(file, material: $0.id, pageCount: nil).isEmpty }) {
             forms.append(("material-links", AnyView(MaterialLinksEditor(model: MaterialsModel(workspace: workspace, course: course), materialId: lecture.id)
-                .environment(\.accent, workspace.accent(course.id)))))
+                .courseAccent(workspace.accent(course.id)))))
         }
         return forms
     }
@@ -101,25 +101,25 @@ enum FormSnapshots {
             }
             proposal.setUnit(nil, of: 3)
             model.show(.proposed(proposal, source: .claude), for: 0)
-            forms.append(("import-place-sections", AnyView(ImportPlaceSheet(model: model).environment(\.accent, accent))))
+            forms.append(("import-place-sections", AnyView(ImportPlaceSheet(model: model).courseAccent(accent))))
         }
         if let document = PDFDocument(data: SampleLecture.data()) {
             let split = LectureSplit(file: file, material: slides.id, pageCount: document.pageCount)
             forms.append(("lecture-split", AnyView(LectureSplitPane(controller: PDFController(document: document, page: 8), split: .constant(split),
                                                                      units: file.units, note: nil, save: {}, cancel: {})
-                    .frame(width: 1180, height: 720).background(Theme.Palette.card).environment(\.accent, accent))))
+                    .frame(width: 1180, height: 720).background(Theme.Palette.card).courseAccent(accent))))
         }
         if let session = file.sessions.first(where: { file.splitProgress(of: $0) != nil }) {
             forms.append(("class-wrap-up", AnyView(ClassWrapUpSheet(workspace: workspace, course: course.id, session: session.id))))
         }
         forms.append(("material-links", AnyView(MaterialLinksEditor(model: MaterialsModel(workspace: workspace, course: course), materialId: slides.id)
-            .environment(\.accent, accent))))
+            .courseAccent(accent))))
         return forms
     }
 
     @MainActor static func capture(_ workspace: Workspace, into directory: URL) async {
         for (name, view) in forms(workspace) {
-            let host = NSHostingView(rootView: view.environment(workspace))
+            let host = NSHostingView(rootView: view.environment(workspace).snapshotKey())
             let size = host.fittingSize
             let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled], backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false

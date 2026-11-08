@@ -115,7 +115,7 @@ struct QuizSolveView: View {
                 ColumnPick { model.start(label: String(localized: .quizSolvePickedScope), course: course) } label: {
                     Text(model.started ? .quizSolveRestart : .quizSolveStart)
                 }
-                .buttonStyle(.pointing(.borderedProminent))
+                .buttonStyle(.prominent)
                 .frame(maxWidth: .infinity)
                 .disabled(pane.preview == 0)
             }
@@ -230,7 +230,7 @@ struct QuizSolveView: View {
             HStack(spacing: Theme.Space.s) {
                 ForEach([Verdict.correct, .partial, .wrong], id: \.self) { v in Chip(model.roundText(v), tone: v.tone) }
             }
-            Button(.quizSolveAgain) { model.start(label: model.label, course: course) }.buttonStyle(.pointing(.borderedProminent))
+            Button(.quizSolveAgain) { model.start(label: model.label, course: course) }.buttonStyle(.prominent)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
@@ -268,12 +268,12 @@ struct QuizSolveView: View {
                                 if model.grading == .claude {
                                     Button(.quizSolveGradeMine) { model.revealed = true }.buttonStyle(.ghost)
                                     Button(.quizSolveGradeClaude) { model.grade(card, course: course) }
-                                        .buttonStyle(.pointing(.borderedProminent))
+                                        .buttonStyle(.prominent)
                                         .keyboardShortcut(.return, modifiers: .command)
                                         .disabled(!model.canGrade)
                                 } else {
                                     Button(.quizSolveShowAnswer) { model.revealed = true }
-                                        .buttonStyle(.pointing(.borderedProminent))
+                                        .buttonStyle(.prominent)
                                         .keyboardShortcut(.return, modifiers: .command)
                                 }
                             }
@@ -346,7 +346,7 @@ struct QuizSolveView: View {
             HStack {
                 Spacer()
                 Button(model.nextTitle) { model.next(course) }
-                    .buttonStyle(.pointing(.borderedProminent))
+                    .buttonStyle(.prominent)
                     .keyboardShortcut(.defaultAction)
             }
         }

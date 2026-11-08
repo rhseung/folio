@@ -426,7 +426,7 @@ struct ProfileSheet: View {
                 .padding(.horizontal, Theme.Space.m)
             HStack {
                 Spacer()
-                Button(.commonClose) { dismiss() }.buttonStyle(.pointing(.borderedProminent)).keyboardShortcut(.defaultAction)
+                Button(.commonClose) { dismiss() }.buttonStyle(.prominent).keyboardShortcut(.defaultAction)
             }
         }
         .padding(Theme.Space.xl)

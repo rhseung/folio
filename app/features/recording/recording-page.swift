@@ -81,7 +81,7 @@ struct RecordingPage: View {
                         EmptyLine(String(localized: .recordingEmpty))
                         if recording.hasAudio {
                             Button(.recordingTranscribe, systemImage: "waveform.badge.magnifyingglass") { model.transcribe() }
-                                .buttonStyle(.pointing(.borderedProminent)).disabled(!model.canTranscribe)
+                                .buttonStyle(.prominent).disabled(!model.canTranscribe)
                         }
                     }
                 }

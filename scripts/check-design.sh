@@ -35,3 +35,13 @@ if [[ -n "$grid" ]]; then
   echo "$grid" >&2
   exit 1
 fi
+
+# A course's colour goes in through `.courseAccent(_:)`, which sets the accent and the ghost buttons' tint together;
+# the accent set alone left a sheet's main button in the course's colour and its ghost buttons in the system's. The note
+# benches in app-tests set the accent alone, which their reference pictures were drawn with.
+accent=$(rg -n --glob '*.swift' -F 'environment(\.accent' app | rg -v '^app/design/' || true)
+if [[ -n "$accent" ]]; then
+  echo "Set a course's colour with .courseAccent(_:), not environment(\\.accent, …):" >&2
+  echo "$accent" >&2
+  exit 1
+fi

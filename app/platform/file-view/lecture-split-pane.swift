@@ -49,7 +49,7 @@ struct LectureSplitPane: View {
                 Text(.fileViewSplitTitle).font(Theme.Typeface.sectionTitle).foregroundStyle(Theme.Palette.textSecondary)
                 Spacer(minLength: Theme.Space.s)
                 Button(String(localized: .commonCancel), action: cancel).buttonStyle(.ghost).keyboardShortcut(.cancelAction)
-                Button(String(localized: .commonSave), action: save).buttonStyle(.pointing(.borderedProminent)).keyboardShortcut(.defaultAction)
+                Button(String(localized: .commonSave), action: save).buttonStyle(.prominent).keyboardShortcut(.defaultAction)
             }
             // Ends where the bar and rows under it end, not nearer the pane's edge: the column's content edge is one line.
             .padding(.horizontal, Theme.Space.l)

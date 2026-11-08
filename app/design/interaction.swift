@@ -19,6 +19,23 @@ extension PrimitiveButtonStyle {
     static func pointing<Base: PrimitiveButtonStyle>(_ base: Base) -> Self where Self == PointingButtonStyle<Base> { .init(base: base) }
 }
 
+/// A screen's one main action: `.borderedProminent` filled with the course's colour inside a course, the system accent
+/// outside one. Set here, not by the tint around it: a course tints its pages with its ink, pale in dark, and a sheet
+/// doesn't take the tint of the view it opens from, only the `accent` it is handed.
+struct ProminentButtonStyle: PrimitiveButtonStyle {
+    @Environment(\.accent) private var accent
+
+    func makeBody(configuration: Configuration) -> some View {
+        // `.gray` is the accent where no course is in view.
+        Button(configuration).buttonStyle(.pointing(.borderedProminent))
+            .tint(accent == .gray ? Color.accentColor : accent.fill)
+    }
+}
+
+extension PrimitiveButtonStyle where Self == ProminentButtonStyle {
+    static var prominent: ProminentButtonStyle { .init() }
+}
+
 extension View {
     /// The pointing hand for menus: a custom button style on a `.button`-style menu turns it back into a pop-up.
     func pointingHand() -> some View {
