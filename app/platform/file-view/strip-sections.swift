@@ -91,7 +91,12 @@ struct StripItem: Identifiable, Equatable {
 
 enum StripMetrics {
     static let gutter: CGFloat = 32
+    /// A header's row: a finger's height on a touch screen, where it is what a range is changed from.
+    #if os(iOS)
+    static let header: CGFloat = 44
+    #else
     static let header: CGFloat = Theme.Size.toolbarButton - Theme.Space.xs
+    #endif
     static let line: CGFloat = 4
     /// From the column's leading edge to the line's middle: under the header's dot, past its chevron.
     static let lineCenter: CGFloat = Theme.Space.s + Theme.Space.m + Theme.Space.xs + Theme.Size.dot / 2
@@ -162,7 +167,7 @@ struct StripHeader: View {
                     .font(Theme.Glyph.small)
                     .foregroundStyle(Theme.Palette.textSecondary)
                     .frame(width: Theme.Space.m, height: StripMetrics.header)
-                    .contentShape(.rect)
+                    .chevronReach()
             }
             .buttonStyle(.pointing(.plain))
             .help(Text(open ? .commonCollapse : .commonExpand))
@@ -185,6 +190,18 @@ struct StripHeader: View {
         .background(lit ? accent.tint : hovering ? Theme.Palette.fill : .clear, in: .rect(cornerRadius: Theme.Radius.control))
         .onHover { hovering = $0 }
         .padding(.bottom, open ? Theme.Space.s : Theme.Space.xxs)
+    }
+}
+
+private extension View {
+    /// The chevron is as narrow as the gutter its dot and line keep to, so on a touch screen its press reaches out over
+    /// the column's margin to the edge, the one side with nothing else to press.
+    @ViewBuilder func chevronReach() -> some View {
+        #if os(iOS)
+        padding(.leading, Theme.Space.s).contentShape(.rect).padding(.leading, -Theme.Space.s)
+        #else
+        contentShape(.rect)
+        #endif
     }
 }
 
