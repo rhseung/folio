@@ -113,9 +113,7 @@ final class ClassWrapUpModel {
                 return String(localized: .wrapUpProgressLine((m.path as NSString).lastPathComponent, pages.lowerBound, pages.upperBound))
             }.joined(separator: ", ")
         case .units: return unitTitles(units)
-        case .note:
-            let id = session.roughNoteId ?? session.reviewNoteId
-            return id.flatMap { id in file.notes.first { $0.id == id } }.map { (($0.path as NSString).lastPathComponent as NSString).deletingPathExtension } ?? ""
+        case .note: return (linkedNote ?? note(session.reviewNoteId)).map(noteName) ?? ""
         case .attendance:
             return AttendanceState.steps.first { $0.value == attendance }?.label ?? ""
         }
@@ -212,17 +210,20 @@ final class ClassWrapUpModel {
 
     // MARK: Units
 
-    /// The course's units in outline order, the last class's first: a class most often carries on with them. Listed
-    /// first only; none is chosen for the user.
+    /// Every unit of the course in outline order, none put forward: whether a unit is done, and which comes next, is
+    /// the user's call (#147).
     var unitOptions: [PickOption<UUID>] {
         guard let file else { return [] }
         return UnitTree.outline(file.units).map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) }
     }
 
-    var recentUnits: [FolioDomain.Unit] {
-        guard let file, let session else { return [] }
-        return file.recentUnits(before: session).compactMap { id in file.units.first { $0.id == id } }.filter { !units.contains($0.id) }
+    /// The class's units as chips, in outline order rather than the order they were picked.
+    var linkedUnits: [FolioDomain.Unit] {
+        guard let file else { return [] }
+        return UnitTree.outline(file.units).map(\.unit).filter { units.contains($0.id) }
     }
+
+    func removeUnit(_ unit: UUID) { units.removeAll { $0 == unit } }
 
     func unitTitles(_ ids: [UUID]) -> String {
         guard let file else { return "" }
@@ -243,21 +244,40 @@ final class ClassWrapUpModel {
 
     // MARK: Note
 
-    var hasNote: Bool { session.map { $0.roughNoteId != nil || $0.reviewNoteId != nil } ?? false }
+    var hasNote: Bool { linkedNote != nil }
 
-    /// Notes no class points at yet, the ones that could be this class's.
-    var unlinkedNotes: [NoteEntry] {
-        guard let file else { return [] }
-        let taken = Set(file.sessions.flatMap { [$0.roughNoteId, $0.reviewNoteId].compactMap { $0 } })
-        return file.notes.filter { !taken.contains($0.id) && $0.kind != .review && $0.examId == nil }
-            .sorted { $0.path.localizedStandardCompare($1.path) == .orderedAscending }
+    /// The class's own (rough) note. A review note also fills the gap, but it covers other classes too, so the row
+    /// never swaps or unlinks it: it only names it while folded (`summary`).
+    var linkedNote: NoteEntry? { note(session?.roughNoteId) }
+
+    private func note(_ id: UUID?) -> NoteEntry? {
+        guard let file, let id else { return nil }
+        return file.notes.first { $0.id == id }
     }
+
+    var noteChoices: [NoteEntry] { file?.classNoteChoices ?? [] }
 
     func noteName(_ note: NoteEntry) -> String { ((note.path as NSString).lastPathComponent as NSString).deletingPathExtension }
 
+    /// Written at once, as "새 단원" is (#147): the note exists already, so there is nothing to wait for.
     func linkNote(_ id: UUID) {
+        // `NoteLink` refuses a class that already holds a rough note, so the held one is taken off first. Nothing else
+        // can refuse the link here: the class is open in a wrap-up, so it exists and isn't cancelled.
+        if let held = linkedNote, held.id != id { unlinkNote() }
         workspace.run(NoteLink(course: courseId, note: id, kind: .rough, session: sessionId, exam: nil, units: [], math: nil))
         makesNote = false
+    }
+
+    /// Taken off at once, as linking writes at once; the note itself stays in the course.
+    func unlinkNote() {
+        guard let note = linkedNote else { return }
+        workspace.run(NoteUnlinkSession(course: courseId, note: note.id, session: sessionId))
+    }
+
+    /// The linked note gives way now; the new one is made on saving, after the units, so they name it.
+    func makeNewNote() {
+        unlinkNote()
+        makesNote = !hasNote
     }
 
     // MARK: Attendance
@@ -307,7 +327,14 @@ final class ClassWrapUpModel {
     /// Why saving is off: a kept file without both pages says nothing about how far the class went.
     var refusal: String? {
         if let row = keptRows.first(where: { $0.first == nil || $0.last == nil }) {
-            return String(localized: .sessionsProgressMissingPages(name(row.id)))
+            // Names the end the bar still lacks: the bar is picked on, not typed into, and its lone handle drags out
+            // the missing end.
+            let name = name(row.id)
+            switch (row.first, row.last) {
+            case (_?, nil): return String(localized: .sessionsProgressMissingLast(name))
+            case (nil, _?): return String(localized: .sessionsProgressMissingFirst(name))
+            default: return String(localized: .sessionsProgressMissingRange(name))
+            }
         }
         return workspace.refusal(action)
     }

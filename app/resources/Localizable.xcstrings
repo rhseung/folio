@@ -3862,6 +3862,50 @@
         }
       }
     },
+    "design.column.hide-list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목록 열 숨기기"
+          }
+        }
+      }
+    },
+    "design.column.hide-sections": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구역 열 숨기기"
+          }
+        }
+      }
+    },
+    "design.column.show-list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목록 열 보기"
+          }
+        }
+      }
+    },
+    "design.column.show-sections": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구역 열 보기"
+          }
+        }
+      }
+    },
     "design.crumb-rename-help": {
       "extractionState": "manual",
       "localizations": {
@@ -10176,17 +10220,6 @@
         }
       }
     },
-    "quiz.solve.resume": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "풀던 카드로"
-          }
-        }
-      }
-    },
     "quiz.solve.review-detail": {
       "extractionState": "manual",
       "localizations": {
@@ -10227,17 +10260,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "채점 기준 %1$lld개 중 %2$lld개 충족"
-          }
-        }
-      }
-    },
-    "quiz.solve.scope": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "범위"
           }
         }
       }
@@ -18877,13 +18899,35 @@
         }
       }
     },
-    "sessions.progress.missing-pages": {
+    "sessions.progress.missing-range": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@의 시작 쪽과 끝 쪽을 적어 주세요"
+            "value": "%@의 쪽 범위를 막대에서 골라 주세요"
+          }
+        }
+      }
+    },
+    "sessions.progress.missing-last": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@의 끝 쪽을 막대에서 골라 주세요"
+          }
+        }
+      }
+    },
+    "sessions.progress.missing-first": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@의 시작 쪽을 막대에서 골라 주세요"
           }
         }
       }
@@ -19104,6 +19148,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "막대를 눌러 쪽을 고르세요"
+          }
+        }
+      }
+    },
+    "design.page-range.open-last": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "손잡이를 끌거나 막대를 눌러 끝 쪽까지 고르세요"
+          }
+        }
+      }
+    },
+    "design.page-range.open-first": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "손잡이를 끌거나 막대를 눌러 시작 쪽부터 고르세요"
           }
         }
       }
@@ -19350,17 +19416,6 @@
         }
       }
     },
-    "wrap-up.units-recent-help": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지난 수업의 단원. 누르면 이번 수업에도 넣는다"
-          }
-        }
-      }
-    },
     "wrap-up.note-link": {
       "extractionState": "manual",
       "localizations": {
@@ -19368,6 +19423,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "기존 노트 연결"
+          }
+        }
+      }
+    },
+    "wrap-up.note-other": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 노트 연결"
+          }
+        }
+      }
+    },
+    "wrap-up.note-new": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 노트 만들기"
+          }
+        }
+      }
+    },
+    "wrap-up.note-unlink": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결 해제"
+          }
+        }
+      }
+    },
+    "wrap-up.note-none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결할 노트가 없습니다"
           }
         }
       }
@@ -19526,6 +19625,50 @@
         }
       }
     },
+    "wrap-up.units-add": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원"
+          }
+        }
+      }
+    },
+    "wrap-up.units-search": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 검색"
+          }
+        }
+      }
+    },
+    "wrap-up.units-remove": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 빼기"
+          }
+        }
+      }
+    },
+    "wrap-up.units-none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아직 고른 단원이 없습니다"
+          }
+        }
+      }
+    },
     "wrap-up.left-detail": {
       "extractionState": "manual",
       "localizations": {
@@ -19577,17 +19720,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "정리하기"
-          }
-        }
-      }
-    },
-    "wrap-up.units-pick": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원 고르기"
           }
         }
       }

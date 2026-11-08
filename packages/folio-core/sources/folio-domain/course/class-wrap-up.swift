@@ -80,10 +80,11 @@ extension CourseFile {
         return nil
     }
 
-    /// The units a wrap-up lists first: those of the class before, which a class most often carries on with. Only
-    /// listed first, not chosen: whether a unit is finished is the user's call.
-    public func recentUnits(before session: Session) -> [UUID] {
-        sessions.filter { !$0.isCancelled && $0.id != session.id && Session.inOrder($0, session) && !$0.unitIds.isEmpty }
-            .max(by: Session.inOrder)?.unitIds ?? []
+    /// The notes a wrap-up offers as a class's note, newest first: those no class holds yet. A review note is written
+    /// after its classes and an exam's note is the exam's, so neither is offered.
+    public var classNoteChoices: [NoteEntry] {
+        let taken = Set(sessions.flatMap { [$0.roughNoteId, $0.reviewNoteId].compactMap { $0 } })
+        return notes.filter { !taken.contains($0.id) && $0.kind != .review && $0.examId == nil }
+            .sorted { $0.createdAt > $1.createdAt }
     }
 }

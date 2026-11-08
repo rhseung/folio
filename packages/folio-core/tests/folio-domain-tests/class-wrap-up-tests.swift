@@ -169,15 +169,19 @@ struct ClassWrapUpTests {
         }
     }
 
-    @Test func theLastClassesUnitsComeFirstButAreNotChosen() {
+    @Test func aClassNoteIsChosenFromNotesNoClassHoldsNewestFirst() {
         var f = course()
-        let earlier = Session(device: device, at: at(1, 9), week: 9, date: at(1, 10, 30))
-        f.sessions.append(earlier)
-        let a = FolioDomain.Unit(device: device, at: at(1, 9), title: "매칭", order: 0, parentId: nil)
-        f.units = [a]
-        #expect(f.recentUnits(before: f.sessions[0]).isEmpty)
-        f.toggle(session: earlier.id, unit: a.id)
-        #expect(f.recentUnits(before: f.sessions[0]) == [a.id])
-        #expect(f.sessions[0].unitIds.isEmpty)
+        let other = Session(device: device, at: at(1, 9), week: 9, date: at(1, 10, 30))
+        f.sessions.append(other)
+        func note(_ name: String, _ day: Int, _ kind: NoteKind = .rough, exam: UUID? = nil) -> NoteEntry {
+            NoteEntry(id: UUID(), device: device, at: at(day, 9), path: "Notes/\(name).md", meta: NoteMeta(id: nil, kind: kind, examId: exam))
+        }
+        let old = note("old", 1), new = note("new", 3), held = note("held", 4), free = note("free", 2, .free)
+        f.notes = [old, new, held, free, note("review", 5, .review), note("exam", 6, .examSummary, exam: UUID())]
+        f.linkNote(held.id, to: other.id, as: .rough)
+        #expect(f.classNoteChoices.map(\.id) == [new.id, free.id, old.id])
+        // Linked to this class, it is this class's and no longer a choice.
+        f.linkNote(new.id, to: f.sessions[0].id, as: .rough)
+        #expect(f.classNoteChoices.map(\.id) == [free.id, old.id])
     }
 }

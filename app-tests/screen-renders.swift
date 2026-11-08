@@ -75,7 +75,13 @@ struct ScreenRenders {
             (name, { AnyView(ScreenView(workspace: workspace, entry: entry)) })
         })
         plain.sheets = FormSnapshots.forms(workspace).map { name, view in ("form-\(name)", { view }) }
-        var batches = [plain]
+        // The list columns hidden by hand where they would fit (#62). Open over the page they need the glass this render
+        // cannot draw, so the window snapshot (`FOLIO_SNAPSHOT_COLUMN=open`) shows that.
+        let columns = ScreenCatalog.columns(workspace)
+        let hidden = ColumnPrefs(defaults: nil, collapsed: Set(ColumnKind.allCases))
+        var batches = [plain, Batch(pages: columns.map { name, entry in
+            ("column-hidden-\(name)", { AnyView(ScreenView(workspace: workspace, entry: entry).environment(\.columnPrefs, hidden)) })
+        })]
         for (name, query) in [("search-empty", ""), ("search", "매칭")] {
             batches.append(Batch(setup: { SnapshotDriver.shared.searchQuery = query },
                                  sheets: [(name, { AnyView(SearchPalette(workspace: workspace, close: {}, choose: { _, _ in })) })]))
@@ -125,6 +131,18 @@ struct ScreenRenders {
         // Opened at a moment past the start, as a link from a note or a tab let go of does.
         if let held = workspace.currentCourses.first(where: { !$0.file.recordings.isEmpty }), let recording = held.file.recordings.first {
             entries.append(("course-recording", Navigator.Entry(link: AppLink(.recording, recording.id, anchor: .time(1700)), course: held.id)))
+        }
+        return entries
+    }
+
+    /// A screen of each list column (#62), at a page each has beside it.
+    static func columns(_ workspace: Workspace) -> [(name: String, entry: Navigator.Entry)] {
+        var entries: [(String, Navigator.Entry)] = [("settings", Navigator.Entry(link: .settings(SettingsTab.general.page)))]
+        if let person = workspace.catalog.people.first { entries.append(("person", Navigator.Entry(link: AppLink(.person, person.id)))) }
+        if let course = workspace.currentCourses.first {
+            entries.append(("course", Navigator.Entry(link: .course(course.id), course: course.id)))
+            entries.append(("course-notes", Navigator.Entry(link: .course(course.id, page: CourseSection.notes.page), course: course.id)))
+            entries.append(("course-quiz", Navigator.Entry(link: .course(course.id, page: CourseSection.quizSolve.page), course: course.id)))
         }
         return entries
     }

@@ -33,6 +33,16 @@ public struct PageRange: Equatable, Sendable {
 
     public subscript(end: End) -> Int? { end == .first ? first : last }
 
+    /// The end set when the other isn't: a range only half picked, whose one handle drags out the other end
+    /// (`tapping` from it) rather than moving away from it.
+    public var lone: End? {
+        switch (first, last) {
+        case (_?, nil): .first
+        case (nil, _?): .last
+        default: nil
+        }
+    }
+
     /// `end` moved to `page` (nil empties it), kept within 1…`pages`; the other end is pushed along past it. The
     /// other end is also brought into the file, for a count learned after it was set.
     public func moving(_ end: End, to page: Int?, pages: Int?) -> PageRange {

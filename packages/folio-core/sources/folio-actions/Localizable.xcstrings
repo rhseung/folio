@@ -1211,6 +1211,17 @@
         }
       }
     },
+    "note.migrate.old-id": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@: frontmatter의 id %2$@ 대신 course.json 항목의 ID를 둡니다. 옛 ID를 가리키는 곳 %3$lld개(회차, 노트)는 손으로 고칩니다"
+          }
+        }
+      }
+    },
     "value.assignment": {
       "extractionState": "manual",
       "localizations": {

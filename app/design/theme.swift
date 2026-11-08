@@ -82,6 +82,9 @@ enum Theme {
         /// Under a frame control the pointer is over, and while it is pressed (`.toolbar` buttons).
         static let hover = 0.08
         static let pressed = 0.14
+        /// Black over the page while a folded column is open over it (`ColumnSplit`): the page stays readable behind
+        /// the glass, and reads as set aside.
+        static let scrim = 0.16
         /// The edge of a washed field, which without it washed out on a light wallpaper.
         static let edge = 0.12
         /// The fill inside a chosen row's line icon (`LineIcon(filled:)`).

@@ -72,6 +72,7 @@ struct CourseView: View {
     @Environment(\.paneInsert) private var paneInsert
     @Environment(\.place) private var place
     @Environment(\.openLink) private var openLink
+    @Environment(\.paneFocused) private var paneFocused
 
     init(workspace: Workspace, courseID: UUID) {
         _model = State(initialValue: CourseModel(workspace: workspace, courseId: courseID))
@@ -80,13 +81,8 @@ struct CourseView: View {
     var body: some View {
         if let course = model.course {
             let workspace = model.workspace
-            ColumnSplit {
+            ColumnSplit(kind: .courseSections) {
                 CourseColumn(model: model, course: course)
-            } bar: {
-                CourseSectionMenu(model: model)
-                if model.section == .notes, model.openNote != nil {
-                    Button(.courseTabNotes, systemImage: "chevron.left") { model.openNote = nil }
-                }
             } content: {
                 Group {
                     switch model.section {
@@ -138,7 +134,8 @@ struct CourseView: View {
                 paneInsert?.text = nil
             }
             #if DEBUG && os(macOS)
-            .onChange(of: SnapshotDriver.shared.section, initial: true) { _, new in if let new { model.section = new } }
+            // The focused pane's only: the course beside it in a snapshot keeps its own page.
+            .onChange(of: SnapshotDriver.shared.section, initial: true) { _, new in if let new, paneFocused { model.section = new } }
             #endif
         } else {
             ContentUnavailableView(String(localized: .courseNotFound), systemImage: "questionmark.folder")
@@ -148,6 +145,7 @@ struct CourseView: View {
 
 struct CourseColumn: View {
     @Environment(\.accent) private var accent
+    @Environment(\.closeColumn) private var closeColumn
     @Bindable var model: CourseModel
     let course: LoadedCourse
 
@@ -171,7 +169,10 @@ struct CourseColumn: View {
                 VStack(spacing: Theme.Space.xxs) {
                     ForEach(CourseTab.allCases) { item in
                         let chosen = model.section.tab == item
-                        Button { if !chosen { model.section = item.pages[0] } } label: {
+                        Button {
+                            if !chosen { model.section = item.pages[0] }
+                            closeColumn()
+                        } label: {
                             ColumnRow(title: item.title, symbol: item.symbol, chosen: chosen, tint: accent.color, fill: accent.tint) {
                                 if let trailing = model.trailing(item, file: file) {
                                     if trailing.warning {
@@ -185,7 +186,10 @@ struct CourseColumn: View {
                         .buttonStyle(.pointing(.plain))
                         if chosen, item.pages.count > 1 {
                             ForEach(item.pages) { page in
-                                Button { model.section = page } label: {
+                                Button {
+                                    model.section = page
+                                    closeColumn()
+                                } label: {
                                     Text(page.title)
                                         .foregroundStyle(model.section == page ? accent.ink : Theme.Palette.textSecondary)
                                         .fontWeight(model.section == page ? .semibold : .regular)
@@ -227,42 +231,17 @@ struct CourseColumn: View {
             }
             .padding(.horizontal, Theme.Inset.panel)
             .padding(.vertical, Theme.Space.l)
+            .clearOfColumnButtons(inset: Theme.Space.l)
         }
         .overflowFade(.vertical)
         .font(Theme.Typeface.body)
         .foregroundStyle(Theme.Palette.text)
-        .background(Theme.Palette.window)
+        .columnBackground()
     }
 }
 
-/// The course's sections where its column is folded away, in the order and with the pages the column lists.
-struct CourseSectionMenu: View {
-    @Bindable var model: CourseModel
-
-    var body: some View {
-        Menu {
-            ForEach(CourseTab.allCases) { tab in
-                if tab.pages.count > 1 {
-                    Menu {
-                        ForEach(tab.pages) { page in
-                            Toggle(page.title, isOn: Binding(get: { model.section == page }, set: { if $0 { model.section = page } }))
-                        }
-                    } label: { Label(tab.title, systemImage: tab.symbol) }
-                } else {
-                    Toggle(isOn: Binding(get: { model.section.tab == tab }, set: { if $0 { model.section = tab.pages[0] } })) {
-                        Label(tab.title, systemImage: tab.symbol)
-                    }
-                }
-            }
-        } label: {
-            Label(model.section.title, systemImage: model.section.tab.symbol)
-        }
-        .fixedSize()
-    }
-}
-
-/// Folded, the notes section is the column's list until a note is opened: the list grows with the course, so it is a
-/// page of its own, not a menu.
+/// Folded, the notes section is the column's list until a note is opened: the list grows with the course, so with
+/// nothing open it is the page, and the column open over the page lists the notes too.
 struct CourseNotesPage: View {
     @Bindable var model: CourseModel
     let course: LoadedCourse
@@ -274,6 +253,7 @@ struct CourseNotesPage: View {
                 NoteList(workspace: model.workspace, course: course, selection: $model.openNote, moves: model.noteMoves)
                     .padding(.horizontal, Theme.Inset.panel)
                     .padding(.vertical, Theme.Space.l)
+                    .clearOfColumnButtons(inset: Theme.Space.l)
             }
             .overflowFade(.vertical)
         } else {

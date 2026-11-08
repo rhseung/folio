@@ -20,6 +20,7 @@ struct Page<Content: View, Backdrop: View>: View {
                     .frame(maxWidth: maxWidth, alignment: .leading)
                     .padding(.horizontal, Theme.Space.xxl)
                     .padding(.top, Theme.Space.xl)
+                    .clearOfColumnButtons(inset: Theme.Space.xl)
                     .padding(.bottom, Theme.Space.xxl * 2)
                     .frame(maxWidth: .infinity)
                     .background(alignment: .top) { backdrop }
@@ -75,71 +76,9 @@ struct ColumnDivider: View {
     var body: some View { Theme.Palette.line.frame(width: 1).ignoresSafeArea() }
 }
 
-/// How a list column beside a page folds where both don't fit (#43): a column of a few fixed sections (a course's,
-/// settings') turns into a menu in a `PageBar` over the page; a list that grows (people, a quiz's scope) shows either
-/// the list or the page, the page with a way back to the list in its bar.
-enum ColumnFold: Equatable {
-    case menu
-    case stack(showingPage: Bool)
-}
-
-/// A list column, its divider and a page, folded by `ColumnFold` below `pageRoom` for the page. The bar is what the
-/// folded page shows above it: the section menu, or the way back to the list.
-struct ColumnSplit<Column: View, Bar: View, Content: View>: View {
-    var width: CGFloat = Theme.Size.courseColumn
-    var fold: ColumnFold = .menu
-    @ViewBuilder var column: Column
-    @ViewBuilder var bar: Bar
-    @ViewBuilder var content: Content
-    @Environment(\.revealsOverflow) private var revealsOverflow
-    @Environment(\.inPanes) private var inPanes
-    // Measured, unlike `Fold`: the side-by-side form can't push a pane out (the page goes down to nothing), so its
-    // first pass at the old width costs nothing, and only the width the page is left decides.
-    @State private var narrow = false
-
-    /// What a page needs beside the column; less, and the column folds.
-    static var pageRoom: CGFloat { 440 }
-
-    var showsPage: Bool { if case .stack(false) = fold { !narrow } else { true } }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            // Not over a pane of several (#62): the tab's segment names the pane and its trail goes back up, and a bar
-            // over each pane read as a title bar per pane. A stacked list's way back has no other place, so it stays.
-            if narrow && showsPage && !(inPanes && fold == .menu) {
-                // Named, not just a glyph: the bar stands in for a column whose rows said where they lead.
-                PageBar { bar.buttonStyle(.ghost) } trailing: { EmptyView() }
-                    .background(Theme.Palette.page)
-            }
-            HStack(spacing: 0) {
-                if !narrow || !showsPage {
-                    column
-                        .frame(width: narrow ? nil : width)
-                        .frame(maxWidth: narrow ? .infinity : nil, maxHeight: .infinity)
-                        .environment(\.columnFolded, narrow)
-                }
-                if !narrow { ColumnDivider() }
-                if showsPage {
-                    content
-                        // minWidth 0: a page's fixed-width rows must never set the column's minimum. When that
-                        // minimum plus a side column exceeds the window, AppKit loops on constraints and kills the
-                        // app. A fit check lifts it to see the page overflow, which this otherwise clips.
-                        .frame(minWidth: revealsOverflow ? nil : 0, maxWidth: .infinity, maxHeight: .infinity)
-                        .environment(\.columnFolded, narrow)
-                }
-            }
-        }
-        .onGeometryChange(for: Bool.self) { $0.size.width < width + 1 + Self.pageRoom } action: { narrow = $0 }
-    }
-}
-
 extension EnvironmentValues {
     /// Set by the screen fit check only: pages that would clip what doesn't fit them push their window out instead.
     @Entry var revealsOverflow = false
-    /// Inside a `ColumnSplit` that shows its column or its page alone: what each held for the other now has to be in it.
-    @Entry var columnFolded = false
-    /// In a tab of several panes, which the tab's segments name: a screen leaves out what only named it (#62).
-    @Entry var inPanes = false
     /// How far from the pane's trailing edge the tab's Claude button reaches over its bottom; zero in a pane it isn't over.
     @Entry var claudeButtonRoom: CGFloat = 0
 }
@@ -158,16 +97,6 @@ private struct ClearOfClaudeButton: ViewModifier {
         content
             .padding(.trailing, max(room - inset, 0))
             .frame(minHeight: room > 0 ? Theme.Size.fab : nil)
-    }
-}
-
-/// What only a folded `ColumnSplit` needs, such as a way from the column back to a page it hides.
-struct FoldedOnly<Content: View>: View {
-    @Environment(\.columnFolded) private var folded
-    @ViewBuilder var content: Content
-
-    var body: some View {
-        if folded { content }
     }
 }
 
@@ -190,6 +119,22 @@ struct Crumb {
     func set(_ crumb: Crumb, level: Int, owner: UUID) { levels[level] = (owner, crumb) }
     /// Only the owner's own step: switching pages shows the new one before the old one has gone.
     func clear(level: Int, owner: UUID) { if levels[level]?.owner == owner { levels[level] = nil } }
+
+    /// The pane's outermost list column, which the menu bar's 구역 열 command works on while the pane is focused (#62).
+    /// Here because this is what a pane's screen already tells its window while it is on screen.
+    private(set) var column: ColumnCommand?
+    @ObservationIgnored private var columnOwner: UUID?
+
+    func setColumn(_ command: ColumnCommand, owner: UUID) {
+        columnOwner = owner
+        column = command
+    }
+
+    func clearColumn(owner: UUID) {
+        guard columnOwner == owner else { return }
+        columnOwner = nil
+        column = nil
+    }
 }
 
 extension View {
@@ -315,8 +260,11 @@ struct Breadcrumb: View {
 struct PageBar<Leading: View, Trailing: View>: View {
     @ViewBuilder var leading: Leading
     @ViewBuilder var trailing: Trailing
+    @Environment(\.columnButtons) private var columnButtons
 
     var body: some View {
+        // Under a folded column's buttons (#62) the bar is their row: as tall, centered on them, starting after them.
+        let afterButtons = Theme.Space.s + CGFloat(columnButtons) * (Theme.Size.toolbarButton + Theme.Space.s)
         VStack(spacing: 0) {
             HStack(spacing: Theme.Space.xxs) {
                 leading
@@ -326,8 +274,9 @@ struct PageBar<Leading: View, Trailing: View>: View {
             .buttonStyle(.toolbar)
             .menuStyle(.button)
             .menuIndicator(.hidden)
-            .padding(.horizontal, Theme.Space.m)
-            .padding(.vertical, Theme.Space.xs)
+            .padding(.leading, columnButtons > 0 ? afterButtons : Theme.Space.m)
+            .padding(.trailing, Theme.Space.m)
+            .padding(.vertical, columnButtons > 0 ? Theme.Space.s : Theme.Space.xs)
             Theme.Palette.lineSoft.frame(height: 1)
         }
     }
