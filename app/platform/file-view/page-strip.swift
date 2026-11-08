@@ -150,7 +150,6 @@ private struct PageStripItem: View {
         let picked = item.mark == .picked
         return PageThumbnail(thumbnails: controller.thumbnails, page: page, current: controller.page + 1 == page, picked: picked)
             .padding(.leading, gutter ? PageStrip.gutter : Theme.Space.xs)
-            .padding(.bottom, Theme.Space.s)
             .contentShape(.rect)
             #if os(macOS)
             .gesture(TapGesture().modifiers(.shift).onEnded { pick(page, extend: true) }
@@ -300,8 +299,9 @@ private struct ProgressClassPicker: View {
     }
 }
 
-/// One page small, with its number under it; outlined while the PDF is on it, ringed in the course's colour while
-/// it is in a range being picked.
+/// One page small, with its number under it; on a soft rounded wash while the PDF is on it, as Preview marks it, and
+/// ringed in the course's colour while it is in a range being picked. The wash is grey, not the course's tint, so a
+/// current page that is also picked still reads as both, and neither looks like the save row above a range.
 struct PageThumbnail: View {
     let thumbnails: PageThumbnails
     let page: Int
@@ -321,15 +321,20 @@ struct PageThumbnail: View {
             }
             .frame(height: 84)
             .clipShape(.rect(cornerRadius: Theme.Radius.small))
-            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.small).strokeBorder(stroke, lineWidth: current || picked ? 2 : 1))
-            Text("\(page)").font(picked ? Theme.Typeface.label : Theme.Typeface.label.weight(.regular)).monospacedDigit()
-                .foregroundStyle(picked ? accent.ink : Theme.Palette.textTertiary)
+            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.small).strokeBorder(picked ? accent.color : Theme.Palette.lineSoft, lineWidth: picked ? 2 : 1))
+            Text("\(page)").font(picked || current ? Theme.Typeface.label : Theme.Typeface.label.weight(.regular)).monospacedDigit()
+                .foregroundStyle(picked ? accent.ink : current ? Theme.Palette.text : Theme.Palette.textTertiary)
         }
-        .padding(.vertical, Theme.Space.xxs)
+        .padding(.vertical, Theme.Space.s)
+        .background {
+            // Sideways the wash reaches into the column's margins rather than padding the page in, so a strip of fixed
+            // width keeps its pages as wide as they were. Its corner is the page's plus the reach, to run alongside it.
+            if current {
+                RoundedRectangle(cornerRadius: Theme.Radius.small + Theme.Space.s)
+                    .fill(Theme.Palette.fill)
+                    .padding(.horizontal, -Theme.Space.s)
+            }
+        }
         .task(id: page) { image = await thumbnails.image(page) }
-    }
-
-    private var stroke: Color {
-        picked ? accent.color : current ? Theme.Palette.text : Theme.Palette.lineSoft
     }
 }
