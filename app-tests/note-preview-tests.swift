@@ -267,6 +267,14 @@ struct NotePreviewTests {
         _ = try await rig.js(tap)
         _ = try await rig.js(tap)
         #expect(try await rig.number(sheet) == fitted)
+        // A touch pinch from the fitted picture keeps its zoom when the fingers lift, apart as they are.
+        let pinch = "const el = document.querySelector('.figure-sheet > *'), r = el.getBoundingClientRect(), y = r.top + r.height / 2, x = r.left + r.width / 2;"
+            + "const send = (type, id, at) => el.dispatchEvent(new PointerEvent(type, {pointerId: id, pointerType: 'touch', clientX: at, clientY: y, bubbles: true}));"
+            + "send('pointerdown', 1, x - 40); send('pointerdown', 2, x + 40); send('pointermove', 2, x + 240); send('pointerup', 1, x - 40); send('pointerup', 2, x + 240)"
+        _ = try await rig.js(pinch)
+        #expect(try await rig.number(sheet) ?? 0 > fitted)
+        #expect(try await rig.js("return document.querySelector('.figure-count').textContent") as? String == "1 / 2")
+        _ = try await rig.js(key, ["key": "0", "command": true])
         // The next is the diagram, drawn again from its own SVG.
         _ = try await rig.js(key, ["key": "ArrowRight", "command": false])
         #expect(try await rig.js("return document.querySelector('.figure-sheet > svg') != null") as? Bool == true)

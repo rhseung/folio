@@ -234,7 +234,8 @@ export function figures() {
     try { viewer.setPointerCapture(event.pointerId); } catch {}
     pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
     if (pointers.size === 1) drag = { x: event.clientX, y: event.clientY, moved: false, fit: atFit(), onSheet: sheet.contains(event.target) };
-    else if (drag) drag.moved = true;
+    // A pinch: its fingers end apart, which would read as a swipe, and the zoom it made stays.
+    else if (drag) drag.moved = drag.pinched = true;
     viewer.classList.add("dragging");
   }
 
@@ -269,6 +270,7 @@ export function figures() {
     drag = null;
     if (!start) return;
     const dx = event.clientX - start.x, dy = event.clientY - start.y;
+    if (start.pinched) return;
     if (start.moved) {
       // A sideways swipe of the fitted picture goes to the next one; any other drag of it springs back.
       if (start.fit && event.type === "pointerup" && Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy) && all().length > 1) step(dx < 0 ? 1 : -1);
