@@ -19064,6 +19064,28 @@
         }
       }
     },
+    "design.page-range.seen-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음하는 동안 본 쪽 %1$lld–%2$lld"
+          }
+        }
+      }
+    },
+    "design.page-range.seen-apply": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 구간으로 맞추기"
+          }
+        }
+      }
+    },
     "design.page-range.seen-help": {
       "extractionState": "manual",
       "localizations": {
