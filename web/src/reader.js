@@ -4,6 +4,7 @@ import { renderMath } from "./math.js";
 import { highlightBlocks } from "./code.js";
 import { renderDiagrams } from "./mermaid.js";
 import { preview } from "./preview.js";
+import { figures } from "./figures.js";
 
 // Typesets what `root` holds. The preview typesets blocks before they go into the page, so `root` may be detached.
 // An embedded note keeps its own math syntax on its box, which may differ from the page's.
@@ -61,6 +62,7 @@ window.folioReader = {
 };
 
 window.folioPreview = preview({ typeset, redraw: () => renderDiagrams(document.body) });
+figures();
 
 // Diagrams take their colors as values, so a new appearance draws them again; the rest follows the CSS variables.
 matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => renderDiagrams(document.body));

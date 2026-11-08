@@ -225,6 +225,71 @@ struct NotePreviewTests {
         #expect(try await rig.number("return document.images[1].naturalWidth") == 0)
     }
 
+    /// A picture or diagram pressed in the preview opens large over the note and closes by Esc, its button or a press
+    /// beside it; one inside a link opens the link instead (#378).
+    @Test func aPictureOpensLargeAndCloses() async throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "preview-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder.appending(path: "assets"), withIntermediateDirectories: true)
+        for name in ["wide-proof.svg", "sample.png"] {
+            try FileManager.default.copyItem(at: NoteRender.fixtures.appending(path: "assets/\(name)"), to: folder.appending(path: "assets/\(name)"))
+        }
+        let exam = UUID()
+        let rig = PreviewRig("![](assets/wide-proof.svg)\n\n```mermaid\ngraph LR\nA-->B\n```\n\n[![](assets/sample.png)](folio://exam/\(exam))", baseURL: folder)
+        defer { rig.close() }
+        var opened: [AppLink] = []
+        rig.page.openLink = OpenLinkAction { link, _, _ in opened.append(link) }
+        await rig.settle()
+        for _ in 0..<40 where try await rig.number("return Math.min(...[...document.images].map(i => i.naturalWidth))") ?? 0 == 0 {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        let open = "return document.querySelector('.figure-viewer') != null"
+        let sheet = "return document.querySelector('.figure-sheet').getBoundingClientRect().width"
+        let key = "document.body.dispatchEvent(new KeyboardEvent('keydown', {key, metaKey: command, bubbles: true}))"
+        let column = try #require(try await rig.number("return document.images[0].getBoundingClientRect().width"))
+
+        _ = try await rig.js("document.images[0].click()")
+        #expect(try await rig.js(open) as? Bool == true)
+        // Drawn larger than the column holds it; the linked picture isn't one of those to step through.
+        let fitted = try #require(try await rig.number(sheet))
+        #expect(fitted > column)
+        #expect(try await rig.js("return document.querySelector('.figure-count').textContent") as? String == "1 / 2")
+        _ = try await rig.js(key, ["key": "=", "command": true])
+        #expect(try await rig.number(sheet) ?? 0 > fitted)
+        _ = try await rig.js(key, ["key": "0", "command": true])
+        #expect(try await rig.number(sheet) == fitted)
+        // Pressed twice: its own size, and back.
+        let tap = "const el = document.querySelector('.figure-sheet > *'), r = el.getBoundingClientRect();"
+            + "for (const type of ['pointerdown', 'pointerup']) el.dispatchEvent(new PointerEvent(type, {pointerId: 1, isPrimary: true,"
+            + " clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, bubbles: true}))"
+        _ = try await rig.js(tap)
+        _ = try await rig.js(tap)
+        #expect(try await rig.js("return document.querySelector('.figure-actual').textContent") as? String == "100%")
+        _ = try await rig.js(tap)
+        _ = try await rig.js(tap)
+        #expect(try await rig.number(sheet) == fitted)
+        // The next is the diagram, drawn again from its own SVG.
+        _ = try await rig.js(key, ["key": "ArrowRight", "command": false])
+        #expect(try await rig.js("return document.querySelector('.figure-sheet > svg') != null") as? Bool == true)
+        _ = try await rig.js(key, ["key": "Escape", "command": false])
+        #expect(try await rig.js(open) as? Bool == false)
+
+        _ = try await rig.js("document.querySelector('figure.mermaid').click()")
+        #expect(try await rig.js("return document.querySelector('.figure-count').textContent") as? String == "2 / 2")
+        _ = try await rig.js("document.querySelector('.figure-close').click()")
+        #expect(try await rig.js(open) as? Bool == false)
+
+        _ = try await rig.js("document.images[0].click()")
+        let beside = "const v = document.querySelector('.figure-viewer');"
+            + "for (const type of ['pointerdown', 'pointerup']) v.dispatchEvent(new PointerEvent(type, {pointerId: 1, isPrimary: true, clientX: 4, clientY: 300, bubbles: true}))"
+        _ = try await rig.js(beside)
+        #expect(try await rig.js(open) as? Bool == false)
+
+        _ = try await rig.js("document.querySelector('a img').click()")
+        for _ in 0..<40 where opened.isEmpty { try? await Task.sleep(for: .milliseconds(50)) }
+        #expect(try await rig.js(open) as? Bool == false)
+        #expect(opened == [AppLink(.exam, exam)])
+    }
+
     /// A page handed to another note keeps nothing of the last one.
     /// A link into the app opens through the window's one opener, whether a wiki link or a markdown link.
     @Test func aClickOnALinkIntoTheAppOpensIt() async throws {

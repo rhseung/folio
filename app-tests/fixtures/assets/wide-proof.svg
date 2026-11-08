@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1808 324" width="1808" height="324" font-family="-apple-system, sans-serif">
+<style>.box{fill:#ffffff;stroke:#8a847b}.edge{fill:none;stroke:#8a847b;stroke-width:1.5}text{fill:#1d1b19;font-size:12px}@media (prefers-color-scheme: dark){.box{fill:#2a2826;stroke:#8a847b}text{fill:#ecebe8}}</style>
+<path class="edge" d="M154.0 60 C154.0 84 154.0 80 154.0 104"/>
+<path class="edge" d="M154.0 140 C154.0 164 154.0 160 154.0 184"/>
+<path class="edge" d="M454.0 60 C454.0 84 454.0 80 454.0 104"/>
+<path class="edge" d="M454.0 140 C454.0 164 454.0 160 454.0 184"/>
+<path class="edge" d="M584 122 H624"/>
+<path class="edge" d="M754.0 140 C754.0 164 754.0 160 754.0 184"/>
+<path class="edge" d="M754.0 220 C754.0 244 754.0 240 754.0 264"/>
+<path class="edge" d="M1054.0 60 C1054.0 84 1054.0 80 1054.0 104"/>
+<path class="edge" d="M1054.0 140 C1054.0 164 1054.0 160 1054.0 184"/>
+<path class="edge" d="M1354.0 60 C1354.0 84 1354.0 80 1354.0 104"/>
+<path class="edge" d="M1654.0 60 C1654.0 84 1654.0 80 1654.0 104"/>
+<path class="edge" d="M1654.0 140 C1654.0 164 1654.0 160 1654.0 184"/>
+<path class="edge" d="M1654.0 220 C1654.0 244 1354.0 240 1354.0 264"/>
+<path class="edge" d="M1054.0 140 C1054.0 164 1354.0 240 1354.0 264"/>
+<path class="edge" d="M1484 282 H1524"/>
+<rect class="box" x="24" y="24" width="260" height="36" rx="4"/><text x="154.0" y="46.0" text-anchor="middle">Hall's theorem</text>
+<rect class="box" x="24" y="104" width="260" height="36" rx="4"/><text x="154.0" y="126.0" text-anchor="middle">k-regular bipartite → perfect matching</text>
+<rect class="box" x="24" y="184" width="260" height="36" rx="4"/><text x="154.0" y="206.0" text-anchor="middle">Petersen: 2k-regular → 2-factor</text>
+<rect class="box" x="324" y="24" width="260" height="36" rx="4"/><text x="454.0" y="46.0" text-anchor="middle">κ, κ′ definitions</text>
+<rect class="box" x="324" y="104" width="260" height="36" rx="4"/><text x="454.0" y="126.0" text-anchor="middle">Whitney: κ ≤ κ′ ≤ δ</text>
+<rect class="box" x="324" y="184" width="260" height="36" rx="4"/><text x="454.0" y="206.0" text-anchor="middle">3-regular → κ = κ′</text>
+<rect class="box" x="624" y="104" width="260" height="36" rx="4"/><text x="754.0" y="126.0" text-anchor="middle">2-connected ⇔ two internally disjoint paths</text>
+<rect class="box" x="624" y="184" width="260" height="36" rx="4"/><text x="754.0" y="206.0" text-anchor="middle">2-connected: four conditions</text>
+<rect class="box" x="624" y="264" width="260" height="36" rx="4"/><text x="754.0" y="286.0" text-anchor="middle">2-connected ⇔ ear decomposition</text>
+<rect class="box" x="924" y="24" width="260" height="36" rx="4"/><text x="1054.0" y="46.0" text-anchor="middle">Max-flow min-cut</text>
+<rect class="box" x="924" y="104" width="260" height="36" rx="4"/><text x="1054.0" y="126.0" text-anchor="middle">Menger, edge form: κ′(x,y) = λ′(x,y)</text>
+<rect class="box" x="924" y="184" width="260" height="36" rx="4"/><text x="1054.0" y="206.0" text-anchor="middle">κ′(G) = max k with λ′(x,y) ≥ k</text>
+<rect class="box" x="1224" y="24" width="260" height="36" rx="4"/><text x="1354.0" y="46.0" text-anchor="middle">Tutte: o(G−S) ≤ |S|</text>
+<rect class="box" x="1224" y="104" width="260" height="36" rx="4"/><text x="1354.0" y="126.0" text-anchor="middle">Petersen: 3-regular, no cut-edge → 1-factor</text>
+<rect class="box" x="1224" y="264" width="260" height="36" rx="4"/><text x="1354.0" y="286.0" text-anchor="middle">Menger: κ(x,y) = λ(x,y)</text>
+<rect class="box" x="1524" y="24" width="260" height="36" rx="4"/><text x="1654.0" y="46.0" text-anchor="middle">Berge's theorem</text>
+<rect class="box" x="1524" y="104" width="260" height="36" rx="4"/><text x="1654.0" y="126.0" text-anchor="middle">Augmenting path algorithm</text>
+<rect class="box" x="1524" y="184" width="260" height="36" rx="4"/><text x="1654.0" y="206.0" text-anchor="middle">König–Egerváry: α′ = β</text>
+<rect class="box" x="1524" y="264" width="260" height="36" rx="4"/><text x="1654.0" y="286.0" text-anchor="middle">Deleting an edge drops κ by at most 1</text>
+</svg>
