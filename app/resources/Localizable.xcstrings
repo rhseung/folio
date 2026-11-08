@@ -18855,50 +18855,6 @@
         }
       }
     },
-    "sessions.progress.from-recording": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "끝 쪽은 녹음하는 동안 20초 넘게 본 쪽으로 채웠습니다"
-          }
-        }
-      }
-    },
-    "sessions.progress.last-class": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지난 수업 %lld쪽까지"
-          }
-        }
-      }
-    },
-    "sessions.progress.recorded": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음 중 %1$lld–%2$lld쪽"
-          }
-        }
-      }
-    },
-    "sessions.progress.page-count": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "전체 %lld쪽"
-          }
-        }
-      }
-    },
     "sessions.progress.missing-range": {
       "extractionState": "manual",
       "localizations": {
@@ -18950,17 +18906,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "자료 추가"
-          }
-        }
-      }
-    },
-    "sessions.progress.empty": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아직 고른 렉처가 없습니다"
           }
         }
       }
@@ -19075,17 +19020,6 @@
         }
       }
     },
-    "design.page-range.fine-hint": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "⌥ 누른 채 끌면 쪽 단위"
-          }
-        }
-      }
-    },
     "design.page-range.first": {
       "extractionState": "manual",
       "localizations": {
@@ -19119,50 +19053,6 @@
         }
       }
     },
-    "design.page-range.from": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "쪽부터"
-          }
-        }
-      }
-    },
-    "design.page-range.to": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "쪽까지"
-          }
-        }
-      }
-    },
-    "design.page-range.hint": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "막대를 눌러 쪽을 고르세요"
-          }
-        }
-      }
-    },
-    "design.page-range.seen": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음 중 봄 %1$lld–%2$lld"
-          }
-        }
-      }
-    },
     "design.page-range.seen-short": {
       "extractionState": "manual",
       "localizations": {
@@ -19181,28 +19071,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "녹음하는 동안 20초 넘게 본 쪽입니다. 누르면 이 구간으로 맞춥니다"
-          }
-        }
-      }
-    },
-    "design.page-range.resume": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지난 수업 다음부터"
-          }
-        }
-      }
-    },
-    "design.page-range.total": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "전체 %lld쪽"
           }
         }
       }
@@ -19246,7 +19114,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ (%2$@)"
+            "value": "%1$@ · %2$@"
           }
         }
       }
@@ -19603,17 +19471,6 @@
         }
       }
     },
-    "wrap-up.units-none": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아직 고른 단원이 없습니다"
-          }
-        }
-      }
-    },
     "wrap-up.left-detail": {
       "extractionState": "manual",
       "localizations": {
@@ -19669,17 +19526,6 @@
         }
       }
     },
-    "wrap-up.announcements-note": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "있었다면"
-          }
-        }
-      }
-    },
     "wrap-up.left-title": {
       "extractionState": "manual",
       "localizations": {
@@ -19709,17 +19555,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "나중에"
-          }
-        }
-      }
-    },
-    "wrap-up.attendance-none": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이 수업은 출결을 적을 수 없습니다"
           }
         }
       }
@@ -19764,6 +19599,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "수업 정리"
+          }
+        }
+      }
+    },
+    "design.page-range.from-page": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld쪽부터"
+          }
+        }
+      }
+    },
+    "design.page-range.to-page": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld쪽까지"
           }
         }
       }

@@ -1,13 +1,15 @@
 import FolioDomain
 import SwiftUI
 
-/// A lecture file's pages as a thin bar, with one class's range on it in the course accent. Pages other classes took
-/// lie faintly under it, the pages seen while recording hang below as a dashed span to take in one tap, and the two
-/// numbers ride the handles. Every change goes through `PageRange` (`moving`, `tapping`, `shifted`), so the range
-/// stays within the file and in order during a drag as much as after one.
+/// A lecture file's pages as a thin bar, with one class's range on it in the course accent and one line under it that
+/// reads the range. Pages other classes took lie faintly in the bar, and the pages seen while recording are a dotted
+/// line under it to take in one tap. The numbers ride the handles only while one is dragged, pointed at or keyed:
+/// at rest they would crowd the bar, and the line under it already says them. Every change goes through `PageRange`
+/// (`moving`, `tapping`, `shifted`), so the range stays within the file and in order during a drag as much as after.
 ///
 /// A lecture split into units (#321) draws its zones as tiles instead of the thin rail (the section bar, e2): the range
-/// lies over them, reads as the units it reaches, and its ends settle on zone edges unless ⌥ is held.
+/// lies over them, the line reads it as the units it reaches, and its ends settle on zone edges unless ⌥ is held.
+/// The tiles carry no names: a handle covered one wherever the range began or ended.
 struct PageRangeField: View {
     /// Pages another class took through the file.
     struct Taught: Identifiable {
@@ -27,8 +29,6 @@ struct PageRangeField: View {
     let pages: Int?
     var taught: [Taught] = []
     var seen: ClosedRange<Int>?
-    /// The page after the last class's, offered as one tap. The sheet passes it; the popover's rows are too tight.
-    var resume: Int?
     var sections: [Section] = []
     /// What a range of a split file reads as (`CourseFile.sectionLabel`): `König–Hall`.
     var reads: ((ClosedRange<Int>) -> String?)?
@@ -51,6 +51,9 @@ struct PageRangeField: View {
     @State private var bumps = 0
     /// A sheet hands its first control focus as it opens; the ring waits for a key so it marks only keyboard use.
     @State private var keyed = false
+    /// The numbers over the handles, kept up a moment after the pointer leaves so it can reach them to type.
+    @State private var pillsUp = false
+    @State private var pillHover = false
     @FocusState private var focused: PageRange.End?
     @FocusState private var typingFocused: Bool
 
@@ -59,18 +62,19 @@ struct PageRangeField: View {
         case span(from: PageRange, at: CGFloat)
     }
 
-    /// Room left and right of the bar for a handle at either end and its pill.
+    /// Room left and right of the bar for a handle at either end.
     private static let inset: CGFloat = 12
     private static let bar: CGFloat = 8
     private static let pillRow: CGFloat = 24
     /// The bar's row, taller than the bar so it is easy to grab.
     private static let hitRow: CGFloat = 24
-    private static let ghostRow: CGFloat = 20
+    /// The recording's dotted line under the bar, tall enough to press.
+    private static let seenRow: CGFloat = 12
     /// Closer than this, the two pills would overlap and read as one: they merge.
     private static let mergeBelow: CGFloat = 56
     private static let grabReach: CGFloat = 10
     private static let spring = Animation.spring(duration: 0.32, bounce: 0.35)
-    private static let zone: CGFloat = 20
+    private static let zone: CGFloat = 12
     /// Within this much of a zone's edge, a dragged end settles on it.
     private static let snap: CGFloat = 0.75 // design: one-off, a fraction of a page, not a distance on screen
 
@@ -89,17 +93,33 @@ struct PageRangeField: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+        VStack(alignment: .leading, spacing: 0) {
             GeometryReader { proxy in track(width: proxy.size.width) }
                 .frame(height: Self.pillRow + Self.hitRow)
             if let seen {
-                GeometryReader { proxy in ghost(seen, width: proxy.size.width) }
-                    .frame(height: Self.ghostRow)
+                GeometryReader { proxy in seenLine(seen, width: proxy.size.width) }
+                    .frame(height: Self.seenRow)
             }
-            if zoned, let summary { summaryRow(summary) }
-            if !compact, let resume { actions(resume) }
+            if let readout {
+                Text(readout)
+                    .font(Theme.Typeface.caption)
+                    .monospacedDigit()
+                    // An end still to pick reads in the course ink: the row's cue, with no sentence for it.
+                    .foregroundStyle(shown.lone == nil ? Theme.Palette.textSecondary : accent.ink)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+                    .padding(.horizontal, Self.inset)
+                    .padding(.top, Theme.Space.s)
+            }
         }
         .frame(minWidth: compact ? 200 : 240)
+        .onChange(of: wantsPills) { _, want in
+            if want { pillsUp = true; return }
+            Task {
+                try? await Task.sleep(for: .milliseconds(300))
+                if !wantsPills { pillsUp = false }
+            }
+        }
         .sensoryFeedback(.selection, trigger: ticks)
         // Firmer where the drag stops giving or starts pushing: the file's first or last page, or the other end.
         .sensoryFeedback(.alignment, trigger: bumps)
@@ -174,7 +194,7 @@ struct PageRangeField: View {
                 .pointerStyle(hovered != nil || grab != nil ? .columnResize : nil)
                 #endif
                 .accessibilityHidden(true)
-            if let p = hoverPage { tip(p, width: w) }
+            if let p = hoverPage, !pillsUp { tip(p, width: w) }
         }
         .frame(width: w, height: Self.pillRow + Self.hitRow)
     }
@@ -201,21 +221,13 @@ struct PageRangeField: View {
         }
     }
 
-    /// The zones as grey tiles with their names; a name the range reaches is in the course ink. Pages other classes
-    /// took are a line under the tiles, as the tiles leave no room to lay them in.
+    /// The zones as grey tiles; pages other classes took darken them, as they do the plain rail.
     private func zones(_ context: GraphicsContext, width w: CGFloat) {
         let n = extent, top = barY - Self.zone / 2
-        let r = shown
-        let picked = r.first.flatMap { f in r.last.map { f...$0 } }
         for (i, s) in sections.enumerated() where s.pages.lowerBound <= n {
             let lo = x(s.pages.lowerBound - 1, w) + (i == 0 ? 0 : 2), hi = x(min(s.pages.upperBound, n), w) - (i == sections.count - 1 ? 0 : 2)
             let rect = CGRect(x: lo, y: top, width: max(hi - lo, 1), height: Self.zone)
             context.fill(Path(roundedRect: rect, cornerRadius: Theme.Radius.tile), with: .color(Theme.Palette.fill))
-            guard !s.title.isEmpty, rect.width > 24 else { continue }
-            let reached = picked?.overlaps(s.pages) == true
-            let text = context.resolve(Text(s.title).font(reached ? Theme.Typeface.label : Theme.Typeface.label.weight(.regular))
-                .foregroundStyle(reached ? accent.ink : Theme.Palette.textSecondary))
-            context.draw(text, in: rect.insetBy(dx: Theme.Space.s, dy: Theme.Space.xxs))
         }
         // Until the count is read the bar runs past the last zone, so an end can still be dragged on: those pages are
         // a zone no unit takes.
@@ -225,29 +237,25 @@ struct PageRangeField: View {
         }
         for t in taught where t.pages.lowerBound <= n {
             let upper = min(t.pages.upperBound, n)
-            let rect = CGRect(x: x(t.pages.lowerBound - 1, w) + 1, y: top + Self.zone + Theme.Space.xxs, width: max(x(upper, w) - x(t.pages.lowerBound - 1, w) - 2, 1), height: 2)
-            context.fill(Path(rect), with: .color(Theme.Palette.text.opacity(Theme.Opacity.projected)))
+            let rect = CGRect(x: x(t.pages.lowerBound - 1, w) + 1, y: top, width: max(x(upper, w) - x(t.pages.lowerBound - 1, w) - 2, 1), height: Self.zone)
+            context.fill(Path(roundedRect: rect, cornerRadius: Theme.Radius.tile), with: .color(Theme.Palette.text.opacity(Theme.Opacity.projected)))
         }
     }
 
-    private var summary: String? {
-        guard let f = shown.first, let l = shown.last else { return nil }
-        let pages = String(localized: f == l ? .designPageRangeLength(f) : .designPageRangeSpan(f, l))
-        guard let name = reads?(f...l) else { return pages }
-        return String(localized: .designPageRangeSummary(name, pages))
+    /// The range in one line: `Hall의 정리–증가 경로 · 14–20쪽`, `14–20쪽` off units, `7쪽부터` with an end to pick.
+    private var readout: String? {
+        switch (shown.first, shown.last) {
+        case let (f?, l?):
+            let pages = String(localized: f == l ? .designPageRangeLength(f) : .designPageRangeSpan(f, l))
+            guard let name = reads?(f...l) else { return pages }
+            return String(localized: .designPageRangeSummary(name, pages))
+        case let (f?, nil): return String(localized: .designPageRangeFromPage(f))
+        case let (nil, l?): return String(localized: .designPageRangeToPage(l))
+        default: return nil
+        }
     }
 
-    private func summaryRow(_ summary: String) -> some View {
-        HStack {
-            Text(summary).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1).truncationMode(.middle)
-            Spacer(minLength: Theme.Space.s)
-            #if os(macOS)
-            if !compact { Text(.designPageRangeFineHint).foregroundStyle(Theme.Palette.textTertiary) }
-            #endif
-        }
-        .font(Theme.Typeface.caption)
-        .padding(.horizontal, Self.inset)
-    }
+    private var wantsPills: Bool { grab != nil || typing != nil || hovered != nil || pillHover || (keyed && focused != nil) }
 
     private var grabbedEnd: PageRange.End? { if case let .end(end, _) = grab { end } else { nil } }
     private var grabbedSpan: Bool { if case .span = grab { true } else { false } }
@@ -312,27 +320,28 @@ struct PageRangeField: View {
                 }
             }
             .position(x: clamp((xa + xb) / 2, 40), y: y)
-            .opacity(merged ? 1 : 0)
-            .allowsHitTesting(merged)
+            .opacity(pillsUp && merged ? 1 : 0)
+            .allowsHitTesting(pillsUp && merged)
             pill { number(.first, f) }
                 .position(x: clamp(xa, 16), y: y)
-                .opacity(merged ? 0 : 1)
-                .allowsHitTesting(!merged)
+                .opacity(pillsUp && !merged ? 1 : 0)
+                .allowsHitTesting(pillsUp && !merged)
             pill { number(.last, l) }
                 .position(x: clamp(xb, 16), y: y)
-                .opacity(merged ? 0 : 1)
-                .allowsHitTesting(!merged)
+                .opacity(pillsUp && !merged ? 1 : 0)
+                .allowsHitTesting(pillsUp && !merged)
         case let (f?, nil, xa?, _):
-            pill { number(.first, f); Text(.designPageRangeFrom).foregroundStyle(Theme.Palette.textSecondary) }
-                .position(x: clamp(xa, 32), y: y)
+            pill { number(.first, f) }
+                .position(x: clamp(xa, 16), y: y)
+                .opacity(pillsUp ? 1 : 0)
+                .allowsHitTesting(pillsUp)
         case let (nil, l?, _, xb?):
-            pill { number(.last, l); Text(.designPageRangeTo).foregroundStyle(Theme.Palette.textSecondary) }
-                .position(x: clamp(xb, 32), y: y)
+            pill { number(.last, l) }
+                .position(x: clamp(xb, 16), y: y)
+                .opacity(pillsUp ? 1 : 0)
+                .allowsHitTesting(pillsUp)
         default:
-            Text(.designPageRangeHint)
-                .font(Theme.Typeface.caption)
-                .foregroundStyle(Theme.Palette.textTertiary)
-                .position(x: w / 2, y: y)
+            EmptyView()
         }
     }
 
@@ -346,7 +355,9 @@ struct PageRangeField: View {
             .overlay(Capsule().strokeBorder(Theme.Palette.lineStrong, lineWidth: 0.5))
             .shadow(color: .black.opacity(0.12), radius: 1, y: 1)
             .fixedSize()
+            .onHover { pillHover = $0 }
             .animation(.easeOut(duration: 0.18), value: moved)
+            .animation(.easeOut(duration: 0.15), value: pillsUp)
     }
 
     @ViewBuilder
@@ -389,46 +400,32 @@ struct PageRangeField: View {
         .background(Theme.Palette.card, in: .capsule)
         .shadow(color: .black.opacity(0.18), radius: 2, y: 1)
         .fixedSize()
-        .position(x: x(p - 1, w) + unit(w) / 2, y: -Theme.Space.s)
+        .position(x: x(p - 1, w) + unit(w) / 2, y: Self.pillRow / 2)
         .allowsHitTesting(false)
     }
 
     // MARK: Below the bar
 
-    private func ghost(_ seen: ClosedRange<Int>, width w: CGFloat) -> some View {
+    /// The pages seen while recording as a dotted line under them; pressing it takes them as the range. A line rather
+    /// than a labelled box: the box and its words sat against the bar and the readout, and the tooltip says the rest.
+    private func seenLine(_ seen: ClosedRange<Int>, width w: CGFloat) -> some View {
         let lo = x(seen.lowerBound - 1, w), hi = x(min(seen.upperBound, extent), w)
         let applied = shown.first == seen.lowerBound && shown.last == seen.upperBound
-        let shape = UnevenRoundedRectangle(bottomLeadingRadius: Theme.Radius.control, bottomTrailingRadius: Theme.Radius.control)
         return Button {
             apply(PageRange().moving(.first, to: seen.lowerBound, pages: pages).moving(.last, to: seen.upperBound, pages: pages))
         } label: {
-            Text(compact ? .designPageRangeSeenShort(seen.lowerBound, seen.upperBound) : .designPageRangeSeen(seen.lowerBound, seen.upperBound))
-                .font(Theme.Typeface.label)
-                .foregroundStyle(accent.ink)
-                .fixedSize()
-                .frame(width: max(hi - lo, 1), height: Self.ghostRow - 2)
-                .background(applied ? accent.tint : .clear, in: shape)
-                .overlay(shape.stroke(accent.color.opacity(0.6), style: StrokeStyle(lineWidth: 1, dash: applied ? [] : [3, 2])))
-                .contentShape(shape)
-        }
-        .buttonStyle(.plain)
-        .help(Text(.designPageRangeSeenHelp))
-        .position(x: (lo + hi) / 2, y: Self.ghostRow / 2)
-    }
-
-    private func actions(_ resume: Int) -> some View {
-        HStack(spacing: Theme.Space.m) {
-            Button(String(localized: .designPageRangeResume)) {
-                apply(range.moving(.first, to: resume, pages: pages))
+            Path { path in
+                path.move(to: CGPoint(x: 0, y: Self.seenRow / 2))
+                path.addLine(to: CGPoint(x: max(hi - lo, 1), y: Self.seenRow / 2))
             }
-            .buttonStyle(.pointing(.plain))
-            .foregroundStyle(accent.ink)
-            .disabled(range.first == resume)
-            Spacer()
-            if let pages { Text(.designPageRangeTotal(pages)).foregroundStyle(Theme.Palette.textTertiary) }
+            .stroke(accent.color.opacity(applied ? 1 : 0.7), style: StrokeStyle(lineWidth: 2, lineCap: .round, dash: applied ? [] : [2, 4]))
+            .frame(width: max(hi - lo, 1), height: Self.seenRow)
+            .contentShape(.rect)
         }
-        .font(Theme.Typeface.caption)
-        .padding(.horizontal, Self.inset)
+        .buttonStyle(.pointing(.plain))
+        .help(Text(.designPageRangeSeenHelp))
+        .accessibilityLabel(Text(.designPageRangeSeenShort(seen.lowerBound, seen.upperBound)))
+        .position(x: (lo + hi) / 2, y: Self.seenRow / 2)
     }
 
     // MARK: Changes

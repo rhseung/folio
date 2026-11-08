@@ -78,7 +78,7 @@ struct ClassWrapUpSheet: View {
         case .note: note
         case .attendance:
             CardRow(last: true) {
-                if model.takesAttendance { attendance } else { EmptyLine(String(localized: .wrapUpAttendanceNone)) }
+                attendance
                 Spacer(minLength: 0)
             }
         }
@@ -92,21 +92,12 @@ struct ClassWrapUpSheet: View {
 
     @ViewBuilder var progress: some View {
         let rows = model.rows
-        if rows.isEmpty {
-            CardRow(last: model.addable.isEmpty) { EmptyLine(String(localized: .sessionsProgressEmpty)) }
-        }
         ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
             CardRow(last: i == rows.count - 1 && model.addable.isEmpty) {
                 CheckCircle(on: row.included) { model.toggle(row.id) }
-                VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                    VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                        Text(model.name(row.id)).lineLimit(1).truncationMode(.middle)
-                        let detail = model.detail(row.id)
-                        if !detail.isEmpty {
-                            Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(2).fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    .opacity(row.included ? 1 : Theme.Opacity.ended)
+                VStack(alignment: .leading, spacing: Theme.Space.s) {
+                    Text(model.name(row.id)).lineLimit(1).truncationMode(.middle)
+                        .opacity(row.included ? 1 : Theme.Opacity.ended)
                     // The file's own action, under its name: the bar beside it is only for picking pages.
                     if model.sections(row.id).isEmpty {
                         Button { split(row.id) } label: { Label(.designPageRangeSplit, systemImage: "scissors") }
@@ -119,7 +110,7 @@ struct ClassWrapUpSheet: View {
                 .frame(width: 176, alignment: .leading)
                 Spacer(minLength: Theme.Space.s)
                 PageRangeField(range: row.range, pages: model.pageCounts[row.id], taught: model.taught(row.id),
-                               seen: model.seen(row.id), resume: model.resume(row.id), sections: model.sections(row.id),
+                               seen: model.seen(row.id), sections: model.sections(row.id),
                                reads: model.reads(row.id)) { model.setRange(row.id, $0) }
                     .opacity(row.included ? 1 : Theme.Opacity.ended)
             }
@@ -147,15 +138,9 @@ struct ClassWrapUpSheet: View {
         let options = model.unitOptions
         if !options.isEmpty {
             CardRow {
-                let linked = model.linkedUnits
-                Group {
-                    if linked.isEmpty {
-                        EmptyLine(String(localized: .wrapUpUnitsNone))
-                    } else {
-                        FlowLayout(spacing: Theme.Space.tight, centered: true) {
-                            ForEach(linked) { unitChip($0) }
-                        }
-                    }
+                // No chips is no units: the empty row needs no sentence for it.
+                FlowLayout(spacing: Theme.Space.tight, centered: true) {
+                    ForEach(model.linkedUnits) { unitChip($0) }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 // Outside the chips, at the row's end: placed after them it moved with every pick, and the open
@@ -242,7 +227,7 @@ struct ClassWrapUpSheet: View {
     // MARK: Announcements
 
     var announcements: some View {
-        Block(String(localized: .wrapUpAnnouncements), note: String(localized: .wrapUpAnnouncementsNote)) {
+        Block(String(localized: .wrapUpAnnouncements)) {
             Card {
                 ForEach(model.announced, id: \.self) { line in
                     CardRow {

@@ -36,8 +36,8 @@ struct LectureProgressModelTests {
 
         let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session, viewed: ask.viewed)
         #expect(model.rows == [.init(id: slides.id, first: 7, last: 11)])
-        #expect(model.detail(slides.id).hasPrefix("지난 수업 6쪽까지 · 녹음 중 6–11쪽"))
-        #expect(model.refusal == nil && model.note == String(localized: .sessionsProgressFromRecording))
+        #expect(model.seen(slides.id) == 6...11)
+        #expect(model.refusal == nil && model.note == nil)
         model.wrapUp()
         #expect(links(session) == [SessionMaterial(materialId: slides.id, firstPage: 7, lastPage: 11)])
     }
@@ -94,7 +94,7 @@ struct LectureProgressModelTests {
 
         let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
         #expect(model.rows == [.init(id: slides.id, first: 7, last: 11)])
-        #expect(model.note == String(localized: .sessionsProgressFromRecording))
+        #expect(model.seen(slides.id) == 6...11)
     }
 
     @Test func aRangeFromTheFieldIsKeptAsIs() throws {

@@ -179,6 +179,8 @@ struct ClassWrapUpModelTests {
         model.add(slides.id)
         #expect(model.rows.first?.range.lone == .first)
         #expect(model.refusal == String(localized: .sessionsProgressMissingLast("05_Matchings.pdf")))
+        // The bar says it lacks an end, and 저장 is off: no sentence under the form.
+        #expect(model.note == nil)
         model.setRange(slides.id, PageRange(first: 1).tapping(1, pages: 20))
         #expect(model.refusal == nil)
         #expect(model.wrapUp())
