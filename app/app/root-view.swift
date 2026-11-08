@@ -218,7 +218,8 @@ struct RootView: View {
             await ResizeProbe.run(window: { host.window }, workspace: workspace,
                                   openTab: { link, course in tabs.open(Navigator(Navigator.Entry(link: link, course: course))) },
                                   front: { tabs.select(number: $0) },
-                                  openBeside: { link, course in tabs.front?.openBeside(Navigator.Entry(link: link, course: course)) })
+                                  openBeside: { link, course in tabs.front?.openBeside(Navigator.Entry(link: link, course: course)) },
+                                  frontPanes: { tabs.front })
         }
         #endif
         #if DEBUG && os(macOS)

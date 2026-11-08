@@ -4,10 +4,6 @@ import SwiftUI
 /// A scrolling page: cards on a quiet background, centered at reading width.
 struct Page<Content: View, Backdrop: View>: View {
     var maxWidth: CGFloat = Theme.Size.pageMaxWidth
-    /// Its blocks built and laid out only as they scroll into view, so a pane or window being resized lays out what
-    /// shows (#62). Only for a page with no `linkTarget` inside a block: a link can't scroll to a row in a block that
-    /// hasn't been built.
-    var lazy = false
     // Behind the content's top across the page's full width, scrolling away with it: Today's course wash.
     @ViewBuilder var backdrop: Backdrop
     @ViewBuilder var content: Content
@@ -17,7 +13,11 @@ struct Page<Content: View, Backdrop: View>: View {
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                stack
+                // Not a LazyVStack: a lazy stack moves its scroll offset to keep a visible block in place whenever the
+                // page's width changes under an animation (a course column docking or hiding), and the page jumped
+                // up and down for a quarter second, all the more where a narrower page stacks its blocks taller
+                // (2026-11-08 사용자). A page holds a few blocks, not a list.
+                VStack(alignment: .leading, spacing: Theme.Space.section) { content }
                     // The fade's hidden bars reach everything inside through the environment; a text area or sheet
                     // on the page keeps its own.
                     .scrollIndicators(.automatic)
@@ -45,19 +45,11 @@ struct Page<Content: View, Backdrop: View>: View {
         .foregroundStyle(Theme.Palette.text)
         .font(Theme.Typeface.body)
     }
-
-    @ViewBuilder var stack: some View {
-        if lazy {
-            LazyVStack(alignment: .leading, spacing: Theme.Space.section) { content }
-        } else {
-            VStack(alignment: .leading, spacing: Theme.Space.section) { content }
-        }
-    }
 }
 
 extension Page where Backdrop == EmptyView {
-    init(maxWidth: CGFloat = Theme.Size.pageMaxWidth, lazy: Bool = false, @ViewBuilder content: () -> Content) {
-        self.init(maxWidth: maxWidth, lazy: lazy, backdrop: { EmptyView() }, content: content)
+    init(maxWidth: CGFloat = Theme.Size.pageMaxWidth, @ViewBuilder content: () -> Content) {
+        self.init(maxWidth: maxWidth, backdrop: { EmptyView() }, content: content)
     }
 }
 

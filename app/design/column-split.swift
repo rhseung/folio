@@ -46,12 +46,15 @@ struct ColumnFit: Equatable {
 /// The columns hidden by hand, on this device: a choice about the screen, not GIST data, so in `UserDefaults` rather
 /// than `settings.json`. One object for the app, so every window and pane follows a change at once.
 @MainActor @Observable final class ColumnPrefs {
-    /// A test host or a window-snapshot run shares the installed app's bundle ID, so its defaults are the user's: a
-    /// column they hid would change what is measured or drawn.
+    /// A test host, a window-snapshot run or a resize probe shares the installed app's bundle ID, so its defaults are
+    /// the user's: a column they hid would change what is measured or drawn, and one the run hides would stay hidden.
     static let shared = ColumnPrefs(defaults: isolated ? nil : .standard)
     private static var isolated: Bool {
         #if DEBUG && os(macOS)
         if SnapshotDriver.directory != nil { return true }
+        #endif
+        #if os(macOS) && (DEBUG || RESIZE_PROBE)
+        if ResizeProbe.file != nil { return true }
         #endif
         return LocalFolders.isIsolated()
     }
