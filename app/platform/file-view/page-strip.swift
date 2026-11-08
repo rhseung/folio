@@ -62,11 +62,11 @@ struct PageStrip: View {
             case .range(let from, let to)?:
                 model.press(from)
                 model.extend(to: to)
-                controller.go(to: to - 1)
+                go(to: to)
             case .edit(let page, let to)?:
                 if let section = model.sections.first(where: { $0.pages.contains(page) }) { model.edit(section) }
                 model.extend(to: to)
-                controller.go(to: to - 1)
+                go(to: to)
             case .choose?: model.choosing = model.onlyToday == nil
             case .save?: model.commit()
             case nil: break
@@ -74,6 +74,19 @@ struct PageStrip: View {
         }
         #endif
     }
+
+    #if DEBUG && os(macOS)
+    /// After the row above the range is laid out, and by way of the page after it: scrolled to at once, the row pushed
+    /// the page below the strip's bottom edge, and scrolled to from above, it sat under the bottom's fade.
+    private func go(to page: Int) {
+        Task {
+            try? await Task.sleep(for: .seconds(0.4))
+            controller.go(to: page)
+            try? await Task.sleep(for: .seconds(0.4))
+            controller.go(to: page - 1)
+        }
+    }
+    #endif
 }
 
 /// One page of the column, with the header, edit row or draft row heading it, or a folded section's header alone.

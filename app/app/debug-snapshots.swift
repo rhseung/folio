@@ -209,7 +209,10 @@ final class SnapshotDriver {
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         if let window = NSApp.windows.first(where: { $0.isVisible }) {
-            window.setContentSize(NSSize(width: Self.width, height: 900))
+            // No taller than the screen: the strip scrolls a page to its bottom edge, which was off a short screen and
+            // out of the picture.
+            let room = (window.screen ?? NSScreen.main)?.visibleFrame.height ?? 900
+            window.setFrame(NSRect(origin: window.frame.origin, size: NSSize(width: Self.width, height: min(900, room))), display: true)
             window.center()
         }
         func pair(_ text: String?, _ fallback: (Int, Int)) -> (Int, Int) {
