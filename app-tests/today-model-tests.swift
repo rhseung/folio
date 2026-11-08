@@ -182,7 +182,7 @@ struct QuickAddModelTests {
         model.text = "HW5 금 23:59"
         let parsed = try #require(model.parsed)
         #expect(model.canAdd(parsed))
-        #expect(model.course(parsed).flatMap(model.courseTitle) == "그래프 이론")
+        #expect(parsed.courseId.flatMap(model.courseTitle) == "그래프 이론")
         model.locale = Locale(identifier: "ko_KR@hours=h23")
         #expect(model.due(parsed)?.hasSuffix("(금) 23:59") == true)
         model.locale = Locale(identifier: "ko_KR@hours=h12")
@@ -196,12 +196,31 @@ struct QuickAddModelTests {
     @Test func theShownCourseIsInUntilTheLineNamesAnother() throws {
         let workspace = try fixtureWorkspace()
         let model = QuickAddModel(workspace: workspace, defaultCourse: graphTheory)
-        #expect(model.course(nil) == graphTheory)
+        #expect(model.chips == [.course(graphTheory)])
         model.text = "HW5 금"
         #expect(model.parsed?.courseId == graphTheory)
         let other = try #require(workspace.currentCourses.first { $0.id != graphTheory })
         model.text = "\(other.title) HW5 금"
         #expect(model.parsed?.courseId == other.id)
+    }
+
+    /// The chips keep one order as values come and go, and a pick on one holds while more of the title is typed.
+    @Test func chipsKeepTheirOrderAndPicksHold() throws {
+        let workspace = try fixtureWorkspace()
+        let model = QuickAddModel(workspace: workspace)
+        model.text = "보고서"
+        #expect(model.chips == [.course(nil), .due(nil)])
+        model.text = "보고서 HW5 매주 금"
+        let due = try #require(model.parsed?.due)
+        #expect(model.chips == [.course(nil), .due(due), .weekly, .folder("HW05")])
+        model.pickCourse(graphTheory)
+        model.text = "보고서 HW5 매주 금 초안"
+        #expect(model.parsed?.courseId == graphTheory)
+        model.renumber(kind: .lab, number: 3)
+        #expect(model.text == "보고서 Lab3 매주 금 초안" && model.chips.last == .folder("Lab03"))
+        model.pickDue(nil)
+        #expect(model.parsed?.due == nil && model.parsed?.repeats == nil)
+        #expect(model.chips == [.course(graphTheory), .due(nil), .folder("Lab03")])
     }
 }
 
