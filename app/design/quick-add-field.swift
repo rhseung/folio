@@ -177,25 +177,31 @@ struct QuickAddField: View {
         func range(_ r: Range<String.Index>) -> NSRange? {
             r.upperBound <= text.endIndex ? NSRange(r, in: text) : nil
         }
-        var marks = parsed.dueRanges.compactMap { r in range(r).map { QuickAddMark(range: $0, fill: Theme.Palette.readDue) } }
-        if let id = parsed.courseId {
-            marks += parsed.courseRanges.compactMap { r in range(r).map { QuickAddMark(range: $0, fill: model.accent(id).read) } }
+        return parsed.spans.compactMap { span in
+            guard let r = range(span.range), let color = fill(span.field, parsed) else { return nil }
+            return QuickAddMark(range: r, fill: color)
         }
-        if let r = parsed.kindRange.flatMap(range) { marks.append(QuickAddMark(range: r, fill: Theme.Palette.readFolder)) }
-        return marks
     }
     #endif
+
+    /// A word's pill color. The course's comes from what will be saved, not from the word: a course picked on the chip
+    /// recolors the word, and with the course cleared the word has no pill.
+    private func fill(_ field: QuickAdd.Span.Field, _ parsed: QuickAdd) -> Color? {
+        switch field {
+        case .due: Theme.Palette.readDue
+        case .course: parsed.courseId.map { model.accent($0).read }
+        case .kind: Theme.Palette.readFolder
+        }
+    }
 
     /// The line laid out again under the field, invisible, so `ReadMarkRenderer` can draw a pill behind each word read.
     private func marks(_ parsed: QuickAdd?) -> some View {
         let text = model.text
         var ranges: [(Range<String.Index>, ReadMark)] = []
         if let parsed {
-            ranges += parsed.dueRanges.map { ($0, ReadMark(fill: Theme.Palette.readDue)) }
-            if let id = parsed.courseId {
-                ranges += parsed.courseRanges.map { ($0, ReadMark(fill: model.accent(id).read)) }
+            for span in parsed.spans {
+                if let color = fill(span.field, parsed) { ranges.append((span.range, ReadMark(fill: color))) }
             }
-            if let r = parsed.kindRange { ranges.append((r, ReadMark(fill: Theme.Palette.readFolder))) }
         }
         var mirror = Text("")
         var at = text.startIndex
