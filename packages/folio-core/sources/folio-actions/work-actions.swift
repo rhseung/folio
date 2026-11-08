@@ -269,8 +269,10 @@ public struct AssignmentSave {
     @CLIName("group") var componentGroup: Patch<String?>
     /// 메모
     var memo: Patch<String>
-    /// 과제가 반영되는 성적 항목마다의 점수. 적지 않은 항목의 점수는 지운다
-    @CLIName("score") @Parsed("score", "9/10. 묶음이면 <항목>:9/10") var scores: Patch<[Score]>
+    /// 과제가 반영되는 성적 항목들의 점수 전체. 주면 목록 전체를 바꾸고, 목록에 없는 항목의 점수는 지운다
+    @Hidden var scores: Patch<[Score]>
+    /// 준 항목의 점수만 바꾸고 다른 항목의 점수는 그대로 둔다. 빈 목록이면 점수를 모두 지운다
+    @CLIName("score") @Parsed("score", "9/10. 묶음이면 <항목>:9/10") var score: Patch<[Score]>
 
     // A weekly series shares one title, so each score is told apart by its date.
     static func scoreTitle(_ title: String, repeats: AssignmentRepeat?, due: Date?) -> String {
@@ -282,7 +284,7 @@ public struct AssignmentSave {
             throw ActionError.input(String(localized: .errorAssignmentComponentOrGroup))
         }
         if title.value?.isEmpty == true { throw ActionError.rule(String(localized: .errorAssignmentTitleEmpty)) }
-        guard (scores.value ?? []).allSatisfy({ $0.max > 0 }) else { throw ActionError.rule(String(localized: .errorAssignmentMaxScore)) }
+        guard ((scores.value ?? []) + (score.value ?? [])).allSatisfy({ $0.max > 0 }) else { throw ActionError.rule(String(localized: .errorAssignmentMaxScore)) }
         let end = try repeatEnd(ctx, course: course)
         try ctx.edit(course) { f in
             let i = try index(assignment, in: f.assignments, .valueAssignment)
@@ -306,7 +308,7 @@ public struct AssignmentSave {
             // What the sheet showed before: with no target it shows the component of the first score. A score there
             // that the new target leaves out goes; one moved elsewhere on the grades page stays.
             let shown = target + covered(old.componentGroup, old.componentId ?? own.first?.componentId).filter { !target.contains($0) }
-            let given: [(component: UUID, score: Double, max: Double)] = try scores.value.map { list in
+            func resolved(_ list: [Score]) throws -> [(component: UUID, score: Double, max: Double)] {
                 try list.map { s in
                     guard let id = s.component ?? (target.count == 1 ? target[0] : nil) else {
                         throw ActionError.input(String(localized: target.isEmpty ? .errorAssignmentNoComponent : .errorAssignmentGroupScoreFormat))
@@ -316,7 +318,17 @@ public struct AssignmentSave {
                     }
                     return (id, s.score, s.max)
                 }
-            } ?? own.filter { target.contains($0.componentId) }.map { ($0.componentId, $0.score, $0.max) }
+            }
+            var given = own.filter { target.contains($0.componentId) }.map { (component: $0.componentId, score: $0.score, max: $0.max) }
+            if let list = scores.value { given = try resolved(list) }
+            // One component's score given on the command line must not take the others' with it.
+            if let list = score.value {
+                if list.isEmpty { given = [] }
+                for s in try resolved(list) {
+                    given.removeAll { $0.component == s.component }
+                    given.append(s)
+                }
+            }
 
             let entryTitle = Self.scoreTitle(a.title, repeats: a.repeats, due: a.due)
             let oldTitle = Self.scoreTitle(old.title, repeats: old.repeats, due: old.due)
@@ -626,9 +638,9 @@ public struct PolicySet {
     var latesPerAbsence: Patch<Int?>
     /// 상대평가에서 A를 받는 비율. 0.5
     var topGradeRatio: Patch<Double?>
-    /// 결석 횟수마다 받을 수 있는 최대 성적
+    /// 결석 횟수마다 받을 수 있는 최대 성적. 주면 목록 전체를 바꾼다
     @CLIName("cap") @Parsed("cap", "결석 횟수:최대 성적. 6:B0") var attendanceCap: Patch<[AttendanceCap]>
-    /// 절대평가의 성적별 최저 점수
+    /// 절대평가의 성적별 최저 점수. 주면 목록 전체를 바꾼다
     @CLIName("cutoff") @Parsed("cutoff", "성적:최저 점수. A+:95") var cutoffs: Patch<[GradeCutoff]>
     /// 구조로 옮기지 못한 규칙 원문
     var notes: Patch<String>

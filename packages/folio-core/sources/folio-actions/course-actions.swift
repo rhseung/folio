@@ -256,7 +256,7 @@ public struct GraduationSet {
     var admissionYear: Patch<Int?>
     /// 교수에게 메일을 보낼 계정
     var email: Patch<String>
-    /// 선언한 과정과 그 학과의 강의 코드
+    /// 선언한 과정과 그 학과의 강의 코드. 주면 목록 전체를 바꾼다
     @CLIName("program") @Parsed("program", "과정:강의 코드 앞부분. major:EC") var programs: Patch<[StudentProgram]>
 
     public func run(_ ctx: ActionContext) throws {

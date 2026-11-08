@@ -283,7 +283,7 @@ enum GeneratedCommands {
         @Option(help: "최저 평점") var minGPA: Double?
         @Option(help: "입학 연도(학번). none이면 지운다") var admissionYear: Clearable<Int>?
         @Option(help: "교수에게 메일을 보낼 계정") var email: String?
-        @Option(name: .customLong("program"), help: ArgumentHelp("선언한 과정과 그 학과의 강의 코드. 과정:강의 코드 앞부분. major:EC. 여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다", valueName: "program")) var programs: [String] = []
+        @Option(name: .customLong("program"), help: ArgumentHelp("선언한 과정과 그 학과의 강의 코드. 주면 목록 전체를 바꾼다. 과정:강의 코드 앞부분. major:EC. 여러 번 줄 수 있다. none이면 비운다", valueName: "program")) var programs: [String] = []
 
         func run() throws {
             guard totalCredits != nil || minGPA != nil || admissionYear != nil || email != nil || !programs.isEmpty else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --total-credits, --min-gpa, --admission-year, --email, --program") }
@@ -958,10 +958,10 @@ enum GeneratedCommands {
         @Option(name: .customLong("component"), help: ArgumentHelp("반영되는 성적 항목. 주면 묶음은 풀린다. none이면 지운다", valueName: "component"), completion: Complete.ref("GradeComponent")) var componentId: Clearable<String>?
         @Option(name: .customLong("group"), help: "한꺼번에 점수를 매기는 성적 항목 묶음. 주면 성적 항목 하나는 풀린다. none이면 지운다") var componentGroup: Clearable<String>?
         @Option(help: "메모") var memo: String?
-        @Option(name: .customLong("score"), help: ArgumentHelp("과제가 반영되는 성적 항목마다의 점수. 적지 않은 항목의 점수는 지운다. 9/10. 묶음이면 <항목>:9/10. 여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다", valueName: "score")) var scores: [String] = []
+        @Option(name: .customLong("score"), help: ArgumentHelp("준 항목의 점수만 바꾸고 다른 항목의 점수는 그대로 둔다. 빈 목록이면 점수를 모두 지운다. 9/10. 묶음이면 <항목>:9/10. 여러 번 줄 수 있다. none이면 비운다", valueName: "score")) var score: [String] = []
 
         func run() throws {
-            guard title != nil || due != nil || status != nil || repeats != nil || componentId != nil || componentGroup != nil || memo != nil || !scores.isEmpty else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --title, --due, --status, --repeats, --component, --group, --memo, --score") }
+            guard title != nil || due != nil || status != nil || repeats != nil || componentId != nil || componentGroup != nil || memo != nil || !score.isEmpty else { throw CLIError(exit: .usage, message: "바꿀 것을 하나 이상 주세요: --title, --due, --status, --repeats, --component, --group, --memo, --score") }
             let ctx = try CLI.context(g)
             let r = Resolver(ctx)
             let (c, assignmentName) = try r.split(assignment)
@@ -975,7 +975,8 @@ enum GeneratedCommands {
                 componentId: try componentId.map { p in Patch.set(try p.value.map { try r.id("GradeComponent", $0, in: c) }) } ?? .keep,
                 componentGroup: componentGroup.map { p in Patch.set(p.value) } ?? .keep,
                 memo: memo.map { Patch.set($0) } ?? .keep,
-                scores: scores.isEmpty ? .keep : .set(try scores.clearing.map { try r.parse($0, in: c) })
+                scores: .keep,
+                score: score.isEmpty ? .keep : .set(try score.clearing.map { try r.parse($0, in: c) })
             )
             try perform(spec: action, g, ctx: ctx)
         }
@@ -1235,8 +1236,8 @@ enum GeneratedCommands {
         @Option(help: "지각 규칙 설명. none이면 지운다") var latePolicy: Clearable<String>?
         @Option(help: "지각 몇 번이 결석 한 번인지. none이면 지운다") var latesPerAbsence: Clearable<Int>?
         @Option(help: "상대평가에서 A를 받는 비율. 0.5. none이면 지운다") var topGradeRatio: Clearable<Double>?
-        @Option(name: .customLong("cap"), help: ArgumentHelp("결석 횟수마다 받을 수 있는 최대 성적. 결석 횟수:최대 성적. 6:B0. 여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다", valueName: "cap")) var attendanceCap: [String] = []
-        @Option(name: .customLong("cutoff"), help: ArgumentHelp("절대평가의 성적별 최저 점수. 성적:최저 점수. A+:95. 여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다", valueName: "cutoff")) var cutoffs: [String] = []
+        @Option(name: .customLong("cap"), help: ArgumentHelp("결석 횟수마다 받을 수 있는 최대 성적. 주면 목록 전체를 바꾼다. 결석 횟수:최대 성적. 6:B0. 여러 번 줄 수 있다. none이면 비운다", valueName: "cap")) var attendanceCap: [String] = []
+        @Option(name: .customLong("cutoff"), help: ArgumentHelp("절대평가의 성적별 최저 점수. 주면 목록 전체를 바꾼다. 성적:최저 점수. A+:95. 여러 번 줄 수 있다. none이면 비운다", valueName: "cutoff")) var cutoffs: [String] = []
         @Option(help: "구조로 옮기지 못한 규칙 원문") var notes: String?
 
         func run() throws {
