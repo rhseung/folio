@@ -144,7 +144,7 @@ struct TextFileView: View {
             } actions: {
                 #if os(macOS)
                 Button(.textFileBuild) { Task { await model.build() } }
-                    .buttonStyle(.pointing(.borderedProminent))
+                    .buttonStyle(.prominent)
                     .disabled(!model.canBuild)
                 #endif
             }

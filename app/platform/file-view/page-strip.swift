@@ -226,8 +226,7 @@ private struct SaveRow: View {
                 Button { withAnimation(.snappy(duration: 0.2)) { model.commit() } } label: {
                     Text(.commonSave).frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.pointing(.borderedProminent))
-                .tint(Theme.Palette.prominent)
+                .buttonStyle(.prominent)
                 .disabled(!model.canSave)
             }
             .controlSize(.small)

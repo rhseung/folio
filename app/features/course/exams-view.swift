@@ -24,7 +24,7 @@ struct ExamsView: View {
                 PageHeader(title: String(localized: .examsTitle), subtitle: model.subtitle(coming: coming.count, past: past.count))
                 Spacer()
                 Button(.examsAdd) { model.add() }
-                    .buttonStyle(.pointing(.borderedProminent))
+                    .buttonStyle(.prominent)
             }
             if coming.isEmpty && past.isEmpty {
                 Card { CardRow(last: true) { EmptyLine(String(localized: .examsEmpty)) } }

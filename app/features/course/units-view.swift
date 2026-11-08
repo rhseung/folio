@@ -98,7 +98,7 @@ struct UnitsView: View {
                 CardRow(last: true) {
                     Image(systemName: "plus").foregroundStyle(Theme.Palette.textTertiary)
                     TextField(String(localized: .unitsNewName), text: $model.newTitle).textFieldStyle(.plain).onSubmit(model.add)
-                    Button(.commonAdd, action: model.add).buttonStyle(.pointing(.borderedProminent)).disabled(!model.canAdd)
+                    Button(.commonAdd, action: model.add).buttonStyle(.prominent).disabled(!model.canAdd)
                 }
             }
             if file.units.isEmpty {
@@ -219,7 +219,7 @@ struct UnitDetail: View {
                 PageHeader(title: unit.title, subtitle: model.parentPath(unit, in: file)) { ReviewBadge(state: state, today: today) }
                 Spacer()
                 Button { reviewing = true } label: { Label(.unitsStartReview, systemImage: "play.fill") }
-                    .buttonStyle(.pointing(.borderedProminent))
+                    .buttonStyle(.prominent)
                     .controlSize(.large)
             }
 

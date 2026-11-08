@@ -446,7 +446,7 @@ struct IntListField: View {
                     ScrubField(value: Binding(get: { Double(draft) }, set: { draft = min(max(Int($0.rounded()), range.lowerBound), range.upperBound) }),
                                range: Double(range.lowerBound)...Double(range.upperBound), step: 1, width: 88)
                     Text(unit).foregroundStyle(Theme.Palette.textSecondary)
-                    Button(.commonAdd, action: add).buttonStyle(.pointing(.borderedProminent))
+                    Button(.commonAdd, action: add).buttonStyle(.prominent)
                 }
                 .padding(Theme.Space.m)
             }

@@ -81,7 +81,7 @@ struct InfoBlocks: View {
                     CardRow(last: true) {
                         Spacer()
                         Button(.courseInfoSaveMemo) { model.saveMemo(course.id) }
-                            .buttonStyle(.pointing(.borderedProminent))
+                            .buttonStyle(.prominent)
                             .disabled(model.memo == c.memo)
                     }
                 }

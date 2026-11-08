@@ -30,7 +30,7 @@ struct LectureSplitPane: View {
                 HStack {
                     Spacer()
                     Button(String(localized: .commonCancel), action: cancel).buttonStyle(.ghost).keyboardShortcut(.cancelAction)
-                    Button(String(localized: .commonSave), action: save).buttonStyle(.pointing(.borderedProminent)).keyboardShortcut(.defaultAction)
+                    Button(String(localized: .commonSave), action: save).buttonStyle(.prominent).keyboardShortcut(.defaultAction)
                 }
                 .clearOfClaudeButton(inset: Theme.Space.l)
             }

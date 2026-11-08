@@ -216,7 +216,7 @@ struct SheetForm<Rows: View>: View {
                 }
                 Spacer()
                 Button(cancel ?? String(localized: .commonCancel)) { dismiss() }.keyboardShortcut(.cancelAction)
-                Button(confirm, action: onConfirm).buttonStyle(.pointing(.borderedProminent)).keyboardShortcut(.defaultAction).disabled(disabled)
+                Button(confirm, action: onConfirm).buttonStyle(.prominent).keyboardShortcut(.defaultAction).disabled(disabled)
             }
         }
         .padding(Theme.Space.xl)

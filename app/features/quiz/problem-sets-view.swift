@@ -14,7 +14,7 @@ struct ProblemSetsView: View {
             HStack(alignment: .bottom) {
                 PageHeader(title: String(localized: .quizProblemsTitle), subtitle: model.problemsSubtitle(course))
                 Spacer()
-                Button(.quizProblemsAdd) { adding = true }.buttonStyle(.pointing(.borderedProminent))
+                Button(.quizProblemsAdd) { adding = true }.buttonStyle(.prominent)
             }
             ForEach(sets) { set in setBlock(set, units: units).linkTarget(set.id) }
 

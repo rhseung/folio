@@ -377,7 +377,7 @@ struct SuggestedSessionActions: View {
                 Button { if let id = model.roughNote(item) { openNote(id) } } label: {
                     if compact { Image(systemName: "square.and.pencil").accessibilityLabel(Text(.sessionsRoughNote)) } else { Text(.sessionsRoughNote) }
                 }
-                .buttonStyle(.pointing(.borderedProminent))
+                .buttonStyle(.prominent)
                 .help(Text(.sessionsRoughNoteHelp))
             } else {
                 Button(.sessionsMake) { model.make(item) }.buttonStyle(.pointing(.bordered))
@@ -445,7 +445,7 @@ struct JoinOnlineButton: View {
 
     var body: some View {
         if prominent {
-            Button(.sessionsJoin, systemImage: "video") { Self.join(url, openURL) }.buttonStyle(.pointing(.borderedProminent))
+            Button(.sessionsJoin, systemImage: "video") { Self.join(url, openURL) }.buttonStyle(.prominent)
                 .help(url.absoluteString)
         } else {
             SessionSlot(String(localized: .sessionsJoin), symbol: "video", help: url.absoluteString, fixed: false) { Self.join(url, openURL) }
