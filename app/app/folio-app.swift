@@ -24,7 +24,9 @@ struct FolioApp: App {
         WindowGroup(id: Self.mainWindow, for: WindowRequest.self) { $request in
             RootView(request: request)
                 #if os(macOS)
-                .frame(minWidth: Theme.Size.windowMin.width, minHeight: Theme.Size.windowMin.height)
+                // Bounded both ways, so the window's least size is this frame's own: with only a least size the
+                // hosting view measured the whole window's content for it on every layout of a resize or a drag (#62).
+                .frame(minWidth: Theme.Size.windowMin.width, maxWidth: .infinity, minHeight: Theme.Size.windowMin.height, maxHeight: .infinity)
                 #endif
                 .appServices()
                 .followsAppearance()

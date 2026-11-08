@@ -102,7 +102,8 @@ struct PaneRow: View {
                 .environment(\.paneFocused, i == panes.focus)
                 .environment(\.paneInsert, inserts[id])
                 .environment(\.askClaude, askClaude)
-                .modifier(HeldWidth(drag: drag, id: id, kept: kept))
+                .frame(width: kept, alignment: .topLeading)
+                .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { width in
                     if width >= Theme.Size.paneMin || panes.count == 1 { sizes.open[id] = width }
                 }
@@ -161,35 +162,19 @@ struct PaneRow: View {
 
     static let wobble: CGFloat = 4
 
-    /// How long the pointer rests before the two panes' screens are laid out at the widths it left them.
-    static let settle = Duration.milliseconds(150)
-
-    /// The widths a drag gives are drawn from `drag` alone until it ends: the tab hears of them once, when it is dropped.
-    /// The two screens beside the divider hold the widths they had while it moves, their panels sliding over them, and
-    /// take the new ones when it rests and when it is dropped: laid out again at every width, a course's pages kept the
-    /// drag under 30 frames a second, where a panel alone keeps up with the pointer.
+    /// The two panes beside the divider are laid out at every width it passes, as a browser's page follows a window's
+    /// edge (2026-11-08 사용자). The widths are drawn from `drag` alone until it ends: the tab hears of them once, when
+    /// it is dropped, so the drag lays out the stack and not the whole row with every screen's closures made anew.
     func dragged(_ d: Int, by translation: CGFloat, folded: Set<Int>) {
         if drag.from == nil {
             let widths = panes.layout.widths(room: sizes.row, folded: folded, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: Self.gap)
             guard widths.indices.contains(d + 1) else { return }
             drag.from = PaneDrag.Start(divider: d, layout: panes.layout, left: widths[d], pair: widths[d] + widths[d + 1])
-            // The right one held at its trailing edge, so neither screen moves: the divider covers and uncovers them.
-            drag.held = [panes.ids[d]: .init(width: widths[d], trailing: false), panes.ids[d + 1]: .init(width: widths[d + 1], trailing: true)]
         }
         guard let from = drag.from, from.pair > 0 else { return }
         var live = from.layout
         live.resize(divider: d, to: (from.left + translation) / from.pair)
-        guard live != drag.live else { return }
-        drag.live = live
-        let widths = live.widths(room: sizes.row, folded: folded, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: Self.gap)
-        let ids = (panes.ids[d], panes.ids[d + 1])
-        drag.settling?.cancel()
-        drag.settling = Task { [drag] in
-            try? await Task.sleep(for: Self.settle)
-            guard !Task.isCancelled, drag.from != nil else { return }
-            drag.held[ids.0]?.width = widths[d]
-            drag.held[ids.1]?.width = widths[d + 1]
-        }
+        if live != drag.live { drag.live = live }
     }
 
     /// The tab takes the widths the drag left. Nothing, when no drag is under way: a drag ends here twice.
@@ -198,11 +183,8 @@ struct PaneRow: View {
             let d = from.divider
             panes.resize(divider: d, to: live.shares[d] / (live.shares[d] + live.shares[d + 1]))
         }
-        drag.settling?.cancel()
-        drag.settling = nil
         drag.from = nil
         drag.live = nil
-        drag.held = [:]
     }
 }
 
@@ -217,31 +199,8 @@ struct PaneRow: View {
         var pair: CGFloat
     }
 
-    /// A screen beside the divider, at the width it is laid out at and which edge of its pane it keeps to.
-    struct Held: Equatable {
-        var width: CGFloat
-        var trailing: Bool
-    }
-
     @ObservationIgnored var from: Start?
-    @ObservationIgnored var settling: Task<Void, Never>?
     var live: PaneLayout?
-    /// By pane: watched only by each screen's frame (`HeldWidth`), so holding and settling lays out no more than them.
-    var held: [UUID: Held] = [:]
-}
-
-/// A pane's screen at its pane's width, or at the width it is held at: folded (`kept`), or beside a divider being dragged.
-private struct HeldWidth: ViewModifier {
-    let drag: PaneDrag
-    let id: UUID
-    let kept: CGFloat?
-
-    func body(content: Content) -> some View {
-        let held = drag.held[id]
-        content
-            .frame(width: kept ?? held?.width, alignment: .topLeading)
-            .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: held?.trailing == true ? .topTrailing : .topLeading)
-    }
 }
 
 #if os(macOS) && (DEBUG || RESIZE_PROBE)
@@ -289,6 +248,12 @@ private struct PaneStack: Layout {
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         proposal.replacingUnspecifiedDimensions()
     }
+
+    // The row's own edges. Left to the default, a parent's question about an edge (a ZStack's) placed every pane and
+    // laid out its screen once more for the answer.
+    func explicitAlignment(of guide: HorizontalAlignment, in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGFloat? { nil }
+
+    func explicitAlignment(of guide: VerticalAlignment, in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGFloat? { nil }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
         let widths = layout.widths(room: bounds.width, folded: folded, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap)
