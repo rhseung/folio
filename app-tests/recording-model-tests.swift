@@ -111,6 +111,25 @@ struct RecordingPlayerModelTests {
         #expect(model.selected == [0, 2])
     }
 
+    /// A touch screen has no ⇧: a long press starts a range on a line and taps move its other end, until 완료.
+    @Test func aHoldStartsATouchRange() throws {
+        let model = try picking(["a", "b", "c", "d", "e"])
+        model.select(4, extending: false)
+        model.hold(1)
+        #expect(model.ranging)
+        #expect(model.selected == [1])
+        model.select(3, extending: true)
+        #expect(model.selected == [1, 2, 3])
+        #expect(!model.allSelected)
+        model.selectAll()
+        #expect(model.allSelected)
+        model.endRange()
+        #expect(!model.ranging)
+        model.hold(0)
+        model.reloadTranscript()
+        #expect(!model.ranging, "a new transcript drops the range with the pick")
+    }
+
     /// Lines come out in transcript order, in the same form the whole-transcript copy used, however they were picked.
     @Test func copiedTextKeepsTranscriptOrder() throws {
         let model = try picking(["행렬", "고윳값", "대각화"])

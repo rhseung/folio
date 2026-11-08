@@ -4071,6 +4071,61 @@
         }
       }
     },
+    "design.sections.cut": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나누기…"
+          }
+        }
+      }
+    },
+    "design.sections.cut-action": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "나누기"
+          }
+        }
+      }
+    },
+    "design.sections.cut-page": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쪽"
+          }
+        }
+      }
+    },
+    "design.sections.cut-range": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 구역이 시작할 쪽 (%1$lld–%2$lld)"
+          }
+        }
+      }
+    },
+    "design.sections.cut-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구역 나누기"
+          }
+        }
+      }
+    },
     "design.sections.match-claude": {
       "extractionState": "manual",
       "localizations": {
@@ -5024,6 +5079,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "여기서 나누기"
+          }
+        }
+      }
+    },
+    "file-view.split-cut-here": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 쪽 앞에서 나누기"
+          }
+        }
+      }
+    },
+    "file-view.split-edit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "구역 고치기"
           }
         }
       }
@@ -11188,6 +11265,17 @@
         }
       }
     },
+    "recording.picking-range": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "범위 고르는 중"
+          }
+        }
+      }
+    },
     "recording.play": {
       "extractionState": "manual",
       "localizations": {
@@ -11283,6 +11371,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "받아쓰기에서 찾기"
+          }
+        }
+      }
+    },
+    "recording.select-all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 고르기"
           }
         }
       }

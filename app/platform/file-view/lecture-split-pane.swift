@@ -97,12 +97,14 @@ private struct SplitThumbnails: View {
         ScrollViewReader { proxy in
             ScrollView {
                 LazyVStack(alignment: .leading, spacing: 0) {
-                    ForEach(strip.items(split, name: name)) { item in
+                    ForEach(Array(strip.items(split, name: name).enumerated()), id: \.element.id) { n, item in
                         StripItemFrame(item: item) {
                             lead(item)
                             page(item)
                         }
                             .id(item.id)
+                            // Each page over the next: a gap's touch target reaches down into the next page's top.
+                            .zIndex(-Double(n))
                     }
                 }
                 .padding(.vertical, Theme.Space.s)
@@ -142,11 +144,25 @@ private struct SplitThumbnails: View {
                       press: { page, extend in
                           if extend { strip.extend(to: page, in: &split) } else { strip.press(page) }
                       },
-                      start: { strip.start(at: $0, in: split) })
+                      start: nil)
                 .overlay(alignment: .bottom) {
                     if page < split.pageCount { gap(after: page) }
                 }
+                // The long press opens this menu rather than starting a change: the gaps are thin to aim at with a
+                // finger, so the cut and the join are here too.
+                .contextMenu { menu(page) }
         }
+    }
+
+    @ViewBuilder private func menu(_ page: Int) -> some View {
+        let i = split.section(at: page)
+        Button(String(localized: .fileViewSplitEdit), systemImage: "arrow.up.and.down") { strip.start(at: page, in: split) }
+        Button(String(localized: .fileViewSplitCutHere), systemImage: "scissors") { split.split(at: page) }
+            .disabled(split.sections[i].firstPage == page)
+        Button(String(localized: .designSectionsMergeBefore), systemImage: "arrow.up.and.down.and.arrow.left.and.right") {
+            split.merge(after: i - 1)
+        }
+        .disabled(i == 0)
     }
 
     private func gap(after page: Int) -> some View {
@@ -165,9 +181,18 @@ private struct Gap: View {
     @State private var hovering = false
     @Environment(\.accent) private var accent
 
+    private var touch: Bool {
+        #if os(iOS)
+        true
+        #else
+        false
+        #endif
+    }
+
     var body: some View {
         ZStack {
-            // Only under the pointer: the next section's header already marks where a section ends.
+            // Only under the pointer: the next section's header already marks where a section ends. A touch screen
+            // has no pointer, so its cuts show a small pair of scissors throughout.
             if hovering {
                 Rectangle()
                     .fill(boundary ? accent.color : Theme.Palette.textTertiary)
@@ -178,11 +203,17 @@ private struct Gap: View {
                     .foregroundStyle(boundary ? accent.ink : Theme.Palette.textSecondary)
                     .padding(Theme.Space.xxs)
                     .background(Theme.Palette.card, in: .circle)
+            } else if touch && !boundary {
+                Image(systemName: "scissors")
+                    .font(Theme.Glyph.small)
+                    .foregroundStyle(Theme.Palette.textTertiary)
             }
         }
         .frame(maxWidth: .infinity)
         .frame(height: Theme.Space.s)
-        .contentShape(.rect)
+        // A finger's 44pt across a cut, over the blank under one page's number and above the next page. A join stays
+        // thin: there the next section's header takes the press, and the page's menu joins.
+        .contentShape(TouchTarget(side: boundary ? 0 : Theme.Size.touchTarget))
         .onHover { hovering = $0 }
         .onTapGesture(perform: action)
         .pointingHand()

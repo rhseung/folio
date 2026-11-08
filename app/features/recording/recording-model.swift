@@ -159,6 +159,19 @@ final class RecordingPlayerModel {
         anchor = anchor ?? shown.first
     }
 
+    var allSelected: Bool { shownLines.allSatisfy { selected.contains($0.index) } }
+
+    /// A touch screen's range under way: a long press started it on a line, and a tap moves its other end, as ⇧-click
+    /// does with a pointer.
+    private(set) var ranging = false
+
+    func hold(_ index: Int) {
+        select(index, extending: false)
+        ranging = true
+    }
+
+    func endRange() { ranging = false }
+
     var canCopy: Bool { !selected.isEmpty }
     var copyLabel: String {
         selected.isEmpty ? String(localized: .recordingCopy) : String(localized: .recordingCopyLines(selected.count))
@@ -259,6 +272,7 @@ final class RecordingPlayerModel {
         // A new transcription splits the audio into other lines; the old indices would pick unrelated text.
         selected = []
         anchor = nil
+        ranging = false
     }
 
     func remove() {

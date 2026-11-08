@@ -99,7 +99,15 @@ final class ImportPlaceModel {
 
     var confirmTitle: String { String(localized: many ? .materialsImportConfirmMany(rows.count) : .materialsImportConfirm) }
 
-    var hint: String { String(localized: many ? .materialsImportKeys : .materialsImportNote) }
+    /// The keys a Mac picks and fills rows with. A touch screen gets no line: the rows show what is picked.
+    var hint: String? {
+        guard many else { return String(localized: .materialsImportNote) }
+        #if os(macOS)
+        return String(localized: .materialsImportKeys)
+        #else
+        return nil
+        #endif
+    }
 
     // MARK: Kinds and sessions
 
@@ -210,6 +218,21 @@ final class ImportPlaceModel {
             anchor = id
         }
         cursor = id
+    }
+
+    /// A touch screen's pick of several under way: a long press started it on a row, and a tap adds a row or takes
+    /// one away, as ⌘-click does with a pointer. Taking the last one away ends it.
+    private(set) var picking = false
+
+    func hold(_ id: Int) {
+        guard many else { return }
+        click(id)
+        picking = true
+    }
+
+    func press(_ id: Int, _ press: PickPress) {
+        click(id, extend: press == .range, toggle: press == .toggle)
+        if selection.isEmpty { picking = false }
     }
 
     /// ↑↓: the next row, or with ⇧ the range from the anchor to it.

@@ -88,6 +88,9 @@ struct RecordingPage: View {
             }
             // The transcript takes the page's height; without lines the card is a row and the rest stays up top.
             .frame(maxHeight: model.hasLines ? .infinity : nil, alignment: .top)
+            if model.ranging {
+                PickingLine(text: String(localized: .recordingPickingRange)) { model.endRange() }
+            }
             if model.showsContext { contextBlock }
             // Words where they fit, the symbols alone in a narrow pane.
             ViewThatFits(in: .horizontal) {
@@ -139,6 +142,10 @@ struct RecordingPage: View {
         HStack {
             Button(model.copyLabel, systemImage: "doc.on.doc") { writePasteboard(model.copiedText) }.disabled(!model.canCopy)
                 .help(Text(.recordingCopyHelp))
+            if model.hasLines {
+                // ⌘A's button, for a screen with no keyboard.
+                Button(.recordingSelectAll, systemImage: "checklist") { model.selectAll() }.disabled(model.allSelected)
+            }
             if model.hasLines && recording.hasAudio {
                 Button(.recordingRetranscribe, systemImage: "arrow.clockwise") { model.transcribe() }
                     .disabled(!model.canTranscribe)
@@ -277,8 +284,7 @@ struct RecordingPage: View {
             .help(Text(.recordingLinePlay))
             // With the audio gone there is nothing to seek to; the line can still be picked and copied.
             .allowsHitTesting(recording.hasAudio)
-            // The pick covers the row but the time: over the time too, iPad's UIKit tap would fire beside the
-            // button's jump and pick the line, while the Mac's button keeps the click to itself.
+            // The pick covers the row but the time, whose press jumps instead.
             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.m) {
                 Text(line.text).foregroundStyle(playing || selected ? Theme.Palette.text : Theme.Palette.textSecondary)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -295,9 +301,11 @@ struct RecordingPage: View {
             }
             .padding(.vertical, Theme.Inset.listRow.top)
             .padding(.trailing, Theme.Inset.listRow.trailing)
-            .contentShape(.rect)
-            .onPick { extending in
-                model.select(index, extending: extending)
+            .picks(picking: model.ranging, touch: .range) {
+                model.hold(index)
+                linesFocused = true
+            } _: { press in
+                model.select(index, extending: press == .range)
                 linesFocused = true
             }
             .accessibilityAddTraits(selected ? .isSelected : [])
@@ -311,18 +319,6 @@ struct RecordingPage: View {
 }
 
 private extension View {
-    /// A tap that says whether Shift was held, to extend a pick. SwiftUI's tap carries no modifier keys.
-    func onPick(_ action: @escaping (_ extending: Bool) -> Void) -> some View {
-        #if os(macOS)
-        // The click's own flags: the keyboard's live state (`NSEvent.modifierFlags`) misses a Shift the click carries
-        // but no key holds, as from Accessibility or a scripted click.
-        onTapGesture { action((NSApp.currentEvent?.modifierFlags ?? NSEvent.modifierFlags).contains(.shift)) }
-        #else
-        // UIKit's recognizer reads the hardware keyboard's Shift; touch alone has no way to extend.
-        gesture(PickTap(action: action))
-        #endif
-    }
-
     /// ⌘A (`"a"`) or ⌘C (`"c"`) on the focused lines; `nil` leaves the command off. A button shortcut on the Mac
     /// would take the key from the search field even while it is being typed in, so there it goes through the
     /// responder chain as the Edit menu's command.
@@ -347,19 +343,6 @@ private extension View {
     UIPasteboard.general.string = text
     #endif
 }
-
-#if os(iOS)
-private struct PickTap: UIGestureRecognizerRepresentable {
-    let action: (_ extending: Bool) -> Void
-
-    func makeUIGestureRecognizer(context: Context) -> UITapGestureRecognizer { UITapGestureRecognizer() }
-
-    func handleUIGestureRecognizerAction(_ recognizer: UITapGestureRecognizer, context: Context) {
-        guard recognizer.state == .ended else { return }
-        action(recognizer.modifierFlags.contains(.shift))
-    }
-}
-#endif
 
 @MainActor @Observable
 final class AudioPlayback {
