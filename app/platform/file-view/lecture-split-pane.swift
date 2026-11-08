@@ -51,8 +51,8 @@ struct LectureSplitPane: View {
                 Button(String(localized: .commonCancel), action: cancel).buttonStyle(.ghost).keyboardShortcut(.cancelAction)
                 Button(String(localized: .commonSave), action: save).buttonStyle(.pointing(.borderedProminent)).keyboardShortcut(.defaultAction)
             }
-            .padding(.leading, Theme.Space.l)
-            .padding(.trailing, Theme.Space.s)
+            // Ends where the bar and rows under it end, not nearer the pane's edge: the column's content edge is one line.
+            .padding(.horizontal, Theme.Space.l)
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Space.m) {
                     SectionEditor(split: $split, units: units, page: controller.page + 1, selected: selected) { controller.go(to: $0 - 1) }
