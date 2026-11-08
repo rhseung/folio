@@ -55,6 +55,8 @@ public struct HTMLRenderer {
     var previewing = false
     /// The note's footnotes, numbered as references to them are drawn.
     var footnotes: FootnoteBook?
+    /// Inside a markdown link's text, where an address can't be a link of its own: anchors don't nest.
+    var inLink = false
 
     /// A renderer for part of this note's page (a table cell, an embed) that draws embeds and references as it does.
     func inner() -> HTMLRenderer {
@@ -237,7 +239,7 @@ public struct HTMLRenderer {
     mutating func inlines(_ nodes: [Markup]) -> String {
         var out = ""
         for node in nodes { out += inline(node) }
-        return linkFootnotes(linkWikiLinks(out))
+        return linkFootnotes(linkAddresses(linkWikiLinks(out)))
     }
 
     mutating func inline(_ node: Markup) -> String {
@@ -264,6 +266,9 @@ public struct HTMLRenderer {
             }
             return "<code>\(Self.escape(c.code))</code>"
         case let l as Markdown.Link:
+            let outer = inLink
+            inLink = true
+            defer { inLink = outer }
             return "<a href=\"\(Self.escape(l.destination ?? ""))\">\(inlines(Array(l.inlineChildren)))</a>"
         case let i as Markdown.Image:
             // Obsidian's `![alt|300](src)`: a width after the last bar; without it the image takes the column.
@@ -352,18 +357,59 @@ public struct HTMLRenderer {
     func replaceWikiLinks(_ s: String) -> String {
         s.replacing(WikiLink.pattern) { m in
             let link = WikiLink(m)
-            let href = link.href
-            // The link was read from rendered HTML, so its target and alias are escaped already; a found title is not.
+            // The link was read from rendered HTML, so its target and alias are escaped already; a found title is not,
+            // nor an address's heading, which was unescaped from `%..`.
+            let href = link.isAddress ? Self.escape(Self.unescape(link.href)) : link.href
             var named = link
             named.target = Self.unescape(link.target)
             let found = noteTitle(named)
-            let text = link.alias ?? ((found.title.map(Self.escape) ?? link.target) + (link.fragment.map { " › " + $0 } ?? ""))
+            let fragment = link.fragment.map { " › " + (link.isAddress ? Self.escape(Self.unescape($0)) : $0) } ?? ""
+            let text = link.alias ?? objectName(named).map(Self.escape) ?? ((found.title.map(Self.escape) ?? link.target) + fragment)
             let missing = found.missing ? " missing" : ""
             return link.isEmbed
                 // A link, not a block: it stands inside the paragraph the embed was written in, with other text.
                 ? "<a class=\"embed\(missing)\" href=\"\(href)\">\(text)</a>"
                 : "<a class=\"wikilink\(missing)\" href=\"\(href)\">\(text)</a>" + preview(link)
         }
+    }
+
+    /// What a link to an app object other than a note shows without a name of its own, as the app names it.
+    func objectName(_ link: WikiLink) -> String? {
+        guard let embeds, link.isAppLink, !link.namesNote else { return nil }
+        return embeds.name(link.href)
+    }
+
+    /// A `folio://` address written as it is, which markdown makes no link of, as GFM links a bare `https://`. Not
+    /// inside another link, a tag, code or math. Punctuation closing a sentence isn't part of it, except in a heading
+    /// anchor (`trimmedAddress`).
+    func linkAddresses(_ html: String) -> String {
+        guard !inLink, html.localizedCaseInsensitiveContains("folio://") else { return html }
+        let protected = /(?s)(<a\b[^>]*>.*?<\/a>|<code>.*?<\/code>|<span class="math">.*?<\/span>|<template\b.*?<\/template>|<[^>]*>)/
+        let address = /[Ff][Oo][Ll][Ii][Oo]:\/\/[^\s<>"'`(){}\[\]\\|&]+/
+        let replace = { (s: Substring) -> String in
+            String(s.replacing(address) { m in
+                let written = String(m.0)
+                let kept = Self.trimmedAddress(written)
+                return "<a href=\"\(kept)\">\(kept)</a>" + written.dropFirst(kept.count)
+            })
+        }
+        var out = ""
+        var cursor = html.startIndex
+        for m in html.matches(of: protected) {
+            out += replace(html[cursor..<m.range.lowerBound]) + html[m.range]
+            cursor = m.range.upperBound
+        }
+        return out + replace(html[cursor...])
+    }
+
+    /// FolioDomain's `AppLink.trimmed`, which the editors find addresses by, so both views link the same text: kept
+    /// on a page, time or block anchor, the full stop would make it read as a heading and open at the top.
+    static func trimmedAddress(_ written: String) -> String {
+        if let hash = written.firstIndex(of: "#") {
+            let anchor = written[written.index(after: hash)...]
+            guard anchor.hasPrefix("page=") || anchor.hasPrefix("t=") || anchor.hasPrefix("^") else { return written }
+        }
+        return String(written.reversed().drop { ".,;:!?".contains($0) }.reversed())
     }
 
     /// For a link by ID, the title of the note it names, which a link without its own name shows. `missing` when no

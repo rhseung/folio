@@ -26,6 +26,19 @@ struct AppLinkWikiTests {
         #expect(leftOut.isSubset(of: withID))
     }
 
+    /// A copied address between brackets (`[[folio://material/<ID>#page=2]]`) opens what the address does (#347).
+    @Test func anAddressBetweenBracketsOpensAsItself() throws {
+        let id = UUID()
+        let links = AppLink.Kind.allCases.map { $0.isPlace ? AppLink.place($0) : AppLink($0, id) }
+            + [AppLink(.material, id, anchor: .page(2)), AppLink(.note, id, anchor: .block("c1")), AppLink(.note, id, anchor: .heading("매칭 정리")),
+               AppLink(.recording, id, anchor: .time(750)), .course(id, page: .units), .settings(.claude)]
+        for link in links {
+            let html = HTMLRenderer.render(markdown: "[[\(link.string)]]")
+            let href = try #require(html.firstMatch(of: /class="wikilink" href="([^"]+)"/)).1
+            #expect(AppLink(string: String(href)) == link, "\(link.string): \(href)")
+        }
+    }
+
     @Test func aPageLinkKeepsItsPage() throws {
         let id = UUID()
         let html = HTMLRenderer.render(markdown: "[[material:\(id.uuidString)#page=12]]")

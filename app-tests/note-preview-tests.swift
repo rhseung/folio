@@ -242,6 +242,23 @@ struct NotePreviewTests {
         #expect(opened == [AppLink(.material, material, anchor: .page(12)), AppLink(.exam, exam)])
     }
 
+    /// A copied address between brackets or on its own opens as a link into the app (#347).
+    @Test func aClickOnACopiedAddressOpensIt() async throws {
+        let material = UUID()
+        let exam = UUID()
+        let rig = PreviewRig("See [[folio://material/\(material)#page=2]] and folio://exam/\(exam).")
+        defer { rig.close() }
+        var opened: [AppLink] = []
+        rig.page.openLink = OpenLinkAction { link, _, _ in opened.append(link) }
+        await rig.settle()
+        #expect(try await rig.js("return document.querySelector('a.wikilink.missing') == null && document.querySelectorAll('a[href^=\"folio://\"]').length == 2") as? Bool == true)
+        _ = try await rig.js("document.querySelector('a.wikilink').click()")
+        for _ in 0..<40 where opened.isEmpty { try? await Task.sleep(for: .milliseconds(50)) }
+        _ = try await rig.js("document.querySelectorAll('a')[1].click()")
+        for _ in 0..<40 where opened.count < 2 { try? await Task.sleep(for: .milliseconds(50)) }
+        #expect(opened == [AppLink(.material, material, anchor: .page(2)), AppLink(.exam, exam)])
+    }
+
     /// The page's menu is told what it was opened on: the link, and the heading or block under the pointer.
     @Test func theMenuKnowsTheLinkAndHeadingUnderThePointer() async throws {
         let rig = PreviewRig("# Matchings\n\nA [link](folio://course/\(graphTheory)).\n\nKept ^proof")

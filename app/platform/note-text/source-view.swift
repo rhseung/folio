@@ -47,6 +47,7 @@ struct MarkdownEditor {
         view.saveFile = saveFile
         view.openNote = openNote
         view.linkOpener = openLink
+        view.linkName = embeds?.name ?? { _ in nil }
         view.onScroll = onScroll
         view.configure(accent: accent, syntax: math, dark: dark)
         view.setAssist(assist, syntax: math)
@@ -78,6 +79,15 @@ struct MarkdownEditor {
 /// The preview has room of its own (web/src/note.css), to bring its last block up to the top.
 enum NoteOverscroll {
     static func bottom(_ height: CGFloat) -> CGFloat { (height / 2).rounded() }
+}
+
+/// A `folio://` address pasted into a note goes in as a link to what it names, as link completion writes one (#43):
+/// `[[material:<ID>#page=2|05_Matchings.pdf]]`. Nil pastes it as text: it is something else, or it lands inside a
+/// link being written (whose target it then is), code or math.
+func pastedNoteLink(_ pasted: String?, into text: String, at caret: Int, name: (AppLink) -> String?) -> String? {
+    guard let pasted = pasted?.trimmingCharacters(in: .whitespacesAndNewlines), let link = AppLink(string: pasted),
+          WikiLink.pastesAsLink(in: text as NSString, at: caret) else { return nil }
+    return link.noteLink(named: name(link))
 }
 
 #if os(macOS)
@@ -159,6 +169,8 @@ class NoteTextView: NSTextView {
     var baseURL: URL?
     var openNote: (String) -> Void = { _ in }
     var linkOpener = OpenLinkAction()
+    /// Names what a pasted `folio://` address points at (`NoteEmbedSource.name`).
+    var linkName: (AppLink) -> String? = { _ in nil }
     /// The note's shortcuts, taken by key code so the Korean input source doesn't change them.
     var shortcut: ((Character) -> Bool)?
     private var caretObserver: NSObjectProtocol?
@@ -892,6 +904,11 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
     override func paste(_ sender: Any?) {
         if insertFiles(from: NSPasteboard.general, at: selectedRange().location) { return }
+        let at = selectedRange()
+        if let link = pastedNoteLink(NSPasteboard.general.string(forType: .string), into: string, at: at.location, name: linkName) {
+            apply(SourceEditing.Edit(range: at, text: link, caret: at.location + link.utf16.count))
+            return
+        }
         pasteAsPlainText(sender)
     }
 
@@ -1024,6 +1041,8 @@ class NoteTextView: UITextView {
     var baseURL: URL?
     var openNote: (String) -> Void = { _ in }
     var linkOpener = OpenLinkAction()
+    /// Names what a pasted `folio://` address points at (`NoteEmbedSource.name`).
+    var linkName: (AppLink) -> String? = { _ in nil }
     private var column: CGFloat = 0
 
     init() {
@@ -1176,6 +1195,15 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
     func insertAtCaret(_ text: String) {
         apply(SourceEditing.Edit(range: selectedRange, text: text, caret: selectedRange.location + text.utf16.count))
         becomeFirstResponder()
+    }
+
+    override func paste(_ sender: Any?) {
+        let at = selectedRange
+        if let link = pastedNoteLink(UIPasteboard.general.string, into: string, at: at.location, name: linkName) {
+            apply(SourceEditing.Edit(range: at, text: link, caret: at.location + link.utf16.count))
+            return
+        }
+        super.paste(sender)
     }
 
     func apply(_ edit: SourceEditing.Edit) {

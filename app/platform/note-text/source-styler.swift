@@ -99,6 +99,15 @@ extension NSAttributedString.Key {
                 if let alias = m.5 { w.marks.append(NSRange(text.index(before: alias.startIndex)..<alias.startIndex, in: text)) }
             }
         }
+        // A bare address, which the preview links and ⌘-click opens, reads as a link here too; one that is already a
+        // link's target is left to that link.
+        for (r, link) in AppLink.links(in: text) where !w.inCode(r) && !math.covers(r) {
+            let taken = storage.attribute(.noteWiki, at: r.location, effectiveRange: nil) != nil
+                || storage.attribute(.noteHref, at: r.location, effectiveRange: nil) != nil
+            guard !taken else { continue }
+            w.set(r, [.foregroundColor: accent.inkNative, .noteHref: link.string, .underlineStyle: NSUnderlineStyle.single.rawValue,
+                      .underlineColor: accent.native.withAlphaComponent(0.4)])
+        }
         for mark in Footnotes.marks(in: text) where !w.inCode(mark.range) && !math.covers(mark.range) {
             w.set(mark.label, [.foregroundColor: accent.inkNative, Self.weight: (mark.definition ? PlatformFont.Weight.semibold : .medium).rawValue])
             w.marks.append(NSRange(location: mark.range.location, length: mark.label.location - mark.range.location))

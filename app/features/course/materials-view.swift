@@ -57,7 +57,9 @@ struct MaterialsView: View {
         }
         .onChange(of: model.viewedLink) { _, link in moved(link) }
         #if DEBUG && os(macOS)
-        .onChange(of: SnapshotDriver.shared.openFile, initial: true) { _, ext in
+        .onChange(of: SnapshotDriver.shared.openFile, initial: true) { old, ext in
+            // Nothing asked for yet: the file a link opened stays open.
+            guard ext != nil || old != nil else { return }
             // Fixtures ship without tracked files; register them so there is a file to show.
             if ext != nil, model.materials.isEmpty { model.workspace.run(MaterialTrack(course: model.course.id)) }
             model.viewing = ext.flatMap { ext in

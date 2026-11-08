@@ -1,5 +1,6 @@
 import FolioActions
 import FolioDomain
+import FolioMarkdown
 import Foundation
 import Testing
 @testable import Folio
@@ -135,6 +136,49 @@ struct WorkspaceLinkTests {
         #expect(workspace.title(of: replay).hasSuffix("· " + String(localized: .recordingPageNamed(day))))
         #expect(workspace.entry(for: AppLink(.recording, recording.id))?.course == graphTheory)
         #expect(workspace.title(of: Navigator.Entry(link: .settings(.claude))) == "\(String(localized: .rootNavSettings)) · Claude")
+    }
+
+    /// A link in a note without a name of its own shows what it points at, as the app names it (#347).
+    @Test func aLinkIsNamedWithItsPage() throws {
+        let workspace = try fixtureWorkspace()
+        workspace.run(MaterialTrack(course: graphTheory))
+        let course = try #require(workspace.course(graphTheory))
+        let material = try #require(course.file.materials.first)
+        let file = (material.path as NSString).lastPathComponent
+        let page = AppLink(.material, material.id, anchor: .page(2))
+        #expect(workspace.name(of: page) == file)
+        #expect(workspace.label(of: page) == "\(file) › \(String(localized: .notesAssistLinkPage(2)))")
+        #expect(workspace.label(of: .settings(.claude)) == "\(String(localized: .rootNavSettings)) · Claude")
+        #expect(workspace.name(of: .course(graphTheory, page: .units))?.hasPrefix(course.title) == true)
+        #expect(workspace.name(of: AppLink(.exam, UUID())) == nil)
+        // The preview shows it, whether the link is written by kind and ID or as the copied address.
+        let embeds = NoteEmbedSource(workspace: workspace, course: course, own: nil).embeds(revision: 0, text: "")
+        for written in ["[[\(page.string)]]", "[[material:\(material.id.uuidString)#page=2]]"] {
+            let html = HTMLRenderer.blocks(ParsedNote(written), embeds: embeds).map(\.html).joined()
+            #expect(html.contains(">\(file) › \(String(localized: .notesAssistLinkPage(2)))</a>"), "\(html)")
+        }
+    }
+
+    /// A pasted address goes in as link completion writes a link, unless it lands where it is a link's target or text.
+    @Test func aPastedAddressBecomesALinkToWhatItNames() {
+        let id = UUID()
+        let named = { (link: AppLink) -> String? in link.kind == .material ? "05_Matchings.pdf" : nil }
+        let page = AppLink(.material, id, anchor: .page(2))
+        #expect(pastedNoteLink(page.string, into: "앞 ", at: 2, name: named) == "[[material:\(id.uuidString)#page=2|05_Matchings.pdf]]")
+        #expect(pastedNoteLink(" \(AppLink(.note, id, anchor: .block("c1")).string)\n", into: "", at: 0, name: named) == "[[note:\(id.uuidString)#^c1]]")
+        #expect(pastedNoteLink(AppLink(.recording, id, anchor: .time(750)).string, into: "", at: 0, name: named) == "[[recording:\(id.uuidString)#t=12:30]]")
+        // No `<kind>:<ID>` form: the address goes between the brackets.
+        #expect(pastedNoteLink(AppLink.course(id, page: .units).string, into: "", at: 0, name: { _ in "그래프 이론 · 단원" })
+            == "[[folio://course/\(id.uuidString)/units|그래프 이론 · 단원]]")
+        #expect(pastedNoteLink(AppLink.settings(.claude).string, into: "", at: 0, name: { _ in nil }) == "[[folio://settings/claude]]")
+        // A heading `|` or `#` would cut short stays escaped in the address.
+        let odd = AppLink(.note, id, anchor: .heading("A|B"))
+        #expect(pastedNoteLink(odd.string, into: "", at: 0, name: { _ in nil }) == "[[\(odd.string)]]")
+        // Inside a link being written, code, or not an address: pasted as it is.
+        #expect(pastedNoteLink(page.string, into: "[[]]", at: 2, name: named) == nil)
+        #expect(pastedNoteLink(page.string, into: "`a`", at: 2, name: named) == nil)
+        #expect(pastedNoteLink("folio://nowhere", into: "", at: 0, name: named) == nil)
+        #expect(pastedNoteLink("https://example.com", into: "", at: 0, name: named) == nil)
     }
 
     /// The address wins: a link naming a tab opens it, and only one naming none (the sidebar, ⌘,) takes the last picked.

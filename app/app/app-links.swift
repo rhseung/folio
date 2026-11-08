@@ -192,6 +192,50 @@ extension Workspace {
         case .card: return file.map { _ in CourseSection.quizCards.title }
         }
     }
+
+    /// What a link is named in a note: the file, exam or note, a course with its page, a place. Nil when nothing here
+    /// has it (deleted, or from another GIST folder).
+    func name(of link: AppLink) -> String? {
+        // A place is named as it is written, not with the settings tab opening it would fill in.
+        guard let entry = link.kind.isPlace ? Navigator.Entry(link: link) : entry(for: link) else { return nil }
+        return link.kind == .course ? title(of: entry) : itemName(of: entry) ?? title(of: entry)
+    }
+
+    /// What a link without a name of its own shows in a note's preview: its name and the page, heading, block or
+    /// moment it points at, as a link to a note shows its title and heading.
+    func label(of link: AppLink) -> String? {
+        name(of: link).map(link.label)
+    }
+}
+
+extension AppLink {
+    func label(_ name: String) -> String {
+        let part: String? = switch anchor {
+        case .page(let n): String(localized: .notesAssistLinkPage(n))
+        case .heading(let heading): heading
+        case .block(let block): "^" + block
+        case .time(let t): AppLink.clock(t)
+        case nil: nil
+        }
+        return [name, part].compactMap { $0 }.joined(separator: " › ")
+    }
+
+    /// What pasting this address into a note writes: the link as link completion writes it, by kind and ID with the
+    /// item's name (`[[material:<ID>#page=2|05_Matchings.pdf]]`). A place or a course's page has no `<kind>:<ID>`
+    /// form and goes between the brackets as its address, which the note reads the same way.
+    func noteLink(named name: String?) -> String {
+        let fragment: String?? = switch anchor {
+        case .page(let n): "page=\(n)"
+        case .block(let block): "^" + block
+        case .heading(let heading): WikiLink.linkable(heading: heading) ? heading : .none
+        case .time(let t): "t=" + AppLink.clock(t)
+        case nil: .some(nil)
+        }
+        guard let id, page == nil, let fragment, WikiLink.objectKinds.contains(kind.rawValue) else {
+            return WikiLink.written(address: string, alias: name)
+        }
+        return WikiLink.written(kind.rawValue, id, fragment: fragment, alias: name)
+    }
 }
 
 extension AppLink.Anchor {

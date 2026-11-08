@@ -41,13 +41,17 @@ public struct NoteEmbeds {
     /// Whether a link by title (`[[제목]]`, written by hand) names a note, found as the app finds it to open the link,
     /// so a link drawn whole always opens and one drawn broken never does. Like `title`, apart from `find`.
     public var hasNote: (String) -> Bool
+    /// What a link to anything else in the app shows without a name of its own (a file's name and page, an exam's
+    /// title), given the link's `href`. Nil leaves it showing what is written.
+    public var name: (String) -> String?
 
     public init(key: String?, labels: Labels, title: @escaping (UUID) -> String? = { _ in nil }, hasNote: @escaping (String) -> Bool = { _ in true },
-                find: @escaping (WikiLink) -> Note?) {
+                name: @escaping (String) -> String? = { _ in nil }, find: @escaping (WikiLink) -> Note?) {
         self.key = key
         self.labels = labels
         self.title = title
         self.hasNote = hasNote
+        self.name = name
         self.find = find
     }
 
@@ -60,7 +64,7 @@ extension WikiLink {
     /// A link to a note rather than to an app object or another file: `![[그림.png]]` and `![[slides.pdf]]` embed files,
     /// which this doesn't draw. An extension must start with a letter, so a title like `v1.2` is still a note.
     var namesNote: Bool {
-        if let objectKind { return objectKind == "note" }
+        if isAppLink { return objectKind == "note" }
         let ext = (target as NSString).pathExtension
         return ext.lowercased() == "md" || ext.wholeMatch(of: /[A-Za-z][A-Za-z0-9]{0,4}/) == nil
     }

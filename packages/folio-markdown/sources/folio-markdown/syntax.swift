@@ -1,8 +1,9 @@
 import Foundation
 
 /// `[[target#heading|alias]]`, `[[target#^block]]`, `![[target]]` (embed), or an app object link
-/// such as `[[material:<ID>#page=12]]`. A note is named by its title, or by its ID so a rename doesn't break the link:
-/// `[[note:<ID>#heading|title]]`.
+/// such as `[[material:<ID>#page=12]]`, or the same written as an address, `[[folio://material/<ID>#page=12]]`, which
+/// is what "링크 복사" puts on the clipboard. A note is named by its title, or by its ID so a rename doesn't break the
+/// link: `[[note:<ID>#heading|title]]`.
 public struct WikiLink: Hashable, Sendable {
     public var target: String
     /// Text after `#` that is not a block reference: a heading, or `page=12` for object links.
@@ -13,13 +14,33 @@ public struct WikiLink: Hashable, Sendable {
 
     /// The app object's kind (`note`, `material`, `exam`, …), named as in a `folio://` link; nil for a note named by title.
     public var objectKind: String? {
+        if let path = addressPath {
+            let kind = path[0].lowercased()
+            return WikiLink.objectKinds.contains(kind) ? kind : nil
+        }
         guard let colon = target.firstIndex(of: ":") else { return nil }
         let kind = String(target[..<colon])
         return WikiLink.objectKinds.contains(kind) ? kind : nil
     }
 
     public var objectID: UUID? {
-        objectKind.flatMap { UUID(uuidString: String(target.dropFirst($0.count + 1))) }
+        if let path = addressPath { return objectKind != nil && path.count > 1 ? UUID(uuidString: path[1]) : nil }
+        return objectKind.flatMap { UUID(uuidString: String(target.dropFirst($0.count + 1))) }
+    }
+
+    /// A `folio://` address between the brackets. It opens in the app even when its kind takes no ID (`folio://today`,
+    /// `folio://settings/claude`), so it is never looked for as a note's title.
+    public var isAddress: Bool { addressPath != nil }
+
+    /// Whether the link opens something in the app rather than a note named by its title or a file.
+    public var isAppLink: Bool { objectKind != nil || isAddress }
+
+    static let scheme = "folio://"
+
+    /// The address after `folio://`, split at `/`.
+    var addressPath: [String]? {
+        guard target.count > Self.scheme.count, target.prefix(Self.scheme.count).lowercased() == Self.scheme else { return nil }
+        return target.dropFirst(Self.scheme.count).split(separator: "/", omittingEmptySubsequences: false).map(String.init)
     }
 
     public var noteID: UUID? { objectKind == "note" ? objectID : nil }
@@ -40,12 +61,15 @@ public struct WikiLink: Hashable, Sendable {
         fragment = isBlock ? nil : m.4.map(String.init)
         alias = m.5.map(String.init)
         isEmbed = m.1 == "!"
+        // A copied address escapes its heading (`#%EB%A7%A4%EC%B9%AD`), which is found and shown by its text.
+        if isAddress, let f = fragment { fragment = f.removingPercentEncoding ?? f }
     }
 
     /// Where the link goes: `folio://<kind>/<ID>` for an app object, `folio://note/<title>` for a note, with the
-    /// heading, block or page after `#`.
+    /// heading, block or page after `#`. An address goes where it says.
     public var href: String {
         let fragment = blockID.map { "#^" + $0 } ?? fragment.map { "#" + $0 } ?? ""
+        if isAddress { return target + fragment }
         if let kind = objectKind {
             return "folio://\(kind)/\(target.dropFirst(kind.count + 1))\(fragment)"
         }

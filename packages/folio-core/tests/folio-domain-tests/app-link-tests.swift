@@ -129,7 +129,15 @@ struct AppLinkTests {
     @Test func findsLinksWrittenInText() {
         let link = AppLink(.material, id, anchor: .page(4))
         let tex = "See \\href{\(link.string)}{the slides} and folio://grades."
-        #expect(AppLink.links(in: tex).map(\.link) == [link])
+        // The sentence's full stop isn't part of the address; a heading's last character is.
+        #expect(AppLink.links(in: tex).map(\.link) == [link, .place(.grades)])
+        #expect((tex as NSString).substring(with: AppLink.links(in: tex)[1].range) == "folio://grades")
+        #expect(AppLink.links(in: "folio://exam/\(id.uuidString)!").map(\.link) == [AppLink(.exam, id)])
+        #expect(AppLink.links(in: "folio://note/\(id.uuidString)#Intro.").map(\.link) == [AppLink(.note, id, anchor: .heading("Intro."))])
+        // A page, time or block is still one at the end of a sentence.
+        #expect(AppLink.links(in: "범위는 folio://material/\(id.uuidString)#page=12.").map(\.link) == [AppLink(.material, id, anchor: .page(12))])
+        #expect(AppLink.links(in: "folio://recording/\(id.uuidString)#t=12:30.").map(\.link) == [AppLink(.recording, id, anchor: .time(750))])
+        #expect(AppLink.links(in: "folio://note/\(id.uuidString)#^c1!").map(\.link) == [AppLink(.note, id, anchor: .block("c1"))])
         let at = (tex as NSString).range(of: "folio://material").location + 3
         #expect(AppLink.link(in: tex, at: at) == link)
         #expect(AppLink.link(in: tex, at: 1) == nil)

@@ -149,12 +149,15 @@ final class SourceFileTextView: NSTextView {
     override func mouseDown(with event: NSEvent) {
         if event.modifierFlags.contains(.command), let window, textStorage?.length ?? 0 > 0 {
             let i = characterIndex(for: window.convertPoint(toScreen: event.locationInWindow))
-            if i != NSNotFound, let link = AppLink.link(in: string, at: i) {
-                linkOpener(link)
-                return
-            }
+            if i != NSNotFound, openLink(at: i) { return }
         }
         super.mouseDown(with: event)
+    }
+
+    func openLink(at i: Int) -> Bool {
+        guard let link = AppLink.link(in: string, at: i) else { return false }
+        linkOpener(link)
+        return true
     }
 
     // A syllable ended without a keystroke (a click elsewhere, another app) changes no text, so no `textDidChange`
