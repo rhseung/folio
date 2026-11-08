@@ -14,6 +14,9 @@ struct PageRangeField: View {
         let id: UUID
         let pages: ClosedRange<Int>
         let label: String
+        /// A lecture file's page is one class's (`Session.progressOverlap`), so the range stops at it; a textbook is
+        /// read over and over.
+        var wall = false
     }
 
     /// A zone of the file by the units holding it (#321); an empty title is pages no unit takes.
@@ -27,6 +30,7 @@ struct PageRangeField: View {
     let pages: Int?
     var taught: [Taught] = []
     var seen: ClosedRange<Int>?
+    private var taken: [ClosedRange<Int>] { taught.filter(\.wall).map(\.pages) }
     /// The page after the last class's, offered as one tap. The sheet passes it; the popover's rows are too tight.
     var resume: Int?
     var sections: [Section] = []
@@ -408,7 +412,7 @@ struct PageRangeField: View {
         let applied = shown.first == seen.lowerBound && shown.last == seen.upperBound
         let shape = UnevenRoundedRectangle(bottomLeadingRadius: Theme.Radius.control, bottomTrailingRadius: Theme.Radius.control)
         return Button {
-            apply(PageRange().moving(.first, to: seen.lowerBound, pages: pages).moving(.last, to: seen.upperBound, pages: pages))
+            apply(PageRange(first: seen.lowerBound, last: seen.upperBound).fitted(besides: taken, pages: pages))
         } label: {
             Text(compact ? .designPageRangeSeenShort(seen.lowerBound, seen.upperBound) : .designPageRangeSeen(seen.lowerBound, seen.upperBound))
                 .font(Theme.Typeface.label)
@@ -428,7 +432,7 @@ struct PageRangeField: View {
         HStack(spacing: Theme.Space.m) {
             if let resume {
                 Button(String(localized: .designPageRangeResume)) {
-                    apply(range.moving(.first, to: resume, pages: pages))
+                    apply(range.moving(.first, to: resume, pages: pages, besides: taken))
                 }
                 .buttonStyle(.pointing(.plain))
                 .foregroundStyle(accent.ink)
@@ -463,8 +467,8 @@ struct PageRangeField: View {
                     let p = end == .first ? Int(settled.rounded()) + 1 : Int(settled.rounded())
                     // The only handle on the bar opens the range toward the pointer, as a tap there would: it is the
                     // one thing in sight to grab, and moving it instead left the missing end unset.
-                    let next = from.lone == end ? from.tapping(page(at: g.location.x, w), pages: pages)
-                        : from.moving(end, to: min(max(p, 1), extent), pages: pages)
+                    let next = from.lone == end ? from.tapping(page(at: g.location.x, w), pages: pages, besides: taken)
+                        : from.moving(end, to: min(max(p, 1), extent), pages: pages, besides: taken)
                     change(to: next, end: end)
                     // Past the file's first or last page the handle gives a little, less the further it goes.
                     let (lo, hi): (CGFloat, CGFloat) = end == .first ? (0, CGFloat(extent - 1)) : (1, CGFloat(extent))
@@ -472,7 +476,7 @@ struct PageRangeField: View {
                 case let .span(from, at):
                     guard let f = from.first, let l = from.last else { return }
                     let raw = CGFloat(f) + (g.location.x - at) / u
-                    change(to: from.shifted(by: Int((raw - CGFloat(f)).rounded()), pages: pages ?? extent), end: nil)
+                    change(to: from.shifted(by: Int((raw - CGFloat(f)).rounded()), pages: pages ?? extent, besides: taken), end: nil)
                     let hi = CGFloat(extent - (l - f))
                     rubber = stretch((raw < 1 ? raw - 1 : raw > hi ? raw - hi : 0) * u)
                 case nil:
@@ -510,7 +514,7 @@ struct PageRangeField: View {
             grab = .span(from: r, at: px)
         } else {
             let p = page(at: px, w)
-            let next = r.tapping(p, pages: pages)
+            let next = r.tapping(p, pages: pages, besides: taken)
             // The end that landed on the tapped page; a first tap sets both, and the drag goes on with the end.
             let end: PageRange.End = next.last == p ? .last : .first
             withAnimation(Self.spring) { draft = next }
@@ -537,7 +541,7 @@ struct PageRangeField: View {
             if pushed { pushes[other, default: 0] += 1 }
             let edgeOf = { (r: PageRange) in r[end].map { end == .first ? $0 - 1 : $0 } }
             let onZoneEdge = zoned && edgeOf(next).map(zoneEdges.contains) == true && edgeOf(was) != edgeOf(next)
-            firm = pushed || onZoneEdge || (next.touches(end, pages: pages) && !was.touches(end, pages: pages) && next[end] != next[other])
+            firm = pushed || onZoneEdge || (next.touches(end, pages: pages, besides: taken) && !was.touches(end, pages: pages, besides: taken) && next[end] != next[other])
         } else {
             firm = next.first == 1 || (pages != nil && next.last == pages)
         }
@@ -556,7 +560,7 @@ struct PageRangeField: View {
 
     private func nudge(_ end: PageRange.End, by step: Int) {
         guard let value = range[end] else { return }
-        let next = range.lone == end ? range.tapping(value + step, pages: pages) : range.moving(end, to: value + step, pages: pages)
+        let next = range.lone == end ? range.tapping(value + step, pages: pages, besides: taken) : range.moving(end, to: value + step, pages: pages, besides: taken)
         guard next != range else {
             // At the file's edge: the handle leans out and springs back.
             bumps += 1
@@ -573,7 +577,7 @@ struct PageRangeField: View {
         typing = nil
         defer { typed = nil }
         guard let typed else { return range }
-        let next = range.moving(end, to: typed, pages: pages)
+        let next = range.moving(end, to: typed, pages: pages, besides: taken)
         guard next != range else { return range }
         feel(from: range, to: next, end: end)
         withAnimation(Self.spring) { set(next) }
@@ -584,6 +588,9 @@ struct PageRangeField: View {
 extension PageRangeField.Taught {
     /// Every other class's pages through `material`, named by its day.
     static func list(_ file: CourseFile, material: UUID, besides session: UUID, calendar: Calendar) -> [Self] {
-        file.pagesTaught(in: material, besides: session).map { Self(id: $0.session.id, pages: $0.pages, label: file.day(of: $0.session, calendar: calendar)) }
+        let lecture = file.materials.first { $0.id == material }?.role == .lecture
+        return file.pagesTaught(in: material, besides: session).map {
+            Self(id: $0.session.id, pages: $0.pages, label: file.day(of: $0.session, calendar: calendar), wall: lecture)
+        }
     }
 }

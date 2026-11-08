@@ -84,54 +84,70 @@ struct LectureProgressTests {
         }
     }
 
-    // MARK: Brackets beside the thumbnails
+    // MARK: One class per page
 
-    @Test func overlappingRangesTakeAnotherLane() {
-        let (a, b, c, d) = (UUID(), UUID(), UUID(), UUID())
-        #expect(ProgressBracket.lay([(a, 1...7), (b, 5...10), (c, 8...13), (d, 11...11)]) == [
-            ProgressBracket(session: a, pages: 1...7, lane: 0),
-            ProgressBracket(session: b, pages: 5...10, lane: 1),
-            // Lane 0 is free again after page 7.
-            ProgressBracket(session: c, pages: 8...13, lane: 0),
-            ProgressBracket(session: d, pages: 11...11, lane: 1),
-        ])
-        // Touching ranges share a page, so they overlap; ranges that only meet end to end share a lane.
-        #expect(ProgressBracket.lay([(a, 1...5), (b, 5...9), (c, 10...12)]).map(\.lane) == [0, 1, 0])
-        // Given out of page order (a later class went back over the start), each still takes the nearest free lane,
-        // and the result keeps the order given.
-        #expect(ProgressBracket.lay([(a, 6...10), (b, 1...4), (c, 3...8)]).map(\.lane) == [0, 0, 1])
-        #expect(ProgressBracket.lay([]).isEmpty)
-    }
-
-    @Test func bracketsComeFromTheFilesProgress() {
+    @Test func sectionsAreEachClassesPagesInPageOrder() {
         var f = course()
         let m = matchings(f)
-        f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 7)
-        f.linkMaterial(m, session: f.sessions[1].id, firstPage: 5, lastPage: 40)
+        f.linkMaterial(m, session: f.sessions[0].id, firstPage: 9, lastPage: 40)
+        f.linkMaterial(m, session: f.sessions[1].id, firstPage: 1, lastPage: 4)
         f.sessions[2].isCancelled = true
-        f.linkMaterial(m, session: f.sessions[2].id, firstPage: 1, lastPage: 3)
+        f.linkMaterial(m, session: f.sessions[2].id, firstPage: 5, lastPage: 6)
         // Cut at the count as the progress is, and a cancelled class has none.
-        #expect(f.progressBrackets(of: m, pageCount: 24) == [
-            ProgressBracket(session: f.sessions[0].id, pages: 1...7, lane: 0),
-            ProgressBracket(session: f.sessions[1].id, pages: 5...24, lane: 1),
-        ])
-        #expect(course().progressBrackets(of: m, pageCount: 24).isEmpty)
+        #expect(f.progressSections(of: m, pageCount: 24).map(\.session) == [f.sessions[1].id, f.sessions[0].id])
+        #expect(f.progressSections(of: m, pageCount: 24).map(\.pages) == [1...4, 9...24])
+        #expect(course().progressSections(of: m, pageCount: 24).isEmpty)
     }
 
-    /// No two brackets in a lane share a page, every bracket keeps its range, and there are only as many lanes as the
-    /// most ranges holding one page.
-    @Test func lanesNeverOverlapAndAreFew() async {
-        let ranges = zip(Gen.int(in: 1...30), Gen.int(in: 0...10)).array(of: 0...8)
-        await propertyCheck(input: ranges) { ranges in
-            let given = ranges.map { (session: UUID(), pages: $0...($0 + $1)) }
-            let laid = ProgressBracket.lay(given)
-            #expect(laid.map(\.session) == given.map(\.session))
-            #expect(laid.map(\.pages) == given.map(\.pages))
-            for (i, x) in laid.enumerated() {
-                for y in laid[(i + 1)...] where x.lane == y.lane { #expect(!x.pages.overlaps(y.pages)) }
+    @Test func classesSharingAPageOverlap() {
+        var f = course()
+        let (m, book) = (matchings(f), f.materials[2].id)
+        f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 5)
+        // Meeting end to end is fine; sharing page 5 is not.
+        f.linkMaterial(m, session: f.sessions[1].id, firstPage: 6, lastPage: 9)
+        #expect(f.progressOverlaps().isEmpty)
+        f.linkMaterial(m, session: f.sessions[2].id, firstPage: 5, lastPage: 7)
+        let found = f.progressOverlaps().map { [$0.earlier.session.id, $0.later.session.id] }
+        #expect(found == [[f.sessions[0].id, f.sessions[2].id], [f.sessions[1].id, f.sessions[2].id]])
+        // A cancelled class taught nothing, and a textbook is read over and over.
+        f.sessions[2].isCancelled = true
+        f.linkMaterial(book, session: f.sessions[0].id, firstPage: 1, lastPage: 50)
+        f.linkMaterial(book, session: f.sessions[1].id, firstPage: 1, lastPage: 50)
+        #expect(f.progressOverlaps().isEmpty)
+    }
+
+    @Test func aSaveThatOverlapsIsRefusedNamingTheOtherClass() {
+        var before = course()
+        let m = matchings(before)
+        before.linkMaterial(m, session: before.sessions[0].id, firstPage: 16, lastPage: 18)
+        var after = before
+        after.linkMaterial(m, session: after.sessions[1].id, firstPage: 17, lastPage: 21)
+        let refused = CourseFile.model.newViolation(before: before, after: after)
+        #expect(refused?.rule == "Session.progressOverlap")
+        #expect(refused?.message.contains(before.day(of: before.sessions[0], calendar: .current)) == true)
+        #expect(refused?.message.contains("16–18쪽") == true && refused?.message.contains("17–21쪽") == true)
+        #expect(refused?.message.contains("05_Matchings.pdf") == true)
+        var clear = before
+        clear.linkMaterial(m, session: clear.sessions[1].id, firstPage: 19, lastPage: 21)
+        #expect(CourseFile.model.newViolation(before: before, after: clear) == nil)
+    }
+
+    /// The rule's overlaps are exactly the pairs of classes that name a common page of a lecture file.
+    @Test func overlapsAreThePairsSharingAPage() async {
+        await propertyCheck(input: Self.ranges) { links in
+            var f = course()
+            let m = matchings(f)
+            for (s, first, length) in links { f.linkMaterial(m, session: f.sessions[s].id, firstPage: first, lastPage: first + length) }
+            let ranges = f.sessions.map { s in s.materials.first { $0.materialId == m }?.pages }
+            var expected: [[UUID]] = []
+            for i in ranges.indices {
+                for j in ranges.indices where i < j {
+                    if let a = ranges[i], let b = ranges[j], (1...40).contains(where: { a.contains($0) && b.contains($0) }) {
+                        expected.append([f.sessions[i].id, f.sessions[j].id])
+                    }
+                }
             }
-            let deepest = (1...40).map { page in given.count { $0.pages.contains(page) } }.max() ?? 0
-            #expect(Set(laid.map(\.lane)) == Set(0..<deepest))
+            #expect(f.progressOverlaps().map { [$0.earlier.session.id, $0.later.session.id] } == expected)
         }
     }
 
@@ -158,12 +174,44 @@ struct LectureProgressTests {
             == [SessionMaterial(materialId: m, firstPage: 1, lastPage: 9)])
     }
 
-    @Test func aRecapShowsThePagesGoneOver() {
+    @Test func aRecapIsSuggestedNoPages() {
         var f = course()
         let m = matchings(f)
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 20)
+        // The pages gone over belong to the class that taught them.
         #expect(f.suggestedProgress(for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 15, lastPage: 18)])
-            == [SessionMaterial(materialId: m, firstPage: 15, lastPage: 18)])
+            == [SessionMaterial(materialId: m)])
+    }
+
+    @Test func aSuggestionStopsBeforeALaterClassesPages() {
+        var f = course()
+        let m = matchings(f)
+        // The class in between is filled in after the one following it already saved its pages.
+        f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 6)
+        f.linkMaterial(m, session: f.sessions[2].id, firstPage: 11, lastPage: 15)
+        #expect(f.suggestedProgress(for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 5, lastPage: 13)])
+            == [SessionMaterial(materialId: m, firstPage: 7, lastPage: 10)])
+    }
+
+    /// Whatever the other classes took and the recording saw, a suggestion never names a page another class took.
+    @Test func aSuggestionNeverOverlaps() async {
+        let taken = zip(Gen.int(in: 1...30), Gen.int(in: 0...6)).array(of: 0...2)
+        await propertyCheck(input: taken, Gen.int(in: 1...30), Gen.int(in: 0...10), Gen.int(in: 1...40)) { taken, seen, length, count in
+            var f = course()
+            let m = matchings(f)
+            // The classes before and after, kept clear of each other as the rule keeps them.
+            var placed: [ClosedRange<Int>] = []
+            for (i, (first, len)) in taken.enumerated() where !placed.contains(where: { $0.overlaps(first...(first + len)) }) {
+                placed.append(first...(first + len))
+                f.linkMaterial(m, session: f.sessions[i == 0 ? 0 : 2].id, firstPage: first, lastPage: first + len)
+            }
+            let viewed = [SessionMaterial(materialId: m, firstPage: seen, lastPage: seen + length)]
+            for s in f.suggestedProgress(for: f.sessions[1], viewed: viewed, pageCounts: [m: count]) {
+                guard let pages = s.pages else { continue }
+                #expect(!f.pagesTaken(in: m, besides: f.sessions[1].id).contains { $0.overlaps(pages) })
+                #expect(pages.upperBound <= count)
+            }
+        }
     }
 
     @Test func pagesAlreadySavedStay() {
@@ -202,8 +250,11 @@ struct LectureProgressTests {
         var f = course()
         let m = matchings(f)
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 30)
+        #expect(f.suggestedProgress(for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 28, lastPage: 50)], pageCounts: [m: 40])
+            == [SessionMaterial(materialId: m, firstPage: 31, lastPage: 40)])
+        // The file the last class finished leaves nothing new.
         #expect(f.suggestedProgress(for: f.sessions[1], viewed: [SessionMaterial(materialId: m, firstPage: 30, lastPage: 30)], pageCounts: [m: 30])
-            == [SessionMaterial(materialId: m, firstPage: 30, lastPage: 30)])
+            == [SessionMaterial(materialId: m)])
     }
 
     // MARK: Replay
@@ -216,8 +267,8 @@ struct LectureProgressTests {
         #expect(f.suggestedLink(of: m, for: f.sessions[1], pageCount: nil) == SessionMaterial(materialId: m))
         f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 12)
         #expect(f.suggestedLink(of: m, for: f.sessions[1], pageCount: nil) == SessionMaterial(materialId: m, firstPage: 13))
-        // A finished file: still on its last page, not past it.
-        #expect(f.suggestedLink(of: m, for: f.sessions[1], pageCount: 12) == SessionMaterial(materialId: m, firstPage: 12))
+        // A finished file has no page left for the next class.
+        #expect(f.suggestedLink(of: m, for: f.sessions[1], pageCount: 12) == SessionMaterial(materialId: m))
     }
 
     /// The prompt was dismissed: nothing was saved, so opening it again starts after the last class, not at the first
@@ -351,6 +402,61 @@ struct LectureProgressTests {
                 if let a = range.first, let b = range.last { #expect(a <= b) }
                 if let page, (1...pages).contains(page) { #expect(range[end] == page) }
                 if page == nil { #expect(range[end] == nil) }
+            }
+        }
+    }
+
+    @Test func anEndStopsAtAnotherClassesPages() {
+        let taken = [1...4, 12...15]
+        let range = PageRange(first: 6, last: 9)
+        #expect(range.moving(.last, to: 13, pages: 20, besides: taken) == PageRange(first: 6, last: 11))
+        #expect(range.moving(.first, to: 2, pages: 20, besides: taken) == PageRange(first: 5, last: 9))
+        // Pushing the other end stops at the wall too.
+        #expect(range.moving(.first, to: 14, pages: 20, besides: taken) == PageRange(first: 11, last: 11))
+        #expect(range.shifted(by: 6, pages: 20, besides: taken) == PageRange(first: 8, last: 11))
+        #expect(range.tapping(18, pages: 20, besides: taken) == PageRange(first: 6, last: 11))
+        // A first tap on a taken page sets nothing; beside it, it starts there.
+        #expect(PageRange().tapping(13, pages: 20, besides: taken) == PageRange())
+        #expect(PageRange().tapping(16, pages: 20, besides: taken) == PageRange(first: 16, last: 16))
+        // At a wall the end touches, for the firmer tick.
+        #expect(PageRange(first: 5, last: 11).touches(.first, pages: nil, besides: taken))
+        #expect(PageRange(first: 5, last: 11).touches(.last, pages: nil, besides: taken))
+        #expect(!PageRange(first: 6, last: 10).touches(.last, pages: nil, besides: taken))
+        #expect(PageRange.room(at: 13, besides: taken, pages: 20) == nil && PageRange.room(at: 8, besides: taken, pages: 20) == 5...11)
+    }
+
+    @Test func aRangeIsFittedClearOfOtherClasses() {
+        let taken = [1...4, 12...15]
+        #expect(PageRange(first: 3, last: 13).fitted(besides: taken, pages: 20) == PageRange(first: 5, last: 11))
+        #expect(PageRange(first: 13, last: 18).fitted(besides: taken, pages: 20) == PageRange(first: 16, last: 18))
+        #expect(PageRange(first: 13).fitted(besides: taken, pages: 20) == PageRange(first: 16))
+        #expect(PageRange(first: 2, last: 4).fitted(besides: taken, pages: 20) == PageRange())
+        #expect(PageRange(first: 13, last: 15).fitted(besides: [1...15], pages: 15) == PageRange())
+    }
+
+    /// Starting clear of the other classes, any run of moves, taps and shifts stays clear of them, in the file and in order.
+    @Test func movesNeverEnterAnotherClassesPages() async {
+        let step = zip(Gen.int(in: 0...3), Gen.int(in: -10...50)).array(of: 1...12)
+        let walls = zip(Gen.int(in: 1...40), Gen.int(in: 0...5)).array(of: 0...3)
+        await propertyCheck(input: step, walls, Gen.int(in: 1...40)) { steps, walls, pages in
+            var taken: [ClosedRange<Int>] = []
+            for (a, n) in walls where !taken.contains(where: { $0.overlaps(a...(a + n)) }) { taken.append(a...(a + n)) }
+            var range = PageRange()
+            for (kind, n) in steps {
+                switch kind {
+                case 0: range = range.tapping(n, pages: pages, besides: taken)
+                case 1: range = range.shifted(by: n, pages: pages, besides: taken)
+                case 2: range = range.moving(.first, to: n, pages: pages, besides: taken)
+                default: range = range.moving(.last, to: n, pages: pages, besides: taken)
+                }
+                for p in [range.first, range.last].compactMap({ $0 }) {
+                    #expect((1...pages).contains(p))
+                    #expect(!taken.contains { $0.contains(p) })
+                }
+                if let a = range.first, let b = range.last {
+                    #expect(a <= b)
+                    #expect(!taken.contains { $0.overlaps(a...b) })
+                }
             }
         }
     }

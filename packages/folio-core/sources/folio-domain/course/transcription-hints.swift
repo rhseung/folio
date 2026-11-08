@@ -141,8 +141,15 @@ extension CourseFile {
         guard let session = recording.sessionId, let s = sessions.firstIndex(where: { $0.id == session }) else { return 0 }
         var linked = 0
         for range in recording.viewedPages() where !sessions[s].materials.contains(where: { $0.materialId == range.materialId }) {
-            guard materials.contains(where: { $0.id == range.materialId }) else { continue }
-            linkMaterial(range.materialId, session: session, firstPage: range.firstPage, lastPage: range.lastPage)
+            guard let material = materials.first(where: { $0.id == range.materialId }) else { continue }
+            var pages = range.pageRange
+            // A lecture page is one class's (`Session.progressOverlap`): pages another class took were gone back over,
+            // and a recording that saw only those adds nothing.
+            if material.role == .lecture {
+                pages = pages.fitted(besides: pagesTaken(in: material.id, besides: session), pages: nil)
+                guard pages.first != nil || pages.last != nil else { continue }
+            }
+            linkMaterial(range.materialId, session: session, firstPage: pages.first, lastPage: pages.last)
             linked += 1
         }
         return linked
