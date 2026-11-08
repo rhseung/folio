@@ -24,27 +24,28 @@ struct ClassWrapUpModelTests {
     var file: CourseFile { workspace.course(graphTheory)!.file }
     var saved: Session { file.sessions.first { $0.id == session }! }
 
-    @Test func whatIsMissingOpensAndTheRestFolds() throws {
+    /// A plain form (2026-11-08): every item shows in asking order, filled or not, holding what the class has.
+    @Test func everyItemShowsHoldingWhatTheClassHas() throws {
         workspace.run(UnitLink(course: graphTheory, unit: unit, sessions: [session], linked: true))
         let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session, recorded: true)
-        #expect(model.items.filter(model.isOpen) == [.progress, .note])
-        #expect(model.folded == [.units, .attendance])
-        #expect(model.summary(.units) == "매칭")
-        model.reopen(.units)
-        #expect(model.items.filter(model.isOpen) == [.progress, .units, .note])
+        #expect(model.items == [.progress, .units, .note, .attendance])
+        #expect(model.items.map(model.label) == ["진도", "단원", "러프 노트", "출석"])
+        #expect(model.linkedUnits.map(\.id) == [unit])
+        // What the today card asks about is still the class's gaps.
+        #expect(file.wrapUpGaps(of: saved, recorded: true) == [.progress, .note])
     }
 
     /// Attendance is a choice with the likely answer picked, not a line saying why: a recorded class starts on
     /// present, one with an entry on that entry's state, and saving writes what was picked, present as no entry.
     @Test func attendanceStartsOnTheLikelyChoiceAndSavesThePickedOne() throws {
         let recorded = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session, recorded: true)
-        #expect(recorded.attendance == .present && recorded.summary(.attendance) == String(localized: .attendancePresent))
+        #expect(recorded.attendance == .present)
         recorded.attendance = .late
         recorded.wrapUp()
         #expect(file.attendance.first { $0.sessionId == session }?.state == .late)
 
         let again = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
-        #expect(again.attendance == .late && again.folded.contains(.attendance))
+        #expect(again.attendance == .late)
         again.attendance = .present
         again.wrapUp()
         #expect(!file.attendance.contains { $0.sessionId == session })
@@ -70,23 +71,41 @@ struct ClassWrapUpModelTests {
         #expect(file.wrapUpGaps(of: s).isEmpty)
     }
 
-    /// Progress the class already has folds, and its rows stay out of the save: a file linked whole (no pages) is
-    /// out of sight there, so it must neither block saving nor be rewritten.
-    @Test func foldedProgressNeitherBlocksNorRewritesTheLinks() throws {
+    /// Progress the class already has shows as its rows, and saving them untouched writes none of them. A file linked
+    /// whole (no pages) starts unchecked, so it neither blocks saving nor gets pages it wasn't given.
+    @Test func progressTheClassHasIsShownAndLeftAlone() throws {
         let problems = try #require(file.materials.first { $0.path.hasSuffix("Problems.pdf") })
         workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: 3, lastPage: 9))
         workspace.run(MaterialLinkSession(course: graphTheory, material: problems.id, session: session))
         let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session,
                                      viewed: [SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 14)], recorded: true)
-        #expect(!model.isOpen(.progress))
-        #expect(model.rows.contains { $0.id == problems.id && $0.last == nil })
-        #expect(model.refusal == nil)
+        #expect(model.rows.first { $0.id == slides.id } == .init(id: slides.id, included: true, first: 3, last: 9))
+        #expect(model.rows.contains { $0.id == problems.id && !$0.included })
+        #expect(model.refusal == nil && model.ranges.isEmpty)
+        // Not from the recording: the class had its pages.
+        #expect(model.note == nil)
         model.wrapUp()
         #expect(saved.materials == [SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 9), SessionMaterial(materialId: problems.id)])
-        // Opened, the same row asks for its pages.
+
+        // Checked, the whole-file row asks for its pages; a changed range is the only one written.
         let again = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
-        again.reopen(.progress)
+        again.toggle(problems.id)
         #expect(again.refusal == String(localized: .sessionsProgressMissingLast("Problems.pdf")))
+        again.toggle(problems.id)
+        again.setRange(slides.id, PageRange(first: 3, last: 12))
+        #expect(again.ranges == [SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 12)])
+        again.wrapUp()
+        #expect(saved.materials == [SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 12), SessionMaterial(materialId: problems.id)])
+    }
+
+    /// Saving the class's own attendance again leaves its entry as it was.
+    @Test func unchangedAttendanceIsNotWrittenAgain() throws {
+        workspace.run(AttendanceSet(course: graphTheory, session: session, state: .late))
+        let entry = try #require(file.attendance.first { $0.sessionId == session })
+        let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
+        #expect(model.attendance == .late)
+        model.wrapUp()
+        #expect(file.attendance.filter { $0.sessionId == session }.map(\.id) == [entry.id])
     }
 
     /// The case the review found: no lecture files, so progress isn't asked, but the class links an exercise sheet
@@ -216,7 +235,7 @@ struct ClassWrapUpModelTests {
         let review = try #require(workspace.run(NoteAdd(course: graphTheory, title: "복습", kind: .review, session: session))?.made)
         let free = try #require(workspace.run(NoteAdd(course: graphTheory, title: "메모"))?.made)
         let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
-        #expect(model.linkedNote == nil && model.summary(.note) == "복습")
+        #expect(model.linkedNote == nil && !model.makesNote)
 
         model.linkNote(free)
         #expect(saved.roughNoteId == free && saved.reviewNoteId == review)

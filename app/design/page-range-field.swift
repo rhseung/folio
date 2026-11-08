@@ -32,8 +32,6 @@ struct PageRangeField: View {
     var sections: [Section] = []
     /// What a range of a split file reads as (`CourseFile.sectionLabel`): `König–Hall`.
     var reads: ((ClosedRange<Int>) -> String?)?
-    /// Opens the split screen, offered under an unsplit file's bar.
-    var split: (() -> Void)?
     var compact = false
     /// Once a drag lets go, or at once for a tap, a key or a typed page: every step of a scrub would otherwise be a
     /// write.
@@ -94,18 +92,12 @@ struct PageRangeField: View {
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
             GeometryReader { proxy in track(width: proxy.size.width) }
                 .frame(height: Self.pillRow + Self.hitRow)
-            if !compact, let lone = shown.lone {
-                Text(lone == .first ? .designPageRangeOpenLast : .designPageRangeOpenFirst)
-                    .font(Theme.Typeface.caption)
-                    .foregroundStyle(accent.ink)
-                    .padding(.horizontal, Self.inset)
-            }
             if let seen {
                 GeometryReader { proxy in ghost(seen, width: proxy.size.width) }
                     .frame(height: Self.ghostRow)
             }
             if zoned, let summary { summaryRow(summary) }
-            if !compact, resume != nil || (!zoned && split != nil) { actions(resume) }
+            if !compact, let resume { actions(resume) }
         }
         .frame(minWidth: compact ? 200 : 240)
         .sensoryFeedback(.selection, trigger: ticks)
@@ -424,22 +416,14 @@ struct PageRangeField: View {
         .position(x: (lo + hi) / 2, y: Self.ghostRow / 2)
     }
 
-    private func actions(_ resume: Int?) -> some View {
+    private func actions(_ resume: Int) -> some View {
         HStack(spacing: Theme.Space.m) {
-            if let resume {
-                Button(String(localized: .designPageRangeResume)) {
-                    apply(range.moving(.first, to: resume, pages: pages))
-                }
-                .buttonStyle(.pointing(.plain))
-                .foregroundStyle(accent.ink)
-                .disabled(range.first == resume)
+            Button(String(localized: .designPageRangeResume)) {
+                apply(range.moving(.first, to: resume, pages: pages))
             }
-            if !zoned, let split {
-                Button(String(localized: .designPageRangeSplit), action: split)
-                    .buttonStyle(.pointing(.plain))
-                    .foregroundStyle(accent.ink)
-                    .help(Text(.designPageRangeSplitHelp))
-            }
+            .buttonStyle(.pointing(.plain))
+            .foregroundStyle(accent.ink)
+            .disabled(range.first == resume)
             Spacer()
             if let pages { Text(.designPageRangeTotal(pages)).foregroundStyle(Theme.Palette.textTertiary) }
         }

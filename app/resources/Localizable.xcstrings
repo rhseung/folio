@@ -19152,28 +19152,6 @@
         }
       }
     },
-    "design.page-range.open-last": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "손잡이를 끌거나 막대를 눌러 끝 쪽까지 고르세요"
-          }
-        }
-      }
-    },
-    "design.page-range.open-first": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "손잡이를 끌거나 막대를 눌러 시작 쪽부터 고르세요"
-          }
-        }
-      }
-    },
     "design.page-range.seen": {
       "extractionState": "manual",
       "localizations": {
@@ -19482,24 +19460,13 @@
         }
       }
     },
-    "wrap-up.progress-line": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ %2$lld–%3$lld쪽"
-          }
-        }
-      }
-    },
     "wrap-up.note-make": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "저장할 때 수업 노트 만들기"
+            "value": "저장할 때 러프 노트 만들기"
           }
         }
       }
@@ -19559,17 +19526,6 @@
         }
       }
     },
-    "wrap-up.filled": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "채운 것"
-          }
-        }
-      }
-    },
     "wrap-up.assignment-add": {
       "extractionState": "manual",
       "localizations": {
@@ -19577,17 +19533,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "과제 추가"
-          }
-        }
-      }
-    },
-    "wrap-up.change": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "바꾸기"
           }
         }
       }
@@ -19675,7 +19620,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "진도, 단원, 수업 노트, 출석 중 빈 것이 있는 수업이에요. 한 번 저장한 수업은 빈 칸이 남아도 다시 묻지 않아요."
+            "value": "진도, 단원, 러프 노트, 출석 중 빈 것이 있는 수업이에요. 한 번 저장한 수업은 빈 칸이 남아도 다시 묻지 않아요."
           }
         }
       }
@@ -19686,18 +19631,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "수업 노트"
-          }
-        }
-      }
-    },
-    "wrap-up.filled-note": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "확인만"
+            "value": "러프 노트"
           }
         }
       }

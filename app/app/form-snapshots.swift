@@ -52,6 +52,22 @@ enum FormSnapshots {
         }
         if let unit = file.units.first { forms.append(("card", AnyView(CardEditorSheet(workspace: workspace, course: course, draft: CardDraft(unitId: unit.id), units: file.units) {}))) }
         forms += lectureSections(workspace, places: importPlaces)
+        forms += wrapUps(workspace)
+        return forms
+    }
+
+    /// The wrap-up of a class with nothing yet and of the class with the most, in a course with lecture files.
+    @MainActor static func wrapUps(_ workspace: Workspace) -> [(String, AnyView)] {
+        guard let course = workspace.currentCourses.first(where: { !$0.file.lectureFiles.isEmpty }) else { return [] }
+        let file = course.file
+        let held = file.sessions.filter { !$0.isCancelled }.map { (session: $0, gaps: file.wrapUpGaps(of: $0).count) }
+        var forms: [(String, AnyView)] = []
+        if let empty = held.last(where: { $0.gaps == WrapUpItem.allCases.count }) {
+            forms.append(("class-wrap-up-empty", AnyView(ClassWrapUpSheet(workspace: workspace, course: course.id, session: empty.session.id))))
+        }
+        if let filled = held.min(by: { $0.gaps < $1.gaps }), filled.gaps < WrapUpItem.allCases.count {
+            forms.append(("class-wrap-up-filled", AnyView(ClassWrapUpSheet(workspace: workspace, course: course.id, session: filled.session.id))))
+        }
         return forms
     }
 
