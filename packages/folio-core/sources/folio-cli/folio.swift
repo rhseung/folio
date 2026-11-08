@@ -8,7 +8,7 @@ struct Folio: ParsableCommand {
         groupedSubcommands: [
             CommandGroup(name: String(localized: .folioGroupToday), subcommands: [TodayCommand.self]),
             CommandGroup(name: String(localized: .folioGroupClass), subcommands: [SessionCommand.self, UnitCommand.self, AttendanceCommand.self, RecordingCommand.self]),
-            CommandGroup(name: String(localized: .folioGroupExams), subcommands: [ExamCommand.self, AssignmentCommand.self]),
+            CommandGroup(name: String(localized: .folioGroupExams), subcommands: [ExamCommand.self, AssignmentCommand.self, AddCommand.self]),
             CommandGroup(name: String(localized: .folioGroupGrades), subcommands: [ScoreCommand.self, ComponentCommand.self, TranscriptCommand.self, RequirementCommand.self, GPACommand.self, UnlockCommand.self, LockCommand.self]),
             CommandGroup(name: String(localized: .folioGroupStudy), subcommands: [ReviewCommand.self, QuizCommand.self, ProblemSetCommand.self]),
             CommandGroup(name: String(localized: .folioGroupMaterials), subcommands: [MaterialCommand.self, NoteCommand.self, SearchCommand.self, LinkCommand.self, OpenCommand.self]),

@@ -8,10 +8,13 @@ struct WriteResult: Encodable {
     var made: UUID?
     var changes: [Change]
     var notes: [String]
+    /// What a command read before building the action, such as `folio add`'s line.
+    var read: JSONValue?
 }
 
 @discardableResult
-func perform<A: Action>(_ action: A, _ options: GlobalOptions, ctx given: ActionContext? = nil, done: @autoclosure () -> String, confirm: String? = nil) throws -> ActionContext {
+func perform<A: Action>(_ action: A, _ options: GlobalOptions, ctx given: ActionContext? = nil, done: @autoclosure () -> String, confirm: String? = nil,
+                          read: JSONValue? = nil) throws -> ActionContext {
     if let confirm, !options.dryRun { try ask(confirm, options) }
     let ctx = try given ?? CLI.context(options)
     do {
@@ -25,7 +28,7 @@ func perform<A: Action>(_ action: A, _ options: GlobalOptions, ctx given: Action
         }
     }
     if options.json {
-        try printJSON(WriteResult(action: A.command, dryRun: options.dryRun, made: ctx.made, changes: ctx.changes.coalesced(), notes: ctx.notes))
+        try printJSON(WriteResult(action: A.command, dryRun: options.dryRun, made: ctx.made, changes: ctx.changes.coalesced(), notes: ctx.notes, read: read))
     } else {
         renderChanges(ctx.changes.coalesced(), done: done(), dryRun: options.dryRun, root: ctx.gist.url)
         for n in ctx.notes { say("  · \(n)".styled(.dim)) }

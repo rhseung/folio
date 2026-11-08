@@ -41,6 +41,8 @@ folio unit list EC4207 --json
 
 # 과제
 folio assignment add EC4207 "HW 4" --due "2026-11-11 23:59" --dry-run
+# 사용자가 적은 한 줄을 앱의 빠른 추가처럼 읽어서. 읽은 과목, 마감, 반복, 폴더를 보이고, 못 읽으면 쓰지 않는다
+folio add "그래프 HW5 금 23:59" --dry-run
 folio assignment status EC4207/HW3 submitted --dry-run
 
 # 노트. 단원 노트의 종류 값은 예전 이름 그대로 topic이다
