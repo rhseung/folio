@@ -1,9 +1,8 @@
 import FolioDomain
 import SwiftUI
 
-/// The end-of-class wrap-up on one sheet: what the class has nothing for opens for input, in asking order, and what it
-/// has folds into one line each under "채운 것" to confirm. Attendance folds as its choice itself rather than a line with
-/// 바꾸기, so a recorded class marked present is one press from late. Announcements made in class can be added below, or skipped.
+/// The end-of-class wrap-up as one plain form: every item as its control, in asking order, holding what the class has
+/// or what is suggested for it. Announcements made in class can be added below, or skipped.
 struct ClassWrapUpSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openLink) private var openLink
@@ -25,30 +24,9 @@ struct ClassWrapUpSheet: View {
         SheetForm(title: model.title, confirm: String(localized: .commonSave), disabled: model.refusal != nil, note: model.note,
                   carded: false, width: 640, mark: CourseMark(model.workspace, model.courseId), cancel: String(localized: .wrapUpLater),
                   step: step) {
-            ForEach(model.openItems, id: \.self) { item in
-                Block(model.label(item)) { Card { open(item) } }
+            ForEach(model.items, id: \.self) { item in
+                Block(model.label(item)) { Card { row(item) } }
             }
-            let folded = model.folded
-            if !folded.isEmpty {
-                Block(String(localized: .wrapUpFilled), note: String(localized: .wrapUpFilledNote)) {
-                    Card {
-                        ForEach(Array(folded.enumerated()), id: \.element) { i, item in
-                            CardRow(last: i == folded.count - 1) {
-                                Text(model.label(item)).foregroundStyle(Theme.Palette.textSecondary).frame(width: 64, alignment: .leading)
-                                if item == .attendance && model.takesAttendance {
-                                    attendance
-                                    Spacer(minLength: 0)
-                                } else {
-                                    Text(model.summary(item)).lineLimit(1).truncationMode(.middle)
-                                    Spacer(minLength: Theme.Space.s)
-                                    Button(.wrapUpChange) { withAnimation(.snappy) { model.reopen(item) } }.buttonStyle(.ghost)
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            announcements
         } onConfirm: {
             guard model.wrapUp() else { return }
             if let saved { saved() } else { dismiss() }
@@ -66,12 +44,6 @@ struct ClassWrapUpSheet: View {
             Text(.sessionsProgressSplitUnsaved)
         }
         .environment(\.accent, model.accent)
-        .sheet(item: $model.addingExam, onDismiss: nil) { exam in
-            if let course = model.course {
-                ExamEditor(workspace: model.workspace, course: course, exam: exam)
-                    .onDisappear { model.examClosed(exam) }
-            }
-        }
     }
 
     /// To the file's split screen (#321). With nothing changed here the sheet closes and the file opens in this tab;
@@ -92,14 +64,14 @@ struct ClassWrapUpSheet: View {
         openLink(AppLink(.material, id), course: model.courseId)
     }
 
-    @ViewBuilder func open(_ item: WrapUpItem) -> some View {
+    @ViewBuilder func row(_ item: WrapUpItem) -> some View {
         switch item {
         case .progress: progress
         case .units: units
         case .note: note
         case .attendance:
             CardRow(last: true) {
-                if model.takesAttendance { attendance } else { EmptyLine(String(localized: .wrapUpAttendanceNone)) }
+                attendance
                 Spacer(minLength: 0)
             }
         }
@@ -113,25 +85,26 @@ struct ClassWrapUpSheet: View {
 
     @ViewBuilder var progress: some View {
         let rows = model.rows
-        if rows.isEmpty {
-            CardRow(last: model.addable.isEmpty) { EmptyLine(String(localized: .sessionsProgressEmpty)) }
-        }
         ForEach(Array(rows.enumerated()), id: \.element.id) { i, row in
             CardRow(last: i == rows.count - 1 && model.addable.isEmpty) {
                 CheckCircle(on: row.included) { model.toggle(row.id) }
-                VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+                VStack(alignment: .leading, spacing: Theme.Space.s) {
                     Text(model.name(row.id)).lineLimit(1).truncationMode(.middle)
-                    let detail = model.detail(row.id)
-                    if !detail.isEmpty {
-                        Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(2).fixedSize(horizontal: false, vertical: true)
+                        .opacity(row.included ? 1 : Theme.Opacity.ended)
+                    // The file's own action, under its name: the bar beside it is only for picking pages.
+                    if model.sections(row.id).isEmpty {
+                        Button { split(row.id) } label: { Label(.designPageRangeSplit, systemImage: "scissors") }
+                            .buttonStyle(.pointing(.plain))
+                            .font(Theme.Typeface.caption)
+                            .foregroundStyle(model.accent.ink)
+                            .help(Text(.designPageRangeSplitHelp))
                     }
                 }
-                .frame(width: 176, alignment: .leading)
-                .opacity(row.included ? 1 : Theme.Opacity.ended)
-                Spacer(minLength: Theme.Space.s)
+                .frame(width: 136, alignment: .leading)
+                // All the rest of the row: the tiles' names need every point the bar can get.
                 PageRangeField(range: row.range, pages: model.pageCounts[row.id], taught: model.taught(row.id),
-                               seen: model.seen(row.id), resume: model.resume(row.id), sections: model.sections(row.id),
-                               reads: model.reads(row.id), split: { split(row.id) }) { model.setRange(row.id, $0) }
+                               seen: model.seen(row.id), sections: model.sections(row.id)) { model.setRange(row.id, $0) }
+                    .frame(maxWidth: .infinity)
                     .opacity(row.included ? 1 : Theme.Opacity.ended)
             }
         }
@@ -156,25 +129,13 @@ struct ClassWrapUpSheet: View {
     /// Nothing is put forward: which unit the class covered is the user's call (#147).
     @ViewBuilder var units: some View {
         let options = model.unitOptions
-        if !options.isEmpty {
+        // No chips is no units, so no row for them: an empty row held only the picker.
+        if !model.linkedUnits.isEmpty {
             CardRow {
-                let linked = model.linkedUnits
-                Group {
-                    if linked.isEmpty {
-                        EmptyLine(String(localized: .wrapUpUnitsNone))
-                    } else {
-                        FlowLayout(spacing: Theme.Space.tight, centered: true) {
-                            ForEach(linked) { unitChip($0) }
-                        }
-                    }
+                FlowLayout(spacing: Theme.Space.tight, centered: true) {
+                    ForEach(model.linkedUnits) { unitChip($0) }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                // Outside the chips, at the row's end: placed after them it moved with every pick, and the open
-                // popover, anchored to it, jumped away from the pointer.
-                SearchPicker(options: options, isSelected: { model.units.contains($0) }, pick: { model.pick($0) }, multiple: true,
-                             prompt: String(localized: .wrapUpUnitsSearch)) {
-                    Label(.wrapUpUnitsAdd, systemImage: "plus").labelStyle(GhostLabelStyle()).foregroundStyle(.tint)
-                }
             }
         }
         CardRow(last: true) {
@@ -182,6 +143,14 @@ struct ClassWrapUpSheet: View {
             TextField(String(localized: .wrapUpUnitsNew), text: $model.newUnit).textFieldStyle(.plain).onSubmit { model.addUnit() }
             if !model.newUnit.trimmingCharacters(in: .whitespaces).isEmpty {
                 Button(.commonAdd) { model.addUnit() }.buttonStyle(.ghost)
+            }
+            // At the end of the one row that is always there, not after the chips: there it moved with every pick,
+            // and the open popover, anchored to it, jumped away from the pointer.
+            if !options.isEmpty {
+                SearchPicker(options: options, isSelected: { model.units.contains($0) }, pick: { model.pick($0) }, multiple: true,
+                             prompt: String(localized: .wrapUpUnitsSearch)) {
+                    Label(.wrapUpUnitsAdd, systemImage: "plus").labelStyle(GhostLabelStyle()).foregroundStyle(.tint)
+                }
             }
         }
     }
@@ -248,30 +217,6 @@ struct ClassWrapUpSheet: View {
         .menuStyle(.button)
         .buttonStyle(.pointing(.plain))
         .menuIndicator(.hidden)
-    }
-
-    // MARK: Announcements
-
-    var announcements: some View {
-        Block(String(localized: .wrapUpAnnouncements), note: String(localized: .wrapUpAnnouncementsNote)) {
-            Card {
-                ForEach(model.announced, id: \.self) { line in
-                    CardRow {
-                        Image(systemName: "checkmark").foregroundStyle(Theme.Palette.success)
-                        Text(line).lineLimit(1)
-                    }
-                }
-                CardRow(last: true) {
-                    Image(systemName: "plus").foregroundStyle(Theme.Palette.textTertiary)
-                    TextField(String(localized: .wrapUpAssignmentPrompt), text: $model.assignmentText).textFieldStyle(.plain)
-                        .onSubmit { model.addAssignment() }
-                    if let parsed = model.parsedAssignment, !parsed.title.isEmpty {
-                        Button(.wrapUpAssignmentAdd) { model.addAssignment() }.buttonStyle(.ghost)
-                    }
-                    Button { model.addExam() } label: { Label(.wrapUpExamAdd, systemImage: "plus") }.buttonStyle(.ghost)
-                }
-            }
-        }
     }
 }
 

@@ -41,6 +41,9 @@ final class SnapshotDriver {
     /// The moment the strip walk is drawn at (`2026-11-04T10:00:00+09:00`), so today's class is the one a fixture's
     /// copy was given.
     static let stripNow = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP_NOW"].flatMap { try? Date($0, strategy: .iso8601) }
+    /// Only the quick-add line (#116): a long line typed on Today and a course's assignments, then the toolbar's popover
+    /// opened on a course page empty, typed and long, as `quick-add-*.png`.
+    static let quickAdd = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_QUICK_ADD"] != nil
     /// Only the split screen of a split lecture (#321): as it opens, then with a section's pages being changed from
     /// the thumbnails, as `split-*.png`. Set to `section-page` (`1-9`): the section whose header is pressed and the
     /// page ⇧-clicked after.
@@ -70,6 +73,10 @@ final class SnapshotDriver {
     var columnOpen = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_COLUMN"] == "open"
     /// What the open PDF's page strip does next, as a click on it would.
     var strip: StripStep?
+    /// The line a quick-add field starts typed with when it appears, and whether the toolbar's popover is open.
+    var quickAddText: String?
+    var quickAddOpen = false
+
     /// The split screen's section to take up from its header and the page its edge goes to, as clicks would.
     var splitEdit: SplitEdit?
 
@@ -258,6 +265,54 @@ final class SnapshotDriver {
             await shot(name)
         }
         strip = nil
+        NSApp.terminate(nil)
+    }
+
+    /// The quick-add walk (`FOLIO_SNAPSHOT_QUICK_ADD`). `named` is the course's word for a line typed off its pages.
+    func runQuickAdd(open: (AppLink) -> Void, course: UUID, named: String) async {
+        guard let directory = Self.directory else { return }
+        // folio:not-an-action debug screenshots, outside the GIST folder
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        if let window = NSApp.windows.first(where: { $0.isVisible }) {
+            window.setContentSize(NSSize(width: Self.width, height: 900))
+            window.center()
+        }
+        // Glass and popovers draw only on screen: with `screen`, a `<step>.ready` file tells a script outside to capture
+        // the window's area then.
+        func shot(_ name: String, popovers: Bool = false) async {
+            capture(to: directory.appending(path: "\(name).png"), popovers: popovers)
+            guard ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_QUICK_ADD"] == "screen" else { return }
+            // folio:not-an-action debug screenshots, outside the GIST folder
+            try? Data().write(to: directory.appending(path: "\(name).ready"))
+            try? await Task.sleep(for: .seconds(3))
+        }
+        let long = "Lab3 보고서 초안과 실험 데이터 정리, 그래프와 오차 분석까지 모두 끝내고 제출하기 금 마감"
+        // Pages lay the field out wider than the popover, so they get a line long enough to run past theirs too.
+        let longer = "Lab3 보고서 초안과 실험 데이터 정리, 그래프와 오차 분석, 참고 문헌 목록과 부록 표까지 모두 끝내고 조원 검토 받은 뒤 제출하기 금 마감"
+        // Away first: a page already shown keeps the field it laid out before the line was set.
+        open(.course(course))
+        section = .overview
+        try? await Task.sleep(for: .seconds(1.5))
+        quickAddText = "\(named) \(longer)"
+        open(.place(.today))
+        try? await Task.sleep(for: .seconds(2))
+        await shot("quick-add-today")
+        quickAddText = longer
+        open(.course(course))
+        section = .assignments
+        try? await Task.sleep(for: .seconds(2))
+        await shot("quick-add-assignments")
+        section = .overview
+        try? await Task.sleep(for: .seconds(1.5))
+        for (name, text) in [("empty", nil), ("typed", "HW5 금 23:59"), ("long", long)] as [(String, String?)] {
+            quickAddText = text
+            quickAddOpen = true
+            try? await Task.sleep(for: .seconds(1.5))
+            await shot("quick-add-course-\(name)", popovers: true)
+            quickAddOpen = false
+            try? await Task.sleep(for: .seconds(1))
+        }
+        quickAddText = nil
         NSApp.terminate(nil)
     }
 

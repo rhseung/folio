@@ -182,11 +182,26 @@ struct QuickAddModelTests {
         model.text = "HW5 금 23:59"
         let parsed = try #require(model.parsed)
         #expect(model.canAdd(parsed))
-        #expect(model.courseTitle(parsed) == "그래프 이론")
-        #expect(model.due(parsed) != nil)
+        #expect(model.course(parsed).flatMap(model.courseTitle) == "그래프 이론")
+        model.locale = Locale(identifier: "ko_KR@hours=h23")
+        #expect(model.due(parsed)?.hasSuffix("(금) 23:59") == true)
+        model.locale = Locale(identifier: "ko_KR@hours=h12")
+        #expect(model.due(parsed)?.hasSuffix("(금) 오후 11:59") == true)
         model.add(parsed)
         #expect(model.text.isEmpty)
         #expect(workspace.course(graphTheory)?.file.assignments.contains { $0.title == "HW5" } == true)
+    }
+
+    /// Opened on a course's page, the line goes to that course until it names another.
+    @Test func theShownCourseIsInUntilTheLineNamesAnother() throws {
+        let workspace = try fixtureWorkspace()
+        let model = QuickAddModel(workspace: workspace, defaultCourse: graphTheory)
+        #expect(model.course(nil) == graphTheory)
+        model.text = "HW5 금"
+        #expect(model.parsed?.courseId == graphTheory)
+        let other = try #require(workspace.currentCourses.first { $0.id != graphTheory })
+        model.text = "\(other.title) HW5 금"
+        #expect(model.parsed?.courseId == other.id)
     }
 }
 

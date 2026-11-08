@@ -91,7 +91,11 @@ struct MaterialNoteStudyTests {
         let s = try #require(f.sessions.first { $0.id == SessionCommandTests.id })
         #expect(s.isWrappedUp)
         #expect(s.unitIds == [Self.unit])
-        #expect(f.attendance.first { $0.sessionId == s.id }?.state == .absent)
+        let entry = try #require(f.attendance.first { $0.sessionId == s.id })
+        #expect(entry.state == .absent)
+        // The same state again keeps the entry as it was rather than writing it anew.
+        #expect(h.cli(["session", "wrap-up", "EC4207/10-28", "--attendance", "absent"], gist: gist).code == 0)
+        #expect(try h.file(GISTStore(url: gist)).attendance.filter { $0.sessionId == s.id }.map(\.id) == [entry.id])
     }
 
     @Test func linkUnit() throws {

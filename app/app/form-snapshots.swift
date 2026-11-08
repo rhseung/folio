@@ -52,6 +52,32 @@ enum FormSnapshots {
         }
         if let unit = file.units.first { forms.append(("card", AnyView(CardEditorSheet(workspace: workspace, course: course, draft: CardDraft(unitId: unit.id), units: file.units) {}))) }
         forms += lectureSections(workspace, places: importPlaces)
+        forms += wrapUps(workspace)
+        return forms
+    }
+
+    /// The wrap-up of a class with nothing yet and of the class with the most, in a course with lecture files.
+    @MainActor static func wrapUps(_ workspace: Workspace) -> [(String, AnyView)] {
+        guard let course = workspace.currentCourses.first(where: { !$0.file.lectureFiles.isEmpty }) else { return [] }
+        let file = course.file
+        let held = file.sessions.filter { !$0.isCancelled }.map { (session: $0, gaps: file.wrapUpGaps(of: $0).count) }
+        var forms: [(String, AnyView)] = []
+        if let empty = held.last(where: { $0.gaps == WrapUpItem.allCases.count }) {
+            forms.append(("class-wrap-up-empty", AnyView(ClassWrapUpSheet(workspace: workspace, course: course.id, session: empty.session.id))))
+        }
+        // The toolbar's quick-add mid-typing, as its popover lays it out: the deadline's pill and what will be saved.
+        forms.append(("quick-add-typing", AnyView(QuickAddField(workspace: workspace).padding(Theme.Space.l).frame(width: 440)
+            .environment(\.quickAddTypedSample, "\(file.course.title.split(separator: " ").first ?? "") Lab3 보고서 금 마감"))))
+        if let filled = held.min(by: { $0.gaps < $1.gaps }), filled.gaps < WrapUpItem.allCases.count {
+            forms.append(("class-wrap-up-filled", AnyView(ClassWrapUpSheet(workspace: workspace, course: course.id, session: filled.session.id))))
+            forms.append(("class-wrap-up-dragging", AnyView(ClassWrapUpSheet(workspace: workspace, course: course.id, session: filled.session.id)
+                .environment(\.pageRangeNumbersShown, true))))
+        }
+        // The same bar, compact, in the popover that links a split lecture file to its classes.
+        if let lecture = file.lectureFiles.first(where: { !PageRangeField.Section.list(file, material: $0.id, pageCount: nil).isEmpty }) {
+            forms.append(("material-links", AnyView(MaterialLinksEditor(model: MaterialsModel(workspace: workspace, course: course), materialId: lecture.id)
+                .environment(\.accent, workspace.accent(course.id)))))
+        }
         return forms
     }
 

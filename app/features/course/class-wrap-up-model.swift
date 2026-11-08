@@ -3,9 +3,9 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// One class's wrap-up, asked when its recording stops, from the today screen, and from the class's menu. What the class
-/// has nothing for (`CourseFile.wrapUpGaps`) opens for input; the rest folds into one line each to confirm. Attendance is
-/// a choice either way, the likely one picked: an entry's state, else present. Saving writes everything in one action.
+/// One class's wrap-up, asked when its recording stops, from the today screen, and from the class's menu. A plain form
+/// (2026-11-08): every item shows as its control, holding what the class has or the suggestion for it, and saving
+/// writes what differs in one action. What the class lacks (`CourseFile.wrapUpGaps`) only decides when to ask.
 @MainActor @Observable
 final class ClassWrapUpModel {
     struct Row: Identifiable, Equatable {
@@ -36,17 +36,11 @@ final class ClassWrapUpModel {
     /// What the class had when the sheet opened, so leaving for the split screen asks only when something would be lost.
     private let initial: (units: [UUID], attendance: AttendanceState)
 
-    /// The items shown open, in asking order: what was missing when the sheet opened, and any reopened from its line.
-    private(set) var open: [WrapUpItem]
     var units: [UUID]
     var attendance: AttendanceState
     /// The class's rough note is made on saving, after the units are, so the note is named after them.
     var makesNote = false
     var newUnit = ""
-    /// Assignments added from the announcements line, to show they went in.
-    private(set) var announced: [String] = []
-    var assignmentText = ""
-    var addingExam: Exam?
 
     init(workspace: Workspace, course: UUID, session: UUID, viewed: [SessionMaterial] = [], recorded: Bool = false) {
         self.workspace = workspace
@@ -58,7 +52,6 @@ final class ClassWrapUpModel {
         // A recording just stopped isn't in course.json yet, so the ask passes its pages; opened later, the session's
         // recordings have them.
         self.viewed = viewed.isEmpty ? file.flatMap { f in s.map { f.viewedPages(of: $0) } } ?? [] : viewed
-        open = file.flatMap { f in s.map { f.wrapUpGaps(of: $0, recorded: recorded) } } ?? []
         // From locals: the observed properties can't be read back before every stored property is set.
         // Present is stored as no entry, so a class without one, recorded or not, starts on present.
         let initial = (units: s?.unitIds ?? [], attendance: file?.attendance.first { $0.sessionId == session }?.state ?? AttendanceState.present)
@@ -72,7 +65,7 @@ final class ClassWrapUpModel {
         edited || makesNote || units != initial.units || attendance != initial.attendance
     }
 
-    var course: LoadedCourse? { workspace.course(courseId) }
+    private var course: LoadedCourse? { workspace.course(courseId) }
     private var file: CourseFile? { course?.file }
     private var session: Session? { file?.sessions.first { $0.id == sessionId } }
 
@@ -86,45 +79,26 @@ final class ClassWrapUpModel {
 
     // MARK: Items
 
-    /// Every item this class can be asked about, in asking order: progress only for a course with lecture files.
+    /// Every item this class can be asked about, in asking order: progress only for a course with lecture files, and
+    /// attendance only where it can be written.
     var items: [WrapUpItem] {
-        WrapUpItem.allCases.filter { $0 != .progress || !(file?.lectureFiles.isEmpty ?? true) }
-    }
-
-    var openItems: [WrapUpItem] { items.filter(isOpen) }
-
-    var folded: [WrapUpItem] { items.filter { !open.contains($0) } }
-    func isOpen(_ item: WrapUpItem) -> Bool { open.contains(item) }
-
-    func reopen(_ item: WrapUpItem) {
-        guard !open.contains(item) else { return }
-        open = items.filter { open.contains($0) || $0 == item }
+        WrapUpItem.allCases.filter { item in
+            switch item {
+            case .progress: !(file?.lectureFiles.isEmpty ?? true)
+            case .attendance: takesAttendance
+            default: true
+            }
+        }
     }
 
     func label(_ item: WrapUpItem) -> String { item.label }
-
-    /// A folded item's line: what the class already has.
-    func summary(_ item: WrapUpItem) -> String {
-        guard let file, let session else { return "" }
-        switch item {
-        case .progress:
-            return session.materials.compactMap { link in
-                guard let pages = link.pages, let m = file.materials.first(where: { $0.id == link.materialId }), m.role == .lecture else { return nil }
-                return String(localized: .wrapUpProgressLine((m.path as NSString).lastPathComponent, pages.lowerBound, pages.upperBound))
-            }.joined(separator: ", ")
-        case .units: return unitTitles(units)
-        case .note: return (linkedNote ?? note(session.reviewNoteId)).map(noteName) ?? ""
-        case .attendance:
-            return AttendanceState.steps.first { $0.value == attendance }?.label ?? ""
-        }
-    }
 
     // MARK: Progress
 
     private func suggest() {
         guard let file, let session else { return }
         rows = file.suggestedProgress(for: session, viewed: viewed, pageCounts: pageCounts)
-            .map { Row(id: $0.materialId, first: $0.firstPage, last: $0.lastPage) }
+            .map { Row(id: $0.materialId, included: session.wrapUpChecks($0), first: $0.firstPage, last: $0.lastPage) }
     }
 
     /// Counts tell where a file ends: the first page stays within it, and a finished file hands over to the next.
@@ -143,19 +117,6 @@ final class ClassWrapUpModel {
         file?.materials.first { $0.id == id }.map { ($0.path as NSString).lastPathComponent } ?? ""
     }
 
-    /// Where the numbers came from, under the file's name: what the last class reached, what the recording saw,
-    /// and how long the file is.
-    func detail(_ id: UUID) -> String {
-        guard let file, let session else { return "" }
-        var parts: [String] = []
-        if let resume = file.resumePage(of: id, for: session) { parts.append(String(localized: .sessionsProgressLastClass(resume - 1))) }
-        if let seen = viewed.first(where: { $0.materialId == id }), let pages = seen.pages {
-            parts.append(String(localized: .sessionsProgressRecorded(pages.lowerBound, pages.upperBound)))
-        }
-        if let count = pageCounts[id] { parts.append(String(localized: .sessionsProgressPageCount(count))) }
-        return parts.joined(separator: " · ")
-    }
-
     func taught(_ id: UUID) -> [PageRangeField.Taught] {
         guard let file else { return [] }
         return PageRangeField.Taught.list(file, material: id, besides: sessionId, calendar: workspace.calendar)
@@ -167,17 +128,7 @@ final class ClassWrapUpModel {
         return PageRangeField.Section.list(file, material: id, pageCount: pageCounts[id])
     }
 
-    func reads(_ id: UUID) -> (ClosedRange<Int>) -> String? {
-        let file = file
-        return { file?.sectionLabel(of: id, pages: $0) }
-    }
-
     func seen(_ id: UUID) -> ClosedRange<Int>? { viewed.first { $0.materialId == id }?.pages }
-
-    func resume(_ id: UUID) -> Int? {
-        guard let file, let session else { return nil }
-        return file.resumePage(of: id, for: session)
-    }
 
     /// Lecture files not in the list yet.
     var addable: [FolioDomain.Material] {
@@ -225,11 +176,6 @@ final class ClassWrapUpModel {
 
     func removeUnit(_ unit: UUID) { units.removeAll { $0 == unit } }
 
-    func unitTitles(_ ids: [UUID]) -> String {
-        guard let file else { return "" }
-        return UnitTree.deepest(ids.compactMap { id in file.units.first { $0.id == id } }, in: file.units).map(\.title).joined(separator: " · ")
-    }
-
     func pick(_ unit: UUID) {
         if units.contains(unit) { units.removeAll { $0 == unit } } else { units.append(unit) }
     }
@@ -247,7 +193,7 @@ final class ClassWrapUpModel {
     var hasNote: Bool { linkedNote != nil }
 
     /// The class's own (rough) note. A review note also fills the gap, but it covers other classes too, so the row
-    /// never swaps or unlinks it: it only names it while folded (`summary`).
+    /// never swaps or unlinks it.
     var linkedNote: NoteEntry? { note(session?.roughNoteId) }
 
     private func note(_ id: UUID?) -> NoteEntry? {
@@ -284,44 +230,20 @@ final class ClassWrapUpModel {
 
     var takesAttendance: Bool { workspace.can(AttendanceSet(course: courseId, session: sessionId, state: .absent)) }
 
-    // MARK: Announcements
-
-    var parsedAssignment: QuickAdd? {
-        let text = assignmentText.trimmingCharacters(in: .whitespaces)
-        guard !text.isEmpty, let file else { return nil }
-        return QuickAdd.parse(text, courses: [file.course], codes: workspace.catalog.codes, fixedCourse: courseId,
-                              now: workspace.now, calendar: workspace.calendar)
-    }
-
-    func addAssignment() {
-        guard let parsed = parsedAssignment, !parsed.title.isEmpty,
-              workspace.run(AssignmentAdd(course: courseId, title: parsed.title, due: parsed.due, repeats: parsed.repeats)) != nil else { return }
-        let due = parsed.due.map { " · " + $0.formatted(.dateTime.month(.defaultDigits).day().weekday(.abbreviated)) } ?? ""
-        announced.append(parsed.title + due)
-        assignmentText = ""
-    }
-
-    func addExam() {
-        let c = workspace.calendar
-        let start = c.date(byAdding: .hour, value: 24 + 9, to: c.startOfDay(for: workspace.now)) ?? workspace.now
-        addingExam = Exam(device: workspace.device, at: .now, title: "", start: start)
-    }
-
-    /// The exam editor saves on its own; a title in the file afterwards means it went in.
-    func examClosed(_ exam: Exam) {
-        if let saved = file?.exams.first(where: { $0.id == exam.id }) { announced.append(saved.title) }
-    }
-
     // MARK: Saving
 
-    /// The rows only while progress is open. Folded, they aren't on screen, and the class's links stay as they are,
-    /// as the command leaves what it isn't given: a file linked whole would otherwise block saving from out of sight.
-    private var keptRows: [Row] { isOpen(.progress) ? rows.filter(\.included) : [] }
+    /// No rows without lecture files: progress isn't shown then, and a file the class links whole would otherwise
+    /// block saving from out of sight.
+    private var keptRows: [Row] { items.contains(.progress) ? rows.filter(\.included) : [] }
+
+    /// Only the ranges the class doesn't have already: every row starts on the class's own pages.
+    var ranges: [SessionMaterial] {
+        let kept = keptRows.map { SessionMaterial(materialId: $0.id, firstPage: $0.first, lastPage: $0.last) }
+        return session?.changedRanges(kept) ?? kept
+    }
 
     var action: SessionWrapUp {
-        SessionWrapUp(course: courseId, session: sessionId,
-                      ranges: keptRows.map { SessionMaterial(materialId: $0.id, firstPage: $0.first, lastPage: $0.last) },
-                      units: units, attendance: attendance)
+        SessionWrapUp(course: courseId, session: sessionId, ranges: ranges, units: units, attendance: attendance)
     }
 
     /// Why saving is off: a kept file without both pages says nothing about how far the class went.
@@ -339,8 +261,10 @@ final class ClassWrapUpModel {
         return workspace.refusal(action)
     }
 
+    /// Only what the form itself can't show (2026-11-08): a row lacking an end already reads so on its bar, with
+    /// 저장 off, so the sheet adds no sentence for it.
     var note: String? {
-        refusal ?? (viewed.isEmpty || !isOpen(.progress) ? nil : String(localized: .sessionsProgressFromRecording))
+        keptRows.contains { $0.first == nil || $0.last == nil } ? nil : workspace.refusal(action)
     }
 
     /// False when the save failed, so a run through several classes stays on this one.
