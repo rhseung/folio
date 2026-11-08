@@ -227,6 +227,7 @@ private struct SaveRow: View {
                     Text(.commonSave).frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.pointing(.borderedProminent))
+                .tint(Theme.Palette.prominent)
                 .disabled(!model.canSave)
             }
             .controlSize(.small)

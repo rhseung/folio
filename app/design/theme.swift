@@ -23,6 +23,9 @@ enum Theme {
 
         /// Text and symbols on a filled accent or tone color.
         static let onFill = Color.white
+        /// The fill of a `.borderedProminent` button inside a course. A course tints its pages with its ink, which in dark
+        /// is a pale shade that white words wash out on; a sheet, outside that tint, already gets the system accent.
+        static let prominent = Color.accentColor
 
         /// A guide line on the window frame (the sidebar's term line): ink laid thin like the selection, since a solid
         /// gray sat as a dark groove on the dark frame.
