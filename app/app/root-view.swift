@@ -100,9 +100,7 @@ struct RootView: View {
     /// For one pane's screen: kept alive behind the front tab, or beside the focused pane, it must still move its own
     /// pane.
     func openLink(from pane: Navigator) -> OpenLinkAction {
-        OpenLinkAction { link, placement, course in open(link, in: placement, course: course, from: pane) } upHandler: { link in
-            if let entry = workspace.entry(for: link) { pane.up(to: entry) }
-        }
+        OpenLinkAction { link, placement, course in open(link, in: placement, course: course, from: pane) }
     }
 
     #if os(macOS)

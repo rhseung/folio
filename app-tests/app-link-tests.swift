@@ -58,30 +58,6 @@ struct NavigatorTests {
         #expect(linked.outsidePlacement(windowAge: 0.3) == .tab)
     }
 
-    @Test func upReturnsToTheListAPersonWasOpenedFrom() {
-        let navigator = Navigator()
-        let people = Navigator.Entry(link: .place(.people))
-        let person = Navigator.Entry(link: AppLink(.person, UUID()))
-        navigator.go(people)
-        navigator.go(person)
-        navigator.up(to: people)
-        #expect(navigator.current == people)
-        #expect(navigator.backList.map(\.link) == [.place(.today)])
-        // As the window's back: forward goes to the person again.
-        #expect(navigator.forwardList == [person])
-    }
-
-    @Test func upFromAPersonOpenedElsewhereIsANewStep() {
-        let navigator = Navigator()
-        let course = Navigator.Entry(link: .course(graphTheory), course: graphTheory)
-        let person = Navigator.Entry(link: AppLink(.person, UUID()))
-        navigator.go(course)
-        navigator.go(person)
-        navigator.up(to: Navigator.Entry(link: .place(.people)))
-        #expect(navigator.current.link == .place(.people))
-        #expect(navigator.backList.map(\.link) == [person.link, course.link, .place(.today)])
-    }
-
     @Test func eachSettingsTabIsAStep() {
         let navigator = Navigator()
         navigator.go(Navigator.Entry(link: .settings(.general)))

@@ -37,14 +37,10 @@ enum LinkPlacement: CaseIterable {
 /// way of moving lands in the window's one history. `course` names where the target likely is; it is only a hint.
 struct OpenLinkAction {
     var handler: @MainActor (AppLink, LinkPlacement, UUID?) -> Void = { _, _, _ in }
-    var upHandler: @MainActor (AppLink) -> Void = { _ in }
 
     @MainActor func callAsFunction(_ link: AppLink, in placement: LinkPlacement = .here, course: UUID? = nil) {
         handler(link, placement, course)
     }
-
-    /// A folded list's back button (`Navigator.up`).
-    @MainActor func up(to link: AppLink) { upHandler(link) }
 }
 
 extension EnvironmentValues {
@@ -85,13 +81,6 @@ final class Navigator {
         } else {
             history.visit(entry)
         }
-    }
-
-    /// Back where the step before is `entry`, as a NavigationStack's back would: a person opened from the list
-    /// returns to it, and forward goes to the person again. From anywhere else (a person opened from a course) a new
-    /// step, so back still leads where the window came from.
-    func up(to entry: Entry) {
-        if history.back.last == entry { back() } else { go(entry) }
     }
 
     func back(_ steps: Int = 1) { history.goBack(steps) }
