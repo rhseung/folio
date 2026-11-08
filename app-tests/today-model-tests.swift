@@ -218,6 +218,10 @@ struct QuickAddModelTests {
         #expect(model.parsed?.courseId == graphTheory)
         model.renumber(kind: .lab, number: 3)
         #expect(model.text == "보고서 Lab3 매주 금 초안" && model.chips.last == .folder("Lab03"))
+        // A chip keeps its identity as its value changes, so an open deadline popover stays open while a date is picked.
+        let kinds = model.chips.map(\.kind)
+        model.pickDue(model.newDue)
+        #expect(model.chips.map(\.kind) == kinds)
         model.pickDue(nil)
         #expect(model.parsed?.due == nil && model.parsed?.repeats == nil)
         #expect(model.chips == [.course(graphTheory), .due(nil), .folder("Lab03")])

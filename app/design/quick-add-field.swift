@@ -148,7 +148,7 @@ struct QuickAddField: View {
                 // Each chip's icon under the field's first letter, and across the field's width: indented further
                 // the row read as cut in and wrapped a chip early.
                 FlowLayout(spacing: Theme.Space.s, centered: true) {
-                    ForEach(chips, id: \.self) { chip in QuickAddChip(model: model, chip: chip) }
+                    ForEach(chips, id: \.kind) { chip in QuickAddChip(model: model, chip: chip) }
                 }
                 .padding(.leading, inset - QuickAddChip.inset)
                 .frame(maxWidth: .infinity, alignment: .leading)

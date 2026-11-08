@@ -10,7 +10,10 @@ final class QuickAddModel {
     /// The course the window shows when the line was opened; a course typed into the line wins over it.
     let defaultCourse: UUID?
     var text = "" {
-        didSet { picks.keep(over: read) }
+        didSet {
+            read = Self.reading(text, workspace: workspace, fixedCourse: fixedCourse, defaultCourse: defaultCourse)
+            picks.keep(over: read)
+        }
     }
     private(set) var picks = QuickAddPicks()
     var locale = Locale.autoupdatingCurrent
@@ -18,13 +21,18 @@ final class QuickAddModel {
     init(workspace: Workspace, fixedCourse: UUID? = nil, defaultCourse: UUID? = nil) {
         self.workspace = workspace
         self.fixedCourse = fixedCourse
-        self.defaultCourse = fixedCourse == nil ? defaultCourse.flatMap { workspace.course($0)?.id } : nil
+        let defaultCourse = fixedCourse == nil ? defaultCourse.flatMap { workspace.course($0)?.id } : nil
+        self.defaultCourse = defaultCourse
+        read = Self.reading("", workspace: workspace, fixedCourse: fixedCourse, defaultCourse: defaultCourse)
     }
 
     var isEmpty: Bool { text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
 
-    /// What the line reads, before the chips' picks.
-    var read: QuickAdd {
+    /// What the line reads, before the chips' picks. Read once per edit and kept: the chips, the pills and each chip
+    /// all ask for it in one pass, and every read runs the date detector.
+    private(set) var read: QuickAdd
+
+    private static func reading(_ text: String, workspace: Workspace, fixedCourse: UUID?, defaultCourse: UUID?) -> QuickAdd {
         QuickAdd.parse(text, courses: workspace.currentCourses.map(\.file.course), codes: workspace.catalog.codes, fixedCourse: fixedCourse,
                        defaultCourse: defaultCourse, now: workspace.now, calendar: workspace.calendar)
     }
@@ -50,6 +58,19 @@ final class QuickAddModel {
         case due(Date?)
         case weekly
         case folder(String)
+
+        /// A chip's identity in the row: its kind, not its value. Keyed by value, picking a date made the deadline
+        /// chip a new view, which closed its own popover mid-pick.
+        enum Kind { case course, due, weekly, folder }
+
+        var kind: Kind {
+            switch self {
+            case .course: .course
+            case .due: .due
+            case .weekly: .weekly
+            case .folder: .folder
+            }
+        }
     }
 
     var chips: [Chip] {
