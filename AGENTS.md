@@ -61,15 +61,16 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
 | `FolioActions` | `packages/folio-core` | 데이터를 바꾸는 모든 동작. Domain의 변환과 Storage의 쓰기, 폴더 생성, 로그를 한 액션으로 묶는다. 액션 목록의 단일 출처 | UI, 출력 형식. 앱과 CLI가 같은 구현을 부른다 |
 | `FolioIndex` | `packages/folio-core` | 기기별 로컬 SQLite 검색 색인(GRDB, FTS5 trigram). 바뀐 과목만 다시 읽고 PDF 본문을 뽑아 둔다. 캐시 폴더에 두며 지워도 다시 만든다 | GIST 폴더에 쓰기. 순위와 발췌는 Domain의 `SearchIndex`에 맡긴다 |
 | `FolioCLI` | `packages/folio-core` | 터미널 도구 `folio`의 명령 라이브러리. 실행 파일은 진입점만 있는 `FolioCommand`다(실행 타깃의 테스트 빌드에는 카탈로그 심볼이 생기지 않아서다). 모든 액션을 `<대상> <동작>` 명령으로 열고, 사람용 출력과 `--json` 출력을 만든다 | 액션 로직. 명령은 인자를 해석해 `FolioActions`를 부르고 결과를 그리기만 한다 |
-| `FolioMacros` | `packages/folio-core` | `@Action`과 필드 표시(`@Arg`, `@New`, `@Off`, `@Hidden`). 선언에서 입력 형식, init, 코딩, `spec`을 만들고 실수(맨 `UUID`, 없는 `{필드}`, 확인 문구 없는 삭제)를 컴파일 오류로 막는다 | 실행 코드. 앱과 CLI에 링크되지 않는다 |
-| `FolioGen` | `packages/folio-core` | `@Action` 액션의 `spec`에서 `folio-cli/generated/commands.swift`를 만든다. 결과는 커밋한다 | FolioCLI에 의존. 생성 파일이 깨져도 다시 만들 수 있게 한다 |
+| `FolioMacros` | `packages/folio-core` | `@Action`과 필드 표시(`@Arg`, `@New`, `@Off`, `@Hidden`, `@CLIName`, `@FromFile`, `@Folder`). 선언에서 입력 형식, init, 코딩, `spec`을 만들고 실수(맨 `UUID`, 없는 `{필드}`, 확인 문구 없는 삭제)를 컴파일 오류로 막는다 | 실행 코드. 앱과 CLI에 링크되지 않는다 |
+| `FolioGen` | `packages/folio-core` | `@Action` 액션의 `spec`에서 `folio-cli/generated/commands.swift`를 만든다. 결과는 커밋한다. 손 명령(`cli: .manual(reason:)`)은 건너뛴다 | FolioCLI에 의존. 생성 파일이 깨져도 다시 만들 수 있게 한다 |
 | `FolioFixtures` | `packages/folio-core` | 테스트와 개발 실행에 쓰는 가짜 GIST 폴더. 파일을 코드에 두고 쓸 때 디스크에 펼친다. 공개 저장소에 과목 파일 폴더를 두지 않기 위해서다. 화면 확인용 상황(`Scenario`)은 표준 폴더에 고정된 시각 기준으로 액션을 돌려 만든다 | CLI에 링크되지 않는다. 앱에서는 `#if DEBUG`의 `Workspace.scenario`(미리보기와 화면 밖 렌더)만 쓴다 |
 | App | `app/` | 화면. `app/`(진입점과 탐색), `design/`(디자인 토큰과 공용 구성 요소), `features/<화면>/`, `platform/`(PencilKit, PDFKit, WKWebView 연결, `file-view/`의 파일 보기(형식별 렌더러), `note-preview.swift`의 노트 미리보기와 `note-text/`의 TextKit 2 편집 보기. 편집 보기는 원문에 글꼴과 색만 입히고, 그림·수식·콜아웃·임베드와 코드의 상자는 미리보기만 그린다), `resources/` | 파일 시스템 직접 접근과 `course.json` 값의 직접 변경. 반드시 `FolioActions`를 거친다 |
 
 - 앱에 새 데이터 조작을 넣을 때는 `FolioActions`에 `@Action`으로 액션을 선언하고, 같은 변경에서 테스트를 함께 넣는다. 액션에 CLI 명령이 없으면 테스트가 실패한다.
     - 필드의 형식이 입력을 정한다. 가리키는 항목은 `Exam.ID`처럼 종류의 ID로 쓰고(경로로 가리키는 노트는 `Note.Path`), `set`의 필드는 `Patch<T>`(빠지면 그대로, `T?`면 `none`/`null`로 지운다), 새 항목의 ID는 `@New`, 위치 인자는 `@Arg`로 쓴다. `///` 주석이 도움말이다.
+    - CLI 입력의 모양도 선언에 적는다. 위치 인자의 순서는 필드 순서이고, 과목 인자 뒤의 항목 인자는 `<과목>/<항목>` 하나로 받는다(목록이면 둘째부터 항목만). 과목을 `Course.ID?`로 두면 빼서 모든 과목에 한다. 다른 옵션 이름은 `@CLIName("unit")`, 파일에서 읽는 값(문자열은 글, 그 밖은 JSON, `-`는 표준 입력. 목록을 파일마다 받으면 `perItem: true`)은 `@FromFile`, 실행한 곳 기준의 폴더 경로는 `@Folder`, 끄는 플래그는 `@Off("undo")`로 쓴다. 계획 항목과 카드처럼 다른 항목 안에서 찾는 ID는 그 항목 필드가 있으면 그 안에서 찾는다. `made`가 `moves.jsonl` 묶음이면 `undoable: true`로 되돌리는 법을 보인다.
     - 확인 문구와 완료 문구는 `{필드}` 자리표시자로 쓰고, ID는 실행하기 전에 이름으로 바뀐다. `.removes`와 `.moves`는 `confirm:`이 있어야 컴파일된다.
-    - 선언한 뒤 `mise run gen-cli`로 CLI 명령을 다시 만든다. 손으로 쓰는 명령은 `cli: .manual`로 둔다.
+    - 선언한 뒤 `mise run gen-cli`로 CLI 명령을 다시 만든다. 생성기가 다루지 못하는 입력(지금 값을 읽어 빈 칸 채우기, `3-12`나 `<자료>:<쪽>` 같은 자리 문법, 액션 여러 번 돌리기)만 손으로 쓰고 `cli: .manual(reason: "...")`에 이유를 적는다. 이유가 없으면 `actions --check`가 실패한다. 손 명령도 같은 액션 하나를 `perform(spec:)`으로 부른다.
     - 규칙은 액션이 아니라 `FolioDomain`의 모델(`course-rules.swift`의 `Document.model`)에 둔다. 모든 저장이 그 규칙으로 검사한다.
     - 화면은 규칙을 다시 적지 않는다. 버튼을 켜고 끌 때는 `workspace.can(액션)`, 막힌 이유는 `refusal`, 확인 문구는 `confirmation`으로 묻는다. 앱이 보여 주는 문서로 미리 실행해 본다.
     - `confirm:`이 있는 액션은 `workspace.ask(액션)`으로 실행하고 결과를 모델의 `pending`에 둔다. 뷰는 `.confirming($model.pending)`으로 묻고, 막힌 액션이면 묻지 않고 이유를 보여 준다. 확인 문구를 화면에서 따로 쓰지 않는다.
@@ -85,7 +86,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
 
 | 축 | 하나로 모으는 것 | 상태 |
 | --- | --- | --- |
-| 액션 `@Action` | 데이터를 바꾸는 모든 동작. 앱, CLI, MCP가 같은 선언을 쓴다 | 있음 |
+| 액션 `@Action` | 데이터를 바꾸는 모든 동작. 앱, CLI, MCP가 같은 선언을 쓰고, CLI 명령은 선언에서 생성한다(손 명령은 이유를 적는다) | 있음 |
 | 표준 구조 `standard-layout.swift` | 폴더와 파일 이름 | 있음 |
 | 앱 링크 `AppLink` | 앱 안의 모든 대상을 가리키는 `folio://<종류>/<ID>[#page=N\|#^블록\|#제목\|#t=12:30]` 주소(`t`는 녹음의 재생 위치). 과목의 페이지는 `folio://course/<ID>/<페이지>`, 설정 탭은 `folio://settings/<탭>`이다. 종류마다 담는 곳(`home`), 받는 앵커(`anchors`), 페이지 경로(`hasPages`)는 `AppLink.Kind` 한 곳에 있고 주소 해석, CLI 검사, `Workspace.entry`가 그 값을 읽는다. 종류별 `switch`에는 `default:`를 두지 않아 새 종류는 모든 곳이 다룰 때까지 컴파일되지 않는다. 앱은 `\.openLink`(여는 위치는 여기·옆 칸·새 탭·새 창)로만 열고, 칸마다 `Navigator`가 뒤로·앞으로 기록을 둔다. 새 탭은 macOS 창 탭이 아니라 창이 툴바 줄에 직접 그리는 탭이다(`WindowTabs`, 탭 목록과 고른 탭은 값 `TabStrip`). 회차, 과제, 시험, 카드, 문제집 링크는 그 목록 페이지를 열고 그 항목으로 스크롤해 표시한다(`\.linkFocus`, `.linkTarget`). 자료의 쪽은 주소에 실려 기록의 지금 걸음을 고친다. 사이드바, 검색, 노트와 파일의 링크, Claude 패널의 답, 바깥에서 온 `folio://`(앞에 있는 창의 새 탭에서 열고 그 탭을 고르며 앱을 앞으로 가져온다), `folio open`이 쓴다. 같은 scheme의 두 주소는 `AppLink`가 아니다. 손으로 쓴 `[[제목]]`이 되는 `folio://note/<제목>`은 그 노트가 있는 과목에서 `[NoteFile].linked`로 찾고(`AppLink.noteTitle`), `folio://action/…`은 Claude 패널의 버튼이라 종류 이름으로 쓸 수 없다(`AppLink.actionHost`) | 있음 |
 | 화면 계약 `ScreenView` | 모든 화면이 주소 하나를 그리고 전체·칸·좁은 폭(1440·720·390)에서 넘치거나 잘리지 않는다. 주소에서 화면을 고르는 곳은 `Screen(entry)` 하나이고, `ScreenFitTests`가 세 폭을 검사한다 | 있음 |
@@ -263,7 +264,7 @@ Me/GIST/
 - 명령줄 도구: `mise run cli -- <명령>`. `~/.local/bin`에 설치는 `mise run install-cli`. GIST 폴더는 `--gist <경로>`, `FOLIO_GIST`, 앱이 연 폴더 순으로 정한다. 모든 쓰기 명령은 `--dry-run`으로 먼저 본다. 명령 목록은 `folio help`, 자연어로 찾기는 `folio help <하고 싶은 일>`
 - MCP: `folio mcp`가 모든 쓰기 액션과 읽기 명령을 표준 입출력 MCP 도구로 연다. 앱의 Claude 패널은 `--propose`로 붙여 쓰기를 제안으로만 받는다. 도구 정의는 질문마다 함께 가므로 `--propose`에는 과목 대화에 쓰는 도구만 연다(`MCPServer.panelGroups`가 목록). 도구 결과의 JSON은 한 줄로 줄이고 null, 빈 배열, 빈 객체를 뺀다. 셸 없는 클라이언트에는 `claude mcp add folio -- folio mcp`처럼 붙인다
 - 에이전트 스킬: 원본은 `packages/folio-core/sources/folio-cli/commands/skill.swift`. 고친 뒤 `mise run cli -- skill > .claude/skills/folio/SKILL.md`로 사본을 맞춘다(테스트가 확인한다). 다른 에이전트에는 `folio skill --install <스킬 폴더>`
-- 액션 커버리지: `mise run cli -- actions --check`. 모든 액션에 명령과 동등성 테스트가 있고 앱이 액션 밖에서 쓰지 않는지 본다. `mise run test`가 함께 돌린다
+- 액션 커버리지: `mise run cli -- actions --check`. 모든 액션에 명령과 동등성 테스트가 있고, 손으로 짠 명령에 이유가 있고, 앱이 액션 밖에서 쓰지 않는지 본다. `mise run test`가 함께 돌린다
 - 구조 검사: `check`
 - 폴더 정리: `cleanup plan --out plan.json [--skip <경로>]`, 검토 뒤 `cleanup apply --plan plan.json --backup <iCloud 밖 폴더> [--include-flagged]`, 되돌리기는 `cleanup undo <batch ID>`. 계획은 `Exams/Past`를 `Inherited`로(낱개 파일은 족보로 표시), `Exam Review`와 `moves.jsonl`이 `Exam Review`에서 왔다고 기록한 `Exercises`의 파일을 `Study`로(시험 연결), `Notes/Exports`를 `Study`로 옮기고 빈 시험 폴더를 지운다. 출처가 불확실한 파일(그런 `Exercises`에 섞인 나머지, 이름에 정리·요약·대비·mock이 든 파일)은 검토 표시라 `--include-flagged` 없이는 옮기지 않는다. 되돌려도 `course.json`에 쓴 연결과 족보 표시는 남는다
 - 노션 가져오기: `import notion <export.json>`. `export.json`은 Notion MCP로 읽은 내용을 `NotionExport` 형식으로 담은 파일이며, 실제 학업 데이터라 저장소에 넣지 않는다. 새 파일만 만들고 기존 파일은 덮어쓰지 않는다

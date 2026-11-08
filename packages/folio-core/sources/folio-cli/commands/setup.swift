@@ -222,7 +222,7 @@ struct CourseCommand: ParsableCommand {
 
 struct CatalogCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "catalog", abstract: String(localized: .catalogAbstract), subcommands: [Show.self, Set.self])
+        commandName: "catalog", abstract: String(localized: .catalogAbstract), subcommands: [Show.self] + GeneratedCommands.catalog)
 
     struct Show: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .catalogShowAbstract), discussion: String(localized: .catalogShowDiscussion))
@@ -236,16 +236,6 @@ struct CatalogCommand: ParsableCommand {
             say(String(localized: .catalogShowCategories).styled(.bold) + "  " + String(localized: .catalogShowCategoryCount(catalog.categories.count)))
             say(String(localized: .catalogShowPeople).styled(.bold) + "  " + catalog.people.map(\.name).joined(separator: ", "))
             say(String(localized: .catalogShowHandbooks).styled(.bold) + "  " + catalog.handbooks.map { String($0.year) }.joined(separator: ", "))
-        }
-    }
-
-    struct Set: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .catalogSetAbstract), discussion: String(localized: .catalogSetDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Option(help: ArgumentHelp(String(localized: .catalogSetHelpFile), valueName: "path"), completion: .file(extensions: ["json"])) var file: String
-
-        func run() throws {
-            try perform(spec: CatalogSet(catalog: try readJSON(Catalog.self, file)), g, ctx: try CLI.context(g))
         }
     }
 }

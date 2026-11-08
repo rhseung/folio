@@ -33,7 +33,9 @@ enum CommandSource {
         ]
         for group in groups.keys.sorted() {
             let names = groups[group]!.map { "\(String(describing: $0)).self" }.joined(separator: ", ")
-            lines.append("    static let \(camel(group)): [any ParsableCommand.Type] = [\(names)]")
+            // `import` is a keyword.
+            let id = ["import"].contains(camel(group)) ? "`\(camel(group))`" : camel(group)
+            lines.append("    static let \(id): [any ParsableCommand.Type] = [\(names)]")
         }
         for type in generated {
             lines.append("")
@@ -46,10 +48,11 @@ enum CommandSource {
     static func command(_ name: String, _ spec: ActionSpec) -> [String] {
         let words = spec.command.split(separator: " ")
         let fields = spec.fields
-        let course = fields.first { $0.ref == "Course" && $0.role == .argument }
-        // `<과목>/<항목>`: a course argument followed by an argument for an item inside it are typed as one.
-        let folded = course.flatMap { c in fields.first { $0.role == .argument && $0.ref.map(scoped.contains) == true && $0.name != c.name } }
-        var discussion = spec.discussion.isEmpty ? [] : [spec.discussion, ""]
+        let course = fields.first { $0.ref == "Course" && $0.role == .argument && !$0.many }
+        // `<과목>/<항목>`: a course argument followed by an argument for an item inside it are typed as one. A course
+        // that may be left out (every course) stays its own argument.
+        let folded = course.flatMap { c in c.optional ? nil : fields.first { $0.role == .argument && $0.ref.map(scoped.contains) == true && $0.name != c.name } }
+        var discussion = spec.discussion.isEmpty ? [] : spec.discussion.components(separatedBy: "\n") + [""]
         if spec.effect == .removes || spec.effect == .moves { discussion += ["실행하기 전에 확인을 받는다.", ""] }
         if !spec.examples.isEmpty { discussion += ["예시:"] + spec.examples.map { "  " + $0 } }
         var out = [
@@ -62,7 +65,15 @@ enum CommandSource {
             // ArgumentParser rejects a positional with a default before another positional.
             let last = !fields.contains { $0.role == .argument && fields.firstIndex(of: $0)! > fields.firstIndex(of: f)! }
             if let folded, f.name == folded.name {
-                out.append("    @Argument(help: ArgumentHelp(\(q("<과목>/<\(f.help.isEmpty ? f.name : f.help)>")), valueName: \(q(f.name))), completion: Complete.ref(\(q(f.ref!)))) var \(f.name): String" + (last ? " = \"\"" : ""))
+                let item = f.help.isEmpty ? f.name : f.help
+                let completion = "completion: Complete.ref(\(q(f.ref!)))"
+                if f.many {
+                    // One value name per item: `<material> ...`.
+                    let one = f.name.hasSuffix("s") ? String(f.name.dropLast()) : f.name
+                    out.append("    @Argument(help: ArgumentHelp(\(q("<과목>/<\(item)>. 둘째부터는 \(item)만 써도 된다")), valueName: \(q(one))), \(completion)) var \(f.name): [String]")
+                } else {
+                    out.append("    @Argument(help: ArgumentHelp(\(q("<과목>/<\(item)>")), valueName: \(q(f.name))), \(completion)) var \(f.name): String" + (last ? " = \"\"" : ""))
+                }
                 continue
             }
             if let line = declaration(f, last: last) { out.append("    " + line) }
@@ -73,26 +84,33 @@ enum CommandSource {
         let patches = fields.filter { $0.patch }
         if !patches.isEmpty, patches.count == fields.filter({ $0.role != .argument }).count {
             let given = patches.map { $0.many ? "!\($0.name).isEmpty" : "\($0.name) != nil" }.joined(separator: " || ")
-            let flags = patches.map { "--" + kebab($0.name) }.joined(separator: ", ")
+            let flags = patches.map { "--" + flag($0) }.joined(separator: ", ")
             out.append("        guard \(given) else { throw CLIError(exit: .usage, message: \(q("바꿀 것을 하나 이상 주세요: \(flags)"))) }")
         }
         out.append("        let ctx = try CLI.context(g)")
-        if course != nil || fields.contains(where: { $0.ref != nil && $0.role != .new }) { out.append("        let r = Resolver(ctx)") }
+        if course != nil || fields.contains(where: { $0.ref != nil && $0.role != .new && $0.role != .hidden }) { out.append("        let r = Resolver(ctx)") }
         if let course {
             if let folded {
-                out.append("        let (c, \(folded.name)Name) = try r.split(\(folded.name))")
+                out.append(folded.many ? "        let (c, \(folded.name)First) = try r.split(\(folded.name).first ?? \"\")"
+                                       : "        let (c, \(folded.name)Name) = try r.split(\(folded.name))")
+            } else if course.optional {
+                out.append("        let c = try \(course.name).map { try r.course($0) }")
             } else {
                 out.append("        let c = try r.course(\(course.name))")
             }
         }
         let scope = course == nil ? "nil" : "c"
-        let values = fields.map { f -> String in
-            let v: String
-            if f.name == course?.name { v = "c.id" }
-            else if f.name == folded?.name { v = "try r.\(lookup(f.ref!))(\(q(f.ref!)), \(f.name)Name, in: c)" }
-            else { v = value(f, scope: scope) }
-            return "            \(f.name): \(v)"
+        var exprs: [String: String] = [:]
+        for f in fields where parent(f, in: fields) == nil {
+            if f.name == course?.name { exprs[f.name] = f.optional ? "c?.id" : "c.id" }
+            else if f.name == folded?.name, f.many {
+                exprs[f.name] = "try ([\(f.name)First] + \(f.name).dropFirst()).map { try r.\(lookup(f.ref!))(\(q(f.ref!)), $0, in: c) }"
+            }
+            else if f.name == folded?.name { exprs[f.name] = "try r.\(lookup(f.ref!))(\(q(f.ref!)), \(f.name)Name, in: c)" }
+            else { exprs[f.name] = value(f, scope: scope) }
         }
+        for f in fields { if let p = parent(f, in: fields) { exprs[f.name] = value(f, scope: scope, parent: exprs[p.name]) } }
+        let values = fields.map { "            \($0.name): \(exprs[$0.name]!)" }
         out.append("        let action = FolioActions.\(name)(")
         out += values.enumerated().map { $0.offset == values.count - 1 ? $0.element : $0.element + "," }
         out.append("        )")
@@ -105,27 +123,50 @@ enum CommandSource {
     /// Kinds that live inside a course file.
     static let scoped: Set<String> = ["Session", "Exam", "Unit", "Assignment", "GradeComponent", "ScoreEntry", "Material", "ProblemSet", "Note", "NotePath"]
 
+    /// Kinds named only inside another item: a plan item in its exam, a card in its unit's deck.
+    static let parents: [String: String] = ["ExamPlanItem": "Exam", "QuizCard": "Unit"]
+
+    /// The field a child kind is looked up in, when the action has one.
+    static func parent(_ f: FieldSpec, in fields: [FieldSpec]) -> FieldSpec? {
+        guard let kind = f.ref, let p = parents[kind] else { return nil }
+        return fields.first { $0.ref == p && !$0.many && !$0.optional }
+    }
+
     /// `X.Path` fields name a file and resolve to its path, the others to an id.
     static func lookup(_ kind: String) -> String { kind.hasSuffix("Path") ? "path" : "id" }
 
+    static func flag(_ f: FieldSpec) -> String { f.cliName ?? kebab(f.name) }
+
     static func cliType(_ f: FieldSpec) -> String {
-        if f.ref != nil { return "String" }
+        if f.ref != nil || f.file != nil || f.folder { return "String" }
         // `켜기`, `yes`, `1` as well as `true`, like the commands written by hand.
         if f.type == "Bool", f.patch { return "Toggle" }
         return f.type == "Date" ? "DateArg" : f.type
     }
 
-    static func help(_ f: FieldSpec) -> String {
+    static func help(_ f: FieldSpec, valueName given: String? = nil) -> String {
         var text = f.help
         if f.patch, f.optional { text += text.isEmpty ? "none이면 지운다" : ". none이면 지운다" }
-        if f.many { text += (text.isEmpty ? "" : ". ") + (f.patch ? "여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다" : "여러 번 줄 수 있다") }
-        let valueName = f.ref != nil ? kebab(f.name) : f.type == "LocalDate" || f.type == "Date" ? "date" : nil
+        // Unless read one file per item, a list's file holds all of it, so it is given once.
+        if f.many, f.file == nil || f.filePerItem {
+            text += (text.isEmpty ? "" : ". ") + (f.patch ? "여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다" : "여러 번 줄 수 있다")
+        }
+        let valueName = given ?? (f.ref != nil ? flag(f) : f.type == "LocalDate" || f.type == "Date" ? "date" : nil)
         return valueName.map { "ArgumentHelp(\(q(text)), valueName: \(q($0)))" } ?? q(text)
     }
 
     static func declaration(_ f: FieldSpec, last: Bool) -> String? {
         let t = cliType(f)
         let completion = f.ref.map { ", completion: Complete.ref(\(q($0)))" } ?? ""
+        let name = f.cliName.map { "name: .customLong(\(q($0))), " } ?? ""
+        if f.file != nil || f.folder {
+            let json = f.file != nil && !(f.type == "String" && !f.many)
+            let complete = f.folder ? ".directory" : json ? ".file(extensions: [\"json\"])" : ".file()"
+            let help = help(f, valueName: f.file ?? "folder")
+            let type = f.filePerItem ? "[String]" : f.optional ? "String?" : "String"
+            let wrapper = f.role == .argument ? "@Argument(" : "@Option(\(name)"
+            return "\(wrapper)help: \(help), completion: \(complete)) var \(f.name): \(type)"
+        }
         switch f.role {
         case .hidden: return nil
         case .new: return "@Option(name: .customLong(\"id\"), help: .hidden) var \(f.name): UUID?"
@@ -136,27 +177,36 @@ enum CommandSource {
             if f.optional { return "@Argument(help: \(help(f))\(completion)) var \(f.name): \(t)?" }
             return "@Argument(help: \(help(f))\(completion)) var \(f.name): \(t)" + (f.defaultValue.map { " = \($0)" } ?? "")
         case .option:
-            if f.type == "Bool", !f.patch, !f.many { return "@Flag(help: \(help(f))) var \(f.name) = \(f.defaultValue ?? "false")" }
+            if f.type == "Bool", !f.patch, !f.many { return "@Flag(\(name)help: \(help(f))) var \(f.name) = \(f.defaultValue ?? "false")" }
             // A list given replaces the whole list; `none` alone empties it.
-            if f.patch, f.many { return "@Option(help: \(help(f))\(completion)) var \(f.name): [\(t)] = []" }
-            if f.patch { return "@Option(help: \(help(f))\(completion)) var \(f.name): \(f.optional ? "Clearable<\(t)>" : t)?" }
-            if f.many { return "@Option(help: \(help(f))\(completion)) var \(f.name): [\(t)] = []" }
-            if f.optional { return "@Option(help: \(help(f))\(completion)) var \(f.name): \(t)?" }
-            if let d = f.defaultValue, f.type != "Date" { return "@Option(help: \(help(f))\(completion)) var \(f.name): \(t) = \(d)" }
-            return "@Option(help: \(help(f))\(completion)) var \(f.name): \(t)"
+            if f.patch, f.many { return "@Option(\(name)help: \(help(f))\(completion)) var \(f.name): [\(t)] = []" }
+            if f.patch { return "@Option(\(name)help: \(help(f))\(completion)) var \(f.name): \(f.optional ? "Clearable<\(t)>" : t)?" }
+            if f.many { return "@Option(\(name)help: \(help(f))\(completion)) var \(f.name): [\(t)] = []" }
+            if f.optional { return "@Option(\(name)help: \(help(f))\(completion)) var \(f.name): \(t)?" }
+            if let d = f.defaultValue, f.type != "Date" { return "@Option(\(name)help: \(help(f))\(completion)) var \(f.name): \(t) = \(d)" }
+            return "@Option(\(name)help: \(help(f))\(completion)) var \(f.name): \(t)"
         }
     }
 
-    static func value(_ f: FieldSpec, scope: String) -> String {
+    static func value(_ f: FieldSpec, scope: String, parent: String? = nil) -> String {
         switch f.role {
         case .hidden: return f.defaultValue ?? "nil"
         case .new: return "\(f.name) ?? UUID()"
         case .off(let flag): return "!\(camel(flag))"
         default: break
         }
+        if f.folder { return f.optional ? "\(f.name).map(absolute)" : "absolute(\(f.name))" }
+        if f.file != nil {
+            if f.type == "String", !f.many { return f.optional ? "try \(f.name).map(readText)" : "try readText(\(f.name))" }
+            if f.filePerItem { return "try \(f.name).map { try readJSONFile(\(f.type).self, $0) }" }
+            let type = f.many ? "[\(f.type)]" : f.type
+            return f.optional ? "try \(f.name).map { try readJSONFile(\(type).self, $0) }" : "try readJSONFile(\(type).self, \(f.name))"
+        }
         let t = f.ref == nil ? "" : "try "
         func one(_ v: String) -> String {
-            if let ref = f.ref { return "try r.\(lookup(ref))(\(q(ref)), \(v), in: \(scope))" }
+            if let ref = f.ref {
+                return "try r.\(lookup(ref))(\(q(ref)), \(v), in: \(scope)\(parent.map { ", parent: \($0)" } ?? ""))"
+            }
             return f.type == "Date" || f.type == "Bool" && f.patch ? "\(v).\(f.type == "Date" ? "date" : "value")" : v
         }
         let identity = f.ref == nil && f.type != "Date" && !(f.type == "Bool" && f.patch)

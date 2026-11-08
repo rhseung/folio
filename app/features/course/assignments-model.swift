@@ -260,7 +260,7 @@ final class AssignmentSheetModel {
     func kind(of m: FolioDomain.Material) -> MaterialKind { m.kind ?? AssignmentFiles.guessKind(fileName: (m.path as NSString).lastPathComponent) }
 
     // Saved at once like an added file, not on confirm: the file is already in the folder whatever the sheet does.
-    func setKind(_ m: FolioDomain.Material, _ kind: MaterialKind) { pending = workspace.ask(MaterialKindSet(course: course.id, materials: [m.id], kind: kind)) }
+    func setKind(_ m: FolioDomain.Material, _ kind: MaterialKind) { pending = workspace.ask(MaterialKindSet(course: course.id, kind: kind, materials: [m.id])) }
 
     func apply() -> Bool {
         let scored = targetComponents

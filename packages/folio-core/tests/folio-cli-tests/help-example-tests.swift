@@ -76,12 +76,16 @@ struct HelpExampleTests {
     static func examples(_ type: ParsableCommand.Type = Folio.self) -> [String] {
         let config = type.configuration
         let text = config.discussion + (ObjectIdentifier(type) == ObjectIdentifier(Folio.self) ? "\n" + Folio.footer : "")
-        let own = text.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }
-            // Pipes, redirects, and files read from or written to the user's disk can't run here.
-            .filter { $0.hasPrefix("folio ") && !$0.contains("|") && !$0.contains(">") && !$0.contains("<") && !$0.contains("~/") && !$0.contains("--file") && !$0.contains("--out") && $0.firstMatch(of: /[0-9A-F]{8}-[0-9A-F]{4}-/) == nil }
+        let own = text.split(separator: "\n").map { $0.trimmingCharacters(in: .whitespaces) }.filter(runnable)
             // The column after two or more spaces says what the example does.
             .map { $0.replacing(/\s{2,}\S.*$/, with: "") }
         return own + (config.subcommands + config.groupedSubcommands.flatMap(\.subcommands)).flatMap { examples($0) }
+    }
+
+    /// Pipes, redirects, files read from or written to the user's disk, and ids made elsewhere can't run here.
+    static func runnable(_ line: String) -> Bool {
+        line.hasPrefix("folio ") && !line.contains("|") && !line.contains(">") && !line.contains("<") && !line.contains("~/") && !line.contains("--file")
+            && !line.contains("--out") && line.firstMatch(of: /[0-9A-F]{8}-[0-9A-F]{4}-/) == nil
     }
 
     static func words(_ line: String) -> [String] {

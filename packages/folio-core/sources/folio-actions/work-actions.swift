@@ -133,11 +133,12 @@ public struct ExamPlanAdd {
 }
 
 @Action("exam plan rm", "공부 계획 항목 지우기", effect: .removes, confirm: "공부 계획 항목 '{item}'을(를) 지웁니다.",
-        done: "공부 계획에서 '{item}'을(를) 지웠습니다", cli: .manual)
+        done: "공부 계획에서 '{item}'을(를) 지웠습니다", examples: [#"folio exam plan rm EC4207/중간고사 "트리 단원 복습" --dry-run"#])
 public struct ExamPlanRemove {
     @Arg var course: Course.ID
+    /// 시험
     @Arg var exam: Exam.ID
-    /// 항목
+    /// 항목 제목이나 UUID
     @Arg var item: ExamPlanItem.ID
 
     public func run(_ ctx: ActionContext) throws {
@@ -152,7 +153,8 @@ public struct ExamPlanRemove {
 }
 
 /// Checks a plan item off or back on; the latest line across every device's log wins.
-@Action("exam plan-check", "공부 계획 항목 끝내기, --undo면 되돌리기", effect: .logs, done: "공부 계획 항목 '{item}'을(를) 표시했습니다", cli: .manual)
+@Action("exam plan-check", "공부 계획 항목 끝내기, --undo면 되돌리기", effect: .logs, done: "공부 계획 항목 '{item}'을(를) 표시했습니다",
+        cli: .manual(reason: "항목을 <과목>/<시험> 안에서 찾지만 액션은 시험을 받지 않고, --undo면 완료 문구가 달라진다"))
 public struct ExamPlanCheck {
     @Arg var course: Course.ID
     @Arg var item: ExamPlanItem.ID
@@ -231,10 +233,10 @@ public struct AssignmentAdd {
     }
 }
 
-/// Everything the assignment sheet edits, with its scores: one per component it counts toward. The command works out
-/// the covered components and scores from its flags, so it is written by hand.
+/// Everything the assignment sheet edits, with its scores: one per component it counts toward.
 @Action("assignment set", "과제의 제목, 마감, 상태, 성적 항목, 메모 바꾸기. 준 것만 바뀐다", done: "과제 '{assignment}'을(를) 바꿨습니다",
-        phrases: ["미뤄졌", "연기", "마감일", "마감 변경", "기한 연장", "과제 메모", "과제 이름"], cli: .manual)
+        phrases: ["미뤄졌", "연기", "마감일", "마감 변경", "기한 연장", "과제 메모", "과제 이름"],
+        cli: .manual(reason: "준 것만 바꾸도록 지금 과제 값으로 빈 칸을 채우고, --score <항목>:<점수>/<만점>을 과제가 들어가는 성적 항목에 맞춰 읽는다. 액션은 앱 시트처럼 전체 값을 받는다"))
 public struct AssignmentSave {
     public struct Score: Codable, Sendable, Equatable {
         public var component: UUID
@@ -541,7 +543,8 @@ public struct ComponentRemove {
 }
 
 /// Swaps a component with its neighbor and renumbers all, since imported components may share one `order`.
-@Action("component move", "성적 항목을 한 칸 위나 아래로", done: "성적 항목 '{component}'을(를) 옮겼습니다", cli: .manual)
+@Action("component move", "성적 항목을 한 칸 위나 아래로", done: "성적 항목 '{component}'을(를) 옮겼습니다",
+        cli: .manual(reason: "--up과 --down 플래그가 옮길 칸 수(by)가 된다"))
 public struct ComponentMove {
     @Arg var course: Course.ID
     @Arg var component: GradeComponent.ID
@@ -566,7 +569,8 @@ public struct ComponentMove {
 }
 
 /// Attendance caps, minimum attendance, late rule, top-grade share and the syllabus's own words.
-@Action("component policy", "성적 규칙 바꾸기", done: "성적 규칙을 바꿨습니다", cli: .manual)
+@Action("component policy", "성적 규칙 바꾸기", done: "성적 규칙을 바꿨습니다",
+        cli: .manual(reason: "준 것만 바꾸도록 지금 성적 규칙을 읽어 고치고, --cap <결석>:<등급>과 --cutoff <등급>:<점수>를 읽는다. 액션은 규칙 전체를 받는다"))
 public struct PolicySet {
     @Arg var course: Course.ID
     /// 성적 규칙 전체

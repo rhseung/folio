@@ -40,7 +40,8 @@ public struct ActionMacro: MemberMacro, ExtensionMacro {
             """
             public static let spec = FolioActions.ActionSpec(command: \(raw: args.command), summary: \(raw: args.summary), discussion: \(raw: args.discussion), \
             effect: .\(raw: args.effect), confirm: \(raw: args.confirm ?? "nil"), done: \(raw: args.done), examples: \(raw: args.examples), \
-            phrases: \(raw: args.phrases), generated: \(raw: args.generated), fields: [\n\(raw: specs)\n])
+            phrases: \(raw: args.phrases), generated: \(raw: args.generated), manualReason: \(raw: args.manualReason ?? "nil"), \
+            undoable: \(raw: args.undoable), fields: [\n\(raw: specs)\n])
             """,
         ]
     }
@@ -64,7 +65,7 @@ struct MacroError: Error, CustomStringConvertible {
 /// The attribute's arguments as Swift source, to pass through into `ActionSpec(...)`.
 private struct Arguments {
     var command = "", summary = "", discussion = "\"\"", effect = "changes", confirm: String?, done = "", examples = "[]", phrases = "[]"
-    var generated = "true"
+    var generated = "true", manualReason: String?, undoable = "false"
     var confirmText: String?, doneText: String?
 
     init(_ node: AttributeSyntax) throws {
@@ -84,7 +85,14 @@ private struct Arguments {
                 doneText = literal(arg.expression)
             case "examples": examples = source
             case "phrases": phrases = source
-            case "cli": generated = source == ".manual" ? "false" : "true"
+            case "cli":
+                guard source != ".generated" else { break }
+                generated = "false"
+                // `.manual(reason: "...")`: the reason as written, so the spec carries the same literal.
+                if let call = arg.expression.as(FunctionCallExprSyntax.self), let reason = call.arguments.first(where: { $0.label?.text == "reason" }) {
+                    manualReason = reason.expression.trimmedDescription
+                }
+            case "undoable": undoable = source
             case let other?: throw MacroError("모르는 인자입니다: \(other)")
             }
         }
@@ -108,6 +116,7 @@ private struct Field {
     var patch = false, optional = false, many = false
     var ref: String?
     var base: String
+    var cliName: String?, file: String?, filePerItem = false, folder = false
 
     init?(_ decl: DeclSyntax) throws {
         guard let v = decl.as(VariableDeclSyntax.self), !v.modifiers.contains(where: { $0.name.text == "static" }),
@@ -127,14 +136,19 @@ private struct Field {
 
         var role = Role.option
         for attr in v.attributes.compactMap({ $0.as(AttributeSyntax.self) }) {
+            let given = attr.arguments?.as(LabeledExprListSyntax.self)?.first?.expression.as(StringLiteralExprSyntax.self)?
+                .segments.compactMap { $0.as(StringSegmentSyntax.self)?.content.text }.joined()
             switch attr.attributeName.trimmedDescription {
             case "Arg": role = .argument
             case "New": role = .new
             case "Hidden": role = .hidden
-            case "Off":
-                let given = attr.arguments?.as(LabeledExprListSyntax.self)?.first?.expression.as(StringLiteralExprSyntax.self)?
-                    .segments.compactMap { $0.as(StringSegmentSyntax.self)?.content.text }.joined()
-                role = .off(given ?? "off")
+            case "Off": role = .off(given ?? "off")
+            case "CLIName": cliName = given
+            case "FromFile":
+                let args = attr.arguments?.as(LabeledExprListSyntax.self)
+                file = args?.first(where: { $0.label == nil }) == nil ? "file" : given ?? "file"
+                filePerItem = args?.contains { $0.label?.text == "perItem" && $0.expression.trimmedDescription == "true" } ?? false
+            case "Folder": folder = true
             default: break
             }
         }
@@ -163,6 +177,9 @@ private struct Field {
         }
         if case .new = role, ref == nil { throw MacroError("@New \(name)은(는) 만드는 항목의 ID(예: Exam.ID)여야 합니다") }
         if case .off = role, type != "Bool" { throw MacroError("@Off \(name)은(는) Bool이어야 합니다") }
+        if file != nil || folder, ref != nil || patch { throw MacroError("@FromFile, @Folder \(name)은(는) 항목 ID나 Patch가 아닌 값이어야 합니다") }
+        if folder, base != "String" || many { throw MacroError("@Folder \(name)은(는) String이어야 합니다") }
+        if filePerItem, !many { throw MacroError("@FromFile(perItem:) \(name)은(는) 목록이어야 합니다") }
     }
 
     var isHidden: Bool { if case .hidden = role { true } else { false } }
@@ -197,7 +214,8 @@ private struct Field {
         case .hidden: ".hidden"
         }
         return "FolioActions.FieldSpec(name: \(quoted(name)), help: \(quoted(help)), role: \(role), type: \(quoted(base)), ref: \(ref.map(quoted) ?? "nil"), "
-            + "optional: \(optional), many: \(many), patch: \(patch), defaultValue: \(defaultValue.map(quoted) ?? "nil"))"
+            + "optional: \(optional), many: \(many), patch: \(patch), defaultValue: \(defaultValue.map(quoted) ?? "nil"), "
+            + "cliName: \(cliName.map(quoted) ?? "nil"), file: \(file.map(quoted) ?? "nil"), filePerItem: \(filePerItem), folder: \(folder))"
     }
 
     func quoted(_ s: String) -> String {

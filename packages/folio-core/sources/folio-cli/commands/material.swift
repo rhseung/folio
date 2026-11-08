@@ -20,7 +20,7 @@ func absolute(_ path: String) -> String {
 struct MaterialCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "material", abstract: String(localized: .materialAbstract),
-        subcommands: [List.self, Show.self, Link.self, Status.self, Kind.self, Relink.self, Track.self, Import.self, Move.self, Write.self, Split.self]
+        subcommands: [List.self, Show.self, Link.self, Relink.self, Import.self, Write.self, Split.self]
             + GeneratedCommands.material)
 
     struct List: ParsableCommand {
@@ -109,38 +109,6 @@ struct MaterialCommand: ParsableCommand {
         }
     }
 
-    struct Status: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .materialStatusAbstract), discussion: String(localized: .materialStatusDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpStatus))) var status: MaterialStatus
-        @Argument(help: ArgumentHelp(String(localized: .materialStatusHelpMaterials), valueName: "material"), completion: Complete.materials) var materials: [String]
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            let r = Resolver(ctx)
-            guard let first = materials.first else { throw CLIError(exit: .usage, message: String(localized: .materialStatusMissing)) }
-            let (c, name) = try r.split(first)
-            let ids = try ([name] + materials.dropFirst().map { c.local($0) }).map { try r.material($0, in: c).id }
-            try perform(spec: MaterialStatusSet(course: c.id, materials: ids, status: status), g, ctx: ctx)
-        }
-    }
-
-    struct Kind: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .materialKindAbstract), discussion: String(localized: .materialKindDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .materialKindHelpKind))) var kind: MaterialKind
-        @Argument(help: ArgumentHelp(String(localized: .materialStatusHelpMaterials), valueName: "material"), completion: Complete.materials) var materials: [String]
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            let r = Resolver(ctx)
-            guard let first = materials.first else { throw CLIError(exit: .usage, message: String(localized: .materialStatusMissing)) }
-            let (c, name) = try r.split(first)
-            let ids = try ([name] + materials.dropFirst().map { c.local($0) }).map { try r.material($0, in: c).id }
-            try perform(spec: MaterialKindSet(course: c.id, materials: ids, kind: kind), g, ctx: ctx)
-        }
-    }
-
     struct Relink: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .materialRelinkAbstract), discussion: String(localized: .materialRelinkDiscussion))
         @OptionGroup var g: GlobalOptions
@@ -180,18 +148,6 @@ struct MaterialCommand: ParsableCommand {
                 expected = current
             }
             try perform(spec: MaterialWrite(course: c.id, material: m.id, text: try readText(file), expected: expected), g, ctx: ctx)
-        }
-    }
-
-    struct Track: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .materialTrackAbstract), discussion: String(localized: .materialTrackDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .materialTrackHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String?
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            let id = try course.map { try Resolver(ctx).course($0).id }
-            try perform(spec: MaterialTrack(course: id), g, ctx: ctx)
         }
     }
 
@@ -242,21 +198,6 @@ struct MaterialCommand: ParsableCommand {
         }
     }
 
-    struct Move: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "mv", abstract: String(localized: .materialMvAbstract), discussion: String(localized: .materialMvDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpMaterial), valueName: "material"), completion: Complete.materials) var material: String
-        @Argument(help: ArgumentHelp(String(localized: .materialMvHelpTo), valueName: "path"), completion: .file(extensions: ["json"])) var to: String
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            let r = Resolver(ctx)
-            let (c, name) = try r.split(material)
-            let m = try r.material(name, in: c)
-            let result = try perform(spec: MaterialMove(course: c.id, material: m.id, to: to), g, ctx: ctx)
-            if !g.json, let batch = result.made { say(String(localized: .materialMvUndo(batch.uuidString)).styled(.dim)) }
-        }
-    }
 }
 
 /// A text material's JSON also carries the file as it is now and the hash `material write --expect` compares. The

@@ -2,9 +2,8 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-/// The command reads the pages as one `--pages 3-12`, so it is written by hand.
 @Action("material link", "자료를 회차에 연결하거나 떼기", done: "자료 '{material}'과(와) 회차 '{session}'의 연결을 바꿨습니다",
-        phrases: ["자료 수업 연결", "슬라이드 회차에 붙이기"], cli: .manual)
+        phrases: ["자료 수업 연결", "슬라이드 회차에 붙이기"], cli: .manual(reason: "--pages 3-12 한 옵션을 firstPage와 lastPage 두 필드로 나눈다"))
 public struct MaterialLinkSession {
     @Arg var course: Course.ID
     @Arg var material: Material.ID
@@ -68,13 +67,17 @@ public struct MaterialLinkUnit {
 }
 
 
-/// The status comes before the materials on the command line, so the command is written by hand.
+// The status comes before the materials on the command line, so it is declared first.
 @Action("material status", "자료의 상태 바꾸기. 여러 개면 확인을 받는다", confirm: "자료 {materials}의 상태를 {status}(으)로 바꿉니다.",
-        done: "자료 {materials}을(를) {status}(으)로 바꿨습니다", phrases: ["자료 분류", "자료 무시"], cli: .manual)
+        done: "자료 {materials}을(를) {status}(으)로 바꿨습니다",
+        examples: ["folio material status ignored EC4207/Seating.pdf", "folio material status classified EC4207/Problems.pdf Guideline.pdf"],
+        phrases: ["자료 분류", "자료 무시"])
 public struct MaterialStatusSet {
     @Arg var course: Course.ID
-    @Arg var materials: [Material.ID]
+    /// 상태
     @Arg var status: MaterialStatus
+    /// 자료
+    @Arg var materials: [Material.ID]
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
@@ -84,13 +87,18 @@ public struct MaterialStatusSet {
     }
 }
 
-/// The kind comes before the materials on the command line, so the command is written by hand.
-@Action("material kind", "자료의 종류(문제, 제출물, 해설 등) 바꾸기. 여러 개면 확인을 받는다", confirm: "자료 {materials}의 종류를 {kind}(으)로 바꿉니다.",
-        done: "자료 {materials}을(를) {kind}(으)로 바꿨습니다", phrases: ["제출물로 표시", "과제 파일 문제 제출물 구분"], cli: .manual)
+// The kind comes before the materials on the command line, so it is declared first.
+@Action("material kind", "자료의 종류(문제, 제출물, 해설 등) 바꾸기. 여러 개면 확인을 받는다",
+        discussion: "과제 폴더의 파일은 종류가 없으면 이름으로 짐작한다(HW3-이름.pdf는 제출물, 나머지는 문제).",
+        confirm: "자료 {materials}의 종류를 {kind}(으)로 바꿉니다.", done: "자료 {materials}을(를) {kind}(으)로 바꿨습니다",
+        examples: ["folio material kind submission EC4207/26h3.pdf", "folio material kind problem EC4207/26h3.pdf"],
+        phrases: ["제출물로 표시", "과제 파일 문제 제출물 구분"])
 public struct MaterialKindSet {
     @Arg var course: Course.ID
-    @Arg var materials: [Material.ID]
+    /// 종류
     @Arg var kind: MaterialKind
+    /// 자료
+    @Arg var materials: [Material.ID]
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.edit(course) { f in
@@ -101,9 +109,8 @@ public struct MaterialKindSet {
 }
 
 /// Points a material at a file inside the course folder, to replace a missing one.
-/// The command reads the file relative to the course folder, so it is written by hand.
 @Action("material relink", "사라진 자료를 과목 폴더 안의 다른 파일에 다시 잇기", done: "자료 '{material}'을(를) {file}에 다시 이었습니다",
-        phrases: ["사라진 파일 다시 연결", "파일 경로 바뀜"], cli: .manual)
+        phrases: ["사라진 파일 다시 연결", "파일 경로 바뀜"], cli: .manual(reason: "상대 경로를 명령을 실행한 폴더가 아니라 과목 폴더 기준으로 푼다"))
 public struct MaterialRelink {
     @Arg var course: Course.ID
     @Arg var material: Material.ID
@@ -143,9 +150,12 @@ public struct MaterialUntrack {
 
 /// Registers new files in the course folder, re-links moved ones, and gives each `Assignments/` folder without one an
 /// assignment. Moves and renames nothing. Without a course, every course with a folder.
-@Action("material track", "과목 폴더의 새 파일을 등록하고 과제 폴더에 과제를 만든다", done: "자료를 등록했습니다",
-        phrases: ["새 파일 등록", "파일 스캔", "자료 반영"], cli: .manual)
+@Action("material track", "과목 폴더의 새 파일을 등록하고 과제 폴더에 과제를 만든다",
+        discussion: "옮기거나 이름을 바꾸지 않는다. 과목을 빼면 모든 과목에 한다. 지난 학기의 새 과제는 제출함으로 둔다.", done: "자료를 등록했습니다",
+        examples: ["folio material track EC4207", "folio material track --dry-run"],
+        phrases: ["새 파일 등록", "파일 스캔", "자료 반영"])
 public struct MaterialTrack {
+    /// 과목. 빼면 모든 과목
     @Arg var course: Course.ID?
 
     public func run(_ ctx: ActionContext) throws {
@@ -187,7 +197,7 @@ public struct ImportItem: Codable, Sendable, Hashable {
 /// in `Lectures` for a session takes the session's week in front of its name. A file already in this course is linked
 /// where it is. Every item is checked before the first copy, so one that can't go in stops them all.
 @Action("material import", "바깥 파일을 과목 폴더로 복사해 등록하고 회차에 연결", effect: .creates, done: "파일 {items}을(를) 가져왔습니다",
-        phrases: ["파일 가져오기", "다운로드한 자료 넣기", "외부 파일 복사"], cli: .manual)
+        phrases: ["파일 가져오기", "다운로드한 자료 넣기", "외부 파일 복사"], cli: .manual(reason: "파일마다 --folder와 --session을 붙여 가져올 항목(ImportItem)을 만든다"))
 public struct MaterialImport {
     @Arg var course: Course.ID
     var items: [ImportItem]
@@ -228,13 +238,15 @@ public struct MaterialImport {
 }
 
 /// Renames or moves a file through `moves.jsonl`, keeping its ID and links. `made` is the batch, for `cleanup undo`.
-/// The command also prints how to undo the move, so it is written by hand.
-@Action("material mv", "자료 파일을 옮기거나 이름 바꾸기. ID와 연결은 그대로", effect: .moves, confirm: "{material}을(를) {to}(으)로 옮깁니다.",
-        done: "{material}을(를) {to}(으)로 옮겼습니다", phrases: ["파일 이름 바꾸기", "다른 폴더로", "파일 이름 변경", "파일 옮기기"], cli: .manual)
+@Action("material mv", "자료 파일을 옮기거나 이름 바꾸기. ID와 연결은 그대로", discussion: "moves.jsonl에 남겨서 folio cleanup undo로 되돌릴 수 있다.",
+        effect: .moves, confirm: "{material}을(를) {to}(으)로 옮깁니다.", done: "{material}을(를) {to}(으)로 옮겼습니다",
+        examples: ["folio material mv EC4207/Seating.pdf Exams/Midterm/자리.pdf --dry-run"],
+        phrases: ["파일 이름 바꾸기", "다른 폴더로", "파일 이름 변경", "파일 옮기기"], undoable: true)
 public struct MaterialMove {
     @Arg var course: Course.ID
+    /// 자료
     @Arg var material: Material.ID
-    /// Course-relative.
+    /// 새 경로. 과목 폴더 기준
     @Arg var to: String
 
     public func run(_ ctx: ActionContext) throws {
@@ -277,7 +289,8 @@ public struct MaterialTrash {
 
 /// Moves the user approved, journaled in `moves.jsonl` as one batch (`made`). `course`, when given, has its materials
 /// re-linked afterwards.
-@Action("cleanup apply", "검토한 계획대로 옮기기. 먼저 GIST 폴더 전체를 백업한다", effect: .moves, confirm: "파일과 폴더 {moves}을(를) 옮깁니다.", done: "파일 {moves}을(를) 옮겼습니다", phrases: ["정리 실행"], cli: .manual)
+@Action("cleanup apply", "검토한 계획대로 옮기기. 먼저 GIST 폴더 전체를 백업한다", effect: .moves, confirm: "파일과 폴더 {moves}을(를) 옮깁니다.", done: "파일 {moves}을(를) 옮겼습니다", phrases: ["정리 실행"],
+        cli: .manual(reason: "계획 파일을 읽어 검토 표시된 이동을 거르고, 확인을 받은 뒤 GIST 폴더를 --backup에 백업하고 나서 실행한다"), undoable: true)
 public struct CleanupApply {
     var moves: [PlannedMove]
     var removals: [String] = []
@@ -320,10 +333,13 @@ public struct CleanupApply {
     }
 }
 
-@Action("cleanup undo", "cleanup apply, material mv, note retitle, note mv, recording retitle로 옮긴 묶음을 되돌리기", effect: .moves, confirm: "묶음 {batch}의 이동을 되돌립니다.", done: "묶음 {batch}의 이동을 되돌렸습니다", phrases: ["정리 되돌리기", "이동 취소"], cli: .manual)
+@Action("cleanup undo", "cleanup apply, material mv, note retitle, note mv, recording retitle로 옮긴 묶음을 되돌리기", effect: .moves, confirm: "묶음 {batch}의 이동을 되돌립니다.", done: "묶음 {batch}의 이동을 되돌렸습니다",
+        examples: ["folio cleanup undo 6A1F0C2E-3B4D-4E5F-8A9B-0C1D2E3F4A5B --dry-run"], phrases: ["정리 되돌리기", "이동 취소"])
 public struct CleanupUndo {
+    /// 묶음 ID
     @Arg var batch: MoveBatch.ID
-    var course: Course.ID?
+    // The app's course page passes its course, to re-link its materials after the undo.
+    @Hidden var course: Course.ID?
 
     public func run(_ ctx: ActionContext) throws {
         let records = try MoveJournal.records(in: ctx.gist.url).filter { $0.batch == batch && $0.undoOf == nil }

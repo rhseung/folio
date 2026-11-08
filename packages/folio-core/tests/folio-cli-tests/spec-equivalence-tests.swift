@@ -11,8 +11,12 @@ import Testing
 struct SpecEquivalenceTests {
     let h = Harness()
 
-    static let examples: [(String, String)] = Actions.all.filter { $0.spec.generated }
-        .flatMap { type in type.spec.examples.map { (type.command, $0.replacing(/\s{2,}\S.*$/, with: "")) } }
+    // It writes beside the backup folder, which the three copies share, so the second run finds the first's folder;
+    // today-backup-tests checks it against the action instead.
+    static let outsideGIST: Set<String> = ["backup restore"]
+
+    static let examples: [(String, String)] = Actions.all.filter { $0.spec.generated && !outsideGIST.contains($0.command) }
+        .flatMap { type in type.spec.examples.filter(HelpExampleTests.runnable).map { (type.command, $0.replacing(/\s{2,}\S.*$/, with: "")) } }
 
     @Test(arguments: examples)
     func threeWaysAgree(_ command: String, _ example: String) throws {

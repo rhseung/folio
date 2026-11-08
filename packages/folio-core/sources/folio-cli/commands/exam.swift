@@ -92,23 +92,8 @@ struct ExamCommand: ParsableCommand {
     }
 
     struct Plan: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .examPlanAbstract), subcommands: GeneratedCommands.examPlan + [Remove.self])
+        static let configuration = CommandConfiguration(abstract: String(localized: .examPlanAbstract), subcommands: GeneratedCommands.examPlan)
 
-        struct Remove: ParsableCommand {
-            static let configuration = CommandConfiguration(commandName: "rm", abstract: String(localized: .examPlanRmAbstract), discussion: String(localized: .examPlanRmDiscussion))
-            @OptionGroup var g: GlobalOptions
-            @Argument(help: ArgumentHelp(String(localized: .commonHelpExam), valueName: "exam"), completion: Complete.exams) var exam: String
-            @Argument(help: ArgumentHelp(String(localized: .commonHelpItem), valueName: "item")) var item: String = ""
-
-            func run() throws {
-                let ctx = try CLI.context(g)
-                let r = Resolver(ctx)
-                let (c, name) = try r.split(exam)
-                let e = try r.exam(name, in: c)
-                let i = try r.planItem(item, in: e, course: c)
-                try perform(spec: ExamPlanRemove(course: c.id, exam: e.id, item: i.id), g, ctx: ctx)
-            }
-        }
     }
 
     struct PlanCheck: ParsableCommand {

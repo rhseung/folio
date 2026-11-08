@@ -16,9 +16,15 @@ func weekdayTime(_ d: Date) -> String { d.formatted(.dateTime.weekday().hour().m
 
 /// Writes transcript.json, catalog.json and the course.json of every matched folder. Never overwrites: refuses when
 /// transcript.json or catalog.json exists, and skips folders that already have a course.json.
-@Action("import notion", "노션 학기, 강의, 성적을 transcript.json, catalog.json, course.json으로", effect: .creates, done: "노션을 가져왔습니다", phrases: ["노션 가져오기"], cli: .manual)
+@Action("import notion", "노션 학기, 강의, 성적을 transcript.json, catalog.json, course.json으로",
+        discussion: """
+        export.json은 Notion MCP로 읽은 내용을 NotionExport 형식으로 담은 파일이다. transcript.json이나 catalog.json이
+        이미 있으면 실행하지 않고(종료 코드 4), course.json이 있는 과목 폴더는 건너뛴다. 학기별 GPA를 노션 값과 비교한다.
+        """,
+        effect: .creates, done: "노션을 가져왔습니다", examples: ["folio import notion ~/Downloads/export.json --dry-run"], phrases: ["노션 가져오기"])
 public struct ImportNotion {
-    var export: NotionExport
+    /// NotionExport JSON
+    @Arg @FromFile("export.json") var export: NotionExport
 
     public func run(_ ctx: ActionContext) throws {
         let gist = ctx.gist
@@ -56,10 +62,16 @@ public struct ImportNotion {
 
 /// Notion lecture notes and score tables, from a dump folder holding `<page id>/index.json`, `notes/`, `assets/` per
 /// course. Note ids are Notion page ids, so running it again adds nothing twice.
-@Action("import notes", "노션 강의 정리와 점수를 노트, 회차, 성적 항목으로", effect: .creates, done: "노션 강의 정리를 가져왔습니다", phrases: ["노션 강의 정리 가져오기"], cli: .manual)
+@Action("import notes", "노션 강의 정리와 점수를 노트, 회차, 성적 항목으로",
+        discussion: """
+        덤프 폴더는 과목마다 <노션 페이지 ID>/index.json, notes/, assets/를 가진다. 노트 ID가 노션 페이지 ID라서 다시
+        실행해도 중복되지 않고, 기존 항목에는 덧붙이기만 한다.
+        """,
+        effect: .creates, done: "노션 강의 정리를 가져왔습니다", examples: ["folio import notes ~/Downloads/notion-dump --dry-run"], phrases: ["노션 강의 정리 가져오기"])
 public struct ImportNotes {
-    /// An absolute path.
-    var folder: String
+    // An absolute path: the action doesn't know where the command ran.
+    /// 덤프 폴더
+    @Arg @Folder var folder: String
 
     public func run(_ ctx: ActionContext) throws {
         let root = URL(filePath: folder, directoryHint: .isDirectory)
@@ -100,9 +112,17 @@ public struct ImportNotes {
 
 /// Class meetings from the calendar become sessions; days in the span without a meeting become cancelled, and review
 /// notes named after a session get linked to it.
-@Action("import calendar", "캘린더의 수업을 회차로", effect: .creates, done: "캘린더 수업을 가져왔습니다", phrases: ["캘린더 수업 가져오기", "시간표 가져오기"], cli: .manual)
+@Action("import calendar", "캘린더의 수업을 회차로",
+        discussion: """
+        meetings.json은 CalendarMeeting 목록이다. 이미 있는 회차는 빈 시각만 채우고, 범위 안에서 수업이 없는 날의
+        회차는 휴강으로 표시하며, 수업 제목과 같은 이름의 복습 노트를 연결한다. lab 번호가 있는 수업은 그 실험의 단원(없으면
+        Lab<번호> <수업 제목>으로 만든다)에 연결한다.
+        """,
+        effect: .creates, done: "캘린더 수업을 가져왔습니다", examples: ["folio import calendar ~/Downloads/meetings.json --dry-run"],
+        phrases: ["캘린더 수업 가져오기", "시간표 가져오기"])
 public struct ImportCalendar {
-    var meetings: [CalendarMeeting]
+    /// CalendarMeeting 목록 JSON
+    @Arg @FromFile("meetings.json") var meetings: [CalendarMeeting]
 
     public func run(_ ctx: ActionContext) throws {
         let ids = try courseIDs(ctx)
@@ -147,9 +167,16 @@ public struct ImportCalendar {
 
 /// Exams from the calendar's "시험" calendar. An exam on the same day only fills blanks; one on another day is left
 /// alone and reported.
-@Action("import exams", "캘린더의 시험을 시험으로", effect: .creates, done: "시험을 가져왔습니다", phrases: ["캘린더 시험 가져오기", "시험 일정 불러오기"], cli: .manual)
+@Action("import exams", "캘린더의 시험을 시험으로",
+        discussion: """
+        exams.json은 구글 캘린더 "시험" 캘린더에서 읽은 CalendarExam 목록이다. 같은 날 시험은 빈 칸만 채우고, 다른 날이면
+        바꾸지 않고 알린다.
+        """,
+        effect: .creates, done: "시험을 가져왔습니다", examples: ["folio import exams ~/Downloads/exams.json --dry-run"],
+        phrases: ["캘린더 시험 가져오기", "시험 일정 불러오기"])
 public struct ImportExams {
-    var exams: [CalendarExam]
+    /// CalendarExam 목록 JSON
+    @Arg @FromFile("exams.json") var exams: [CalendarExam]
 
     public func run(_ ctx: ActionContext) throws {
         let ids = try courseIDs(ctx)
@@ -169,9 +196,15 @@ public struct ImportExams {
 }
 
 /// Units matched by title: only missing ones are added, and session links are only added.
-@Action("import units", "단원 표를 단원으로", effect: .creates, done: "단원을 가져왔습니다", phrases: ["단원 표 가져오기"], cli: .manual)
+@Action("import units", "단원 표를 단원으로",
+        discussion: """
+        파일마다 {"course": <과목 폴더 이름>, "units": [{"title", "sessions": ["11-03"], "children"}]}. 제목으로 맞춰
+        없는 단원만 더하고, 회차 연결은 더하기만 한다.
+        """,
+        effect: .creates, done: "단원을 가져왔습니다", examples: ["folio import units ~/Downloads/EC4207-units.json --dry-run"], phrases: ["단원 표 가져오기"])
 public struct ImportUnits {
-    var files: [UnitFile]
+    /// 단원 JSON
+    @Arg @FromFile("units.json", perItem: true) var files: [UnitFile]
 
     public func run(_ ctx: ActionContext) throws {
         let ids = try courseIDs(ctx)
@@ -191,9 +224,11 @@ public struct ImportUnits {
 
 /// Graduation requirement categories into catalog.json, and the student's admission year and programs into
 /// transcript.json.
-@Action("import requirements", "졸업 요건 분류와 학생 정보", done: "졸업 요건을 가져왔습니다", phrases: ["졸업 요건 가져오기"], cli: .manual)
+@Action("import requirements", "졸업 요건 분류와 학생 정보", discussion: "강의 코드 표에 없는 코드가 있으면 실행하지 않는다(종료 코드 4).",
+        done: "졸업 요건을 가져왔습니다", examples: ["folio import requirements ~/Downloads/requirements.json --dry-run"], phrases: ["졸업 요건 가져오기"])
 public struct ImportRequirements {
-    var file: RequirementFile
+    /// RequirementFile JSON
+    @Arg @FromFile("requirements.json") var file: RequirementFile
 
     public func run(_ ctx: ActionContext) throws {
         let catalog = try ctx.catalog()
@@ -228,9 +263,15 @@ public struct ImportRequirements {
 
 /// A year's handbook (학사편람) area table into catalog.json, replacing the same year. With `accept`, the suggested
 /// categories are set on the courses too; otherwise they wait for approval in the app.
-@Action("import handbook", "학사편람 분류 표", done: "학사편람을 가져왔습니다", phrases: ["학사편람 가져오기"], cli: .manual)
+@Action("import handbook", "학사편람 분류 표",
+        discussion: "같은 해 표는 바꾼다. 과목의 분류 제안을 보여 주며, 앱의 졸업 요건 화면에서 승인하거나 --accept로 바로 적용한다.",
+        done: "학사편람을 가져왔습니다",
+        examples: ["folio import handbook ~/Downloads/handbook-2023.json --dry-run", "folio import handbook ~/Downloads/handbook-2023.json --accept"],
+        phrases: ["학사편람 가져오기"])
 public struct ImportHandbook {
-    var handbook: Handbook
+    /// Handbook JSON
+    @Arg @FromFile("handbook.json") var handbook: Handbook
+    /// 분류 제안을 과목에 바로 적용
     var accept: Bool = false
 
     public func run(_ ctx: ActionContext) throws {

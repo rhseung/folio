@@ -112,7 +112,8 @@ public struct SemesterSet {
 }
 
 /// Creates the course folder `<code><number> <title>` with its course.json.
-@Action("course add", "과목 추가. 과목 폴더와 course.json을 만든다", effect: .creates, done: "과목 '{title}'을(를) 추가했습니다", phrases: ["과목 추가", "수강 신청한 과목", "새 과목"], cli: .manual)
+@Action("course add", "과목 추가. 과목 폴더와 course.json을 만든다", effect: .creates, done: "과목 '{title}'을(를) 추가했습니다", phrases: ["과목 추가", "수강 신청한 과목", "새 과목"],
+        cli: .manual(reason: "학기를 빼면 지금 학기로 정한다. 생성한 명령은 빠진 항목을 지금 것으로 채우지 않는다"))
 public struct CourseAdd {
     @New var id: Course.ID
     var semester: Semester.ID
@@ -148,7 +149,8 @@ public struct CourseAdd {
 
 /// course.json is the source of truth; the folder follows it. The rename goes to `moves.jsonl` so `cleanup undo` can
 /// reverse it.
-@Action("course rename", "과목 이름, 코드, 번호 바꾸기. 폴더 이름도 바뀌므로 확인을 받는다", effect: .moves, confirm: "과목 '{course}'의 폴더 이름을 바꿉니다.", done: "과목 '{course}'의 이름을 바꿨습니다", phrases: ["과목 이름 변경", "과목 코드 변경"], cli: .manual)
+@Action("course rename", "과목 이름, 코드, 번호 바꾸기. 폴더 이름도 바뀌므로 확인을 받는다", effect: .moves, confirm: "과목 '{course}'의 폴더 이름을 바꿉니다.", done: "과목 '{course}'의 이름을 바꿨습니다", phrases: ["과목 이름 변경", "과목 코드 변경"],
+        cli: .manual(reason: "준 것만 바꾸도록 지금 과목의 이름, 코드, 번호로 빈 칸을 채운다. 액션은 앱 시트처럼 전체 값을 받는다"))
 public struct CourseRename {
     @Arg var course: Course.ID
     var title: String
@@ -182,8 +184,8 @@ public struct CourseRename {
     }
 }
 
-/// The command reads names (grades, people, categories) into ids, so it is written by hand.
-@Action("course set", "과목의 학점, 평가 방식, 색, 아이콘, 성적, 교수, 분류, 학과 인정 바꾸기. 준 것만 바꾼다", done: "과목 '{course}'을(를) 바꿨습니다", phrases: ["교수님", "교수 이름", "학점 수정", "학점 바꾸기", "받은 성적", "학점 변경", "과목 색", "교수 지정", "성적 입력", "평가 방식"], cli: .manual)
+@Action("course set", "과목의 학점, 평가 방식, 색, 아이콘, 성적, 교수, 분류, 학과 인정 바꾸기. 준 것만 바꾼다", done: "과목 '{course}'을(를) 바꿨습니다", phrases: ["교수님", "교수 이름", "학점 수정", "학점 바꾸기", "받은 성적", "학점 변경", "과목 색", "교수 지정", "성적 입력", "평가 방식"],
+        cli: .manual(reason: "입력이 바꿀 항목(Field)의 목록이라, 옵션마다 항목 하나를 만들고 색 프리셋과 none을 검사한다"))
 public struct CourseSet {
     public enum Field: Codable, Sendable, Equatable {
         case memo(String), credits(Double), gradingMode(GradingMode), instructors([UUID]), categories([UUID]), color(String), icon(String?),
@@ -220,7 +222,8 @@ public struct CourseSet {
     }
 }
 
-@Action("requirement set", "졸업 요건과 학생 정보 바꾸기. 준 것만 바꾼다", done: "졸업 요건을 바꿨습니다", phrases: ["복수전공 추가", "부전공", "전공 추가", "입학 연도", "전공 선언", "복수전공"], cli: .manual)
+@Action("requirement set", "졸업 요건과 학생 정보 바꾸기. 준 것만 바꾼다", done: "졸업 요건을 바꿨습니다", phrases: ["복수전공 추가", "부전공", "전공 추가", "입학 연도", "전공 선언", "복수전공"],
+        cli: .manual(reason: "준 것만 바꾸도록 지금 졸업 요건을 읽어 고치고, --program을 <종류>:<코드>로 읽는다. 액션은 요건 전체를 받는다"))
 public struct GraduationSet {
     var rule: GraduationRule
 
@@ -234,7 +237,7 @@ public struct GraduationSet {
 /// the others untouched.
 @Action("requirement accept", "학사편람의 분류 제안 받아들이기. 여러 과목이면 확인을 받는다",
         confirm: "과목 {courses}의 분류를 학사편람대로 바꿉니다.", done: "과목 {courses}의 분류를 학사편람대로 바꿨습니다",
-        phrases: ["학사편람 분류 적용", "분류 제안 적용", "제안 모두 적용"], cli: .manual)
+        phrases: ["학사편람 분류 적용", "분류 제안 적용", "제안 모두 적용"], cli: .manual(reason: "과목을 빼면 졸업 요건 검사가 제안한 과목을 모두 고른다"))
 public struct RequirementAccept {
     /// 과목
     @Arg var courses: [Course.ID]
@@ -253,9 +256,12 @@ public struct RequirementAccept {
 }
 
 /// Replaces catalog.json's tables; rows that changed are stamped as edited from this device. Unknown keys are kept.
-@Action("catalog set", "catalog.json을 파일 내용으로 바꾸기. 바뀐 행만 수정 시각이 바뀐다", done: "카탈로그를 바꿨습니다", phrases: ["카탈로그 수정"], cli: .manual)
+@Action("catalog set", "catalog.json을 파일 내용으로 바꾸기. 바뀐 행만 수정 시각이 바뀐다",
+        discussion: "`folio catalog show --json`으로 받은 파일을 고쳐서 넣는다. 모르는 필드는 남는다.",
+        done: "카탈로그를 바꿨습니다", examples: ["folio catalog set --file catalog.json --dry-run"], phrases: ["카탈로그 수정"])
 public struct CatalogSet {
-    var catalog: Catalog
+    /// catalog.json 형식의 파일
+    @CLIName("file") @FromFile("path") var catalog: Catalog
 
     public func run(_ ctx: ActionContext) throws {
         try ctx.editCatalog { old in
@@ -278,7 +284,8 @@ public struct CatalogSet {
     }
 }
 
-@Action("settings set", "설정 하나를 바꾸거나 settings.json 전체를 파일 내용으로 바꾸기", done: "설정을 바꿨습니다", phrases: ["설정 변경", "하루 경계", "복습 간격", "알림 시간"], cli: .manual)
+@Action("settings set", "설정 하나를 바꾸거나 settings.json 전체를 파일 내용으로 바꾸기", done: "설정을 바꿨습니다", phrases: ["설정 변경", "하루 경계", "복습 간격", "알림 시간"],
+        cli: .manual(reason: "<키 경로> <값>으로 지금 설정의 한 값을 바꾸거나 --file로 전체를 바꾼다. 액션은 설정 전체를 받는다"))
 public struct SettingsSet {
     var settings: Settings
 

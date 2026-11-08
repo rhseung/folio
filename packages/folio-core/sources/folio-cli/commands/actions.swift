@@ -15,6 +15,9 @@ struct ActionsCommand: ParsableCommand {
         var action: String
         var command: String
         var hasCommand: Bool
+        /// False when the command is written by hand, which then needs `manualReason`.
+        var generated: Bool
+        var manualReason: String?
         var screens: [String]
         var equivalenceTest: Bool
     }
@@ -37,11 +40,13 @@ struct ActionsCommand: ParsableCommand {
             // `exam scope --taught`: a flag of an existing command counts as that command.
             let path = type.command.components(separatedBy: " --")[0]
             return Row(action: name, command: type.command, hasCommand: commands.contains(path),
+                       generated: type.spec.generated, manualReason: type.spec.manualReason,
                        screens: app.filter { $0.1.contains(call) }.map { ($0.0 as NSString).deletingPathExtension },
                        equivalenceTest: tests.contains(call))
         }
         let writes = Self.directWrites(app)
-        let passed = rows.allSatisfy { $0.hasCommand && $0.equivalenceTest } && writes.isEmpty
+        let unexplained = rows.filter { !$0.generated && ($0.manualReason ?? "").isEmpty }
+        let passed = rows.allSatisfy { $0.hasCommand && $0.equivalenceTest } && writes.isEmpty && unexplained.isEmpty
         if g.json {
             try printJSON(Report(actions: rows, directWrites: writes, passed: passed))
         } else {
@@ -53,8 +58,10 @@ struct ActionsCommand: ParsableCommand {
             }
             t.print()
             for w in writes { say("✗".styled(.red) + " " + String(localized: .actionsDirectWrite(w))) }
+            for r in unexplained { say("✗".styled(.red) + " " + String(localized: .actionsNoReason(r.command))) }
             let n = rows.count
             say([String(localized: .actionsSummaryActions(n)), String(localized: .actionsSummaryCommands(rows.filter(\.hasCommand).count, n)),
+                 String(localized: .actionsSummaryGenerated(rows.filter(\.generated).count, n)),
                  String(localized: .actionsSummaryTests(rows.filter(\.equivalenceTest).count, n)), String(localized: .actionsSummaryWrites(writes.count))].joined(separator: " · ").styled(.dim))
         }
         if check, !passed { throw ExitCode(Exit.coverage.rawValue) }

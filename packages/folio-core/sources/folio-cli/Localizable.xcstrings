@@ -40,7 +40,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "--check는 명령이 없는 액션, 동등성 테스트가 없는 액션, 앱 코드에서 액션을 거치지 않고 파일을 바꾸는 곳이 있으면\n종료 코드 7로 끝난다. 액션 밖 쓰기가 맞는 곳(녹음, 대화, 공부 시간 기록)은 그 줄이나 바로 윗줄에\n`// folio:not-an-action <이유>`를 단다. 저장소 안에서 실행해야 한다.\n\n예시:\n  folio actions\n  folio actions --check --json\n  folio actions --schema"
+            "value": "--check는 명령이 없는 액션, 동등성 테스트가 없는 액션, 이유(cli: .manual(reason:)) 없이 손으로 짠 명령,\n앱 코드에서 액션을 거치지 않고 파일을 바꾸는 곳이 있으면 종료 코드 7로 끝난다. 액션 밖 쓰기가 맞는 곳(녹음, 대화, 공부 시간 기록)은 그 줄이나 바로 윗줄에\n`// folio:not-an-action <이유>`를 단다. 저장소 안에서 실행해야 한다.\n\n예시:\n  folio actions\n  folio actions --check --json\n  folio actions --schema"
           }
         }
       }
@@ -562,28 +562,6 @@
         }
       }
     },
-    "backup.create.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "오늘 백업을 만든다"
-          }
-        }
-      }
-    },
-    "backup.create.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "설정의 백업 폴더(기본 ~/Backups/Folio/auto)에 오늘 백업을 만든다. GIST 폴더와 같은 디스크면 GIST 전체를 APFS 복제로 Folio-<날짜> 폴더에 떠서 바뀐 파일만큼만 공간을 쓴다. iCloud에만 있는 파일은 내려받지 않고 건너뛴다. 다른 디스크면 GIST의 .folio와 각 과목의 Notes, Ink, .folio를 Folio-<날짜>.zip으로 묶는다.\n오늘 백업이 있으면 바꾼다. 보관 기간이 지난 백업은 지운다. GIST 폴더는 바뀌지 않는다.\n\n예시:\n  folio backup create --dry-run\n  folio backup create"
-          }
-        }
-      }
-    },
     "backup.list.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -628,39 +606,6 @@
         }
       }
     },
-    "backup.restore.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "한 과목을 백업에서 새 폴더로 꺼낸다"
-          }
-        }
-      }
-    },
-    "backup.restore.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목을 백업 폴더 옆 restored 폴더에 새로 꺼낸다. 복제 백업이면 과목 폴더 전체, zip 백업이면 Notes, Ink, .folio를 꺼낸다. GIST 폴더는 건드리지 않으니 비교해서 직접 옮긴다.\n\n예시:\n  folio backup restore EC4207 2026-10-27 --dry-run\n  folio backup restore EC4207 2026-10-27"
-          }
-        }
-      }
-    },
-    "backup.restore.help.day": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "백업 날짜. 2026-10-27"
-          }
-        }
-      }
-    },
     "catalog.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -668,39 +613,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "catalog.json: 강의 코드, 분류, 평어, 교수"
-          }
-        }
-      }
-    },
-    "catalog.set.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "catalog.json을 파일 내용으로 바꾸기. 바뀐 행만 수정 시각이 바뀐다"
-          }
-        }
-      }
-    },
-    "catalog.set.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "`folio catalog show --json`으로 받은 파일을 고쳐서 넣는다. 모르는 필드는 남는다.\n\n예시:\n  folio catalog set --file catalog.json --dry-run"
-          }
-        }
-      }
-    },
-    "catalog.set.help.file": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "catalog.json 형식의 파일"
           }
         }
       }
@@ -943,17 +855,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "cleanup plan이 만든 파일"
-          }
-        }
-      }
-    },
-    "cleanup.apply.undo-hint": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "  되돌리기: folio cleanup undo %@"
           }
         }
       }
@@ -1222,39 +1123,6 @@
         }
       }
     },
-    "cleanup.undo.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "cleanup apply나 material mv로 옮긴 묶음을 되돌리기"
-          }
-        }
-      }
-    },
-    "cleanup.undo.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "확인을 받는다.\n\n예시:\n  folio cleanup undo 6A1F0C2E-3B4D-4E5F-8A9B-0C1D2E3F4A5B --dry-run"
-          }
-        }
-      }
-    },
-    "cleanup.undo.help.batch": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "묶음 ID"
-          }
-        }
-      }
-    },
     "common.count": {
       "extractionState": "manual",
       "localizations": {
@@ -1317,17 +1185,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "항목 제목이나 UUID"
-          }
-        }
-      }
-    },
-    "common.help.kind": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "종류"
           }
         }
       }
@@ -2443,28 +2300,6 @@
         }
       }
     },
-    "exam.plan.rm.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "공부 계획 항목 지우기. 확인을 받는다"
-          }
-        }
-      }
-    },
-    "exam.plan.rm.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio exam plan rm EC4207/중간고사 \"트리 단원 복습\" --dry-run"
-          }
-        }
-      }
-    },
     "exam.scope.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -3213,39 +3048,6 @@
         }
       }
     },
-    "import.calendar.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "캘린더의 수업을 회차로"
-          }
-        }
-      }
-    },
-    "import.calendar.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "meetings.json은 CalendarMeeting 목록이다. 이미 있는 회차는 빈 시각만 채우고, 범위 안에서 수업이 없는 날의\n회차는 휴강으로 표시하며, 수업 제목과 같은 이름의 복습 노트를 연결한다. lab 번호가 있는 수업은 그 실험의 단원(없으면\nLab<번호> <수업 제목>으로 만든다)에 연결한다.\n\n예시:\n  folio import calendar ~/Downloads/meetings.json --dry-run"
-          }
-        }
-      }
-    },
-    "import.calendar.help.file": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CalendarMeeting 목록 JSON"
-          }
-        }
-      }
-    },
     "import.discussion": {
       "extractionState": "manual",
       "localizations": {
@@ -3253,182 +3055,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "가져올 파일은 실제 학업 데이터라 저장소에 넣지 않는다. 먼저 --dry-run으로 계획을 보고, 확인한 뒤 실행한다."
-          }
-        }
-      }
-    },
-    "import.exams.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "캘린더의 시험을 시험으로"
-          }
-        }
-      }
-    },
-    "import.exams.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "exams.json은 구글 캘린더 \"시험\" 캘린더에서 읽은 CalendarExam 목록이다. 같은 날 시험은 빈 칸만 채우고, 다른 날이면\n바꾸지 않고 알린다.\n\n예시:\n  folio import exams ~/Downloads/exams.json --dry-run"
-          }
-        }
-      }
-    },
-    "import.exams.help.file": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "CalendarExam 목록 JSON"
-          }
-        }
-      }
-    },
-    "import.handbook.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "학사편람 분류 표"
-          }
-        }
-      }
-    },
-    "import.handbook.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "같은 해 표는 바꾼다. 과목의 분류 제안을 보여 주며, 앱의 졸업 요건 화면에서 승인하거나 --accept로 바로 적용한다.\n\n예시:\n  folio import handbook ~/Downloads/handbook-2023.json --dry-run\n  folio import handbook ~/Downloads/handbook-2023.json --accept"
-          }
-        }
-      }
-    },
-    "import.handbook.help.accept": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "분류 제안을 과목에 바로 적용"
-          }
-        }
-      }
-    },
-    "import.notes.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노션 강의 정리와 점수를 노트, 회차, 성적 항목으로"
-          }
-        }
-      }
-    },
-    "import.notes.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "덤프 폴더는 과목마다 <노션 페이지 ID>/index.json, notes/, assets/를 가진다. 노트 ID가 노션 페이지 ID라서 다시\n실행해도 중복되지 않고, 기존 항목에는 덧붙이기만 한다.\n\n예시:\n  folio import notes ~/Downloads/notion-dump --dry-run"
-          }
-        }
-      }
-    },
-    "import.notes.help.folder": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "덤프 폴더"
-          }
-        }
-      }
-    },
-    "import.notion.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노션 학기, 강의, 성적을 transcript.json, catalog.json, course.json으로"
-          }
-        }
-      }
-    },
-    "import.notion.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "export.json은 Notion MCP로 읽은 내용을 NotionExport 형식으로 담은 파일이다. transcript.json이나 catalog.json이\n이미 있으면 실행하지 않고(종료 코드 4), course.json이 있는 과목 폴더는 건너뛴다. 학기별 GPA를 노션 값과 비교한다.\n\n예시:\n  folio import notion ~/Downloads/export.json --dry-run"
-          }
-        }
-      }
-    },
-    "import.requirements.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "졸업 요건 분류와 학생 정보"
-          }
-        }
-      }
-    },
-    "import.requirements.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "강의 코드 표에 없는 코드가 있으면 실행하지 않는다(종료 코드 4).\n\n예시:\n  folio import requirements ~/Downloads/requirements.json --dry-run"
-          }
-        }
-      }
-    },
-    "import.units.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원 표를 단원으로"
-          }
-        }
-      }
-    },
-    "import.units.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "파일마다 {\"course\": <과목 폴더 이름>, \"units\": [{\"title\", \"sessions\": [\"11-03\"], \"children\"}]}. 제목으로 맞춰\n없는 단원만 더하고, 회차 연결은 더하기만 한다.\n\n예시:\n  folio import units ~/Downloads/EC4207-units.json --dry-run"
-          }
-        }
-      }
-    },
-    "import.units.help.files": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원 JSON. 여러 개"
           }
         }
       }
@@ -3730,50 +3356,6 @@
         }
       }
     },
-    "material.mv.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자료 파일을 옮기거나 이름 바꾸기. ID와 연결은 그대로"
-          }
-        }
-      }
-    },
-    "material.mv.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "moves.jsonl에 남겨서 folio cleanup undo로 되돌릴 수 있다. 확인을 받는다.\n\n예시:\n  folio material mv EC4207/Seating.pdf Exams/Midterm/자리.pdf --dry-run"
-          }
-        }
-      }
-    },
-    "material.mv.help.to": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 경로. 과목 폴더 기준"
-          }
-        }
-      }
-    },
-    "material.mv.undo": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "  되돌리기: folio cleanup undo %@"
-          }
-        }
-      }
-    },
     "material.relink.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -3884,83 +3466,6 @@
         }
       }
     },
-    "material.status.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자료의 상태 바꾸기. 여러 개면 확인을 받는다"
-          }
-        }
-      }
-    },
-    "material.status.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio material status ignored EC4207/Seating.pdf\n  folio material status classified EC4207/Problems.pdf Guideline.pdf"
-          }
-        }
-      }
-    },
-    "material.status.help.materials": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "<과목>/<자료>. 둘째부터는 자료만 써도 된다"
-          }
-        }
-      }
-    },
-    "material.status.missing": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자료를 주세요"
-          }
-        }
-      }
-    },
-    "material.track.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목 폴더의 새 파일을 등록하고 과제 폴더에 과제를 만든다"
-          }
-        }
-      }
-    },
-    "material.track.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "옮기거나 이름을 바꾸지 않는다. 과목을 빼면 모든 과목에 한다. 지난 학기의 새 과제는 제출함으로 둔다.\n\n예시:\n  folio material track EC4207\n  folio material track --dry-run"
-          }
-        }
-      }
-    },
-    "material.track.help.course": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목. 빼면 모든 과목"
-          }
-        }
-      }
-    },
     "mcp.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -4038,105 +3543,6 @@
         }
       }
     },
-    "note.add.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Notes 폴더에 마크다운이나 LaTeX 노트 만들기. 본문을 주지 않으면 종류의 템플릿"
-          }
-        }
-      }
-    },
-    "note.add.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio note add EC4207 \"매칭 정리\" --kind topic --unit 매칭\n  folio note add EC4207 \"매칭 정리\" --format tex\n  echo \"# 메모\" | folio note add EC4207 \"시험 메모\" --body -"
-          }
-        }
-      }
-    },
-    "note.add.help.body": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "본문 파일. -이면 표준 입력"
-          }
-        }
-      }
-    },
-    "note.add.help.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "제목. 파일 이름이 된다"
-          }
-        }
-      }
-    },
-    "note.link.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트의 종류와 회차, 시험, 단원 연결 정하기"
-          }
-        }
-      }
-    },
-    "note.link.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "러프 노트와 복습 노트는 --session, 시험 종합 정리는 --exam, 단원 노트(topic)는 --unit을 받는다. 종류를 바꾸면 예전 연결은 떨어진다.\n복습 노트는 --session의 회차를 옮기지 않고 더한다. 여러 회차를 한 번에 더할 때는 note link-sessions, 회차 하나를 뗄 때는 note unlink-session을 쓴다.\n\n예시:\n  folio note link EC4207/09-08 --kind review --session 09-08\n  folio note link \"EC4207/매칭 정리\" --kind topic --unit 매칭 --unit \"이분 그래프\""
-          }
-        }
-      }
-    },
-    "note.link.help.exam": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "시험"
-          }
-        }
-      }
-    },
-    "note.link.help.session": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "회차"
-          }
-        }
-      }
-    },
-    "note.link.help.unit": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원. 여러 번 줄 수 있다"
-          }
-        }
-      }
-    },
     "note.list.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -4199,50 +3605,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "회차"
-          }
-        }
-      }
-    },
-    "note.mv.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트 이름 바꾸기나 Notes 안의 다른 폴더로 옮기기. 노트의 첫 제목과 다른 노트의 링크도 따라 바뀐다"
-          }
-        }
-      }
-    },
-    "note.mv.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 이름은 Notes 폴더 기준이고 확장자는 노트 그대로다. 과목의 다른 노트가 같은 이름이면 뒤에 \" 2\"를 붙인다. course.json의 노트 경로, 노트의 첫 제목(아직 예전 이름일 때), 다른 노트의 [[제목]] 링크와 [[note:<ID>|제목]]의 이름(아직 예전 이름일 때)이 함께 바뀌고, 다른 폴더로 옮기면 노트 안의 상대 경로(그림)도 새 자리에 맞춘다. 이동은 moves.jsonl에 남고 folio cleanup undo로 함께 되돌린다. .tex 노트는 Folio가 빌드한 PDF(Study/<제목>.pdf)도 같은 묶음으로 새 이름을 따라가고, 새 이름의 PDF가 이미 있으면 덮어쓰지 않고 그대로 둔다. Folio가 만들지 않은 같은 이름의 PDF는 옮기지 않는다. 확인을 받는다.\n\n예시:\n  folio note mv \"EC4207/시험 메모\" \"중간 대비\" --dry-run\n  folio note mv EC4207/09-08 정리/09-08"
-          }
-        }
-      }
-    },
-    "note.mv.help.to": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 이름. Notes 폴더 기준이고 하위 폴더를 앞에 쓴다. 예: 정리/증명"
-          }
-        }
-      }
-    },
-    "note.mv.undo": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "  되돌리기: folio cleanup undo %@"
           }
         }
       }
@@ -4621,61 +3983,6 @@
         }
       }
     },
-    "quiz.add.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "JSON 파일의 카드를 넣거나 같은 ID의 카드를 바꾸기"
-          }
-        }
-      }
-    },
-    "quiz.add.bad-cards": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "카드 형식이 맞지 않습니다: %@"
-          }
-        }
-      }
-    },
-    "quiz.add.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "파일은 course.json과 같은 필드 이름을 쓰는 QuizCard 배열이다. 단원을 옮긴 카드는 --moved-from에 예전 단원을 준다.\n\n예시:\n  folio quiz add EC4207 --file cards.json\n  folio quiz add EC4207 --file - --moved-from 매칭 < card.json"
-          }
-        }
-      }
-    },
-    "quiz.add.help.file": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "카드 JSON 파일. -이면 표준 입력"
-          }
-        }
-      }
-    },
-    "quiz.add.help.moved-from": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "카드가 떠난 단원"
-          }
-        }
-      }
-    },
     "quiz.list.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -4797,28 +4104,6 @@
         }
       }
     },
-    "quiz.rm.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "카드 지우기. 풀이 기록은 남는다"
-          }
-        }
-      }
-    },
-    "quiz.rm.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예시:\n  folio quiz rm EC4207/매칭 3F2A9C1E-0000-4000-8000-000000000001"
-          }
-        }
-      }
-    },
     "read-json.bad-format": {
       "extractionState": "manual",
       "localizations": {
@@ -4848,39 +4133,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "강의 녹음"
-          }
-        }
-      }
-    },
-    "recording.retitle.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예전 이름(3주차-1)의 녹음 파일을 날짜 이름(11-03(화))으로 바꾸기. 받아쓰기 파일도 함께 바뀐다"
-          }
-        }
-      }
-    },
-    "recording.retitle.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "회차에 연결된 녹음 중 파일 이름이 아직 `3주차-1.m4a`, `3주차-1 2.m4a`인 것만 그 수업 날짜(`11-03(화).m4a`)로 바꾼다. 같은 날 녹음이 둘이면 뒤에 \" 2\"를 붙인다. 직접 지은 이름과 회차 없는 녹음은 그대로 둔다. 오디오와 받아쓰기(.transcript.json)는 moves.jsonl에 한 묶음으로 남고, folio cleanup undo로 함께 되돌린다. 실제 폴더에서는 folio backup create로 백업한 뒤 --dry-run으로 먼저 본다.\n\n예시:\n  folio recording retitle --dry-run\n  folio recording retitle EC4207"
-          }
-        }
-      }
-    },
-    "recording.retitle.help.course": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목. 빼면 모든 과목"
           }
         }
       }
@@ -6414,50 +5666,6 @@
         }
       }
     },
-    "session.rm.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "아무것도 연결되지 않은 회차 지우기"
-          }
-        }
-      }
-    },
-    "session.rm.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트, 녹음, 출석, 자료, 단원이 연결된 회차는 지우지 않는다(종료 코드 4). 수업이 없던 날이면 session set --kind cancelled로 휴강 표시한다.\n확인을 받는다.\n\n예시:\n  folio session rm EC4207/10-30 --dry-run"
-          }
-        }
-      }
-    },
-    "session.rm.help.sessions": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "<과목>/<회차>. 같은 과목이면 둘째부터 회차만 써도 된다"
-          }
-        }
-      }
-    },
-    "session.rm.missing": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "지울 회차를 주세요"
-          }
-        }
-      }
-    },
     "session.show.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -7415,39 +6623,6 @@
         }
       }
     },
-    "material.kind.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "자료의 종류(문제, 제출물, 해설 등) 바꾸기. 여러 개면 확인을 받는다"
-          }
-        }
-      }
-    },
-    "material.kind.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과제 폴더의 파일은 종류가 없으면 이름으로 짐작한다(HW3-이름.pdf는 제출물, 나머지는 문제).\n\n예시:\n  folio material kind submission EC4207/26h3.pdf\n  folio material kind problem EC4207/26h3.pdf"
-          }
-        }
-      }
-    },
-    "material.kind.help.kind": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "종류"
-          }
-        }
-      }
-    },
     "material.write.abstract": {
       "extractionState": "manual",
       "localizations": {
@@ -7499,105 +6674,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "읽을 때의 contentHash(material show --json). 다르면 쓰지 않는다"
-          }
-        }
-      }
-    },
-    "note.add.help.format": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "파일 형식. markdown(.md) 또는 tex(.tex)"
-          }
-        }
-      }
-    },
-    "note.migrate.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트 frontmatter의 프로퍼티를 course.json으로 옮기고 파일에서 지우기. 예전 노트를 한 번 정리한다"
-          }
-        }
-      }
-    },
-    "note.migrate.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Folio가 쓴 키(id, kind, sessionId, unitIds, examId, tags, math)만 옮기고, 다른 키는 파일에 남긴다. course.json에 이미 항목이 있는 노트는 태그를 합치고 나머지는 항목에서 빈 값만 채우며, ID는 항목의 것을 둔다. 실제 폴더에서는 백업한 뒤 --dry-run으로 먼저 본다.\n\n예시:\n  folio note migrate --dry-run\n  folio note migrate EC4207"
-          }
-        }
-      }
-    },
-    "note.migrate.help.course": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목. 빼면 모든 과목"
-          }
-        }
-      }
-    },
-    "note.retitle.abstract": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "예전 이름(10주차-2)의 회차 노트를 날짜와 단원 이름으로 바꾸기. 노트의 첫 제목과 다른 노트의 링크도 따라 바뀐다"
-          }
-        }
-      }
-    },
-    "note.retitle.discussion": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "회차에 연결된 러프 노트와 복습 노트 중 이름이 아직 `10주차-2`, `10주차-2 정리`인 것만 바꾼다. 직접 지은 이름은 그대로 둔다. 이동은 moves.jsonl에 한 묶음으로 남고, folio cleanup undo로 이름과 제목, 링크를 함께 되돌린다. 실제 폴더에서는 folio backup create로 백업한 뒤 --dry-run으로 먼저 본다.\n\n예시:\n  folio note retitle --dry-run\n  folio note retitle EC4207"
-          }
-        }
-      }
-    },
-    "note.retitle.help.course": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과목. 빼면 모든 과목"
-          }
-        }
-      }
-    },
-    "note.retitle.undo": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "  되돌리기: folio cleanup undo %@"
-          }
-        }
-      }
-    },
-    "note.link.help.math": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수식 문법(latex, asciimath). 빼면 그대로"
           }
         }
       }
@@ -8137,6 +7213,50 @@
           "stringUnit": {
             "state": "translated",
             "value": "단원. 여러 번 쓸 수 있고, 주면 회차의 단원이 이것으로 바뀐다"
+          }
+        }
+      }
+    },
+    "resolve.not-batch": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "묶음 ID가 아닙니다: %@"
+          }
+        }
+      }
+    },
+    "perform.undo-hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "  되돌리기: folio cleanup undo %@"
+          }
+        }
+      }
+    },
+    "actions.no-reason": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: 손으로 짠 명령의 이유가 없습니다. cli: .manual(reason:)에 적어 주세요"
+          }
+        }
+      }
+    },
+    "actions.summary.generated": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "생성 %lld/%lld"
           }
         }
       }

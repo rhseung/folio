@@ -15,20 +15,29 @@ func note(_ ctx: ActionContext, course: UUID, id: UUID) throws -> NoteFile {
     return note
 }
 
-/// A note in `Notes/` with `body`, or the template for its kind and format. The command reads the body from a file or
-/// standard input, so it is written by hand.
+/// A note in `Notes/` with `body`, or the template for its kind and format.
 @Action("note add", "Notes 폴더에 마크다운이나 LaTeX 노트 만들기. 본문을 주지 않으면 종류의 템플릿", effect: .creates, done: "노트 '{title}'을(를) 만들었습니다",
-        phrases: ["노트 만들기", "새 노트", "정리 노트 쓰기"], cli: .manual)
+        examples: [#"folio note add EC4207 "매칭 정리" --kind topic --unit 매칭"#, #"folio note add EC4207 "매칭 정리" --format tex"#,
+                   ##"echo "# 메모" | folio note add EC4207 "시험 메모" --body -"##],
+        phrases: ["노트 만들기", "새 노트", "정리 노트 쓰기"])
 public struct NoteAdd {
     @New var id: Note.ID
+    /// 과목
     @Arg var course: Course.ID
+    /// 제목. 파일 이름이 된다
     @Arg var title: String
+    /// 종류
     var kind: NoteKind = .free
+    /// 파일 형식. markdown(.md) 또는 tex(.tex)
     var format: NoteFormat = .markdown
-    var body: String?
+    /// 본문 파일. -이면 표준 입력
+    @FromFile var body: String?
+    /// 회차
     var session: Session.ID?
+    /// 시험
     var exam: Exam.ID?
-    var units: [FolioDomain.Unit.ID] = []
+    /// 단원
+    @CLIName("unit") var units: [FolioDomain.Unit.ID] = []
 
     public func run(_ ctx: ActionContext) throws {
         let title = title.trimmingCharacters(in: .whitespaces)
@@ -78,9 +87,9 @@ struct NoteLinks {
 }
 
 /// Writes the whole file as given. With `expected`, refuses when the file is no longer that text: it was changed
-/// elsewhere since it was read. The command reads the text from a file and checks `--expect` against a hash.
+/// elsewhere since it was read.
 @Action("note write", "노트 파일 전체를 바꾸기. 노트의 프로퍼티는 course.json에 있어 그대로다", done: "노트 '{note}'을(를) 썼습니다",
-        phrases: ["노트 수정", "노트 내용 바꾸기"], cli: .manual)
+        phrases: ["노트 수정", "노트 내용 바꾸기"], cli: .manual(reason: "--expect의 해시를 지금 노트와 비교한 뒤 그 원문을 expected로 넘긴다"))
 public struct NoteWrite {
     @Arg var course: Course.ID
     @Arg var note: Note.Path
@@ -97,10 +106,10 @@ public struct NoteWrite {
 
 /// Changes part of a note without sending the whole text, as `note write` must. Each `old` has to occur exactly
 /// once in the text the replacements before it left, which also does `expected`'s job: text changed elsewhere no
-/// longer matches. The command pairs `--old` and `--new` by order, so it is written by hand.
+/// longer matches.
 @Action("note edit", "노트 일부 고치기. 찾아 바꾸거나 끝에 붙인다. 노트 전체를 다시 쓰지 않는다", done: "노트 '{note}'을(를) 고쳤습니다",
         examples: [#"folio note edit EC4207/09-08 --old "non-adjacent" --new "서로 이웃하지 않는""#, #"folio note edit EC4207/09-08 --append "질문: 최대 매칭은 어떻게 찾나""#],
-        phrases: ["노트 일부 수정", "노트에 덧붙이기", "노트 끝에 추가", "노트 찾아 바꾸기"], cli: .manual)
+        phrases: ["노트 일부 수정", "노트에 덧붙이기", "노트 끝에 추가", "노트 찾아 바꾸기"], cli: .manual(reason: "--old와 --new를 준 순서대로 짝지어 바꿀 목록을 만든다"))
 public struct NoteEdit {
     public struct Replacement: Codable, Sendable, Equatable {
         public var old: String
@@ -175,16 +184,27 @@ public struct NoteAdopt {
 }
 
 /// One kind at a time: becoming another kind lets go of the session or exam the old one belonged to. Writes the
-/// note's entry and the session's note link together. The command takes each unit as `--unit`, so it is written by hand.
-@Action("note link", "노트의 종류와 회차, 시험, 단원 연결, 수식 문법 정하기", done: "노트 '{note}'을(를) 연결했습니다",
-        phrases: ["노트 연결", "노트 종류"], cli: .manual)
+/// note's entry and the session's note link together.
+@Action("note link", "노트의 종류와 회차, 시험, 단원 연결, 수식 문법 정하기",
+        discussion: """
+        러프 노트와 복습 노트는 --session, 시험 종합 정리는 --exam, 단원 노트(topic)는 --unit을 받는다. 종류를 바꾸면 예전 연결은 떨어진다.
+        복습 노트는 --session의 회차를 옮기지 않고 더한다. 여러 회차를 한 번에 더할 때는 note link-sessions, 회차 하나를 뗄 때는 note unlink-session을 쓴다.
+        """,
+        done: "노트 '{note}'을(를) 연결했습니다",
+        examples: ["folio note link EC4207/09-08 --kind review --session 09-08", #"folio note link "EC4207/매칭 정리" --kind topic --unit 매칭 --unit "이분 그래프""#],
+        phrases: ["노트 연결", "노트 종류"])
 public struct NoteLink {
     @Arg var course: Course.ID
+    /// 노트
     @Arg var note: Note.ID
+    /// 종류
     var kind: NoteKind
+    /// 회차
     var session: Session.ID?
+    /// 시험
     var exam: Exam.ID?
-    var units: [FolioDomain.Unit.ID] = []
+    /// 단원
+    @CLIName("unit") var units: [FolioDomain.Unit.ID] = []
     /// 수식 문법. 빼면 그대로
     var math: MathSyntax?
 
@@ -253,10 +273,11 @@ public struct NoteUnlinkSession {
 /// Moves Folio's properties out of the notes' frontmatter into course.json, once, for notes from before #206. The
 /// entries are saved before any file is touched, so a run that stops halfway is finished by running it again. A note
 /// that already has an entry gives it what the entry lacks (`merge`) before its frontmatter goes. A link to a session, unit or exam that is gone is dropped, as is a second
-/// note of one kind on a session: the model would refuse the whole file for either. The course may be left out, which generated commands can't take, so the command is
-/// written by hand.
+/// note of one kind on a session: the model would refuse the whole file for either.
 @Action("note migrate", "노트 frontmatter의 프로퍼티를 course.json으로 옮기고 파일에서 지우기. 예전 노트를 한 번 정리한다",
-        done: "노트 프로퍼티를 course.json으로 옮겼습니다", phrases: ["노트 프로퍼티 옮기기", "frontmatter 정리"], cli: .manual)
+        discussion: "Folio가 쓴 키(id, kind, sessionId, unitIds, examId, tags, math)만 옮기고, 다른 키는 파일에 남긴다. course.json에 이미 항목이 있는 노트는 태그를 합치고 나머지는 항목에서 빈 값만 채우며, ID는 항목의 것을 둔다. 실제 폴더에서는 백업한 뒤 --dry-run으로 먼저 본다.",
+        done: "노트 프로퍼티를 course.json으로 옮겼습니다", examples: ["folio note migrate --dry-run", "folio note migrate EC4207"],
+        phrases: ["노트 프로퍼티 옮기기", "frontmatter 정리"])
 public struct NoteMigrate {
     /// 과목. 빼면 모든 과목
     @Arg var course: Course.ID?
@@ -342,10 +363,11 @@ public struct NoteMigrate {
 
 /// Renames the session notes still named `10주차-2` the way `session note` names new ones (#273). The files move as one
 /// `moves.jsonl` batch (`made`), and `cleanup undo` of it turns names, headings and links back. A taken name gets ` 2`.
-/// The course may be left out, which generated commands can't take, so the command is written by hand.
 @Action("note retitle", "예전 이름(10주차-2)의 회차 노트를 날짜와 단원 이름으로 바꾸기. 노트의 첫 제목과 다른 노트의 링크도 따라 바뀐다",
+        discussion: "회차에 연결된 러프 노트와 복습 노트 중 이름이 아직 `10주차-2`, `10주차-2 정리`인 것만 바꾼다. 직접 지은 이름은 그대로 둔다. 이동은 moves.jsonl에 한 묶음으로 남고, folio cleanup undo로 이름과 제목, 링크를 함께 되돌린다. 실제 폴더에서는 folio backup create로 백업한 뒤 --dry-run으로 먼저 본다.",
         effect: .moves, confirm: "회차 노트의 이름을 날짜와 단원으로 바꿉니다.", done: "회차 노트의 이름을 바꿨습니다",
-        phrases: ["노트 이름 날짜로", "예전 노트 이름 바꾸기", "주차 이름 노트"], cli: .manual)
+        examples: ["folio note retitle --dry-run", "folio note retitle EC4207"],
+        phrases: ["노트 이름 날짜로", "예전 노트 이름 바꾸기", "주차 이름 노트"], undoable: true)
 public struct NoteRetitleSessions {
     /// 과목. 빼면 모든 과목
     @Arg var course: Course.ID?
@@ -379,15 +401,18 @@ public struct NoteRetitleSessions {
 
 /// Renames a note or moves it to another folder of Notes/ as `note retitle` renames: one `moves.jsonl` batch (`made`)
 /// that `cleanup undo` turns back, with its entry's path, its heading and the links to it following. `to` is
-/// Notes-relative; a name another note of the course has gets ` 2`, so the app passes the name it showed. The
-/// command prints how to undo the move, so it is written by hand.
-@Action("note mv", "노트 이름 바꾸기나 Notes 안의 다른 폴더로 옮기기. 노트의 첫 제목과 다른 노트의 링크도 따라 바뀐다", effect: .moves,
-        confirm: "노트 {note}을(를) Notes/{to}(으)로 옮깁니다.", done: "노트 {note}을(를) Notes/{to}(으)로 옮겼습니다",
-        phrases: ["노트 이름 바꾸기", "노트 이름 변경", "노트 옮기기", "노트 폴더로"], cli: .manual)
+/// Notes-relative, with or without the note's extension; a name another note of the course has gets ` 2`, so the
+/// app passes the name it showed.
+@Action("note mv", "노트 이름 바꾸기나 Notes 안의 다른 폴더로 옮기기. 노트의 첫 제목과 다른 노트의 링크도 따라 바뀐다",
+        discussion: #"새 이름은 Notes 폴더 기준이고 확장자는 노트 그대로다. 과목의 다른 노트가 같은 이름이면 뒤에 " 2"를 붙인다. course.json의 노트 경로, 노트의 첫 제목(아직 예전 이름일 때), 다른 노트의 [[제목]] 링크와 [[note:<ID>|제목]]의 이름(아직 예전 이름일 때)이 함께 바뀌고, 다른 폴더로 옮기면 노트 안의 상대 경로(그림)도 새 자리에 맞춘다. 이동은 moves.jsonl에 남고 folio cleanup undo로 함께 되돌린다. .tex 노트는 Folio가 빌드한 PDF(Study/<제목>.pdf)도 같은 묶음으로 새 이름을 따라가고, 새 이름의 PDF가 이미 있으면 덮어쓰지 않고 그대로 둔다. Folio가 만들지 않은 같은 이름의 PDF는 옮기지 않는다."#,
+        effect: .moves, confirm: "노트 {note}을(를) Notes/{to}(으)로 옮깁니다.", done: "노트 {note}을(를) Notes/{to}(으)로 옮겼습니다",
+        examples: [#"folio note mv "EC4207/시험 메모" "중간 대비" --dry-run"#, "folio note mv EC4207/09-08 정리/09-08"],
+        phrases: ["노트 이름 바꾸기", "노트 이름 변경", "노트 옮기기", "노트 폴더로"], undoable: true)
 public struct NoteMove {
     @Arg var course: Course.ID
+    /// 노트
     @Arg var note: Note.Path
-    /// Notes-relative, with or without the note's extension: `정리/증명`.
+    /// 새 이름. Notes 폴더 기준이고 하위 폴더를 앞에 쓴다. 예: 정리/증명
     @Arg var to: String
 
     public func run(_ ctx: ActionContext) throws {
@@ -514,12 +539,18 @@ public struct NoteRemove {
 // MARK: Quiz
 
 /// Adds cards or replaces those with the same id. `movedFrom` is the unit an edited card left; it is taken out there
-/// only after the new copy is saved. The command reads the cards from a JSON file.
-@Action("quiz add", "JSON 파일의 카드를 넣거나 같은 ID의 카드를 바꾸기", done: "카드 {cards}을(를) 저장했습니다",
-        phrases: ["카드 만들기", "퀴즈 추가"], cli: .manual)
+/// only after the new copy is saved.
+@Action("quiz add", "JSON 파일의 카드를 넣거나 같은 ID의 카드를 바꾸기",
+        discussion: "파일은 course.json과 같은 필드 이름을 쓰는 QuizCard 배열이다. 단원을 옮긴 카드는 --moved-from에 예전 단원을 준다.",
+        done: "카드 {cards}을(를) 저장했습니다",
+        examples: ["folio quiz add EC4207 --file cards.json", "folio quiz add EC4207 --file - --moved-from 매칭 < card.json"],
+        phrases: ["카드 만들기", "퀴즈 추가"])
 public struct QuizCardSave {
+    /// 과목
     @Arg var course: Course.ID
-    var cards: [QuizCard]
+    /// 카드 JSON 파일. -이면 표준 입력
+    @CLIName("file") @FromFile var cards: [QuizCard]
+    /// 카드가 떠난 단원
     var movedFrom: FolioDomain.Unit.ID?
 
     public func run(_ ctx: ActionContext) throws {
@@ -542,10 +573,12 @@ public struct QuizCardSave {
 
 /// Past attempts stay in the log. The command finds the card by its prompt among the unit's cards.
 @Action("quiz rm", "카드 지우기. 풀이 기록은 남는다", effect: .removes, confirm: "단원 '{unit}'의 카드를 지웁니다. 풀이 기록은 남습니다.",
-        done: "단원 '{unit}'의 카드를 지웠습니다", phrases: ["카드 삭제"], cli: .manual)
+        done: "단원 '{unit}'의 카드를 지웠습니다", examples: ["folio quiz rm EC4207/매칭 3F2A9C1E-0000-4000-8000-000000000001"], phrases: ["카드 삭제"])
 public struct QuizCardRemove {
     @Arg var course: Course.ID
+    /// 단원
     @Arg var unit: FolioDomain.Unit.ID
+    /// 카드 ID 또는 문제 글
     @Arg var card: QuizCard.ID
 
     public func run(_ ctx: ActionContext) throws {
@@ -557,7 +590,8 @@ public struct QuizCardRemove {
 }
 
 @Action("quiz record", "카드 풀이 결과를 기록", effect: .logs, done: "풀이를 기록했습니다",
-        phrases: ["맞았", "틀렸", "맞힘", "퀴즈 풀이", "맞음", "틀림", "카드 결과"], cli: .manual)
+        phrases: ["맞았", "틀렸", "맞힘", "퀴즈 풀이", "맞음", "틀림", "카드 결과"],
+        cli: .manual(reason: "단원 안에서 카드를 찾고, 판정, 채점자, 답으로 풀이 기록(QuizAttemptEvent) 하나를 만든다"))
 public struct QuizRecord {
     @Arg var course: Course.ID
     var attempt: QuizAttemptEvent
@@ -571,9 +605,9 @@ public struct QuizRecord {
     }
 }
 
-/// A new set, or the whole of one with the same id. The command builds the set from problem numbers.
+/// A new set, or the whole of one with the same id.
 @Action("problem-set add", "문제 번호로 문제 묶음 만들기", effect: .creates, done: "문제 묶음을 저장했습니다",
-        phrases: ["문제 묶음 만들기", "연습문제 등록"], cli: .manual)
+        phrases: ["문제 묶음 만들기", "연습문제 등록"], cli: .manual(reason: "제목과 문제 번호로 문제 묶음(ProblemSet) 전체를 만든다"))
 public struct ProblemSetSave {
     @Arg var course: Course.ID
     var set: ProblemSet
@@ -634,7 +668,7 @@ public struct ProblemLinkUnit {
 }
 
 @Action("problem-set record", "문제 풀이 결과를 기록", effect: .logs, done: "풀이를 기록했습니다",
-        phrases: ["풀었", "못 풀", "문제 풀이 결과", "풀었음", "못 풂"], cli: .manual)
+        phrases: ["풀었", "못 풀", "문제 풀이 결과", "풀었음", "못 풂"], cli: .manual(reason: "묶음, 문제 번호, 판정으로 풀이 기록(ProblemAttemptEvent) 하나를 만들고 번호가 묶음에 있는지 본다"))
 public struct ProblemRecord {
     @Arg var course: Course.ID
     var attempt: ProblemAttemptEvent
@@ -675,11 +709,10 @@ public struct ReviewRecord {
 }
 
 /// Marks units as not needing review, one `skip` event each. The time counts only when the unit was open (the review
-/// screen passes when it opened); skipped from a list, nothing was studied. Units may come from several courses, so
-/// the command is written by hand.
+/// screen passes when it opened); skipped from a list, nothing was studied.
 @Action("review skip", "단원을 복습하지 않아도 되는 것으로 표시. 단원을 열어 본 시간이 있으면 공부 시간으로 남긴다. 여러 개면 확인을 받는다", effect: .logs,
         confirm: "단원 {units}의 복습을 건너뜁니다.", done: "단원 {units}을(를) 건너뛰었습니다",
-        phrases: ["복습 안 해도", "복습 빼기", "복습 건너뛰기", "복습 필요 없음"], cli: .manual)
+        phrases: ["복습 안 해도", "복습 빼기", "복습 건너뛰기", "복습 필요 없음"], cli: .manual(reason: "<과목>/<단원>마다 과목이 달라도 되는 대상(Target) 목록을 만든다"))
 public struct ReviewSkip {
     public struct Target: Codable, Sendable, Equatable {
         public var course: UUID

@@ -165,7 +165,7 @@ final class MaterialsModel {
 
     func untrack(_ m: FolioDomain.Material) { workspace.run(MaterialUntrack(course: course.id, material: m.id)) }
     func trash(_ m: FolioDomain.Material) { pending = workspace.ask(MaterialTrash(course: course.id, material: m.id), button: .materialsTrash) }
-    func ignore(_ ids: [UUID]) { pending = workspace.ask(MaterialStatusSet(course: course.id, materials: ids, status: .ignored)) }
+    func ignore(_ ids: [UUID]) { pending = workspace.ask(MaterialStatusSet(course: course.id, status: .ignored, materials: ids)) }
 
     /// A folder's name is all name: a project called `robot.v2` has no extension to keep.
     private func kept(_ m: FolioDomain.Material) -> String { m.isFolder ? "" : (m.path as NSString).pathExtension }
