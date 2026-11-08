@@ -25,7 +25,7 @@ final class QuickAddModel {
     func courseTitle(_ parsed: QuickAdd) -> String? { parsed.courseId.flatMap { workspace.course($0)?.title } }
 
     func due(_ parsed: QuickAdd) -> String? {
-        parsed.due?.formatted(.dateTime.month(.defaultDigits).day().weekday(.abbreviated).hour().minute())
+        parsed.due.map { CourseFile.deadline($0, calendar: workspace.calendar) }
     }
 
     enum Summary: Hashable {

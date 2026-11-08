@@ -583,22 +583,16 @@ struct CourseWorkTests {
         #expect(read("마감 정리").title == "마감 정리" && read("마감 정리").due == nil)
     }
 
-    @Test func aLeadingKindWordIsDroppedOnlyWhenItIsJustALabel() {
+    /// Titles go in as typed: a leading `과제` is part of the title, not a label to drop.
+    @Test func aLeadingKindWordStaysInTheTitle() {
         let now = date("2026-10-22 15:00")
-        func title(_ line: String) -> String { QuickAdd.parse(line, courses: [], fixedCourse: courses[1].id, now: now, calendar: calendar).title }
-        #expect(title("과제: 금요일까지 HW4") == "HW4")
-        #expect(title("과제: 실험 보고서") == "실험 보고서")
-        #expect(title("과제 HW4 금") == "HW4")
-        #expect(title("과제 3 금") == "과제 3")
-        #expect(title("과제 제출 금") == "과제 제출")
-        #expect(title("과제") == "과제")
+        let r = QuickAdd.parse("과제 3 금", courses: [], fixedCourse: courses[1].id, now: now, calendar: calendar)
+        #expect(r.title == "과제 3" && r.due == date("2026-10-23 23:59"))
     }
 
-    /// The wrap-up sheet's placeholder is an example of the line, so it has to read as it says.
-    @Test func theWrapUpPlaceholderParsesAsShown() {
-        let now = date("2026-10-22 15:00")
-        let r = QuickAdd.parse("HW4 금요일까지", courses: [], fixedCourse: courses[1].id, now: now, calendar: calendar)
-        #expect(r.title == "HW4" && r.due == date("2026-10-23 23:59"))
+    @Test func aDeadlineReadsAsTheShortDayAndA24HourMinute() {
+        #expect(CourseFile.deadline(date("2026-11-13 23:59"), calendar: calendar) == "11/13(금) 23:59")
+        #expect(CourseFile.deadline(date("2026-11-03 09:05"), calendar: calendar) == "11/3(화) 09:05")
     }
 
     @Test func theTitleNeverHoldsTheHighlightedDeadline() async {

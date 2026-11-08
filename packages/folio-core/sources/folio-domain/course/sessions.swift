@@ -438,9 +438,19 @@ extension CourseFile {
     }
 
     /// `11/3(화)`, where what the class covered is already said around it (a unit's own classes, say).
-    public func day(of session: Session, calendar: Calendar) -> String {
-        let c = calendar.dateComponents([.month, .day], from: session.date)
-        return String(localized: .sessionDay(c.month!, c.day!, ClassTime.weekdayNames[calendar.isoWeekday(of: session.date) - 1]))
+    public func day(of session: Session, calendar: Calendar) -> String { Self.day(session.date, calendar: calendar) }
+
+    /// `11/3(화)`: the one short day the app writes, a class's or a deadline's.
+    public static func day(_ date: Date, calendar: Calendar) -> String {
+        let c = calendar.dateComponents([.month, .day], from: date)
+        return String(localized: .sessionDay(c.month!, c.day!, ClassTime.weekdayNames[calendar.isoWeekday(of: date) - 1]))
+    }
+
+    /// `11/13(금) 23:59`. The minute is 24-hour, as syllabi write deadlines: `오후 11:59` beside the day read as a
+    /// second phrase.
+    public static func deadline(_ date: Date, calendar: Calendar) -> String {
+        let c = calendar.dateComponents([.hour, .minute], from: date)
+        return day(date, calendar: calendar) + " " + String(format: "%02d:%02d", c.hour!, c.minute!)
     }
 
     /// `11/3(화): 행복과 습관`, or the day alone when nothing says what the class covered: the one name a

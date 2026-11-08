@@ -183,7 +183,7 @@ struct QuickAddModelTests {
         let parsed = try #require(model.parsed)
         #expect(model.canAdd(parsed))
         #expect(model.courseTitle(parsed) == "그래프 이론")
-        #expect(model.due(parsed) != nil)
+        #expect(model.due(parsed)?.hasSuffix("(금) 23:59") == true)
         model.add(parsed)
         #expect(model.text.isEmpty)
         #expect(workspace.course(graphTheory)?.file.assignments.contains { $0.title == "HW5" } == true)

@@ -15,8 +15,6 @@ public struct QuickAdd: Equatable, Sendable {
     /// What Korean puts after a deadline word (`금요일까지`, `11/14까지`) or after the whole deadline as a word of its own
     /// (`금 마감`). They belong to the deadline, never the title.
     static let dueEndings = ["까지", "마감"]
-    /// A leading word that only says what is added (`과제: HW4`); dropped when it can't be the title's own word.
-    static let kindWords = ["과제", "숙제"]
     /// Deadline time when only a day is given.
     static let defaultMinute = 23 * 60 + 59
 
@@ -85,14 +83,6 @@ public struct QuickAdd: Equatable, Sendable {
                 course = match
                 found.remove(at: i)
                 break
-            }
-        }
-        // `과제: HW4`, or `과제 HW4` whose rest names its kind itself; `과제 3` keeps the word as its title.
-        if found.count > 1, let first = found.first {
-            let labeled = first.0.hasSuffix(":") || first.0.hasSuffix("：")
-            let word = labeled ? String(first.0.dropLast()) : first.0
-            if kindWords.contains(word), labeled || AssignmentKind.parse(title: found.dropFirst().map(\.0).joined(separator: " ")) != nil {
-                found.removeFirst()
             }
         }
         let today = LocalDate(now, in: calendar)
