@@ -19108,17 +19108,6 @@
         }
       }
     },
-    "design.page-range.summary": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · %2$@"
-          }
-        }
-      }
-    },
     "design.page-range.tip-section": {
       "extractionState": "manual",
       "localizations": {

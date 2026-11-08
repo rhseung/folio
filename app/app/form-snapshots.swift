@@ -67,6 +67,13 @@ enum FormSnapshots {
         }
         if let filled = held.min(by: { $0.gaps < $1.gaps }), filled.gaps < WrapUpItem.allCases.count {
             forms.append(("class-wrap-up-filled", AnyView(ClassWrapUpSheet(workspace: workspace, course: course.id, session: filled.session.id))))
+            forms.append(("class-wrap-up-dragging", AnyView(ClassWrapUpSheet(workspace: workspace, course: course.id, session: filled.session.id)
+                .environment(\.pageRangeNumbersShown, true))))
+        }
+        // The same bar, compact, in the popover that links a split lecture file to its classes.
+        if let lecture = file.lectureFiles.first(where: { !PageRangeField.Section.list(file, material: $0.id, pageCount: nil).isEmpty }) {
+            forms.append(("material-links", AnyView(MaterialLinksEditor(model: MaterialsModel(workspace: workspace, course: course), materialId: lecture.id)
+                .environment(\.accent, workspace.accent(course.id)))))
         }
         return forms
     }

@@ -132,11 +132,6 @@ final class ClassWrapUpModel {
         return PageRangeField.Section.list(file, material: id, pageCount: pageCounts[id])
     }
 
-    func reads(_ id: UUID) -> (ClosedRange<Int>) -> String? {
-        let file = file
-        return { file?.sectionLabel(of: id, pages: $0) }
-    }
-
     func seen(_ id: UUID) -> ClosedRange<Int>? { viewed.first { $0.materialId == id }?.pages }
 
     /// Lecture files not in the list yet.

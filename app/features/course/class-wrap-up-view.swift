@@ -107,11 +107,11 @@ struct ClassWrapUpSheet: View {
                             .help(Text(.designPageRangeSplitHelp))
                     }
                 }
-                .frame(width: 176, alignment: .leading)
-                Spacer(minLength: Theme.Space.s)
+                .frame(width: 152, alignment: .leading)
+                // All the rest of the row: the tiles' names need every point the bar can get.
                 PageRangeField(range: row.range, pages: model.pageCounts[row.id], taught: model.taught(row.id),
-                               seen: model.seen(row.id), sections: model.sections(row.id),
-                               reads: model.reads(row.id)) { model.setRange(row.id, $0) }
+                               seen: model.seen(row.id), sections: model.sections(row.id)) { model.setRange(row.id, $0) }
+                    .frame(maxWidth: .infinity)
                     .opacity(row.included ? 1 : Theme.Opacity.ended)
             }
         }
