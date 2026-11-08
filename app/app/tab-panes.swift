@@ -107,6 +107,17 @@ final class TabPanes {
         return true
     }
 
+    /// By the pane's ID, for what draws a pane apart from the row's order: a place kept from before a pane closed is
+    /// another pane's now, or past the end.
+    func press(pane id: UUID) {
+        if let i = ids.firstIndex(of: id) { press(i) }
+    }
+
+    @discardableResult
+    func close(pane id: UUID) -> Bool {
+        ids.firstIndex(of: id).map { close($0) } ?? false
+    }
+
     func swap(_ i: Int, _ j: Int) {
         guard ids.indices.contains(i), ids.indices.contains(j), i != j else { return }
         layout.swap(i, j)

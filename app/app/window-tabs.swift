@@ -420,19 +420,40 @@ struct TabBar: View {
     /// a gray icon and a dimmed short name (icons alone at `compact`); the close button at the end closes the tab.
     func joined(_ panes: TabPanes, crumbRoom: CGFloat, compact: Bool) -> some View {
         HStack(spacing: 0) {
-            ForEach(Array(panes.ids.enumerated()), id: \.element) { i, _ in
-                if i > 0 { SegmentRule() }
-                TabSegment(mark: workspace.paneMark(of: panes.navigators[i].current, trail: panes.trails[i]),
-                           crumbs: i == panes.focus ? crumbs : nil, crumbRoom: crumbRoom, iconOnly: compact,
-                           playing: tabs.playingPanes.contains(panes.ids[i]),
-                           select: { panes.press(i) }, close: { panes.close(i) }, pause: { [tabs] in tabs.pause(pane: panes.ids[i]) })
-                    .contextMenu { PaneMenu(panes: panes, index: i) { [tabs] navigator in tabs.open(navigator, fromLink: true) } }
+            ForEach(Segment.all(panes, workspace: workspace, playing: tabs.playingPanes)) { segment in
+                if segment.index > 0 { SegmentRule() }
+                TabSegment(mark: segment.mark, crumbs: segment.index == panes.focus ? crumbs : nil, crumbRoom: crumbRoom, iconOnly: compact,
+                           playing: segment.playing,
+                           select: { panes.press(pane: segment.id) }, close: { panes.close(pane: segment.id) },
+                           pause: { [tabs] in tabs.pause(pane: segment.id) })
+                    .contextMenu {
+                        if let i = panes.ids.firstIndex(of: segment.id) {
+                            PaneMenu(panes: panes, index: i) { [tabs] navigator in tabs.open(navigator, fromLink: true) }
+                        }
+                    }
             }
             if tabs.count > 1 { closeButton(tabs.selected).padding(.leading, Theme.Space.xxs) }
         }
         .padding(.horizontal, Theme.Space.xs)
         .frame(height: Theme.Size.toolbarButton)
         .tabSurface(front: true)
+    }
+
+    /// One pane as the tab bar draws it, read from the panes before `ForEach` gets it. Not its place to read them by
+    /// inside: as a pane closed, SwiftUI ran the segment it had once more with the place it had then, past the end of
+    /// the panes, and the app crashed (2026-11-08).
+    struct Segment: Identifiable {
+        let id: UUID
+        let index: Int
+        let mark: Crumb
+        let playing: Bool
+
+        @MainActor static func all(_ panes: TabPanes, workspace: Workspace, playing: Set<UUID>) -> [Segment] {
+            panes.ids.indices.map { i in
+                Segment(id: panes.ids[i], index: i, mark: workspace.paneMark(of: panes.navigators[i].current, trail: panes.trails[i]),
+                        playing: playing.contains(panes.ids[i]))
+            }
+        }
     }
 
     func closeButton(_ id: UUID) -> some View {
@@ -477,29 +498,28 @@ struct TabBar: View {
     /// selects, as a tab of one pane does at an icon.
     @ViewBuilder func label(_ id: UUID, form: TabForm) -> some View {
         if let panes = tabs.panes(id), panes.count > 1 {
-            let marks = zip(panes.navigators, panes.trails).map { workspace.paneMark(of: $0.current, trail: $1) }
-            let playing = panes.ids.map { tabs.playingPanes.contains($0) }
+            let segments = Segment.all(panes, workspace: workspace, playing: tabs.playingPanes)
             HStack(spacing: 0) {
                 if form == .stacked {
                     Button { tabs.select(id) } label: {
                         HStack(spacing: Theme.Space.xxs) {
-                            if playing.contains(true) { speakerIcon } else { PlaceIcon(place: marks[0]) }
-                            Text(.panesMoreCount(marks.count - 1)).font(Theme.Typeface.caption).monospacedDigit()
+                            if segments.contains(where: \.playing) { speakerIcon } else if let first = segments.first { PlaceIcon(place: first.mark) }
+                            Text(.panesMoreCount(segments.count - 1)).font(Theme.Typeface.caption).monospacedDigit()
                         }
                         .contentShape(.rect)
                     }
                     .buttonStyle(.pointing(.plain))
                 } else {
-                    ForEach(marks.indices, id: \.self) { i in
-                        if i > 0 { SegmentRule() }
+                    ForEach(segments) { segment in
+                        if segment.index > 0 { SegmentRule() }
                         Group {
-                            if playing[i] {
-                                Button { tabs.pause(pane: panes.ids[i]) } label: { speakerIcon.contentShape(.rect) }
+                            if segment.playing {
+                                Button { tabs.pause(pane: segment.id) } label: { speakerIcon.contentShape(.rect) }
                                     .help(Text(.tabsPause))
                                     .accessibilityLabel(Text(.tabsPause))
                             } else {
-                                Button { tabs.select(id) } label: { PlaceIcon(place: marks[i]).contentShape(.rect) }
-                                    .accessibilityLabel(marks[i].title)
+                                Button { tabs.select(id) } label: { PlaceIcon(place: segment.mark).contentShape(.rect) }
+                                    .accessibilityLabel(segment.mark.title)
                             }
                         }
                         .buttonStyle(.pointing(.plain))

@@ -51,10 +51,14 @@ struct PaneRow: View {
         // The panes go in built, so a drag redraws the stack alone: were the shares read here, every frame of it would
         // run this body again, and each pane's screen with it for the closures it is handed anew (`openLink`).
         LivePaneStack(panes: panes, drag: drag, folded: folded) {
-            ForEach(Array(panes.ids.enumerated()), id: \.element) { i, id in
-                pane(i, id: id, folded: folded.contains(i))
-                if i + 1 < panes.count {
-                    divider(after: i, folded: folded)
+            // The pane's place found again from its ID: SwiftUI can run a closed pane's view once more with the place
+            // it had, past the end of the panes (as it did the tab bar's segments, 2026-11-08).
+            ForEach(panes.ids, id: \.self) { id in
+                if let i = panes.ids.firstIndex(of: id) {
+                    pane(i, id: id, folded: folded.contains(i))
+                    if i + 1 < panes.count {
+                        divider(after: i, folded: folded)
+                    }
                 }
             }
         }
