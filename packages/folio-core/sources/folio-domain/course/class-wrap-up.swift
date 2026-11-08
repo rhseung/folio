@@ -88,3 +88,21 @@ extension CourseFile {
             .sorted { $0.createdAt > $1.createdAt }
     }
 }
+
+extension Session {
+    /// Whether the wrap-up starts a suggested range checked. A file the class already links that nothing gives both
+    /// ends for keeps its link as it is: checked, it would hold the save until an end is picked, for a class that
+    /// linked the file whole on purpose. Unchecked leaves a link alone, so saving with it unchecked writes nothing.
+    public func wrapUpChecks(_ range: SessionMaterial) -> Bool {
+        (range.firstPage != nil && range.lastPage != nil) || !materials.contains { $0.materialId == range.materialId }
+    }
+
+    /// The ranges among `ranges` the class doesn't have yet. The wrap-up shows every class's current pages, so a
+    /// save writes only what was changed or newly suggested.
+    public func changedRanges(_ ranges: [SessionMaterial]) -> [SessionMaterial] {
+        ranges.filter { r in
+            guard let had = materials.first(where: { $0.materialId == r.materialId }) else { return true }
+            return had.firstPage != r.firstPage || had.lastPage != r.lastPage
+        }
+    }
+}

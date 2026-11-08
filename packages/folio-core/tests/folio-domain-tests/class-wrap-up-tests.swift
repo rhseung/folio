@@ -184,4 +184,33 @@ struct ClassWrapUpTests {
         f.linkNote(new.id, to: f.sessions[0].id, as: .rough)
         #expect(f.classNoteChoices.map(\.id) == [free.id, old.id])
     }
+
+    // MARK: The plain form (2026-11-08)
+
+    /// Every row shows what the class has, so a save leaves alone what it was opened with.
+    @Test func aSaveWritesOnlyTheRangesTheClassDoesNotHave() {
+        let (a, b, c) = (UUID(), UUID(), UUID())
+        var session = course().sessions[0]
+        session.materials = [SessionMaterial(materialId: a, firstPage: 3, lastPage: 9), SessionMaterial(materialId: b)]
+        let same = SessionMaterial(materialId: a, firstPage: 3, lastPage: 9)
+        let moved = SessionMaterial(materialId: a, firstPage: 3, lastPage: 12)
+        let paged = SessionMaterial(materialId: b, firstPage: 1, lastPage: 4)
+        let new = SessionMaterial(materialId: c, firstPage: 10, lastPage: 11)
+        #expect(session.changedRanges([same, paged, new]) == [paged, new])
+        #expect(session.changedRanges([moved]) == [moved])
+        #expect(session.changedRanges([same, SessionMaterial(materialId: b)]).isEmpty)
+    }
+
+    /// A file linked whole stays so unless asked: checked without an end it would hold the save.
+    @Test func aWholeFileLinkStartsUncheckedUnlessSuggestedWhole() {
+        let (a, b) = (UUID(), UUID())
+        var session = course().sessions[0]
+        session.materials = [SessionMaterial(materialId: a)]
+        #expect(!session.wrapUpChecks(SessionMaterial(materialId: a, firstPage: 5)))
+        #expect(!session.wrapUpChecks(SessionMaterial(materialId: a)))
+        // A recording saw where the class went: both ends are known, so it is asked.
+        #expect(session.wrapUpChecks(SessionMaterial(materialId: a, firstPage: 5, lastPage: 9)))
+        // A new suggestion is checked even with an end missing: picking it is the question.
+        #expect(session.wrapUpChecks(SessionMaterial(materialId: b, firstPage: 5)))
+    }
 }

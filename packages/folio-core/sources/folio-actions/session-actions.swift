@@ -474,8 +474,12 @@ public struct SessionWrapUp {
             }
             for unit in units { _ = try index(unit, in: f.units, .valueUnit) }
             for unit in Set(f.sessions[i].unitIds).symmetricDifference(units) { f.toggle(session: session, unit: unit) }
-            f.attendance.removeAll { $0.sessionId == session }
-            if attendance != .present { f.attendance.append(Attendance(device: ctx.device, at: ctx.now, sessionId: session, state: attendance)) }
+            // The sheet always passes the class's attendance, so an entry already in that state keeps its time and device.
+            let had = f.attendance.first { $0.sessionId == session }?.state ?? .present
+            if had != attendance {
+                f.attendance.removeAll { $0.sessionId == session }
+                if attendance != .present { f.attendance.append(Attendance(device: ctx.device, at: ctx.now, sessionId: session, state: attendance)) }
+            }
             f.sessions[i].isWrappedUp = true
         }
     }
