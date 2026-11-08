@@ -139,6 +139,50 @@ struct PaneLayoutTests {
         #expect(one.shares == [1])
     }
 
+    @Test func aPaneFoldedByHandStaysFoldedUntilPressed() {
+        var l = Self.three()
+        // The focused note folds by hand: the focus goes to the quiz, pressed before it.
+        l.collapse(1)
+        #expect(l.collapsed == [1] && l.focus == 2)
+        // However wide the window: the rest open, the note a strip, the others sharing what it leaves.
+        let wide = Self.fit(l, 2000)
+        #expect(wide.folded == [1] && wide.widths[1] == 40)
+        #expect(approx(wide.widths[0], wide.widths[2]))
+        // Narrower, the room folds the oldest press as well; never the focus.
+        #expect(Self.fit(l, 500).folded == [0, 1])
+        // The last open pane can't fold.
+        l.collapse(0)
+        #expect(!l.canCollapse(2))
+        l.collapse(2)
+        #expect(l.collapsed == [0, 1] && l.focus == 2)
+        // Pressing its strip opens it.
+        l.press(1)
+        #expect(l.collapsed == [0] && l.focus == 1)
+        #expect(Self.fit(l, 2000).folded == [0])
+    }
+
+    @Test func closingTheLastOpenPaneOpensTheFocus() {
+        var l = Self.three()
+        l.collapse(0)
+        l.collapse(2)
+        let closed = l.close(1)
+        #expect(closed)
+        // The quiz was pressed more recently than the lecture: it takes the focus and opens.
+        #expect(l.links == [lecture, quiz] && l.focus == 1 && l.collapsed == [0])
+    }
+
+    @Test func aFoldByHandRoundTripsThroughJSON() throws {
+        var l = Self.three()
+        l.collapse(0)
+        let data = try JSONEncoder().encode(l)
+        let back = try JSONDecoder().decode(PaneLayout.self, from: data)
+        #expect(back.collapsed == [0] && back == l)
+        let json = #"{"panes":[{"link":"\#(lecture.string)","share":1,"pressed":0},{"link":"\#(note.string)","share":1,"pressed":1,"collapsed":true}],"focus":1}"#
+        let old = try JSONDecoder().decode(PaneLayout.self, from: Data(json.utf8))
+        // A focus folded by hand, which the app never writes, moves to the pane left open.
+        #expect(old.focus == 0 && old.collapsed == [1])
+    }
+
     @Test func aPaneKeepsItsNoteModeUntilItShowsAnotherNote() {
         var l = PaneLayout(note)
         l.show(.read, in: 0)
@@ -241,7 +285,7 @@ struct PaneMemoryTests {
 struct PaneLayoutPropertyTests {
     static let links = [lecture, note, quiz, other, AppLink(.exam, UUID()), AppLink.place(.today)]
     // An action, which pane or link, and a fraction for a drag.
-    static let steps = zip(Gen.int(in: 0...6), Gen.int(in: 0...5), Gen.double(in: -0.5...1.5)).array(of: 0...30)
+    static let steps = zip(Gen.int(in: 0...7), Gen.int(in: 0...5), Gen.double(in: -0.5...1.5)).array(of: 0...30)
 
     static func run(_ steps: [(Int, Int, Double)], limit: Int) -> PaneLayout {
         var l = PaneLayout(links[0])
@@ -253,6 +297,7 @@ struct PaneLayoutPropertyTests {
             case 3: l.swap(k % l.panes.count, (k + 1) % l.panes.count)
             case 4: l.resize(divider: k % max(1, l.panes.count - 1), to: x)
             case 5: l.even()
+            case 6: l.collapse(k % l.panes.count)
             default: l.open(links[k])
             }
         }
@@ -266,6 +311,7 @@ struct PaneLayoutPropertyTests {
             #expect(l.panes.indices.contains(l.focus))
             #expect(approx(l.shares.reduce(0, +), 1))
             #expect(l.shares.allSatisfy { $0 > 0 })
+            #expect(!l.collapsed.contains(l.focus))
         }
     }
 
@@ -293,10 +339,12 @@ struct PaneLayoutPropertyTests {
             var l = Self.run(steps, limit: 3)
             let before = l.fit(room: room, minWidth: 360, strip: 40, gap: 8).folded
             guard let strip = before.sorted().dropFirst(k % max(1, before.count)).first else { return }
+            let byHand = l.collapsed.contains(strip)
             l.press(strip)
             let after = l.fit(room: room, minWidth: 360, strip: 40, gap: 8).folded
             #expect(!after.contains(strip))
-            #expect(after.count == before.count)
+            // A strip the room folded trades places with another; one folded by hand may find room of its own.
+            #expect(byHand ? after.count <= before.count : after.count == before.count)
         }
     }
 }

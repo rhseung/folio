@@ -25,14 +25,17 @@ public struct PaneLayout: Hashable, Sendable {
         /// How a note shown here is shown. It travels with the layout, so a session's layout brings its note back the
         /// way it was left.
         public var noteMode: NoteViewMode?
+        /// Folded by hand ("칸 접기"): a strip at any width until it is pressed.
+        public fileprivate(set) var collapsed = false
         // The layout's clock when this pane was last pressed. A tick, not a date: two presses in the same instant
         // must still order, and a restored layout must not fold by when the device was last used.
         fileprivate var pressed: Int
 
-        fileprivate init(link: AppLink, share: Double, noteMode: NoteViewMode? = nil, pressed: Int) {
+        fileprivate init(link: AppLink, share: Double, noteMode: NoteViewMode? = nil, collapsed: Bool = false, pressed: Int) {
             self.link = link
             self.share = share
             self.noteMode = noteMode
+            self.collapsed = collapsed
             self.pressed = pressed
         }
     }
@@ -72,12 +75,39 @@ public struct PaneLayout: Hashable, Sendable {
     public var links: [AppLink] { panes.map(\.link) }
     public var shares: [Double] { panes.map(\.share) }
     public var focused: Pane { panes[focus] }
+    public var collapsed: Set<Int> { Set(panes.indices.filter { panes[$0].collapsed }) }
 
+    /// Pressing a pane folded by hand opens it again: its strip is the only place left to press.
     public mutating func press(_ i: Int) {
         guard panes.indices.contains(i) else { return }
         clock += 1
         panes[i].pressed = clock
+        panes[i].collapsed = false
         focus = i
+    }
+
+    /// Whether "칸 접기" can fold pane `i`: not while it is the last pane open.
+    public func canCollapse(_ i: Int) -> Bool {
+        panes.indices.contains(i) && !panes[i].collapsed && panes.indices.contains { $0 != i && !panes[$0].collapsed }
+    }
+
+    /// "칸 접기": pane `i` folds to its strip and stays folded however wide the window grows, until it is pressed
+    /// (2026-11-08 사용자). The focus, which never folds, moves to the open pane pressed most recently.
+    public mutating func collapse(_ i: Int) {
+        guard canCollapse(i) else { return }
+        panes[i].collapsed = true
+        if focus == i, let next = panes.indices.filter({ !panes[$0].collapsed }).max(by: { panes[$0].pressed < panes[$1].pressed }) {
+            press(next)
+        }
+    }
+
+    /// The focus goes to the pane pressed most recently that isn't folded by hand; were every pane left folded, that
+    /// pane opens, since the focus never folds.
+    private mutating func refocus() {
+        let open = panes.indices.filter { !panes[$0].collapsed }
+        let pool = open.isEmpty ? Array(panes.indices) : open
+        focus = pool.max { panes[$0].pressed < panes[$1].pressed } ?? 0
+        panes[focus].collapsed = false
     }
 
     /// The focused pane goes to `link`, as a click in it does. A new address keeps no note mode from the old one.
@@ -123,7 +153,7 @@ public struct PaneLayout: Hashable, Sendable {
         guard panes.count > 1, panes.indices.contains(i) else { return false }
         let share = panes.remove(at: i).share
         panes[i > 0 ? i - 1 : 0].share += share
-        focus = panes.indices.max { panes[$0].pressed < panes[$1].pressed } ?? 0
+        refocus()
         return true
     }
 
@@ -159,7 +189,7 @@ public struct PaneLayout: Hashable, Sendable {
         copy.panes = panes.indices.filter(kept.contains).map { panes[$0] }
         let total = copy.panes.map(\.share).reduce(0, +)
         for i in copy.panes.indices { copy.panes[i].share /= total }
-        copy.focus = copy.panes.indices.max { copy.panes[$0].pressed < copy.panes[$1].pressed } ?? 0
+        copy.refocus()
         return copy
     }
 
@@ -189,10 +219,12 @@ public struct PaneLayout: Hashable, Sendable {
         return open
     }
 
-    /// The panes folded when `open` of them stay open: the ones pressed longest ago, never the focused one.
+    /// The panes folded when `open` of them could stay open: the ones folded by hand, then as many more as the room
+    /// asks, pressed longest ago first, never the focused one. A pane folded by hand stays folded in any room.
     public func folded(open: Int) -> Set<Int> {
-        let byAge = panes.indices.filter { $0 != focus }.sorted { panes[$0].pressed < panes[$1].pressed }
-        return Set(byAge.prefix(max(0, panes.count - max(1, open))))
+        let collapsed = collapsed
+        let byAge = panes.indices.filter { $0 != focus && !collapsed.contains($0) }.sorted { panes[$0].pressed < panes[$1].pressed }
+        return collapsed.union(byAge.prefix(max(0, panes.count - collapsed.count - max(1, open))))
     }
 
     /// Each pane's width in `room`, the gaps between them taken out: `strip` for the folded ones, and the rest by
@@ -222,7 +254,7 @@ public struct PaneLayout: Hashable, Sendable {
 
 extension PaneLayout: Codable {
     private enum CodingKeys: String, CodingKey { case panes, focus }
-    private enum PaneKeys: String, CodingKey { case link, share, noteMode, pressed }
+    private enum PaneKeys: String, CodingKey { case link, share, noteMode, collapsed, pressed }
 
     // Links are written as their `folio://` text, the same form a note or the CLI writes.
     public init(from decoder: Decoder) throws {
@@ -237,6 +269,7 @@ extension PaneLayout: Codable {
             }
             panes.append(Pane(link: link, share: try p.decode(Double.self, forKey: .share),
                               noteMode: try p.decodeIfPresent(NoteViewMode.self, forKey: .noteMode),
+                              collapsed: try p.decodeIfPresent(Bool.self, forKey: .collapsed) ?? false,
                               pressed: try p.decode(Int.self, forKey: .pressed)))
         }
         guard !panes.isEmpty, panes.allSatisfy({ $0.share > 0 && $0.share.isFinite }) else {
@@ -247,6 +280,7 @@ extension PaneLayout: Codable {
         self.panes = panes
         focus = min(max(try c.decode(Int.self, forKey: .focus), 0), panes.count - 1)
         clock = panes.map(\.pressed).max() ?? 0
+        if self.panes[focus].collapsed { refocus() }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -257,6 +291,7 @@ extension PaneLayout: Codable {
             try p.encode(pane.link.string, forKey: .link)
             try p.encode(pane.share, forKey: .share)
             try p.encodeIfPresent(pane.noteMode, forKey: .noteMode)
+            if pane.collapsed { try p.encode(true, forKey: .collapsed) }
             try p.encode(pane.pressed, forKey: .pressed)
         }
         try c.encode(focus, forKey: .focus)
