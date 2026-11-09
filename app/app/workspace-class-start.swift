@@ -55,7 +55,7 @@ extension Workspace {
     /// opened during it. Each step of a class is done once (`classStartDone`), and only while the class runs.
     func classStartTick(at now: Date) {
         stopClassRecordingIfDue(at: now)
-        guard let step = classStartStep(at: now) else { return }
+        guard let step = classStartStep(at: now, recorderBusy: recorder.isActive) else { return }
         if step.records { recordClass(step.ask) }
         guard step.records || step.ask.asksRecording || !step.ask.opens.isEmpty else { return }
         if !step.ask.opens.isEmpty || step.ask.asksRecording { classStartAsk = step.ask }
@@ -64,7 +64,7 @@ extension Workspace {
 
     /// Writes what the class's due steps need (its session, its rough note) and says what is left to do. Separate
     /// from the recorder and the windows, so a test runs it on a fixture at a pinned time.
-    func classStartStep(at now: Date) -> ClassStartStep? {
+    func classStartStep(at now: Date, recorderBusy: Bool) -> ClassStartStep? {
         guard gist != nil else { return nil }
         let setting = settings.classStart
         let terms = currentCourses.map { ClassStart.Course(file: $0.file, term: semester(of: $0.file.course)) }
@@ -72,8 +72,9 @@ extension Workspace {
         let done = classStartDone[c.key] ?? []
         let due = ClassStart.due(c, settings: setting, now: now).subtracting(done)
         guard !due.isEmpty else { return nil }
-        // Marked before anything runs: a step that fails is reported once, not again every minute.
-        classStartDone[c.key] = done.union(due)
+        // Marked before anything runs: a step that fails is reported once, not again every minute. Not the recording
+        // while another runs (the class before, kept on until its stop time): it starts the minute that one ends.
+        classStartDone[c.key] = done.union(recorderBusy ? due.subtracting([.recording]) : due)
         guard let id = c.sessionId ?? run(SessionAdd(course: c.courseId, date: c.start))?.made,
               let loaded = course(c.courseId), let session = loaded.file.sessions.first(where: { $0.id == id }) else { return nil }
         var step = ClassStartStep(ask: ClassStartAsk(course: loaded.id, session: id, front: setting.screen == .front,
@@ -82,7 +83,7 @@ extension Workspace {
         if due.contains(.open) { step.ask.opens = classStartOpenings(for: session, in: loaded.id) }
         // A recording under way is never cut short, and a class recorded already (then stopped, or on another
         // device) isn't recorded again because the app opened during it.
-        if due.contains(.recording), !recorder.isActive, !loaded.file.recordings.contains(where: { $0.sessionId == id }) {
+        if due.contains(.recording), !recorderBusy, !loaded.file.recordings.contains(where: { $0.sessionId == id }) {
             switch setting.recording {
             case .start: step.records = true
             case .ask: step.ask.asksRecording = true

@@ -37,8 +37,8 @@ struct ClassStartModelTests {
 
     @Test func theClassOpensOnItsRoughNoteOnce() throws {
         set { $0.roughNote = .create; $0.lecture = .open }
-        #expect(workspace.classStartStep(at: at(20, 59)) == nil)
-        let step = try #require(workspace.classStartStep(at: at(21, 5)))
+        #expect(workspace.classStartStep(at: at(20, 59), recorderBusy: false) == nil)
+        let step = try #require(workspace.classStartStep(at: at(21, 5), recorderBusy: false))
         let saved = try #require(session(at: at(21)))
         let note = try #require(saved.roughNoteId)
         #expect(step.ask.session == saved.id && step.ask.course == course)
@@ -46,18 +46,18 @@ struct ClassStartModelTests {
         #expect(step.ask.opens == [ClassStartOpening(link: AppLink(.note, note), placement: .here)])
         #expect(!step.records && !step.ask.asksRecording && !step.ask.front)
         // Once per class: the next minute has nothing left to do.
-        #expect(workspace.classStartStep(at: at(21, 6)) == nil)
+        #expect(workspace.classStartStep(at: at(21, 6), recorderBusy: false) == nil)
     }
 
     @Test func nothingAfterTheClass() {
         set { $0.roughNote = .create }
-        #expect(workspace.classStartStep(at: at(22)) == nil)
+        #expect(workspace.classStartStep(at: at(22), recorderBusy: false) == nil)
         #expect(session(at: at(21)) == nil)
     }
 
     @Test func theClassItselfOpensWhenNoNoteTakesItsPlace() throws {
         set { $0.roughNote = .openExisting; $0.recording = .ask; $0.screen = .front }
-        let step = try #require(workspace.classStartStep(at: at(21)))
+        let step = try #require(workspace.classStartStep(at: at(21), recorderBusy: false))
         let saved = try #require(session(at: at(21)))
         #expect(saved.roughNoteId == nil)
         #expect(step.ask.opens == [ClassStartOpening(link: AppLink(.session, saved.id), placement: .here)])
@@ -66,7 +66,7 @@ struct ClassStartModelTests {
 
     @Test func recordsAtOnceUnlessTheClassWasRecorded() throws {
         set { $0.recording = .start; $0.recordingOffsetMinutes = -5; $0.stopsRecording = true; $0.stopAfterMinutes = 5 }
-        let early = try #require(workspace.classStartStep(at: at(20, 55)))
+        let early = try #require(workspace.classStartStep(at: at(20, 55), recorderBusy: false))
         #expect(early.records && early.ask.opens.isEmpty && early.ask.stopAt == at(22, 5))
         let saved = try #require(session(at: at(21)))
 
@@ -77,13 +77,24 @@ struct ClassStartModelTests {
                                 courses: Dictionary(workspace.courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))
         try ctx.edit(course) { $0.recordings.append(Recording(device: workspace.device, at: at(20, 55), sessionId: saved.id, file: "Recordings/10-29(목).m4a")) }
         workspace.show(ctx)
-        let again = try #require(workspace.classStartStep(at: at(21, 10)))
+        let again = try #require(workspace.classStartStep(at: at(21, 10), recorderBusy: false))
         #expect(!again.records && again.ask.opens.map(\.link) == [AppLink(.session, saved.id)])
+    }
+
+    /// Back-to-back classes: the one before is still recording until its stop time, so this class's recording waits
+    /// for it instead of being given up.
+    @Test func theRecordingWaitsForTheOneBeforeToStop() throws {
+        set { $0.recording = .start; $0.roughNote = .create }
+        let busy = try #require(workspace.classStartStep(at: at(21), recorderBusy: true))
+        #expect(!busy.records && busy.ask.opens.count == 1)
+        let free = try #require(workspace.classStartStep(at: at(21, 5), recorderBusy: false))
+        #expect(free.records && free.ask.opens.isEmpty)
+        #expect(workspace.classStartStep(at: at(21, 6), recorderBusy: false) == nil)
     }
 
     @Test func aWindowOnAnotherClassIsLeftAlone() throws {
         set { $0.roughNote = .create; $0.roughNotePlace = .tab }
-        let step = try #require(workspace.classStartStep(at: at(21)))
+        let step = try #require(workspace.classStartStep(at: at(21), recorderBusy: false))
         let other = try #require(workspace.run(SessionAdd(course: course, date: at(21) - 7 * 86_400))?.made)
         let elsewhere = Navigator.Entry(link: AppLink(.session, other), course: course)
         #expect(workspace.classStartOpenings(step.ask, showing: elsewhere).isEmpty)
