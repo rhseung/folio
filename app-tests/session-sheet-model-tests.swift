@@ -296,4 +296,16 @@ struct SessionSheetModelTests {
         #expect(s.unitIds == [unit])
         #expect(file.attendance.first { $0.sessionId == s.id }?.state == .excused)
     }
+
+    /// Leaving for a file's split screen asks first when only the class's time, kind or link changed, as for the rest.
+    @Test func editingTheClassInfoCountsAsAChange() throws {
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session)
+        #expect(!model.changed)
+        model.link = "https://zoom.us/j/7"
+        #expect(model.changed)
+        model.link = saved.link ?? ""
+        #expect(!model.changed)
+        model.setKind(.makeup)
+        #expect(model.changed)
+    }
 }

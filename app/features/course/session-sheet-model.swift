@@ -112,8 +112,11 @@ final class SessionSheetModel {
         suggest()
     }
 
+    /// Whether leaving would lose something, including the class's time, kind and link the sheet now holds too.
     var changed: Bool {
-        edited || makesNote || units != initial.units || attendance != initial.attendance || review != initial.review
+        if edited || makesNote || units != initial.units || attendance != initial.attendance || review != initial.review { return true }
+        guard let session else { return false }
+        return start != session.date || endPatch(session) != .keep || storedLink != session.link || kind != session.kind
     }
 
     private var course: LoadedCourse? { workspace.course(courseId) }
