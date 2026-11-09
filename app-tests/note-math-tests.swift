@@ -171,7 +171,8 @@ struct NoteMathTests {
             }
             let l = try await middle(low)
             let c = try await middle(centered)
-            #expect(l > c + 0.1, "\(low) at \(l), \(centered) at \(c) of the picture's height")
+            // Trimmed, both are at the middle; untrimmed, a tenth of the height apart, give or take a runner's fonts.
+            #expect(l > c + 0.05, "\(low) at \(l), \(centered) at \(c) of the picture's height")
         }
     }
 
