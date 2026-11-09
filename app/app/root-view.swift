@@ -650,7 +650,7 @@ struct RootView: View {
         // Terms already over step back, so the current and coming ones stand out in a list that grows every term.
         let past = semester.term == .credited || workspace.currentSemester.map { semester.order < $0.order } ?? false
         return Label {
-            Text(semester.title)
+            Text(semester.title).lineLimit(1)
         } icon: {
             Group {
                 if semester.term == .credited {
@@ -703,7 +703,7 @@ struct RootView: View {
                 if let ongoing {
                     Spacer(minLength: Theme.Space.xs)
                     Text(.rootMinutesLeft(Int(ongoing.end.timeIntervalSince(now) / 60) + 1)).font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
-                        .foregroundStyle(accent.ink)
+                        .foregroundStyle(accent.ink).fixedSize()
                 } else if let hint {
                     Spacer(minLength: Theme.Space.xs)
                     courseHint(hint)
@@ -728,6 +728,8 @@ struct RootView: View {
             }
         }
         .font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
+        // A time or D-n is never cut; the course's name gives way.
+        .fixedSize()
     }
 
     func clock(_ date: Date) -> String { date.formatted(.dateTime.hour(.defaultDigits(amPM: .omitted)).minute()) }

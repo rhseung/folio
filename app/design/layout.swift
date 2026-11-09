@@ -62,7 +62,9 @@ struct PageHeader<Chips: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             HStack(spacing: Theme.Space.tight) { chips }
-            Text(title).font(Theme.Typeface.pageTitle)
+            // One line, cut at its end: a title broken over lines at a pane's width read as two headings (#402). The
+            // subtitle is a summary of counts, which are never cut, so it may take a second line.
+            Text(title).font(Theme.Typeface.pageTitle).lineLimit(1)
             if let subtitle { Text(subtitle).foregroundStyle(Theme.Palette.textTertiary) }
         }
     }
@@ -256,6 +258,8 @@ struct PageBar<Leading: View, Trailing: View>: View {
                 Spacer(minLength: Theme.Space.s)
                 trailing
             }
+            // A bar is one line at any width: what doesn't fit folds into a ⋯ menu (`ViewThatFits`, DESIGN.md "한 줄").
+            .lineLimit(1)
             .buttonStyle(.toolbar)
             .menuStyle(.button)
             .menuIndicator(.hidden)
@@ -276,14 +280,75 @@ struct Block<Content: View, Trailing: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
-            HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
-                Text(title).font(Theme.Typeface.sectionTitle).foregroundStyle(Theme.Palette.textSecondary)
-                if let note { Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary) }
-                Spacer(minLength: 0)
-                trailing.font(Theme.Typeface.caption)
+            // The heading never breaks: where the note doesn't fit beside the title it moves under it, so a count in
+            // the note isn't cut (#402). The title is cut only when it alone is too long; the action keeps its width.
+            BlockHeading {
+                heading
+                if let note { noteText(note) } else { Color.clear.frame(width: 0, height: 0) }
+                action
             }
             content
         }
+    }
+}
+
+extension Block {
+    var heading: some View {
+        Text(title).font(Theme.Typeface.sectionTitle).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1)
+    }
+
+    // In a stack even when empty or several views, so `BlockHeading` always gets one subview for it.
+    var action: some View { HStack(spacing: Theme.Space.s) { trailing }.font(Theme.Typeface.caption).lineLimit(1).fixedSize() }
+
+    // No line limit: beside the title it is given its own width and stays one line; under it, a sentence (the settings'
+    // notes) wraps as body text does.
+    func noteText(_ note: String) -> some View {
+        Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+    }
+}
+
+// A layout rather than `ViewThatFits`: inside a page's scroll view that grew the page's scroll height by the candidates
+// it didn't pick (#402).
+struct BlockHeading: Layout {
+    var spacing: CGFloat = Theme.Space.s
+    var lineSpacing: CGFloat = Theme.Space.xxs
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let p = plan(proposal.width, subviews)
+        return CGSize(width: p.width, height: p.height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        let p = plan(bounds.width, subviews)
+        let (title, note, action) = (subviews[0], subviews[1], subviews[2])
+        let titleSize = title.sizeThatFits(ProposedViewSize(width: p.titleWidth, height: nil))
+        let actionSize = action.sizeThatFits(.unspecified)
+        let baseline = title.dimensions(in: ProposedViewSize(titleSize))[VerticalAlignment.firstTextBaseline]
+        title.place(at: CGPoint(x: bounds.minX, y: bounds.minY), proposal: ProposedViewSize(width: p.titleWidth, height: nil))
+        let actionBaseline = action.dimensions(in: .unspecified)[VerticalAlignment.firstTextBaseline]
+        action.place(at: CGPoint(x: bounds.maxX - actionSize.width, y: bounds.minY + max(0, baseline - actionBaseline)), proposal: .unspecified)
+        let noteProposal = ProposedViewSize(width: p.oneLine ? note.sizeThatFits(.unspecified).width : bounds.width, height: nil)
+        if p.oneLine {
+            let noteBaseline = note.dimensions(in: noteProposal)[VerticalAlignment.firstTextBaseline]
+            note.place(at: CGPoint(x: bounds.minX + titleSize.width + spacing, y: bounds.minY + max(0, baseline - noteBaseline)), proposal: noteProposal)
+        } else {
+            note.place(at: CGPoint(x: bounds.minX, y: bounds.minY + p.lineHeight + lineSpacing), proposal: noteProposal)
+        }
+    }
+
+    private func plan(_ offered: CGFloat?, _ subviews: Subviews) -> (width: CGFloat, height: CGFloat, titleWidth: CGFloat, oneLine: Bool, lineHeight: CGFloat) {
+        let (title, note, action) = (subviews[0], subviews[1], subviews[2])
+        let t = title.sizeThatFits(.unspecified), n = note.sizeThatFits(.unspecified), a = action.sizeThatFits(.unspecified)
+        let hasNote = n.width > 0, hasAction = a.width > 0
+        let full = t.width + (hasNote ? spacing + n.width : 0) + (hasAction ? spacing + a.width : 0)
+        // An unbounded proposal (an ideal-size pass) gets the one-line width, not infinity.
+        let width = offered.flatMap { $0.isFinite ? $0 : nil } ?? full
+        let oneLine = !hasNote || full <= width
+        let room = width - (hasAction ? spacing + a.width : 0)
+        let titleWidth = min(t.width, oneLine ? room - (hasNote ? spacing + n.width : 0) : room)
+        let lineHeight = max(title.sizeThatFits(ProposedViewSize(width: max(titleWidth, 0), height: nil)).height, a.height)
+        let height = oneLine ? max(lineHeight, n.height) : lineHeight + lineSpacing + note.sizeThatFits(ProposedViewSize(width: width, height: nil)).height
+        return (width, height, max(titleWidth, 0), oneLine, lineHeight)
     }
 }
 
@@ -520,9 +585,10 @@ struct ColumnRow<Trailing: View>: View {
     var body: some View {
         HStack(spacing: Self.gap) {
             LineIcon(symbol: symbol, filled: chosen).foregroundStyle(chosen ? tint : Theme.Palette.textSecondary)
-            Text(title)
-            Spacer()
-            trailing
+            Text(title).lineLimit(1)
+            Spacer(minLength: Theme.Space.s)
+            // A count or chip keeps its width; the name is cut instead.
+            trailing.lineLimit(1).fixedSize()
         }
         // Slimmer than a list row: the icon column is already tile-tall, and the list row's padding on top of it
         // spaced the column wider than the window sidebar beside it.

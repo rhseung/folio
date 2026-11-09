@@ -82,9 +82,11 @@ struct StudyTimeBlock: View {
                 Figure(String(localized: .todayStudyFortnight), StudyTimeModel.duration(chart.total), font: Theme.Typeface.figureSmall)
                 Figure(String(localized: .todayStudyDays), String(localized: .todayStudyDayCount(chart.perDay.values.filter { $0 > 0 }.count)), font: Theme.Typeface.figureSmall)
             }
-            VStack(alignment: .leading, spacing: Theme.Space.s) {
+            // A grid, so the time column is as wide as its longest entry ("1시간 35분") on every row: each row's own
+            // width would give the bars tracks of different lengths, and a wrapped time read as two entries (#402).
+            Grid(alignment: .leading, horizontalSpacing: Theme.Space.s, verticalSpacing: Theme.Space.s) {
                 ForEach(courses, id: \.course.id) { entry in
-                    HStack(spacing: Theme.Space.s) {
+                    GridRow {
                         Text(entry.course.title).foregroundStyle(Theme.Palette.textSecondary).lineLimit(1).frame(width: 88, alignment: .leading)
                         Capsule().fill(Theme.Palette.fill)
                             .overlay(alignment: .leading) {
@@ -93,7 +95,8 @@ struct StudyTimeBlock: View {
                                 }
                             }
                             .frame(height: Theme.Space.tight)
-                        Text(StudyTimeModel.duration(entry.seconds)).monospacedDigit().frame(minWidth: 40, alignment: .trailing)
+                        Text(StudyTimeModel.duration(entry.seconds)).monospacedDigit().lineLimit(1).fixedSize()
+                            .gridColumnAlignment(.trailing)
                     }
                     .font(Theme.Typeface.caption)
                 }
@@ -109,7 +112,7 @@ struct StudyTimeBlock: View {
                     CourseDot(color: model.workspace.accent(s.courseId).color, size: 8)
                     Text(s.title).lineLimit(1)
                     Spacer(minLength: Theme.Space.s)
-                    Text(StudyTimeModel.duration(s.seconds)).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
+                    Text(StudyTimeModel.duration(s.seconds)).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary).fixedSize()
                 }
             }
         }

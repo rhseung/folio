@@ -233,7 +233,7 @@ struct Segmented<Value: Hashable>: View {
                 let chosen = selection == value
                 Button { selection = value } label: {
                     Group {
-                        if symbols.indices.contains(i) { LineIcon(symbol: symbols[i], filled: chosen) } else { Text(label) }
+                        if symbols.indices.contains(i) { LineIcon(symbol: symbols[i], filled: chosen) } else { Text(label).lineLimit(1) }
                     }
                         .fontWeight(chosen ? .semibold : .regular)
                         .foregroundStyle(chosen ? Theme.Palette.text : Theme.Palette.textSecondary)
@@ -660,6 +660,7 @@ struct ChipTabs<Value: Hashable>: View {
                 let on = value == selection
                 Button { selection = value } label: {
                     Text(title)
+                        .lineLimit(1)
                         .font(Theme.Typeface.caption.weight(on ? .semibold : .regular))
                         .foregroundStyle(on ? accent.ink : Theme.Palette.textSecondary)
                         .padding(Theme.Inset.toggle)

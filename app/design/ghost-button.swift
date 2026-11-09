@@ -65,6 +65,9 @@ private struct ToolbarButton: View {
         // A label that sets its own style inside (the running timer's time) keeps it; the rest show the icon.
         configuration.label.labelStyle(.iconOnly)
             .font(Theme.Glyph.toolbar)
+            // A label of text (the running timer's time) keeps its width and one line, as every bar item does.
+            .lineLimit(1)
+            .fixedSize()
             .foregroundStyle(Theme.Palette.chromeIcon)
             // A fixed square, not padding and a minimum: the glyph's own width left it off the hover circle's center.
             .frame(minWidth: Theme.Size.toolbarButton, minHeight: Theme.Size.toolbarButton)

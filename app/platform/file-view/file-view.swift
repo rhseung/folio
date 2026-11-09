@@ -118,46 +118,96 @@ struct FileView: View {
 
     var isPDF: Bool { pdf != nil }
 
-    /// Page and zoom lead; search and opening elsewhere trail, as in Preview.
+    /// Page and zoom lead; search and opening elsewhere trail, as in Preview. Where the pane is too narrow for every
+    /// tool, zoom, split, link and Claude fold into one ⋯ menu; the thumbnails, the page count and the search stay out.
     var bar: some View {
+        ViewThatFits(in: .horizontal) {
+            barRow(folded: false)
+            barRow(folded: true)
+        }
+        // Zoom's keys whichever row is shown: a folded menu's items don't take keys while it is closed, and the two
+        // rows would otherwise claim the same keys twice.
+        .background {
+            if let c = pdf {
+                Group {
+                    Button("") { c.zoomOut() }.keyboardShortcut("-")
+                    Button("") { c.fit() }.keyboardShortcut("0")
+                    Button("") { c.zoomIn() }.keyboardShortcut("=")
+                }
+                .opacity(0).allowsHitTesting(false).accessibilityHidden(true)
+            }
+        }
+    }
+
+    func barRow(folded: Bool) -> some View {
         PageBar {
             if let c = pdf {
                 if model.splitting == nil {
-                    Button(.materialsViewerThumbnails, systemImage: "sidebar.left") { thumbnails.toggle() }.help(Text(.materialsViewerThumbnails))
+                    // Not `sidebar.leading`: the course column's button beside it is that glyph (#402).
+                    Button(.materialsViewerThumbnails, systemImage: "sidebar.squares.left") { thumbnails.toggle() }.help(Text(.materialsViewerThumbnails))
                 }
-                Text("\(c.page + 1) / \(c.pageCount)").monospacedDigit().foregroundStyle(Theme.Palette.textSecondary).padding(.horizontal, Theme.Space.xs)
-                Button(.materialsViewerZoomOut, systemImage: "minus.magnifyingglass") { c.zoomOut() }.keyboardShortcut("-")
-                Button(.materialsViewerFit, systemImage: "arrow.up.left.and.arrow.down.right") { c.fit() }.help(Text(.materialsViewerFit)).keyboardShortcut("0")
-                Button(.materialsViewerZoomIn, systemImage: "plus.magnifyingglass") { c.zoomIn() }.keyboardShortcut("=")
+                // Its own width always: squeezed, the count broke a digit per line (#402).
+                Text("\(c.page + 1) / \(c.pageCount)").monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
+                    .fixedSize().padding(.horizontal, Theme.Space.xs)
+                if !folded { zoomButtons(c) }
             }
         } trailing: {
             if let c = pdf {
-                // A see-through capsule like the window's search field.
-                HStack(spacing: Theme.Space.xs) {
-                    Image(systemName: "magnifyingglass").foregroundStyle(Theme.Palette.textTertiary)
-                    TextField(String(localized: .materialsViewerSearch), text: $query).textFieldStyle(.plain).frame(width: 160).onSubmit { c.find(query) }
-                    if !c.matches.isEmpty {
-                        Text("\(c.matchIndex + 1)/\(c.matches.count)").font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(Theme.Palette.textTertiary)
-                        Button { c.step(-1) } label: { Image(systemName: "chevron.up") }.buttonStyle(.ghost)
-                        Button { c.step(1) } label: { Image(systemName: "chevron.down") }.buttonStyle(.ghost)
+                search(c)
+                if folded {
+                    Menu {
+                        zoomButtons(c)
+                        Divider()
+                        pageTools(c)
+                    } label: {
+                        Label(.designMoreTools, systemImage: "ellipsis")
                     }
-                }
-                .toolbarField()
-                if model.canSplit, model.splitting == nil {
-                    Button(.designPageRangeSplit, systemImage: "scissors") { Task { await model.startSplit(c) } }.help(Text(.designPageRangeSplitHelp))
-                }
-                if let link = model.pageLink(c.page) {
-                    Button(.fileViewCopyPageLink, systemImage: "link") { copyLink(link) }.help(Text(.fileViewCopyPageLink))
-                }
-                if let askClaude, model.material != nil {
-                    Button(.fileViewAskClaude, systemImage: "sparkle") {
-                        if let item = model.pageContext(c.page, in: c) { askClaude(item) }
-                    }
-                    .help(Text(.fileViewAskClaude))
+                    .help(Text(.designMoreTools))
+                } else {
+                    pageTools(c)
                 }
             }
             if model.opensElsewhere { OpenElsewhereButton(url: model.url) }
         }
+    }
+
+    @ViewBuilder func zoomButtons(_ c: PDFController) -> some View {
+        Button(.materialsViewerZoomOut, systemImage: "minus.magnifyingglass") { c.zoomOut() }.help(Text(.materialsViewerZoomOut))
+        Button(.materialsViewerFit, systemImage: "arrow.up.left.and.arrow.down.right") { c.fit() }.help(Text(.materialsViewerFit))
+        Button(.materialsViewerZoomIn, systemImage: "plus.magnifyingglass") { c.zoomIn() }.help(Text(.materialsViewerZoomIn))
+    }
+
+    @ViewBuilder func pageTools(_ c: PDFController) -> some View {
+        if model.canSplit, model.splitting == nil {
+            Button(.designPageRangeSplit, systemImage: "scissors") { Task { await model.startSplit(c) } }.help(Text(.designPageRangeSplitHelp))
+        }
+        if let link = model.pageLink(c.page) {
+            Button(.fileViewCopyPageLink, systemImage: "link") { copyLink(link) }.help(Text(.fileViewCopyPageLink))
+        }
+        if let askClaude, model.material != nil {
+            Button(.fileViewAskClaude, systemImage: "sparkle") {
+                if let item = model.pageContext(c.page, in: c) { askClaude(item) }
+            }
+            .help(Text(.fileViewAskClaude))
+        }
+    }
+
+    /// A see-through capsule like the window's search field. It measures its full width when the bar picks a row, and
+    /// gives way down to `minWidth` only in the folded one.
+    func search(_ c: PDFController) -> some View {
+        HStack(spacing: Theme.Space.xs) {
+            Image(systemName: "magnifyingglass").foregroundStyle(Theme.Palette.textTertiary)
+            TextField(String(localized: .materialsViewerSearch), text: $query).textFieldStyle(.plain)
+                .frame(minWidth: 64, idealWidth: 160, maxWidth: 160)
+                .onSubmit { c.find(query) }
+            if !c.matches.isEmpty {
+                Text("\(c.matchIndex + 1)/\(c.matches.count)").font(Theme.Typeface.caption).monospacedDigit().foregroundStyle(Theme.Palette.textTertiary)
+                    .fixedSize()
+                Button { c.step(-1) } label: { Image(systemName: "chevron.up") }.buttonStyle(.ghost)
+                Button { c.step(1) } label: { Image(systemName: "chevron.down") }.buttonStyle(.ghost)
+            }
+        }
+        .toolbarField()
     }
 
     func takeSplitAsk() {

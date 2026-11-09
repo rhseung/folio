@@ -20988,6 +20988,17 @@
           }
         }
       }
+    },
+    "design.more-tools": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "도구 더 보기"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
