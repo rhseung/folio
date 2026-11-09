@@ -98,9 +98,10 @@ public enum InputGuide {
         } else if let sample = AsciiMathSymbols.all.first(where: { $0.name.count >= 4 }) {
             // A word's first letters, and the names they bring up.
             let typed = String(sample.name.prefix(2))
-            let found = Completion.filter(AsciiMathSymbols.items, typed, prefixOnly: true).prefix(3).map(\.title)
+            // The typed letters can be a name of their own (`fr`); showing it back reads as an echo, not a result.
+            let found = Completion.filter(AsciiMathSymbols.items, typed, prefixOnly: true).map(\.title).filter { $0 != typed }
             out.append(Entry("menu.asciimath", .menu, .phrase(.asciiMathSymbol), note: .phrase(.fromTwoLetters),
-                             [.key(typed), .result(.code(found.joined(separator: " ")))], keywords: AsciiMathSymbols.all.map(\.name)))
+                             [.key(typed), .result(.list(found))], keywords: AsciiMathSymbols.all.map(\.name)))
         }
         return out
     }

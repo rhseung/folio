@@ -885,9 +885,9 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             return
         }
         let label = hint ?? {
-            let label = HintLabel(labelWithString: String(localized: .notesGuideHint))
-            label.font = NoteLook.font(NoteLook.body)
-            label.textColor = NoteLook.text3
+            let label = HintLabel(labelWithAttributedString: NSAttributedString(string: String(localized: .notesGuideHint), attributes: [
+                .font: NoteLook.font(NoteLook.body), .foregroundColor: NoteLook.text3,
+            ]))
             label.setAccessibilityElement(false)
             label.sizeToFit()
             addSubview(label)

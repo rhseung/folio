@@ -239,6 +239,23 @@ struct NoteAssistTests {
         try rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: dir).appending(path: "\(name).png"))
     }
 
+    /// The edit view's top, its hint included, to look at.
+    static func writeText(_ view: SourceTextView, _ name: String, dark: Bool) throws {
+        guard let dir = ProcessInfo.processInfo.environment["FOLIO_NOTE_RENDER"] else { return }
+        let area = NSRect(x: 0, y: 0, width: view.bounds.width, height: 160)
+        let text = try #require(view.bitmapImageRepForCachingDisplay(in: area))
+        view.cacheDisplay(in: area, to: text)
+        let back = dark ? NSColor(white: 0.12, alpha: 1) : NSColor.white
+        let out = NSImage(size: area.size, flipped: false) { _ in
+            back.setFill()
+            area.fill()
+            text.draw(in: area)
+            return true
+        }
+        let rep = try #require(out.tiffRepresentation.flatMap(NSBitmapImageRep.init(data:)))
+        try rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: dir).appending(path: "\(name).png"))
+    }
+
     @Test func renderMenu() async throws {
         for dark in [false, true] {
             let (view, window) = Self.editor("# 행렬\n\n고윳값은 ", syntax: .latex)
@@ -253,6 +270,10 @@ struct NoteAssistTests {
             third.appearance = window.appearance
             Self.type(ascii, "$la")
             try Self.writeWithMenu(ascii, "assist-asciimath-\(dark ? "dark" : "light")", dark: dark)
+            let (hint, fifth) = Self.editor("# 행렬\n\n", syntax: .latex)
+            fifth.appearance = window.appearance
+            hint.updateHint()
+            try Self.writeText(hint, "assist-hint-\(dark ? "dark" : "light")", dark: dark)
             let (link, fourth) = Self.editor("# 행렬\n\n고윳값은 ", links: StubLinks())
             fourth.appearance = window.appearance
             Self.type(link, "[[")

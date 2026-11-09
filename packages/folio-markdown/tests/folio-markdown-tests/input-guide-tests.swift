@@ -83,9 +83,9 @@ struct InputGuideTests {
         #expect(entries.contains { $0.title == .code("frac(…)(…)") })
         #expect(entries.first { $0.id == "tab.slot" }?.steps.last == .result(.code("frac(a)(…)")))
         // The sample's typed letters really bring up the names shown.
-        if let row = entries.first(where: { $0.id == "menu.asciimath" }), case .key(let typed) = row.steps[0], case .result(.code(let names)) = row.steps[1] {
+        if let row = entries.first(where: { $0.id == "menu.asciimath" }), case .key(let typed) = row.steps[0], case .result(.list(let names)) = row.steps[1] {
             let found = Completion.items(for: CompletionQuery(kind: .asciiMath, text: typed, range: NSRange(), place: .text), catalog: ascii).map(\.title)
-            #expect(names.split(separator: " ").allSatisfy { found.contains(String($0)) })
+            #expect(!names.isEmpty && !names.contains(typed) && names.allSatisfy { found.contains($0) })
         } else {
             Issue.record("no AsciiMath row")
         }
