@@ -94,7 +94,6 @@ jobs:
       - run: sysctl -n hw.ncpu hw.memsize
       - id: run
         run: mise run test
-      - run: swift test --skip-build --package-path packages/folio-core --filter FolioCLITests --no-parallel 2>&1 | grep -E 'passed after|failed after' | sort -t' ' -k1 || true
       # A failed test still built everything, so its build is worth keeping.
       - if: ${{ !cancelled() && (github.event_name == 'push' || steps.cache.outputs.cache-matched-key == '') && steps.run.outcome != 'skipped' }}
         uses: actions/cache/save@v6
@@ -128,6 +127,8 @@ jobs:
     steps:
       - if: env.RUN != 'true'
         run: echo "No file in this PR reaches ${{ matrix.task }}."
+      - if: env.RUN == 'true' && matrix.task == 'test-ipad'
+        run: date; xcrun simctl boot "$(xcrun simctl list devices available | grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}')"; date
       - if: env.RUN == 'true'
         uses: actions/checkout@v7
       # Checkout stamps every file with the time it was written, so Xcode and SwiftPM, which compare a source's time
@@ -157,6 +158,7 @@ jobs:
             !.build/DerivedData/Index.noindex
             !.build/DerivedData/Logs
             !.build/DerivedData/TestResults
+            Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
           key: derived-data-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-${{ github.sha }}
           restore-keys: |
             derived-data-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-
@@ -167,7 +169,7 @@ jobs:
       - if: env.RUN == 'true'
         run: |
           rm -rf .build/DerivedData/Build/Products/*/*.app .build/DerivedData/Build/Products/*/*.xctest .build/DerivedData/Build/Products/*/*.bundle
-          defaults write com.apple.dt.XCBuild IgnoreFileSystemDeviceInodeChanges -bool YES
+          defaults write com.apple.dt.SWBBuildService IgnoreFileSystemDeviceInodeChanges -bool YES
       - if: env.RUN == 'true'
         uses: jdx/mise-action@v5
       - if: env.RUN == 'true'
@@ -192,6 +194,7 @@ jobs:
             !.build/DerivedData/Index.noindex
             !.build/DerivedData/Logs
             !.build/DerivedData/TestResults
+            Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
           key: ${{ steps.cache.outputs.cache-primary-key }}
       # `mise run note-screens -- <run ID>` takes these as the new references.
       - if: failure() && matrix.task == 'test-app'

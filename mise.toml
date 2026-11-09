@@ -86,7 +86,7 @@ if [ -d "$out" ]; then find "$out" -maxdepth 1 -type f -name '*.png' -delete; rm
 rm -rf .build/test-app.xcresult
 status=0
 TEST_RUNNER_FOLIO_NOTE_SCREENS="$out" TEST_RUNNER_FOLIO_NOTE_SCREENS_STRICT="${FOLIO_NOTE_SCREENS_STRICT:-}" \
-xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation || status=$?
+xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -parallel-testing-enabled YES -parallel-testing-worker-count 3 -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation || status=$?
 # -quiet leaves out why a test failed; the summary has each failure's message.
 if [ "$status" -ne 0 ] && [ -d .build/test-app.xcresult ]; then
   xcrun xcresulttool get test-results summary --path .build/test-app.xcresult --compact
