@@ -72,16 +72,6 @@ jobs:
       # Apple's date detector reads 오후 3시 or 자정 only when Korean is a preferred language; on the English runner
       # it kept the date and dropped the time.
       - run: defaults write -g AppleLanguages -array ko-KR en-US && defaults write -g AppleLocale ko_KR
-      - id: xcode
-        run: echo "version=$(DEVELOPER_DIR="$XCODE/Contents/Developer" xcodebuild -version | tr -s ' \n' '-' | sed 's/-$//')" >> "$GITHUB_OUTPUT"
-      - uses: actions/cache@v6
-        with:
-          path: packages/*/.build
-          key: spm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved') }}
-          restore-keys: spm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
-      # Checkout stamps every source newer than the cached build, so Folio's own modules always compile again; the
-      # cache saves the dependencies. A resource bundle would keep a file the branch deleted, so it is copied afresh.
-      - run: rm -rf packages/*/.build/out/Products/*/*.bundle packages/*/.build/*/debug/*.bundle
       - uses: jdx/mise-action@v5
       - run: mise run test
 
@@ -108,7 +98,8 @@ jobs:
       # quietly stopping. A missing or changed picture lands here and goes up as the note-screens artifact.
       FOLIO_NOTE_SCREENS_STRICT: 1
       FOLIO_NOTE_SCREENS: ${{ github.workspace }}/.build/note-screens
-      XCODE_XCCONFIG_FILE: ${{ github.workspace }}/.build/ci.xcconfig
+      # Turns the compilation cache on for CI alone, without a setting in project.yml.
+      XCODE_XCCONFIG_FILE: ${{ runner.temp }}/ci.xcconfig
     steps:
       - if: env.RUN != 'true'
         run: echo "No file in this PR reaches ${{ matrix.task }}."
@@ -122,7 +113,8 @@ jobs:
         id: xcode
         run: echo "version=$(DEVELOPER_DIR="$XCODE/Contents/Developer" xcodebuild -version | tr -s ' \n' '-' | sed 's/-$//')" >> "$GITHUB_OUTPUT"
       # One cache per task: each builds another platform or configuration into its own DerivedData. The index, logs
-      # and test results are rebuilt by every run and aren't worth the download.
+      # and test results are rebuilt by every run and aren't worth the download. Each push to main saves a new cache,
+      # which PRs start from; a PR saves only when it found none, so its pushes don't push main's out of the 10 GB.
       - if: env.RUN == 'true'
         id: cache
         uses: actions/cache/restore@v6
@@ -132,24 +124,32 @@ jobs:
             !.build/DerivedData/Index.noindex
             !.build/DerivedData/Logs
             !.build/DerivedData/TestResults
-          key: xcode-cas2-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}
-          restore-keys: xcode-cas2-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
-      # As in `test`, Folio's own sources compile again. The app, test and resource bundles go so that a file the
-      # branch deleted can't linger in them; Xcode copies resources into a bundle without removing old ones.
+          key: xcode-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-${{ github.sha }}
+          restore-keys: |
+            xcode-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-
+            xcode-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
+      # Checkout stamps every source newer than the cached build, so every module compiles again; the compilation
+      # cache answers the ones whose inputs are unchanged by content, not by date, so an edit can't be skipped. The app,
+      # test and resource bundles go so that a file the branch deleted can't linger in them; Xcode copies resources
+      # into a bundle without removing old ones.
       - if: env.RUN == 'true'
-        run: rm -rf .build/DerivedData/Build/Products/*/*.app .build/DerivedData/Build/Products/*/*.xctest .build/DerivedData/Build/Products/*/*.bundle
-      - if: env.RUN == 'true'
-        run: mkdir -p .build && echo 'COMPILATION_CACHE_ENABLE_CACHING = YES' > "$XCODE_XCCONFIG_FILE"
+        run: |
+          rm -rf .build/DerivedData/Build/Products/*/*.app .build/DerivedData/Build/Products/*/*.xctest .build/DerivedData/Build/Products/*/*.bundle
+          echo 'COMPILATION_CACHE_ENABLE_CACHING = YES' > "$XCODE_XCCONFIG_FILE"
       - if: env.RUN == 'true'
         uses: jdx/mise-action@v5
       - if: env.RUN == 'true'
         id: run
         run: mise run ${{ matrix.task }}
-      - if: ${{ !cancelled() && env.RUN == 'true' }}
-        run: du -sh .build/DerivedData/* || true
-      # A key is saved once, so a run that failed to build would leave a cache without the dependencies. A failed test
-      # still saves, since the app was built: otherwise a red test-app would never get a cache.
-      - if: ${{ !cancelled() && env.RUN == 'true' && steps.cache.outputs.cache-hit != 'true' && (steps.run.outcome == 'success' || (steps.run.outcome == 'failure' && hashFiles('.build/DerivedData/Build/Products/*/Folio.app/**/Info.plist') != '')) }}
+      # A run that failed to build would leave a cache without the dependencies; a failed test still saves, since the
+      # app was built. The compilation cache only grows, so past 3 GB it starts over.
+      - if: ${{ !cancelled() && env.RUN == 'true' && (github.event_name == 'push' || steps.cache.outputs.cache-matched-key == '') && (steps.run.outcome == 'success' || (steps.run.outcome == 'failure' && hashFiles('.build/DerivedData/Build/Products/*/Folio.app/**/Info.plist') != '')) }}
+        id: keep
+        run: |
+          cas=.build/DerivedData/CompilationCache.noindex
+          if [ -d "$cas" ] && [ "$(du -sm "$cas" | cut -f1)" -gt 3072 ]; then rm -rf "$cas"; fi
+          du -sh .build/DerivedData/* || true
+      - if: ${{ !cancelled() && steps.keep.outcome == 'success' }}
         uses: actions/cache/save@v6
         with:
           path: |
