@@ -45,8 +45,8 @@ import UIKit
 
     static let shared = NoteMath()
 
-    /// How far past KaTeX's boxes the snapshot reaches, in ems, before the picture is cut to its ink: a glyph's ink
-    /// runs past its box (an italic f, a slanted integral) by less than one. A test draws with more to see nothing's cut.
+    /// How far past KaTeX's boxes a trimmed picture's snapshot reaches, in ems, before it's cut to its ink: a glyph's
+    /// ink runs past its box (an italic f, a slanted integral) by less than one. A test draws with more to see nothing's cut.
     private let room: CGFloat
 
     init(room: CGFloat = 1) {
@@ -75,6 +75,7 @@ import UIKit
         let display: Bool
         let size: CGFloat
         let dark: Bool
+        let trim: Bool
     }
 
     /// The page draws only while it is in a window on screen, so the view that shows math (the edit view) carries it.
@@ -99,16 +100,20 @@ import UIKit
         #endif
     }
 
-    func picture(_ source: String, syntax: MathSyntax, display: Bool, size: CGFloat, dark: Bool, ready: (() -> Void)? = nil) -> Picture? {
+    /// `trim` cuts the picture to its ink, for the bubble, which pads it evenly. Untrimmed it keeps KaTeX's boxes, the
+    /// line box and strut: the palette and the completion menu center a symbol in its cell, and only the boxes keep
+    /// `\ldots` under `\cdots`, `.` under `\cdot` and `,` under `'`.
+    func picture(_ source: String, syntax: MathSyntax, display: Bool, size: CGFloat, dark: Bool, trim: Bool = false,
+                 ready: (() -> Void)? = nil) -> Picture? {
         _ = drawn
         let formula = source.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !formula.isEmpty else { return nil }
-        let key = "\(syntax.rawValue)|\(display)|\(size)|\(dark)|\(formula)"
+        let key = "\(syntax.rawValue)|\(display)|\(size)|\(dark)|\(trim)|\(formula)"
         if let hit = cache[key] { return hit }
         if failed.contains(key) { return nil }
         if let ready { waiting[key, default: []].append(ready) }
         if !queue.contains(where: { $0.key == key }) {
-            queue.append(Job(key: key, source: formula, syntax: syntax, display: display, size: size, dark: dark))
+            queue.append(Job(key: key, source: formula, syntax: syntax, display: display, size: size, dark: dark, trim: trim))
         }
         pump()
         return nil
@@ -130,7 +135,8 @@ import UIKit
         let job = queue.removeFirst(), turn = UUID(), started = ContinuousClock.now
         current = turn
         Task {
-            let result = await page.draw(job.source, syntax: job.syntax, display: job.display, size: job.size, dark: job.dark, room: room)
+            let result = await page.draw(job.source, syntax: job.syntax, display: job.display, size: job.size, dark: job.dark,
+                                         room: job.trim ? room : nil)
             guard current == turn else { return }
             // Only what KaTeX can't read is given up on; a page that ended or a snapshot that failed is asked again.
             switch result {
@@ -257,7 +263,8 @@ import UIKit
         case failed
     }
 
-    func draw(_ source: String, syntax: MathSyntax, display: Bool, size: CGFloat, dark: Bool, room: CGFloat) async -> Drawn {
+    /// With `room`, the snapshot reaches that many ems past the boxes and is cut to its ink; without, it's the boxes.
+    func draw(_ source: String, syntax: MathSyntax, display: Bool, size: CGFloat, dark: Bool, room: CGFloat?) async -> Drawn {
         if !loaded { await withCheckedContinuation { onLoad.append($0) } }
         let escaped = source.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;")
         let html = display ? "<div class=\"math display\">\(escaped)</div>" : "<span class=\"math\">\(escaped)</span>"
@@ -290,7 +297,9 @@ import UIKit
         do { answer = try await web.callAsyncJavaScript(script, arguments: arguments, contentWorld: .defaultClient) } catch { return .failed }
         guard let found = answer as? [NSNumber], found.count == 4 else { return .unreadable }
         let ink = CGRect(x: found[0].doubleValue, y: found[1].doubleValue, width: found[2].doubleValue, height: found[3].doubleValue)
-        let margin = ceil(size * room)
+        // Untrimmed, glyphs still reach a little past their boxes, so a quarter em of room around them; in whole
+        // points either way, so the picture isn't stretched into its bounds.
+        let margin = ceil(size * (room ?? 0.25))
         let rect = CGRect(x: floor(ink.minX) - margin, y: floor(ink.minY) - margin, width: 0, height: 0)
             .union(CGRect(x: ceil(ink.maxX) + margin, y: ceil(ink.maxY) + margin, width: 0, height: 0))
             .intersection(web.bounds)
@@ -300,8 +309,10 @@ import UIKit
         // The page is drawn afresh for the picture; waiting for the screen would wait on a window that may not show.
         snapshot.afterScreenUpdates = false
         guard let image = try? await web.takeSnapshot(configuration: snapshot) else { return .failed }
+        let taken = NoteMath.Picture(image: image, size: rect.size)
+        guard room != nil else { return .picture(taken) }
         // Spacing or `\left.` alone has no ink; its picture stays as it was taken, empty.
-        return .picture(Self.inked(image, size: rect.size) ?? NoteMath.Picture(image: image, size: rect.size))
+        return .picture(Self.inked(image, size: rect.size) ?? taken)
     }
 
     /// The picture cut to the pixels its ink covers, in whole points so it isn't stretched into its frame. KaTeX's

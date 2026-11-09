@@ -18,19 +18,20 @@ struct NoteMathTests {
         return window
     }()
 
-    /// The picture once drawn; nil when it fails or doesn't come in time.
-    func picture(_ source: String, _ syntax: MathSyntax = .latex, display: Bool = false, dark: Bool = false,
+    /// The picture once drawn; nil when it fails or doesn't come in time. Trimmed to its ink, as the bubble's is,
+    /// unless asked otherwise.
+    func picture(_ source: String, _ syntax: MathSyntax = .latex, display: Bool = false, dark: Bool = false, trim: Bool = true,
                  by math: NoteMath = .shared) async -> NoteMath.Picture? {
         math.host(in: Self.window.contentView!)
         var done = false
-        if let hit = math.picture(source, syntax: syntax, display: display, size: 16, dark: dark, ready: { done = true }) { return hit }
+        if let hit = math.picture(source, syntax: syntax, display: display, size: 16, dark: dark, trim: trim, ready: { done = true }) { return hit }
         let clock = ContinuousClock(), until = clock.now + .seconds(20)
         while !done, clock.now < until {
             // Another test's editor may have taken the page into its window.
             math.host(in: Self.window.contentView!)
             try? await Task.sleep(for: .milliseconds(20))
         }
-        return math.picture(source, syntax: syntax, display: display, size: 16, dark: dark)
+        return math.picture(source, syntax: syntax, display: display, size: 16, dark: dark, trim: trim)
     }
 
     /// The first picture waits for a web process and the page; later ones only for KaTeX and the snapshot. A new
@@ -155,6 +156,22 @@ struct NoteMathTests {
             let tight = try #require(await picture(source, syntax, display: display), "\(source)")
             let wide = try #require(await picture(source, syntax, display: display, by: roomy), "\(source)")
             #expect(tight.size == wide.size, "\(source): \(tight.size) vs \(wide.size)")
+        }
+    }
+
+    /// Untrimmed, as the palette and the completion menu ask, a picture keeps KaTeX's line box, so a symbol centered
+    /// in its cell still sits where it does on the line: low dots under centered ones, a period under a centered dot.
+    @Test func untrimmedPicturesKeepTheirLine() async throws {
+        for (low, centered) in [(#"\ldots"#, #"\cdots"#), (".", #"\cdot"#)] {
+            func middle(_ tex: String) async throws -> CGFloat {
+                let picture = try #require(await picture(tex, trim: false), "\(tex)")
+                let pixels = try Pixels(picture.image)
+                let ink = try #require(pixels.ink, "\(tex)")
+                return CGFloat(ink.minY + ink.maxY) / 2 / CGFloat(pixels.height)
+            }
+            let l = try await middle(low)
+            let c = try await middle(centered)
+            #expect(l > c + 0.1, "\(low) at \(l), \(centered) at \(c) of the picture's height")
         }
     }
 

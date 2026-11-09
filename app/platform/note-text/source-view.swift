@@ -979,7 +979,8 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         var span = NSRange()
         if caret > 0 {
             if let tex = storage.attribute(.noteMath, at: caret - 1, longestEffectiveRange: &span, in: all) as? String, caret > span.location,
-               let picture = NoteMath.shared.picture(tex, syntax: styler.syntax, display: false, size: NoteLook.body, dark: styler.dark, ready: redrawBubble) {
+               let picture = NoteMath.shared.picture(tex, syntax: styler.syntax, display: false, size: NoteLook.body, dark: styler.dark, trim: true,
+                                                     ready: redrawBubble) {
                 return (picture.image, picture.size, span)
             }
             if let source = storage.attribute(.noteImage, at: caret - 1, longestEffectiveRange: &span, in: all) as? String, caret > span.location,
@@ -992,7 +993,8 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         }
         let at = min(caret, storage.length - 1)
         if let tex = storage.attribute(.noteMathBlock, at: at, longestEffectiveRange: &span, in: all) as? String,
-           let picture = NoteMath.shared.picture(tex, syntax: styler.syntax, display: true, size: NoteLook.body, dark: styler.dark, ready: redrawBubble) {
+           let picture = NoteMath.shared.picture(tex, syntax: styler.syntax, display: true, size: NoteLook.body, dark: styler.dark, trim: true,
+                                                 ready: redrawBubble) {
             return (picture.image, picture.size, span)
         }
         return nil
