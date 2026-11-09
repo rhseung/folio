@@ -5,7 +5,8 @@ on:
     branches: [main]
   pull_request:
 
-# A newer push to the same branch or PR makes the older run moot.
+# A newer push to the same branch or PR makes the older run moot. A cancelled job saves no cache: actions/cache saves
+# only after every step succeeded.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -16,7 +17,55 @@ env:
   MISE_TRUSTED_CONFIG_PATHS: ${{ github.workspace }}
 
 jobs:
+  # Which checks a PR's files can reach. Push to main runs everything. A file a check never reads is listed per check
+  # below; any other file, or no answer from the API, runs the check.
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      test: ${{ steps.files.outputs.test }}
+      test-app: ${{ steps.files.outputs.test-app }}
+      build-ipad: ${{ steps.files.outputs.build-ipad }}
+      test-ipad: ${{ steps.files.outputs.test-ipad }}
+    steps:
+      - id: files
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT: ${{ github.event_name }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          tasks="test test-app build-ipad test-ipad"
+          run_all() { for t in $tasks; do echo "$t=true" >> "$GITHUB_OUTPUT"; done; exit 0; }
+          [ "$EVENT" = pull_request ] || run_all
+          # A rename's old path counts too: moving a file out of app/ changes what app/ builds.
+          files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
+            --jq '.[] | .filename, (.previous_filename // empty)') || run_all
+          # The API lists at most 3000 files; a longer list may be missing the one that matters.
+          [ -n "$files" ] && [ "$(wc -l <<< "$files")" -lt 3000 ] || run_all
+          printf '%s\n' "$files"
+          # Prose, the web bundle's sources (the app ships the built copy in app/resources/web) and PR pictures.
+          none='^docs/|^[^/]+\.md$|^\.github/.+\.md$|^web/|^pr-renders/'
+          # build-ipad builds the app target alone. test-app builds the same target and resources for the Mac, so a
+          # resource that breaks the bundle fails there.
+          build_ipad="$none|^app-tests/|^scripts/|^\.claude/|^app/resources/web/"
+          test_app="$none|^scripts/|^\.claude/"
+          # FolioPadTests compiles app-tests/ipad only.
+          test_ipad="$none|^scripts/|^\.claude/|^app-tests/[^/]+$|^app-tests/(references|fixtures)/"
+          needs() { if grep -qvE "$1" <<< "$files"; then echo true; else echo false; fi; }
+          # test reads app/ and app-tests/ only for their Swift files (the design, Application Support and action
+          # checks), which a pattern can't say without lookahead.
+          if [ -n "$(grep -vE "$none|^(app|app-tests)/" <<< "$files" || true)" ] || grep -qE '^(app|app-tests)/.*\.swift$' <<< "$files"
+          then test=true; else test=false; fi
+          {
+            echo "test=$test"
+            echo "test-app=$(needs "$test_app")"
+            echo "build-ipad=$(needs "$build_ipad")"
+            echo "test-ipad=$(needs "$test_ipad")"
+          } | tee -a "$GITHUB_OUTPUT"
+
   test:
+    needs: changes
+    # A skipped job reports success to the ruleset. A failed `changes` leaves the output empty, which runs the job.
+    if: ${{ !cancelled() && needs.changes.outputs.test != 'false' }}
     runs-on: xcode-27
     steps:
       - uses: actions/checkout@v7
@@ -24,11 +73,25 @@ jobs:
       # Apple's date detector reads 오후 3시 or 자정 only when Korean is a preferred language; on the English runner
       # it kept the date and dropped the time.
       - run: defaults write -g AppleLanguages -array ko-KR en-US && defaults write -g AppleLocale ko_KR
+      - id: xcode
+        run: echo "version=$(DEVELOPER_DIR="$XCODE/Contents/Developer" xcodebuild -version | tr -s ' \n' '-' | sed 's/-$//')" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@v6
+        with:
+          path: packages/*/.build
+          key: spm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved') }}
+          restore-keys: spm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
+      # Checkout stamps every source newer than the cached build, so Folio's own modules always compile again; the
+      # cache saves the dependencies. A resource bundle would keep a file the branch deleted, so it is copied afresh.
+      - run: rm -rf packages/*/.build/out/Products/*/*.bundle packages/*/.build/*/debug/*.bundle
       - uses: jdx/mise-action@v5
       - run: mise run test
 
   build:
-    runs-on: xcode-27
+    needs: changes
+    if: ${{ !cancelled() }}
+    # A required check that a PR's files can't reach still has to report under its matrix name, which a job-level `if`
+    # can't do (the matrix never expands). It runs on a Linux runner instead, with every step skipped.
+    runs-on: ${{ needs.changes.outputs[matrix.task] == 'false' && 'ubuntu-latest' || 'xcode-27' }}
     # A test stuck on the main thread outlives its own time limit; without this the job would run for six hours.
     timeout-minutes: 45
     strategy:
@@ -38,6 +101,7 @@ jobs:
         # iPad's own tests on a simulator.
         task: [test-app, build-ipad, test-ipad]
     env:
+      RUN: ${{ needs.changes.outputs[matrix.task] != 'false' }}
       # Every other check builds Debug, so the iPad build goes Release: it also catches code that reaches what only
       # exists under #if DEBUG. It runs on PRs because macOS-only APIs broke main three times when it ran after merging.
       FOLIO_CONFIGURATION: ${{ matrix.task == 'build-ipad' && 'Release' || 'Debug' }}
@@ -46,11 +110,37 @@ jobs:
       FOLIO_NOTE_SCREENS_STRICT: 1
       FOLIO_NOTE_SCREENS: ${{ github.workspace }}/.build/note-screens
     steps:
-      - uses: actions/checkout@v7
-      - run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
-      - run: defaults write -g AppleLanguages -array ko-KR en-US && defaults write -g AppleLocale ko_KR
-      - uses: jdx/mise-action@v5
-      - run: mise run ${{ matrix.task }}
+      - if: env.RUN != 'true'
+        run: echo "No file in this PR reaches ${{ matrix.task }}."
+      - if: env.RUN == 'true'
+        uses: actions/checkout@v7
+      - if: env.RUN == 'true'
+        run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
+      - if: env.RUN == 'true'
+        run: defaults write -g AppleLanguages -array ko-KR en-US && defaults write -g AppleLocale ko_KR
+      - if: env.RUN == 'true'
+        id: xcode
+        run: echo "version=$(DEVELOPER_DIR="$XCODE/Contents/Developer" xcodebuild -version | tr -s ' \n' '-' | sed 's/-$//')" >> "$GITHUB_OUTPUT"
+      # One cache per task: each builds another platform or configuration into its own DerivedData. The index, logs
+      # and test results are rebuilt by every run and aren't worth the download.
+      - if: env.RUN == 'true'
+        uses: actions/cache@v6
+        with:
+          path: |
+            .build/DerivedData
+            !.build/DerivedData/Index.noindex
+            !.build/DerivedData/Logs
+            !.build/DerivedData/TestResults
+          key: xcode-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}
+          restore-keys: xcode-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
+      # As in `test`, Folio's own sources compile again. The app, test and resource bundles go so that a file the
+      # branch deleted can't linger in them; Xcode copies resources into a bundle without removing old ones.
+      - if: env.RUN == 'true'
+        run: rm -rf .build/DerivedData/Build/Products/*/*.app .build/DerivedData/Build/Products/*/*.xctest .build/DerivedData/Build/Products/*/*.bundle
+      - if: env.RUN == 'true'
+        uses: jdx/mise-action@v5
+      - if: env.RUN == 'true'
+        run: mise run ${{ matrix.task }}
       # `mise run note-screens -- <run ID>` takes these as the new references.
       - if: failure() && matrix.task == 'test-app'
         uses: actions/upload-artifact@v7
