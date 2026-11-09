@@ -5,27 +5,16 @@ import AppKit
 import UIKit
 #endif
 
-/// The table commands as the edit view offers them: their names in the app's language, symbols and keys, in the
-/// groups the menu shows. What each one does to the source is `TableEditing`'s.
+/// The table commands as the edit view offers them: their names in the app's language and symbols. Their keys and
+/// groups are `TableCommand`'s, which the input guide reads too; what each one does to the source is `TableEditing`'s.
 ///
 /// The keys act only with the caret in a table, so outside one they stay the text view's and the app's. None of them is
-/// taken elsewhere in the note screen (⌘S, ⌘E, ⌘K, ⌘[ and ⌘] are).
+/// taken elsewhere in the note screen (⌘S, ⌘E, ⌘K, ⌘/, ⌘[ and ⌘] are).
 @MainActor enum TableCommands {
-    enum Key { case up, down, left, right, enter, delete }
+    typealias Key = TableShortcut.Key
+    typealias Shortcut = TableShortcut
 
-    struct Shortcut: Equatable {
-        var key: Key
-        var shift = false
-        var option = false
-        var control = false
-    }
-
-    static let groups: [[TableCommand]] = [
-        [.rowAbove, .rowBelow, .columnLeft, .columnRight],
-        [.moveRowUp, .moveRowDown, .moveColumnLeft, .moveColumnRight],
-        [.deleteRow, .deleteColumn],
-        [.format],
-    ]
+    static let groups = TableCommand.groups
 
     static func title(_ command: TableCommand) -> String {
         switch command {
@@ -58,27 +47,9 @@ import UIKit
         }
     }
 
-    /// Rows and columns are added with ⌘ and ⌥⌘, moved with ⌃⌘, deleted with ⇧⌘⌫ and ⌥⇧⌘⌫, as Typora and Obsidian's
-    /// Advanced Tables have most of them. Tidying is rare enough for the menu alone.
-    static func shortcut(_ command: TableCommand) -> Shortcut? {
-        switch command {
-        case .rowBelow: Shortcut(key: .enter)
-        case .rowAbove: Shortcut(key: .enter, shift: true)
-        case .columnLeft: Shortcut(key: .left, option: true)
-        case .columnRight: Shortcut(key: .right, option: true)
-        case .moveRowUp: Shortcut(key: .up, control: true)
-        case .moveRowDown: Shortcut(key: .down, control: true)
-        case .moveColumnLeft: Shortcut(key: .left, control: true)
-        case .moveColumnRight: Shortcut(key: .right, control: true)
-        case .deleteRow: Shortcut(key: .delete, shift: true)
-        case .deleteColumn: Shortcut(key: .delete, shift: true, option: true)
-        case .format: nil
-        }
-    }
+    static func shortcut(_ command: TableCommand) -> Shortcut? { command.shortcut }
 
-    static func command(for shortcut: Shortcut) -> TableCommand? {
-        TableCommand.allCases.first { self.shortcut($0) == shortcut }
-    }
+    static func command(for shortcut: Shortcut) -> TableCommand? { TableCommand.command(for: shortcut) }
 
     #if os(macOS)
     /// Taken by key code, so the Korean input source doesn't change them.

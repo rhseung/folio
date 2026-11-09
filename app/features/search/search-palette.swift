@@ -166,12 +166,7 @@ struct SearchPalette: View {
         }
     }
 
-    func keycap(_ key: String) -> some View {
-        Text(key).font(Theme.Typeface.label).monospaced()
-            .foregroundStyle(Theme.Palette.textSecondary)
-            .padding(.horizontal, Theme.Space.tight).padding(.vertical, Theme.Space.xxs)
-            .background(Theme.Palette.fill, in: .rect(cornerRadius: Theme.Radius.small))
-    }
+    func keycap(_ key: String) -> some View { KeyCap(key) }
 
     func row(_ hit: SearchHit, selected: Bool) -> some View {
         let course = model.workspace.course(hit.item.courseId)

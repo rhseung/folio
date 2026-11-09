@@ -75,6 +75,9 @@ struct ScreenRenders {
             (name, { AnyView(ScreenView(workspace: workspace, entry: entry)) })
         })
         plain.sheets = FormSnapshots.forms(workspace).map { name, view in ("form-\(name)", { view }) }
+        plain.sheets += MathSyntax.allCases.map { syntax in
+            ("input-guide-\(syntax.rawValue)", { AnyView(InputGuideSheet(workspace: workspace, syntax: syntax)) })
+        }
         // The list columns hidden by hand where they would fit (#62). Open over the page they need the glass this render
         // cannot draw, so the window snapshot (`FOLIO_SNAPSHOT_COLUMN=open`) shows that.
         let columns = ScreenCatalog.columns(workspace)
