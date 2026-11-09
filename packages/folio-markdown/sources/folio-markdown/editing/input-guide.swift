@@ -19,11 +19,11 @@ public enum InputGuide {
     }
 
     public enum Phrase: String, CaseIterable, Sendable {
-        case blocks, link, headingLink, pageLink, embed, calloutKind, codeLanguage, texCommand, texEnvironment, asciiMathSymbol
+        case blocks, link, headingLink, pageLink, embed, calloutKind, codeLanguage, mathSymbols, texEnvironment, asciiMathSymbol
         case nextSlot, indent, pairs, wrap, listContinue, listEnd, tableMenu
         case linkTargets, lastPageFirst, embedTargets, inMath, endWritten, fromTwoLetters, snippet, mathSnippet
         case previousSlot, renumbers, nestedStepsOut, inTable
-        case blockList, targetList, headingList, pageList, kindList, languageList, commandList, environmentList
+        case blockList, targetList, headingList, pageList, kindList, languageList, symbolsByCategory, environmentList
         case nextItem, emptyItem, listEnded, selection, secondaryClick
     }
 
@@ -88,10 +88,11 @@ public enum InputGuide {
             Entry("menu.language", .menu, .phrase(.codeLanguage), note: .list(languages), [.key("```"), .result(.phrase(.languageList))],
                   keywords: languages),
         ]
+        // A bare `\` lists them all in either syntax (#392); AsciiMath takes the name in its place.
+        out.append(Entry("menu.symbols", .menu, .phrase(.mathSymbols), note: .phrase(.inMath), [.key("\\"), .result(.phrase(.symbolsByCategory))],
+                         keywords: catalog.tex ? TeXCommands.all.map(\.name) : AsciiMathSymbols.all.map(\.name)))
         if catalog.tex {
             out += [
-                Entry("menu.tex", .menu, .phrase(.texCommand), note: .phrase(.inMath), [.key("\\"), .result(.phrase(.commandList))],
-                      keywords: TeXCommands.all.map(\.name)),
                 Entry("menu.environment", .menu, .phrase(.texEnvironment), note: .phrase(.endWritten),
                       [.key("\\begin{"), .result(.phrase(.environmentList))], keywords: TeXCommands.environments),
             ]

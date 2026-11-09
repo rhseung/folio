@@ -66,6 +66,16 @@ public enum SourcePlace: Equatable, Sendable {
         }
     }
 
+    /// Where something typed at the caret would be: read as if a letter were already there, since `$a + $` is no
+    /// formula (its closing `$` follows a space) though `$a + x$` is, and the symbol put at `$a + |$` belongs in it.
+    public static func typing(at caret: Int, in text: NSString) -> SourcePlace {
+        let caret = min(max(0, caret), text.length)
+        let probe = NSMutableString(string: text)
+        probe.insert("x", at: caret)
+        guard case .math(let display, let content) = at(caret, in: probe) else { return at(caret, in: probe) }
+        return .math(display: display, content: NSRange(location: content.location, length: max(0, content.length - 1)))
+    }
+
     /// Code spans and `$…$` on the caret's line, as `MathScan.scanInline` reads them. A span still open at the caret
     /// counts, since that is where one types before closing it, and so does an empty `$$` with the caret between.
     static func inline(_ line: String, from offset: Int, caret: Int) -> SourcePlace {

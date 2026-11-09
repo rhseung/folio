@@ -117,10 +117,12 @@ struct NoteAssistTests {
         #expect(Self.caretShown(view) == "값 $x \\frac{|}{}$")
     }
 
+    /// `\` lists an AsciiMath note's own names, never TeX commands (#392).
     @Test func asciiMathNotesGetNoTeXCommands() {
         let (view, _) = Self.editor("", syntax: .asciimath)
         Self.type(view, "$\\fr")
-        #expect(!view.completion.visible)
+        #expect(view.completion.visible && !view.completion.items.isEmpty)
+        #expect(view.completion.items.allSatisfy { !$0.title.hasPrefix("\\") })
     }
 
     /// Each block shows its faster way in, read from the snippets for `mk` and `dm`; the guide comes last, and taking

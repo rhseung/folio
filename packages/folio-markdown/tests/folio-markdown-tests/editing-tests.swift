@@ -224,7 +224,8 @@ struct CompletionTests {
         #expect(query("```py|")?.kind == .codeLanguage)
         #expect(query("```py\nx\n```|") == nil)
         #expect(query("$\\fr|$")?.kind == .texCommand)
-        #expect(query("$\\fr|$", tex: false) == nil)
+        // AsciiMath has no commands, but a `\` asks for its names all the same.
+        #expect(query("$\\fr|$", tex: false)?.kind == .texCommand)
         #expect(query("$\\\\|$") == nil)
         #expect(query("$\\begin{pm|}$")?.kind == .texEnvironment)
         #expect(query("값 mk|")?.kind == .snippet)

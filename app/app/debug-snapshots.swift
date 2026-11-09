@@ -49,6 +49,8 @@ final class SnapshotDriver {
     /// the thumbnails, as `split-*.png`. Set to `section-page` (`1-9`): the section whose header is pressed and the
     /// page ⇧-clicked after.
     static let split = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_SPLIT"]
+    /// Only a formula's symbols (#392): the menu a bare `\` opens in a note, then the f(x) palette, as `math-*.png`.
+    static let math = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_MATH"] != nil
 
     var section: CourseSection?
     /// Inside the units section: `detail` opens the first unit, `review` also opens its review sheet.
@@ -79,6 +81,8 @@ final class SnapshotDriver {
     var quickAddOpen = false
     /// Opens the deadline chip's calendar as the field appears.
     var quickAddDueOpen = false
+    /// Opens the f(x) palette of the open note, as its button would.
+    var mathPaletteOpen = false
 
     /// The split screen's section to take up from its header and the page its edge goes to, as clicks would.
     var splitEdit: SplitEdit?
@@ -328,6 +332,49 @@ final class SnapshotDriver {
             try? await Task.sleep(for: .seconds(1))
         }
         quickAddText = nil
+        NSApp.terminate(nil)
+    }
+
+    /// The math walk (`FOLIO_SNAPSHOT_MATH`): types `\` into a formula at the end of `note` as keys would, then opens
+    /// the palette.
+    func runMath(open: (AppLink) -> Void, note: AppLink) async {
+        guard let directory = Self.directory else { return }
+        // folio:not-an-action debug screenshots, outside the GIST folder
+        try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let window = NSApp.windows.first { $0.isVisible }
+        window?.setContentSize(NSSize(width: Self.width, height: 900))
+        window?.center()
+        // The popover's glass draws only on screen: with `screen`, a `<step>.ready` file tells a script outside to
+        // capture the window's area then.
+        func shot(_ name: String, popovers: Bool = false) async {
+            capture(to: directory.appending(path: "\(name).png"), popovers: popovers)
+            guard ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_MATH"] == "screen" else { return }
+            // folio:not-an-action debug screenshots, outside the GIST folder
+            try? Data().write(to: directory.appending(path: "\(name).ready"))
+            try? await Task.sleep(for: .seconds(3))
+        }
+        open(note)
+        func editors(in view: NSView) -> [SourceTextView] { (view as? SourceTextView).map { [$0] } ?? view.subviews.flatMap(editors) }
+        // A first launch takes longer to lay the note out.
+        var found: SourceTextView?
+        for _ in 0..<20 where found == nil {
+            try? await Task.sleep(for: .seconds(0.5))
+            found = window?.contentView.flatMap { editors(in: $0).first }
+        }
+        try? await Task.sleep(for: .seconds(1))
+        if let editor = found {
+            window?.makeFirstResponder(editor)
+            editor.setSelectedRange(NSRange(location: (editor.string as NSString).length, length: 0))
+            for key in "\n\n집합 $A " { editor.insertText(String(key), replacementRange: NSRange(location: NSNotFound, length: 0)) }
+            editor.insertText("\\", replacementRange: NSRange(location: NSNotFound, length: 0))
+            try? await Task.sleep(for: .seconds(2))
+            await shot("math-menu")
+            editor.doCommand(by: #selector(NSResponder.cancelOperation(_:)))
+        }
+        mathPaletteOpen = true
+        try? await Task.sleep(for: .seconds(3))
+        await shot("math-palette", popovers: true)
+        mathPaletteOpen = false
         NSApp.terminate(nil)
     }
 

@@ -74,12 +74,13 @@ struct InputGuideTests {
 
     @Test func theMathRowsFollowTheNotesSyntax() {
         let tex = InputGuide.entries(catalog: Self.catalog).map(\.id)
-        #expect(tex.contains("menu.tex") && tex.contains("menu.environment") && !tex.contains("menu.asciimath"))
+        #expect(tex.contains("menu.symbols") && tex.contains("menu.environment") && !tex.contains("menu.asciimath"))
         var ascii = Self.catalog
         ascii.tex = false
         ascii.snippets = [Snippet(trigger: "mk", body: "$$1$", inMath: false), Snippet(trigger: "//", body: "frac($1)($2)", inMath: true)]
         let entries = InputGuide.entries(catalog: ascii)
-        #expect(!entries.contains { $0.id == "menu.tex" } && entries.contains { $0.id == "menu.asciimath" })
+        #expect(!entries.contains { $0.id == "menu.environment" } && entries.contains { $0.id == "menu.asciimath" })
+        #expect(entries.first { $0.id == "menu.symbols" }?.steps.first == .key("\\"))
         #expect(entries.contains { $0.title == .code("frac(…)(…)") })
         #expect(entries.first { $0.id == "tab.slot" }?.steps.last == .result(.code("frac(a)(…)")))
         // The sample's typed letters really bring up the names shown.

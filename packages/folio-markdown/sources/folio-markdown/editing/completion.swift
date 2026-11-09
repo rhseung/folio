@@ -10,7 +10,8 @@ public struct CompletionQuery: Equatable, Sendable {
         case callout
         /// An opening code fence: the block's language.
         case codeLanguage
-        /// `\` in TeX math: a command.
+        /// `\` in a formula: a TeX command, or in an AsciiMath note a symbol by its AsciiMath name, which goes in without
+        /// the `\` that asked for it. A bare `\` offers every symbol and math snippet, category by category.
         case texCommand
         /// `\begin{` in TeX math: an environment, closed with its `\end`.
         case texEnvironment
@@ -95,10 +96,12 @@ public struct CompletionItem: Equatable, Sendable, Identifiable {
     public var caret: Int?
     /// Leaves the caret where another menu opens, as a file's link does at its page.
     public var continues: Bool
+    /// Where a formula's symbol is found when the whole list is browsed.
+    public var category: MathCategory?
 
     public init(id: String, title: String, detail: String? = nil, symbol: String? = nil, preview: String? = nil,
                 previewAsciiMath: Bool = false, keywords: [String] = [], body: String, block: Bool = false,
-                caret: Int? = nil, continues: Bool = false) {
+                caret: Int? = nil, continues: Bool = false, category: MathCategory? = nil) {
         self.id = id
         self.title = title
         self.detail = detail
@@ -110,6 +113,7 @@ public struct CompletionItem: Equatable, Sendable, Identifiable {
         self.block = block
         self.caret = caret
         self.continues = continues
+        self.category = category
     }
 }
 
@@ -164,6 +168,11 @@ public enum Completion {
             }
         case .math(_, let content):
             guard catalog.tex else {
+                // AsciiMath has no commands; a `\` here asks for its names as one does in TeX, and the name replaces it.
+                // An escape the writer means (`\ ` for a space) stays when the menu is closed with Esc.
+                if let m = prefix.firstMatch(of: #/(?:^|[^\\])\\([A-Za-z]*)$/#), caret - m.1.utf16.count - 1 >= content.location {
+                    return make(.texCommand, m.1).widened(by: 1)
+                }
                 // Two letters or more: one letter is a variable, and offering on it would cover every formula.
                 if let m = prefix.firstMatch(of: #/(?:^|[^A-Za-z\\])([A-Za-z]{2,})$/#), caret - m.1.utf16.count >= content.location,
                    !asciiMath(String(m.1), catalog: catalog).isEmpty {
@@ -200,7 +209,8 @@ public enum Completion {
             let names = catalog.languages + [CBWidget.language]
             return filter(names.map { CompletionItem(id: "language.\($0)", title: $0, body: $0) }, query.text)
         case .texCommand:
-            return filter(TeXCommands.all.map(\.item), query.text, prefixOnly: true)
+            if query.text.isEmpty { return MathSymbols.items(tex: catalog.tex, snippets: catalog.snippets) }
+            return filter(catalog.tex ? TeXCommands.all.map(\.item) : AsciiMathSymbols.items, query.text, prefixOnly: true)
         case .texEnvironment:
             return filter(TeXCommands.environments.map { CompletionItem(id: "env.\($0)", title: $0, body: $0) }, query.text, prefixOnly: true)
         case .snippet:

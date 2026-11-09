@@ -52,6 +52,7 @@ struct FolioApp: App {
             InputGuideCommands()
             #if os(macOS)
             TabCommands()
+            MathCommands()
             #endif
         }
     }
@@ -105,6 +106,22 @@ private struct PaneCommands: Commands {
         }
     }
 }
+
+#if os(macOS)
+/// 편집 › 수식 기호 목록: the menu typing `\` in a formula opens, with every symbol of the note's syntax, sent down the
+/// responder chain to the note being written, which beeps when its caret is in no formula (#392). No key: ⌃Space is
+/// the input source switch (2026-11-09 사용자), and `\` itself is the key. Not on the iPad, which has no completion
+/// menu yet (#31); its path to every symbol is the palette under the note bar's f(x).
+private struct MathCommands: Commands {
+    var body: some Commands {
+        CommandGroup(after: .textEditing) {
+            Button(.notesMathSymbolsMenu) {
+                if !NSApp.sendAction(#selector(SourceTextView.showMathSymbols(_:)), to: nil, from: nil) { NSSound.beep() }
+            }
+        }
+    }
+}
+#endif
 
 /// 보기 › 구역 열 보기·숨기기 (⌥⌘S) for the focused pane's list column, beside the sidebar's ⌃⌘S: hides a docked
 /// column by hand, and shows a folded one again, docked where it fits and over the page where it doesn't (#62).
