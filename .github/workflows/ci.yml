@@ -98,8 +98,6 @@ jobs:
       # quietly stopping. A missing or changed picture lands here and goes up as the note-screens artifact.
       FOLIO_NOTE_SCREENS_STRICT: 1
       FOLIO_NOTE_SCREENS: ${{ github.workspace }}/.build/note-screens
-      # Turns the compilation cache on for CI alone, without a setting in project.yml.
-      XCODE_XCCONFIG_FILE: ${{ runner.temp }}/ci.xcconfig
     steps:
       - if: env.RUN != 'true'
         run: echo "No file in this PR reaches ${{ matrix.task }}."
@@ -135,7 +133,10 @@ jobs:
       - if: env.RUN == 'true'
         run: |
           rm -rf .build/DerivedData/Build/Products/*/*.app .build/DerivedData/Build/Products/*/*.xctest .build/DerivedData/Build/Products/*/*.bundle
-          echo 'COMPILATION_CACHE_ENABLE_CACHING = YES' > "$XCODE_XCCONFIG_FILE"
+          # xcodebuild reads XCODE_XCCONFIG_FILE over every target's settings: the compilation cache is on in CI alone,
+          # without a setting in project.yml.
+          echo 'COMPILATION_CACHE_ENABLE_CACHING = YES' > "$RUNNER_TEMP/ci.xcconfig"
+          echo "XCODE_XCCONFIG_FILE=$RUNNER_TEMP/ci.xcconfig" >> "$GITHUB_ENV"
       - if: env.RUN == 'true'
         uses: jdx/mise-action@v5
       - if: env.RUN == 'true'
