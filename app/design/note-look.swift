@@ -25,6 +25,10 @@ enum NoteLook {
     static let blockGap: CGFloat = 20
     static let listIndent: CGFloat = 24
     static let radius: CGFloat = 12
+    /// The preview draws `---` as three dots, not a line. At a middle dot's size in the faintest gray they disappeared.
+    static let breakDot: CGFloat = 4
+    static let breakDotPitch: CGFloat = 16
+    static let breakSpace: CGFloat = 32
 
     static func font(_ size: CGFloat, _ weight: PlatformFont.Weight = .regular, italic: Bool = false, mono: Bool = false) -> PlatformFont {
         let base = mono ? PlatformFont.monospacedSystemFont(ofSize: size, weight: weight) : PlatformFont.systemFont(ofSize: size, weight: weight)

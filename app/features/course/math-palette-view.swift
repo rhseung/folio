@@ -8,7 +8,6 @@ struct MathPalette: View {
     @Bindable var model: MathPaletteModel
     /// The read view has no caret, so it keeps only the syntax.
     let writing: Bool
-    @Environment(\.accent) private var accent
 
     static let width: CGFloat = 400
     static let gridHeight: CGFloat = 320
@@ -36,24 +35,9 @@ struct MathPalette: View {
         .font(Theme.Typeface.body)
     }
 
-    /// Eight categories are more than `Segmented` holds (2–4), so they wrap as a row of chips, each fully named.
+    // Eight categories are more than `Segmented` holds (2–4).
     var tabs: some View {
-        FlowLayout(spacing: Theme.Space.tight) {
-            let shown = model.shown
-            ForEach(model.categories, id: \.self) { category in
-                let on = category == shown
-                Button { model.category = category } label: {
-                    Text(category.label)
-                        .font(Theme.Typeface.caption.weight(on ? .semibold : .regular))
-                        .foregroundStyle(on ? accent.ink : Theme.Palette.textSecondary)
-                        .padding(Theme.Inset.toggle)
-                        .background(on ? accent.tint : Theme.Palette.fill, in: .capsule)
-                        .contentShape(TouchTarget())
-                }
-                .buttonStyle(.pointing(.plain))
-                .accessibilityAddTraits(on ? .isSelected : [])
-            }
-        }
+        ChipTabs(selection: Binding { model.shown } set: { model.category = $0 }, options: model.categories.map { ($0, $0.label) })
     }
 
     var grid: some View {

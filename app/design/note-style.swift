@@ -28,6 +28,7 @@ enum NoteStyle {
         let values: [(String, CGFloat)] = [
             ("measure", NoteLook.measure), ("margin", NoteLook.margin), ("body", NoteLook.body), ("paragraph-gap", NoteLook.paragraphGap),
             ("block-gap", NoteLook.blockGap), ("radius", NoteLook.radius), ("code-size", NoteLook.codeSize), ("label-size", NoteLook.labelSize),
+            ("break-dot", NoteLook.breakDot), ("break-pitch", NoteLook.breakDotPitch), ("break-space", NoteLook.breakSpace),
         ] + NoteLook.headingSizes.enumerated().map { ("h\($0.offset + 1)", $0.element) }
             + [("fade", Theme.Space.xl)]
             // The preview's picture viewer: its pill buttons (a finger's width on a touch screen), their gap and glass.

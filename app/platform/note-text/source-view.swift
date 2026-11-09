@@ -23,6 +23,8 @@ struct MarkdownEditor {
     var revision = 0
     /// Set to put a symbol picked in the math palette at the cursor; cleared once inserted.
     var insertMath: Binding<CompletionItem?> = .constant(nil)
+    /// Opens the input guide for this note (#395): the `/` menu's last item and 도움말 › 입력 안내 come here.
+    var openGuide: @MainActor () -> Void = {}
 
     @MainActor func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -51,6 +53,7 @@ struct MarkdownEditor {
         view.linkOpener = openLink
         view.linkName = embeds?.name ?? { _ in nil }
         view.onScroll = onScroll
+        view.openGuide = openGuide
         view.configure(accent: accent, syntax: math, dark: dark)
         view.setAssist(assist, syntax: math)
         #if os(macOS)
@@ -348,6 +351,8 @@ class NoteTextView: NSTextView {
 
 final class SourceTextView: NoteTextView, NSTextViewDelegate {
     var onChange: () -> Void = {}
+    var openGuide: @MainActor () -> Void = {}
+    private var hint: HintLabel?
     var onScroll: @MainActor (Int, Double) -> Void = { _, _ in }
     var saveFile: (String, Data) -> String? = { _, _ in nil }
     private var styler: SourceStyler?
@@ -387,7 +392,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         if changed { restyle() }
     }
 
-    override func columnChanged() { updateBubble() }
+    override func columnChanged() {
+        updateBubble()
+        updateHint()
+    }
 
     /// Puts the caret at `location` and its line near the top of the screen, as the preview shows a heading or block.
     func reveal(_ location: Int) {
@@ -466,6 +474,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             place(held.index, at: held.y)
         }
         super.didChangeText()
+        updateHint()
     }
 
     /// What's typed next looks like the text around it until it's styled; a plain-text view would use its own font.
@@ -540,6 +549,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             refreshCompletion(opening: false)
         }
         updateBubble()
+        updateHint()
     }
 
     override func viewDidMoveToSuperview() {
@@ -676,6 +686,11 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         if let index { completion.selected = index }
         guard var query = completion.query, var item = completion.current else { return }
         completion.hide()
+        if item.id == InputGuide.menuItemID {
+            apply(SourceEditing.Edit(range: query.range, text: "", caret: query.range.location))
+            placeMenu()
+            return openGuide()
+        }
         if CompletionMenu.late(query), let links = assisting?.0.links {
             guard let taken = links.take(item, for: query, text: string) else { return placeMenu() }
             item = taken.item
@@ -718,6 +733,9 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         host.frame = NSRect(x: x, y: fits ? down : up, width: size.width, height: size.height)
         host.isHidden = false
     }
+
+    /// 도움말 › 입력 안내 (⌘/), sent here while this note is being written, so the guide shows its math syntax.
+    @objc func showInputGuide(_ sender: Any?) { openGuide() }
 
     // MARK: Tables
 
@@ -795,6 +813,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     override func setMarkedText(_ string: Any, selectedRange: NSRange, replacementRange: NSRange) {
         hideCard()
         super.setMarkedText(string, selectedRange: selectedRange, replacementRange: replacementRange)
+        updateHint()
     }
 
     override func viewWillMove(toWindow newWindow: NSWindow?) {
@@ -871,8 +890,46 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             bubble = nil
             completion.hide()
             placeMenu()
+            hint?.isHidden = true
         }
         return super.resignFirstResponder()
+    }
+
+    override func becomeFirstResponder() -> Bool {
+        defer { DispatchQueue.main.async { [weak self] in self?.updateHint() } }
+        return super.becomeFirstResponder()
+    }
+
+    var hintShown: Bool { hint.map { !$0.isHidden } ?? false }
+
+    /// "/ 블록 삽입" after the caret on an empty line (#395). A label over the text, not text: the input method, undo
+    /// and the saved note never see it. A syllable being composed is in the text, so the line isn't empty and it goes.
+    func updateHint() {
+        let caret = selectedRange()
+        guard window?.firstResponder === self, !hasMarkedText(), let window,
+              SourceEditing.offersBlocks(in: string as NSString, selection: caret) else {
+            hint?.isHidden = true
+            return
+        }
+        let label = hint ?? {
+            let label = HintLabel(labelWithAttributedString: NSAttributedString(string: String(localized: .notesGuideHint), attributes: [
+                .font: NoteLook.font(NoteLook.body), .foregroundColor: NoteLook.text3,
+            ]))
+            label.setAccessibilityElement(false)
+            label.sizeToFit()
+            addSubview(label)
+            hint = label
+            return label
+        }()
+        let size = label.fittingSize
+        var line = convert(window.convertFromScreen(firstRect(forCharacterRange: NSRange(location: caret.location, length: 0), actualRange: nil)), from: nil)
+        // An empty note has no line laid out yet: its first line starts at the column's corner.
+        if line.height < 1 {
+            line = NSRect(x: textContainerOrigin.x + (textContainer?.lineFragmentPadding ?? 0), y: textContainerOrigin.y, width: 0, height: size.height)
+        }
+        // On the line's baseline side, where the caret is drawn (`NoteLines.caret`); just past the caret.
+        label.frame = NSRect(x: line.minX + Theme.Space.xs, y: line.maxY - size.height, width: size.width, height: size.height)
+        label.isHidden = false
     }
 
     /// With the caret in math or an image link, its rendering floats by the source, over the text, which keeps its place.
@@ -1006,6 +1063,11 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         apply(SourceEditing.Edit(range: NSRange(location: at, length: 0), text: lead + text, caret: at + lead.utf16.count + text.utf16.count))
         window?.makeFirstResponder(self)
     }
+}
+
+/// The empty line's hint, which a click goes through to the line under it.
+final class HintLabel: NSTextField {
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
 
 /// Rendered math or an image over the text, by its source.
@@ -1146,6 +1208,7 @@ class NoteTextView: UITextView {
 /// math and images rendered are Mac-only for now; add them when the iPad is used for writing.
 final class SourceTextView: NoteTextView, UITextViewDelegate {
     var onChange: () -> Void = {}
+    var openGuide: @MainActor () -> Void = {}
     var onScroll: @MainActor (Int, Double) -> Void = { _, _ in }
     var saveFile: (String, Data) -> String? = { _, _ in nil }
     private var styler: SourceStyler?
@@ -1299,6 +1362,11 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
     override var keyCommands: [UIKeyCommand]? {
         (super.keyCommands ?? []) + TableCommands.keyCommands(action: #selector(runTableCommand(_:)))
     }
+
+    /// 도움말 › 입력 안내 (⌘/ on a keyboard), sent here while this note is being written, so the guide shows its math
+    /// syntax. The note bar's button is the way by touch. No empty-line hint here: it points at the `/` menu, which the
+    /// iPad doesn't have yet (#31).
+    @objc func showInputGuide(_ sender: Any?) { openGuide() }
 
     /// A table key outside a table, or one that can't be done there, is left to the text view.
     override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {

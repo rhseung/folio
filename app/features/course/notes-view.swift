@@ -150,6 +150,7 @@ struct NoteEditor: View {
     @State private var model: NoteEditorModel
     @Environment(\.accent) private var accent
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.showInputGuide) private var showInputGuide
     var anchor: AppLink.Anchor?
     var insert: Binding<String?> = .constant(nil)
     let openNote: (String) -> Void
@@ -197,6 +198,11 @@ struct NoteEditor: View {
                         Label(.notesAssets, systemImage: "photo.on.rectangle").foregroundStyle(showsAssets ? accent.color : Theme.Palette.textSecondary)
                     }
                     .help(Text(.notesAssetsHelp))
+                    // The way by touch; on the Mac also 도움말 › 입력 안내 (⌘/) and the `/` menu.
+                    Button { showInputGuide(model.meta.math) } label: {
+                        Label(.notesGuideTitle, systemImage: "keyboard")
+                    }
+                    .help(Text(.notesGuideTitle))
                 }
             }
             if writing && showsAssets {
@@ -269,7 +275,8 @@ struct NoteEditor: View {
         MarkdownEditor(text: $model.body, baseURL: model.baseURL, math: model.meta.math, insert: $model.pendingInsert,
                        saveFile: model.saveFile, openNote: openNote, onScroll: preview.follow,
                        assist: NoteAssist(settings: model.workspace.settings, links: model.links), anchor: anchor, embeds: model.embeds,
-                       revision: model.workspace.notesRevision, insertMath: $model.pendingMath)
+                       revision: model.workspace.notesRevision, insertMath: $model.pendingMath,
+                       openGuide: { showInputGuide(model.meta.math) })
     }
 }
 

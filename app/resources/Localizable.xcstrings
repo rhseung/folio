@@ -7162,6 +7162,567 @@
         }
       }
     },
+    "notes.guide.math-symbols": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수식 기호 전체 목록"
+          }
+        }
+      }
+    },
+    "notes.guide.symbols-by-category": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "분류별 기호 목록"
+          }
+        }
+      }
+    },
+    "notes.guide.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "입력 안내"
+          }
+        }
+      }
+    },
+    "notes.guide.search": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "찾기: 링크, 표, 분수"
+          }
+        }
+      }
+    },
+    "notes.guide.all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체"
+          }
+        }
+      }
+    },
+    "notes.guide.section.menu": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 완성 메뉴"
+          }
+        }
+      }
+    },
+    "notes.guide.section.tab": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tab 입력"
+          }
+        }
+      }
+    },
+    "notes.guide.section.auto": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 입력"
+          }
+        }
+      }
+    },
+    "notes.guide.section.table": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표 편집"
+          }
+        }
+      }
+    },
+    "notes.guide.no-match": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "검색 결과 없음"
+          }
+        }
+      }
+    },
+    "notes.guide.hint": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "/ 블록 삽입"
+          }
+        }
+      }
+    },
+    "notes.guide.blocks": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "블록 삽입"
+          }
+        }
+      }
+    },
+    "notes.guide.link": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "링크"
+          }
+        }
+      }
+    },
+    "notes.guide.heading-link": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제목과 블록 링크"
+          }
+        }
+      }
+    },
+    "notes.guide.page-link": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자료 쪽 링크"
+          }
+        }
+      }
+    },
+    "notes.guide.embed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "임베드"
+          }
+        }
+      }
+    },
+    "notes.guide.callout-kind": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "콜아웃 종류"
+          }
+        }
+      }
+    },
+    "notes.guide.code-language": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "코드 언어"
+          }
+        }
+      }
+    },
+    "notes.guide.tex-environment": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TeX 환경"
+          }
+        }
+      }
+    },
+    "notes.guide.ascii-math-symbol": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "AsciiMath 기호"
+          }
+        }
+      }
+    },
+    "notes.guide.next-slot": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음 인자 칸"
+          }
+        }
+      }
+    },
+    "notes.guide.indent": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "들여쓰기와 내어쓰기"
+          }
+        }
+      }
+    },
+    "notes.guide.pairs": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "닫는 기호"
+          }
+        }
+      }
+    },
+    "notes.guide.wrap": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택 영역 감싸기"
+          }
+        }
+      }
+    },
+    "notes.guide.list-continue": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목록 이어 쓰기"
+          }
+        }
+      }
+    },
+    "notes.guide.list-end": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목록 끝내기"
+          }
+        }
+      }
+    },
+    "notes.guide.table-menu": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표 메뉴"
+          }
+        }
+      }
+    },
+    "notes.guide.link-targets": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트, 자료, 회차, 시험"
+          }
+        }
+      }
+    },
+    "notes.guide.last-page-first": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "최근 본 쪽 우선"
+          }
+        }
+      }
+    },
+    "notes.guide.embed-targets": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그림과 노트"
+          }
+        }
+      }
+    },
+    "notes.guide.in-math": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수식 안"
+          }
+        }
+      }
+    },
+    "notes.guide.end-written": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "\\end 자동 입력"
+          }
+        }
+      }
+    },
+    "notes.guide.from-two-letters": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수식 안, 두 글자부터"
+          }
+        }
+      }
+    },
+    "notes.guide.snippet": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스니펫"
+          }
+        }
+      }
+    },
+    "notes.guide.math-snippet": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수식 안 스니펫"
+          }
+        }
+      }
+    },
+    "notes.guide.previous-slot": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "⇧⇥ 이전 칸"
+          }
+        }
+      }
+    },
+    "notes.guide.renumbers": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "번호 목록 번호 갱신"
+          }
+        }
+      }
+    },
+    "notes.guide.nested-steps-out": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하위 항목은 한 단계 위로"
+          }
+        }
+      }
+    },
+    "notes.guide.in-table": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "표 안"
+          }
+        }
+      }
+    },
+    "notes.guide.block-list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "블록 목록"
+          }
+        }
+      }
+    },
+    "notes.guide.target-list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "대상 목록"
+          }
+        }
+      }
+    },
+    "notes.guide.heading-list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "제목 목록"
+          }
+        }
+      }
+    },
+    "notes.guide.page-list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쪽 목록"
+          }
+        }
+      }
+    },
+    "notes.guide.kind-list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "종류 목록"
+          }
+        }
+      }
+    },
+    "notes.guide.language-list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "언어 목록"
+          }
+        }
+      }
+    },
+    "notes.guide.environment-list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "환경 목록"
+          }
+        }
+      }
+    },
+    "notes.guide.next-item": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음 항목"
+          }
+        }
+      }
+    },
+    "notes.guide.empty-item": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빈 항목"
+          }
+        }
+      }
+    },
+    "notes.guide.list-ended": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목록 끝"
+          }
+        }
+      }
+    },
+    "notes.guide.selection": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "선택 영역"
+          }
+        }
+      }
+    },
+    "notes.guide.secondary-click": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "오른쪽 클릭"
+          }
+        }
+      }
+    },
     "notes.choose": {
       "extractionState": "manual",
       "localizations": {

@@ -79,8 +79,11 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note blockquote { margin: 18px 0; padding: 2px 0 2px 18px; border-left: 3px solid var(--line); color: var(--text-2); }
 /* The last block's margin would sit inside the rule and leave it longer below the text than above. */
 .note blockquote > :last-child { margin-bottom: 0; }
-.note hr { border: 0; height: 24px; margin: 28px 0; text-align: center; }
-.note hr::before { content: "· · ·"; color: var(--text-3); letter-spacing: .6em; font-size: 14px; }
+/* Drawn dots, not "· · ·" text: a glyph's size and spacing follow the font and came out too small to see. */
+.note hr { border: 0; height: var(--break-dot); margin: var(--break-space) 0; position: relative; overflow: visible; }
+.note hr::before { content: ""; position: absolute; top: 0; left: calc(50% - var(--break-dot) / 2); width: var(--break-dot); height: var(--break-dot);
+  border-radius: 50%; background: var(--text-2);
+  box-shadow: calc(-1 * var(--break-pitch)) 0 var(--text-2), var(--break-pitch) 0 var(--text-2); }
 
 /* No backdrop behind images: transparent SVGs carry their own dark-mode palette, and a light card under them hides their light ink. */
 /* A width from `|300` stays a cap, not a minimum. */
