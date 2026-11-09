@@ -128,6 +128,7 @@ jobs:
       # quietly stopping. A missing or changed picture lands here and goes up as the note-screens artifact.
       FOLIO_NOTE_SCREENS_STRICT: 1
       FOLIO_NOTE_SCREENS: ${{ github.workspace }}/.build/note-screens
+      FOLIO_XCODEBUILD_FLAGS: -skipPackageUpdates
     steps:
       - if: env.RUN != 'true'
         run: echo "No file in this PR reaches ${{ matrix.task }}."
@@ -161,6 +162,7 @@ jobs:
             !.build/DerivedData/Logs
             !.build/DerivedData/TestResults
             Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+            ~/Library/Caches/org.swift.swiftpm/manifests
           key: derived-data-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-${{ github.sha }}
           restore-keys: |
             derived-data-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-
@@ -170,7 +172,7 @@ jobs:
       # one, and every file is new to this machine, so it is told to look at the times and sizes alone.
       - if: env.RUN == 'true'
         run: |
-          rm -rf .build/DerivedData/Build/Products/*/*.app .build/DerivedData/Build/Products/*/*.xctest .build/DerivedData/Build/Products/*/*.bundle
+          ls -la Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/ ~/Library/Caches/org.swift.swiftpm || true
           defaults write com.apple.dt.SWBBuildService IgnoreFileSystemDeviceInodeChanges -bool YES
       - if: env.RUN == 'true'
         uses: jdx/mise-action@v5
@@ -197,6 +199,7 @@ jobs:
             !.build/DerivedData/Logs
             !.build/DerivedData/TestResults
             Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+            ~/Library/Caches/org.swift.swiftpm/manifests
           key: ${{ steps.cache.outputs.cache-primary-key }}
       # `mise run note-screens -- <run ID>` takes these as the new references.
       - if: failure() && matrix.task == 'test-app'
