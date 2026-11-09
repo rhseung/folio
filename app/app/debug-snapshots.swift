@@ -87,6 +87,8 @@ final class SnapshotDriver {
     var quickAddOpen = false
     /// Opens the deadline chip's calendar as the field appears.
     var quickAddDueOpen = false
+    /// The course the course chip picks once the sample line is typed, as a click in its menu would.
+    var quickAddPick: UUID?
     /// Opens the f(x) palette of the open note, as its button would.
     var mathPaletteOpen = false
 
@@ -294,7 +296,7 @@ final class SnapshotDriver {
     }
 
     /// The quick-add walk (`FOLIO_SNAPSHOT_QUICK_ADD`). `named` is the course's word for a line typed off its pages.
-    func runQuickAdd(open: (AppLink) -> Void, course: UUID, named: String) async {
+    func runQuickAdd(open: (AppLink) -> Void, course: UUID, other: UUID?, named: String) async {
         guard let directory = Self.directory else { return }
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -324,6 +326,23 @@ final class SnapshotDriver {
             open(.course(course))
             try? await Task.sleep(for: .seconds(1))
         }
+        // The toolbar's popover off a course's pages: every chip dimmed on the empty line, lit as the line reads them,
+        // then another course picked on the chip, which rewrites the line's course word.
+        quickAddText = nil
+        open(.place(.today))
+        try? await Task.sleep(for: .seconds(3))
+        for (name, text, pick) in [("empty", nil, nil), ("typed", "\(named) HW7 금", nil), ("picked", "\(named) HW7 금", other)] as [(String, String?, UUID?)] {
+            quickAddText = text
+            quickAddPick = pick
+            quickAddOpen = true
+            try? await Task.sleep(for: .seconds(pick == nil ? 3 : 4))
+            await shot("quick-add-today-popover-\(name)", popovers: true)
+            quickAddOpen = false
+            quickAddPick = nil
+            try? await Task.sleep(for: .seconds(1))
+        }
+        open(.course(course))
+        try? await Task.sleep(for: .seconds(1))
         quickAddText = long
         section = .assignments
         try? await Task.sleep(for: .seconds(3))

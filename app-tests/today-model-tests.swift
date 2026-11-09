@@ -204,27 +204,63 @@ struct QuickAddModelTests {
         #expect(model.parsed?.courseId == other.id)
     }
 
-    /// The chips keep one order as values come and go, and a pick on one holds while more of the title is typed.
-    @Test func chipsKeepTheirOrderAndPicksHold() throws {
+    /// The chips keep one order as values come and go, and a pick on one is written into the line.
+    @Test func chipsKeepTheirOrderAndPicksGoIntoTheLine() throws {
         let workspace = try fixtureWorkspace()
         let model = QuickAddModel(workspace: workspace)
         model.text = "보고서"
         #expect(model.chips == [.course(nil), .due(nil)])
         model.text = "보고서 HW5 매주 금"
         let due = try #require(model.parsed?.due)
-        #expect(model.chips == [.course(nil), .due(due), .weekly, .folder("HW05")])
+        #expect(model.chips == [.course(nil), .due(due), .repeats(.weekly), .folder("HW05")])
         model.pickCourse(graphTheory)
-        model.text = "보고서 HW5 매주 금 초안"
-        #expect(model.parsed?.courseId == graphTheory)
+        #expect(model.text == "보고서 HW5 매주 금 그래프 이론" && model.parsed?.courseId == graphTheory)
         model.renumber(kind: .lab, number: 3)
-        #expect(model.text == "보고서 Lab3 매주 금 초안" && model.chips.last == .folder("Lab03"))
+        #expect(model.text == "보고서 Lab3 매주 금 그래프 이론" && model.chips.last == .folder("Lab03"))
         // A chip keeps its identity as its value changes, so an open deadline popover stays open while a date is picked.
         let kinds = model.chips.map(\.kind)
         model.pickDue(model.newDue)
         #expect(model.chips.map(\.kind) == kinds)
+        #expect(model.parsed?.due == model.newDue && model.parsed?.repeats == .weekly)
         model.pickDue(nil)
+        #expect(model.text == "보고서 Lab3 그래프 이론")
         #expect(model.parsed?.due == nil && model.parsed?.repeats == nil)
         #expect(model.chips == [.course(graphTheory), .due(nil), .folder("Lab03")])
+    }
+
+    /// Choosing another course on its chip rewrites the course's words, so the line never says one course while the
+    /// chip says another.
+    @Test func aPickedCourseReplacesTheTypedOne() throws {
+        let workspace = try fixtureWorkspace()
+        let model = QuickAddModel(workspace: workspace, showsEmptyChips: true)
+        model.text = "그래프 HW7 금"
+        let other = try #require(workspace.currentCourses.first { $0.id != graphTheory })
+        model.pickCourse(other.id)
+        #expect(model.text == "\(other.title) HW7 금")
+        #expect(model.parsed?.courseId == other.id && model.parsed?.title == "HW7")
+        // Typing on reads the course from the line, as there is nothing else to hold it.
+        model.text = "그래프 HW7 금"
+        #expect(model.parsed?.courseId == graphTheory)
+    }
+
+    /// On Today and in the toolbar's popover every chip stands from the start, dimmed, and lights up once the line
+    /// reads it; a dimmed chip still picks a value.
+    @Test func emptyChipsStandDimmedUntilRead() throws {
+        let workspace = try fixtureWorkspace()
+        let model = QuickAddModel(workspace: workspace, showsEmptyChips: true)
+        #expect(model.chips == [.course(nil), .due(nil), .repeats(nil), .folder(nil)])
+        #expect(model.chips.allSatisfy(model.isDimmed))
+        model.text = "HW7"
+        #expect(!model.isDimmed(.course(nil)) && model.isDimmed(.due(nil)))
+        #expect(model.chips == [.course(nil), .due(nil), .repeats(nil), .folder("HW07")])
+        model.text = ""
+        model.pickRepeats(.weekly)
+        #expect(model.text == "매주" && model.chips[2] == .repeats(.weekly))
+        model.renumber(kind: .homework, number: 2)
+        #expect(model.text == "매주 HW2")
+        // The assignments screen shows only what was read.
+        let plain = QuickAddModel(workspace: workspace, fixedCourse: graphTheory)
+        #expect(plain.chips.isEmpty)
     }
 
     /// Return adds only a line with a course and a title; anything else stays as typed.

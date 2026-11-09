@@ -29,7 +29,7 @@ struct TodayView: View {
         } content: {
             TodayHeader(model: model, summary: summary, classes: classes, reviews: reviews)
             DayRibbonCard(model: model, summary: summary, classes: classes, go: go, openNote: openNote)
-            QuickAddField(workspace: model.workspace)
+            QuickAddField(workspace: model.workspace, showsEmptyChips: true)
             wrapUpBlock(model.wrapUps(now: model.workspace.liveNow))
             AttendanceWarnings(model: model)
             UnfiledCoursesNotice(workspace: model.workspace)

@@ -108,7 +108,7 @@ enum FormSnapshots {
             forms.append(("class-wrap-up-empty", AnyView(wrapUp(workspace, course.id, empty.session.id))))
         }
         // The toolbar's quick-add mid-typing, as its popover lays it out: the deadline's pill and what will be saved.
-        forms.append(("quick-add-typing", AnyView(QuickAddField(workspace: workspace, floating: true).padding(Theme.Space.l).frame(width: 440)
+        forms.append(("quick-add-typing", AnyView(QuickAddField(workspace: workspace, showsEmptyChips: true, floating: true).padding(Theme.Space.l).frame(width: 440)
             .environment(\.quickAddTypedSample, "\(file.course.title.split(separator: " ").first ?? "") Lab3 보고서 금 마감"))))
         if let filled = held.min(by: { $0.gaps < $1.gaps }), filled.gaps < WrapUpItem.allCases.count {
             forms.append(("class-wrap-up-filled", AnyView(wrapUp(workspace, course.id, filled.session.id))))
