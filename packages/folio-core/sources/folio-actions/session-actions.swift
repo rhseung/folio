@@ -105,22 +105,32 @@ public struct SessionSet {
         let start = try date.value == nil ? nil : ctx.semester(of: ctx.file(course).course)?.start
         try ctx.edit(course) { f in
             _ = try index(session, in: f.sessions, .valueSession)
-            if let date = date.value { f.reschedule(session, to: date, termStart: start, calendar: ctx.calendar) }
-            let schedule = f.course.schedule
-            try f.update(\.sessions, session) { s in
-                if let end = end.value { s.setEnd(end, schedule: schedule, calendar: ctx.calendar) }
-                if let link = link.value { s.link = OnlineLink.stored(link) }
-                kind.apply(&s.kind)
-                skipsReview.apply(&s.skipsReview)
-                reviewUnfinished.apply(&s.reviewNoteUnfinished)
-            }
-            // A review note covering several classes is written once, so they are marked together.
-            if let unfinished = reviewUnfinished.value, let note = f.sessions.first(where: { $0.id == session })?.reviewNoteId {
-                f.setReviewNoteUnfinished(note, unfinished)
-            }
-            // A class that didn't happen has no attendance to count.
-            if kind.value == .cancelled { f.attendance.removeAll { $0.sessionId == session } }
+            try f.set(session: session, date: date, end: end, link: link, kind: kind, skipsReview: skipsReview, reviewUnfinished: reviewUnfinished,
+                      termStart: start, calendar: ctx.calendar)
         }
+    }
+}
+
+extension CourseFile {
+    /// When and how a class meets and its review flags, written the same by `session set` (the menu's review check) and
+    /// `session wrap-up` (the class's sheet), so the two can't drift apart.
+    mutating func set(session id: UUID, date: Patch<Date>, end: Patch<Date?>, link: Patch<String?>, kind: Patch<Session.Kind>,
+                      skipsReview: Patch<Bool>, reviewUnfinished: Patch<Bool>, termStart: LocalDate?, calendar: Calendar) throws {
+        if let date = date.value { reschedule(id, to: date, termStart: termStart, calendar: calendar) }
+        let schedule = course.schedule
+        try update(\.sessions, id) { s in
+            if let end = end.value { s.setEnd(end, schedule: schedule, calendar: calendar) }
+            if let link = link.value { s.link = OnlineLink.stored(link) }
+            kind.apply(&s.kind)
+            skipsReview.apply(&s.skipsReview)
+            reviewUnfinished.apply(&s.reviewNoteUnfinished)
+        }
+        // A review note covering several classes is written once, so they are marked together.
+        if let unfinished = reviewUnfinished.value, let note = sessions.first(where: { $0.id == id })?.reviewNoteId {
+            setReviewNoteUnfinished(note, unfinished)
+        }
+        // A class that didn't happen has no attendance to count.
+        if kind.value == .cancelled { attendance.removeAll { $0.sessionId == id } }
     }
 }
 
@@ -495,19 +505,8 @@ public struct SessionWrapUp {
         let start = try date.value == nil ? nil : ctx.semester(of: ctx.file(course).course)?.start
         try ctx.edit(course) { f in
             _ = try index(session, in: f.sessions, .valueSession)
-            if let date = date.value { f.reschedule(session, to: date, termStart: start, calendar: ctx.calendar) }
-            let schedule = f.course.schedule
-            try f.update(\.sessions, session) { s in
-                if let end = end.value { s.setEnd(end, schedule: schedule, calendar: ctx.calendar) }
-                if let link = link.value { s.link = OnlineLink.stored(link) }
-                kind.apply(&s.kind)
-                skipsReview.apply(&s.skipsReview)
-                reviewUnfinished.apply(&s.reviewNoteUnfinished)
-            }
-            // A review note covering several classes is written once, so they are marked together.
-            if let unfinished = reviewUnfinished.value, let note = f.sessions.first(where: { $0.id == session })?.reviewNoteId {
-                f.setReviewNoteUnfinished(note, unfinished)
-            }
+            try f.set(session: session, date: date, end: end, link: link, kind: kind, skipsReview: skipsReview, reviewUnfinished: reviewUnfinished,
+                      termStart: start, calendar: ctx.calendar)
             let i = try index(session, in: f.sessions, .valueSession)
             for range in ranges {
                 _ = try index(range.materialId, in: f.materials, .valueMaterial)
@@ -524,7 +523,7 @@ public struct SessionWrapUp {
                 if state != .present { f.attendance.append(Attendance(device: ctx.device, at: ctx.now, sessionId: session, state: state)) }
             }
             let s = f.sessions[i]
-            // A class that didn't happen has no attendance to count.
+            // Again after the attendance above: a class that didn't happen has none to count.
             if s.isCancelled { f.attendance.removeAll { $0.sessionId == session } }
             if Session.savingWrapsUp(kind: s.kind, start: s.date, at: ctx.now) { f.sessions[i].isWrappedUp = true }
         }
