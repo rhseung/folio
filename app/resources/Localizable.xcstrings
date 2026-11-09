@@ -727,6 +727,28 @@
         }
       }
     },
+    "class-start.record": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 시작"
+          }
+        }
+      }
+    },
+    "class-start.record-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 녹음 시작"
+          }
+        }
+      }
+    },
     "class-times.add": {
       "extractionState": "manual",
       "localizations": {
@@ -8724,6 +8746,28 @@
         }
       }
     },
+    "notify.class-started": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 시작"
+          }
+        }
+      }
+    },
+    "notify.class-started-recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ · 녹음 중"
+          }
+        }
+      }
+    },
     "notify.due": {
       "extractionState": "manual",
       "localizations": {
@@ -15533,6 +15577,347 @@
         }
       }
     },
+    "settings.class-start": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 시작 시 자동 실행"
+          }
+        }
+      }
+    },
+    "settings.class-start-after": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "후"
+          }
+        }
+      }
+    },
+    "settings.class-start-all-lectures": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체 렉처"
+          }
+        }
+      }
+    },
+    "settings.class-start-all-off": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체 제외"
+          }
+        }
+      }
+    },
+    "settings.class-start-ask": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "확인 후 시작"
+          }
+        }
+      }
+    },
+    "settings.class-start-before": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전"
+          }
+        }
+      }
+    },
+    "settings.class-start-courses": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목별 예외"
+          }
+        }
+      }
+    },
+    "settings.class-start-create": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새로 만들어 열기"
+          }
+        }
+      }
+    },
+    "settings.class-start-first-lecture": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "첫 렉처"
+          }
+        }
+      }
+    },
+    "settings.class-start-follows": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 설정"
+          }
+        }
+      }
+    },
+    "settings.class-start-front": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱 앞으로"
+          }
+        }
+      }
+    },
+    "settings.class-start-lecture": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "렉처"
+          }
+        }
+      }
+    },
+    "settings.class-start-lecture-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "렉처 범위"
+          }
+        }
+      }
+    },
+    "settings.class-start-notify": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "알림만"
+          }
+        }
+      }
+    },
+    "settings.class-start-now": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "자동 시작"
+          }
+        }
+      }
+    },
+    "settings.class-start-off": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하지 않음"
+          }
+        }
+      }
+    },
+    "settings.class-start-on-time": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정각"
+          }
+        }
+      }
+    },
+    "settings.class-start-open-existing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기존 노트 열기"
+          }
+        }
+      }
+    },
+    "settings.class-start-open-linked": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연결된 렉처 열기"
+          }
+        }
+      }
+    },
+    "settings.class-start-place": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "열기 위치"
+          }
+        }
+      }
+    },
+    "settings.class-start-place-beside": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "옆 칸"
+          }
+        }
+      }
+    },
+    "settings.class-start-place-here": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "본문"
+          }
+        }
+      }
+    },
+    "settings.class-start-place-tab": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 탭"
+          }
+        }
+      }
+    },
+    "settings.class-start-place-window": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 창"
+          }
+        }
+      }
+    },
+    "settings.class-start-recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음"
+          }
+        }
+      }
+    },
+    "settings.class-start-recording-at": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 시작 시점"
+          }
+        }
+      }
+    },
+    "settings.class-start-resume": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지난 진도 다음 쪽"
+          }
+        }
+      }
+    },
+    "settings.class-start-rough-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "러프 노트"
+          }
+        }
+      }
+    },
+    "settings.class-start-screen": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화면 표시"
+          }
+        }
+      }
+    },
+    "settings.class-start-some-off": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 제외"
+          }
+        }
+      }
+    },
+    "settings.class-start-stop": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 종료 후 정지"
+          }
+        }
+      }
+    },
     "settings.claude-api-detail": {
       "extractionState": "manual",
       "localizations": {
@@ -16299,6 +16684,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "시간 전"
+          }
+        }
+      }
+    },
+    "settings.unit-minutes-after": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "분 후"
           }
         }
       }

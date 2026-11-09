@@ -133,6 +133,14 @@ struct RootView: View {
         #endif
     }
 
+    /// The iPad has no way to bring an app forward; a class there starts while the app is in front or opened.
+    func bringForward() {
+        #if os(macOS)
+        NSApp.activate()
+        host.window?.makeKeyAndOrderFront(nil)
+        #endif
+    }
+
     var body: some View {
         Group {
             if workspace.gist == nil {
@@ -157,6 +165,7 @@ struct RootView: View {
                 #endif
                 .environment(\.openLink, openLink)
                 .classWrapUpPrompt(workspace)
+                .classStartPrompt(workspace, open: { open($0.link, in: $0.placement) }, showing: { navigator.current }, bringForward: bringForward)
                 #if os(iOS)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { windowWidth = $0 }
                 #endif

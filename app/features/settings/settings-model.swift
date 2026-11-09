@@ -52,6 +52,52 @@ final class SettingsModel {
         workspace.gist.map { ($0.url.path as NSString).abbreviatingWithTildeInPath } ?? String(localized: .settingsNone)
     }
 
+    // MARK: Class start
+
+    enum RecordingTiming: Hashable { case onTime, before, after }
+
+    /// The recording's offset as the row shows it: a direction, and minutes beside it.
+    var recordingTiming: RecordingTiming {
+        get {
+            let offset = settings.classStart.recordingOffsetMinutes
+            return offset == 0 ? .onTime : offset < 0 ? .before : .after
+        }
+        set {
+            let current = abs(settings.classStart.recordingOffsetMinutes)
+            let minutes = current == 0 ? Self.defaultLead : current
+            settings.classStart.recordingOffsetMinutes = switch newValue {
+            case .onTime: 0
+            case .before: -minutes
+            case .after: minutes
+            }
+        }
+    }
+
+    static let defaultLead = 5
+
+    var recordingMinutes: Int {
+        get { abs(settings.classStart.recordingOffsetMinutes) }
+        set { settings.classStart.recordingOffsetMinutes = (recordingTiming == .before ? -1 : 1) * max(1, newValue) }
+    }
+
+    var classStartCourses: [LoadedCourse] { workspace.currentCourses }
+
+    func follows(_ item: ClassStartSettings.Item, course: UUID) -> Bool { !settings.classStart.off(for: course).contains(item) }
+
+    func setFollows(_ follows: Bool, _ item: ClassStartSettings.Item, course: UUID) {
+        var off = settings.classStart.off(for: course)
+        if follows { off.remove(item) } else { off.insert(item) }
+        settings.classStart.setOff(off, for: course)
+    }
+
+    /// 기본 설정, 전체 제외, or the items off: 녹음 · 렉처 제외.
+    func exceptionLabel(_ course: UUID) -> String {
+        let off = ClassStartSettings.Item.allCases.filter(settings.classStart.off(for: course).contains)
+        if off.isEmpty { return String(localized: .settingsClassStartFollows) }
+        if off.count == ClassStartSettings.Item.allCases.count { return String(localized: .settingsClassStartAllOff) }
+        return String(localized: .settingsClassStartSomeOff(off.map(\.label).joined(separator: " · ")))
+    }
+
     // MARK: Backup
 
     #if os(macOS)
@@ -161,5 +207,26 @@ extension SettingsTab {
     /// What a link without a tab (the sidebar, ⌘,) opens: the tab last picked.
     static var remembered: SettingsTab {
         UserDefaults.standard.string(forKey: storageKey).flatMap(SettingsTab.init(rawValue:)) ?? .general
+    }
+}
+
+extension ClassStartSettings.Item {
+    var label: String {
+        switch self {
+        case .recording: String(localized: .settingsClassStartRecording)
+        case .roughNote: String(localized: .settingsClassStartRoughNote)
+        case .lecture: String(localized: .settingsClassStartLecture)
+        }
+    }
+}
+
+extension ClassStartSettings.Place {
+    var label: String {
+        switch self {
+        case .here: String(localized: .settingsClassStartPlaceHere)
+        case .beside: String(localized: .settingsClassStartPlaceBeside)
+        case .tab: String(localized: .settingsClassStartPlaceTab)
+        case .window: String(localized: .settingsClassStartPlaceWindow)
+        }
     }
 }
