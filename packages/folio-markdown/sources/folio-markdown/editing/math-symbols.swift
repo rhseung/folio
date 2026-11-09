@@ -32,9 +32,17 @@ public enum MathSymbols {
     static func snippetItems(_ snippets: [Snippet], tex: Bool) -> [CompletionItem] {
         snippets.enumerated().filter { $0.element.inMath && !$0.element.trigger.isEmpty }.map { i, s in
             let text = s.expanded.text
-            return CompletionItem(id: "snippet.\(i).\(s.trigger)", title: s.trigger, detail: text, symbol: "text.insert", preview: text,
+            return CompletionItem(id: "snippet.\(i).\(s.trigger)", title: s.trigger, detail: text, symbol: "text.insert", preview: sample(s.body),
                                   previewAsciiMath: !tex, body: s.body, category: .snippets)
         }
+    }
+
+    // Empty arguments (`\frac{}{}`) and a script with no base (`^{2}`) typeset to nothing or a lone digit, so the
+    // marks are filled with letters, as a command's sample is.
+    static func sample(_ body: String) -> String {
+        var letters = "abcdefghi".makeIterator()
+        let filled = body.replacing(#/\$([0-9])/#) { $0.1 == "0" ? "" : String(letters.next() ?? "x") }
+        return filled.hasPrefix("^") || filled.hasPrefix("_") ? "x" + filled : filled
     }
 
     /// The edit that puts a symbol picked in the palette at the selection. In a formula it goes in as it is, a space
