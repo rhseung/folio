@@ -47,10 +47,13 @@ public enum MathSymbols {
 
     /// The edit that puts a symbol picked in the palette at the selection. In a formula it goes in as it is, a space
     /// keeping its name from running into the letters beside it (`\alpha x`, not `\alphax`, which is no command); outside
-    /// one it goes in as an inline formula of its own, the caret left inside.
+    /// one it goes in as an inline formula of its own, the caret left inside; in code, as it is.
     public static func insertion(_ item: CompletionItem, in text: NSString, selection: NSRange) -> SourceEditing.Edit {
         var (body, caret) = Snippet(trigger: "", body: item.body, inMath: true).expanded
-        if SourcePlace.typing(at: selection.location, in: text).isMath {
+        let place = SourcePlace.typing(at: selection.location, in: text)
+        if place.isCode {
+            // Code shows `$` as itself: the name goes in bare, as one is written in a code sample.
+        } else if place.isMath {
             func letter(_ c: UInt16?) -> Bool { c.flatMap(Unicode.Scalar.init).map(CharacterSet.letters.contains) ?? false }
             let before = selection.location > 0 ? text.character(at: selection.location - 1) : nil
             let after = NSMaxRange(selection) < text.length ? text.character(at: NSMaxRange(selection)) : nil
