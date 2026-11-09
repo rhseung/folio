@@ -26,6 +26,12 @@ public struct ClassStartSettings: Codable, Sendable, Equatable {
         case here, beside, tab, window
     }
 
+    /// Where the rough note and the lectures open (2026-11-09 사용자): together in a new tab, side by side as the
+    /// "수업 중" preset lays them out (`PanePreset.inClass`), or in the tab in front, each at its own `Place`.
+    public enum OpenIn: String, Codable, Sendable, CaseIterable {
+        case splitTab, currentTab
+    }
+
     /// Whether the app comes to the front with the class, or stays behind and posts a notification.
     public enum Screen: String, Codable, Sendable, CaseIterable {
         case front, notify
@@ -41,6 +47,7 @@ public struct ClassStartSettings: Codable, Sendable, Equatable {
     public var roughNotePlace = Place.here
     public var lecture = Lecture.off
     public var lecturePlace = Place.beside
+    public var openIn = OpenIn.splitTab
     /// Every linked lecture rather than the first.
     public var allLectures = false
     /// At the page after where the last class stopped, when one did.
@@ -63,6 +70,7 @@ public struct ClassStartSettings: Codable, Sendable, Equatable {
         roughNotePlace = try c.value(.roughNotePlace, or: d.roughNotePlace)
         lecture = try c.value(.lecture, or: d.lecture)
         lecturePlace = try c.value(.lecturePlace, or: d.lecturePlace)
+        openIn = try c.value(.openIn, or: d.openIn)
         allLectures = try c.value(.allLectures, or: d.allLectures)
         resumesLecture = try c.value(.resumesLecture, or: d.resumesLecture)
         screen = try c.value(.screen, or: d.screen)

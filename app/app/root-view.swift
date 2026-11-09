@@ -91,6 +91,32 @@ struct RootView: View {
         }
     }
 
+    /// A new tab of panes side by side, as a class's start opens its pages (`ClassStartSettings.OpenIn.splitTab`). On the
+    /// iPad, whose windows are its tabs, a window of its own; where it allows only one window, the pages open in the
+    /// tab in front, the first in the focused pane and the rest beside it.
+    func openTab(_ layout: PaneLayout, course hint: UUID?) {
+        let found = layout.panes.indices.compactMap { i in workspace.entry(for: layout.panes[i].link, hint: hint).map { (i, $0) } }
+        guard !found.isEmpty else { return }
+        let histories = found.map { LinkHistory($0.1) }
+        let shares = found.map { layout.panes[$0.0].share }
+        let focus = found.firstIndex { $0.0 == layout.focus } ?? 0
+        #if os(macOS)
+        if let panes = TabPanes(histories: histories, shares: shares, focus: focus) { tabs.open(panes, fromLink: true) }
+        #else
+        if multipleWindows {
+            let focused = found[focus].1
+            var request = WindowRequest(link: focused.link, course: focused.course)
+            request.panes = histories
+            request.shares = shares
+            request.focus = focus
+            openWindow(id: FolioApp.mainWindow, value: request)
+        } else {
+            navigator.go(found[0].1)
+            for (_, entry) in found.dropFirst() { tabs.front?.openBeside(entry) }
+        }
+        #endif
+    }
+
     /// Where the system allows only one window, the link opens in place.
     func openInWindow(_ entry: Navigator.Entry, else pane: Navigator) {
         guard multipleWindows else { return pane.go(entry) }
@@ -168,7 +194,8 @@ struct RootView: View {
                 .environment(\.sheetRoom, contentHeight)
                 // The window less its toolbar (and an iPad's keyboard): a sheet taller than that ran off the window.
                 .onGeometryChange(for: CGFloat.self) { $0.size.height - $0.safeAreaInsets.top - $0.safeAreaInsets.bottom } action: { contentHeight = $0 }
-                .classStartPrompt(workspace, open: { open($0.link, in: $0.placement) }, showing: { navigator.current }, bringForward: bringForward)
+                .classStartPrompt(workspace, open: { open($0.link, in: $0.placement) }, openSplit: { openTab($0, course: $1) },
+                                  showing: { navigator.current }, bringForward: bringForward)
                 #if os(iOS)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { windowWidth = $0 }
                 #endif

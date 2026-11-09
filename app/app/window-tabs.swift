@@ -28,6 +28,21 @@ final class WindowTabs {
     @ObservationIgnored var closeWindow: @MainActor () -> Void = {}
     @ObservationIgnored var now: @MainActor () -> Date = { .now }
     @ObservationIgnored var policy = WindowTabs.keep
+    /// Where the panes of the tab in front are across the window, for a tab dragged onto their edge (`TabBar`). Not
+    /// watched: it changes with every frame of a resize, and only a drag reads it.
+    @ObservationIgnored var contentFrame: CGRect = .zero
+    /// Where a dragged tab would join the tab in front if let go now, which the panes mark.
+    var drop: MergeDrop?
+
+    enum MergeEdge: Equatable {
+        case leading, trailing
+    }
+
+    struct MergeDrop: Equatable {
+        var edge: MergeEdge
+        /// Of the row, what the joining panes would take (`PaneLayout.merge`).
+        var share: Double
+    }
 
     /// How many screens wait behind the front tab and for how long. A note tab costs most: its preview's page runs in a
     /// WebKit process of its own, about 80MB for a usual note and 270MB for a long one with math and diagrams, against
@@ -88,7 +103,11 @@ final class WindowTabs {
             let on = pause != nil && strip.tabs.contains(id)
             if on != playingPanes.contains(pane) { if on { playingPanes.insert(pane) } else { playingPanes.remove(pane) } }
         }
-        // From the tabs still open: a closed tab's screen says it stopped only once the tab is gone.
+        settlePlaying()
+    }
+
+    /// From the tabs still open: a closed tab's screen says it stopped only once the tab is gone.
+    private func settlePlaying() {
         let open = Set(strip.tabs.flatMap { tabs[$0]?.ids ?? [] })
         let panes = playingPanes.intersection(open)
         if panes != playingPanes { playingPanes = panes }
@@ -107,6 +126,45 @@ final class WindowTabs {
         strip.closeOthers(than: id)
         tabs = tabs.filter { $0.key == id }
     }
+
+    /// Whether tab `id`'s panes fit beside `target`'s ("옆 칸으로 합치기").
+    func canMerge(_ id: UUID, into target: UUID) -> Bool {
+        guard id != target, let source = tabs[id], let into = tabs[target] else { return false }
+        return into.canMerge(source)
+    }
+
+    /// "옆 칸으로 합치기" (2026-11-09 사용자): tab `id`'s panes join `target`'s, with their histories, at `edge` (nil:
+    /// right of its focused pane, as "옆 칸에 열기" opens one), and tab `id` closes. `target` comes to the front.
+    func merge(_ id: UUID, into target: UUID, at edge: MergeEdge? = nil) {
+        guard canMerge(id, into: target), let source = tabs[id], let into = tabs[target] else { return }
+        let index = switch edge {
+        case .leading: 0
+        case .trailing: into.count
+        case nil: into.focus + 1
+        }
+        guard into.merge(source, at: index), strip.close(id) else { return }
+        tabs[id] = nil
+        strip.select(target)
+        // Its panes took new IDs here, and their screens are drawn anew: the old IDs' marks go.
+        settlePlaying()
+    }
+
+    /// Where tab `id`, dragged to `point` across the window, would join the tab in front: within `mergeZone` of the
+    /// panes' leading or trailing edge, below their top. Nil for the tab in front itself and for a tab that wouldn't
+    /// fit.
+    func drop(for id: UUID, at point: CGPoint) -> MergeDrop? {
+        let frame = contentFrame
+        guard id != selected, canMerge(id, into: selected), let source = tabs[id], let front = front, frame.width > 0,
+              frame.minY <= point.y, point.y <= frame.maxY else { return nil }
+        let zone = min(Self.mergeZone, frame.width / 3)
+        let edge: MergeEdge
+        if point.x <= frame.minX + zone { edge = .leading } else if point.x >= frame.maxX - zone { edge = .trailing } else { return nil }
+        return MergeDrop(edge: edge, share: Double(source.count) / Double(source.count + front.count))
+    }
+
+    /// How far in from the panes' edge a dragged tab joins them: wide enough to find without aiming, narrow enough to
+    /// leave the middle for letting go without joining.
+    static let mergeZone = Theme.Size.paneMin / 2
 
     /// Takes a tab out for a window of its own; nil for the last one, which is the window already.
     func take(_ id: UUID) -> TabPanes? {
@@ -138,6 +196,25 @@ struct TabScreens: View {
     /// For the pane whose history this is.
     let openLink: (Navigator) -> OpenLinkAction
     @State private var sizes = ScreenSizes()
+    #if os(iOS)
+    @Environment(\.openWindow) private var openWindow
+    @Environment(\.supportsMultipleWindows) private var multipleWindows
+    #endif
+
+    /// "새 탭으로 옮기기" from a pane's menu: a tab of its own, its history with it. The iPad's tabs are its windows,
+    /// so there it goes to a window of its own, and nowhere where the system allows only one; a tab there would be one
+    /// with no bar to find it by.
+    var newTab: ((Navigator) -> Void)? {
+        #if os(macOS)
+        return { [tabs] navigator in tabs.open(navigator, fromLink: true) }
+        #else
+        guard multipleWindows else { return nil }
+        return { [openWindow] navigator in
+            openWindow(id: FolioApp.mainWindow,
+                       value: WindowRequest(link: navigator.current.link, course: navigator.current.course, history: navigator.history))
+        }
+        #endif
+    }
 
     var body: some View {
         ZStack {
@@ -151,7 +228,7 @@ struct TabScreens: View {
                     let kept = front ? nil : sizes[id]
                     PaneRow(workspace: workspace, panes: panes, front: front, openLink: openLink,
                             play: { [tabs] pane, pause in tabs.play(id, pane: pane, pause: pause) },
-                            newTab: { [tabs] navigator in tabs.open(navigator, fromLink: true) })
+                            newTab: newTab)
                         .onGeometryChange(for: CGSize.self, of: \.size) { sizes[id] = $0 }
                         .frame(width: kept?.width, height: kept?.height, alignment: .topLeading)
                         // The window's size whatever the screen inside: with no least size given, a screen behind
@@ -167,8 +244,37 @@ struct TabScreens: View {
             }
         }
         .onChange(of: tabs.alive) { _, alive in sizes.keep(alive) }
+        #if os(macOS)
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { tabs.contentFrame = $0 }
+        .overlay { MergeMark(tabs: tabs) }
+        #endif
     }
 }
+
+#if os(macOS)
+/// Where a tab dragged onto the panes' edge would join them: the room its panes would take, in the accent, as the
+/// focused pane's ring is. Only the iPad lacks it, having no tabs to drag.
+private struct MergeMark: View {
+    let tabs: WindowTabs
+
+    var body: some View {
+        let drop = tabs.drop
+        GeometryReader { proxy in
+            if let drop {
+                let shape = RoundedRectangle(cornerRadius: Theme.Radius.floating)
+                shape.fill(Theme.Palette.chromeSelected.opacity(Theme.Opacity.tint))
+                    .overlay { shape.strokeBorder(Theme.Palette.chromeSelected, lineWidth: 1) }
+                    .frame(width: proxy.size.width * drop.share)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: drop.edge == .leading ? .leading : .trailing)
+                    .transition(.opacity)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .animation(.snappy(duration: 0.2), value: drop)
+    }
+}
+#endif
 
 extension EnvironmentValues {
     /// Where a screen says it is playing a recording, so its tab is kept and its pane marked behind the front one.
@@ -295,6 +401,11 @@ struct TabBar: View {
     @State private var frames: [UUID: CGRect] = [:]
     @State private var dragged: (id: UUID, start: CGFloat)?
     @State private var dragOffset: CGFloat = 0
+    /// The strip's origin across the window, which a drag's points are measured from: the panes' edge it may be
+    /// dragged onto is measured across the window too.
+    @State private var stripOrigin: CGPoint = .zero
+    /// Back to false however a tab's drag ends: one the system cuts short has no end to clear the merge mark.
+    @GestureState private var dragging = false
 
     static let gap = Theme.Space.s
     static let icon = Theme.Size.toolbarButton
@@ -371,6 +482,8 @@ struct TabBar: View {
                 #endif
         }
         .coordinateSpace(.named(Self.space))
+        .onGeometryChange(for: CGPoint.self) { $0.frame(in: .global).origin } action: { stripOrigin = $0 }
+        .onChange(of: dragging) { _, now in if !now { tabs.drop = nil } }
         .background { measures(others) }
         .onChange(of: tabs.selected) { report() }
         .onChange(of: tabs.ids) { _, ids in
@@ -590,15 +703,20 @@ struct TabBar: View {
         .accessibilityLabel(Text(.tabsPause))
     }
 
+    /// A tab as a menu names it: the preset its panes are, else what its focused pane shows; with that pane's icon, or
+    /// the speaker while it plays.
+    func menuItem(_ id: UUID) -> (name: String, symbol: String) {
+        let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
+        let place = workspace.placeCrumb(of: entry)
+        let name = tabs.panes(id).flatMap(workspace.presetName(of:)) ?? workspace.tabTitle(of: entry) ?? place.title
+        return (name, tabs.playing.contains(id) ? Self.speakerSymbol : place.symbol ?? CourseMark.defaultIcon)
+    }
+
     func more(_ hidden: [UUID]) -> some View {
         Menu {
             ForEach(hidden, id: \.self) { id in
-                let entry = tabs.navigator(id)?.current ?? Navigator.Entry(link: .place(.today))
-                let place = workspace.placeCrumb(of: entry)
-                let name = tabs.panes(id).flatMap(workspace.presetName(of:)) ?? workspace.tabTitle(of: entry) ?? place.title
-                Button(name, systemImage: tabs.playing.contains(id) ? Self.speakerSymbol : place.symbol ?? CourseMark.defaultIcon) {
-                    tabs.select(id)
-                }
+                let item = menuItem(id)
+                Button(item.name, systemImage: item.symbol) { tabs.select(id) }
             }
         } label: {
             moreLabel(hidden.count)
@@ -629,8 +747,23 @@ struct TabBar: View {
             Button(.tabsClose) { tabs.close(id) }
             Button(.tabsCloseOthers) { tabs.closeOthers(than: id) }.disabled(tabs.count < 2)
             Divider()
+            mergeMenu(into: id)
             Button(.tabsMoveToWindow) { moveToWindow(id) }.disabled(tabs.count < 2)
         }
+    }
+
+    /// "옆 칸으로 합치기 ▸": every other tab, whose panes join this one's right of its focused pane; a tab whose panes
+    /// wouldn't fit beside these is off. The menu's way to what dragging a tab onto the panes' edge does.
+    func mergeMenu(into id: UUID) -> some View {
+        let others = tabs.ids.filter { $0 != id }
+        return Menu(String(localized: .tabsMerge)) {
+            ForEach(others, id: \.self) { other in
+                let item = menuItem(other)
+                Button(item.name, systemImage: item.symbol) { tabs.merge(other, into: id) }
+                    .disabled(!tabs.canMerge(other, into: id))
+            }
+        }
+        .disabled(!others.contains { tabs.canMerge($0, into: id) })
     }
 
     /// What every tab would take at each width it can have, drawn once out of sight: a tab drawn as an icon can't tell
@@ -658,28 +791,46 @@ struct TabBar: View {
         .accessibilityHidden(true)
     }
 
-    /// Drags a tab along the row; passing a neighbor's middle swaps them, as in Safari.
+    /// Drags a tab along the row; passing a neighbor's middle swaps them, as in Safari. Down onto the leading or
+    /// trailing edge of the panes, it joins the tab in front there when let go ("옆 칸으로 합치기", 2026-11-09 사용자),
+    /// the room it would take marked meanwhile (`MergeMark`). Out of the window is #305's.
     func drag(_ id: UUID, row: [UUID]) -> some Gesture {
         DragGesture(minimumDistance: Theme.Space.xs, coordinateSpace: .named(Self.space))
+            .updating($dragging) { _, state, _ in state = true }
             .onChanged { value in
                 guard let frame = frames[id] else { return }
                 if dragged?.id != id { dragged = (id, frame.minX) }
-                let others = row.filter { $0 != id }
-                let before = others.filter { (frames[$0]?.midX ?? 0) < value.location.x }.count
-                var rest = tabs.ids.filter { $0 != id }
-                let index: Int = if before < others.count { rest.firstIndex(of: others[before]) ?? 0 }
-                    else { others.last.flatMap { rest.firstIndex(of: $0) }.map { $0 + 1 } ?? rest.count }
-                rest.insert(id, at: index)
-                if rest != tabs.ids { tabs.move(id, to: index) }
+                let point = across(value.location)
+                let drop = tabs.drop(for: id, at: point)
+                if drop != tabs.drop { tabs.drop = drop }
+                // Over the panes the tab is on its way to join them, not to another place in the row.
+                let content = tabs.contentFrame
+                if content.isEmpty || point.y < content.minY { reorder(id, row: row, to: value.location.x) }
                 // The tab follows the pointer from where it was picked up, whatever place the row now gives it.
                 dragOffset = value.translation.width - ((frames[id]?.minX ?? frame.minX) - (dragged?.start ?? frame.minX))
             }
-            .onEnded { _ in
+            .onEnded { value in
+                // From where it was let go rather than the mark, which `dragging` may have cleared already.
+                let drop = tabs.drop(for: id, at: across(value.location))
+                tabs.drop = nil
+                if let drop { tabs.merge(id, into: tabs.selected, at: drop.edge) }
                 withAnimation(.snappy(duration: 0.2)) {
                     dragged = nil
                     dragOffset = 0
                 }
             }
+    }
+
+    func across(_ location: CGPoint) -> CGPoint { CGPoint(x: stripOrigin.x + location.x, y: stripOrigin.y + location.y) }
+
+    func reorder(_ id: UUID, row: [UUID], to x: CGFloat) {
+        let others = row.filter { $0 != id }
+        let before = others.filter { (frames[$0]?.midX ?? 0) < x }.count
+        var rest = tabs.ids.filter { $0 != id }
+        let index: Int = if before < others.count { rest.firstIndex(of: others[before]) ?? 0 }
+            else { others.last.flatMap { rest.firstIndex(of: $0) }.map { $0 + 1 } ?? rest.count }
+        rest.insert(id, at: index)
+        if rest != tabs.ids { tabs.move(id, to: index) }
     }
 }
 

@@ -150,6 +150,60 @@ struct TabPanesTests {
         #expect(abs(window.shares[0] - 0.7) < 1e-9)
     }
 
+    /// "옆 칸으로 합치기" (2026-11-09 사용자): the other tab's pane joins with its history and its focus, and its tab
+    /// closes; the tab it joined comes to the front.
+    @Test func anotherTabJoinsBesideTheFocusWithItsHistory() throws {
+        let tabs = WindowTabs(Navigator(grades))
+        let front = try #require(tabs.front)
+        let target = tabs.selected
+        tabs.open(Navigator(people))
+        let source = tabs.selected
+        tabs.navigator(source)?.go(codes)
+        tabs.select(target)
+        #expect(tabs.canMerge(source, into: target))
+        tabs.merge(source, into: target)
+        #expect(tabs.ids == [target] && tabs.selected == target)
+        #expect(front.navigators.map(\.current) == [grades, codes] && front.focus == 1)
+        #expect(front.focused.backList == [people])
+        #expect(Set(front.ids).count == 2 && front.trails.count == 2)
+    }
+
+    @Test func aTabJoinsAtTheEdgeItWasDroppedOn() throws {
+        let tabs = WindowTabs(TabPanes(Navigator(grades), limit: 3))
+        let target = tabs.selected
+        tabs.open(TabPanes(Navigator(people), limit: 3))
+        let source = tabs.selected
+        tabs.select(target)
+        tabs.merge(source, into: target, at: .leading)
+        #expect(tabs.front?.navigators.map(\.current) == [people, grades])
+    }
+
+    @Test func aTabThatWouldNotFitIsLeftOpen() throws {
+        let tabs = WindowTabs(TabPanes(Navigator(grades), limit: 2))
+        let target = tabs.selected
+        tabs.front?.openBeside(people)
+        tabs.open(TabPanes(Navigator(codes), limit: 2))
+        let source = tabs.selected
+        #expect(!tabs.canMerge(source, into: target) && !tabs.canMerge(target, into: target))
+        tabs.merge(source, into: target)
+        #expect(tabs.ids == [target, source] && tabs.panes(target)?.count == 2)
+    }
+
+    /// A drag lets go onto the panes' edge, within reach of it and below their top, for a tab that fits.
+    @Test func aDragJoinsOnlyNearThePanesEdge() throws {
+        let tabs = WindowTabs(TabPanes(Navigator(grades), limit: 3))
+        let target = tabs.selected
+        tabs.open(TabPanes(Navigator(people), limit: 3))
+        let source = tabs.selected
+        tabs.select(target)
+        tabs.contentFrame = CGRect(x: 200, y: 48, width: 1000, height: 700)
+        #expect(tabs.drop(for: source, at: CGPoint(x: 210, y: 300)) == WindowTabs.MergeDrop(edge: .leading, share: 0.5))
+        #expect(tabs.drop(for: source, at: CGPoint(x: 1190, y: 300))?.edge == .trailing)
+        #expect(tabs.drop(for: source, at: CGPoint(x: 700, y: 300)) == nil)
+        #expect(tabs.drop(for: source, at: CGPoint(x: 210, y: 20)) == nil)
+        #expect(tabs.drop(for: target, at: CGPoint(x: 210, y: 300)) == nil)
+    }
+
     @Test func eachPresetHasAName() {
         for preset in PanePreset.builtIn { #expect(preset.name != preset.id) }
     }

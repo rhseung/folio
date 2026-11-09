@@ -198,6 +198,43 @@ struct PaneLayoutTests {
         #expect(approx(l.shares.reduce(0, +), 1))
     }
 
+    @Test func anotherTabJoinsAtAnEdgeWithItsFocus() {
+        // A tab of one joining a tab of one halves the row; the other tab's focus comes along and takes the focus.
+        var l = PaneLayout(lecture)
+        let joined = l.merge(PaneLayout(note), at: 1, limit: 3)
+        #expect(joined)
+        #expect(l.links == [lecture, note] && l.focus == 1)
+        #expect(l.shares.allSatisfy { approx($0, 0.5) })
+
+        // A tab of two at the leading edge: two thirds of the row, split as it had it, its own focus kept.
+        var two = PaneLayout(links: [quiz, other], shares: [0.75, 0.25], limit: 2)!
+        two.press(1)
+        var one = PaneLayout(lecture)
+        let joinedTwo = one.merge(two, at: 0, limit: 3)
+        #expect(joinedTwo)
+        #expect(one.links == [quiz, other, lecture] && one.focus == 1)
+        #expect(approx(one.shares[0], 0.5) && approx(one.shares[1], 1.0 / 6) && approx(one.shares[2], 1.0 / 3))
+        // The joined panes count as pressed after the ones here, so the lecture folds first.
+        #expect(one.folded(open: 2) == [2])
+    }
+
+    @Test func aTabThatDoesNotFitStaysWhereItIs() {
+        var l = Self.three()
+        let before = l
+        #expect(!l.canMerge(PaneLayout(other), limit: 3))
+        let joined = l.merge(PaneLayout(other), at: 1, limit: 3)
+        #expect(!joined)
+        #expect(l == before)
+    }
+
+    @Test func aPaneFoldedByHandInTheOtherTabStaysFolded() {
+        var two = PaneLayout(links: [quiz, other], limit: 2)!
+        two.collapse(1)
+        var l = PaneLayout(lecture)
+        l.merge(two, at: 1, limit: 3)
+        #expect(l.collapsed == [2] && l.focus == 1)
+    }
+
     @Test func roundTripsThroughJSON() throws {
         var l = Self.three()
         l.resize(divider: 0, to: 0.3)
@@ -245,6 +282,20 @@ struct PanePresetTests {
         #expect(PanePreset.matching(l, session: s, course: Self.course, limit: 3) == .inClass)
         l.openBeside(other, limit: 3)
         #expect(PanePreset.matching(l, session: s, course: Self.course, limit: 3) == nil)
+    }
+
+    @Test func classStartFillsInClassWithItsLecturesAndNote() throws {
+        let lectures = [AppLink(.material, UUID(), anchor: .page(13)), AppLink(.material, UUID()), AppLink(.material, UUID())]
+        let l = try #require(PanePreset.inClass.layout([.lecture: Array(lectures.prefix(2)), .classNote: [note]], focus: .classNote, limit: 3))
+        #expect(l.links == [lectures[0], lectures[1], note] && l.focus == 2)
+        #expect(approx(l.shares[0], 0.275) && approx(l.shares[1], 0.275) && approx(l.shares[2], 0.45))
+        // Short of room, a lecture gives way before the note does.
+        let pad = try #require(PanePreset.inClass.layout([.lecture: lectures, .classNote: [note]], focus: .classNote, limit: 2))
+        #expect(pad.links == [lectures[0], note] && pad.shares == [0.55, 0.45] && pad.focus == 1)
+        // Without the note, the lectures alone, focused on the first.
+        let alone = try #require(PanePreset.inClass.layout([.lecture: [lectures[0]], .classNote: []], focus: .classNote, limit: 3))
+        #expect(alone.links == [lectures[0]] && alone.shares == [1] && alone.focus == 0)
+        #expect(PanePreset.inClass.layout([:], limit: 3) == nil)
     }
 
     @Test func builtInIDsAreUnique() {
@@ -312,6 +363,25 @@ struct PaneLayoutPropertyTests {
             #expect(approx(l.shares.reduce(0, +), 1))
             #expect(l.shares.allSatisfy { $0 > 0 })
             #expect(!l.collapsed.contains(l.focus))
+        }
+    }
+
+    @Test func mergingKeepsBothWholeOrChangesNothing() async {
+        await propertyCheck(input: Self.steps, Self.steps, Gen.int(in: 0...3)) { a, b, at in
+            var l = Self.run(a, limit: 3)
+            let other = Self.run(b, limit: 2)
+            let before = l
+            let joined = l.merge(other, at: at, limit: 3)
+            #expect(joined == (before.panes.count + other.panes.count <= 3))
+            guard joined else {
+                #expect(l == before)
+                return
+            }
+            #expect(l.panes.count == before.panes.count + other.panes.count)
+            #expect(approx(l.shares.reduce(0, +), 1) && l.shares.allSatisfy { $0 > 0 })
+            #expect(l.focused.link == other.focused.link && !l.collapsed.contains(l.focus))
+            let start = min(at, before.panes.count)
+            #expect(Array(l.links[start..<(start + other.panes.count)]) == other.links)
         }
     }
 

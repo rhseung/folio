@@ -146,6 +146,33 @@ public struct PaneLayout: Hashable, Sendable {
         press(oldest)
     }
 
+    /// Whether another tab's panes fit beside these ("옆 칸으로 합치기"): all of them or none, since a tab's panes
+    /// are one layout and a pane left behind would be closed without being asked.
+    public func canMerge(_ other: PaneLayout, limit: Int) -> Bool { panes.count + other.panes.count <= limit }
+
+    /// "옆 칸으로 합치기" (2026-11-09 사용자): another tab's panes join these before pane `index` (0 the leading edge,
+    /// `panes.count` the trailing one), keeping their order, note modes and folds. Together they take the share of
+    /// the row their count is of all the panes, between themselves as they had it, so a tab of one joining a tab
+    /// of one halves the row. The focus goes to the pane that was focused in the other tab, which is what was being
+    /// looked at there; its panes count as pressed after these, in the order they were. False, and nothing joined,
+    /// past `limit`.
+    @discardableResult
+    public mutating func merge(_ other: PaneLayout, at index: Int, limit: Int) -> Bool {
+        guard canMerge(other, limit: limit) else { return false }
+        let at = min(max(index, 0), panes.count)
+        let joining = Double(other.panes.count) / Double(panes.count + other.panes.count)
+        for i in panes.indices { panes[i].share *= 1 - joining }
+        var added = other.panes
+        for (rank, j) in other.panes.indices.sorted(by: { other.panes[$0].pressed < other.panes[$1].pressed }).enumerated() {
+            added[j].pressed = clock + 1 + rank
+        }
+        for j in added.indices { added[j].share *= joining }
+        clock += added.count
+        panes.insert(contentsOf: added, at: at)
+        press(at + other.focus)
+        return true
+    }
+
     /// False, and nothing closed, for the last pane. The width goes to the pane on the left (on the right for the
     /// first), which stood beside it; the focus goes to the pane pressed most recently.
     @discardableResult
@@ -340,6 +367,32 @@ public struct PanePreset: Hashable, Sendable, Codable, Identifiable {
         case .quiz: .course(course, page: .quiz)
         case .problems, .canvas: nil
         }
+    }
+
+    /// The preset filled with `links` for each role, several to a role sharing its width: the class's lectures and
+    /// its rough note when a class starts (#391, 2026-11-09 사용자). Every role given a link keeps one pane before a
+    /// role gets a second, so past `limit` a third lecture gives way, not the note. Focused on `focus`'s first pane,
+    /// else the first pane. Nil without a link.
+    public func layout(_ links: [Role: [AppLink]], focus: Role? = nil, limit: Int) -> PaneLayout? {
+        let filled = roles.map { links[$0] ?? [] }
+        var counts = filled.map { $0.isEmpty ? 0 : 1 }
+        while counts.reduce(0, +) > max(1, limit), let last = counts.lastIndex(where: { $0 > 0 }) { counts[last] = 0 }
+        for i in filled.indices {
+            while counts[i] > 0, counts[i] < filled[i].count, counts.reduce(0, +) < limit { counts[i] += 1 }
+        }
+        var chosen: [AppLink] = []
+        var widths: [Double] = []
+        var focused: Int?
+        for (i, (role, share)) in zip(roles, shares).enumerated() where counts[i] > 0 {
+            if role == focus, focused == nil { focused = chosen.count }
+            for link in filled[i].prefix(counts[i]) {
+                chosen.append(link)
+                widths.append(share / Double(counts[i]))
+            }
+        }
+        guard var layout = PaneLayout(links: chosen, shares: widths, limit: limit) else { return nil }
+        if let focused { layout.press(focused) }
+        return layout
     }
 
     /// The preset filled in for a session, without the roles it has nothing for. Nil when it has none.

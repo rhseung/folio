@@ -15863,6 +15863,39 @@
         }
       }
     },
+    "settings.class-start-open-in": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "탭 배치"
+          }
+        }
+      }
+    },
+    "settings.class-start-open-in-split": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 탭, 나눠 보기"
+          }
+        }
+      }
+    },
+    "settings.class-start-open-in-current": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 탭"
+          }
+        }
+      }
+    },
     "settings.class-start-place": {
       "extractionState": "manual",
       "localizations": {
@@ -20017,6 +20050,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "새 창으로 옮기기"
+          }
+        }
+      }
+    },
+    "tabs.merge": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "옆 칸으로 합치기"
           }
         }
       }

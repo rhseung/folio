@@ -36,7 +36,7 @@ struct ClassStartModelTests {
     func session(at date: Date) -> Session? { workspace.course(course)?.file.sessions.first { $0.date == date } }
 
     @Test func theClassOpensOnItsRoughNoteOnce() throws {
-        set { $0.roughNote = .create; $0.lecture = .open }
+        set { $0.roughNote = .create; $0.lecture = .open; $0.openIn = .currentTab }
         #expect(workspace.classStartStep(at: at(20, 59), recorderBusy: false) == nil)
         let step = try #require(workspace.classStartStep(at: at(21, 5), recorderBusy: false))
         let saved = try #require(session(at: at(21)))
@@ -47,6 +47,38 @@ struct ClassStartModelTests {
         #expect(!step.records && !step.ask.asksRecording && !step.ask.front)
         // Once per class: the next minute has nothing left to do.
         #expect(workspace.classStartStep(at: at(21, 6), recorderBusy: false) == nil)
+    }
+
+    /// By default the note and the lectures open together in a new tab, laid out as "수업 중" (2026-11-09 사용자),
+    /// and the tab in front stays where it is.
+    @Test func thePagesOpenSideBySideInANewTab() throws {
+        set { $0.roughNote = .create; $0.lecture = .open }
+        let gist = try #require(workspace.gist)
+        let ctx = ActionContext(gist: gist, device: workspace.device, calendar: workspace.calendar,
+                                courses: Dictionary(workspace.courses.map { ($0.id, $0.store) }, uniquingKeysWith: { a, _ in a }))
+        let path = "Lectures/09_Flows.pdf"
+        let lecture = Material(device: workspace.device, at: at(9), path: path, role: MaterialRole(path: path), status: .classified)
+        let planned = Session(device: workspace.device, at: at(9), week: 9, date: at(21))
+        try ctx.edit(course) { file in
+            file.materials.append(lecture)
+            file.sessions.append(planned)
+            file.linkMaterial(lecture.id, session: planned.id)
+        }
+        workspace.show(ctx)
+        let step = try #require(workspace.classStartStep(at: at(21, 5), recorderBusy: false))
+        let note = try #require(session(at: at(21))?.roughNoteId)
+        let split = try #require(step.ask.split)
+        #expect(split.links == [AppLink(.material, lecture.id), AppLink(.note, note)])
+        #expect(split.shares == PanePreset.inClass.shares && split.focus == 1)
+        #expect(step.ask.opens.isEmpty)
+    }
+
+    /// With nothing to put side by side, the class itself opens in front, as it does in the tab in front.
+    @Test func withoutPagesTheClassOpensInFront() throws {
+        set { $0.roughNote = .openExisting }
+        let step = try #require(workspace.classStartStep(at: at(21), recorderBusy: false))
+        let saved = try #require(session(at: at(21)))
+        #expect(step.ask.split == nil && step.ask.opens == [ClassStartOpening(link: AppLink(.session, saved.id), placement: .here)])
     }
 
     @Test func nothingAfterTheClass() {
@@ -86,14 +118,14 @@ struct ClassStartModelTests {
     @Test func theRecordingWaitsForTheOneBeforeToStop() throws {
         set { $0.recording = .start; $0.roughNote = .create }
         let busy = try #require(workspace.classStartStep(at: at(21), recorderBusy: true))
-        #expect(!busy.records && busy.ask.opens.count == 1)
+        #expect(!busy.records && busy.ask.opensPages)
         let free = try #require(workspace.classStartStep(at: at(21, 5), recorderBusy: false))
-        #expect(free.records && free.ask.opens.isEmpty)
+        #expect(free.records && !free.ask.opensPages)
         #expect(workspace.classStartStep(at: at(21, 6), recorderBusy: false) == nil)
     }
 
     @Test func aWindowOnAnotherClassIsLeftAlone() throws {
-        set { $0.roughNote = .create; $0.roughNotePlace = .tab }
+        set { $0.roughNote = .create; $0.roughNotePlace = .tab; $0.openIn = .currentTab }
         let step = try #require(workspace.classStartStep(at: at(21), recorderBusy: false))
         let other = try #require(workspace.run(SessionAdd(course: course, date: at(21) - 7 * 86_400))?.made)
         let elsewhere = Navigator.Entry(link: AppLink(.session, other), course: course)
@@ -101,6 +133,13 @@ struct ClassStartModelTests {
         #expect(workspace.classStartOpenings(step.ask, showing: Navigator.Entry(link: .place(.today))) == step.ask.opens)
         // The class first, then its note in a tab.
         #expect(step.ask.opens.map(\.placement) == [.here, .tab])
+
+        // A split tab waits the same way.
+        var split = step.ask
+        split.opens = []
+        split.split = PaneLayout(AppLink(.session, other))
+        #expect(workspace.classStartSplit(split, showing: elsewhere) == nil)
+        #expect(workspace.classStartSplit(split, showing: Navigator.Entry(link: .place(.today))) == split.split)
     }
 
     @Test func settingsShowTheOffsetAndTheExceptions() {
