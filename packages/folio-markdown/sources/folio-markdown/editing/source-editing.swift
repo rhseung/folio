@@ -73,6 +73,14 @@ public enum SourceEditing {
         return nil
     }
 
+    /// Whether the edit view shows its hint for `/` at the caret: an empty line of text, the caret alone on it. Not in
+    /// code or math, where `/` is typed as it is.
+    public static func offersBlocks(in text: NSString, selection: NSRange) -> Bool {
+        guard selection.length == 0, selection.location <= text.length else { return false }
+        let line = SourceLines.content(text.lineRange(for: NSRange(location: selection.location, length: 0)), in: text)
+        return line.length == 0 && SourcePlace.at(selection.location, in: text) == .text
+    }
+
     // MARK: Tab
 
     public static let indentUnit = "    "
@@ -138,6 +146,17 @@ public enum SourceEditing {
     // MARK: Pairs
 
     private static let pairs: [UInt16: UInt16] = [0x28: 0x29, 0x5B: 0x5D, 0x7B: 0x7D]
+    /// What a selection is wrapped in by typing its opener: brackets anywhere, emphasis, code and math marks in text.
+    private static let wraps: [UInt16: UInt16] = [0x5B: 0x5D, 0x28: 0x29]
+    private static let textWraps: [UInt16: UInt16] = wraps.merging([0x2A: 0x2A, 0x60: 0x60, 0x24: 0x24]) { a, _ in a }
+
+    /// What typing closes, as the input guide lists it. `$`, backticks and `**` pair by rules of their own in `typed`,
+    /// not by a table, so the list is kept beside them and a test types each one.
+    public static let shownPairs = ["(", "[", "{", "$", "`", "**"]
+    /// What a selection is wrapped in by typing it, in text; the test types each one.
+    public static let shownWraps = ["*", "`", "$", "[", "("]
+    /// The lines Return carries on, as the guide lists them; the test ends each one.
+    public static let shownListMarks = ["-", "1.", "- [ ]", ">"]
     private static let closers: Set<UInt16> = [0x29, 0x5D, 0x7D]
     /// A pair opens only before these, the end of the line, or space, so typing in front of a word doesn't leave a
     /// closer stranded after it.
@@ -158,8 +177,7 @@ public enum SourceEditing {
         let next2: UInt16? = end + 1 < text.length ? text.character(at: end + 1) : nil
 
         if selection.length > 0 {
-            let wraps: [UInt16: UInt16] = place == .text ? [0x2A: 0x2A, 0x60: 0x60, 0x24: 0x24, 0x5B: 0x5D, 0x28: 0x29] : [0x5B: 0x5D, 0x28: 0x29]
-            guard let close = wraps[c] else { return nil }
+            guard let close = (place == .text ? textWraps : wraps)[c] else { return nil }
             let inner = text.substring(with: selection)
             return Edit(range: selection, text: typed + inner + String(utf16CodeUnits: [close], count: 1), caret: at + 1, selected: selection.length)
         }
