@@ -33,8 +33,10 @@ enum NoteStyle {
             + [("fade", Theme.Space.xl)]
             // The preview's picture viewer: its pill buttons (a finger's width on a touch screen), their gap and glass.
             + [("control", Theme.Size.toolbarButton), ("touch", Theme.Size.fab), ("gap", Theme.Space.s), ("glass-blur", Theme.Space.l)]
+        // The page's words are the app's, from the string catalog; the CSS has none of its own.
+        let label = String(localized: .notesOutlineTitle).replacing("\\", with: "\\\\").replacing("\"", with: "\\\"")
         return ":root{" + values.map { String(format: "--%@:%gpx;", $0.0, Double($0.1)) }.joined()
-            + String(format: "--scrim:rgb(0 0 0 / %g);", Theme.Opacity.figureScrim) + "}"
+            + String(format: "--scrim:rgb(0 0 0 / %g);", Theme.Opacity.figureScrim) + "--toc-label:\"\(label)\";}"
     }()
 
     static func resource(_ name: String) -> String {

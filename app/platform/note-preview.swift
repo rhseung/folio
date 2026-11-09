@@ -25,6 +25,8 @@ struct NotePreview {
     var embeds: NoteEmbedSource?
     /// The workspace's `notesRevision`: when another note changes, what this one embeds is drawn again.
     var revision = 0
+    /// The screen's handle on this view, for the outline beside it.
+    var views: NoteViews?
 
     @MainActor final class Coordinator {
         let page = NotePreviewPage.take()
@@ -43,6 +45,8 @@ struct NotePreview {
         page.embeds = embeds
         if link?.page !== page { link?.page = page }
         page.link = link
+        page.views = views
+        if views?.page !== page { views?.page = page }
         page.show(text, baseURL: baseURL, math: math, accent: accent, dark: dark, revision: revision)
         page.reveal(anchor)
     }
@@ -122,6 +126,7 @@ extension NotePreview: UIViewRepresentable {
         didSet { view.toggleMode = toggleMode }
     }
     weak var link: PreviewLink?
+    weak var views: NoteViews?
 
     /// The page holds the stylesheet and scripts but no note until `show`: `ready` once it has loaded.
     private(set) var ready = false
@@ -175,6 +180,7 @@ extension NotePreview: UIViewRepresentable {
         edit = nil
         toggleMode = nil
         link = nil
+        views = nil
         wanted = nil
         following = nil
         widgets.reset()
@@ -346,6 +352,14 @@ extension NotePreview: UIViewRepresentable {
         }
     }
 
+    /// Puts the block written on `line` (of the note's text) at the top, as the editor puts a line it reveals.
+    func jump(line: Int) {
+        Task {
+            _ = try? await view.callAsyncJavaScript("window.folioPreview?.jump(line)", arguments: ["line": line],
+                                                     contentWorld: .defaultClient)
+        }
+    }
+
     // MARK: Messages from the page
 
     /// Holds the page weakly: the content controller keeps its handlers, and the page keeps the controller.
@@ -364,6 +378,7 @@ extension NotePreview: UIViewRepresentable {
                 page?.menuAnchor = anchor
             }
             if body["type"] as? String == "selection" { page?.selectionAnchor = anchor }
+            if body["type"] as? String == "top", let line = body["line"] as? Int { page?.views?.previewScrolled(line) }
         }
     }
 

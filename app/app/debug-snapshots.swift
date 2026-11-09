@@ -51,6 +51,8 @@ final class SnapshotDriver {
     static let split = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_SPLIT"]
     /// Only a formula's symbols (#392): the menu a bare `\` opens in a note, then the f(x) palette, as `math-*.png`.
     static let math = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_MATH"] != nil
+    /// The open note's outline (#387) in its popover where the panel has no room beside the note: `popover`.
+    static let outline = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_OUTLINE"]
 
     var section: CourseSection?
     /// Inside the units section: `detail` opens the first unit, `review` also opens its review sheet.
@@ -120,7 +122,7 @@ final class SnapshotDriver {
             select(destination)
             self.section = section
             try? await Task.sleep(for: .seconds(1.5))
-            capture(to: directory.appending(path: "\(name).png"))
+            capture(to: directory.appending(path: "\(name).png"), popovers: name == "course-notes" && Self.outline != nil)
             if name == "today" || name == "course-materials" { captureScrolled(to: directory.appending(path: "\(name)-full.png")) }
             if name == Self.webStep { await captureWebViews(to: directory, name: name) }
             if Self.holdSteps.contains(name) { try? await Task.sleep(for: .seconds(6)) }

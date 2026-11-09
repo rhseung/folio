@@ -110,7 +110,7 @@ extension ParsedNote {
         let wanted = heading.trimmingCharacters(in: .whitespaces)
         return tops.firstIndex { node in
             guard let h = node as? Heading else { return false }
-            let text = h.children.map(HTMLRenderer.sourceText).joined().trimmingCharacters(in: .whitespaces)
+            let text = NoteOutline.anchor(of: h)
             return text.caseInsensitiveCompare(wanted) == .orderedSame || HTMLRenderer.slug(text) == HTMLRenderer.slug(wanted)
         }
     }

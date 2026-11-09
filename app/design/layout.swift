@@ -120,6 +120,31 @@ struct Crumb {
         columnOwner = nil
         column = nil
     }
+
+    /// The open note's outline, which the menu bar's 목차 command shows and hides while the pane is focused (#387).
+    private(set) var outline: OutlineCommand?
+    @ObservationIgnored private var outlineOwner: UUID?
+
+    func setOutline(_ command: OutlineCommand, owner: UUID) {
+        outlineOwner = owner
+        outline = command
+    }
+
+    func clearOutline(owner: UUID) {
+        guard outlineOwner == owner else { return }
+        outlineOwner = nil
+        outline = nil
+    }
+}
+
+/// The menu bar's 목차 보기·숨기기 for the note in the focused pane.
+struct OutlineCommand {
+    var shown: Bool
+    var toggle: @MainActor () -> Void
+}
+
+extension FocusedValues {
+    @Entry var outlineCommand: OutlineCommand?
 }
 
 extension View {

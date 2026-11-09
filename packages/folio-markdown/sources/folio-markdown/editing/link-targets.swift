@@ -54,9 +54,8 @@ extension ParsedNote {
 
     /// The headings in the order written, their text as written.
     public var headings: [HeadingLine] {
-        document.children.compactMap { node in
-            guard let h = node as? Markdown.Heading else { return nil }
-            let text = h.children.map(HTMLRenderer.sourceText).joined().trimmingCharacters(in: .whitespaces)
+        NoteOutline.headings(in: document).compactMap { h in
+            let text = NoteOutline.anchor(of: h)
             return text.isEmpty ? nil : HeadingLine(level: h.level, text: text)
         }
     }

@@ -179,6 +179,9 @@ enum Theme {
         static let washReach: CGFloat = 220
         static let washReachFocus: CGFloat = 400
         static let courseColumn: CGFloat = 256
+        /// The outline beside a note (#387), and the most its popover takes where the note has no room for it.
+        static let noteOutline: CGFloat = 224
+        static let noteOutlinePopover = CGSize(width: 280, height: 400)
         static let sidebar: CGFloat = 216
         static let claudePanel: CGFloat = 380
         /// The round button a page's floating panel opens from (a course's Claude), at the content's bottom trailing corner.

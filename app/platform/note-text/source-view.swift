@@ -25,6 +25,8 @@ struct MarkdownEditor {
     var insertMath: Binding<CompletionItem?> = .constant(nil)
     /// Opens the input guide for this note (#395): the `/` menu's last item and 도움말 › 입력 안내 come here.
     var openGuide: @MainActor () -> Void = {}
+    /// The screen's handle on this view, for the outline beside it.
+    var views: NoteViews?
 
     @MainActor func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -54,6 +56,7 @@ struct MarkdownEditor {
         view.linkName = embeds?.name ?? { _ in nil }
         view.onScroll = onScroll
         view.openGuide = openGuide
+        if views?.editor !== view { views?.editor = view }
         view.configure(accent: accent, syntax: math, dark: dark)
         view.setAssist(assist, syntax: math)
         #if os(macOS)

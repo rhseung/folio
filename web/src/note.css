@@ -1,8 +1,8 @@
 /* Note typography, shared by the note preview, the Claude panel and PDF export.
    Colors and sizes come from the app as variables (note-style.swift, from theme.swift and note-look.swift): --text,
    --text-2, --text-3, --line, --line-soft, --fill, --card, --accent, --accent-ink, the callout kinds --c-*, and
-   --measure, --margin, --body, --paragraph-gap, --block-gap, --radius, --code-size, --label-size, --h1 to --h6, and --fade
-   (the edge fade's length, Theme.Space.xl). */
+   --measure, --margin, --body, --paragraph-gap, --block-gap, --radius, --code-size, --label-size, --h1 to --h6, --fade
+   (the edge fade's length, Theme.Space.xl), and the words the page shows, --toc-label. */
 
 :root {
   color-scheme: light dark;
@@ -152,6 +152,16 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note .embed-body > :first-child { margin-top: 0; }
 .note .embed-body > :last-child { margin-bottom: 0; }
 .note .embed-note { margin: 0; font-size: var(--label-size); color: var(--text-3); }
+
+/* `[TOC]`: the note's headings on a quiet card, each a link to its heading. Its name comes from the app (--toc-label). */
+.note nav.toc { margin: var(--block-gap) 0; padding: 12px 20px; border: 1px solid var(--line-soft); border-radius: var(--radius); }
+.note nav.toc::before { content: var(--toc-label, none); display: block; margin-bottom: 8px; font-size: var(--label-size); font-weight: 600; color: var(--text-3); }
+.note nav.toc ul { list-style: none; margin: 0; padding-left: 0; }
+.note nav.toc ul ul { padding-left: 1.25em; }
+.note nav.toc li { margin: 4px 0; padding-left: 0; }
+.note nav.toc a { color: var(--text-2); background-image: none; }
+.note nav.toc > ul > li > a { color: var(--text); font-weight: 550; }
+.note nav.toc a:hover { color: var(--accent-ink); background-image: none; }
 
 /* A block reference's card, shown while the pointer rests on the link: the block on the card color, above the page. */
 .ref-popover { position: absolute; z-index: 10; box-sizing: border-box; width: min(calc(var(--measure) - 2 * var(--margin)), calc(100vw - 16px));

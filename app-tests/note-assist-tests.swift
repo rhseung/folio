@@ -50,6 +50,14 @@ struct NoteAssistTests {
         #expect(view.string.hasPrefix("|  |  |\n| --- | --- |") && !view.completion.visible)
     }
 
+    @Test func theBlockMenuWritesAContentsLine() {
+        let (view, _) = Self.editor("")
+        Self.type(view, "/목차")
+        #expect(view.completion.current?.id == "slash.toc")
+        Self.enter(view)
+        #expect(view.string == "[TOC]\n")
+    }
+
     @Test func aCalloutFromTheMenuAsksForItsType() {
         let (view, _) = Self.editor("")
         Self.type(view, "/callout")

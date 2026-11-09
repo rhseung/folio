@@ -133,6 +133,29 @@ export function preview({ typeset, redraw }) {
   const margin = () => parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--margin")) || 0;
   const top = (node) => node.getBoundingClientRect().top + scrollY;
 
+  // The line of the block at the top of the page, for the outline beside it to mark the heading being read. Said only
+  // when it changes, once a frame at most: a scroll fires many times a frame.
+  let reported = null, reporting = false;
+  const report = () => {
+    if (reporting) return;
+    reporting = true;
+    requestAnimationFrame(() => {
+      reporting = false;
+      // A block placed at the top (a jump, following the editor) starts a margin below the page's top edge.
+      const y = scrollY + margin() + 1;
+      let line = null;
+      for (const block of shown) {
+        if (block.line == null || !block.nodes.length) continue;
+        if (top(block.nodes[0]) > y) break;
+        line = block.line;
+      }
+      if (line === reported) return;
+      reported = line;
+      post({ type: "top", line: line ?? 0 });
+    });
+  };
+  addEventListener("scroll", report, { passive: true });
+
   return {
     // Only blocks whose HTML changed are made again, so typing in the editor leaves the rest of the page (and a
     // widget's running page) alone.
@@ -187,6 +210,13 @@ export function preview({ typeset, redraw }) {
           else node.dataset.line = block.line;
         }
       });
+      report();
+    },
+
+    // Puts the block written on `line` at the top, a margin below the edge as following the editor does.
+    jump(line) {
+      const block = shown.find((b) => b.line === line && b.nodes.length);
+      if (block) scrollTo(0, Math.max(0, top(block.nodes[0]) - margin()));
     },
 
     // Puts the block holding the editor's top line where the editor has it: `frac` of the way through the line.
@@ -211,6 +241,7 @@ export function preview({ typeset, redraw }) {
       options = {};
       folds.clear();
       heights.clear();
+      reported = null;
       scrollTo(0, 0);
     },
 
