@@ -86,6 +86,7 @@ struct NoteAssist: Equatable {
             item("widget", String(localized: .notesAssistWidget), "square.on.square", "widget cb-widget",
                  fence + "cb-widget\n{\"id\": \"$1\", \"height\": 320}\n" + fence),
             item("divider", String(localized: .notesAssistDivider), "minus", "divider rule hr", "---\n"),
+            item("toc", String(localized: .notesAssistToc), "list.bullet.indent", "toc contents outline", "[TOC]\n"),
         ]
         for (kind, sections) in templates {
             let body = sections.enumerated().map { i, s in "## \(s)\n" + (i == 0 ? "$1\n" : "\n") }.joined(separator: "\n")

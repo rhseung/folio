@@ -7173,6 +7173,17 @@
         }
       }
     },
+    "notes.assist.toc": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목차"
+          }
+        }
+      }
+    },
     "notes.assist.widget": {
       "extractionState": "manual",
       "localizations": {
@@ -8489,6 +8500,39 @@
           "stringUnit": {
             "state": "translated",
             "value": "열기"
+          }
+        }
+      }
+    },
+    "notes.outline.hide": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목차 숨기기"
+          }
+        }
+      }
+    },
+    "notes.outline.show": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목차 보기"
+          }
+        }
+      }
+    },
+    "notes.outline.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목차"
           }
         }
       }

@@ -97,12 +97,13 @@ public struct HTMLRenderer {
         case let p as Paragraph:
             // A definition is drawn in the list at the note's end, not where it was written.
             if footnotes?.isDefinition(p) == true { return "" }
+            if NoteOutline.isContents(p) { return contents(of: p.root) }
             if embeds != nil, let links = Self.embedsOnly(p) { return links.map { embed($0) }.joined() }
             let (html, id) = Self.splitBlockID(inlines(Array(p.inlineChildren)))
             return "<p\(idAttribute(id))>\(html)</p>\n"
         case let h as Heading:
             let html = inlines(Array(h.inlineChildren))
-            let id = nested ? "" : " id=\"\(Self.escape(Self.slug(h.plainText)))\""
+            let id = nested ? "" : " id=\"\(Self.escape(NoteOutline.id(of: h)))\""
             return "<h\(h.level)\(id)>\(html)</h\(h.level)>\n"
         case let q as BlockQuote:
             return "<blockquote>\n\(blocks(Array(q.children)))</blockquote>\n"
@@ -122,6 +123,38 @@ public struct HTMLRenderer {
         default:
             return blocks(Array(node.children))
         }
+    }
+
+    /// `[TOC]`: the headings of the document it is written in, nested by level, each a link to its heading. Drawn
+    /// from another note (an embed), where its headings have no ids, the items are no links.
+    func contents(of document: Markup) -> String {
+        let headings = NoteOutline.headings(in: document).filter { $0.level <= NoteOutline.depth }
+        guard !headings.isEmpty else { return "" }
+        let levels = Set(headings.map(\.level)).sorted()
+        let items = headings.map { h in
+            var r = HTMLRenderer()
+            r.inLink = true
+            // The heading's own links and references would nest inside the item's link.
+            let title = Self.splitBlockID(r.inlines(Array(h.inlineChildren))).html
+                .replacing(/<template\b(?s:.*?)<\/template>/, with: "").replacing(/<\/?a\b[^>]*>/, with: "")
+                .replacing(Footnotes.reference, with: "")
+            let item = nested ? "<span>\(title)</span>" : "<a href=\"#\(Self.escape(NoteOutline.id(of: h)))\">\(title)</a>"
+            return (levels.firstIndex(of: h.level) ?? 0, item)
+        }
+        // Each item holds the deeper ones after it, up to the next one no deeper.
+        func list(_ items: ArraySlice<(Int, String)>) -> String {
+            guard !items.isEmpty else { return "" }
+            var out = "<ul>"
+            var i = items.startIndex
+            while i < items.endIndex {
+                let depth = items[i].0
+                let end = items[(i + 1)...].firstIndex { $0.0 <= depth } ?? items.endIndex
+                out += "<li>\(items[i].1)\(list(items[(i + 1)..<end]))</li>"
+                i = end
+            }
+            return out + "</ul>"
+        }
+        return "<nav class=\"toc\">\(list(items[...]))</nav>\n"
     }
 
     mutating func listItems(_ items: [ListItem]) -> String {
