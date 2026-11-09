@@ -193,6 +193,7 @@ struct RootView: View {
                 .sheet(item: $inputGuide) { InputGuideSheet(workspace: workspace, syntax: $0.syntax) }
                 .focusedSceneValue(\.navigator, navigator)
                 .focusedSceneValue(\.columnCommand, tabs.trail(tabs.selected)?.column)
+                .focusedSceneValue(\.outlineCommand, tabs.trail(tabs.selected)?.outline)
                 .focusedSceneValue(\.frontPanes, tabs.front)
                 .onAppear { MemoryPressure.start() }
                 .onReceive(MemoryPressure.publisher) { _ in tabs.dropBackground() }

@@ -48,6 +48,7 @@ struct FolioApp: App {
             SettingsCommands()
             NavigationCommands()
             ColumnCommands()
+            OutlineCommands()
             PaneCommands()
             InputGuideCommands()
             #if os(macOS)
@@ -88,6 +89,19 @@ private struct InputGuideCommands: Commands {
                 if !sent { show?(nil) }
             }
             .keyboardShortcut("/")
+        }
+    }
+}
+
+/// 보기 › 목차 보기·숨기기 for the note in the focused pane, as the note's bar button does (#387). No key yet: keys
+/// come with the table of them (#116).
+private struct OutlineCommands: Commands {
+    @FocusedValue(\.outlineCommand) private var outline
+
+    var body: some Commands {
+        CommandGroup(after: .sidebar) {
+            Button(outline?.shown == true ? String(localized: .notesOutlineHide) : String(localized: .notesOutlineShow)) { outline?.toggle() }
+                .disabled(outline == nil)
         }
     }
 }

@@ -161,6 +161,14 @@ struct NoteEditor: View {
     @State private var renaming = false
     @State private var palette: MathPaletteModel
     @State private var showsMath = false
+    @State private var outline = NoteOutlineModel()
+    /// The outline beside the note stays shown or hidden for every note on this device.
+    @AppStorage("noteOutline") private var outlineOn = true
+    @State private var outlinePopover = false
+    @State private var outlineFit = NoteOutlineFit(width: 0)
+    @State private var outlineOwner = UUID()
+    @Environment(\.paneFocused) private var paneFocused
+    @Environment(CrumbTrail.self) private var trail: CrumbTrail?
     let moves: MoveUndo?
 
     init(workspace: Workspace, course: LoadedCourse, note: NoteFile, anchor: AppLink.Anchor? = nil, insert: Binding<String?> = .constant(nil),
@@ -204,6 +212,7 @@ struct NoteEditor: View {
                     }
                     .help(Text(.notesGuideTitle))
                 }
+                outlineButton
             }
             if writing && showsAssets {
                 AssetTray(model: model)
@@ -218,11 +227,22 @@ struct NoteEditor: View {
                     NotePreview(text: model.body, baseURL: model.baseURL, math: model.meta.math, openNote: openNote, anchor: anchor,
                                 noteLink: model.note.meta.id.map { AppLink(.note, $0) }, edit: model.replaceLines,
                                 link: shown == .split ? preview : nil, toggleMode: toggleMode, embeds: model.embeds,
-                                revision: model.workspace.notesRevision)
+                                revision: model.workspace.notesRevision, views: outline.views)
+                }
+                if outlineDocked {
+                    Theme.Palette.lineSoft.frame(width: 1)
+                    NoteOutlineList(model: outline)
+                        .frame(width: Theme.Size.noteOutline)
+                        .frame(maxHeight: .infinity, alignment: .top)
+                        .transition(.move(edge: .trailing).combined(with: .opacity))
                 }
             }
         }
         .onGeometryChange(for: Bool.self) { $0.size.width >= NotePanes.sideBySide } action: { wide = $0 }
+        .onGeometryChange(for: NoteOutlineFit.self) { NoteOutlineFit(width: $0.size.width) } action: { outlineFit = $0 }
+        .onChange(of: model.body, initial: true) { outline.read(model.body) }
+        .onChange(of: [paneFocused, outlineShown, outline.isEmpty], initial: true) { registerOutline() }
+        .onDisappear { trail?.clearOutline(owner: outlineOwner) }
         .background(Theme.Palette.card)
         .animation(.snappy(duration: 0.25), value: showsAssets)
         // Edits save on their own; ⌘S is kept only for the habit, with no button of its own.
@@ -269,14 +289,52 @@ struct NoteEditor: View {
     var shown: NotePanes.Mode { panes.shown(wide: wide) }
     var writing: Bool { shown != .read }
 
+    var outlineDocked: Bool { outlineOn && !outline.isEmpty && outlineFit.docks(shown) }
+    /// Beside the note, the remembered choice; where there's no room for it, the popover.
+    var outlineShown: Bool { outlineFit.docks(shown) ? outlineOn : outlinePopover }
+
+    func toggleOutline() {
+        if outlineFit.docks(shown) {
+            withAnimation(.snappy(duration: 0.25)) { outlineOn.toggle() }
+        } else {
+            outlinePopover.toggle()
+        }
+    }
+
+    /// While the pane is focused, the menu bar's 목차 command works on this note's outline.
+    func registerOutline() {
+        guard let trail else { return }
+        guard paneFocused, !outline.isEmpty else { return trail.clearOutline(owner: outlineOwner) }
+        trail.setOutline(OutlineCommand(shown: outlineShown, toggle: toggleOutline), owner: outlineOwner)
+    }
+
+    var outlineButton: some View {
+        Button { toggleOutline() } label: {
+            Label(.notesOutlineTitle, systemImage: "list.bullet.indent")
+                .foregroundStyle(outlineShown ? accent.color : Theme.Palette.textSecondary)
+        }
+        .help(Text(outlineShown ? .notesOutlineHide : .notesOutlineShow))
+        .disabled(outline.isEmpty)
+        .popover(isPresented: $outlinePopover, arrowEdge: .bottom) {
+            NoteOutlineList(model: outline) { outlinePopover = false }
+                .frame(width: Theme.Size.noteOutlinePopover.width)
+                .frame(maxHeight: Theme.Size.noteOutlinePopover.height)
+        }
+    }
+
     func toggleMode() { panes.toggle() }
 
     var editor: some View {
         MarkdownEditor(text: $model.body, baseURL: model.baseURL, math: model.meta.math, insert: $model.pendingInsert,
-                       saveFile: model.saveFile, openNote: openNote, onScroll: preview.follow,
+                       saveFile: model.saveFile, openNote: openNote,
+                       onScroll: { [preview, outline] line, frac in
+                           preview.follow(line: line, frac: frac)
+                           outline.views.editorScrolled(line)
+                       },
                        assist: NoteAssist(settings: model.workspace.settings, links: model.links), anchor: anchor, embeds: model.embeds,
                        revision: model.workspace.notesRevision, insertMath: $model.pendingMath,
-                       openGuide: { showInputGuide(model.meta.math) })
+                       openGuide: { showInputGuide(model.meta.math) },
+                       views: outline.views)
     }
 }
 
