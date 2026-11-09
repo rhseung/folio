@@ -26,11 +26,14 @@ public struct SessionAdd {
     var kind: Session.Kind = .lecture
     /// 출결. 결석이나 공결을 미리 알 때. 휴강과 함께 줄 수 없다
     var attendance: AttendanceState?
+    /// 이 수업이 다룰 단원
+    @CLIName("unit") var units: [FolioDomain.Unit.ID] = []
 
     public func run(_ ctx: ActionContext) throws {
         let start = try ctx.semester(of: ctx.file(course).course)?.start
         try ctx.edit(course) { f in
             guard !f.sessions.contains(where: { $0.id == id }) else { throw ActionError.rule(String(localized: .errorIdTakenSession("\(id)"))) }
+            for unit in units { _ = try index(unit, in: f.units, .valueUnit) }
             var s = SessionPlanner.session(at: date, sessions: f.sessions, termStart: start, calendar: ctx.calendar,
                                            device: ctx.device, now: ctx.now)
             s.id = id
@@ -38,6 +41,7 @@ public struct SessionAdd {
             s.link = OnlineLink.stored(link)
             s.setEnd(end, schedule: f.course.schedule, calendar: ctx.calendar)
             f.sessions.append(s)
+            for unit in Set(units) { f.toggle(session: id, unit: unit) }
             // In the same edit as the session, so a refused attendance (on a 휴강) leaves no session behind.
             if let attendance, attendance != .present {
                 f.attendance.append(Attendance(device: ctx.device, at: ctx.now, sessionId: id, state: attendance))
@@ -101,22 +105,32 @@ public struct SessionSet {
         let start = try date.value == nil ? nil : ctx.semester(of: ctx.file(course).course)?.start
         try ctx.edit(course) { f in
             _ = try index(session, in: f.sessions, .valueSession)
-            if let date = date.value { f.reschedule(session, to: date, termStart: start, calendar: ctx.calendar) }
-            let schedule = f.course.schedule
-            try f.update(\.sessions, session) { s in
-                if let end = end.value { s.setEnd(end, schedule: schedule, calendar: ctx.calendar) }
-                if let link = link.value { s.link = OnlineLink.stored(link) }
-                kind.apply(&s.kind)
-                skipsReview.apply(&s.skipsReview)
-                reviewUnfinished.apply(&s.reviewNoteUnfinished)
-            }
-            // A review note covering several classes is written once, so they are marked together.
-            if let unfinished = reviewUnfinished.value, let note = f.sessions.first(where: { $0.id == session })?.reviewNoteId {
-                f.setReviewNoteUnfinished(note, unfinished)
-            }
-            // A class that didn't happen has no attendance to count.
-            if kind.value == .cancelled { f.attendance.removeAll { $0.sessionId == session } }
+            try f.set(session: session, date: date, end: end, link: link, kind: kind, skipsReview: skipsReview, reviewUnfinished: reviewUnfinished,
+                      termStart: start, calendar: ctx.calendar)
         }
+    }
+}
+
+extension CourseFile {
+    /// When and how a class meets and its review flags, written the same by `session set` (the menu's review check) and
+    /// `session wrap-up` (the class's sheet), so the two can't drift apart.
+    mutating func set(session id: UUID, date: Patch<Date>, end: Patch<Date?>, link: Patch<String?>, kind: Patch<Session.Kind>,
+                      skipsReview: Patch<Bool>, reviewUnfinished: Patch<Bool>, termStart: LocalDate?, calendar: Calendar) throws {
+        if let date = date.value { reschedule(id, to: date, termStart: termStart, calendar: calendar) }
+        let schedule = course.schedule
+        try update(\.sessions, id) { s in
+            if let end = end.value { s.setEnd(end, schedule: schedule, calendar: calendar) }
+            if let link = link.value { s.link = OnlineLink.stored(link) }
+            kind.apply(&s.kind)
+            skipsReview.apply(&s.skipsReview)
+            reviewUnfinished.apply(&s.reviewNoteUnfinished)
+        }
+        // A review note covering several classes is written once, so they are marked together.
+        if let unfinished = reviewUnfinished.value, let note = sessions.first(where: { $0.id == id })?.reviewNoteId {
+            setReviewNoteUnfinished(note, unfinished)
+        }
+        // A class that didn't happen has no attendance to count.
+        if kind.value == .cancelled { attendance.removeAll { $0.sessionId == id } }
     }
 }
 
@@ -454,13 +468,15 @@ public struct SessionProgress {
     }
 }
 
-/// Everything the end-of-class wrap-up saves, in one action so a part the rules refuse leaves the rest unwritten too.
-/// Marks the class wrapped up, which is what stops it being asked about: what was left empty stays so on purpose.
-@Action("session wrap-up", "수업 정리: 회차의 렉처 진도, 단원, 출결을 한 번에 적고 정리했다고 표시한다",
-        discussion: "렉처 파일은 <자료>:<시작>-<끝>으로 쓴다. 주지 않은 것은 그대로 두고, 정리했다고 표시해 오늘 화면의 수업 정리에서 뺀다.",
-        done: "회차 '{session}'을(를) 정리했습니다",
-        examples: ["folio session wrap-up EC4207/10-26 05_Matchings.pdf:7-11 --unit 매칭", "folio session wrap-up EC4207/10-26 --attendance late --dry-run"],
-        phrases: ["수업 정리", "수업 끝", "오늘 수업 정리", "수업 마무리"])
+/// Everything a class's sheet saves, in one action so a part the rules refuse leaves the rest unwritten too: what the
+/// class covered (progress, units), how it was attended and reviewed, and when and how it meets. Once the class has
+/// begun, saving marks it wrapped up, which is what stops it being asked about: what was left empty stays so on purpose.
+@Action("session wrap-up", "회차 편집과 수업 정리: 렉처 진도, 단원, 출결, 복습, 일시, 종류, 온라인 링크를 한 번에 적는다. 시작한 수업이면 정리했다고 표시한다",
+        discussion: "렉처 파일은 <자료>:<시작>-<끝>으로 쓴다. 주지 않은 것은 그대로 둔다. 시작한 수업(휴강 아님)이면 정리했다고 표시해 오늘 화면의 수업 정리에서 뺀다.",
+        done: "회차 '{session}'을(를) 저장했습니다",
+        examples: ["folio session wrap-up EC4207/10-26 05_Matchings.pdf:7-11 --unit 매칭", "folio session wrap-up EC4207/10-26 --attendance late --dry-run",
+                   "folio session wrap-up EC4207/10-26 --review-unfinished false --kind makeup --dry-run"],
+        phrases: ["수업 정리", "수업 끝", "오늘 수업 정리", "수업 마무리", "회차 편집"])
 public struct SessionWrapUp {
     /// 과목
     @Arg var course: Course.ID
@@ -472,9 +488,25 @@ public struct SessionWrapUp {
     @CLIName("unit") var units: Patch<[FolioDomain.Unit.ID]>
     /// 출결
     var attendance: Patch<AttendanceState>
+    /// 일시. 회차를 가리키는 날짜(11-03)도 따라 바뀐다
+    var date: Patch<Date>
+    /// 끝 일시. 수업 시간표 칸과 다를 때만 저장된다
+    var end: Patch<Date?>
+    /// 온라인 수업 링크(Zoom 등)
+    var link: Patch<String?>
+    /// 종류. lecture(강의), cancelled(휴강), makeup(보강). 휴강이면 그 회차의 출결을 지운다
+    var kind: Patch<Session.Kind>
+    /// 복습에서 뺄지
+    var skipsReview: Patch<Bool>
+    /// 복습 노트를 마저 써야 하는지
+    var reviewUnfinished: Patch<Bool>
 
     public func run(_ ctx: ActionContext) throws {
+        let start = try date.value == nil ? nil : ctx.semester(of: ctx.file(course).course)?.start
         try ctx.edit(course) { f in
+            _ = try index(session, in: f.sessions, .valueSession)
+            try f.set(session: session, date: date, end: end, link: link, kind: kind, skipsReview: skipsReview, reviewUnfinished: reviewUnfinished,
+                      termStart: start, calendar: ctx.calendar)
             let i = try index(session, in: f.sessions, .valueSession)
             for range in ranges {
                 _ = try index(range.materialId, in: f.materials, .valueMaterial)
@@ -490,7 +522,10 @@ public struct SessionWrapUp {
                 f.attendance.removeAll { $0.sessionId == session }
                 if state != .present { f.attendance.append(Attendance(device: ctx.device, at: ctx.now, sessionId: session, state: state)) }
             }
-            f.sessions[i].isWrappedUp = true
+            let s = f.sessions[i]
+            // Again after the attendance above: a class that didn't happen has none to count.
+            if s.isCancelled { f.attendance.removeAll { $0.sessionId == session } }
+            if Session.savingWrapsUp(kind: s.kind, start: s.date, at: ctx.now) { f.sessions[i].isWrappedUp = true }
         }
     }
 }

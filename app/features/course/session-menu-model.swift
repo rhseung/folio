@@ -2,8 +2,9 @@ import FolioActions
 import FolioDomain
 import Foundation
 
-/// What a class's menu offers and does, for every screen that shows one: the sessions page, the course overview,
-/// Today's list and ribbon. A struct over the workspace, so a row can make one for its own course without keeping state.
+/// What a class's card and a timetable slot's menu do, for every screen that shows one: the sessions page, the course
+/// overview, Today's list and ribbon. A saved class's menu is `SessionMenuSource`. A struct over the workspace, so a row
+/// can make one for its own course without keeping state.
 @MainActor
 struct SessionMenuModel {
     let workspace: Workspace
@@ -18,62 +19,18 @@ struct SessionMenuModel {
 
     // MARK: A saved session
 
-    /// Only while the class still happens.
-    func link(of session: Session) -> URL? {
-        guard !session.isCancelled, let file else { return nil }
-        return session.link(schedule: file.course.schedule, calendar: calendar)
-    }
-
-    func noteLabel(_ kind: NoteKind, of session: Session) -> String {
-        switch kind {
-        case .rough: String(localized: session.roughNoteId == nil ? .sessionsMakeRoughNote : .sessionsOpenRoughNote)
-        default: String(localized: session.reviewNoteId == nil ? .sessionsMakeReviewNote : .sessionsOpenReviewNote)
-        }
-    }
-
     /// The note, made from its template the first time.
     func note(_ kind: NoteKind, of session: Session) -> UUID? {
         workspace.note(kind, of: session.id, in: courseId)
-    }
-
-    func setReviewNoteUnfinished(_ unfinished: Bool, of session: Session) {
-        workspace.setReviewNoteUnfinished(unfinished, of: session.id, in: courseId)
-    }
-
-    func setSkipsReview(_ skips: Bool, of session: Session) { workspace.setSkipsReview(skips, of: session.id, in: courseId) }
-
-    func takesAttendance(_ session: Session) -> Bool {
-        workspace.can(AttendanceSet(course: courseId, session: session.id, state: .absent))
     }
 
     func attendance(of session: Session) -> AttendanceState {
         file?.attendance.first { $0.sessionId == session.id }?.state ?? .present
     }
 
-    func setAttendance(_ state: AttendanceState, of session: Session) {
-        workspace.run(AttendanceSet(course: courseId, session: session.id, state: state))
-    }
-
-    var kindOptions: [(Session.Kind, String)] { Session.Kind.options }
-
-    func setKind(_ kind: Session.Kind, of session: Session) {
-        guard kind != session.kind else { return }
-        workspace.run(SessionSet(course: courseId, session: session.id, kind: .set(kind)))
-    }
-
     func record(_ session: Session) { workspace.record(session.id, in: courseId) }
 
-    func recordings(of session: Session) -> [Recording] { file?.recordings.filter { $0.sessionId == session.id } ?? [] }
-
-    func playLabel(_ index: Int, _ recording: Recording) -> String {
-        String(localized: .sessionsPlayRecording(index + 1, RecordingTime.label(recording.duration)))
-    }
-
-    func linksUnit(_ unit: UUID, to session: Session) -> Bool { session.unitIds.contains(unit) }
-
-    func toggleUnit(_ unit: UUID, of session: Session) {
-        workspace.run(UnitLink(course: courseId, unit: unit, sessions: [session.id], linked: !session.unitIds.contains(unit)))
-    }
+    func recordings(of session: Session) -> [Recording] { file?.recordings(of: session) ?? [] }
 
     // MARK: A class the timetable holds, not saved yet
 
@@ -102,7 +59,7 @@ struct SessionMenuModel {
 }
 
 extension Session.Kind {
-    /// The menu and the form offer the same choice in the same order.
+    /// The sheet offers the kinds in this order.
     static var options: [(Session.Kind, String)] {
         [(.lecture, String(localized: .sessionsLecture)), (.cancelled, String(localized: .sessionsCancelled)),
          (.makeup, String(localized: .sessionsMakeup))]

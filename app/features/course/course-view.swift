@@ -223,7 +223,7 @@ struct CourseColumn: View {
                                 .contentShape(.rect)
                             }
                             .buttonStyle(.pointing(.plain))
-                            .contextMenu { SessionMenu(courseId: course.id, sessionId: session.id, openNote: model.show(note:), showSessions: { model.section = .sessions }) }
+                            .contextMenu { SessionMenu(courseId: course.id, sessionId: session.id, openNote: model.show(note:)) }
                         }
                     }
                 }
@@ -349,7 +349,7 @@ struct CourseOverview: View {
                             }
                             Spacer(minLength: 0)
                         }
-                        .contextMenu { SessionMenu(courseId: course.id, sessionId: s.id, openNote: model.show(note:), showSessions: { model.section = .sessions }) }
+                        .contextMenu { SessionMenu(courseId: course.id, sessionId: s.id, openNote: model.show(note:)) }
                     }
                 }
                 .opens { model.section = .sessions }

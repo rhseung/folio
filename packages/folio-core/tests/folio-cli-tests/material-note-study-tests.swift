@@ -82,11 +82,13 @@ struct MaterialNoteStudyTests {
                           ranges: [SessionMaterial(materialId: try material(gist, "05_Matchings.pdf"), firstPage: 3, lastPage: 12)],
                           units: .set([Self.unit]), attendance: .set(.late))
         }
-        // Given nothing, what the class has stays and it is only marked wrapped up.
         let gist = try Harness.fixtureCopy()
         for setup in [Self.track, SessionCommandTests.add, Self.addUnit] { _ = h.cli(setup, gist: gist) }
         #expect(h.cli(["session", "wrap-up", "EC4207/10-28", "--unit", "매칭", "--attendance", "absent"], gist: gist).code == 0)
-        #expect(h.cli(["session", "wrap-up", "EC4207/10-28"], gist: gist).code == 0)
+        // The class is still ahead of the harness's clock, so saving it isn't wrapping it up.
+        #expect(try h.file(GISTStore(url: gist)).sessions.first { $0.id == SessionCommandTests.id }?.isWrappedUp == false)
+        // Moved to a day already past, given nothing else: what the class has stays and it is marked wrapped up.
+        #expect(h.cli(["session", "wrap-up", "EC4207/10-28", "--date", "2026-10-27 19:00"], gist: gist).code == 0)
         let f = try h.file(GISTStore(url: gist))
         let s = try #require(f.sessions.first { $0.id == SessionCommandTests.id })
         #expect(s.isWrappedUp)
@@ -94,7 +96,7 @@ struct MaterialNoteStudyTests {
         let entry = try #require(f.attendance.first { $0.sessionId == s.id })
         #expect(entry.state == .absent)
         // The same state again keeps the entry as it was rather than writing it anew.
-        #expect(h.cli(["session", "wrap-up", "EC4207/10-28", "--attendance", "absent"], gist: gist).code == 0)
+        #expect(h.cli(["session", "wrap-up", "EC4207/10-27", "--attendance", "absent"], gist: gist).code == 0)
         #expect(try h.file(GISTStore(url: gist)).attendance.filter { $0.sessionId == s.id }.map(\.id) == [entry.id])
     }
 

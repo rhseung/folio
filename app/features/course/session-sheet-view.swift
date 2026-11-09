@@ -1,41 +1,70 @@
 import FolioDomain
 import SwiftUI
 
-/// The end-of-class wrap-up as one plain form: every item as its control, in asking order, holding what the class has
-/// or what is suggested for it. Announcements made in class can be added below, or skipped.
-struct ClassWrapUpSheet: View {
+/// A class's one sheet (#403), in place of the edit form, the wrap-up and the units popover: 진도 · 단원 · 노트 · 출결 ·
+/// 수업 정보 once the class has begun, 수업 정보 first ahead of it, and 수업 정보 alone for a 휴강. Every way in opens
+/// this: the menu's 편집…, the card's units icon, the gaps popover, a stopped recording, Today's wrap-up card, the
+/// run through past classes, and 회차 추가.
+struct SessionSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openLink) private var openLink
     @Environment(\.supportsMultipleWindows) private var multipleWindows
-    @State private var model: ClassWrapUpModel
+    @State private var model: SessionSheetModel
     @State private var splitting: UUID?
+    @State private var height: CGFloat = 0
+    let focus: SessionSection?
+    let asked: Bool
     var step: String?
     /// Set in a run through several classes, which moves on to the next instead of closing.
     var saved: (() -> Void)?
 
-    init(workspace: Workspace, course: UUID, session: UUID, viewed: [SessionMaterial] = [], recorded: Bool = false,
-         step: String? = nil, saved: (() -> Void)? = nil) {
-        _model = State(initialValue: ClassWrapUpModel(workspace: workspace, course: course, session: session, viewed: viewed, recorded: recorded))
+    /// The tallest the groups grow before they scroll: a class with several lecture files and every group runs past
+    /// a laptop's sheet.
+    static let maxHeight: CGFloat = 520
+
+    init(workspace: Workspace, request: SessionSheetRequest, step: String? = nil, saved: (() -> Void)? = nil) {
+        self.init(model: SessionSheetModel(workspace: workspace, request: request), focus: request.focus, asked: request.asked, step: step, saved: saved)
+    }
+
+    /// With a model already set up, as the renders show a class mid-edit (picked as 휴강).
+    init(model: SessionSheetModel, focus: SessionSection? = nil, asked: Bool = false, step: String? = nil, saved: (() -> Void)? = nil) {
+        _model = State(initialValue: model)
+        self.focus = focus
+        self.asked = asked
         self.step = step
         self.saved = saved
     }
 
     var body: some View {
-        SheetForm(title: model.title, confirm: String(localized: .commonSave), disabled: model.refusal != nil, note: model.note,
-                  carded: false, width: 640, mark: CourseMark(model.workspace, model.courseId), cancel: String(localized: .wrapUpLater),
-                  step: step) {
-            ForEach(model.items, id: \.self) { item in
-                Block(model.label(item)) { Card { row(item) } }
+        SheetForm(title: model.title, confirm: model.confirm, disabled: model.disabled, note: model.note,
+                  carded: false, width: 640, mark: CourseMark(model.workspace, model.courseId),
+                  cancel: asked ? String(localized: .wrapUpLater) : nil, step: step) {
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(alignment: .leading, spacing: Theme.Space.l) {
+                        ForEach(model.sections, id: \.self) { section in
+                            Block(model.label(section)) { Card { rows(section) } }.id(section)
+                        }
+                    }
+                    .onGeometryChange(for: CGFloat.self, of: \.size.height) { height = $0 }
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .overflowFade(.vertical)
+                .frame(height: min(height, Self.maxHeight))
+                .task(id: height > 0) {
+                    guard height > 0, let focus else { return }
+                    proxy.scrollTo(focus, anchor: .top)
+                }
             }
         } onConfirm: {
-            guard model.wrapUp() else { return }
+            guard model.submit() else { return }
             if let saved { saved() } else { dismiss() }
         }
         .task { await model.load() }
         .confirmationDialog(String(localized: .assignmentsOpenUnsaved), isPresented: Binding(get: { splitting != nil }, set: { if !$0 { splitting = nil } }),
                             titleVisibility: .visible, presenting: splitting) { id in
             Button(.assignmentsOpenSave) {
-                guard model.wrapUp() else { return }
+                guard model.submit() else { return }
                 leave(for: id)
             }
             Button(.assignmentsOpenDiscard, role: .destructive) { leave(for: id) }
@@ -64,21 +93,18 @@ struct ClassWrapUpSheet: View {
         openLink(AppLink(.material, id), course: model.courseId)
     }
 
-    @ViewBuilder func row(_ item: WrapUpItem) -> some View {
-        switch item {
+    @ViewBuilder func rows(_ section: SessionSection) -> some View {
+        switch section {
         case .progress: progress
         case .units: units
-        case .note: note
+        case .notes: notes
         case .attendance:
             CardRow(last: true) {
-                attendance
+                Segmented(selection: $model.attendance, options: AttendanceState.steps.map { ($0.value, $0.label) })
                 Spacer(minLength: 0)
             }
+        case .info: info
         }
-    }
-
-    var attendance: some View {
-        Segmented(selection: $model.attendance, options: AttendanceState.steps.map { ($0.value, $0.label) })
     }
 
     // MARK: Progress
@@ -92,7 +118,7 @@ struct ClassWrapUpSheet: View {
                     Text(model.name(row.id)).lineLimit(1).truncationMode(.middle)
                         .opacity(row.included ? 1 : Theme.Opacity.ended)
                     // The file's own action, under its name: the bar beside it is only for picking pages.
-                    if model.sections(row.id).isEmpty {
+                    if model.zones(row.id).isEmpty {
                         Button { split(row.id) } label: { Label(.designPageRangeSplit, systemImage: "scissors") }
                             .buttonStyle(.pointing(.plain))
                             .font(Theme.Typeface.caption)
@@ -103,7 +129,7 @@ struct ClassWrapUpSheet: View {
                 .frame(width: 136, alignment: .leading)
                 // All the rest of the row: the tiles' names need every point the bar can get.
                 PageRangeField(range: row.range, pages: model.pageCounts[row.id], taught: model.taught(row.id),
-                               seen: model.seen(row.id), sections: model.sections(row.id)) { model.setRange(row.id, $0) }
+                               seen: model.seen(row.id), sections: model.zones(row.id)) { model.setRange(row.id, $0) }
                     .frame(maxWidth: .infinity)
                     .opacity(row.included ? 1 : Theme.Opacity.ended)
             }
@@ -125,8 +151,10 @@ struct ClassWrapUpSheet: View {
 
     // MARK: Units
 
-    /// The class's units as chips that wrap, so a long title is read whole, and "+ 단원" for the course's whole outline.
-    /// Nothing is put forward: which unit the class covered is the user's call (#147).
+    /// The class's units as chips that wrap, so a long title is read whole, and one "단원 추가" row: it searches the
+    /// course's whole outline and makes a unit the search doesn't find. A separate "새 단원" field beside a "+ 단원"
+    /// picker read as two ways to do one thing (#403). Nothing is put forward: which unit the class covered is the
+    /// user's call (#147).
     @ViewBuilder var units: some View {
         let options = model.unitOptions
         // No chips is no units, so no row for them: an empty row held only the picker.
@@ -138,19 +166,19 @@ struct ClassWrapUpSheet: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        // Its own row under the chips, not after them: there it moved with every pick, and the open popover, anchored to
+        // it, jumped away from the pointer.
         CardRow(last: true) {
-            Image(systemName: "plus").foregroundStyle(Theme.Palette.textTertiary)
-            TextField(String(localized: .wrapUpUnitsNew), text: $model.newUnit).textFieldStyle(.plain).onSubmit { model.addUnit() }
-            if !model.newUnit.trimmingCharacters(in: .whitespaces).isEmpty {
-                Button(.commonAdd) { model.addUnit() }.buttonStyle(.ghost)
-            }
-            // At the end of the one row that is always there, not after the chips: there it moved with every pick,
-            // and the open popover, anchored to it, jumped away from the pointer.
-            if !options.isEmpty {
-                SearchPicker(options: options, isSelected: { model.units.contains($0) }, pick: { model.pick($0) }, multiple: true,
-                             prompt: String(localized: .wrapUpUnitsSearch)) {
-                    Label(.wrapUpUnitsAdd, systemImage: "plus").labelStyle(GhostLabelStyle()).foregroundStyle(.tint)
+            SearchPicker(options: options, isSelected: { model.units.contains($0) }, pick: { model.pick($0) }, multiple: true,
+                         prompt: String(localized: .wrapUpUnitsSearch), flexible: true, create: { model.makeUnit($0) },
+                         createTitle: { String(localized: .sessionSheetUnitsNew($0)) }) {
+                HStack(spacing: Theme.Space.s) {
+                    Image(systemName: "plus")
+                    Text(.sessionSheetUnitsAdd)
+                    Spacer(minLength: 0)
                 }
+                .foregroundStyle(.tint)
+                .contentShape(.rect)
             }
         }
     }
@@ -170,10 +198,10 @@ struct ClassWrapUpSheet: View {
         .contextMenu { Button(.commonRemove, role: .destructive) { model.removeUnit(unit.id) } }
     }
 
-    // MARK: Note
+    // MARK: Notes
 
-    var note: some View {
-        CardRow(last: true) {
+    @ViewBuilder var notes: some View {
+        CardRow(last: !model.showsReview) {
             if let linked = model.linkedNote {
                 noteMenu(linked)
             } else {
@@ -190,6 +218,12 @@ struct ClassWrapUpSheet: View {
                     }
                     .menuStyle(.button).buttonStyle(.ghost).fixedSize()
                 }
+            }
+        }
+        if model.showsReview, let review = model.review {
+            FormRow(label: String(localized: .sessionSheetReview), last: true) {
+                Segmented(selection: Binding(get: { model.review ?? review }, set: { model.review = $0 }),
+                          options: review.choices.map { ($0, model.reviewLabel($0)) })
             }
         }
     }
@@ -218,41 +252,17 @@ struct ClassWrapUpSheet: View {
         .buttonStyle(.pointing(.plain))
         .menuIndicator(.hidden)
     }
-}
 
-/// Shows the wrap-up a stopped recording asks for, in the window it was stopped from. Every window watches the same
-/// ask; the first that takes it clears it, so two windows don't both ask.
-struct ClassWrapUpPrompt: ViewModifier {
-    let workspace: Workspace
-    @State private var shown: ClassWrapUpAsk?
-    #if os(macOS)
-    @Environment(\.appearsActive) private var active
-    #endif
+    // MARK: When and how
 
-    func body(content: Content) -> some View {
-        content
-            .onChange(of: workspace.wrapUpAsk) { _, ask in
-                guard let ask, workspace.wrapUpAsk == ask else { return }
-                #if os(macOS)
-                // The stop button was in the key window.
-                guard active else { return }
-                workspace.wrapUpAsk = nil
-                shown = ask
-                #else
-                workspace.wrapUpAsk = nil
-                // The recording card's popover is still going away; a sheet asked for meanwhile is dropped.
-                Task {
-                    try? await Task.sleep(for: .milliseconds(400))
-                    shown = ask
-                }
-                #endif
-            }
-            .sheet(item: $shown) { ask in
-                ClassWrapUpSheet(workspace: workspace, course: ask.course, session: ask.session, viewed: ask.viewed, recorded: true)
-            }
+    @ViewBuilder var info: some View {
+        FormRow(label: String(localized: .sessionsDate)) { DateChip(date: Binding(get: { model.start }, set: { model.setStart($0) })) }
+        FormRow(label: String(localized: .sessionsEnd)) { TimeMenu(minute: Binding(get: { model.endMinute }, set: { model.setEnd($0) })) }
+        FormRow(label: String(localized: .sessionsKind)) {
+            Segmented(selection: Binding(get: { model.kind }, set: { model.setKind($0) }), options: model.kindOptions)
+        }
+        FormRow(label: String(localized: .sessionsLink), detail: String(localized: .sessionsLinkDetail), last: true) {
+            InlineField(String(localized: .sessionsLinkPrompt), text: $model.link)
+        }
     }
-}
-
-extension View {
-    func classWrapUpPrompt(_ workspace: Workspace) -> some View { modifier(ClassWrapUpPrompt(workspace: workspace)) }
 }

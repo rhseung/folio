@@ -73,6 +73,9 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
     var prompt = String(localized: .commonSearch)
     /// For a label that should shrink and truncate with its row instead of holding its full width.
     var flexible = false
+    /// Offered when the query names no option, so one row both picks and makes (a class's units, #403).
+    var create: ((String) -> Void)?
+    var createTitle: (String) -> String = { $0 }
     @ViewBuilder let label: Label
     @State private var open = false
     @State private var query = ""
@@ -83,6 +86,13 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
         let q = query.trimmingCharacters(in: .whitespaces)
         guard !q.isEmpty else { return options }
         return options.filter { o in [o.title, o.detail, o.section].contains { $0?.localizedCaseInsensitiveContains(q) == true } }
+    }
+
+    /// The query, when it can be made: no option already has that title.
+    var creatable: String? {
+        let q = query.trimmingCharacters(in: .whitespaces)
+        guard create != nil, !q.isEmpty, !options.contains(where: { $0.title.caseInsensitiveCompare(q) == .orderedSame }) else { return nil }
+        return q
     }
 
     var body: some View {
@@ -100,14 +110,22 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
                 TextField(prompt, text: $query)
                     .textFieldStyle(.plain)
                     .focused($focused)
-                    .onSubmit { if let id = highlighted ?? rows.first?.id { choose(id) } }
+                    .onSubmit {
+                        if let id = highlighted ?? rows.first?.id { choose(id) } else if let title = creatable { make(title) }
+                    }
                     .onKeyPress(.downArrow) { step(1, in: rows); return .handled }
                     .onKeyPress(.upArrow) { step(-1, in: rows); return .handled }
             }
             .padding(Theme.Space.m)
             Theme.Palette.line.frame(height: 1)
+            if let title = creatable {
+                createRow(title)
+                if !rows.isEmpty { Theme.Palette.lineSoft.frame(height: 1) }
+            }
             if rows.isEmpty {
-                EmptyLine(String(localized: .designNoMatch)).padding(Theme.Space.m).frame(maxWidth: .infinity, alignment: .leading)
+                if creatable == nil {
+                    EmptyLine(String(localized: .designNoMatch)).padding(Theme.Space.m).frame(maxWidth: .infinity, alignment: .leading)
+                }
             } else {
                 ScrollViewReader { proxy in
                     ScrollView {
@@ -159,6 +177,32 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
         .disabled(o.disabled && !isSelected(o.id))
         .opacity(o.disabled && !isSelected(o.id) ? 0.45 : 1)
         .onHover { if $0 { highlighted = o.id } }
+    }
+
+    func createRow(_ title: String) -> some View {
+        Button { make(title) } label: {
+            HStack(spacing: Theme.Space.s) {
+                Image(systemName: "plus").font(Theme.Glyph.regular)
+                Text(createTitle(title)).lineLimit(1)
+                Spacer(minLength: 0)
+            }
+            .foregroundStyle(.tint)
+            .padding(.horizontal, Theme.Space.m)
+            .padding(.vertical, Theme.Space.tight)
+            .background(rowsEmpty ? Theme.Palette.fill : .clear, in: .rect(cornerRadius: Theme.Radius.control))
+            .padding(Theme.Space.xs)
+            .contentShape(.rect)
+        }
+        .buttonStyle(.pointing(.plain))
+    }
+
+    /// With nothing else to pick, Return makes it, so the row shows as the one Return reaches.
+    private var rowsEmpty: Bool { filtered.isEmpty }
+
+    func make(_ title: String) {
+        create?(title)
+        query = ""
+        if !multiple { open = false }
     }
 
     func step(_ delta: Int, in rows: [PickOption<ID>]) {

@@ -153,7 +153,7 @@ struct UnitsView: View {
                 CardRow(last: i == shown.count - 1 && sessions.count <= shown.count) {
                     Text(course.file.title(of: s, calendar: model.workspace.calendar)).lineLimit(1)
                     Spacer(minLength: Theme.Space.m)
-                    SessionUnitsPicker(course: course, session: s)
+                    SessionUnitsButton(course: course, session: s)
                 }
             }
             if sessions.count > shown.count {
@@ -233,7 +233,7 @@ struct UnitDetail: View {
                     ForEach(Array(sessions.enumerated()), id: \.element.id) { i, s in
                         CardRow(last: i == sessions.count - 1) { sessionRow(s) }
                             .contentShape(.rect)
-                            .contextMenu { sessionMenu(s, now: now) }
+                            .contextMenu { SessionMenu(courseId: course.id, sessionId: s.id, host: .unit(unit.id), openNote: openNote) }
                     }
                 }
             }
@@ -397,15 +397,6 @@ struct UnitDetail: View {
             .buttonStyle(.ghost)
             .foregroundStyle(Theme.Palette.textTertiary)
             .help(Text(.unitsUnlink))
-    }
-
-    @ViewBuilder func sessionMenu(_ s: Session, now: Date) -> some View {
-        if let id = s.roughNoteId { Button(.sessionsOpenRoughNote) { openNote(id) } }
-        if s.reviewNoteId != nil || course.file.needsReviewNote(s, at: now) {
-            Button(String(localized: s.reviewNoteId == nil ? .sessionsMakeReviewNote : .sessionsOpenReviewNote)) { openReview(s) }
-        }
-        Divider()
-        Button(.unitsUnlinkSession) { model.unlink(s, from: unit) }
     }
 
     func openReview(_ s: Session) {
