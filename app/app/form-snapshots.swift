@@ -39,6 +39,16 @@ enum FormSnapshots {
                                                            places: importPlaces))),
             ("material-new", AnyView(NewMaterialFileSheet(workspace: workspace, course: course, folder: nil) { _ in })),
         ]
+        // The memo grows with its text: empty, one line, a long unbroken URL among a few lines, and past the cap.
+        let assignment = file.assignments.first ?? Assignment(device: device, at: .now, title: "HW01")
+        let url = "https://lms.example.ac.kr/course/view.php?id=104729&section=assignment-submission-guidelines-and-rubric-2026-fall"
+        let steps = { (n: Int) in (1...n).map { "\($0). 문제 \($0)의 풀이 과정을 빠짐없이 적는다" }.joined(separator: "\n") }
+        for (name, memo) in [("empty", ""), ("short", "채점 기준은 LMS 공지 참고"),
+                             ("long", "제출 안내\n\(url)\n\(steps(4))"), ("overflow", "제출 안내\n\(url)\n\(steps(14))")] {
+            var a = assignment
+            a.memo = memo
+            forms.append(("assignment-memo-\(name)", AnyView(AssignmentSheet(workspace: workspace, course: course, assignment: a) { _, _ in })))
+        }
         let users = workspace.allCourses.flatMap(\.codes)
         if let code = workspace.catalog.codes.max(by: { a, b in users.filter { $0 == a.id }.count < users.filter { $0 == b.id }.count }) {
             let courses = workspace.allCourses.filter { $0.codes.contains(code.id) }.map(\.id)
@@ -152,12 +162,16 @@ enum FormSnapshots {
     @MainActor static func capture(_ workspace: Workspace, into directory: URL) async {
         for (name, view) in forms(workspace) {
             let host = NSHostingView(rootView: view.environment(workspace).snapshotKey())
-            let size = host.fittingSize
-            let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.titled], backing: .buffered, defer: false)
+            // Sized here, once the sheet has loaded: left to the hosting view, a sheet whose text grows after it
+            // appears (a memo loaded in onAppear) kept the window's first height and squeezed the text area.
+            host.sizingOptions = []
+            let window = NSWindow(contentRect: NSRect(origin: .zero, size: host.fittingSize), styleMask: [.titled], backing: .buffered, defer: false)
             window.isReleasedWhenClosed = false
             window.contentView = host
             window.orderFront(nil)
             try? await Task.sleep(for: .seconds(0.8))
+            window.setContentSize(host.fittingSize)
+            try? await Task.sleep(for: .seconds(0.3))
             if let rep = host.bitmapImageRepForCachingDisplay(in: host.bounds) {
                 host.cacheDisplay(in: host.bounds, to: rep)
                 // folio:not-an-action debug screenshots, outside the GIST folder

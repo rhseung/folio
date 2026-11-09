@@ -252,13 +252,8 @@ struct QuizSolveView: View {
                 } else {
                     VStack(alignment: .leading, spacing: Theme.Space.s) {
                         Caption(String(localized: .quizSolveMyAnswer))
-                        TextEditor(text: $model.answer)
-                            // A text input keeps its bar: the card's fade hides it for everything inside.
-                            .scrollIndicators(.automatic)
-                            .font(.system(size: 14)) // design: one-off, the answer sits a step under the 15pt prompt
-                            .scrollContentBackground(.hidden)
+                        GrowingTextEditor(text: $model.answer, size: 14, lines: 5...12) // design: one-off, a step under the 15pt prompt
                             .padding(Theme.Space.s)
-                            .frame(minHeight: 120)
                             .background(Theme.Palette.fill.opacity(0.6), in: .rect(cornerRadius: Theme.Radius.control))
                             .disabled(model.pending != nil || model.busy)
                         if model.pending == nil && !model.revealed {

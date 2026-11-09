@@ -736,6 +736,66 @@ struct SearchField: View {
     }
 }
 
+/// A `TextEditor` as tall as its text, from `lines.lowerBound` lines up to `lines.upperBound`, past which it scrolls.
+/// Not `TextField(axis: .vertical)`: on the Mac its Return ends the field instead of breaking the line, and options
+/// and rules are written one per line. Not a drag handle either: a touch has nothing to drag it with.
+struct GrowingTextEditor: View {
+    @Binding var text: String
+    /// A point size, not a `Font`: the height is measured with the platform font.
+    var size: CGFloat = Theme.Typeface.bodySize
+    var lines: ClosedRange<Int> = 3...12
+    /// The most it may grow to in a sheet, whose rows fit the window: fewer lines than `lines` allows there.
+    var room: CGFloat?
+    @State private var width: CGFloat = 0
+
+    var body: some View {
+        let height = Self.height(of: text, size: size, width: width, lines: lines, room: room)
+        TextEditor(text: $text)
+            .font(.system(size: size))
+            .scrollContentBackground(.hidden)
+            // Only once it scrolls. A text input keeps its bar then (a fading scroll area around it hides it for
+            // everything inside), but the Mac's editor keeps a bar's width free for it, wrapping its text narrower than
+            // the width measured here: the box came out a line short.
+            .scrollIndicators(height.scrolls ? .automatic : .never)
+            .frame(height: height.points)
+            .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
+    }
+
+    /// Laid out by TextKit as the editor's text view lays it out. A hidden SwiftUI `Text` broke a long URL at other
+    /// places than the editor did, a line short, and the last line scrolled out of a box that should have held it.
+    static func height(of text: String, size: CGFloat, width: CGFloat, lines: ClosedRange<Int>, room: CGFloat? = nil) -> (points: CGFloat, scrolls: Bool) {
+        let font = PlatformFont.systemFont(ofSize: size)
+        let layout = NSLayoutManager()
+        #if os(macOS)
+        let line = layout.defaultLineHeight(for: font)
+        #else
+        let line = font.lineHeight
+        #endif
+        var used = line * CGFloat(lines.lowerBound)
+        if width > 0 {
+            let storage = NSTextStorage(string: text, attributes: [.font: font])
+            // The container's default line padding is the editor's too.
+            let container = NSTextContainer(size: CGSize(width: width, height: .greatestFiniteMagnitude))
+            layout.addTextContainer(container)
+            storage.addLayoutManager(layout)
+            layout.ensureLayout(for: container)
+            // The used rect counts a trailing newline's empty line, where the editor's caret sits.
+            used = layout.usedRect(for: container).height
+        }
+        // Whole lines that fit the room, never under the minimum.
+        let fit = room.map { Int(($0 - 2 * inset) / line) } ?? lines.upperBound
+        let cap = line * CGFloat(max(lines.lowerBound, min(lines.upperBound, fit)))
+        return (min(max(used, line * CGFloat(lines.lowerBound)), cap).rounded(.up) + 2 * inset, used > cap)
+    }
+
+    // UITextView keeps its text 8pt from its top and bottom edges; the Mac's text view sets it at the edges.
+    #if os(iOS)
+    private static let inset: CGFloat = 8
+    #else
+    private static let inset: CGFloat = 0
+    #endif
+}
+
 extension Binding {
     /// An array element that survives its removal: a removed row's controls still read their binding while they go away,
     /// and a plain `$array[i]` then reads past the end and crashes.

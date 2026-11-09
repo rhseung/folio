@@ -100,10 +100,10 @@ struct CardEditorSheet: View {
                 FormRow(label: String(localized: .quizCategory)) { ChoiceMenu(selection: $model.draft.category, options: CardCategory.allCases.map { ($0, $0.label) }) }
                 FormRow(label: String(localized: .quizCardType), last: true) { ChoiceMenu(selection: $model.draft.type, options: CardType.editable.map { ($0, $0.label) }) }
             }
-            FormTextArea(label: String(localized: .quizCardPrompt), text: $model.draft.prompt, height: 80)
+            FormTextArea(label: String(localized: .quizCardPrompt), text: $model.draft.prompt)
             switch model.draft.type {
             case .choice:
-                FormTextArea(label: String(localized: .quizCardOptions), detail: String(localized: .quizCardOnePerLine), text: $model.draft.options, height: 70)
+                FormTextArea(label: String(localized: .quizCardOptions), detail: String(localized: .quizCardOnePerLine), text: $model.draft.options)
                 Card {
                     FormRow(label: String(localized: .quizCardAnswer), last: true) {
                         ChoiceMenu(selection: $model.draft.answer, options: [("", String(localized: .quizCardChoose))] + model.draft.optionList.map { ($0, $0) })
@@ -116,9 +116,9 @@ struct CardEditorSheet: View {
                     }
                 }
             default:
-                FormTextArea(label: String(localized: .quizModelAnswer), text: $model.draft.answer, height: 80)
+                FormTextArea(label: String(localized: .quizModelAnswer), text: $model.draft.answer)
             }
-            FormTextArea(label: String(localized: .quizCardRubric), detail: String(localized: .quizCardRubricDetail), text: $model.draft.rubric, height: 56)
+            FormTextArea(label: String(localized: .quizCardRubric), detail: String(localized: .quizCardRubricDetail), text: $model.draft.rubric)
         } onConfirm: {
             guard model.saveCard() else { return }
             saved()

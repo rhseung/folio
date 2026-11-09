@@ -153,7 +153,7 @@ struct PolicySheet: View {
                     FormRow(label: String(localized: .courseGradesLateSubmission), last: true) { InlineField(String(localized: .policySheetLateSubmissionExample), text: $model.late) }
                 }
             }
-            FormTextArea(label: String(localized: .policySheetNotes), detail: String(localized: .policySheetNotesDetail), text: $model.notes, height: 96)
+            FormTextArea(label: String(localized: .policySheetNotes), detail: String(localized: .policySheetNotesDetail), text: $model.notes)
         } onConfirm: {
             if model.confirm() { dismiss() }
         }

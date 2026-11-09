@@ -382,7 +382,7 @@ struct RequirementSheet: View {
                 }
             }
             FormTextArea(label: String(localized: .requirementsFieldRule),
-                         text: Binding(get: { model.draft.rule ?? "" }, set: { model.draft.rule = $0.isEmpty ? nil : $0 }), height: 64)
+                         text: Binding(get: { model.draft.rule ?? "" }, set: { model.draft.rule = $0.isEmpty ? nil : $0 }))
         } onConfirm: {
             model.confirm()
             dismiss()

@@ -346,7 +346,7 @@ struct ExamEditor: View {
                     }
                 }
             }
-            FormTextArea(label: String(localized: .examsEditorMemo), text: $model.draft.memo, height: 56)
+            FormTextArea(label: String(localized: .examsEditorMemo), text: $model.draft.memo)
         } onConfirm: {
             if model.apply() { dismiss() }
         }
