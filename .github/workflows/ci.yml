@@ -108,6 +108,7 @@ jobs:
       # quietly stopping. A missing or changed picture lands here and goes up as the note-screens artifact.
       FOLIO_NOTE_SCREENS_STRICT: 1
       FOLIO_NOTE_SCREENS: ${{ github.workspace }}/.build/note-screens
+      COMPILATION_CACHE_ENABLE_CACHING: YES
     steps:
       - if: env.RUN != 'true'
         run: echo "No file in this PR reaches ${{ matrix.task }}."
@@ -131,8 +132,8 @@ jobs:
             !.build/DerivedData/Index.noindex
             !.build/DerivedData/Logs
             !.build/DerivedData/TestResults
-          key: xcode-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}
-          restore-keys: xcode-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
+          key: xcode-cas-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}
+          restore-keys: xcode-cas-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
       # As in `test`, Folio's own sources compile again. The app, test and resource bundles go so that a file the
       # branch deleted can't linger in them; Xcode copies resources into a bundle without removing old ones.
       - if: env.RUN == 'true'
@@ -142,6 +143,8 @@ jobs:
       - if: env.RUN == 'true'
         id: run
         run: mise run ${{ matrix.task }}
+      - if: ${{ !cancelled() && env.RUN == 'true' }}
+        run: du -sh .build/DerivedData/* || true
       # A key is saved once, so a run that failed to build would leave a cache without the dependencies. A failed test
       # still saves, since the app was built: otherwise a red test-app would never get a cache.
       - if: ${{ !cancelled() && env.RUN == 'true' && steps.cache.outputs.cache-hit != 'true' && (steps.run.outcome == 'success' || (steps.run.outcome == 'failure' && hashFiles('.build/DerivedData/Build/Products/*/Folio.app/**/Info.plist') != '')) }}
