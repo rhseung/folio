@@ -279,10 +279,11 @@ struct RootView: View {
                                          paused: SnapshotDriver.recordingPaused, level: SnapshotDriver.recordingLevel)
             }
             let ids = workspace.currentCourses.map(\.id)
-            // The first lecture file some class names pages of.
+            // The first lecture file some class names pages of, or with none, the first lecture file: its strip with no
+            // progress yet.
             if SnapshotDriver.strip != nil, let lecture = workspace.currentCourses.lazy.compactMap({ c in
                 c.file.lectureFiles.first { m in c.file.sessions.contains { $0.materials.contains { $0.materialId == m.id && $0.pages != nil } } }
-            }).first {
+            }).first ?? workspace.currentCourses.lazy.compactMap({ $0.file.lectureFiles.first }).first {
                 if let now = SnapshotDriver.stripNow { workspace.pinnedNow = now }
                 await SnapshotDriver.shared.runStrip(open: { open($0) }, lecture: AppLink(.material, lecture.id))
                 return
