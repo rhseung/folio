@@ -136,4 +136,35 @@ struct NoteMathTests {
         #expect(try width(#"\textbf{a b}"#) > width(#"\textbf{ab}"#))
         #expect(try width(#"\textit{강조}"#) > 24)
     }
+
+    /// The edit view reads a formula with the preview's `toTeX`, so both see the same TeX for either syntax.
+    @Test func bothViewsReadTheFormulaAlike() throws {
+        let source = ##"min{|F|: G - F " separates " x, y} = max{"# edge-disjoint " x,y- "paths"}"##
+        let tex = NoteScripts.tex(source, .asciimath)
+        #expect(tex.contains(##"\text{# edge-disjoint }"##) && tex.contains(##"\max"##))
+        #expect(NoteMath.picture(source, syntax: .asciimath, display: false, size: 16, color: .black, dark: false) != nil)
+        #expect(NoteScripts.tex(#"\frac{a}{b}"#, .latex) == #"\frac{a}{b}"#)
+    }
+
+    /// A bar closes the bar opened before it in the same brackets; asciimath2tex alone paired `|X| >= |I|` as one
+    /// `\left| X | >= \right|` and read `|:` in `|F|:` as a bracket that ate the colon.
+    @Test func barsPairInOrder() throws {
+        let cases: [(String, String)] = [
+            (#"|(bigcup_(i in I) A_i) cap (bigcup_(i in J) B_i)| >= |I| + |J| - m"#,
+             #"\left \lvert \left ( \bigcup_{i \in I} A_{i} \right ) \cap \left ( \bigcup_{i \in J} B_{i} \right ) \right \rvert \ge \left \lvert I \right \rvert + \left \lvert J \right \rvert - m"#),
+            (#"|det(A)| = |lambda_1| |lambda_2|"#,
+             #"\left \lvert \det{\left ( A \right )} \right \rvert = \left \lvert \lambda_{1} \right \rvert \left \lvert \lambda_{2} \right \rvert"#),
+            (#"min{|F|: G}"#, #"\min \left \lbrace \left \lvert F \right \rvert : G \right \rbrace"#),
+            (#"||x|| + |y|"#, #"\left \lvert \left \lvert x \right \rvert \right \rvert + \left \lvert y \right \rvert"#),
+            // As before: a norm, explicit bars, a lone bar and AsciiMath's tokens with a bar in them.
+            (#"||x||"#, #"\left \lvert \left \lvert x \right \rvert \right \rvert"#),
+            (#"|:x:|"#, #"\left \lvert x \right \rvert"#),
+            (#"a|b"#, "a | b"),
+            (#"{x | x > 0}"#, #"\left \lbrace x \mid x > 0 \right \rbrace"#),
+            (#"x |-> y"#, #"x \mapsto y"#),
+            (#""a|b" + |x|"#, #"\text{a|b} + \left \lvert x \right \rvert"#),
+        ]
+        for (source, tex) in cases { #expect(NoteScripts.tex(source, .asciimath) == tex, "\(source)") }
+        #expect(NoteMath.picture(cases[0].0, syntax: .asciimath, display: true, size: 16, color: .black, dark: false) != nil)
+    }
 }

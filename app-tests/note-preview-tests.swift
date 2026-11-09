@@ -15,11 +15,13 @@ import WebKit
     let window: NSWindow
     var text: String
     var baseURL: URL?
+    var math: MathSyntax
     var accent = CourseAccent.presets[0].accent
     /// Stands for the workspace's `notesRevision`, which another note's change bumps.
     var revision = 0
 
-    init(_ text: String, baseURL: URL? = nil, editable: Bool = false, height: CGFloat = 600, embeds: NoteEmbedSource? = nil) {
+    init(_ text: String, baseURL: URL? = nil, editable: Bool = false, height: CGFloat = 600, embeds: NoteEmbedSource? = nil,
+         math: MathSyntax = .latex) {
         page = NotePreviewPage.take()
         page.embeds = embeds
         window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: 900, height: height), styleMask: [.borderless], backing: .buffered, defer: false)
@@ -30,6 +32,7 @@ import WebKit
         Self.keepDrawing(page.view, in: window)
         self.text = text
         self.baseURL = baseURL
+        self.math = math
         if editable {
             page.edit = { [unowned self] from, to, old, new in
                 var lines = self.text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
@@ -56,7 +59,7 @@ import WebKit
 
     func show(_ text: String) {
         self.text = text
-        page.show(text, baseURL: baseURL, math: .latex, accent: accent, dark: false, revision: revision)
+        page.show(text, baseURL: baseURL, math: math, accent: accent, dark: false, revision: revision)
     }
 
     func close() {
@@ -204,6 +207,16 @@ struct NotePreviewTests {
     /// `%`, `#` and `&` in a formula's text are the characters, not TeX's comment and markup.
     @Test func textInMathReadsAsWritten() async throws {
         let rig = PreviewRig("$\\textbf{오차 5% 이내} \\text{과제 #3 \\& 4} \\textit{A & B}$")
+        defer { rig.close() }
+        await rig.settle()
+        #expect(try await rig.js("return document.querySelectorAll('.math-error').length") as? Int == 0)
+        #expect(try await rig.js("return document.querySelectorAll('.katex').length") as? Int == 1)
+    }
+
+    /// AsciiMath's quoted text lands in `\text{…}` as written, so its `#` is the character there too, as the edit view
+    /// shows it.
+    @Test func asciiMathTextReadsAsWritten() async throws {
+        let rig = PreviewRig(##"$min{|F|: G - F " separates " x, y} = max{"# edge-disjoint " x,y- "paths"}$"##, math: .asciimath)
         defer { rig.close() }
         await rig.settle()
         #expect(try await rig.js("return document.querySelectorAll('.math-error').length") as? Int == 0)
