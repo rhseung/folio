@@ -158,11 +158,15 @@ struct NoteEditor: View {
     @State private var preview = PreviewLink()
     @State private var showsAssets = false
     @State private var renaming = false
+    @State private var palette: MathPaletteModel
+    @State private var showsMath = false
     let moves: MoveUndo?
 
     init(workspace: Workspace, course: LoadedCourse, note: NoteFile, anchor: AppLink.Anchor? = nil, insert: Binding<String?> = .constant(nil),
          moves: MoveUndo? = nil, openNote: @escaping (String) -> Void) {
-        _model = State(initialValue: NoteEditorModel(workspace: workspace, course: course, note: note))
+        let model = NoteEditorModel(workspace: workspace, course: course, note: note)
+        _model = State(initialValue: model)
+        _palette = State(initialValue: MathPaletteModel(editor: model))
         self.moves = moves
         self.anchor = anchor
         self.insert = insert
@@ -180,16 +184,13 @@ struct NoteEditor: View {
                     }
                     .help(Text(.notesReviewDoneHelp))
                 }
-                // An icon like the bar's other items; the syntax in use is checked in the menu and named in the tooltip.
-                Menu {
-                    Picker(String(localized: .notesMathSyntax), selection: $model.meta.math) {
-                        ForEach(MathSyntax.allCases, id: \.self) { Text($0.label).tag($0) }
-                    }
-                    .pickerStyle(.inline)
-                } label: {
+                // An icon like the bar's other items; the syntax in use is chosen on top of the palette and named in
+                // the tooltip.
+                Button { showsMath.toggle() } label: {
                     Label(String(localized: .notesMathLabel(model.meta.math.label)), systemImage: "function")
                 }
                 .help(Text(.notesMathHelp(model.meta.math.label)))
+                .popover(isPresented: $showsMath, arrowEdge: .bottom) { MathPalette(model: palette, writing: writing) }
                 NoteLinkMenu(model: model)
                 if writing {
                     Button { showsAssets.toggle() } label: {
@@ -265,7 +266,7 @@ struct NoteEditor: View {
         MarkdownEditor(text: $model.body, baseURL: model.baseURL, math: model.meta.math, insert: $model.pendingInsert,
                        saveFile: model.saveFile, openNote: openNote, onScroll: preview.follow,
                        assist: NoteAssist(settings: model.workspace.settings, links: model.links), anchor: anchor, embeds: model.embeds,
-                       revision: model.workspace.notesRevision)
+                       revision: model.workspace.notesRevision, insertMath: $model.pendingMath)
     }
 }
 

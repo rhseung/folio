@@ -263,6 +263,8 @@ final class NoteEditorModel {
     private var savedMath = MathSyntax.latex
     /// Set to insert at the editor's cursor; the editor clears it once inserted.
     var pendingInsert: String?
+    /// A symbol picked in the math palette, for the editor to put at its cursor and clear.
+    var pendingMath: CompletionItem?
     private(set) var assets: [URL] = []
     /// Bumped when a pasted or dropped image lands in `assets/`, which the tray doesn't see happen.
     private(set) var assetsRevision = 0

@@ -7624,13 +7624,101 @@
         }
       }
     },
+    "notes.math-category.arrows": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "화살표"
+          }
+        }
+      }
+    },
+    "notes.math-category.fonts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "글꼴과 괄호"
+          }
+        }
+      }
+    },
+    "notes.math-category.functions": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "함수"
+          }
+        }
+      }
+    },
+    "notes.math-category.greek": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그리스 문자"
+          }
+        }
+      }
+    },
+    "notes.math-category.operators": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "연산"
+          }
+        }
+      }
+    },
+    "notes.math-category.relations": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "관계"
+          }
+        }
+      }
+    },
+    "notes.math-category.snippets": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "스니펫"
+          }
+        }
+      }
+    },
+    "notes.math-category.symbols": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기타 기호"
+          }
+        }
+      }
+    },
     "notes.math-help": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "수식 문법: %@. 이 노트의 $…$ 수식을 어떤 문법으로 읽을지"
+            "value": "수식 기호와 문법(지금 %@)"
           }
         }
       }
@@ -7642,6 +7730,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "수식 %@"
+          }
+        }
+      }
+    },
+    "notes.math-search": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기호 검색"
+          }
+        }
+      }
+    },
+    "notes.math-symbols-menu": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수식 기호 목록"
           }
         }
       }

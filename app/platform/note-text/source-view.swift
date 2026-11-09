@@ -21,6 +21,8 @@ struct MarkdownEditor {
     var embeds: NoteEmbedSource?
     /// The workspace's `notesRevision`.
     var revision = 0
+    /// Set to put a symbol picked in the math palette at the cursor; cleared once inserted.
+    var insertMath: Binding<CompletionItem?> = .constant(nil)
 
     @MainActor func makeCoordinator() -> Coordinator { Coordinator(self) }
 
@@ -71,6 +73,15 @@ struct MarkdownEditor {
         if let insert {
             view.insertAtCaret(insert)
             DispatchQueue.main.async { self.insert = nil }
+        }
+        // Put in after the update: an edit made during it doesn't reach the binding (`updating`), and the next update
+        // would swap the text back. Checked again there, so an update run twice before it inserts once.
+        if insertMath.wrappedValue != nil {
+            DispatchQueue.main.async {
+                guard let item = self.insertMath.wrappedValue else { return }
+                self.insertMath.wrappedValue = nil
+                view.insertMath(item)
+            }
         }
     }
 }
@@ -498,6 +509,11 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         window?.makeFirstResponder(self)
     }
 
+    func insertMath(_ item: CompletionItem) {
+        apply(MathSymbols.insertion(item, in: string as NSString, selection: selectedRange()))
+        window?.makeFirstResponder(self)
+    }
+
     func apply(_ edit: SourceEditing.Edit, reveal: Bool = true) {
         // Stepping over a closer changes no text, and an empty change would still be an undo step.
         if edit.range.length > 0 || !edit.text.isEmpty {
@@ -621,11 +637,33 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         completion.arrived = { [weak self] in self?.placeMenu() }
     }
 
+    /// ⌃Space (편집 › 수식 기호 목록): every symbol and math snippet of the note's syntax, before anything is typed.
+    /// Only in a formula; elsewhere it beeps, as a menu command that can't act here does.
+    @objc func showMathSymbols(_ sender: Any?) {
+        let selection = selectedRange()
+        guard !hasMarkedText(), selection.length == 0,
+              let query = Completion.symbols(in: string as NSString, caret: selection.location, catalog: catalog) else { return NSSound.beep() }
+        completion.show(query, Completion.items(for: query, catalog: catalog))
+        hideCard()
+        placeMenu()
+    }
+
     /// Opens, narrows or closes the menu for the text at the caret. Only typing opens it; a caret moved elsewhere
     /// keeps it only while it is still on the same kind of thing.
     func refreshCompletion(opening: Bool) {
         guard !hasMarkedText() else { return }
         let selection = selectedRange()
+        // The whole list stays on the word typed since ⌃Space, which the text alone wouldn't open a menu on (`al` in
+        // TeX), and goes once the caret leaves that word.
+        if let browsing = completion.query, browsing.kind == .mathSymbols {
+            if selection.length == 0, let query = Completion.symbols(in: string as NSString, caret: selection.location, catalog: catalog),
+               query.continues(browsing), case let items = Completion.items(for: query, catalog: catalog), !items.isEmpty {
+                completion.show(query, items)
+            } else {
+                completion.hide()
+            }
+            return placeMenu()
+        }
         if selection.length == 0, let query = Completion.query(in: string as NSString, caret: selection.location, catalog: catalog),
            opening || completion.query.map({ Self.sameKind($0.kind, query.kind) }) == true {
             let items = Completion.items(for: query, catalog: catalog)
@@ -1195,6 +1233,12 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
     func insertAtCaret(_ text: String) {
         apply(SourceEditing.Edit(range: selectedRange, text: text, caret: selectedRange.location + text.utf16.count))
         becomeFirstResponder()
+    }
+
+    /// Without taking focus, unlike `insertAtCaret`: the keyboard would come up over the palette still open for the
+    /// next symbol.
+    func insertMath(_ item: CompletionItem) {
+        apply(MathSymbols.insertion(item, in: string as NSString, selection: selectedRange))
     }
 
     override func paste(_ sender: Any?) {

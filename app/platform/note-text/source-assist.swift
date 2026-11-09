@@ -157,6 +157,7 @@ struct CompletionMenuView: View {
 
     static let width: CGFloat = 288
     static let rowHeight: CGFloat = 32
+    static let headerHeight: CGFloat = 24
     static let maxRows = 8
     static let inset = Theme.Space.xs
 
@@ -173,8 +174,16 @@ struct CompletionMenuView: View {
     }
 
     var rows: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(menu.items.enumerated()), id: \.element.id) { i, item in
+        // The whole list of a formula's symbols (⌃Space) is browsed category by category; once narrowed, best first.
+        let sections = menu.query.map { $0.kind == .mathSymbols && $0.text.isEmpty } ?? false
+        let items = menu.items
+        return VStack(spacing: 0) {
+            ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
+                if sections, let category = item.category, i == 0 || items[i - 1].category != category {
+                    Caption(category.label)
+                        .frame(maxWidth: .infinity, minHeight: Self.headerHeight, alignment: .bottomLeading)
+                        .padding(.horizontal, Theme.Space.s)
+                }
                 row(item, selected: i == menu.selected)
                     .id(i)
                     .contentShape(.rect)
@@ -219,9 +228,24 @@ struct CompletionMenuView: View {
         switch menu.query?.kind {
         case .callout: "exclamationmark.bubble"
         case .codeLanguage: "chevron.left.forwardslash.chevron.right"
-        case .texCommand, .texEnvironment, .asciiMath: "function"
+        case .texCommand, .texEnvironment, .asciiMath, .mathSymbols: "function"
         case .link: "link"
         default: "text.insert"
+        }
+    }
+}
+
+extension MathCategory {
+    var label: String {
+        switch self {
+        case .snippets: String(localized: .notesMathCategorySnippets)
+        case .greek: String(localized: .notesMathCategoryGreek)
+        case .relations: String(localized: .notesMathCategoryRelations)
+        case .operators: String(localized: .notesMathCategoryOperators)
+        case .arrows: String(localized: .notesMathCategoryArrows)
+        case .functions: String(localized: .notesMathCategoryFunctions)
+        case .fonts: String(localized: .notesMathCategoryFonts)
+        case .symbols: String(localized: .notesMathCategorySymbols)
         }
     }
 }

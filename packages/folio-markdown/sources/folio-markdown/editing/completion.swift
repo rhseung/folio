@@ -18,6 +18,8 @@ public struct CompletionQuery: Equatable, Sendable {
         case snippet
         /// A word in AsciiMath math: a symbol or function by its AsciiMath name, or a snippet.
         case asciiMath
+        /// Every symbol and math snippet of the note's syntax, asked for by ⌃Space, narrowed by the word typed since.
+        case mathSymbols
         /// Inside `[[` or `![[`: what the link points at, or the heading, block or page in it. The app finds the
         /// candidates, which come late (`CompletionMenu.more`).
         case link(LinkQuery)
@@ -95,10 +97,12 @@ public struct CompletionItem: Equatable, Sendable, Identifiable {
     public var caret: Int?
     /// Leaves the caret where another menu opens, as a file's link does at its page.
     public var continues: Bool
+    /// Where a formula's symbol is found when the whole list is browsed.
+    public var category: MathCategory?
 
     public init(id: String, title: String, detail: String? = nil, symbol: String? = nil, preview: String? = nil,
                 previewAsciiMath: Bool = false, keywords: [String] = [], body: String, block: Bool = false,
-                caret: Int? = nil, continues: Bool = false) {
+                caret: Int? = nil, continues: Bool = false, category: MathCategory? = nil) {
         self.id = id
         self.title = title
         self.detail = detail
@@ -110,6 +114,7 @@ public struct CompletionItem: Equatable, Sendable, Identifiable {
         self.block = block
         self.caret = caret
         self.continues = continues
+        self.category = category
     }
 }
 
@@ -207,9 +212,26 @@ public enum Completion {
             return snippets(catalog, trigger: query.text, inMath: query.place.isMath)
         case .asciiMath:
             return asciiMath(query.text, catalog: catalog)
+        case .mathSymbols:
+            return filter(MathSymbols.items(tex: catalog.tex, snippets: catalog.snippets), query.text)
         case .link:
             return []
         }
+    }
+
+    /// The word before the caret in a formula, which the whole list ⌃Space opens narrows by: a TeX command's name,
+    /// its `\` typed or not, or an AsciiMath name; nil outside math. The list stays open on the word while it grows.
+    public static func symbols(in text: NSString, caret: Int, catalog: CompletionCatalog) -> CompletionQuery? {
+        let place = SourcePlace.typing(at: caret, in: text)
+        guard case .math(_, let content) = place, caret >= content.location else { return nil }
+        let line = text.lineRange(for: NSRange(location: caret, length: 0))
+        let from = max(line.location, content.location)
+        let prefix = text.substring(with: NSRange(location: from, length: caret - from))
+        guard let word = prefix.firstMatch(of: #/(\\?)([A-Za-z]*)$/#) else { return nil }
+        var n = word.0.utf16.count
+        // `\\` is a TeX line break, and AsciiMath has no `\`: neither starts the name.
+        if !word.1.isEmpty, !catalog.tex || prefix.hasSuffix("\\\\" + word.2) { n -= 1 }
+        return CompletionQuery(kind: .mathSymbols, text: String(word.2), range: NSRange(location: caret - n, length: n), place: place)
     }
 
     // Numbered, since settings don't stop two snippets sharing a trigger and the menu needs distinct ids.
@@ -297,7 +319,7 @@ public enum Completion {
                 range = NSRange(location: range.location - trailing, length: range.length + trailing)
                 body = "\n" + body
             }
-        case .texCommand, .snippet, .asciiMath, .link:
+        case .texCommand, .snippet, .asciiMath, .mathSymbols, .link:
             break
         }
         return Snippet(trigger: "", body: body, inMath: false).edit(replacing: range)
