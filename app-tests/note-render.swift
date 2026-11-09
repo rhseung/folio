@@ -67,4 +67,57 @@ import FolioDomain
         view.cacheDisplay(in: view.bounds, to: rep)
         try? rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: dir).appending(path: "\(name).png"))
     }
+
+    /// Pictures in a table under column titles, each row named on its left, on the note's card color. A row with a
+    /// picture too wide for a column (a formula longer than the line) puts its pictures under one another instead.
+    /// Written to `FOLIO_NOTE_RENDER`, or else to `sheets/` in `FOLIO_NOTE_SCREENS`, which CI uploads on every run as
+    /// the `note-sheets` artifact: a folder of its own, so `mise run note-screens` doesn't take a sheet for a reference.
+    static func sheet(_ rows: [(String, [NSBitmapImageRep])], columns: [String], dark: Bool, _ name: String) {
+        let environment = ProcessInfo.processInfo.environment
+        guard let dir = environment["FOLIO_NOTE_RENDER"] ?? environment["FOLIO_NOTE_SCREENS"].flatMap({ $0.isEmpty ? nil : "\($0)/sheets" }),
+              let scale = rows.first?.1.first.map({ CGFloat($0.pixelsWide) / $0.size.width }) else { return }
+        try? FileManager.default.createDirectory(atPath: dir, withIntermediateDirectories: true)
+        let gap: CGFloat = 8, labelWidth: CGFloat = 112, titleHeight: CGFloat = 28, widest: CGFloat = 360
+        let narrow = rows.filter { $0.1.allSatisfy { $0.size.width <= widest } }
+        let column = narrow.flatMap { $0.1 }.map(\.size.width).max() ?? widest
+        let table = labelWidth + CGFloat(columns.count) * (column + gap)
+        let width = max(table, labelWidth + (rows.flatMap { $0.1 }.map(\.size.width).max() ?? 0)) + gap
+        var placed: [(NSBitmapImageRep, CGPoint)] = [], labels: [(String, CGPoint)] = []
+        var y = titleHeight
+        for (label, cells) in rows {
+            labels.append((label, CGPoint(x: gap, y: y + gap)))
+            if cells.allSatisfy({ $0.size.width <= widest }) {
+                for (i, cell) in cells.enumerated() { placed.append((cell, CGPoint(x: labelWidth + CGFloat(i) * (column + gap), y: y))) }
+                y += (cells.map(\.size.height).max() ?? 0) + gap
+            } else {
+                for cell in cells {
+                    placed.append((cell, CGPoint(x: labelWidth, y: y)))
+                    y += cell.size.height + gap
+                }
+            }
+        }
+        let size = CGSize(width: width, height: y)
+        guard let out = NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: Int(size.width * scale), pixelsHigh: Int(size.height * scale),
+                                         bitsPerSample: 8, samplesPerPixel: 4, hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB,
+                                         bytesPerRow: 0, bitsPerPixel: 0) else { return }
+        // Before the context is made: it takes the rep's points, and drew at one pixel a point otherwise.
+        out.size = size
+        guard let context = NSGraphicsContext(bitmapImageRep: out) else { return }
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        // Drawn from the top: AppKit's y runs up.
+        func flip(_ point: CGPoint, _ height: CGFloat) -> CGPoint { CGPoint(x: point.x, y: size.height - point.y - height) }
+        NSAppearance(named: dark ? .darkAqua : .aqua)?.performAsCurrentDrawingAppearance {
+            NoteLook.card.setFill()
+            NSRect(origin: .zero, size: size).fill()
+            let type: [NSAttributedString.Key: Any] = [.font: NSFont.systemFont(ofSize: 12, weight: .semibold), .foregroundColor: NoteLook.text2]
+            for (i, title) in columns.enumerated() {
+                (title as NSString).draw(at: flip(CGPoint(x: labelWidth + CGFloat(i) * (column + gap) + 12, y: gap), 16), withAttributes: type)
+            }
+            for (label, at) in labels { (label as NSString).draw(at: flip(at, 16), withAttributes: type) }
+            for (cell, at) in placed { cell.draw(in: NSRect(origin: flip(at, cell.size.height), size: cell.size)) }
+        }
+        NSGraphicsContext.restoreGraphicsState()
+        try? out.representation(using: .png, properties: [:])?.write(to: URL(filePath: dir).appending(path: "\(name).png"))
+    }
 }

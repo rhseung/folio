@@ -84,13 +84,77 @@ struct NoteMathTests {
         #expect(braced.size.width < plain.size.width + 16, "\(braced.size) vs \(plain.size)")
     }
 
-    /// The picture holds all the ink: none touches its edge, so an italic overhang or a tall accent isn't cut.
+    /// The shapes a formula takes, in TeX and in AsciiMath: from one letter to a line wider than the column, with
+    /// what reaches above and below a line (limits, fractions, roots, braces, big delimiters, rows). The last three are
+    /// the ones the bubble drew with room the formula didn't need: a line box over the ink, and a display formula as
+    /// wide as the column with the formula at its left.
+    static let shapes: [(name: String, tex: String, ascii: String)] = [
+        ("한 글자", "x", "x"),
+        ("숫자", "1", "1"),
+        ("위첨자", "x^2", "x^2"),
+        ("아래첨자", "a_i", "a_i"),
+        ("합", #"\sum_{i=1}^{n} i"#, "sum_(i=1)^n i"),
+        ("적분", #"\int_0^1 f(x)\,dx"#, "int_0^1 f(x) dx"),
+        ("극한", #"\lim_{x\to0} \frac{\sin x}{x}"#, "lim_(x->0) (sin x)/x"),
+        ("겹친 분수", #"\frac{a}{\frac{b}{c}}"#, "a/(b/c)"),
+        ("근호", #"\sqrt{x} + \sqrt[n]{y}"#, "sqrt(x) + root(n)(y)"),
+        ("행렬", #"\begin{pmatrix} a & b \\ c & d \end{pmatrix}"#, "((a, b), (c, d))"),
+        ("경우", #"\begin{cases} x & x > 0 \\ -x & \text{otherwise} \end{cases}"#, #"{(x, x > 0), (-x, "otherwise"):}"#),
+        ("정렬", #"\begin{aligned} a &= b + c \\ &= d \end{aligned}"#, "{:(a, =, b + c), (, =, d):}"),
+        ("중괄호", #"\underbrace{a + b}_{n} \overbrace{c}^{m}"#, "ubrace(a + b)_n obrace(c)^m"),
+        ("윗줄", #"\overline{AB}"#, "bar(AB)"),
+        ("큰 괄호", #"\left(\frac{a}{b}\right)"#, "(a/b)"),
+        ("화살표", #"A \xrightarrow{f \circ g} B \to C"#, "A stackrel(f @ g)(->) B -> C"),
+        ("한글", #"\text{확률 } P(A) = \frac{1}{2}"#, #""확률 " P(A) = 1/2"#),
+        ("긴 줄", (1...24).map { "a_{\($0)} x^{\($0)}" }.joined(separator: " + "), (1...24).map { "a_(\($0)) x^(\($0))" }.joined(separator: " + ")),
+        ("합집합 블록", #"\left|\left(\bigcup_{i \in I} A_i\right) \cap \left(\bigcup_{i \in J} B_i\right)\right| \geq |I| + |J| - m"#,
+         "abs((bigcup_(i in I) A_i) cap (bigcup_(i in J) B_i)) >= absI + absJ - m"),
+        ("합집합", #"\left|\bigcup_{i \in I} A_i\right| \geq |I|"#, "abs(bigcup_(iinI)A_i) >= abs(I)"),
+        ("목록", "s_1,s_2,s_3,s_4,s_5", "s_1,s_2,s_3,s_4,s_5"),
+    ]
+
+    /// Every shape in both syntaxes, inline and as a block.
+    static var hugged: [(String, MathSyntax, Bool)] {
+        shapes.flatMap { shape -> [(String, MathSyntax, Bool)] in
+            [(shape.tex, .latex, false), (shape.tex, .latex, true), (shape.ascii, .asciimath, false), (shape.ascii, .asciimath, true)]
+        }
+    }
+
+    /// The picture is the formula's ink and nothing around it, so the bubble's even padding is all the room there is:
+    /// no side has more than the pixel the picture's whole points round to.
+    @Test func picturesAreTheirInk() async throws {
+        for (source, syntax, display) in Self.hugged {
+            for dark in [false, true] {
+                let picture = try #require(await picture(source, syntax, display: display, dark: dark), "\(source)")
+                let pixels = try Pixels(picture.image)
+                let ink = try #require(pixels.ink, "\(source)")
+                let scale = CGFloat(pixels.width) / picture.size.width
+                #expect(abs(CGFloat(pixels.height) / picture.size.height - scale) < 0.01, "\(source): stretched")
+                let margins = [ink.minX, ink.minY, pixels.width - 1 - ink.maxX, pixels.height - 1 - ink.maxY]
+                #expect(margins.allSatisfy { CGFloat($0) < scale }, "\(source) dark \(dark): margins \(margins) at \(scale)x, \(picture.size)")
+            }
+        }
+        // Nothing to draw, or what KaTeX can't read: no picture, and no bubble.
+        #expect(NoteMath.shared.picture("  ", syntax: .latex, display: false, size: 16, dark: false) == nil)
+        #expect(await picture(#"\frac{a}"#) == nil)
+        #expect(await picture(#"\frac{a}"#, display: true) == nil)
+    }
+
+    /// Cut to its ink, the picture still holds all of it: drawn with three times the room around KaTeX's boxes, a
+    /// limit, a brace or a slanted integral comes out no bigger.
     @Test func picturesKeepTheirInk() async throws {
-        for tex in [#"G - T"#, #"\bar S"#, #"\int_0^1 f"#, #"\hat{A}^{T}"#, #"\sqrt{\frac{a}{b}}"#] {
-            let picture = try #require(await picture(tex), "\(tex)")
-            let pixels = try Pixels(picture.image)
-            #expect(pixels.inked > 0, "\(tex)")
-            #expect(pixels.edgeInk == 0, "\(tex): \(pixels.edgeInk) inked pixels on the edge")
+        let roomy = NoteMath(room: 3)
+        let tall = [#"G - T"#, #"\bar S"#, #"\int_0^1 f"#, #"\hat{A}^{T}"#, #"\sqrt{\frac{a}{b}}"#, #"\underbrace{a + b}_{n}"#]
+        for tex in tall {
+            let tight = try #require(await picture(tex), "\(tex)")
+            let wide = try #require(await picture(tex, by: roomy), "\(tex)")
+            #expect(try Pixels(tight.image).inked > 0, "\(tex)")
+            #expect(tight.size == wide.size, "\(tex): \(tight.size) vs \(wide.size)")
+        }
+        for (source, syntax, display) in Self.hugged {
+            let tight = try #require(await picture(source, syntax, display: display), "\(source)")
+            let wide = try #require(await picture(source, syntax, display: display, by: roomy), "\(source)")
+            #expect(tight.size == wide.size, "\(source): \(tight.size) vs \(wide.size)")
         }
     }
 
@@ -105,11 +169,15 @@ struct NoteMathTests {
     }
 
     private struct Pixels {
-        var inked = 0, edgeInk = 0, darkInk = 0, lightInk = 0
+        var inked = 0, darkInk = 0, lightInk = 0
+        var width = 0, height = 0
+        /// Every pixel with any ink, its edge included, in pixels from the top left.
+        var ink: (minX: Int, minY: Int, maxX: Int, maxY: Int)?
 
         init(_ image: NSImage) throws {
             let cg = try #require(image.cgImage(forProposedRect: nil, context: nil, hints: nil))
             let (w, h) = (cg.width, cg.height)
+            (width, height) = (w, h)
             var bytes = [UInt8](repeating: 0, count: w * h * 4)
             let context = try #require(CGContext(data: &bytes, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
                                                  space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
@@ -117,9 +185,11 @@ struct NoteMathTests {
             for y in 0..<h {
                 for x in 0..<w {
                     let i = (y * w + x) * 4
+                    if bytes[i + 3] > 0 {
+                        ink = ink.map { (min($0.minX, x), min($0.minY, y), max($0.maxX, x), max($0.maxY, y)) } ?? (x, y, x, y)
+                    }
                     guard bytes[i + 3] > 128 else { continue }
                     inked += 1
-                    if x == 0 || y == 0 || x == w - 1 || y == h - 1 { edgeInk += 1 }
                     // Premultiplied: a light pixel's brightest channel is close to its alpha.
                     let bright = Double(max(bytes[i], bytes[i + 1], bytes[i + 2])) / Double(bytes[i + 3])
                     if bright < 0.5 { darkInk += 1 } else { lightInk += 1 }

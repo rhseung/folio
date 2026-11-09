@@ -159,6 +159,13 @@ jobs:
             !.build/DerivedData/Logs
             !.build/DerivedData/TestResults
           key: ${{ steps.cache.outputs.cache-primary-key }}
+      # Sheets of pictures a test lays out for a PR (app-tests/note-render.swift), passing or not; not references.
+      - if: ${{ !cancelled() && env.RUN == 'true' && matrix.task == 'test-app' }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: note-sheets
+          path: .build/note-screens/sheets
+          if-no-files-found: ignore
       # `mise run note-screens -- <run ID>` takes these as the new references.
       - if: failure() && matrix.task == 'test-app'
         uses: actions/upload-artifact@v7

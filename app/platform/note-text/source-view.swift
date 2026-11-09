@@ -950,11 +950,12 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         let line = { (i: Int) in self.convert(window.convertFromScreen(self.firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil) }
         let first = line(shown.span.location), last = line(end - 1)
         // A formula wider than the editor is shrunk to fit; the bubble is a glance, and the preview scrolls it whole.
-        let room = visibleRect.width - 2 * PreviewBubble.pad.width - 8
+        let room = visibleRect.width - 2 * PreviewBubble.pad - 8
         let scale = min(1, room / max(1, shown.size.width))
         let view = PreviewBubble(image: shown.image, size: CGSize(width: (shown.size.width * scale).rounded(), height: (shown.size.height * scale).rounded()))
         let size = view.frame.size
-        let x = max(0, min(first.minX - 10, bounds.maxX - size.width - 4))
+        // The formula starts where its source does; the padding reaches out to the left of it.
+        let x = max(0, min(first.minX - PreviewBubble.pad, bounds.maxX - size.width - 4))
         // Under the source, or over it when the screen ends first; never pushing the text.
         let under = last.maxY + 4, over = first.minY - 4 - size.height
         let y = under + size.height <= visibleRect.maxY || over < visibleRect.minY ? under : over
@@ -1085,11 +1086,12 @@ final class HintLabel: NSTextField {
 
 /// Rendered math or an image over the text, by its source.
 final class PreviewBubble: NSView {
-    static let pad = CGSize(width: 10, height: 6)
+    /// The same on every side: a formula's picture is its ink (`NoteMath`), so this is all the room around it.
+    static let pad = Theme.Space.m
 
     init(image picture: NSImage, size: CGSize) {
         let pad = Self.pad
-        super.init(frame: NSRect(origin: .zero, size: CGSize(width: size.width + 2 * pad.width, height: size.height + 2 * pad.height)))
+        super.init(frame: NSRect(origin: .zero, size: CGSize(width: size.width + 2 * pad, height: size.height + 2 * pad)))
         wantsLayer = true
         layer?.cornerRadius = NoteLook.radius
         layer?.borderWidth = 1
@@ -1097,7 +1099,7 @@ final class PreviewBubble: NSView {
         layer?.shadowOpacity = 0.12
         layer?.shadowRadius = 10
         layer?.shadowOffset = CGSize(width: 0, height: -6)
-        let image = NSImageView(frame: NSRect(origin: CGPoint(x: pad.width, y: pad.height), size: size))
+        let image = NSImageView(frame: NSRect(origin: CGPoint(x: pad, y: pad), size: size))
         image.image = picture
         image.imageScaling = .scaleAxesIndependently
         addSubview(image)

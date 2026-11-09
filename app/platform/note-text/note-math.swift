@@ -45,6 +45,14 @@ import UIKit
 
     static let shared = NoteMath()
 
+    /// How far past KaTeX's boxes the snapshot reaches, in ems, before the picture is cut to its ink: a glyph's ink
+    /// runs past its box (an italic f, a slanted integral) by less than one. A test draws with more to see nothing's cut.
+    private let room: CGFloat
+
+    init(room: CGFloat = 1) {
+        self.room = room
+    }
+
     private(set) var drawn = 0
     /// From the page being made to its first picture, and the last picture's own time; for the PR and the tests.
     @ObservationIgnored private(set) var firstPicture: Duration?
@@ -122,7 +130,7 @@ import UIKit
         let job = queue.removeFirst(), turn = UUID(), started = ContinuousClock.now
         current = turn
         Task {
-            let result = await page.draw(job.source, syntax: job.syntax, display: job.display, size: job.size, dark: job.dark)
+            let result = await page.draw(job.source, syntax: job.syntax, display: job.display, size: job.size, dark: job.dark, room: room)
             guard current == turn else { return }
             // Only what KaTeX can't read is given up on; a page that ended or a snapshot that failed is asked again.
             switch result {
@@ -204,8 +212,9 @@ import UIKit
     /// Wide enough that a long formula stays on one line, as the bubble shrinks it to fit rather than wrapping it.
     private static let canvas = CGSize(width: 2400, height: 800)
 
-    // The page is as wide as its formula and has no padding of its own, so the formula's box is where it was measured.
-    private static let css = "html,body{background:transparent!important}body.note{margin:0;padding:8px;max-width:none;width:max-content}"
+    // The page is as wide as its formula, with room around it for the snapshot's (`NoteMath.room`): a snapshot past the
+    // page's edge is cut there, and an ink running into it would be too.
+    private static let css = "html,body{background:transparent!important}body.note{margin:0;padding:4em;max-width:none;width:max-content}"
         + "body.note>.math.display{margin:0;overflow:visible}"
 
     func move(to view: PlatformView) {
@@ -248,11 +257,12 @@ import UIKit
         case failed
     }
 
-    func draw(_ source: String, syntax: MathSyntax, display: Bool, size: CGFloat, dark: Bool) async -> Drawn {
+    func draw(_ source: String, syntax: MathSyntax, display: Bool, size: CGFloat, dark: Bool, room: CGFloat) async -> Drawn {
         if !loaded { await withCheckedContinuation { onLoad.append($0) } }
         let escaped = source.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;")
         let html = display ? "<div class=\"math display\">\(escaped)</div>" : "<span class=\"math\">\(escaped)</span>"
-        // Every part's box, not only KaTeX's outer one: a tall accent or a limit reaches past it.
+        // Every part's box, not only KaTeX's outer one: a tall accent or a limit reaches past it. Not the MathML copy
+        // for screen readers, which KaTeX hides in a 1px box its contents run far out of.
         let script = """
             const root = document.documentElement, body = document.body;
             root.style.setProperty("--text", color);
@@ -267,7 +277,7 @@ import UIKit
             let r = box.getBoundingClientRect(), left = r.left, top = r.top, right = r.right, bottom = r.bottom;
             for (const el of box.querySelectorAll("*")) {
               // A stretched brace or arrow is a 400em picture its box clips to the formula's width.
-              if (el.closest("svg")) continue;
+              if (el.closest("svg, .katex-mathml")) continue;
               const q = el.getBoundingClientRect();
               if (q.width === 0 || q.height === 0) continue;
               left = Math.min(left, q.left); top = Math.min(top, q.top); right = Math.max(right, q.right); bottom = Math.max(bottom, q.bottom);
@@ -280,11 +290,9 @@ import UIKit
         do { answer = try await web.callAsyncJavaScript(script, arguments: arguments, contentWorld: .defaultClient) } catch { return .failed }
         guard let found = answer as? [NSNumber], found.count == 4 else { return .unreadable }
         let ink = CGRect(x: found[0].doubleValue, y: found[1].doubleValue, width: found[2].doubleValue, height: found[3].doubleValue)
-        // Glyphs reach a little past their boxes (an italic f, a slanted integral), so a quarter em of room around
-        // them, in whole points so the picture isn't stretched into its bounds.
-        let room = ceil(size / 4)
-        let rect = CGRect(x: floor(ink.minX) - room, y: floor(ink.minY) - room, width: 0, height: 0)
-            .union(CGRect(x: ceil(ink.maxX) + room, y: ceil(ink.maxY) + room, width: 0, height: 0))
+        let margin = ceil(size * room)
+        let rect = CGRect(x: floor(ink.minX) - margin, y: floor(ink.minY) - margin, width: 0, height: 0)
+            .union(CGRect(x: ceil(ink.maxX) + margin, y: ceil(ink.maxY) + margin, width: 0, height: 0))
             .intersection(web.bounds)
         guard rect.width > 0, rect.height > 0 else { return .unreadable }
         let snapshot = WKSnapshotConfiguration()
@@ -292,7 +300,53 @@ import UIKit
         // The page is drawn afresh for the picture; waiting for the screen would wait on a window that may not show.
         snapshot.afterScreenUpdates = false
         guard let image = try? await web.takeSnapshot(configuration: snapshot) else { return .failed }
-        return .picture(NoteMath.Picture(image: image, size: rect.size))
+        // Spacing or `\left.` alone has no ink; its picture stays as it was taken, empty.
+        return .picture(Self.inked(image, size: rect.size) ?? NoteMath.Picture(image: image, size: rect.size))
+    }
+
+    /// The picture cut to the pixels its ink covers, in whole points so it isn't stretched into its frame. KaTeX's
+    /// boxes aren't its ink: the line box and the strut reach over and under it, and a picture cut to them had more
+    /// room at the top than the sides, which the bubble's even padding then added to.
+    private static func inked(_ image: PlatformImage, size: CGSize) -> NoteMath.Picture? {
+        #if os(macOS)
+        guard let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) else { return nil }
+        #else
+        guard let cg = image.cgImage else { return nil }
+        #endif
+        let (w, h) = (cg.width, cg.height)
+        guard w > 0, h > 0, size.width > 0 else { return nil }
+        let scale = CGFloat(w) / size.width
+        var pixels = [UInt8](repeating: 0, count: w * h * 4)
+        let drawn = pixels.withUnsafeMutableBytes { buffer -> Bool in
+            guard let context = CGContext(data: buffer.baseAddress, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
+                                          space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) else { return false }
+            context.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+            return true
+        }
+        guard drawn else { return nil }
+        // The page is transparent, so any alpha is ink, its antialiased edge included. Rows run from the top.
+        var minX = w, minY = h, maxX = -1, maxY = -1
+        for y in 0..<h {
+            let row = y * w
+            for x in 0..<w where pixels[(row + x) * 4 + 3] > 0 {
+                minX = min(minX, x)
+                maxX = max(maxX, x)
+                minY = min(minY, y)
+                maxY = max(maxY, y)
+            }
+        }
+        guard maxX >= 0 else { return nil }
+        let points = CGRect(x: floor(CGFloat(minX) / scale), y: floor(CGFloat(minY) / scale), width: 0, height: 0)
+            .union(CGRect(x: ceil(CGFloat(maxX + 1) / scale), y: ceil(CGFloat(maxY + 1) / scale), width: 0, height: 0))
+        let crop = CGRect(x: points.minX * scale, y: points.minY * scale, width: points.width * scale, height: points.height * scale)
+            .integral.intersection(CGRect(x: 0, y: 0, width: w, height: h))
+        guard let cut = cg.cropping(to: crop) else { return nil }
+        let cutSize = CGSize(width: CGFloat(cut.width) / scale, height: CGFloat(cut.height) / scale)
+        #if os(macOS)
+        return NoteMath.Picture(image: NSImage(cgImage: cut, size: cutSize), size: cutSize)
+        #else
+        return NoteMath.Picture(image: UIImage(cgImage: cut, scale: scale, orientation: .up), size: cutSize)
+        #endif
     }
 }
 
