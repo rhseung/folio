@@ -87,14 +87,17 @@ struct NoteWidgetTests {
         #expect(try await Self.heights(rig).styled == 300)
     }
 
-    /// A page taller than most of the panel is cut to it, and scrolls inside its frame.
-    @Test func aLongPageIsCapped() async throws {
-        let (rig, _) = try Self.preview(widget: "<!doctype html><div style='height:6000px'></div>", height: 600) { Self.block($0) }
+    /// A page taller than the panel is drawn whole, so the note scrolls past it instead of stopping inside its frame.
+    @Test func aLongPageIsDrawnWhole() async throws {
+        let (rig, _) = try Self.preview(widget: "<!doctype html><div style='height:6000px'></div><script>window.done = true</script>", height: 600) {
+            Self.block($0) + "\n\nAfter"
+        }
         defer { rig.close() }
         await rig.settle()
         let heights = try await Self.heights(rig)
-        #expect(heights.styled == 6000)
-        #expect(heights.drawn == 480, "\(heights.drawn)")
+        #expect(heights.styled == 6000 && heights.drawn == 6000, "\(heights)")
+        let inside = try await Self.value(rig, "[document.documentElement.scrollHeight, innerHeight]") as? [Double]
+        #expect(inside?[0] == inside?[1], "\(String(describing: inside))")
     }
 
     @Test func theWidgetCannotReachTheNetwork() async throws {
@@ -151,7 +154,7 @@ struct NoteWidgetTests {
     /// A page sized by its frame, taller or shorter than it, takes the block's height instead of chasing the frame.
     @Test(arguments: [
         "<div style='height:100vh'></div><div style='height:16px'></div>", "<div style='height:50vh'></div>",
-        "<div style='height:calc(600px - 100vh)'></div>",
+        "<div style='height:calc(600px - 100vh)'></div>", "<div style='height:200vh'></div>",
     ])
     func aPageSizedByItsFrameTakesTheBlocksHeight(body: String) async throws {
         let (rig, _) = try Self.preview(widget: "<!doctype html>" + body) { Self.block($0, height: 200) }
