@@ -16,10 +16,14 @@ struct PageStripModelTests {
 
     init() throws {
         workspace = try fixtureWorkspace()
+        // An hour before the real clock is the day before between 4 and 5 a.m. (the study day's edge), and today's
+        // class would not be today's: a fixed afternoon keeps the class an hour ago on the same study day.
+        let now = workspace.calendar.date(from: DateComponents(year: 2026, month: 10, day: 28, hour: 14))!
+        workspace.pinnedNow = now
         workspace.run(MaterialTrack(course: graphTheory))
-        earlier = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now.addingTimeInterval(-7 * 86_400)))?.made)
-        session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now.addingTimeInterval(-3_600)))?.made)
-        upcoming = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now.addingTimeInterval(7 * 86_400)))?.made)
+        earlier = try #require(workspace.run(SessionAdd(course: graphTheory, date: now.addingTimeInterval(-7 * 86_400)))?.made)
+        session = try #require(workspace.run(SessionAdd(course: graphTheory, date: now.addingTimeInterval(-3_600)))?.made)
+        upcoming = try #require(workspace.run(SessionAdd(course: graphTheory, date: now.addingTimeInterval(7 * 86_400)))?.made)
         slides = try #require(workspace.course(graphTheory)?.file.materials.first { $0.path == "Lectures/05_Matchings.pdf" })
     }
 
@@ -66,7 +70,7 @@ struct PageStripModelTests {
 
     /// Unfolded until folded by hand: the two latest sections. A fold is kept per file on this device.
     @Test func earlierSectionsFoldAndAFoldIsKept() throws {
-        let third = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now.addingTimeInterval(-3 * 86_400)))?.made)
+        let third = try #require(workspace.run(SessionAdd(course: graphTheory, date: workspace.now.addingTimeInterval(-3 * 86_400)))?.made)
         link(earlier, 1...4)
         link(third, 5...8)
         link(session, 9...10)
