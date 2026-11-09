@@ -243,6 +243,13 @@ struct NoteEditor: View {
         .onChange(of: model.body, initial: true) { outline.read(model.body) }
         .onChange(of: [paneFocused, outlineShown, outline.isEmpty], initial: true) { registerOutline() }
         .onDisappear { trail?.clearOutline(owner: outlineOwner) }
+        #if DEBUG && os(macOS)
+        .task {
+            guard SnapshotDriver.outline == "popover" else { return }
+            try? await Task.sleep(for: .seconds(0.5))
+            if !outlineFit.docks(shown) { outlinePopover = true }
+        }
+        #endif
         .background(Theme.Palette.card)
         .animation(.snappy(duration: 0.25), value: showsAssets)
         // Edits save on their own; ⌘S is kept only for the habit, with no button of its own.
