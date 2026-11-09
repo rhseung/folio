@@ -90,7 +90,7 @@ final class SettingsModel {
         settings.classStart.setOff(off, for: course)
     }
 
-    /// 따름, 모두 끔, or the items off: 녹음 · 렉처 끔.
+    /// 기본 설정, 전체 제외, or the items off: 녹음 · 렉처 제외.
     func exceptionLabel(_ course: UUID) -> String {
         let off = ClassStartSettings.Item.allCases.filter(settings.classStart.off(for: course).contains)
         if off.isEmpty { return String(localized: .settingsClassStartFollows) }

@@ -106,9 +106,9 @@ struct ClassStartModelTests {
 
         #expect(model.exceptionLabel(course) == String(localized: .settingsClassStartFollows))
         model.setFollows(false, .recording, course: course)
-        #expect(model.exceptionLabel(course) == "녹음 끔")
+        #expect(model.exceptionLabel(course) == "녹음 제외")
         model.setFollows(false, .lecture, course: course)
-        #expect(model.exceptionLabel(course) == "녹음 · 렉처 끔")
+        #expect(model.exceptionLabel(course) == "녹음 · 렉처 제외")
         model.setFollows(false, .roughNote, course: course)
         #expect(model.exceptionLabel(course) == String(localized: .settingsClassStartAllOff))
         #expect(!model.follows(.roughNote, course: course))

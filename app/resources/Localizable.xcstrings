@@ -744,7 +744,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "수업 녹음"
+            "value": "수업 녹음 시작"
           }
         }
       }
@@ -15022,7 +15022,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "수업 시작 때"
+            "value": "수업 시작 시 자동 실행"
           }
         }
       }
@@ -15033,7 +15033,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "뒤"
+            "value": "후"
           }
         }
       }
@@ -15044,7 +15044,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "모두"
+            "value": "전체 렉처"
           }
         }
       }
@@ -15055,7 +15055,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "모두 끔"
+            "value": "전체 제외"
           }
         }
       }
@@ -15066,7 +15066,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "묻기"
+            "value": "확인 후 시작"
           }
         }
       }
@@ -15099,7 +15099,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "없으면 만들어 열기"
+            "value": "새로 만들어 열기"
           }
         }
       }
@@ -15110,7 +15110,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "첫 렉처만"
+            "value": "첫 렉처"
           }
         }
       }
@@ -15121,7 +15121,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "따름"
+            "value": "기본 설정"
           }
         }
       }
@@ -15132,7 +15132,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "앞으로 가져오기"
+            "value": "앱 앞으로"
           }
         }
       }
@@ -15154,7 +15154,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "여러 렉처"
+            "value": "렉처 범위"
           }
         }
       }
@@ -15176,7 +15176,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "바로 시작"
+            "value": "자동 시작"
           }
         }
       }
@@ -15209,7 +15209,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "있으면 열기"
+            "value": "기존 노트 열기"
           }
         }
       }
@@ -15231,7 +15231,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "열 자리"
+            "value": "열기 위치"
           }
         }
       }
@@ -15297,7 +15297,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "녹음 시작"
+            "value": "녹음 시작 시점"
           }
         }
       }
@@ -15308,7 +15308,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "지난 진도 다음 쪽부터"
+            "value": "지난 진도 다음 쪽"
           }
         }
       }
@@ -15330,7 +15330,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "화면"
+            "value": "화면 표시"
           }
         }
       }
@@ -15341,7 +15341,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%@ 끔"
+            "value": "%@ 제외"
           }
         }
       }
@@ -15352,7 +15352,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "수업 끝나면 멈춤"
+            "value": "수업 종료 후 정지"
           }
         }
       }
@@ -16133,7 +16133,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "분 뒤"
+            "value": "분 후"
           }
         }
       }
