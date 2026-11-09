@@ -73,7 +73,8 @@ jobs:
       # file's content (its blob hash) is the same on every runner while the content is, and a different one once it
       # changes, so a cached build skips exactly the unchanged files. Times stay in 2001-2010, never in the future.
       - name: Pin file times to content
-        run: git ls-files -s -z | perl -0ne 'my ($mode, $sha, $path) = /^(\d+) ([0-9a-f]+) \d+\t(.*)\0$/s or next; next unless $mode =~ /^100/; my $t = 1_000_000_000 + hex(substr($sha, 0, 7)); utime($t, $t, $path) or die "$path: $!"'
+        run: |
+          git ls-files -s -z | perl -0ne 'my ($mode, $sha, $path) = /^(\d+) ([0-9a-f]+) \d+\t(.*)\0$/s or next; next unless $mode =~ /^100/; my $t = 1_000_000_000 + hex(substr($sha, 0, 7)); utime($t, $t, $path) or die "$path: $!"'
       - run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
       # Apple's date detector reads 오후 3시 or 자정 only when Korean is a preferred language; on the English runner
       # it kept the date and dropped the time.
@@ -134,7 +135,8 @@ jobs:
       # changes, so a cached build skips exactly the unchanged files. Times stay in 2001-2010, never in the future.
       - if: env.RUN == 'true'
         name: Pin file times to content
-        run: git ls-files -s -z | perl -0ne 'my ($mode, $sha, $path) = /^(\d+) ([0-9a-f]+) \d+\t(.*)\0$/s or next; next unless $mode =~ /^100/; my $t = 1_000_000_000 + hex(substr($sha, 0, 7)); utime($t, $t, $path) or die "$path: $!"'
+        run: |
+          git ls-files -s -z | perl -0ne 'my ($mode, $sha, $path) = /^(\d+) ([0-9a-f]+) \d+\t(.*)\0$/s or next; next unless $mode =~ /^100/; my $t = 1_000_000_000 + hex(substr($sha, 0, 7)); utime($t, $t, $path) or die "$path: $!"'
       - if: env.RUN == 'true'
         run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
       - if: env.RUN == 'true'
