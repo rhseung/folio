@@ -10,8 +10,16 @@ FOLIO_DERIVED_DATA = "{{config_root}}/.build/DerivedData"
 xcodegen = "2.46.0"
 
 [tasks.generate]
-description = "Generate Folio.xcodeproj from project.yml"
-run = "xcodegen generate"
+description = "Generate Folio.xcodeproj from project.yml, with the version and build number"
+run = ["scripts/version.sh xcconfig", "xcodegen generate"]
+
+[tasks.version-bump]
+description = "Raise the version in FolioVersion: mise run version-bump -- major|minor|patch"
+run = "scripts/version.sh bump"
+
+[tasks.release-tag]
+description = "Tag origin/main as v<version> and push the tag, which drafts its GitHub release"
+run = "scripts/version.sh tag"
 
 [tasks.test]
 description = "Run package tests, the design token check and the Application Support check"

@@ -55,6 +55,11 @@ targets:
         product: Algorithms
       - package: ArgmaxOSS
         product: WhisperKit
+    # MARKETING_VERSION and CURRENT_PROJECT_VERSION, which the generated Info.plist reads. `mise run generate` writes
+    # it from FolioVersion and the commit count (scripts/version.sh), so a build is only as new as its last generate.
+    configFiles:
+      Debug: .build/version.xcconfig
+      Release: .build/version.xcconfig
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.rhseung.folio

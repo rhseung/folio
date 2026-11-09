@@ -167,6 +167,13 @@ private struct GeneralSettings: View {
                 }
             }
         }
+        Block(String(localized: .settingsAbout)) {
+            Card {
+                FormRow(label: String(localized: .settingsVersion), last: true) {
+                    Text(model.version).foregroundStyle(Theme.Palette.textSecondary).textSelection(.enabled)
+                }
+            }
+        }
     }
 }
 
