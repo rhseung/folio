@@ -77,7 +77,7 @@ Folio가 아닌 앱에서 같은 느낌을 만들 때도 이 문서를 쓴다. "
 | `Theme.Typeface` | 글자 | 제목 3단(`pageTitle`, `columnTitle`, `sectionTitle`), 수치 4단(`figure` 화면의 주인공 수치, `figureCompact` 타일 수치, `figureMedium` 행 앞 날짜·성적 글자, `figureSmall` 표 안 수치), 본문(`bodyLarge`, `body`, `bodyStrong`, `caption`, `label`, `mono`) |
 | `Theme.Glyph` | 홀로 쓰는 SF Symbol 크기 | `tiny`, `small`, `regular`, `check`, `large`, `toolbar`(틀 위 버튼), `line`(`LineIcon`), `lineTitle`(열 제목 옆의 `LineIcon`, 칸은 그대로), `fab`(떠 있는 버튼). 글자 옆 아이콘은 글자의 글꼴을 따른다 |
 | `Swatch` | 노트 CSS와 함께 쓰는 색 | `NoteStyle`이 CSS 변수로 넘긴다. 노트 CSS에 색을 직접 적지 않는다 |
-| `NoteLook` | 노트의 글꼴 크기, 열 폭, 여백, 블록 간격 | 편집 보기(TextKit)는 값을 그대로 쓰되 원문에 글꼴, 굵기, 색만 입히고 상자와 그림은 그리지 않는다(수식과 그림은 캐럿 옆 말풍선으로만 본다. 말풍선과 자동 완성의 수식은 미리보기와 같은 KaTeX와 노트 CSS로 그린 그림이라(`NoteMath`) 두 보기가 같은 모양이다. 말풍선의 그림은 수식의 잉크에 맞춰 자르고 네 변에 같은 여백 `Space.m`을 둔다. 기호 팔레트와 자동 완성의 그림은 기호가 줄의 제자리(`\ldots`와 `\cdots`)에 보이도록 KaTeX 상자대로 둔다). 미리보기와 Claude 패널은 `NoteStyle`이 CSS 변수(`--measure`, `--margin`, `--block-gap`, `--h1` 등)로 받는다. 노트 CSS에 크기를 직접 적지 않는다 |
+| `NoteLook` | 노트의 글꼴 크기, 열 폭, 여백, 블록 간격 | 편집 보기(TextKit)는 값을 그대로 쓰되 원문에 글꼴, 굵기, 색만 입히고 상자와 그림은 그리지 않는다(수식과 그림은 캐럿 옆 말풍선으로만 본다. 말풍선과 자동 완성의 수식은 미리보기와 같은 KaTeX와 노트 CSS로 그린 그림이라(`NoteMath`) 두 보기가 같은 모양이다. 말풍선의 그림은 수식의 잉크에 맞춰 자르고 네 변에 같은 여백 `Space.m`을 둔다. 열보다 긴 수식은 줄이지 않고 원래 크기로 그려, 열 폭까지 넓어진 말풍선 안에서 가로로 스크롤하고 더 있는 쪽 가장자리를 흐리게 한다. 처음에는 캐럿이 있는 부분을 보이고, 포인터가 위에 있는 동안에는 캐럿이 떠나도 닫히지 않는다. 기호 팔레트와 자동 완성의 그림은 기호가 줄의 제자리(`\ldots`와 `\cdots`)에 보이도록 KaTeX 상자대로 둔다). 미리보기와 Claude 패널은 `NoteStyle`이 CSS 변수(`--measure`, `--margin`, `--block-gap`, `--h1` 등)로 받는다. 노트 CSS에 크기를 직접 적지 않는다 |
 
 ## 구성 요소
 

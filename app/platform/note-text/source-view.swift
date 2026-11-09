@@ -360,7 +360,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     var saveFile: (String, Data) -> String? = { _, _ in nil }
     private var styler: SourceStyler?
     private var lineStarts: [Int] = [0]
-    private var bubble: NSView?
+    private(set) var bubble: PreviewBubble?
     private var observer: NSObjectProtocol?
     private var held: (index: Int, y: CGFloat)?
     private static let promiseQueue = OperationQueue()
@@ -939,29 +939,63 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
     /// With the caret in math or an image link, its rendering floats by the source, over the text, which keeps its place.
     func updateBubble() {
+        let caret = selectedRange()
+        var found: Rendering?
+        if window?.firstResponder === self, caret.length == 0, let storage = textStorage, caret.location <= storage.length {
+            found = rendering(at: caret.location, in: storage)
+        }
+        if let kept = bubble {
+            // Under the pointer it stays while the caret goes elsewhere, or a long formula couldn't be scrolled to its
+            // end; it goes when the pointer leaves (`PreviewBubble.onLeave`).
+            if kept.hovered, found == nil || found?.image === kept.picture.image { return }
+            // The same picture keeps its view, and where it's scrolled to follows the caret.
+            if let found, found.image === kept.picture.image, found.size == kept.picture.frame.size, let origin = bubbleOrigin(kept.frame.size, found.span) {
+                kept.setFrameOrigin(origin)
+                kept.reveal(found.at)
+                return
+            }
+        }
         bubble?.removeFromSuperview()
         bubble = nil
-        let caret = selectedRange()
-        guard window?.firstResponder === self, caret.length == 0, let storage = textStorage, caret.location <= storage.length,
-              let shown = rendering(at: caret.location, in: storage), let window else { return }
-        let text = storage.string as NSString
-        var end = NSMaxRange(shown.span)
-        while end > shown.span.location + 1, text.character(at: end - 1) == 0x0A { end -= 1 }
-        let line = { (i: Int) in self.convert(window.convertFromScreen(self.firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil) }
-        let first = line(shown.span.location), last = line(end - 1)
-        // A formula wider than the editor is shrunk to fit; the bubble is a glance, and the preview scrolls it whole.
+        guard let found else { return }
+        // At its own size: a formula wider than the editor scrolls sideways in the bubble, as it does in the preview,
+        // since shrunk to fit it was too small to read. A picture is already cut to a preview's size.
         let room = visibleRect.width - 2 * PreviewBubble.pad - 8
-        let scale = min(1, room / max(1, shown.size.width))
-        let view = PreviewBubble(image: shown.image, size: CGSize(width: (shown.size.width * scale).rounded(), height: (shown.size.height * scale).rounded()))
-        let size = view.frame.size
-        // The formula starts where its source does; the padding reaches out to the left of it.
-        let x = max(0, min(first.minX - PreviewBubble.pad, bounds.maxX - size.width - 4))
-        // Under the source, or over it when the screen ends first; never pushing the text.
-        let under = last.maxY + 4, over = first.minY - 4 - size.height
-        let y = under + size.height <= visibleRect.maxY || over < visibleRect.minY ? under : over
-        view.setFrameOrigin(NSPoint(x: x, y: y))
+        let scale = found.math ? 1 : min(1, room / max(1, found.size.width))
+        let view = PreviewBubble(image: found.image, size: CGSize(width: (found.size.width * scale).rounded(), height: (found.size.height * scale).rounded()),
+                                 width: room + 2 * PreviewBubble.pad)
+        guard let origin = bubbleOrigin(view.frame.size, found.span) else { return }
+        view.setFrameOrigin(origin)
+        view.onLeave = { [weak self] in self?.updateBubble() }
         addSubview(view)
+        view.reveal(found.at)
         bubble = view
+    }
+
+    /// By the source at `span`: the formula starting where its source does, the padding reaching out to the left of it,
+    /// under the source, or over it when the screen ends first; never pushing the text.
+    private func bubbleOrigin(_ size: CGSize, _ span: NSRange) -> NSPoint? {
+        guard let window, let storage = textStorage, NSMaxRange(span) <= storage.length, span.length > 0 else { return nil }
+        let text = storage.string as NSString
+        var end = NSMaxRange(span)
+        while end > span.location + 1, text.character(at: end - 1) == 0x0A { end -= 1 }
+        let line = { (i: Int) in self.convert(window.convertFromScreen(self.firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil) }
+        let first = line(span.location), last = line(end - 1)
+        let x = max(0, min(first.minX - PreviewBubble.pad, bounds.maxX - size.width - 4))
+        let under = last.maxY + 4, over = first.minY - 4 - size.height
+        // In whole points: the scroller's clip view aligns itself to the screen's pixels, and off them it shifted the
+        // picture by the fraction.
+        return NSPoint(x: x.rounded(), y: (under + size.height <= visibleRect.maxY || over < visibleRect.minY ? under : over).rounded())
+    }
+
+    /// What the bubble shows: its picture, the source it's for, and how far into that source the caret is, which a
+    /// formula wider than the bubble is scrolled to.
+    private struct Rendering {
+        let image: NSImage
+        let size: CGSize
+        let span: NSRange
+        let math: Bool
+        let at: CGFloat
     }
 
     /// The math is drawn after the caret came to it (`NoteMath`), and the caret may have moved on by then.
@@ -973,29 +1007,30 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     }
 
     /// What the caret is in: inline math or an image link it's past the start of, or any line of a math block.
-    private func rendering(at caret: Int, in storage: NSTextStorage) -> (image: NSImage, size: CGSize, span: NSRange)? {
+    private func rendering(at caret: Int, in storage: NSTextStorage) -> Rendering? {
         guard let styler, storage.length > 0 else { return nil }
+        let at = { (span: NSRange) in CGFloat(caret - span.location) / CGFloat(max(1, span.length)) }
         let all = NSRange(location: 0, length: storage.length)
         var span = NSRange()
         if caret > 0 {
             if let tex = storage.attribute(.noteMath, at: caret - 1, longestEffectiveRange: &span, in: all) as? String, caret > span.location,
                let picture = NoteMath.shared.picture(tex, syntax: styler.syntax, display: false, size: NoteLook.body, dark: styler.dark, trim: true,
                                                      ready: redrawBubble) {
-                return (picture.image, picture.size, span)
+                return Rendering(image: picture.image, size: picture.size, span: span, math: true, at: at(span))
             }
             if let source = storage.attribute(.noteImage, at: caret - 1, longestEffectiveRange: &span, in: all) as? String, caret > span.location,
                let image = NoteImages.load(source, base: baseURL) {
                 // A preview, not the picture at its size: big enough to tell what it is, small enough to keep the note in view.
                 let natural = image.size
                 let scale = min(1, min(columnWidth, 480) / max(1, natural.width), 320 / max(1, natural.height))
-                return (image, CGSize(width: (natural.width * scale).rounded(), height: (natural.height * scale).rounded()), span)
+                return Rendering(image: image, size: CGSize(width: (natural.width * scale).rounded(), height: (natural.height * scale).rounded()),
+                                 span: span, math: false, at: 0)
             }
         }
-        let at = min(caret, storage.length - 1)
-        if let tex = storage.attribute(.noteMathBlock, at: at, longestEffectiveRange: &span, in: all) as? String,
+        if let tex = storage.attribute(.noteMathBlock, at: min(caret, storage.length - 1), longestEffectiveRange: &span, in: all) as? String,
            let picture = NoteMath.shared.picture(tex, syntax: styler.syntax, display: true, size: NoteLook.body, dark: styler.dark, trim: true,
                                                  ready: redrawBubble) {
-            return (picture.image, picture.size, span)
+            return Rendering(image: picture.image, size: picture.size, span: span, math: true, at: at(span))
         }
         return nil
     }
@@ -1086,31 +1121,108 @@ final class HintLabel: NSTextField {
     override func hitTest(_ point: NSPoint) -> NSView? { nil }
 }
 
-/// Rendered math or an image over the text, by its source.
+/// Rendered math or an image over the text, by its source. A picture wider than the bubble scrolls sideways in
+/// it, with a fade at an edge it runs on past.
 final class PreviewBubble: NSView {
     /// The same on every side: a formula's picture is its ink (`NoteMath`), so this is all the room around it.
     static let pad = Theme.Space.m
+    // Well past the padding, so it fades the formula itself and reads as more of it that way.
+    static let fade = 2 * Theme.Space.xl
 
-    init(image picture: NSImage, size: CGSize) {
-        let pad = Self.pad
-        super.init(frame: NSRect(origin: .zero, size: CGSize(width: size.width + 2 * pad, height: size.height + 2 * pad)))
+    let picture: NSImageView
+    let scroller: BubbleScroller
+    let leading = EdgeFade(leading: true), trailing = EdgeFade(leading: false)
+    /// Whether the pointer is over it, which keeps it while the caret goes elsewhere (`SourceTextView.updateBubble`).
+    var hovered = false
+    var onLeave: (() -> Void)?
+    let scrolls: Bool
+
+    /// At most `width` wide; a wider picture scrolls in it.
+    init(image: NSImage, size: CGSize, width: CGFloat) {
+        let pad = Self.pad, border: CGFloat = 1
+        let whole = CGSize(width: size.width + 2 * pad, height: size.height + 2 * pad)
+        let shown = CGSize(width: min(whole.width, max(width, 2 * pad)), height: whole.height)
+        // Inside the border, so neither the picture scrolling by nor the fades over it cover it.
+        let inner = NSRect(origin: .zero, size: shown).insetBy(dx: border, dy: border)
+        picture = NSImageView(frame: NSRect(origin: CGPoint(x: pad - border, y: pad - border), size: size))
+        scroller = BubbleScroller(frame: inner)
+        scrolls = whole.width > shown.width
+        super.init(frame: NSRect(origin: .zero, size: shown))
         wantsLayer = true
         layer?.cornerRadius = NoteLook.radius
-        layer?.borderWidth = 1
+        layer?.borderWidth = border
         shadow = NSShadow()
         layer?.shadowOpacity = 0.12
         layer?.shadowRadius = 10
         layer?.shadowOffset = CGSize(width: 0, height: -6)
-        let image = NSImageView(frame: NSRect(origin: CGPoint(x: pad, y: pad), size: size))
-        image.image = picture
-        image.imageScaling = .scaleAxesIndependently
-        addSubview(image)
+        picture.image = image
+        picture.imageScaling = .scaleAxesIndependently
+        let document = NSView(frame: NSRect(x: 0, y: 0, width: whole.width - 2 * border, height: inner.height))
+        document.addSubview(picture)
+        scroller.documentView = document
+        scroller.drawsBackground = false
+        scroller.hasHorizontalScroller = false
+        scroller.hasVerticalScroller = false
+        scroller.verticalScrollElasticity = .none
+        scroller.horizontalScrollElasticity = scrolls ? .automatic : .none
+        scroller.wantsLayer = true
+        scroller.layer?.cornerRadius = NoteLook.radius - border
+        scroller.layer?.masksToBounds = true
+        addSubview(scroller)
+        scroller.tile()
+        for (fade, x) in [(leading, inner.minX), (trailing, inner.maxX - Self.fade)] {
+            fade.frame = NSRect(x: x, y: inner.minY, width: Self.fade, height: inner.height)
+            fade.layer?.cornerRadius = NoteLook.radius - border
+            addSubview(fade)
+        }
+        scroller.contentView.postsBoundsChangedNotifications = true
+        NotificationCenter.default.addObserver(self, selector: #selector(scrolled), name: NSView.boundsDidChangeNotification, object: scroller.contentView)
+        scrolled()
     }
 
     required init?(coder: NSCoder) { fatalError() }
 
+    /// Scrolls to the part of the picture `fraction` of the way across it, the caret's place in the source,
+    /// centered where the picture's ends allow.
+    func reveal(_ fraction: CGFloat) {
+        guard scrolls, let document = scroller.documentView else { return }
+        let visible = scroller.bounds.width
+        let x = min(max(0, fraction * document.frame.width - visible / 2), document.frame.width - visible)
+        scroller.contentView.scroll(to: NSPoint(x: x.rounded(), y: 0))
+        scroller.reflectScrolledClipView(scroller.contentView)
+    }
+
+    @objc private func scrolled() {
+        let x = scroller.contentView.bounds.minX, end = (scroller.documentView?.frame.width ?? 0) - scroller.bounds.width
+        leading.isHidden = !scrolls || x <= 0.5
+        trailing.isHidden = !scrolls || x >= end - 0.5
+    }
+
     // It covers the lines under the source it shows; a click there is meant for them, and taken here it went nowhere.
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+    // Over a picture that scrolls, the scroller takes the wheel, and passes a click on (`BubbleScroller`).
+    override func hitTest(_ point: NSPoint) -> NSView? {
+        scrolls && frame.contains(point) ? scroller : nil
+    }
+
+    override func updateTrackingAreas() {
+        super.updateTrackingAreas()
+        trackingAreas.forEach(removeTrackingArea)
+        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self, userInfo: nil))
+    }
+
+    // Shown under a pointer that hasn't moved, it gets no `mouseEntered`.
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if let window { hovered = bounds.contains(convert(window.mouseLocationOutsideOfEventStream, from: nil)) }
+    }
+
+    override func mouseEntered(with event: NSEvent) { hovered = true }
+    override func mouseExited(with event: NSEvent) { left() }
+
+    func left() {
+        hovered = false
+        onLeave?()
+    }
 
     override var wantsUpdateLayer: Bool { true }
 
@@ -1121,6 +1233,44 @@ final class PreviewBubble: NSView {
             layer?.backgroundColor = NoteLook.card.cgColor
             layer?.borderColor = NoteLook.lineSoft.cgColor
         }
+    }
+}
+
+/// The bubble's sideways scroll. A wheel or swipe that's mostly up or down is the note's, not lost on a bubble that
+/// can't go that way; a click goes on up to the text under it.
+final class BubbleScroller: NSScrollView {
+    override func scrollWheel(with event: NSEvent) {
+        if abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) { nextResponder?.scrollWheel(with: event) } else { super.scrollWheel(with: event) }
+    }
+
+    override func hitTest(_ point: NSPoint) -> NSView? { frame.contains(point) ? self : nil }
+}
+
+/// The card's color fading out over a scrolling picture's edge.
+final class EdgeFade: NSView {
+    private let leading: Bool
+
+    init(leading: Bool) {
+        self.leading = leading
+        super.init(frame: .zero)
+        wantsLayer = true
+        layer?.masksToBounds = true
+        layer?.maskedCorners = leading ? [.layerMinXMinYCorner, .layerMinXMaxYCorner] : [.layerMaxXMinYCorner, .layerMaxXMaxYCorner]
+    }
+
+    required init?(coder: NSCoder) { fatalError() }
+
+    override func makeBackingLayer() -> CALayer { CAGradientLayer() }
+    override var wantsUpdateLayer: Bool { true }
+    override func hitTest(_ point: NSPoint) -> NSView? { nil }
+
+    override func updateLayer() {
+        guard let gradient = layer as? CAGradientLayer else { return }
+        effectiveAppearance.performAsCurrentDrawingAppearance {
+            gradient.colors = [NoteLook.card.cgColor, NoteLook.card.withAlphaComponent(0).cgColor]
+        }
+        gradient.startPoint = CGPoint(x: leading ? 0 : 1, y: 0.5)
+        gradient.endPoint = CGPoint(x: leading ? 1 : 0, y: 0.5)
     }
 }
 #else
