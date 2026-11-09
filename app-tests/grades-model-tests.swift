@@ -145,8 +145,8 @@ struct RequirementsModelTests {
         catalog.handbooks = [Handbook(year: 2026, source: "2026 학사편람", areas: ["EC4207": "전공선택", "MA2001": "전공선택"])]
         workspace.saveCatalog(catalog)
         let linear = UUID(uuidString: "C0000000-0000-4000-8000-000000000001")!
-        #expect(workspace.run(CourseRename(course: graphTheory, title: "그래프 이론", codes: [ec.id], number: "4207")) != nil)
-        #expect(workspace.run(CourseRename(course: linear, title: "선형대수학", codes: [ma.id], number: "2001")) != nil)
+        #expect(workspace.run(CourseRename(course: graphTheory, title: .set("그래프 이론"), codes: .set([ec.id]), number: .set("4207"))) != nil)
+        #expect(workspace.run(CourseRename(course: linear, title: .set("선형대수학"), codes: .set([ma.id]), number: .set("2001"))) != nil)
 
         let model = RequirementsModel(workspace: workspace)
         let suggestions = model.audit.suggestions

@@ -164,6 +164,7 @@ public struct TableSource {
         }
         while i < units.count {
             if units[i] == 0x5C { i += 2; continue }
+            if let end = wikiLinkEnd(units, i) { i = end; continue }
             if units[i] == 0x7C {
                 cell(start, i)
                 start = i + 1
@@ -186,16 +187,39 @@ public struct TableSource {
         }
     }
 
-    /// Pipes inside a cell's text escaped, as GFM needs them; ones already escaped stay as they are.
-    static func escapePipes(_ text: String) -> String {
-        var out = ""
-        var escaped = false
-        for ch in text {
-            if ch == "|", !escaped { out.append("\\") }
-            out.append(ch)
-            escaped = ch == "\\" && !escaped
+    /// Where a `[[…]]` starting at `i` ends, past its `]]`. Its `|` is the link's, not a cell's, as Obsidian and the
+    /// preview read it (`MathProtection`), so the link's own `[[target|alias]]` keeps the row's cells whole.
+    static func wikiLinkEnd(_ units: [UInt16], _ i: Int) -> Int? {
+        guard i + 1 < units.count, units[i] == 0x5B, units[i + 1] == 0x5B else { return nil }
+        var j = i + 2
+        while j + 1 < units.count {
+            if units[j] == 0x5D { return units[j + 1] == 0x5D && j > i + 2 ? j + 2 : nil }
+            j += 1
         }
-        return out
+        return nil
+    }
+
+    /// Pipes inside a cell's text escaped, as GFM needs them; ones already escaped, and a link's, stay as they are.
+    static func escapePipes(_ text: String) -> String {
+        let units = Array(text.utf16)
+        var out: [UInt16] = []
+        var i = 0
+        while i < units.count {
+            if units[i] == 0x5C {
+                out += units[i..<min(i + 2, units.count)]
+                i += 2
+                continue
+            }
+            if let end = wikiLinkEnd(units, i) {
+                out += units[i..<end]
+                i = end
+                continue
+            }
+            if units[i] == 0x7C { out.append(0x5C) }
+            out.append(units[i])
+            i += 1
+        }
+        return String(utf16CodeUnits: out, count: out.count)
     }
 
     /// The table with its pipes lined up, and where each cell's text is in it.

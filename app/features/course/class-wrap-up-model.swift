@@ -243,7 +243,7 @@ final class ClassWrapUpModel {
     }
 
     var action: SessionWrapUp {
-        SessionWrapUp(course: courseId, session: sessionId, ranges: ranges, units: units, attendance: attendance)
+        SessionWrapUp(course: courseId, session: sessionId, ranges: ranges, units: .set(units), attendance: .set(attendance))
     }
 
     /// Why saving is off: a kept file without both pages says nothing about how far the class went.

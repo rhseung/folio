@@ -75,6 +75,81 @@ extension Resolver {
     }
 }
 
+/// A value an `@Parsed` field reads from one command-line word, names in it looked up like any other.
+protocol CLIText {
+    init(cli text: String, _ r: Resolver, in course: CourseRef?) throws
+}
+
+extension Resolver {
+    /// The type comes from the action's field the value goes into.
+    func parse<T: CLIText>(_ text: String, in course: CourseRef?) throws -> T { try T(cli: text, self, in: course) }
+}
+
+/// Splits at the last colon: a file or item name may hold one, the number after it never does.
+private func pair(_ text: String, _ error: @autoclosure () -> String) throws -> (String, String) {
+    guard let i = text.lastIndex(of: ":") else { throw CLIError(exit: .usage, message: error()) }
+    return (String(text[..<i]), String(text[text.index(after: i)...]))
+}
+
+private func scoped(_ course: CourseRef?, _ text: String) throws -> CourseRef {
+    guard let course else { throw CLIError(exit: .usage, message: String(localized: .resolveNeedCourse(text))) }
+    return course
+}
+
+/// `05_Matchings.pdf:3-12`, or `:7` for one page.
+extension SessionMaterial: CLIText {
+    init(cli text: String, _ r: Resolver, in course: CourseRef?) throws {
+        let c = try scoped(course, text)
+        let (name, pages) = try pair(text, String(localized: .sessionProgressFormat(text)))
+        let bounds = pages.split(separator: "-", omittingEmptySubsequences: false).map { Int($0) }
+        guard (1...2).contains(bounds.count), let first = bounds.first ?? nil, let last = bounds.last ?? nil else {
+            throw CLIError(exit: .usage, message: String(localized: .sessionProgressFormat(text)))
+        }
+        self.init(materialId: try r.material(c.local(name), in: c).id, firstPage: first, lastPage: last)
+    }
+}
+
+/// `6:B0`: absences and the highest grade left.
+extension AttendanceCap: CLIText {
+    init(cli text: String, _ r: Resolver, in course: CourseRef?) throws {
+        let (n, grade) = try pair(text, String(localized: .componentPolicyBadPair(text)))
+        guard let absences = Int(n) else { throw CLIError(exit: .usage, message: String(localized: .componentPolicyBadAbsences(text))) }
+        self.init(absences: absences, maxGrade: try r.letterGrade(grade).id)
+    }
+}
+
+/// `A+:95`: a grade and the lowest score that gets it.
+extension GradeCutoff: CLIText {
+    init(cli text: String, _ r: Resolver, in course: CourseRef?) throws {
+        let (grade, n) = try pair(text, String(localized: .componentPolicyBadPair(text)))
+        guard let min = Double(n) else { throw CLIError(exit: .usage, message: String(localized: .componentPolicyBadMinScore(text))) }
+        self.init(grade: try r.letterGrade(grade).id, minScore: min)
+    }
+}
+
+/// `major:EC`: the program and its department's course code.
+extension StudentProgram: CLIText {
+    init(cli text: String, _ r: Resolver, in course: CourseRef?) throws {
+        let parts = text.split(separator: ":", maxSplits: 1).map(String.init)
+        guard parts.count == 2, let kind = StudentProgram.Kind(rawValue: parts[0]) else {
+            throw CLIError(exit: .usage, message: String(localized: .requirementSetBadProgram(text)),
+                           hints: [String(localized: .requirementSetProgramKinds) + StudentProgram.Kind.allCases.map(\.rawValue).joined(separator: ", ")])
+        }
+        self.init(codeId: try r.code(parts[1]).id, kind: kind)
+    }
+}
+
+/// `9/10`, or `<component>:9/10` when the assignment counts toward several; the action picks the one it counts toward.
+extension AssignmentSave.Score: CLIText {
+    init(cli text: String, _ r: Resolver, in course: CourseRef?) throws {
+        let c = try scoped(course, text)
+        let (target, value) = text.firstIndex(of: ":").map { (String(text[..<$0]), String(text[text.index(after: $0)...])) } ?? (nil, text)
+        let parts = value.split(separator: "/").compactMap { Double($0) }
+        guard parts.count == 2 else { throw CLIError(exit: .usage, message: String(localized: .assignmentSetScoreFormat(text))) }
+        self.init(component: try target.map { try r.component($0, in: c).id }, score: parts[0], max: parts[1])
+    }
+}
+
 extension Complete {
     static func ref(_ kind: String) -> CompletionKind {
         switch kind {
@@ -94,14 +169,14 @@ extension Complete {
 }
 
 @discardableResult
-func perform<A: Action>(spec action: A, _ options: GlobalOptions, ctx: ActionContext) throws -> ActionContext {
+func perform<A: Action>(spec action: A, _ options: GlobalOptions, ctx: ActionContext, read: JSONValue? = nil) throws -> ActionContext {
     let spec = A.spec
     if let record = Built.record { record(A.command, try JSONValue(action)) }
     let confirm = spec.asks(action) ? spec.confirm.map { spec.render($0, action, ctx: ctx) } : nil
     // Rendered before running so the name of an item the action removes still shows; an item it makes has a name
     // only after.
     let before = spec.effect == .creates ? nil : spec.render(spec.done, action, ctx: ctx)
-    let result = try perform(action, options, ctx: ctx, done: before ?? spec.render(spec.done, action, ctx: ctx), confirm: confirm)
+    let result = try perform(action, options, ctx: ctx, done: before ?? spec.render(spec.done, action, ctx: ctx), confirm: confirm, read: read)
     if spec.undoable, !options.json, let batch = result.made { say(String(localized: .performUndoHint(batch.uuidString)).styled(.dim)) }
     return result
 }

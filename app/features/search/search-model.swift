@@ -119,7 +119,7 @@ final class SearchModel {
             .replacingOccurrences(of: #"!?\[([^\]]*)\]\([^)]*\)"#, with: "$1", options: .regularExpression)
             // The tail of a link the snippet cut into: `…0](assets/x.png)`.
             .replacingOccurrences(of: #"\]\([^)\s]*\)"#, with: "", options: .regularExpression)
-            .replacingOccurrences(of: #"\[\[([^\]|]*)(\|[^\]]*)?\]\]"#, with: "$1", options: .regularExpression)
+            .replacingOccurrences(of: #"\[\[([^\]|]*?)\\?(\|[^\]]*)?\]\]"#, with: "$1", options: .regularExpression)
             .replacingOccurrences(of: #"(^|\s)#{1,6}\s"#, with: "$1", options: .regularExpression)
             .replacingOccurrences(of: #"\*\*|__|`"#, with: "", options: .regularExpression)
     }

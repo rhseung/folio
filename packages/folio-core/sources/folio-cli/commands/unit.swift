@@ -112,6 +112,7 @@ func performAll<A: Action>(_ actions: [A], _ options: GlobalOptions, ctx: Action
             case .notFound(let m): throw CLIError(exit: .notFound, message: m)
             case .rule(let m): throw CLIError(exit: .rule, message: m)
             case .conflict(let m): throw CLIError(exit: .conflict, message: m)
+            case .input(let m): throw CLIError(exit: .usage, message: m)
             }
         }
     }
