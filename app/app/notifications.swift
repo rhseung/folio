@@ -1,6 +1,11 @@
 import FolioDomain
 import Foundation
 import UserNotifications
+#if os(macOS)
+import AppKit
+#else
+import UIKit
+#endif
 
 @MainActor
 enum NotificationScheduler {
@@ -33,6 +38,24 @@ enum NotificationScheduler {
             try? await center.add(UNNotificationRequest(identifier: item.id, content: content(item, workspace), trigger: trigger))
         }
         UserDefaults.standard.set(Array(sent), forKey: sentKey)
+    }
+
+    /// Told at once and only while the app is behind: in front, the class it just opened says so itself.
+    static func classStarted(_ title: String, recording: Bool) {
+        #if os(macOS)
+        guard !NSApplication.shared.isActive else { return }
+        #else
+        guard UIApplication.shared.applicationState != .active else { return }
+        #endif
+        let content = UNMutableNotificationContent()
+        content.title = String(localized: .notifyClassStarted)
+        content.body = recording ? String(localized: .notifyClassStartedRecording(title)) : title
+        content.sound = .default
+        Task {
+            let center = UNUserNotificationCenter.current()
+            guard (try? await center.requestAuthorization(options: [.alert, .sound])) == true else { return }
+            try? await center.add(UNNotificationRequest(identifier: "class-start-\(UUID().uuidString)", content: content, trigger: nil))
+        }
     }
 
     static func content(_ item: PlannedNotification, _ workspace: Workspace) -> UNMutableNotificationContent {
