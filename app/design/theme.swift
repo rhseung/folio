@@ -229,7 +229,9 @@ enum Theme {
         static let bodyLarge = Font.system(size: bodyLargeSize)
         /// For the quick add field's AppKit text view, which takes a size rather than a `Font`.
         static let bodyLargeSize = CGFloat(15)
-        static let body = Font.system(size: 13)
+        static let body = Font.system(size: bodySize)
+        /// For text measured with the platform font (`GrowingTextEditor`).
+        static let bodySize = CGFloat(13)
         static let bodyStrong = Font.system(size: 13, weight: .semibold)
         static let caption = Font.system(size: 12)
         /// File names and paths.

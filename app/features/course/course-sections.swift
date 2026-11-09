@@ -73,9 +73,7 @@ struct InfoBlocks: View {
             }
             Block(String(localized: .courseInfoMemo)) {
                 Card {
-                    TextEditor(text: $model.memo)
-                        .scrollContentBackground(.hidden)
-                        .frame(minHeight: 140)
+                    GrowingTextEditor(text: $model.memo)
                         .padding(Theme.Space.m)
                     Theme.Palette.lineSoft.frame(height: 1)
                     CardRow(last: true) {

@@ -166,7 +166,7 @@ struct AssignmentSheet: View {
                 }
                 .sensitive(scored.isEmpty ? nil : .block)
             }
-            FormTextArea(label: String(localized: .assignmentsMemo), text: $model.memo, height: 56)
+            FormTextArea(label: String(localized: .assignmentsMemo), text: $model.memo)
             Block(title: String(localized: .assignmentsFiles), note: model.folder) {
                 Button(.assignmentsAddFiles) { pickingFiles = true }
                     .buttonStyle(.ghost)

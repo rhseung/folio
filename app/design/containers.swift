@@ -138,21 +138,18 @@ struct Fold<Content: View>: View {
     }
 }
 
-/// Several lines of text in a form: a section of its own, the label and help as its heading and a card holding only the editor.
+/// Several lines of text in a form: a section of its own, the label and help as its heading and a card holding only the editor,
+/// which grows with the text and then scrolls.
 /// Never put it inside another card: a tall editor among single-line rows breaks their rhythm.
 struct FormTextArea: View {
     let label: String
     var detail: String?
     @Binding var text: String
-    var height: CGFloat = 72
 
     var body: some View {
         Block(label, note: detail) {
             Card(padding: Theme.Space.m) {
-                TextEditor(text: $text)
-                    .scrollContentBackground(.hidden)
-                    .font(Theme.Typeface.body)
-                    .frame(height: height)
+                GrowingTextEditor(text: $text)
             }
         }
     }

@@ -302,7 +302,7 @@ private struct NoteSettingsForm: View {
                                           set: { settings.asciiMathSnippets = $0 == MathSnippet.asciiMathDefaults ? nil : $0 }),
                         defaults: MathSnippet.asciiMathDefaults, placed: false)
         }
-        FormTextArea(label: String(localized: .settingsNoteRules), detail: String(localized: .settingsNoteRulesDetail), text: $settings.noteRules, height: 160)
+        FormTextArea(label: String(localized: .settingsNoteRules), detail: String(localized: .settingsNoteRulesDetail), text: $settings.noteRules)
     }
 
     static func name(_ kind: NoteKind) -> String {

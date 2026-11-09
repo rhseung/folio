@@ -141,7 +141,7 @@ struct PeopleView: View {
                     }
                 }
             }
-            FormTextArea(label: String(localized: .peopleMemo), detail: String(localized: .peopleMemoDetail), text: person.memo, height: 140)
+            FormTextArea(label: String(localized: .peopleMemo), detail: String(localized: .peopleMemoDetail), text: person.memo)
         }
     }
 }
