@@ -897,6 +897,8 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
     override func becomeFirstResponder() -> Bool {
         defer { DispatchQueue.main.async { [weak self] in self?.updateHint() } }
+        // The math page may have left with another editor's window; the one being typed in shows the math now.
+        NoteMath.shared.host(in: self)
         return super.becomeFirstResponder()
     }
 
@@ -964,12 +966,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     override func viewDidMoveToWindow() {
         super.viewDidMoveToWindow()
         if window != nil { NoteMath.shared.host(in: self, warm: true) }
-    }
-
-    // The page may have left with another editor's window; the one being typed in shows the math now.
-    override func becomeFirstResponder() -> Bool {
-        NoteMath.shared.host(in: self)
-        return super.becomeFirstResponder()
     }
 
     /// What the caret is in: inline math or an image link it's past the start of, or any line of a math block.

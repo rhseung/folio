@@ -95,14 +95,14 @@ struct MathPaletteCell: View {
 
     @ViewBuilder var glyph: some View {
         if let formula = item.preview,
-           let picture = NoteMath.picture(formula, syntax: item.previewAsciiMath ? .asciimath : .latex, display: false, size: NoteLook.body,
-                                          color: NoteLook.text, dark: scheme == .dark) {
+           let picture = NoteMath.shared.picture(formula, syntax: item.previewAsciiMath ? .asciimath : .latex, display: false, size: NoteLook.body,
+                                                 dark: scheme == .dark) {
             Image(platformImage: picture.image)
                 .resizable()
                 .scaledToFit()
                 .frame(maxWidth: min(picture.size.width, Self.minWidth - 2 * Theme.Space.s), maxHeight: min(picture.size.height, Self.glyphHeight))
         } else {
-            // Spacing and `\left` draw nothing of their own.
+            // Spacing and `\left` draw nothing of their own, and a symbol not drawn yet shows this until it is.
             Image(systemName: "square.dashed").font(Theme.Glyph.regular).foregroundStyle(Theme.Palette.textTertiary)
         }
     }
