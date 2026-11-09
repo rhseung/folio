@@ -930,13 +930,14 @@ enum GeneratedCommands {
             예시:
               folio assignment add EC4207 \"HW 3\" --due \"2026-11-04 23:59\"
               folio assignment add EC4207 \"Weekly Quiz\" --due 2026-11-02 --repeats weekly --dry-run
+              folio assignment add EC4207 \"Lab 보고서\" --due 2026-11-02 --repeats \"격주 월수\"
             """)
         @OptionGroup var g: GlobalOptions
         @Option(name: .customLong("id"), help: .hidden) var id: UUID?
         @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
         @Argument(help: "과제 제목") var title: String
         @Option(help: ArgumentHelp("마감 일시", valueName: "date")) var due: DateArg?
-        @Option(help: "반복") var repeats: AssignmentRepeat?
+        @Option(help: "반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 3일마다, 격주, 매주 월수, 월,수마다)") var repeats: AssignmentRepeat?
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -969,7 +970,7 @@ enum GeneratedCommands {
         @Option(help: "새 제목") var title: String?
         @Option(help: ArgumentHelp("마감 일시. none이면 지운다", valueName: "date")) var due: Clearable<DateArg>?
         @Option(help: "상태") var status: AssignmentStatus?
-        @Option(help: "반복. none이면 지운다") var repeats: Clearable<AssignmentRepeat>?
+        @Option(help: "반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 3일마다, 격주, 매주 월수, 월,수마다). none이면 지운다") var repeats: Clearable<AssignmentRepeat>?
         @Option(name: .customLong("component"), help: ArgumentHelp("반영되는 성적 항목. 주면 묶음은 풀린다. none이면 지운다", valueName: "component"), completion: Complete.ref("GradeComponent")) var componentId: Clearable<String>?
         @Option(name: .customLong("group"), help: "한꺼번에 점수를 매기는 성적 항목 묶음. 주면 성적 항목 하나는 풀린다. none이면 지운다") var componentGroup: Clearable<String>?
         @Option(help: "메모") var memo: String?

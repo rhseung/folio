@@ -115,6 +115,30 @@ struct AssignmentsModelTests {
         #expect(!model.invalid)
         #expect(model.titleDetail == nil)
     }
+
+    /// The sheet picks a preset or edits a rule by its parts, and says when the next one will be due.
+    @Test func sheetEditsTheRepeatRule() throws {
+        let (workspace, course) = try fixtureCourse()
+        let id = try #require(workspace.run(AssignmentAdd(course: linearAlgebra, title: "퀴즈", repeats: AssignmentRepeat(every: 3, .day)))?.made)
+        let model = AssignmentSheetModel(workspace: workspace, course: course, assignment: try #require(workspace.course(linearAlgebra)?.file.assignments.first { $0.id == id }))
+        model.load()
+        // No preset is every three days, so its parts show.
+        #expect(model.customRepeat && model.repeatLabel == "3일마다")
+        #expect(model.repeatDetail == "마감을 정해야 다음 과제가 생깁니다")
+        model.pickRepeat(.biweekly)
+        #expect(!model.customRepeat && model.repeatLabel == "격주")
+        model.hasDue = true
+        model.due = try #require(workspace.calendar.date(from: DateComponents(year: 2026, month: 11, day: 6, hour: 23, minute: 59)))  // Friday
+        #expect(model.repeatDetail == "제출로 바꾸면 다음 과제가 \(CourseFile.deadline(model.due.addingTimeInterval(14 * 86_400), calendar: workspace.calendar)) 마감으로 생깁니다")
+        model.customizeRepeat()
+        #expect(model.customRepeat && model.customRule == .biweekly && model.dueWeekday == 5)
+        model.customRule = AssignmentRepeat(every: 2, .week, weekdays: [1, 3])
+        #expect(model.repeatLabel == "격주 월, 수")
+        #expect(model.apply())
+        #expect(workspace.course(linearAlgebra)?.file.assignments.first { $0.id == id }?.repeats == AssignmentRepeat(every: 2, .week, weekdays: [1, 3]))
+        model.pickRepeat(nil)
+        #expect(model.repeatDetail == nil && model.repeatLabel == "반복 없음")
+    }
 }
 
 /// Both pages that take scores save them with the same meaning.

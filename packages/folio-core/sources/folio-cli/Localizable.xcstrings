@@ -293,7 +293,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "줄에서 읽은 반복 대신 쓸 반복. none이면 반복하지 않는다"
+            "value": "줄에서 읽은 반복 대신 쓸 반복(매일, 격주, 3일마다, 매주 월수, weekly:mon,wed). none이면 반복하지 않는다"
           }
         }
       }
@@ -360,17 +360,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "읽지 못함"
-          }
-        }
-      }
-    },
-    "add.weekly": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "매주"
           }
         }
       }
@@ -569,17 +558,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "  상태  %@"
-          }
-        }
-      }
-    },
-    "assignment.show.weekly": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "  반복  매주"
           }
         }
       }
@@ -6773,6 +6751,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "생성 %lld/%lld"
+          }
+        }
+      }
+    },
+    "assignment.show.repeats": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "  반복  %@"
           }
         }
       }

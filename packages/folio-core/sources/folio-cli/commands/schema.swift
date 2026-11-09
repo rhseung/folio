@@ -256,3 +256,16 @@ func actionSchemas() -> JSONValue {
         "$defs": .object(builder.defs),
     ]
 }
+/// Read from a string as well as its object, so the decoder would see only the string.
+extension AssignmentRepeat: SchemaHint {
+    static var schema: JSONValue {
+        let rule: JSONValue = ["type": "object", "required": .array(["every", "unit"]), "properties": [
+            "every": ["type": "integer", "minimum": .number(1)],
+            "unit": ["type": "string", "enum": .array(Unit.allCases.map { .string($0.rawValue) })],
+            "weekdays": ["type": "array", "items": ["type": "integer", "minimum": .number(1), "maximum": .number(7)], "description": "ISO weekdays, 1 = Monday; week only"],
+        ]]
+        let words: JSONValue = ["type": "string", "description": "daily, weekly, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 매일, 격주, 3일마다, 매주 월수"]
+        return ["oneOf": .array([rule, words])]
+    }
+    static var example: Any { AssignmentRepeat.weekly }
+}

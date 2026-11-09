@@ -63,7 +63,7 @@ extension QuickAdd {
                     tries = [line.splicing(ranges.map { ($0, "") })]
                     break
                 }
-                let words = (before.repeats == .weekly ? "매주 " : "") + text(of: date)
+                let words = (before.repeats.map { $0.phrase + " " } ?? "") + text(of: date)
                 let cleared = line.splicing(ranges.map { ($0, "") })
                 if let first = before.dueRanges.first {
                     tries = [line.splicing([(first, words)] + ranges.dropFirst().map { ($0, "") }), cleared.appending(word: words)]
@@ -72,13 +72,28 @@ extension QuickAdd {
                 }
             case let .repeats(repeats):
                 guard before.repeats != repeats else { return line }
-                if repeats == .weekly {
-                    tries = (before.dueRanges.first.map { [line.splicing([($0.lowerBound..<$0.lowerBound, "매주 ")])] } ?? [])
-                        + [line.appending(word: "매주")]
-                } else {
+                // The rule's words out, and its weekdays down to the deadline's own (`매주 월수` due Wednesday → `수`), so
+                // the deadline stays where it was.
+                let letter = before.due.map { AssignmentRepeat.weekdayLetters[calendar.isoWeekday(of: $0) - 1] } ?? ""
+                let plain = line.splicing(before.repeatRanges.map { (line.wordRange($0), "") } + before.weekdayRanges.map { ($0, letter) })
+                let stripped = read(plain)
+                switch repeats {
+                case nil:
                     // `매주 까지` with no day: the `까지` was the repeat's, and taken out with it.
-                    tries = [line.splicing(before.weeklyRanges.map { (line.wordRange($0), "") })]
-                        + (before.due == nil ? [line.splicing(before.dueRanges.map { (line.wordRange($0), "") })] : [])
+                    tries = [plain] + (before.due == nil ? [line.splicing(before.dueRanges.map { (line.wordRange($0), "") })] : [])
+                case let rule? where rule.weekdays.isEmpty:
+                    tries = (stripped.dueRanges.first.map { [plain.splicing([($0.lowerBound..<$0.lowerBound, rule.phrase + " ")])] } ?? [])
+                        + [plain.appending(word: rule.phrase)]
+                case let rule?:
+                    // The weekdays name the day, so the deadline's day words give way to them and only its time stays.
+                    guard let due = before.due else {
+                        tries = [plain.appending(word: rule.phrase)]
+                        break
+                    }
+                    let words = rule.phrase + " " + text(of: due).split(separator: " ").last!
+                    let ranges = stripped.dueRanges.map(plain.wordRange)
+                    tries = (stripped.dueRanges.first.map { [plain.splicing([($0, words)] + ranges.dropFirst().map { ($0, "") })] } ?? [])
+                        + [plain.splicing(ranges.map { ($0, "") }).appending(word: words)]
                 }
             case let .kind(kind, number):
                 let word = "\(kind.rawValue)\(number)"
@@ -111,7 +126,13 @@ extension QuickAdd {
             case let .course(id): return after.courseId == id && same.due && same.repeats && same.title && same.kind
             // Clearing the deadline takes `매주` with it, as it sits among the deadline's words.
             case let .due(date): return after.due == date && after.repeats == (date == nil ? nil : before.repeats) && same.course && same.title && same.kind
-            case let .repeats(repeats): return after.repeats == repeats && same.course && same.due && same.title && same.kind
+            case let .repeats(repeats):
+                guard let rule = repeats, !rule.weekdays.isEmpty else { return after.repeats == repeats && same.course && same.due && same.title && same.kind }
+                // Weekdays move the deadline onto the first of them still ahead, at the same time.
+                guard let due = after.due, after.repeats == rule.normalized(dueWeekday: calendar.isoWeekday(of: due)) else { return false }
+                let time = { (d: Date) in calendar.dateComponents([.hour, .minute], from: d) }
+                return rule.weekdays.contains(calendar.isoWeekday(of: due)) && before.due.map { time($0) == time(due) } ?? true
+                    && same.course && same.title && same.kind
             case let .kind(kind, number): return after.kind == kind && after.number == number && same.course && same.due && same.repeats
             }
         }
