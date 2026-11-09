@@ -85,7 +85,9 @@ jobs:
       - id: cache
         uses: actions/cache/restore@v6
         with:
-          path: packages/*/.build
+          path: |
+            packages/*/.build
+            ~/Library/Caches/org.swift.swiftpm/manifests
           key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved') }}-${{ github.sha }}
           restore-keys: |
             swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved') }}-
@@ -98,7 +100,9 @@ jobs:
       - if: ${{ !cancelled() && (github.event_name == 'push' || steps.cache.outputs.cache-matched-key == '') && steps.run.outcome != 'skipped' }}
         uses: actions/cache/save@v6
         with:
-          path: packages/*/.build
+          path: |
+            packages/*/.build
+            ~/Library/Caches/org.swift.swiftpm/manifests
           key: ${{ steps.cache.outputs.cache-primary-key }}
 
   build:
@@ -127,8 +131,6 @@ jobs:
     steps:
       - if: env.RUN != 'true'
         run: echo "No file in this PR reaches ${{ matrix.task }}."
-      - if: env.RUN == 'true' && matrix.task == 'test-ipad'
-        run: date; xcrun simctl boot "$(xcrun simctl list devices available | grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}')"; date
       - if: env.RUN == 'true'
         uses: actions/checkout@v7
       # Checkout stamps every file with the time it was written, so Xcode and SwiftPM, which compare a source's time

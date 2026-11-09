@@ -86,7 +86,7 @@ if [ -d "$out" ]; then find "$out" -maxdepth 1 -type f -name '*.png' -delete; rm
 rm -rf .build/test-app.xcresult
 status=0
 TEST_RUNNER_FOLIO_NOTE_SCREENS="$out" TEST_RUNNER_FOLIO_NOTE_SCREENS_STRICT="${FOLIO_NOTE_SCREENS_STRICT:-}" \
-xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -parallel-testing-enabled YES -parallel-testing-worker-count 3 -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation || status=$?
+xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation || status=$?
 # -quiet leaves out why a test failed; the summary has each failure's message.
 if [ "$status" -ne 0 ] && [ -d .build/test-app.xcresult ]; then
   xcrun xcresulttool get test-results summary --path .build/test-app.xcresult --compact
@@ -101,12 +101,7 @@ run = """
 id=$(xcrun simctl list devices available | grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}')
 [ -n "$id" ] || { echo "no available iPad simulator" >&2; exit 1; }
 rm -rf .build/test-ipad.xcresult
-date
-xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" build-for-testing -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
-date
-xcrun simctl bootstatus "$id" -b
-date
-xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test-without-building -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
+xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
 # -quiet leaves out the tests themselves; the count shows they ran.
 date
 xcrun xcresulttool get test-results summary --path .build/test-ipad.xcresult --compact
