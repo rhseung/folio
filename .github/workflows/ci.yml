@@ -5,8 +5,7 @@ on:
     branches: [main]
   pull_request:
 
-# A newer push to the same branch or PR makes the older run moot. A cancelled job saves no cache: actions/cache saves
-# only after every step succeeded.
+# A newer push to the same branch or PR makes the older run moot. A cancelled job saves no cache, so none is cut short.
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
@@ -124,7 +123,8 @@ jobs:
       # One cache per task: each builds another platform or configuration into its own DerivedData. The index, logs
       # and test results are rebuilt by every run and aren't worth the download.
       - if: env.RUN == 'true'
-        uses: actions/cache@v6
+        id: cache
+        uses: actions/cache/restore@v6
         with:
           path: |
             .build/DerivedData
@@ -140,7 +140,19 @@ jobs:
       - if: env.RUN == 'true'
         uses: jdx/mise-action@v5
       - if: env.RUN == 'true'
+        id: run
         run: mise run ${{ matrix.task }}
+      # A key is saved once, so a run that failed to build would leave a cache without the dependencies. A failed test
+      # still saves, since the app was built: otherwise a red test-app would never get a cache.
+      - if: ${{ !cancelled() && env.RUN == 'true' && steps.cache.outputs.cache-hit != 'true' && (steps.run.outcome == 'success' || (steps.run.outcome == 'failure' && hashFiles('.build/DerivedData/Build/Products/*/Folio.app/**/Info.plist') != '')) }}
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            .build/DerivedData
+            !.build/DerivedData/Index.noindex
+            !.build/DerivedData/Logs
+            !.build/DerivedData/TestResults
+          key: ${{ steps.cache.outputs.cache-primary-key }}
       # `mise run note-screens -- <run ID>` takes these as the new references.
       - if: failure() && matrix.task == 'test-app'
         uses: actions/upload-artifact@v7
