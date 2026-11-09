@@ -141,6 +141,6 @@ depends = ["generate"]
 run = "xcodebuild -scheme Folio -configuration \"${FOLIO_CONFIGURATION:-Debug}\" -destination 'generic/platform=iOS Simulator' build -quiet -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation"
 
 [tasks.build-web]
-description = "Bundle AsciiMath conversion, code highlighting and the Claude panel math into app/resources/web"
+description = "Bundle the note page (KaTeX math, code highlighting, diagrams, note CSS) and the edit view's code highlighting into app/resources/web"
 dir = "web"
 run = ["npm ci --ignore-scripts --no-audit --no-fund", "npm run build"]

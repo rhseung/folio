@@ -218,8 +218,8 @@ struct CompletionMenuView: View {
                 .lineLimit(1)
             Spacer(minLength: Theme.Space.s)
             if let formula = item.preview,
-               let picture = NoteMath.picture(formula, syntax: item.previewAsciiMath ? .asciimath : .latex, display: false, size: NoteLook.body,
-                                              color: NoteLook.text, dark: scheme == .dark) {
+               let picture = NoteMath.shared.picture(formula, syntax: item.previewAsciiMath ? .asciimath : .latex, display: false, size: NoteLook.body,
+                                                     dark: scheme == .dark) {
                 Image(platformImage: picture.image)
                     .resizable()
                     .frame(width: min(picture.size.width, Self.width / 3), height: min(picture.size.height, Self.rowHeight - Theme.Space.s))

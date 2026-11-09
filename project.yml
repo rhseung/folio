@@ -20,10 +20,6 @@ packages:
   swift-algorithms:
     url: https://github.com/apple/swift-algorithms
     from: 1.2.0
-  # Native TeX typesetting for the edit view's math bubble (AsciiMath is turned into TeX first, resources/web/native.js).
-  SwiftMath:
-    url: https://github.com/mgriebling/SwiftMath
-    exactVersion: 1.7.3
   # WhisperKit: Whisper on the device, for transcribing a whole recording where Korean and English mix (#99).
   ArgmaxOSS:
     url: https://github.com/argmaxinc/argmax-oss-swift
@@ -57,7 +53,6 @@ targets:
       - package: FolioAI
       - package: swift-algorithms
         product: Algorithms
-      - package: SwiftMath
       - package: ArgmaxOSS
         product: WhisperKit
     settings:
