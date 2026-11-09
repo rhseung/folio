@@ -186,28 +186,74 @@ struct QuickAddCorpusTests {
         #expect(r.courseRanges.map { String(line[$0]) } == ["그래프 이론"])
         #expect(r.kind == .lab && r.number == 3 && r.folderName == "Lab03")
         #expect(r.kindRange.map { String(line[$0]) } == "Lab 3")
-        #expect(QuickAdd.renumbered(line, at: r.kindRange!, kind: .homework, number: 4) == "그래프 이론 HW4 보고서 금")
+        #expect(reader.line(line, setting: .kind(.homework, 4)) == "그래프 이론 HW4 보고서 금")
+        #expect(reader.line("그래프 보고서", setting: .kind(.lab, 2)) == "그래프 보고서 Lab2")
         // A number inside the deadline or the course is not the assignment's.
         #expect(read("확통 보고서 11/20").kind == nil)
     }
 
-    /// A chip's pick holds while more of the title is typed, and gives way once the line reads that field anew.
-    @Test func aPickHoldsUntilTheLineReadsItsFieldAgain() {
-        var picks = QuickAddPicks()
-        let first = read("HW5 금")
-        picks.pickCourse(courses[3].id, over: first)
-        picks.pickDue(date("2026-10-30 12:00"), over: first)
-        let more = read("HW5 보고서 금")
-        picks.keep(over: more)
-        #expect(picks.applied(to: more).courseId == courses[3].id)
-        #expect(picks.applied(to: more).due == date("2026-10-30 12:00"))
-        let named = read("선대 HW5 보고서 금")
-        picks.keep(over: named)
-        #expect(picks.applied(to: named).courseId == courses[0].id)
-        #expect(picks.applied(to: named).due == date("2026-10-30 12:00"))
-        let redated = read("선대 HW5 보고서 월")
-        picks.keep(over: redated)
-        #expect(picks.isEmpty && picks.applied(to: redated).due == date("2026-10-26 23:59"))
+    var reader: QuickAdd.Reader { QuickAdd.Reader(courses: courses, codes: codes, now: now, calendar: calendar) }
+
+    /// A chip's pick goes into the line: the words read for it replaced, taken out, or added at the end.
+    @Test func aPickIsWrittenIntoTheLine() {
+        #expect(reader.line("선대 HW7 금", setting: .course(courses[1].id)) == "그래프 이론 HW7 금")
+        #expect(reader.line("HW7 금", setting: .course(courses[5].id)) == "HW7 금 운영체제")
+        #expect(reader.line("선대 HW7 금", setting: .due(date("2026-11-14 23:59"))) == "선대 HW7 11/14 23:59")
+        #expect(reader.line("선대 HW7 금 보고서 23:59", setting: .due(date("2026-11-14 18:00"))) == "선대 HW7 11/14 18:00 보고서")
+        #expect(reader.line("선대 HW7", setting: .due(date("2026-11-14 23:59"))) == "선대 HW7 11/14 23:59")
+        // A day `10/1` would read as next year's is written with its year.
+        #expect(reader.line("선대 HW7", setting: .due(date("2026-10-01 09:00"))) == "선대 HW7 2026/10/1 09:00")
+        #expect(reader.line("선대 HW7 금 23:59 보고서", setting: .due(nil)) == "선대 HW7 보고서")
+        #expect(reader.line("로봇 매주 금요일 23:59 퀴즈", setting: .due(date("2026-10-30 18:00"))) == "로봇 매주 10/30 18:00 퀴즈")
+        #expect(reader.line("로봇 매주 금요일 23:59 퀴즈", setting: .due(nil)) == "로봇 퀴즈")
+        #expect(reader.line("로봇 퀴즈 금요일 23:59", setting: .repeats(.weekly)) == "로봇 퀴즈 매주 금요일 23:59")
+        #expect(reader.line("로봇 퀴즈", setting: .repeats(.weekly)) == "로봇 퀴즈 매주")
+        #expect(reader.line("로봇 매주 금요일 퀴즈", setting: .repeats(nil)) == "로봇 금요일 퀴즈")
+        // A one-word title another course's title starts with reads as that course only typed whole.
+        let physics = Course(device: device, at: .now, title: "일반물리학실험", codes: [], number: "1101")
+        let wide = QuickAdd.Reader(courses: [physics] + courses, codes: codes, now: now, calendar: calendar)
+        #expect(wide.read(wide.line("HW1", setting: .course(courses[6].id))).courseId == courses[6].id)
+    }
+
+    static let titleWords = ["보고서", "HW3", "정리", "Lab2", "실험", "3장", "읽기", "1-10번", "초안", "까지", "오후"]
+    static let dueWords = ["금", "다음 주 수요일까지", "11/20 오후 3시", "내일 자정", "금 마감", "매주 금 23:59", "매주", "11월 3일 오전 9시", "모레 23:59"]
+    static let courseWords = ["", "선대", "그래프 이론", "컴네", "확률과 통계", "EC4207", "운체"]
+
+    /// Whatever the line, a value written into it reads back as that value, and nothing else it read changes.
+    @Test func aWrittenValueReadsBack() async {
+        let line = zip(Gen.int(in: 0...(Self.courseWords.count - 1)), Gen.int(in: 0...(Self.titleWords.count - 1)).array(of: 0...3),
+                       zip(Gen.int(in: -1...(Self.dueWords.count - 1)), Gen.int(in: 0...3)))
+        // A course, a deadline from yesterday to over a year ahead (or none), the repeat, a kind and number.
+        let value = zip(Gen.int(in: 0...3), Gen.int(in: 0...(courses.count - 1)), Gen.int(in: -1...(500 * 24 * 4)))
+        await propertyCheck(input: line, value) { line, value in
+            var words = line.1.map { Self.titleWords[$0] }
+            if line.2.0 >= 0 { words.insert(Self.dueWords[line.2.0], at: min(line.2.1, words.count)) }
+            let text = ([Self.courseWords[line.0]].filter { !$0.isEmpty } + words).joined(separator: " ")
+            let set: QuickAdd.Value
+            switch value.0 {
+            case 0: set = .course(courses[value.1].id)
+            case 1: set = .due(value.2 < 0 ? nil : calendar.date(byAdding: .minute, value: value.2 * 15, to: date("2026-10-21 00:00")))
+            case 2: set = .repeats(value.2 % 2 == 0 ? .weekly : nil)
+            default: set = .kind(AssignmentKind.allCases[value.1 % AssignmentKind.allCases.count], value.1 + 1)
+            }
+            let before = reader.read(text)
+            let after = reader.read(reader.line(text, setting: set))
+            switch set {
+            case let .course(id):
+                #expect(after.courseId == id, "\(text) → \(set)")
+                #expect(after.title == before.title && after.due == before.due && after.repeats == before.repeats, "\(text) → \(set)")
+            case let .due(due):
+                #expect(after.due == due, "\(text) → \(set)")
+                #expect(after.repeats == (due == nil ? nil : before.repeats), "\(text) → \(set)")
+                #expect(after.title == before.title && after.courseId == before.courseId, "\(text) → \(set)")
+            case let .repeats(repeats):
+                #expect(after.repeats == repeats, "\(text) → \(set)")
+                #expect(after.title == before.title && after.courseId == before.courseId && after.due == before.due, "\(text) → \(set)")
+            case let .kind(kind, number):
+                #expect(after.kind == kind && after.number == number, "\(text) → \(set)")
+                #expect(after.courseId == before.courseId && after.due == before.due, "\(text) → \(set)")
+            }
+        }
     }
 
     @Test func readsTheCorpus() {

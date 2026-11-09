@@ -17007,6 +17007,50 @@
         }
       }
     },
+    "quick-add.chip-course": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목"
+          }
+        }
+      }
+    },
+    "quick-add.chip-due": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마감"
+          }
+        }
+      }
+    },
+    "quick-add.chip-folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과제 번호"
+          }
+        }
+      }
+    },
+    "quick-add.chip-repeat": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "반복"
+          }
+        }
+      }
+    },
     "quick-add.clear-due": {
       "extractionState": "manual",
       "localizations": {

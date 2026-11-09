@@ -66,9 +66,10 @@ struct QuickAddField: View {
     /// fields (`Card`), since glass belongs only to the frame and what floats over it.
     private let floating: Bool
 
-    init(workspace: Workspace, fixedCourse: UUID? = nil, defaultCourse: UUID? = nil, focusOnAppear: Bool = false,
-         floating: Bool = false) {
-        _model = State(initialValue: QuickAddModel(workspace: workspace, fixedCourse: fixedCourse, defaultCourse: defaultCourse))
+    init(workspace: Workspace, fixedCourse: UUID? = nil, defaultCourse: UUID? = nil, showsEmptyChips: Bool = false,
+         focusOnAppear: Bool = false, floating: Bool = false) {
+        _model = State(initialValue: QuickAddModel(workspace: workspace, fixedCourse: fixedCourse, defaultCourse: defaultCourse,
+                                                   showsEmptyChips: showsEmptyChips))
         self.focusOnAppear = focusOnAppear
         self.floating = floating
     }
@@ -166,6 +167,12 @@ struct QuickAddField: View {
                 model.text += (model.text.isEmpty ? "" : " ") + word
                 try? await Task.sleep(for: .seconds(0.03))
             }
+            #if DEBUG && os(macOS)
+            if let pick = SnapshotDriver.shared.quickAddPick {
+                try? await Task.sleep(for: .seconds(1))
+                model.pickCourse(pick)
+            }
+            #endif
         }
     }
 
@@ -260,7 +267,7 @@ struct QuickAddChip: View {
             switch chip {
             case let .course(id): courseChip(id)
             case let .due(date): dueChip(date)
-            case .weekly: weeklyChip
+            case let .repeats(repeats): repeatsChip(repeats)
             case let .folder(name): folderChip(name)
             }
         }
@@ -287,6 +294,8 @@ struct QuickAddChip: View {
                     CourseMark(model.workspace, id, inline: true)
                     Text(title).foregroundStyle(accent.ink)
                 }
+            } else if model.isDimmed(chip) {
+                dimmed("book.closed", .quickAddChipCourse)
             } else {
                 label(fill: Theme.Palette.dangerFill) {
                     Image(systemName: "exclamationmark.circle")
@@ -303,19 +312,11 @@ struct QuickAddChip: View {
 
     private func dueChip(_ date: Date?) -> some View {
         Button { pickingDue = true } label: {
-            label(fill: Theme.Palette.readDue) {
-                Image(systemName: "clock")
-                if let date, let parsed = model.parsed, let text = model.due(parsed) {
-                    Text(text)
-                    if let left = model.left(date) {
-                        Text(left.text).foregroundStyle(left.overdue ? Theme.Palette.danger : Theme.Palette.readDueInk.opacity(Theme.Opacity.secondaryInk))
-                    }
-                } else {
-                    Text(.quickAddAddDue)
-                }
+            if model.isDimmed(chip) {
+                dimmed("clock", .quickAddChipDue)
+            } else {
+                dueLabel(date)
             }
-            .foregroundStyle(Theme.Palette.readDueInk)
-            .monospacedDigit()
         }
         .buttonStyle(.pointing(.plain))
         .popover(isPresented: $pickingDue, arrowEdge: .bottom) {
@@ -341,16 +342,40 @@ struct QuickAddChip: View {
         }
     }
 
-    private var weeklyChip: some View {
-        Menu {
-            Button { model.pickRepeats(.weekly) } label: { Label(String(localized: .quickAddWeekly), systemImage: "checkmark") }
-            Button(.quickAddNoRepeat) { model.pickRepeats(nil) }
-        } label: {
-            label(fill: Theme.Palette.readDue) {
-                Image(systemName: "repeat")
-                Text(.quickAddWeekly)
+    private func dueLabel(_ date: Date?) -> some View {
+        label(fill: Theme.Palette.readDue) {
+            Image(systemName: "clock")
+            if let date, let parsed = model.parsed, let text = model.due(parsed) {
+                Text(text)
+                if let left = model.left(date) {
+                    Text(left.text).foregroundStyle(left.overdue ? Theme.Palette.danger : Theme.Palette.readDueInk.opacity(Theme.Opacity.secondaryInk))
+                }
+            } else {
+                Text(.quickAddAddDue)
             }
-            .foregroundStyle(Theme.Palette.readDueInk)
+        }
+        .foregroundStyle(Theme.Palette.readDueInk)
+        .monospacedDigit()
+    }
+
+    private func repeatsChip(_ repeats: AssignmentRepeat?) -> some View {
+        Menu {
+            Button { model.pickRepeats(.weekly) } label: {
+                if repeats == .weekly { Label(String(localized: .quickAddWeekly), systemImage: "checkmark") } else { Text(.quickAddWeekly) }
+            }
+            Button { model.pickRepeats(nil) } label: {
+                if repeats == nil { Label(String(localized: .quickAddNoRepeat), systemImage: "checkmark") } else { Text(.quickAddNoRepeat) }
+            }
+        } label: {
+            if model.isDimmed(chip) {
+                dimmed("repeat", .quickAddChipRepeat)
+            } else {
+                label(fill: Theme.Palette.readDue) {
+                    Image(systemName: "repeat")
+                    Text(.quickAddWeekly)
+                }
+                .foregroundStyle(Theme.Palette.readDueInk)
+            }
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)
@@ -358,7 +383,7 @@ struct QuickAddChip: View {
         .fixedSize()
     }
 
-    private func folderChip(_ name: String) -> some View {
+    private func folderChip(_ name: String?) -> some View {
         let current = model.kind
         return Menu {
             Section(String(localized: .quickAddKind)) {
@@ -376,16 +401,30 @@ struct QuickAddChip: View {
                 }
             }
         } label: {
-            label(fill: Theme.Palette.readFolder) {
-                Image(systemName: "folder")
-                Text(verbatim: name)
+            if let name {
+                label(fill: Theme.Palette.readFolder) {
+                    Image(systemName: "folder")
+                    Text(verbatim: name)
+                }
+                .foregroundStyle(Theme.Palette.readFolderInk)
+            } else {
+                dimmed("folder", .quickAddChipFolder)
             }
-            .foregroundStyle(Theme.Palette.readFolderInk)
         }
         .menuStyle(.button)
         .menuIndicator(.hidden)
         .buttonStyle(.plain).pointingHand()
         .fixedSize()
+    }
+
+    /// A chip with nothing read yet: what the line can read, in a quiet wash of the text color that reads the same on
+    /// the paper card and the popover's glass. Still a button, so a value can be picked by touch.
+    private func dimmed(_ icon: String, _ title: LocalizedStringResource) -> some View {
+        label(fill: Theme.Palette.text.opacity(Theme.Opacity.wash)) {
+            Image(systemName: icon)
+            Text(title)
+        }
+        .foregroundStyle(Theme.Palette.textTertiary)
     }
 
     private func label<Content: View>(fill: Color, @ViewBuilder _ content: () -> Content) -> some View {

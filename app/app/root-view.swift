@@ -261,7 +261,7 @@ struct RootView: View {
                 return
             }
             if SnapshotDriver.quickAdd, let course = workspace.currentCourses.first {
-                await SnapshotDriver.shared.runQuickAdd(open: { open($0) }, course: course.id,
+                await SnapshotDriver.shared.runQuickAdd(open: { open($0) }, course: course.id, other: workspace.currentCourses.dropFirst().first?.id,
                                                         named: String(course.title.split(separator: " ").first ?? ""))
                 return
             }
@@ -530,7 +530,7 @@ struct RootView: View {
             Button(.rootQuickAdd, systemImage: "plus") { quickAdding = true }
                 .help(Text(.rootQuickAddHelp))
                 .popover(isPresented: $quickAdding, arrowEdge: .bottom) {
-                    QuickAddField(workspace: workspace, defaultCourse: navigator.current.course, focusOnAppear: true, floating: true).padding(Theme.Space.l).frame(width: 440)
+                    QuickAddField(workspace: workspace, defaultCourse: navigator.current.course, showsEmptyChips: true, focusOnAppear: true, floating: true).padding(Theme.Space.l).frame(width: 440)
                         // A popover proposes the height it opened with; at its own height it grows as the line wraps.
                         .fixedSize(horizontal: false, vertical: true)
                 }

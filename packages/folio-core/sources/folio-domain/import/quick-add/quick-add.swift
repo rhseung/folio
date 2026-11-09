@@ -15,6 +15,8 @@ public struct QuickAdd: Equatable, Sendable {
     /// Every part of the line that was read, and what it reads as; the title is the words in none of them. The field's
     /// marks and the chips under it read these.
     public var spans: [Span] = []
+    /// Where `매주` sits, inside the deadline's spans; the repeat chip takes it out of the line.
+    var weeklyRanges: [Range<String.Index>] = []
 
     public struct Span: Equatable, Sendable {
         public enum Field: Equatable, Sendable {
@@ -77,11 +79,5 @@ public struct QuickAdd: Equatable, Sendable {
         detect(&words)
         markEndings(&words)
         return resolve(words, line: line, course: course, courseSpan: courseSpan, now: now, calendar: calendar)
-    }
-
-    /// The line with its kind and number (`HW5`) changed to another, as the number chip picks it. The title is what is
-    /// typed, so the folder name changes in the line rather than beside it.
-    public static func renumbered(_ line: String, at range: Range<String.Index>, kind: AssignmentKind, number: Int) -> String {
-        line.replacingCharacters(in: range, with: "\(kind.rawValue)\(number)")
     }
 }
