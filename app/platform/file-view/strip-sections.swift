@@ -270,8 +270,11 @@ struct StripPage: View {
     let start: ((_ page: Int) -> Void)?
 
     var body: some View {
+        // With no gutter the page sits in the column's middle: a slide is narrower than the lecture column, and
+        // leading it left the right margin wide. Beside a gutter it keeps to the line.
         PageThumbnail(thumbnails: controller.thumbnails, page: page, current: controller.page + 1 == page, picked: picked)
             .padding(.leading, gutter ? StripMetrics.gutter : Theme.Space.xs)
+            .frame(maxWidth: .infinity, alignment: gutter ? .leading : .center)
             .padding(.bottom, Theme.Space.s)
             .contentShape(.rect)
             #if os(macOS)

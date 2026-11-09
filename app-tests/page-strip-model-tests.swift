@@ -192,6 +192,20 @@ struct PageStripModelTests {
         #expect(model.choices.isEmpty && model.chosen == nil && !model.canSave)
     }
 
+    /// The line's gutter is kept only once a class has pages here: not on a lecture file with none, nor while its first
+    /// range is picked, so the pages don't shift under the pointer; nor on a file with no progress at all.
+    @Test func theGutterWaitsForAClassesPages() throws {
+        let model = model()
+        #expect(model.picks && !model.railed)
+        model.press(9)
+        model.extend(to: 12)
+        #expect(!model.railed)
+        model.commit()
+        #expect(model.railed)
+        let other = try #require(file.materials.first { $0.role != .lecture && !$0.isFolder })
+        #expect(!self.model(other.id).railed)
+    }
+
     @Test func todaysClassAloneIsOfferedWithoutAMenu() {
         link(earlier, 1...4)
         let model = model()
