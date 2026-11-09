@@ -122,9 +122,14 @@ import UIKit
         let job = queue.removeFirst(), turn = UUID(), started = ContinuousClock.now
         current = turn
         Task {
-            let picture = await page.draw(job.source, syntax: job.syntax, display: job.display, size: job.size, dark: job.dark)
+            let result = await page.draw(job.source, syntax: job.syntax, display: job.display, size: job.size, dark: job.dark)
             guard current == turn else { return }
-            if let picture { cache[job.key] = picture } else { failed.insert(job.key) }
+            // Only what KaTeX can't read is given up on; a page that ended or a snapshot that failed is asked again.
+            switch result {
+            case .picture(let picture): cache[job.key] = picture
+            case .unreadable: failed.insert(job.key)
+            case .failed: break
+            }
             let now = ContinuousClock.now
             lastPicture = now - started
             if firstPicture == nil, let made { firstPicture = now - made }
@@ -219,6 +224,15 @@ import UIKit
         load()
     }
 
+    // Loading a string hardly fails, but if it did every formula would wait on the page for good.
+    func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: any Error) {
+        if navigation === loading { load() }
+    }
+
+    func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: any Error) {
+        if navigation === loading { load() }
+    }
+
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         guard navigation === loading else { return }
         loading = nil
@@ -227,7 +241,14 @@ import UIKit
         onLoad = []
     }
 
-    func draw(_ source: String, syntax: MathSyntax, display: Bool, size: CGFloat, dark: Bool) async -> NoteMath.Picture? {
+    enum Drawn {
+        case picture(NoteMath.Picture)
+        /// KaTeX can't read it; drawing it again gives the same.
+        case unreadable
+        case failed
+    }
+
+    func draw(_ source: String, syntax: MathSyntax, display: Bool, size: CGFloat, dark: Bool) async -> Drawn {
         if !loaded { await withCheckedContinuation { onLoad.append($0) } }
         let escaped = source.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;").replacingOccurrences(of: ">", with: "&gt;")
         let html = display ? "<div class=\"math display\">\(escaped)</div>" : "<span class=\"math\">\(escaped)</span>"
@@ -255,8 +276,9 @@ import UIKit
             """
         let color = String(format: "#%06X", dark ? Swatch.text.dark : Swatch.text.light)
         let arguments: [String: Any] = ["html": html, "syntax": syntax.rawValue, "size": Double(size), "color": color]
-        guard let found = try? await web.callAsyncJavaScript(script, arguments: arguments, contentWorld: .defaultClient) as? [NSNumber],
-              found.count == 4 else { return nil }
+        let answer: Any?
+        do { answer = try await web.callAsyncJavaScript(script, arguments: arguments, contentWorld: .defaultClient) } catch { return .failed }
+        guard let found = answer as? [NSNumber], found.count == 4 else { return .unreadable }
         let ink = CGRect(x: found[0].doubleValue, y: found[1].doubleValue, width: found[2].doubleValue, height: found[3].doubleValue)
         // Glyphs reach a little past their boxes (an italic f, a slanted integral), so a quarter em of room around
         // them, in whole points so the picture isn't stretched into its bounds.
@@ -264,13 +286,13 @@ import UIKit
         let rect = CGRect(x: floor(ink.minX) - room, y: floor(ink.minY) - room, width: 0, height: 0)
             .union(CGRect(x: ceil(ink.maxX) + room, y: ceil(ink.maxY) + room, width: 0, height: 0))
             .intersection(web.bounds)
-        guard rect.width > 0, rect.height > 0 else { return nil }
+        guard rect.width > 0, rect.height > 0 else { return .unreadable }
         let snapshot = WKSnapshotConfiguration()
         snapshot.rect = rect
         // The page is drawn afresh for the picture; waiting for the screen would wait on a window that may not show.
         snapshot.afterScreenUpdates = false
-        guard let image = try? await web.takeSnapshot(configuration: snapshot) else { return nil }
-        return NoteMath.Picture(image: image, size: rect.size)
+        guard let image = try? await web.takeSnapshot(configuration: snapshot) else { return .failed }
+        return .picture(NoteMath.Picture(image: image, size: rect.size))
     }
 }
 
