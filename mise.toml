@@ -70,7 +70,7 @@ run = [
 [tasks.build-mac]
 description = "Build the app for macOS"
 depends = ["generate"]
-run = "xcodebuild -scheme Folio -destination 'platform=macOS' build -quiet -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation"
+run = "xcodebuild -scheme Folio -destination 'platform=macOS' build -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation"
 
 [tasks.test-app]
 description = "Run the app's tests on macOS: screen models, and the note views against their reference screens"
@@ -86,7 +86,7 @@ if [ -d "$out" ]; then find "$out" -maxdepth 1 -type f -name '*.png' -delete; rm
 rm -rf .build/test-app.xcresult
 status=0
 TEST_RUNNER_FOLIO_NOTE_SCREENS="$out" TEST_RUNNER_FOLIO_NOTE_SCREENS_STRICT="${FOLIO_NOTE_SCREENS_STRICT:-}" \
-xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation || status=$?
+xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation || status=$?
 # -quiet leaves out why a test failed; the summary has each failure's message.
 if [ "$status" -ne 0 ] && [ -d .build/test-app.xcresult ]; then
   xcrun xcresulttool get test-results summary --path .build/test-app.xcresult --compact
@@ -104,9 +104,9 @@ rm -rf .build/test-ipad.xcresult
 # A simulator that hasn't run yet takes minutes to boot, so it boots while the tests build.
 xcrun simctl bootstatus "$id" -b >/dev/null &
 boot=$!
-xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" build-for-testing -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
+xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" build-for-testing -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
 wait "$boot"
-xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test-without-building -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
+xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test-without-building -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
 # -quiet leaves out the tests themselves; the count shows they ran.
 xcrun xcresulttool get test-results summary --path .build/test-ipad.xcresult --compact
 """
@@ -126,7 +126,7 @@ case "$dir" in /*) ;; *) dir="$PWD/$dir" ;; esac
 TEST_RUNNER_FOLIO_RENDER_DIR="$dir" TEST_RUNNER_TZ=Asia/Seoul \
 TEST_RUNNER_FOLIO_RENDER_SIZES="${FOLIO_RENDER_SIZES:-}" TEST_RUNNER_FOLIO_RENDER_SCREENS="${FOLIO_RENDER_SCREENS:-}" \
 TEST_RUNNER_FOLIO_RENDER_SCENARIOS="${FOLIO_RENDER_SCENARIOS:-}" \
-xcodebuild -scheme Folio -destination 'platform=macOS,arch=arm64' test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation \
+xcodebuild -scheme Folio -destination 'platform=macOS,arch=arm64' test -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation \
   -only-testing:FolioTests/ScreenRenders -testLanguage ko -testRegion KR
 echo "$dir"
 """
@@ -136,7 +136,7 @@ description = "Build a Release app and install it to /Applications"
 depends = ["generate"]
 # A running copy is quit first so it is replaced whole.
 run = """
-xcodebuild -scheme Folio -configuration Release -destination 'platform=macOS' build -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
+xcodebuild -scheme Folio -configuration Release -destination 'platform=macOS' build -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
 osascript -e 'quit app "Folio"' 2>/dev/null || true
 # The app was Coursebook.app before it was renamed; the old copy goes so only one remains.
 rm -rf /Applications/Coursebook.app /Applications/Folio.app
@@ -148,7 +148,7 @@ description = "Build the app for the iPad simulator (FOLIO_CONFIGURATION=Release
 depends = ["generate"]
 # A generic destination builds every simulator architecture outside Debug; Intel's adds a second full compile of the
 # same code and nothing an iPad runs.
-run = "xcodebuild -scheme Folio -configuration \"${FOLIO_CONFIGURATION:-Debug}\" -destination 'generic/platform=iOS Simulator' ARCHS=arm64 build -quiet -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation"
+run = "xcodebuild -scheme Folio -configuration \"${FOLIO_CONFIGURATION:-Debug}\" -destination 'generic/platform=iOS Simulator' ARCHS=arm64 build -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation"
 
 [tasks.build-web]
 description = "Bundle the note page (KaTeX math, code highlighting, diagrams, note CSS) and the edit view's code highlighting into app/resources/web"
