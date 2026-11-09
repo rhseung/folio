@@ -136,4 +136,13 @@ struct NoteMathTests {
         #expect(try width(#"\textbf{a b}"#) > width(#"\textbf{ab}"#))
         #expect(try width(#"\textit{강조}"#) > 24)
     }
+
+    /// The edit view reads a formula with the preview's `toTeX`, so both see the same TeX for either syntax.
+    @Test func bothViewsReadTheFormulaAlike() throws {
+        let source = ##"min{|F|: G - F " separates " x, y} = max{"# edge-disjoint " x,y- "paths"}"##
+        let tex = NoteScripts.tex(source, .asciimath)
+        #expect(tex.contains(##"\text{# edge-disjoint }"##) && tex.contains(##"\max"##))
+        #expect(NoteMath.picture(source, syntax: .asciimath, display: false, size: 16, color: .black, dark: false) != nil)
+        #expect(NoteScripts.tex(#"\frac{a}{b}"#, .latex) == #"\frac{a}{b}"#)
+    }
 }

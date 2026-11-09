@@ -52,6 +52,12 @@ struct MathTests {
             "<p>집합 <span class=\"math\">\\{x_1, x_2\\}</span> 과 <span class=\"math\">a_1 * b_2</span></p>\n")
     }
 
+    /// AsciiMath's quotes, `#`, bars and braces reach the page as written; the preview reads the span's text.
+    @Test func asciiMathSurvivesMarkdown() {
+        #expect(html(##"$min{|F|: G - F " separates " x, y} = max{"# edge-disjoint " x,y- "paths"}$"##) ==
+            ##"<p><span class="math">min{|F|: G - F &quot; separates &quot; x, y} = max{&quot;# edge-disjoint &quot; x,y- &quot;paths&quot;}</span></p>"## + "\n")
+    }
+
     @Test func displayMathSpansLines() {
         #expect(html("$$\n\\begin{aligned}\na &= b \\\\\nc &= d\n\\end{aligned}\n$$") ==
             "<div class=\"math display\">\\begin{aligned}\na &amp;= b \\\\\nc &amp;= d\n\\end{aligned}</div>\n")
