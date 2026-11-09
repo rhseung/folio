@@ -223,6 +223,32 @@ struct NotePreviewTests {
         #expect(try await rig.js("return document.querySelectorAll('.katex').length") as? Int == 1)
     }
 
+    /// A bar closes the bar opened before it in the same brackets; asciimath2tex alone paired `|X| >= |I|` as one
+    /// `\left| X | >= \right|` and read `|:` in `|F|:` as a bracket that ate the colon. Read from the TeX KaTeX keeps
+    /// beside what it drew, which is what the edit view's bubble draws too (`NoteMath`).
+    @Test func asciiMathBarsPairInOrder() async throws {
+        let cases: [(String, String)] = [
+            (#"|(bigcup_(i in I) A_i) cap (bigcup_(i in J) B_i)| >= |I| + |J| - m"#,
+             #"\left \lvert \left ( \bigcup_{i \in I} A_{i} \right ) \cap \left ( \bigcup_{i \in J} B_{i} \right ) \right \rvert \ge \left \lvert I \right \rvert + \left \lvert J \right \rvert - m"#),
+            (#"|det(A)| = |lambda_1| |lambda_2|"#,
+             #"\left \lvert \det{\left ( A \right )} \right \rvert = \left \lvert \lambda_{1} \right \rvert \left \lvert \lambda_{2} \right \rvert"#),
+            (#"min{|F|: G}"#, #"\min \left \lbrace \left \lvert F \right \rvert : G \right \rbrace"#),
+            (#"||x|| + |y|"#, #"\left \lvert \left \lvert x \right \rvert \right \rvert + \left \lvert y \right \rvert"#),
+            // As before: a norm, explicit bars, a lone bar and AsciiMath's tokens with a bar in them.
+            (#"||x||"#, #"\left \lvert \left \lvert x \right \rvert \right \rvert"#),
+            (#"|:x:|"#, #"\left \lvert x \right \rvert"#),
+            (#"a|b"#, "a | b"),
+            (#"{x | x > 0}"#, #"\left \lbrace x \mid x > 0 \right \rbrace"#),
+            (#"x |-> y"#, #"x \mapsto y"#),
+            (#""a|b" + |x|"#, #"\text{a|b} + \left \lvert x \right \rvert"#),
+        ]
+        let rig = PreviewRig(cases.map { "$\($0.0)$" }.joined(separator: "\n\n"), math: .asciimath)
+        defer { rig.close() }
+        await rig.settle()
+        let read = try await rig.js("return [...document.querySelectorAll('.math')].map(m => m.querySelector('annotation')?.textContent ?? '')") as? [String]
+        #expect(read == cases.map(\.1))
+    }
+
     /// The page loads the note's own pictures and nothing from outside.
     @Test func picturesComeFromTheNotesFolder() async throws {
         let folder = FileManager.default.temporaryDirectory.appending(path: "preview-\(UUID().uuidString)")

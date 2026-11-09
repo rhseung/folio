@@ -897,6 +897,8 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
     override func becomeFirstResponder() -> Bool {
         defer { DispatchQueue.main.async { [weak self] in self?.updateHint() } }
+        // The math page may have left with another editor's window; the one being typed in shows the math now.
+        NoteMath.shared.host(in: self)
         return super.becomeFirstResponder()
     }
 
@@ -958,6 +960,14 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         bubble = view
     }
 
+    /// The math is drawn after the caret came to it (`NoteMath`), and the caret may have moved on by then.
+    private func redrawBubble() { updateBubble() }
+
+    override func viewDidMoveToWindow() {
+        super.viewDidMoveToWindow()
+        if window != nil { NoteMath.shared.host(in: self, warm: true) }
+    }
+
     /// What the caret is in: inline math or an image link it's past the start of, or any line of a math block.
     private func rendering(at caret: Int, in storage: NSTextStorage) -> (image: NSImage, size: CGSize, span: NSRange)? {
         guard let styler, storage.length > 0 else { return nil }
@@ -965,7 +975,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         var span = NSRange()
         if caret > 0 {
             if let tex = storage.attribute(.noteMath, at: caret - 1, longestEffectiveRange: &span, in: all) as? String, caret > span.location,
-               let picture = NoteMath.picture(tex, syntax: styler.syntax, display: false, size: NoteLook.body * 1.05, color: NoteLook.text, dark: styler.dark) {
+               let picture = NoteMath.shared.picture(tex, syntax: styler.syntax, display: false, size: NoteLook.body, dark: styler.dark, ready: redrawBubble) {
                 return (picture.image, picture.size, span)
             }
             if let source = storage.attribute(.noteImage, at: caret - 1, longestEffectiveRange: &span, in: all) as? String, caret > span.location,
@@ -978,7 +988,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         }
         let at = min(caret, storage.length - 1)
         if let tex = storage.attribute(.noteMathBlock, at: at, longestEffectiveRange: &span, in: all) as? String,
-           let picture = NoteMath.picture(tex, syntax: styler.syntax, display: true, size: NoteLook.body * 1.1, color: NoteLook.text, dark: styler.dark) {
+           let picture = NoteMath.shared.picture(tex, syntax: styler.syntax, display: true, size: NoteLook.body, dark: styler.dark, ready: redrawBubble) {
             return (picture.image, picture.size, span)
         }
         return nil
@@ -1220,6 +1230,13 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
     override init() {
         super.init()
         delegate = self
+    }
+
+    // Nothing shows math on the iPad yet (the bubble and the completion menu are the Mac's), but when it does it draws
+    // it the Mac's way, in this view's window.
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window != nil { NoteMath.shared.host(in: self) }
     }
 
     required init?(coder: NSCoder) { fatalError() }

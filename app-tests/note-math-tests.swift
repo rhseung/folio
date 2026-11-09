@@ -1,170 +1,130 @@
 import AppKit
 import FolioDomain
+import FolioMarkdown
 import Foundation
-import SwiftMath
 import Testing
 @testable import Folio
 
-/// Math drawn by SwiftMath for the edit view's bubble (`NoteMath`): the whole formula's ink, commands SwiftMath lacks,
-/// double-struck capitals and text inside math.
+/// Math for the edit view's bubble and completion menu (`NoteMath`), drawn by the preview's KaTeX in a hidden page:
+/// every command the menu offers draws, the formulas that came out otherwise than in the preview, the whole ink, the
+/// appearance's color, and how long a picture takes.
 @MainActor @Suite(.serialized)
 struct NoteMathTests {
-    @Test func mathKeepsInkThatLeavesItsBox() throws {
-        func ink(_ image: NSImage) throws -> CGSize {
-            let scale: CGFloat = 2, pad: CGFloat = 40
-            let w = Int((image.size.width + 2 * pad) * scale), h = Int((image.size.height + 2 * pad) * scale)
-            let rep = try #require(NSBitmapImageRep(bitmapDataPlanes: nil, pixelsWide: w, pixelsHigh: h, bitsPerSample: 8, samplesPerPixel: 4,
-                                                    hasAlpha: true, isPlanar: false, colorSpaceName: .deviceRGB, bytesPerRow: 0, bitsPerPixel: 0))
-            rep.size = NSSize(width: CGFloat(w) / scale, height: CGFloat(h) / scale)
-            NSGraphicsContext.saveGraphicsState()
-            NSGraphicsContext.current = NSGraphicsContext(bitmapImageRep: rep)
-            image.draw(in: NSRect(origin: CGPoint(x: pad, y: pad), size: image.size))
-            NSGraphicsContext.restoreGraphicsState()
-            var box = CGRect.null
-            for x in 0..<w { for y in 0..<h where (rep.colorAt(x: x, y: y)?.alphaComponent ?? 0) > 0 { box = box.union(CGRect(x: x, y: y, width: 1, height: 1)) } }
-            return box.size
+    /// Carries the page as the edit view does, in a window nobody sees.
+    static let window: NSWindow = {
+        let window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: 400, height: 300), styleMask: [.borderless],
+                              backing: .buffered, defer: false)
+        window.orderBack(nil)
+        return window
+    }()
+
+    /// The picture once drawn; nil when it fails or doesn't come in time.
+    func picture(_ source: String, _ syntax: MathSyntax = .latex, display: Bool = false, dark: Bool = false,
+                 by math: NoteMath = .shared) async -> NoteMath.Picture? {
+        math.host(in: Self.window.contentView!)
+        var done = false
+        if let hit = math.picture(source, syntax: syntax, display: display, size: 16, dark: dark, ready: { done = true }) { return hit }
+        let clock = ContinuousClock(), until = clock.now + .seconds(20)
+        while !done, clock.now < until {
+            // Another test's editor may have taken the page into its window.
+            math.host(in: Self.window.contentView!)
+            try? await Task.sleep(for: .milliseconds(20))
         }
-        for tex in [#"G - T"#, #"\bar S"#, #"\|T\| \ge \|\kappa\|"#, #"f"#] {
-            let picture = try #require(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false))
-            // SwiftMath's own picture with room on every side: all the ink the formula has.
-            let whole = MTMathImage(latex: tex, fontSize: 16, textColor: .black, labelMode: .text)
-            whole.contentInsets = NSEdgeInsets(top: 16, left: 16, bottom: 16, right: 16)
-            let reference = try #require(whole.asImage().1)
-            let (got, want) = (try ink(picture.image), try ink(reference))
-            // A pixel either way is antialiasing: the two are drawn at different fractions of a point.
-            #expect(abs(got.width - want.width) <= 1 && abs(got.height - want.height) <= 1, "\(tex): \(got) vs \(want)")
+        return math.picture(source, syntax: syntax, display: display, size: 16, dark: dark)
+    }
+
+    /// The first picture waits for a web process and the page; later ones only for KaTeX and the snapshot. A new
+    /// renderer, as the app's is when its first editor opens, so the first is measured from cold. Printed for the PR.
+    @Test func picturesComeQuickly() async throws {
+        let math = NoteMath(), clock = ContinuousClock()
+        var start = clock.now
+        #expect(await picture(#"\sum_{k=1}^{n} k = \frac{n(n+1)}{2}"#, by: math) != nil)
+        let cold = clock.now - start
+        var warm: [Duration] = []
+        for tex in [#"\int_0^1 x^2 \, dx = \frac{1}{3}"#, #"\underbrace{a + b}_{n}"#, #"\mathbb{R}^n \to \mathbb{R}"#, "x^2"] {
+            start = clock.now
+            #expect(await picture(tex, by: math) != nil)
+            warm.append(clock.now - start)
+        }
+        print("NoteMath timing: first picture \(cold) (page made to picture \(math.firstPicture.map { "\($0)" } ?? "-")), then \(warm)")
+        #expect(warm.allSatisfy { $0 < .seconds(1) }, "\(warm)")
+    }
+
+    /// Whatever the menu offers draws in the bubble too, as it does in the preview: with SwiftMath a fifth didn't.
+    @Test func everyOfferedCommandDraws() async throws {
+        for command in TeXCommands.all where !["left", "right"].contains(command.name) {
+            #expect(await picture(command.sample) != nil, "\(command.sample)")
+        }
+        #expect(await picture(#"\left( \frac{a}{b} \right)"#) != nil)
+        for environment in TeXCommands.environments {
+            let body = environment.hasPrefix("equation") ? "a = b" : #"a & b \\ c & d"#
+            let tex = "\\begin{\(environment)} \(body) \\end{\(environment)}"
+            #expect(await picture(tex, display: true) != nil, "\(tex)")
+        }
+        #expect(await picture(#"\notacommand{x}"#) == nil)
+    }
+
+    /// Formulas the bubble drew otherwise than the preview, or not at all (#389).
+    @Test func drawsWhatThePreviewDraws() async throws {
+        let cases: [(String, MathSyntax, Bool)] = [
+            ("ubrace(abs(R cap {a_1,...,a_m}))_(m - absI)", .asciimath, false),
+            (##"min{|F|: G - F " separates " x, y} = max{"# edge-disjoint " x,y- "paths"}"##, .asciimath, false),
+            ("|(bigcup_(i in I) A_i) cap (bigcup_(i in J) B_i)| >= |I| + |J| - m", .asciimath, true),
+            (#"\overbrace{a + b}^{n} \cancel{x} \boxed{y} \boldsymbol{v} \underset{n}{\lim}"#, .latex, false),
+            (#"\text{과제 #3, 5% 이내, A & B}"#, .latex, false),
+        ]
+        for (source, syntax, display) in cases {
+            #expect(await picture(source, syntax, display: display) != nil, "\(source)")
+        }
+        // The brace takes room under the formula: the picture is taller than the formula without it.
+        let braced = try #require(await picture(#"\underbrace{a + b}_{n}"#))
+        let plain = try #require(await picture(#"{a + b}_{n}"#))
+        #expect(braced.size.height > plain.size.height + 4)
+        // The brace is a 400em picture its box clips; measured whole, the picture ran the page's width.
+        #expect(braced.size.width < plain.size.width + 16, "\(braced.size) vs \(plain.size)")
+    }
+
+    /// The picture holds all the ink: none touches its edge, so an italic overhang or a tall accent isn't cut.
+    @Test func picturesKeepTheirInk() async throws {
+        for tex in [#"G - T"#, #"\bar S"#, #"\int_0^1 f"#, #"\hat{A}^{T}"#, #"\sqrt{\frac{a}{b}}"#] {
+            let picture = try #require(await picture(tex), "\(tex)")
+            let pixels = try Pixels(picture.image)
+            #expect(pixels.inked > 0, "\(tex)")
+            #expect(pixels.edgeInk == 0, "\(tex): \(pixels.edgeInk) inked pixels on the edge")
         }
     }
 
-    /// SwiftMath colors a stretched delimiter, a fraction's bar and a root through the current graphics context, not
-    /// the one it draws into; with none current they came out black, unseen on a dark bubble.
-    @Test func darkMathDrawsEveryPartInItsColor() throws {
-        for (source, syntax) in [("det(A^-1) = 1/det(A)", MathSyntax.asciimath), ("rank(AB) <= rank(A) < n => AB", .asciimath),
-                                 (#"\left( \frac{a}{b} \right) + \sqrt{x}"#, .latex)] {
-            let picture = try #require(NoteMath.picture(source, syntax: syntax, display: false, size: 16, color: NoteLook.text, dark: true))
-            let image = try #require(picture.image.cgImage(forProposedRect: nil, context: nil, hints: nil))
-            let (w, h) = (image.width, image.height)
+    /// Drawn in the note's text color for the appearance asked for, not the page's.
+    @Test func inkFollowsTheAppearance() async throws {
+        for dark in [false, true] {
+            let picture = try #require(await picture(#"\left( \frac{a}{b} \right) + \sqrt{x}"#, dark: dark))
+            let pixels = try Pixels(picture.image)
+            #expect(pixels.inked > 0)
+            if dark { #expect(pixels.darkInk == 0, "\(pixels.darkInk) dark of \(pixels.inked)") } else { #expect(pixels.lightInk == 0, "\(pixels.lightInk) light of \(pixels.inked)") }
+        }
+    }
+
+    private struct Pixels {
+        var inked = 0, edgeInk = 0, darkInk = 0, lightInk = 0
+
+        init(_ image: NSImage) throws {
+            let cg = try #require(image.cgImage(forProposedRect: nil, context: nil, hints: nil))
+            let (w, h) = (cg.width, cg.height)
             var bytes = [UInt8](repeating: 0, count: w * h * 4)
             let context = try #require(CGContext(data: &bytes, width: w, height: h, bitsPerComponent: 8, bytesPerRow: w * 4,
                                                  space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
-            context.draw(image, in: CGRect(x: 0, y: 0, width: w, height: h))
-            var ink = 0, dark = 0
-            for i in stride(from: 0, to: bytes.count, by: 4) where bytes[i + 3] > 128 {
-                ink += 1
-                // Premultiplied: a light pixel's brightest channel is close to its alpha.
-                if Double(max(bytes[i], bytes[i + 1], bytes[i + 2])) < 0.5 * Double(bytes[i + 3]) { dark += 1 }
-            }
-            #expect(ink > 0 && dark == 0, "\(source): \(dark) dark of \(ink) inked pixels")
-        }
-    }
-
-    @Test func everydayCommandsSwiftMathLacksStillDraw() throws {
-        for tex in [#"0, \dots, n-1"#, #"i \bmod n"#, #"a \equiv b \pmod{n}"#, #"a \mod n"#, #"\operatorname{rank} A"#,
-                    #"p \implies q"#, #"q \impliedby p"#, #"A \subsetneq B"#, #"a \nmid b"#, #"\therefore x"#, #"\blacksquare"#,
-                    #"\square"#, #"\varnothing"#, #"\lvert x \rvert"#, #"\iint f"#, #"\dfrac{1}{2}"#, #"\bigl( x \bigr)"#,
-                    #"\boxed{x}"#, #"a \xrightarrow{f} b"#, #"\overset{?}{=}"#, #"a \not= b"#, #"a \lt b"#,
-                    #"\left\lvert x \right\rvert"#, #"\left\lVert x \right\rVert"#, #"\lVert x \rVert"#] {
-            #expect(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false) != nil, "\(tex)")
-        }
-        #expect(NoteMath.picture(#"\notacommand{x}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false) == nil)
-    }
-
-    @Test func doubleStruckCapitalsUseTheAMSFont() throws {
-        func fonts(_ display: MTDisplay) -> [String] {
-            if let line = display as? MTCTLineDisplay {
-                return (CTLineGetGlyphRuns(line.line) as? [CTRun] ?? []).map {
-                    let attributes = CTRunGetAttributes($0) as NSDictionary
-                    return CTFontCopyPostScriptName(attributes[kCTFontAttributeName] as! CTFont) as String
+            context.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+            for y in 0..<h {
+                for x in 0..<w {
+                    let i = (y * w + x) * 4
+                    guard bytes[i + 3] > 128 else { continue }
+                    inked += 1
+                    if x == 0 || y == 0 || x == w - 1 || y == h - 1 { edgeInk += 1 }
+                    // Premultiplied: a light pixel's brightest channel is close to its alpha.
+                    let bright = Double(max(bytes[i], bytes[i + 1], bytes[i + 2])) / Double(bytes[i + 3])
+                    if bright < 0.5 { darkInk += 1 } else { lightInk += 1 }
                 }
             }
-            var found: [String] = [], mirror: Mirror? = Mirror(reflecting: display)
-            while let m = mirror {
-                for child in m.children {
-                    if let part = child.value as? MTDisplay { found += fonts(part) }
-                    if let parts = child.value as? [MTDisplay] { found += parts.flatMap(fonts) }
-                }
-                mirror = m.superclassMirror
-            }
-            return found
         }
-        for tex in [NoteMath.tex("u in F^2, RR", .asciimath), NoteMath.tex(#"\sqrt{\mathbb{Z}}"#, .latex), NoteMath.tex(#"\frac{\mathbb{Q}}{2}"#, .latex)] {
-            let list = try #require(NoteMath.typeset(tex, display: false, size: 16, color: .black), "\(tex)")
-            #expect(fonts(list).contains("KaTeX_AMS-Regular"), "\(tex)")
-        }
-        // Kerned back to Latin Modern's width, so what SwiftMath placed after the letter stays put.
-        let swapped = try #require(NoteMath.typeset(NoteMath.tex(#"\mathbb{R}^2"#, .latex), display: false, size: 16, color: .black))
-        #expect(fonts(swapped).contains("KaTeX_AMS-Regular"))
-        let line = try #require(swapped.subDisplays.first as? MTCTLineDisplay)
-        #expect(abs(CTLineGetTypographicBounds(line.line, nil, nil, nil) - line.width) < 0.01)
-        // The AMS M is a third wider than Latin Modern's; SwiftMath makes room for it rather than overlapping the next.
-        let pair = try #require(NoteMath.picture(#"\mathbb{MM}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false))
-        #expect(pair.size.width >= 2 * 0.944 * 16 - 1)
-        // With no room after it, an AMS letter would run into what follows, so a formula with a body that can't be
-        // split, or a double-struck capital typed as itself, stays as written and all Latin Modern, with no room added.
-        for tex in [#"\mathbb{R^2}"#, #"\mathbb{R\times S}"#, #"\mathbb{M} + \mathbb{R^2}"#, #"ℝ + \mathbb{M}"#] {
-            #expect(NoteMath.tex(tex, .latex) == tex)
-            let list = try #require(NoteMath.typeset(NoteMath.tex(tex, .latex), display: false, size: 16, color: .black), "\(tex)")
-            #expect(!fonts(list).contains("KaTeX_AMS-Regular"), "\(tex)")
-            #expect(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false) != nil, "\(tex)")
-        }
-        // A ℝ typed in text is hidden in a command once text is filled, so it must be seen before.
-        let typed = try #require(NoteMath.typeset(NoteMath.tex(#"\text{ℝ} = \mathbb{R}"#, .latex), display: false, size: 16, color: .black))
-        #expect(!fonts(typed).contains("KaTeX_AMS-Regular"))
-        // A longer command that starts the same is left alone, so it still shows as source rather than as 𝕞1.
-        #expect(NoteMath.tex(#"\mathbbm{1}"#, .latex) == #"\mathbbm{1}"#)
-        #expect(NoteMath.picture(#"\mathbbm{1}"#, syntax: .latex, display: false, size: 16, color: .black, dark: false) == nil)
-    }
-
-    @Test func textInMathReadsAsText() throws {
-        func width(_ tex: String) throws -> CGFloat {
-            try #require(NoteMath.picture(tex, syntax: .latex, display: false, size: 16, color: .black, dark: false), "\(tex)").size.width
-        }
-        // Math puts room around a minus and a ratio colon; text doesn't.
-        #expect(try width(#"\text{a-b}"#) < width(#"\mathrm{a}-\mathrm{b}"#))
-        #expect(try width(#"\text{a:b}"#) < width(#"\mathrm{a}:\mathrm{b}"#))
-        // Past ASCII SwiftMath dropped the character.
-        #expect(try width(#"\text{a–b}"#) > width(#"\text{ab}"#))
-        #expect(try width(#"\text{a--b}"#) == width(#"\text{a–b}"#))
-        #expect(try width(#"x\text{양이온}"#) > width("x") + 24)
-        #expect(try width(#"\text{König–Egerváry: } \alpha'(G) = \beta(G)"#) > 0)
-        // SwiftMath dropped `$ % # ~` and read `&` as a table column.
-        #expect(try width(#"\text{5% 이내}"#) > width(#"\text{5 이내}"#))
-        #expect(try width(#"\text{#3}"#) > width(#"\text{3}"#))
-        #expect(try width(#"\text{A&B}"#) == width(#"\text{A\&B}"#))
-        #expect(try width(#"\text{a~b}"#) == width(#"\text{a b}"#))
-        // Only `\text` kept its spaces.
-        #expect(try width(#"\textbf{a b}"#) > width(#"\textbf{ab}"#))
-        #expect(try width(#"\textit{강조}"#) > 24)
-    }
-
-    /// The edit view reads a formula with the preview's `toTeX`, so both see the same TeX for either syntax.
-    @Test func bothViewsReadTheFormulaAlike() throws {
-        let source = ##"min{|F|: G - F " separates " x, y} = max{"# edge-disjoint " x,y- "paths"}"##
-        let tex = NoteScripts.tex(source, .asciimath)
-        #expect(tex.contains(##"\text{# edge-disjoint }"##) && tex.contains(##"\max"##))
-        #expect(NoteMath.picture(source, syntax: .asciimath, display: false, size: 16, color: .black, dark: false) != nil)
-        #expect(NoteScripts.tex(#"\frac{a}{b}"#, .latex) == #"\frac{a}{b}"#)
-    }
-
-    /// A bar closes the bar opened before it in the same brackets; asciimath2tex alone paired `|X| >= |I|` as one
-    /// `\left| X | >= \right|` and read `|:` in `|F|:` as a bracket that ate the colon.
-    @Test func barsPairInOrder() throws {
-        let cases: [(String, String)] = [
-            (#"|(bigcup_(i in I) A_i) cap (bigcup_(i in J) B_i)| >= |I| + |J| - m"#,
-             #"\left \lvert \left ( \bigcup_{i \in I} A_{i} \right ) \cap \left ( \bigcup_{i \in J} B_{i} \right ) \right \rvert \ge \left \lvert I \right \rvert + \left \lvert J \right \rvert - m"#),
-            (#"|det(A)| = |lambda_1| |lambda_2|"#,
-             #"\left \lvert \det{\left ( A \right )} \right \rvert = \left \lvert \lambda_{1} \right \rvert \left \lvert \lambda_{2} \right \rvert"#),
-            (#"min{|F|: G}"#, #"\min \left \lbrace \left \lvert F \right \rvert : G \right \rbrace"#),
-            (#"||x|| + |y|"#, #"\left \lvert \left \lvert x \right \rvert \right \rvert + \left \lvert y \right \rvert"#),
-            // As before: a norm, explicit bars, a lone bar and AsciiMath's tokens with a bar in them.
-            (#"||x||"#, #"\left \lvert \left \lvert x \right \rvert \right \rvert"#),
-            (#"|:x:|"#, #"\left \lvert x \right \rvert"#),
-            (#"a|b"#, "a | b"),
-            (#"{x | x > 0}"#, #"\left \lbrace x \mid x > 0 \right \rbrace"#),
-            (#"x |-> y"#, #"x \mapsto y"#),
-            (#""a|b" + |x|"#, #"\text{a|b} + \left \lvert x \right \rvert"#),
-        ]
-        for (source, tex) in cases { #expect(NoteScripts.tex(source, .asciimath) == tex, "\(source)") }
-        #expect(NoteMath.picture(cases[0].0, syntax: .asciimath, display: true, size: 16, color: .black, dark: false) != nil)
     }
 }

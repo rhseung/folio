@@ -207,31 +207,52 @@ struct NoteSourceTests {
         #expect(shown == unshown)
     }
 
-    @Test func theBubbleShowsMathBlocksAndImagesByTheCaret() throws {
+    /// The math in the bubble is drawn after the caret comes to it (`NoteMath`), so it shows a moment later.
+    static func bubble(_ view: SourceTextView) async -> PreviewBubble? {
+        for _ in 0..<500 {
+            if let bubble = view.subviews.compactMap({ $0 as? PreviewBubble }).first { return bubble }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        return nil
+    }
+
+    /// Off every screen but in the window list, as the math page draws only in a window that is.
+    static func shown(_ window: NSWindow) {
+        window.setFrameOrigin(NSPoint(x: -20_000, y: -20_000))
+        window.orderBack(nil)
+    }
+
+    @Test func theBubbleShowsMathBlocksAndImagesByTheCaret() async throws {
         let text = "앞 $y$\n$$\nx^2\n$$\n![a](assets/sample.png)"
         let (view, window) = Self.editor(text)
+        Self.shown(window)
+        defer { window.orderOut(nil) }
         window.makeFirstResponder(view)
         let ns = text as NSString
-        func bubble(at i: Int) -> PreviewBubble? {
+        func bubble(at i: Int) async -> PreviewBubble? {
             view.setSelectedRange(NSRange(location: i, length: 0))
-            return view.subviews.compactMap { $0 as? PreviewBubble }.first
+            return await Self.bubble(view)
         }
-        #expect(bubble(at: 0) == nil)
-        #expect(bubble(at: ns.range(of: "$y").location + 1) != nil)
-        #expect(bubble(at: ns.range(of: "x^2").location) != nil)
+        view.setSelectedRange(NSRange(location: 0, length: 0))
+        #expect(view.subviews.compactMap { $0 as? PreviewBubble }.isEmpty)
+        #expect(await bubble(at: ns.range(of: "$y").location + 1) != nil)
+        #expect(await bubble(at: ns.range(of: "x^2").location) != nil)
         // On the note's last line there's no room under it, so the bubble goes over it, where the view still shows it.
-        let image = try #require(bubble(at: ns.range(of: "sample").location))
+        let image = try #require(await bubble(at: ns.range(of: "sample").location))
         #expect(image.frame.maxY <= view.bounds.maxY && image.frame.minY >= 0, "\(image.frame) in \(view.bounds)")
     }
 
-    @Test func renderDarkBubble() {
+    @Test func renderDarkBubble() async {
         let text = "역행렬의 행렬식 $det(A^-1) = 1/det(A)$ 은 이렇다.\n\n둘째 줄"
         let (view, window) = Self.editor(text, width: 600, dark: true)
+        Self.shown(window)
+        defer { window.orderOut(nil) }
         view.drawsBackground = true
         view.backgroundColor = NoteLook.card
         view.configure(accent: CourseAccent.presets[0].accent, syntax: .asciimath, dark: true)
         window.makeFirstResponder(view)
         view.setSelectedRange(NSRange(location: (text as NSString).range(of: "det(A^").location, length: 0))
+        _ = await Self.bubble(view)
         NoteRender.write(view, "bubble-dark")
     }
 

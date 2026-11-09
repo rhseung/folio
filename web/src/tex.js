@@ -1,6 +1,5 @@
-// Both note views read a formula through this one function, the edit view in JavaScriptCore (native.js) and the preview
-// in its page (math.js), so they never disagree on what a `$…$` says. What each typesetter can't take is fixed after it:
-// SwiftMath's gaps in `TeXGaps`, KaTeX's in math.js.
+// How a note's formula reads as TeX. Both note views draw math with math.js in a page (the preview, and the edit view's
+// bubble and completion menu through NoteMath), so they never disagree on what a `$…$` says.
 import AsciiMathParser from "asciimath2tex";
 
 const ascii = new AsciiMathParser();
