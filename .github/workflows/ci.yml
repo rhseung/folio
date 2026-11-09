@@ -108,7 +108,7 @@ jobs:
       # quietly stopping. A missing or changed picture lands here and goes up as the note-screens artifact.
       FOLIO_NOTE_SCREENS_STRICT: 1
       FOLIO_NOTE_SCREENS: ${{ github.workspace }}/.build/note-screens
-      COMPILATION_CACHE_ENABLE_CACHING: YES
+      XCODE_XCCONFIG_FILE: ${{ github.workspace }}/.build/ci.xcconfig
     steps:
       - if: env.RUN != 'true'
         run: echo "No file in this PR reaches ${{ matrix.task }}."
@@ -132,12 +132,14 @@ jobs:
             !.build/DerivedData/Index.noindex
             !.build/DerivedData/Logs
             !.build/DerivedData/TestResults
-          key: xcode-cas-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}
-          restore-keys: xcode-cas-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
+          key: xcode-cas2-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}
+          restore-keys: xcode-cas2-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
       # As in `test`, Folio's own sources compile again. The app, test and resource bundles go so that a file the
       # branch deleted can't linger in them; Xcode copies resources into a bundle without removing old ones.
       - if: env.RUN == 'true'
         run: rm -rf .build/DerivedData/Build/Products/*/*.app .build/DerivedData/Build/Products/*/*.xctest .build/DerivedData/Build/Products/*/*.bundle
+      - if: env.RUN == 'true'
+        run: echo 'COMPILATION_CACHE_ENABLE_CACHING = YES' > "$XCODE_XCCONFIG_FILE"
       - if: env.RUN == 'true'
         uses: jdx/mise-action@v5
       - if: env.RUN == 'true'
