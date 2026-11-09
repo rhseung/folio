@@ -29,3 +29,7 @@ public enum CLIMode: Sendable {
 @attached(peer) public macro FromFile(_ valueName: String = "file", perItem: Bool = false) = #externalMacro(module: "FolioMacros", type: "MarkerMacro")
 /// A folder on this Mac: the CLI takes it relative to where it runs and passes it on absolute.
 @attached(peer) public macro Folder() = #externalMacro(module: "FolioMacros", type: "MarkerMacro")
+/// On the CLI, text the CLI reads into the value (each item of a list), such as `05_Matchings.pdf:3-12`: the type
+/// conforms to FolioCLI's `CLIText`, which also looks up the names in it. `form` is added to the CLI's help only,
+/// since the JSON input takes the value itself.
+@attached(peer) public macro Parsed(_ valueName: String, _ form: String) = #externalMacro(module: "FolioMacros", type: "MarkerMacro")

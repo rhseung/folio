@@ -217,13 +217,9 @@ final class PolicyModel {
     func setCap(_ i: Int, _ cap: AttendanceCap) { if caps.indices.contains(i) { caps[i] = cap } }
 
     func confirm() -> Bool {
-        var policy = course.file.policy
-        policy.attendanceCap = caps
-        policy.minAttendanceRatio = Double(ratio).map { $0 / 100 }
-        policy.latePolicy = late.isEmpty ? nil : late
-        policy.notes = notes
-        policy.topGradeRatio = Double(topShare).map { $0 / 100 }
-        policy.latesPerAbsence = Int(lates)
-        return workspace.run(PolicySet(course: course.id, policy: policy)) != nil
+        // Every field the sheet shows; the cutoffs it doesn't show stay as they are.
+        workspace.run(PolicySet(course: course.id, minAttendanceRatio: .set(Double(ratio).map { $0 / 100 }), latePolicy: .set(late.isEmpty ? nil : late),
+                                latesPerAbsence: .set(Int(lates)), topGradeRatio: .set(Double(topShare).map { $0 / 100 }), attendanceCap: .set(caps),
+                                notes: .set(notes))) != nil
     }
 }

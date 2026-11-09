@@ -22,10 +22,12 @@ public enum ActionError: Error, Equatable, CustomStringConvertible {
     case rule(String)
     /// The file changed elsewhere since it was read.
     case conflict(String)
+    /// The input doesn't fit together or doesn't fit the data's shape, e.g. a settings key that isn't there.
+    case input(String)
 
     public var description: String {
         switch self {
-        case .notFound(let s), .rule(let s), .conflict(let s): s
+        case .notFound(let s), .rule(let s), .conflict(let s), .input(let s): s
         }
     }
 

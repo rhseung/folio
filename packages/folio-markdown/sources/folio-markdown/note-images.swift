@@ -4,7 +4,7 @@ import Foundation
 public enum NoteImages {
     static let extensions: Set<String> = ["png", "jpg", "jpeg", "heic", "gif", "webp", "tif", "tiff"]
     static var link: Regex<(Substring, Substring)> { /!\[[^\]]*\]\(<?([^)>]+?)>?(?:\s+"[^"]*")?\)/ }
-    static var wiki: Regex<(Substring, Substring)> { /!\[\[([^\]|#]+)(?:[|#][^\]]*)?\]\]/ }
+    static var wiki: Regex<(Substring, Substring)> { /!\[\[([^\]|#]+?)\\?(?:[|#][^\]]*)?\]\]/ }
 
     public enum Reference: Equatable, Sendable {
         /// Relative to the note's folder.

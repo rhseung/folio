@@ -142,3 +142,14 @@ public struct Semester: Entity {
         folder?.name ?? source.flatMap(StandardLayout.creditedFolder(source:))
     }
 }
+
+extension [Semester] {
+    /// The term `today` falls in by its dates; otherwise the newest one started, where a term without a start counts as
+    /// started (dates are often filled in late); with none started, the next to start. A credited term is never current:
+    /// it has no dates and no term folder to add to.
+    public func current(on today: LocalDate) -> Semester? {
+        let terms = filter { $0.term != .credited }.sorted { $0.order < $1.order }
+        return terms.last { ($0.start.map { $0 <= today } ?? false) && ($0.end.map { today <= $0 } ?? true) }
+            ?? terms.last { ($0.start ?? today) <= today } ?? terms.first
+    }
+}

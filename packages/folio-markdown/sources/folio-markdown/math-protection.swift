@@ -1,6 +1,9 @@
 /// Markdown escapes would eat TeX (`\{` becomes `{`, `a_1_b` turns into emphasis), so math is wrapped
 /// in code before parsing: `$$...$$` becomes a ```` ```math ```` block and `$...$` an inline code span
 /// starting with `mathMarker`. Code spans and fenced code are left alone, and `\$` is a literal dollar.
+/// A `|` inside `[[…]]` is escaped too: in a table row GFM would split the cell there and drop the cells past the
+/// header's width, as `[[note:<ID>|title]]` always has one. GFM unescapes `\|` in a cell and markdown elsewhere, so
+/// the renderer still reads `[[target|alias]]`.
 public enum MathProtection {
     public static let blockLanguage = "math"
     /// Private-use character marking an inline code span that holds math.
@@ -66,6 +69,15 @@ public enum MathProtection {
                     result += rest[..<close.upperBound]
                     chars = Array(rest[close.upperBound...])[...]
                 }
+            case "[" where chars.first == "[":
+                let rest = String(chars.dropFirst())
+                guard let close = rest.range(of: "]]"), !rest[..<close.lowerBound].contains("]") else {
+                    result.append(c)
+                    continue
+                }
+                let inner = rest[..<close.lowerBound]
+                result += "[[" + escapePipes(inner) + "]]"
+                chars = Array(rest[close.upperBound...])[...]
             case "$":
                 let rest = String(chars)
                 guard let close = closingDollar(in: rest), !close.isEmpty, !close.hasPrefix(" "), !close.hasSuffix(" ") else {
@@ -80,6 +92,18 @@ public enum MathProtection {
             }
         }
         return result
+    }
+
+    /// Pipes escaped, as a GFM cell needs them; ones already escaped stay as they are.
+    static func escapePipes(_ text: some StringProtocol) -> String {
+        var out = ""
+        var escaped = false
+        for ch in text {
+            if ch == "|", !escaped { out.append("\\") }
+            out.append(ch)
+            escaped = ch == "\\" && !escaped
+        }
+        return out
     }
 
     static func closingDollar(in s: String) -> String? {

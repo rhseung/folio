@@ -81,14 +81,17 @@ enum CommandSource {
 
         out.append("")
         out.append("    func run() throws {")
-        let patches = fields.filter { $0.patch }
-        if !patches.isEmpty, patches.count == fields.filter({ $0.role != .argument }).count {
+        let patches = fields.filter { $0.patch && $0.role != .hidden }
+        // A command that only changes what it is given has nothing to do without one; the items it points at don't count.
+        if !patches.isEmpty, patches.count == fields.filter({ !($0.role == .argument && $0.ref != nil) && $0.role != .hidden }).count {
             let given = patches.map { $0.many ? "!\($0.name).isEmpty" : "\($0.name) != nil" }.joined(separator: " || ")
             let flags = patches.map { "--" + flag($0) }.joined(separator: ", ")
             out.append("        guard \(given) else { throw CLIError(exit: .usage, message: \(q("바꿀 것을 하나 이상 주세요: \(flags)"))) }")
         }
         out.append("        let ctx = try CLI.context(g)")
-        if course != nil || fields.contains(where: { $0.ref != nil && $0.role != .new && $0.role != .hidden }) { out.append("        let r = Resolver(ctx)") }
+        if course != nil || fields.contains(where: { $0.ref != nil && $0.role != .new && $0.role != .hidden || $0.parsed != nil }) {
+            out.append("        let r = Resolver(ctx)")
+        }
         if let course {
             if let folded {
                 out.append(folded.many ? "        let (c, \(folded.name)First) = try r.split(\(folded.name).first ?? \"\")"
@@ -138,20 +141,22 @@ enum CommandSource {
     static func flag(_ f: FieldSpec) -> String { f.cliName ?? kebab(f.name) }
 
     static func cliType(_ f: FieldSpec) -> String {
-        if f.ref != nil || f.file != nil || f.folder { return "String" }
+        if f.ref != nil || f.file != nil || f.folder || f.parsed != nil { return "String" }
         // `켜기`, `yes`, `1` as well as `true`, like the commands written by hand.
         if f.type == "Bool", f.patch { return "Toggle" }
         return f.type == "Date" ? "DateArg" : f.type
     }
 
     static func help(_ f: FieldSpec, valueName given: String? = nil) -> String {
-        var text = f.help
+        var text = [f.help, f.parsedForm ?? ""].filter { !$0.isEmpty }.joined(separator: ". ")
         if f.patch, f.optional { text += text.isEmpty ? "none이면 지운다" : ". none이면 지운다" }
         // Unless read one file per item, a list's file holds all of it, so it is given once.
         if f.many, f.file == nil || f.filePerItem {
-            text += (text.isEmpty ? "" : ". ") + (f.patch ? "여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다" : "여러 번 줄 수 있다")
+            // What a parsed list given does (replace or merge) is the field's own to say.
+            let given = f.parsed != nil ? "none이면 비운다" : "주면 목록 전체를 바꾸고, none이면 비운다"
+            text += (text.isEmpty ? "" : ". ") + (f.patch ? "여러 번 줄 수 있다. " + given : "여러 번 줄 수 있다")
         }
-        let valueName = given ?? (f.ref != nil ? flag(f) : f.type == "LocalDate" || f.type == "Date" ? "date" : nil)
+        let valueName = given ?? f.parsed ?? (f.ref != nil ? flag(f) : f.type == "LocalDate" || f.type == "Date" ? "date" : nil)
         return valueName.map { "ArgumentHelp(\(q(text)), valueName: \(q($0)))" } ?? q(text)
     }
 
@@ -190,7 +195,7 @@ enum CommandSource {
 
     static func value(_ f: FieldSpec, scope: String, parent: String? = nil) -> String {
         switch f.role {
-        case .hidden: return f.defaultValue ?? "nil"
+        case .hidden: return f.defaultValue ?? (f.patch ? ".keep" : "nil")
         case .new: return "\(f.name) ?? UUID()"
         case .off(let flag): return "!\(camel(flag))"
         default: break
@@ -202,14 +207,16 @@ enum CommandSource {
             let type = f.many ? "[\(f.type)]" : f.type
             return f.optional ? "try \(f.name).map { try readJSONFile(\(type).self, $0) }" : "try readJSONFile(\(type).self, \(f.name))"
         }
-        let t = f.ref == nil ? "" : "try "
+        let t = f.ref == nil && f.parsed == nil ? "" : "try "
         func one(_ v: String) -> String {
+            // The type is the field's, inferred.
+            if f.parsed != nil { return "try r.parse(\(v), in: \(scope))" }
             if let ref = f.ref {
                 return "try r.\(lookup(ref))(\(q(ref)), \(v), in: \(scope)\(parent.map { ", parent: \($0)" } ?? ""))"
             }
             return f.type == "Date" || f.type == "Bool" && f.patch ? "\(v).\(f.type == "Date" ? "date" : "value")" : v
         }
-        let identity = f.ref == nil && f.type != "Date" && !(f.type == "Bool" && f.patch)
+        let identity = f.ref == nil && f.parsed == nil && f.type != "Date" && !(f.type == "Bool" && f.patch)
         if f.patch, f.many {
             return "\(f.name).isEmpty ? .keep : .set(\(t)\(f.name).clearing.map { \(one("$0")) })"
         }
@@ -227,8 +234,14 @@ enum CommandSource {
         let parts = s.split(separator: "-")
         return String(parts[0]) + parts.dropFirst().map { $0.prefix(1).uppercased() + $0.dropFirst() }.joined()
     }
+    /// As ArgumentParser names an option: `minGPA` is `min-gpa`, `latesPerAbsence` is `lates-per-absence`.
     static func kebab(_ s: String) -> String {
-        s.reduce(into: "") { out, ch in out += ch.isUppercase ? "-" + ch.lowercased() : String(ch) }
+        let chars = Array(s)
+        return chars.indices.reduce(into: "") { out, i in
+            let ch = chars[i]
+            let starts = ch.isUppercase && i > 0 && (!chars[i - 1].isUppercase || i + 1 < chars.count && chars[i + 1].isLowercase)
+            out += (starts ? "-" : "") + ch.lowercased()
+        }
     }
 }
 

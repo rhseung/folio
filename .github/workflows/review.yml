@@ -41,6 +41,10 @@ jobs:
     needs: changes
     if: vars.ENABLE_CLAUDE_REVIEW == 'true' && needs.changes.outputs.docs != 'true'
     uses: rhseung/claude-review-plugin/.github/workflows/review.yml@main
+    # Dependabot's runs get only Dependabot secrets, so CLAUDE_CODE_OAUTH_TOKEN must be set there too
+    # (gh secret set --app dependabot).
+    with:
+      allowed_bots: dependabot[bot]
     secrets: inherit
 
   # Docs-only PRs skip code review, but the ruleset still needs one approval. A new push dismisses it and this job

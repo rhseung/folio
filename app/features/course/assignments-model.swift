@@ -188,7 +188,6 @@ final class AssignmentSheetModel {
             maxes[s.componentId] = s.max.formatted()
         }
         target = assignment.componentGroup.map { .group($0) } ?? (assignment.componentId ?? own.first?.componentId).map { .component($0) } ?? .none
-        loadedComponents = targetComponents.map(\.id)
         loaded = draft
     }
 
@@ -247,10 +246,6 @@ final class AssignmentSheetModel {
 
     func discardAndOpen() { opening = nil }
 
-    /// The fields shown when the sheet opened; a score in one of them that the user moved the target away from goes,
-    /// while one in a component the sheet never showed (moved there on the grades page) stays.
-    private var loadedComponents: [UUID] = []
-
     func importFiles(_ urls: [URL]) { workspace.importFiles(urls, into: folder, course: course.id) }
 
     let kindOptions: [(MaterialKind, String)] = [(.problem, String(localized: .assignmentsProblem)),
@@ -271,9 +266,10 @@ final class AssignmentSheetModel {
         var componentId: UUID?, group: String?
         if case .component(let id) = target { componentId = id }
         if case .group(let g) = target { group = g }
-        return workspace.run(AssignmentSave(course: course.id, assignment: assignment.id, title: title, due: hasDue ? due : nil, status: status,
-                                            repeats: repeats, componentId: componentId, componentGroup: group, memo: memo,
-                                            components: Array(Set(loadedComponents + scored.map(\.id))), scores: entered)) != nil
+        // Every field, as the sheet shows them all; the action drops the scores of a target the sheet moved away from.
+        return workspace.run(AssignmentSave(course: course.id, assignment: assignment.id, title: .set(title), due: .set(hasDue ? due : nil),
+                                            status: .set(status), repeats: .set(repeats), componentId: .set(componentId),
+                                            componentGroup: .set(group), memo: .set(memo), scores: .set(entered))) != nil
     }
 
     func delete(then done: @escaping @MainActor () -> Void) {

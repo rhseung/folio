@@ -308,7 +308,14 @@ struct TodayView: View {
     func noteRow(_ item: TodaySummary.SessionItem) -> some View {
         let accent = model.workspace.accent(item.courseId)
         let unfinished = item.session.reviewNoteUnfinished
+        // Finishing shows on hover only on the Mac, so the resting list reads as notes rather than as buttons. Touch has
+        // no hover, so the iPad shows it always, beside the unfinished mark it would otherwise replace.
+        #if os(macOS)
         let hovering = hoveredNote == item.session.id
+        let finishing = hovering, marked = unfinished && !hovering
+        #else
+        let finishing = true, marked = unfinished
+        #endif
         return HStack(spacing: Theme.Space.s) {
             Button {
                 if let id = model.reviewNote(of: item) { openNote(in: item.courseId)(id) }
@@ -327,17 +334,17 @@ struct TodayView: View {
             }
             .buttonStyle(.pointing(.plain))
             .help(Text(unfinished ? .todayNoteOpenHelp : .todayNoteCreateHelp))
-            // Finishing shows on hover only, so the resting list reads as notes rather than as buttons.
-            if hovering {
+            if marked {
+                Label(.todayNoteUnfinished, systemImage: "pencil").labelStyle(GhostLabelStyle())
+                    .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.warning)
+            }
+            if finishing {
                 Button(unfinished ? String(localized: .todayNoteDone) : String(localized: .todayNoteNoReview)) {
                     unfinished ? model.finishReviewNote(item) : model.skipReviewNote(item)
                 }
                 .buttonStyle(.ghost)
                 .font(Theme.Typeface.caption)
                 .help(Text(unfinished ? .todayNoteFinish : .todayNoteNoReviewHelp))
-            } else if unfinished {
-                Label(.todayNoteUnfinished, systemImage: "pencil").labelStyle(GhostLabelStyle())
-                    .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.warning)
             }
         }
         .padding(.horizontal, Theme.Space.l)

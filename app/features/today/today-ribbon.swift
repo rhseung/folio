@@ -213,12 +213,32 @@ struct DayRibbonCard: View {
                         .padding(Theme.Space.m)
                         .frame(width: 420)
                 }
-                .contextMenu { SuggestedSessionItems(item: suggested, primary: true, openNote: openNote(item.courseId)) }
+                .contextMenu { SuggestedSessionItems(item: suggested, primary: true, openNote: openNote(item.courseId)) } preview: { preview(item) }
         } else if let sessionId = item.sessionId {
             Button { go(item.courseId, .sessions) } label: { label }
                 .buttonStyle(.pointing(.plain))
-                .contextMenu { SessionMenu(courseId: item.courseId, sessionId: sessionId, openNote: openNote(item.courseId), showSessions: { go(item.courseId, .sessions) }) }
+                .contextMenu { SessionMenu(courseId: item.courseId, sessionId: sessionId, openNote: openNote(item.courseId), showSessions: { go(item.courseId, .sessions) }) } preview: { preview(item) }
         }
+    }
+
+    /// The block's full course, unit and time, which it cuts short and leaves to the tooltip: touch has no tooltip, so
+    /// pressing and holding shows them over the menu. The Mac's menu has no preview.
+    func preview(_ item: TodayModel.RibbonClass) -> some View {
+        VStack(alignment: .leading, spacing: Theme.Space.xs) {
+            HStack(spacing: Theme.Space.s) {
+                CourseMark(model.workspace, item.courseId, inline: true)
+                Text(model.title(item.courseId)).font(Theme.Typeface.bodyStrong).foregroundStyle(model.workspace.accent(item.courseId).ink)
+            }
+            if !item.name.isEmpty { Text(item.name).font(Theme.Typeface.body).foregroundStyle(Theme.Palette.text) }
+            HStack(spacing: Theme.Space.xs) {
+                Text(verbatim: "\(model.time(item.start)) – \(model.time(item.end))").monospacedDigit()
+                if item.isMakeup { Text(.sessionsMakeup) }
+            }
+            .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+        }
+        .padding(Theme.Space.l)
+        .frame(width: 280, alignment: .leading)
+        .background(Theme.Palette.card)
     }
 
     /// Today's deadlines by their time, those due together on one flag.
@@ -227,20 +247,35 @@ struct DayRibbonCard: View {
         return Dictionary(grouping: today) { $0.assignment.due ?? .distantFuture }.sorted { $0.key < $1.key }.map { ($0.key, $0.value) }
     }
 
-    func flag(_ date: Date, items: [TodaySummary.DeadlineItem]) -> some View {
+    @ViewBuilder func flag(_ date: Date, items: [TodaySummary.DeadlineItem]) -> some View {
         let help = items.map { String(localized: .todayRibbonDueHelp($0.assignment.title, model.time(date))) }.joined(separator: "\n")
-        return Button { if let first = items.first { model.edit(first) } } label: {
-            HStack(spacing: Theme.Space.xxs) {
-                Text(model.time(date)).monospacedDigit()
-                Image(systemName: "flag.fill")
-            }
-            .font(Theme.Typeface.label)
-            .foregroundStyle(Theme.Palette.danger)
-            .fixedSize()
+        let label = HStack(spacing: Theme.Space.xxs) {
+            Text(model.time(date)).monospacedDigit()
+            Image(systemName: "flag.fill")
         }
-        .buttonStyle(.pointing(.plain))
-        .help(help)
-        .accessibilityLabel(help)
+        .font(Theme.Typeface.label)
+        .foregroundStyle(Theme.Palette.danger)
+        .fixedSize()
+        .contentShape(TouchTarget())
+        // Several due together pick which to open: opening the first hid the rest from anyone without the tooltip.
+        if items.count > 1 {
+            Menu {
+                ForEach(items, id: \.assignment.id) { item in
+                    Button { model.edit(item) } label: {
+                        Text(item.assignment.title)
+                        Text(model.title(item.courseId))
+                    }
+                }
+            } label: { label }
+            .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.borderless).pointingHand().fixedSize()
+            .help(help)
+            .accessibilityLabel(help)
+        } else {
+            Button { if let first = items.first { model.edit(first) } } label: { label }
+                .buttonStyle(.pointing(.plain))
+                .help(help)
+                .accessibilityLabel(help)
+        }
     }
 
     func freeDay(now: Date) -> some View {

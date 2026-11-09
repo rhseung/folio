@@ -101,7 +101,8 @@ final class EditCourseModel {
         guard let update else { return false }
         let c = course.file.course
         if title != c.title || codes != c.codes || number != c.number {
-            guard workspace.run(CourseRename(course: course.id, title: title, codes: codes, number: number)) != nil else { return false }
+            guard workspace.run(CourseRename(course: course.id, title: .changed(c.title, title), codes: .changed(c.codes, codes),
+                                             number: .changed(c.number, number))) != nil else { return false }
         }
         workspace.run(update)
         return true

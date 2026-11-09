@@ -54,8 +54,15 @@ enum Theme {
         static let dangerFill = Color(light: 0xFBE4DD, dark: 0x3A201A)
         static let success = Color(light: 0x1E7D4F, dark: 0x5FCF98)
 
-        /// Behind the words the quick add reads as a date, as Todoist marks them while typing.
-        static let highlightFill = Color(light: 0xC2DAF7, dark: 0x2F5C9E)
+        /// What the quick add line read, behind the words in the line and on the chip under it for the same value, so
+        /// the two read as a pair: the deadline and its repeat in blue, the assignment folder in sand; the course takes
+        /// its own accent (`CourseAccent.read`). The folder's sand is off the course presets' hues: in violet it sat beside
+        /// the first preset's course as one more of the same. Fills only, no outline: an outlined word read as unfinished. Solid
+        /// enough to stand on the popover's glass, which a tint-strength chip blended into.
+        static let readDue = Color(light: 0xC2DAF7, dark: 0x2F5C9E)
+        static let readDueInk = Color(light: 0x1D4A8A, dark: 0xDCE9FC)
+        static let readFolder = Color(light: 0xE8D5AE, dark: 0x544631)
+        static let readFolderInk = Color(light: 0x5A4417, dark: 0xF0DEB8)
     }
 
     /// Chart series in fixed order, checked with the dataviz palette validator against the card surface in both
@@ -99,6 +106,9 @@ enum Theme {
         static let duotone = 0.14
         /// What's over and kept only for reference: Today's ended classes, the sidebar's past terms.
         static let ended = 0.45
+        /// The quieter part of a chip's ink (the days left on the deadline chip): the chip's own hue, lighter, since the
+        /// page's secondary gray went muddy on a colored fill.
+        static let secondaryInk = 0.7
         /// Today's course wash at the page's top (`TodayWash`). Each accent is already tuned per appearance, so one value
         /// reads in both.
         static let courseWash = 0.24
@@ -213,7 +223,9 @@ enum Theme {
         static let figureMedium = Font.system(size: 17, weight: .bold)
         static let figureSmall = Font.system(size: 16, weight: .semibold).monospacedDigit()
         /// Text the user reads or writes at length: a quiz prompt, the quick add field.
-        static let bodyLarge = Font.system(size: 15)
+        static let bodyLarge = Font.system(size: bodyLargeSize)
+        /// For the quick add field's AppKit text view, which takes a size rather than a `Font`.
+        static let bodyLargeSize = CGFloat(15)
         static let body = Font.system(size: 13)
         static let bodyStrong = Font.system(size: 13, weight: .semibold)
         static let caption = Font.system(size: 12)
@@ -281,6 +293,8 @@ struct CourseAccent: Hashable {
     var ink: Color { Color(light: inkLight, dark: inkDark) }
     var fill: Color { Color(light: fillLight, dark: fillDark) }
     var tint: Color { color.opacity(Theme.Opacity.tint) }
+    /// The course as the quick add line read it (`Palette.readDue`): twice the tint, which faded into the popover.
+    var read: Color { color.opacity(Theme.Opacity.onTint) }
 
     /// Where no course is in view (a paused recording, a proof callout). Not a course preset; `graphite` is.
     static let gray = CourseAccent(light: 0x706C66, dark: 0x9A98A8, inkLight: 0x4A4741, inkDark: 0xC9C7D6, fillLight: 0x706C66, fillDark: 0x747287)

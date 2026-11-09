@@ -51,6 +51,7 @@ enum Finder {
     /// Commands not yet declared with `@Action` keep theirs here; declared ones give `phrases:`.
     private static let written: [String: [String]] = [
         "today": ["오늘 할 일", "오늘 일정", "지금 뭐 해야", "하루 요약"],
+        "add": ["빠른 추가", "한 줄로 추가", "금요일까지 과제", "말로 과제 추가"],
         "session list": ["수업 목록", "강의 목록", "회차 보기", "몇 주차"], "session show": ["수업 하나 보기", "회차 자세히"],
         "session rm": ["수업 지우기", "회차 삭제"], "unit list": ["단원 목록", "챕터 목록", "진도"], "unit show": ["단원 보기"], "unit move": ["단원 순서", "단원 옮기기", "하위 단원으로"],
         "exam list": ["시험 목록", "시험 언제"], "exam show": ["몇 시", "어디서", "시험 장소 보기", "시험 범위 보기", "시험 정보", "시험 시간과 장소"],

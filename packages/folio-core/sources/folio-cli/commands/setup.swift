@@ -18,16 +18,6 @@ extension Resolver {
     }
 }
 
-func readJSON<T: Decodable>(_ type: T.Type, _ path: String) throws -> T {
-    let url = URL(filePath: (path as NSString).expandingTildeInPath)
-    guard let data = try? Data(contentsOf: url) else { throw CLIError(exit: .usage, message: String(localized: .readJsonUnreadable(path))) }
-    do {
-        return try JSONDecoder.folio.decode(T.self, from: data)
-    } catch let e as DecodingError {
-        throw CLIError(exit: .usage, message: String(localized: .readJsonBadFormat(RunCommand.describe(e))))
-    }
-}
-
 struct SemesterCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "semester", abstract: String(localized: .semesterAbstract),
@@ -84,7 +74,7 @@ struct SemesterCommand: ParsableCommand {
 struct CourseCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "course", abstract: String(localized: .courseAbstract),
-        subcommands: [List.self, Show.self, Add.self, Rename.self, Set.self])
+        subcommands: [List.self, Show.self] + GeneratedCommands.course + [Set.self])
 
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .courseListAbstract), discussion: String(localized: .courseListDiscussion))
@@ -139,42 +129,6 @@ struct CourseCommand: ParsableCommand {
             }
             if x.sharingApproved == true { say(String(localized: .courseShowSharingApproved)) }
             if !x.memo.isEmpty { say(String(localized: .courseShowMemo(x.memo))) }
-        }
-    }
-
-    struct Add: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .courseAddAbstract), discussion: String(localized: .courseAddDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .courseAddHelpCode), valueName: "code")) var code: String
-        @Argument(help: ArgumentHelp(String(localized: .courseAddHelpNumber), valueName: "number")) var number: String
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpTitle), valueName: "name")) var title: String
-        @Option(help: ArgumentHelp(String(localized: .commonHelpCredits))) var credits: Double = 3
-        @Option(help: ArgumentHelp(String(localized: .commonHelpMode))) var mode: GradingMode = .relative
-        @Option(help: ArgumentHelp(String(localized: .courseAddHelpSemester), valueName: "semester"), completion: .custom(Complete.semesters)) var semester: String?
-        @Option(help: .hidden) var id: UUID?
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            let r = Resolver(ctx)
-            try perform(spec: CourseAdd(id: id ?? UUID(), semester: try r.semester(semester).id, title: title, code: try r.code(code).id, number: number,
-                                        credits: credits, mode: mode), g, ctx: ctx)
-        }
-    }
-
-    struct Rename: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .courseRenameAbstract), discussion: String(localized: .courseRenameDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .commonHelpCourse), valueName: "course"), completion: .custom(Complete.courses)) var course: String = ""
-        @Option(help: ArgumentHelp(String(localized: .commonHelpTitle))) var title: String?
-        @Option(help: ArgumentHelp(String(localized: .courseRenameHelpCode), valueName: "code")) var code: [String] = []
-        @Option(help: ArgumentHelp(String(localized: .courseRenameHelpNumber))) var number: String?
-
-        func run() throws {
-            let ctx = try CLI.context(g)
-            let r = Resolver(ctx)
-            let c = try r.course(course)
-            let codes = code.isEmpty ? c.course.codes : try code.map { try r.code($0).id }
-            try perform(spec: CourseRename(course: c.id, title: title ?? c.course.title, codes: codes, number: number ?? c.course.number), g, ctx: ctx)
         }
     }
 
@@ -242,7 +196,7 @@ struct CatalogCommand: ParsableCommand {
 
 struct SettingsCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
-        commandName: "settings", abstract: String(localized: .settingsAbstract), subcommands: [Show.self, Set.self])
+        commandName: "settings", abstract: String(localized: .settingsAbstract), subcommands: [Show.self] + GeneratedCommands.settings)
 
     struct Show: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .settingsShowAbstract), discussion: String(localized: .settingsShowDiscussion))
@@ -257,47 +211,5 @@ struct SettingsCommand: ParsableCommand {
             say(String(localized: .settingsShowNewNoteMath).styled(.bold) + "  \(s.newNoteMath.rawValue)")
             say(String(localized: .settingsShowBackup).styled(.bold) + "  \(s.backup.enabled ? s.backup.folder : String(localized: .settingsShowOff))")
         }
-    }
-
-    struct Set: ParsableCommand {
-        static let configuration = CommandConfiguration(abstract: String(localized: .settingsSetAbstract), discussion: String(localized: .settingsSetDiscussion))
-        @OptionGroup var g: GlobalOptions
-        @Argument(help: ArgumentHelp(String(localized: .settingsSetHelpField), valueName: "field")) var field: String?
-        @Argument(help: ArgumentHelp(String(localized: .settingsSetHelpValue), valueName: "value")) var value: String?
-        @Option(help: ArgumentHelp(String(localized: .settingsSetHelpFile), valueName: "path"), completion: .file(extensions: ["json"])) var file: String?
-
-        func run() throws {
-            if let file {
-                guard field == nil else { throw CLIError(exit: .usage, message: String(localized: .settingsSetFieldOrFile)) }
-                try perform(spec: SettingsSet(settings: try readJSON(Settings.self, file)), g, ctx: try CLI.context(g))
-                return
-            }
-            guard let field, let value else { throw CLIError(exit: .usage, message: String(localized: .settingsSetNeedsFieldAndValue)) }
-            let ctx = try CLI.context(g)
-            var root = try JSONDecoder.folio.decode(JSONValue.self, from: JSONEncoder.folio.encode(try ctx.settings()))
-            let parsed = (try? JSONDecoder().decode(JSONValue.self, from: Data(value.utf8))) ?? .string(value)
-            try root.set(field.split(separator: ".").map(String.init), to: parsed, path: field)
-            let settings: Settings
-            do {
-                settings = try JSONDecoder.folio.decode(Settings.self, from: JSONEncoder.folio.encode(root))
-            } catch let e as DecodingError {
-                throw CLIError(exit: .usage, message: String(localized: .settingsSetBadValue(field, RunCommand.describe(e))))
-            }
-            try perform(spec: SettingsSet(settings: settings), g, ctx: ctx)
-        }
-    }
-}
-
-extension JSONValue {
-    /// Replaces the value at an existing key path; a key that isn't there is a typo, not a new setting.
-    mutating func set(_ keys: [String], to value: JSONValue, path: String) throws {
-        guard let key = keys.first else { self = value; return }
-        guard case .object(var o) = self, var child = o[key] else {
-            let known = if case .object(let o) = self { o.keys.sorted() } else { [String]() }
-            throw CLIError(exit: .usage, message: String(localized: .settingsSetUnknownField(path)), candidates: known)
-        }
-        try child.set(Array(keys.dropFirst()), to: value, path: path)
-        o[key] = child
-        self = .object(o)
     }
 }

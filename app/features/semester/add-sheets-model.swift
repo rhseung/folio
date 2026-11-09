@@ -63,6 +63,6 @@ final class AddCourseModel {
 
     func add() -> UUID? {
         guard let codeId, let credits else { return nil }
-        return workspace.run(CourseAdd(semester: semester.id, title: title, code: codeId, number: number, credits: credits, mode: mode))?.made
+        return workspace.run(CourseAdd(code: codeId, number: number, title: title, credits: credits, mode: mode, semester: semester.id))?.made
     }
 }

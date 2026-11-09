@@ -65,21 +65,11 @@ struct RunCommand: ParsableCommand {
         return switch name {
         case CatalogSet.command: ("catalog", try json(ctx.catalog()))
         case SettingsSet.command: ("settings", try json(ctx.settings()))
-        case GraduationSet.command: ("rule", try json(ctx.transcript().graduation))
         default: nil
         }
     }
 
-    static func describe(_ e: DecodingError) -> String {
-        let path = { (c: DecodingError.Context) in c.codingPath.map { $0.intValue.map { "[\($0)]" } ?? $0.stringValue }.joined(separator: ".") }
-        return switch e {
-        case .keyNotFound(let key, let c): String(localized: .runDecodeKeyNotFound(([path(c)] + [key.stringValue]).filter { !$0.isEmpty }.joined(separator: ".")))
-        case .typeMismatch(let t, let c): String(localized: .runDecodeTypeMismatch(path(c), "\(t)"))
-        case .valueNotFound(let t, let c): String(localized: .runDecodeValueNotFound(path(c), "\(t)"))
-        case .dataCorrupted(let c): "\(path(c)): \(c.debugDescription)"
-        @unknown default: "\(e)"
-        }
-    }
+    static func describe(_ e: DecodingError) -> String { e.summary }
 }
 
 extension Action {
