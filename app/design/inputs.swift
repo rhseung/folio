@@ -699,10 +699,12 @@ struct GrowingTextEditor: View {
     /// A point size, not a `Font`: the height is measured with the platform font.
     var size: CGFloat = Theme.Typeface.bodySize
     var lines: ClosedRange<Int> = 3...12
+    /// The most it may grow to in a sheet, whose rows fit the window: fewer lines than `lines` allows there.
+    var room: CGFloat?
     @State private var width: CGFloat = 0
 
     var body: some View {
-        let height = Self.height(of: text, size: size, width: width, lines: lines)
+        let height = Self.height(of: text, size: size, width: width, lines: lines, room: room)
         TextEditor(text: $text)
             .font(.system(size: size))
             .scrollContentBackground(.hidden)
@@ -716,7 +718,7 @@ struct GrowingTextEditor: View {
 
     /// Laid out by TextKit as the editor's text view lays it out. A hidden SwiftUI `Text` broke a long URL at other
     /// places than the editor did, a line short, and the last line scrolled out of a box that should have held it.
-    static func height(of text: String, size: CGFloat, width: CGFloat, lines: ClosedRange<Int>) -> (points: CGFloat, scrolls: Bool) {
+    static func height(of text: String, size: CGFloat, width: CGFloat, lines: ClosedRange<Int>, room: CGFloat? = nil) -> (points: CGFloat, scrolls: Bool) {
         let font = PlatformFont.systemFont(ofSize: size)
         let layout = NSLayoutManager()
         #if os(macOS)
@@ -735,7 +737,9 @@ struct GrowingTextEditor: View {
             // The used rect counts a trailing newline's empty line, where the editor's caret sits.
             used = layout.usedRect(for: container).height
         }
-        let cap = line * CGFloat(lines.upperBound)
+        // Whole lines that fit the room, never under the minimum.
+        let fit = room.map { Int(($0 - 2 * inset) / line) } ?? lines.upperBound
+        let cap = line * CGFloat(max(lines.lowerBound, min(lines.upperBound, fit)))
         return (min(max(used, line * CGFloat(lines.lowerBound)), cap).rounded(.up) + 2 * inset, used > cap)
     }
 

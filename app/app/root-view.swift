@@ -25,6 +25,7 @@ struct RootView: View {
     @State private var showingRecording = false
     @State private var quickAdding = false
     @State private var inputGuide: InputGuideRequest?
+    @State private var contentHeight: CGFloat?
     @Environment(\.colorScheme) private var colorScheme
     #if os(macOS)
     /// When this window was made, which tells a window made for a link from outside from one already in use.
@@ -164,6 +165,9 @@ struct RootView: View {
                 .toolbar { globalTools }
                 #endif
                 .environment(\.openLink, openLink)
+                .environment(\.sheetRoom, contentHeight)
+                // The window less its toolbar (and an iPad's keyboard): a sheet taller than that ran off the window.
+                .onGeometryChange(for: CGFloat.self) { $0.size.height - $0.safeAreaInsets.top - $0.safeAreaInsets.bottom } action: { contentHeight = $0 }
                 .classWrapUpPrompt(workspace)
                 .classStartPrompt(workspace, open: { open($0.link, in: $0.placement) }, showing: { navigator.current }, bringForward: bringForward)
                 #if os(iOS)

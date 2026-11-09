@@ -46,6 +46,11 @@ struct AssignmentsView: View {
                 openLink(AppLink(.material, id), in: placement, course: model.course.id)
             }
         }
+        #if DEBUG && os(macOS)
+        .onChange(of: SnapshotDriver.shared.editAssignmentMemo, initial: true) { _, memo in
+            model.editing = memo.flatMap { memo in model.course.file.assignments.first.map { var a = $0; a.memo = memo; return a } }
+        }
+        #endif
         .confirming($model.pending)
     }
 

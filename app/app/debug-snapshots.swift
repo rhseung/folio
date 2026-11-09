@@ -24,6 +24,8 @@ final class SnapshotDriver {
     static let recordingLevel = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_RECORDING"].flatMap(Float.init) ?? 0.6
     /// A narrower window (e.g. `1100`) to catch labels that wrap or truncate once the columns squeeze.
     static let width = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_WIDTH"].flatMap(Double.init) ?? 1440
+    /// A lower window (e.g. `600`) to see sheets keep inside its content area and scroll their rows.
+    static let height = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_HEIGHT"].flatMap(Double.init) ?? 900
     /// How many tabs the window opens before the walk (`4`), to see the title row's tabs share and give up the row.
     static let tabs = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_TABS"].flatMap(Int.init) ?? 1
     /// How many panes the first two tabs hold (`2`, `3`), a lecture file and a quiz beside the page the walk moves (#62).
@@ -63,6 +65,8 @@ final class SnapshotDriver {
     @ObservationIgnored var extraCaptures: ((URL) async -> Void)?
     var editCourse = false
     var editExam = false
+    /// Opens the first assignment's sheet with this memo in place of its own (`course-assignment-edit`).
+    var editAssignmentMemo: String?
     /// The extension of the classified file the materials page opens, one renderer at a time (`FileView`).
     var openFile: String?
     /// Set by the materials page when it found a file for `openFile`.
@@ -108,7 +112,7 @@ final class SnapshotDriver {
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         if let window = NSApp.windows.first(where: { $0.isVisible }) {
-            window.setContentSize(NSSize(width: Self.width, height: 900))
+            window.setContentSize(NSSize(width: Self.width, height: Self.height))
             // On screen for the hold step's capture; a restored frame can leave it off every display.
             window.center()
         }
@@ -151,6 +155,15 @@ final class SnapshotDriver {
             try? await Task.sleep(for: .seconds(1.5))
             capture(to: directory.appending(path: "course-exam-edit.png"))
             editExam = false
+            try? await Task.sleep(for: .seconds(1))
+
+            section = .assignments
+            editAssignmentMemo = "제출 안내\nhttps://lms.example.ac.kr/course/view.php?id=104729&section=assignment-submission-guidelines-and-rubric-2026-fall\n"
+                + (1...14).map { "\($0). 문제 \($0)의 풀이 과정을 빠짐없이 적는다" }.joined(separator: "\n")
+            try? await Task.sleep(for: .seconds(1.5))
+            capture(to: directory.appending(path: "course-assignment-edit.png"))
+            if Self.holdSteps.contains("course-assignment-edit") { try? await Task.sleep(for: .seconds(6)) }
+            editAssignmentMemo = nil
             try? await Task.sleep(for: .seconds(1))
 
             section = .materials
@@ -286,7 +299,7 @@ final class SnapshotDriver {
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         if let window = NSApp.windows.first(where: { $0.isVisible }) {
-            window.setContentSize(NSSize(width: Self.width, height: 900))
+            window.setContentSize(NSSize(width: Self.width, height: Self.height))
             window.center()
         }
         // Glass and popovers draw only on screen: with `screen`, a `<step>.ready` file tells a script outside to capture
@@ -386,7 +399,7 @@ final class SnapshotDriver {
         // folio:not-an-action debug screenshots, outside the GIST folder
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         if let window = NSApp.windows.first(where: { $0.isVisible }) {
-            window.setContentSize(NSSize(width: Self.width, height: 900))
+            window.setContentSize(NSSize(width: Self.width, height: Self.height))
             window.center()
         }
         let bounds = (Self.split ?? "").split(separator: "-").compactMap { Int($0) }
