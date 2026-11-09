@@ -6,7 +6,7 @@ struct Caption: View {
     let text: String
     init(_ text: String) { self.text = text }
     var body: some View {
-        Text(text).font(Theme.Typeface.label).foregroundStyle(Theme.Palette.textTertiary)
+        Text(text).font(Theme.Typeface.label).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
     }
 }
 
@@ -191,6 +191,7 @@ struct KeyCap: View {
     var body: some View {
         Text(key).font(Theme.Typeface.label).monospaced()
             .foregroundStyle(Theme.Palette.textSecondary)
+            .lineLimit(1).fixedSize()
             .padding(.horizontal, Theme.Space.tight).padding(.vertical, Theme.Space.xxs)
             .background(Theme.Palette.fill, in: .rect(cornerRadius: Theme.Radius.small))
     }

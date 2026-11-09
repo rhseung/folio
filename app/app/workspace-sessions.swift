@@ -44,10 +44,6 @@ extension Workspace {
         run(SessionSet(course: courseId, session: sessionId, reviewUnfinished: .set(unfinished)))
     }
 
-    func setSkipsReview(_ skips: Bool, of sessionId: UUID, in courseId: UUID) {
-        run(SessionSet(course: courseId, session: sessionId, skipsReview: .set(skips)))
-    }
-
     func record(_ sessionId: UUID, in courseId: UUID) {
         guard let course = course(courseId), let session = course.file.sessions.first(where: { $0.id == sessionId }) else { return }
         Task { await startRecording(session, in: course) }

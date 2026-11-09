@@ -114,14 +114,6 @@ final class TodayModel {
         workspace.note(.review, of: item.session.id, in: item.courseId)
     }
 
-    func finishReviewNote(_ item: TodaySummary.SessionItem) {
-        workspace.setReviewNoteUnfinished(false, of: item.session.id, in: item.courseId)
-    }
-
-    func skipReviewNote(_ item: TodaySummary.SessionItem) {
-        workspace.setSkipsReview(true, of: item.session.id, in: item.courseId)
-    }
-
     var attendanceWarnings: [(course: LoadedCourse, absences: Int, cap: AttendanceCap)] {
         current.compactMap { course in course.file.capOneAway(at: workspace.now).map { (course, $0.absences, $0.cap) } }
     }

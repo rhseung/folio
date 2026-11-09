@@ -1,79 +1,119 @@
+import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// A saved class's menu, the same on every screen. What needs a sheet or a dialog of the host (editing, deleting)
-/// shows only where the host passes it; elsewhere 회차에서 보기 leads to the page that has them. A recording is a page
-/// of its own, so it plays from any of them.
+/// A saved class's menu, the same on every screen (#403): rows come from `CourseFile.commands(for:at:host:)`, so what
+/// the class has and the time of day decide them, and the window shows its sheet and confirmations, so editing and
+/// deleting work from Today, the ribbon and search too.
+@MainActor
+struct SessionMenuSource: ItemMenuSource {
+    let workspace: Workspace
+    let courseId: UUID
+    let session: Session
+    let host: MenuHost
+    let now: Date
+    let openNote: (UUID) -> Void
+    let openLink: OpenLinkAction
+    let openURL: OpenURLAction
+    let sheets: ItemSheetsAction
+
+    private var file: CourseFile? { workspace.course(courseId)?.file }
+    private var link: AppLink { AppLink(.session, session.id) }
+
+    var commands: [SessionCommand] {
+        file?.commands(for: session, at: now, host: host, classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar) ?? []
+    }
+
+    func row(_ command: SessionCommand) -> MenuRow {
+        let row = { (title: String, symbol: String, kind: MenuRow.Kind) in
+            MenuRow(id: command, group: command.group, title: title, symbol: symbol, kind: kind)
+        }
+        switch command {
+        case .open:
+            return row(String(localized: .commonOpen), "arrow.right.circle", .action { openLink(link, course: courseId) })
+        case .join:
+            return row(String(localized: .sessionsJoinOnline), "video", .action {
+                if let file, let url = session.link(schedule: file.course.schedule, calendar: workspace.calendar) { JoinOnlineButton.join(url, openURL) }
+            })
+        case .openNote(let kind):
+            return row(String(localized: kind == .rough ? .sessionsOpenRoughNote : .sessionsOpenReviewNote), "doc.text", .action { open(kind) })
+        case .makeReviewNote:
+            return row(String(localized: .sessionsMakeReviewNote), "square.and.pencil", .action { open(.review) })
+        case .play(let id):
+            return row(String(localized: .sessionsPlayRecordingOne(duration(id))), "play", .action { play(id) })
+        case .recordings(let ids):
+            return row(String(localized: .sessionsRecordingShort), "waveform", .submenu(ids.enumerated().map { i, id in
+                MenuRow.Leaf(id: id, title: String(localized: .sessionsRecordingNumbered(i + 1, duration(id))), symbol: "play") { play(id) }
+            }))
+        case .record:
+            var r = row(String(localized: .sessionsRecord), "record.circle", .action { workspace.record(session.id, in: courseId) })
+            r.disabled = workspace.recorder.isActive
+            return r
+        case .review(let review):
+            let title = String(localized: review == .needed || review == .notNeeded ? .sessionsSkipsReview : .sessionsReviewWritten)
+            return row(title, review.reviewUnfinished == nil ? "forward" : "checkmark.circle", .check(review.isChecked) { _ in setReview(review.toggled) })
+        case .edit:
+            return row(String(localized: .commonEditEllipsis), "pencil", .action {
+                sheets.present(.session(SessionSheetRequest(course: courseId, session: session.id)))
+            })
+        case .unlink(let unit):
+            return row(String(localized: .unitsUnlinkSession), "link.badge.minus", .action {
+                workspace.run(UnitLink(course: courseId, unit: unit, sessions: [session.id], linked: false))
+            })
+        case .share:
+            return row(String(localized: .menuShare), "square.and.arrow.up", .share(link, course: courseId))
+        case .remove:
+            var r = row(String(localized: .commonDeleteEllipsis), "trash", .action {
+                sheets.confirm(workspace.ask(SessionRemove(course: courseId, sessions: [session.id]), button: .sessionsRemove))
+            })
+            r.role = .destructive
+            return r
+        }
+    }
+
+    /// The note, made from its template the first time.
+    private func open(_ kind: NoteKind) {
+        if let id = workspace.note(kind, of: session.id, in: courseId) { openNote(id) }
+    }
+
+    private func play(_ id: UUID) { openLink(AppLink(.recording, id), course: courseId) }
+
+    private func duration(_ id: UUID) -> String {
+        RecordingTime.label(file?.recordings.first { $0.id == id }?.duration ?? 0)
+    }
+
+    /// One flag, the one the check names: skipping review without a note, finishing it with one.
+    func setReview(_ review: ClassReview) {
+        workspace.run(SessionSet(course: courseId, session: session.id,
+                                 skipsReview: review.skipsReview.map(Patch.set) ?? .keep,
+                                 reviewUnfinished: review.reviewUnfinished.map(Patch.set) ?? .keep))
+    }
+}
+
+/// The menu of a saved class, for `.contextMenu` and a `⋯` button. `host` says where it is shown: the class's own
+/// screen leaves "열기" out, and a unit's page adds the row that unlinks it from that unit.
 struct SessionMenu: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.openURL) private var openURL
     @Environment(\.openLink) private var openLink
+    @Environment(\.itemSheets) private var sheets
     let courseId: UUID
     let sessionId: UUID
+    var host: MenuHost = .elsewhere
     let openNote: (UUID) -> Void
-    var showSessions: (() -> Void)?
-    var edit: (() -> Void)?
-    /// The class's wrap-up: progress, units, note, attendance.
-    var wrapUp: (() -> Void)?
-    var remove: (() -> Void)?
 
     var body: some View {
-        let model = SessionMenuModel(workspace: workspace, courseId: courseId)
-        if let session = model.session(sessionId) {
-            if let link = model.link(of: session) {
-                Button(.sessionsJoinOnline, systemImage: "video") { JoinOnlineButton.join(link, openURL) }
-                Divider()
-            }
-            Button(model.noteLabel(.rough, of: session), systemImage: "pencil.line") { open(.rough, session, model) }
-            Button(model.noteLabel(.review, of: session), systemImage: "square.and.pencil") { open(.review, session, model) }
-            if session.reviewNoteId != nil {
-                if session.reviewNoteUnfinished {
-                    Button(.courseReviewNoteFinish, systemImage: "checkmark.circle") { model.setReviewNoteUnfinished(false, of: session) }
-                } else {
-                    Button(.courseReviewNoteReopen, systemImage: "arrow.uturn.backward") { model.setReviewNoteUnfinished(true, of: session) }
-                }
-            }
-            Toggle(isOn: Binding(get: { session.skipsReview }, set: { model.setSkipsReview($0, of: session) })) {
-                Label(.sessionsSkipsReview, systemImage: "forward")
-            }
-            // Also ahead of the class, for an absence known in advance; it counts toward the caps once the class starts.
-            if model.takesAttendance(session) {
-                Picker(selection: Binding(get: { model.attendance(of: session) }, set: { model.setAttendance($0, of: session) })) {
-                    ForEach(AttendanceState.steps, id: \.value) { Text($0.label).tag($0.value) }
-                } label: {
-                    Label(.sessionsAttendance, systemImage: "person.crop.circle.badge.checkmark")
-                }
-            }
-            Divider()
-            Button(.sessionsRecord, systemImage: "record.circle") { model.record(session) }.disabled(model.isRecording)
-            ForEach(Array(model.recordings(of: session).enumerated()), id: \.element.id) { i, r in
-                Button(model.playLabel(i, r), systemImage: "play") { openLink(AppLink(.recording, r.id), course: courseId) }
-            }
-            Divider()
-            if let edit { Button(.commonEditEllipsis, systemImage: "pencil", action: edit) }
-            if let wrapUp, !session.isCancelled { Button(.wrapUpEllipsis, systemImage: "checklist", action: wrapUp) }
-            // Inline, so a makeup that was cancelled goes back to a makeup from here, not only from the form.
-            Divider()
-            Picker(selection: Binding(get: { session.kind }, set: { model.setKind($0, of: session) })) {
-                ForEach(model.kindOptions, id: \.0) { Text($0.1).tag($0.0) }
-            } label: {
-                Label(.sessionsKind, systemImage: "calendar.badge.minus")
-            }
-            .pickerStyle(.inline)
-            if let remove {
-                Divider()
-                Button(.sessionsRemoveSessionEllipsis, systemImage: "trash", role: .destructive, action: remove)
-            }
-            if let showSessions {
-                Divider()
-                Button(.courseShowSessions, systemImage: "calendar", action: showSessions)
-            }
-            LinkMenu(link: AppLink(.session, sessionId), course: courseId, trailing: true)
+        if let source = SessionMenu.source(workspace, courseId, sessionId, host: host, openNote: openNote, openLink: openLink, openURL: openURL, sheets: sheets) {
+            ItemMenu(source: source)
         }
     }
 
-    func open(_ kind: NoteKind, _ session: Session, _ model: SessionMenuModel) {
-        if let id = model.note(kind, of: session) { openNote(id) }
+    /// Minute by minute (`liveNow`), so a menu opened as a class ends offers what follows it.
+    @MainActor static func source(_ workspace: Workspace, _ courseId: UUID, _ sessionId: UUID, host: MenuHost, openNote: @escaping (UUID) -> Void,
+                                  openLink: OpenLinkAction, openURL: OpenURLAction, sheets: ItemSheetsAction) -> SessionMenuSource? {
+        guard let session = workspace.course(courseId)?.file.sessions.first(where: { $0.id == sessionId }) else { return nil }
+        return SessionMenuSource(workspace: workspace, courseId: courseId, session: session, host: host, now: workspace.liveNow,
+                                 openNote: openNote, openLink: openLink, openURL: openURL, sheets: sheets)
     }
 }
 
@@ -83,6 +123,7 @@ struct SessionMenu: View {
 struct SuggestedSessionItems: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.openURL) private var openURL
+    @Environment(\.itemSheets) private var sheets
     let item: Workspace.SuggestedSession
     let primary: Bool
     let openNote: (UUID) -> Void
@@ -111,6 +152,11 @@ struct SuggestedSessionItems: View {
             .disabled(!model.canMark(item, .excused))
         Divider()
         Button(.sessionsCancelled, systemImage: "calendar.badge.minus") { model.make(item, kind: .cancelled) }
+        Divider()
+        // The class's one sheet, adding it at this slot: nothing is saved until it is.
+        Button(.commonEditEllipsis, systemImage: "pencil") {
+            sheets.present(.session(SessionSheetRequest(course: item.courseId, start: item.suggestion.date)))
+        }
         if let editTimes {
             Divider()
             Button(.sessionsClassTimesChangeEllipsis, systemImage: "clock", action: editTimes)

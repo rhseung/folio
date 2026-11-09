@@ -3719,17 +3719,6 @@
         }
       }
     },
-    "course.review-note-finish": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복습 노트 작성 완료"
-          }
-        }
-      }
-    },
     "course.review-note-missing": {
       "extractionState": "manual",
       "localizations": {
@@ -3737,17 +3726,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "복습 노트 없음"
-          }
-        }
-      }
-    },
-    "course.review-note-reopen": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복습 노트 작성 중으로"
           }
         }
       }
@@ -3792,17 +3770,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "과제 보기"
-          }
-        }
-      }
-    },
-    "course.show-sessions": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "회차 보기"
           }
         }
       }
@@ -14818,17 +14785,6 @@
         }
       }
     },
-    "sessions.attendance": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "출석"
-          }
-        }
-      }
-    },
     "sessions.cancelled": {
       "extractionState": "manual",
       "localizations": {
@@ -14983,17 +14939,6 @@
         }
       }
     },
-    "sessions.make-rough-note": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "러프 노트 만들기"
-          }
-        }
-      }
-    },
     "sessions.make-session": {
       "extractionState": "manual",
       "localizations": {
@@ -15044,7 +14989,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "노트, 출석, 녹음, 종류, 삭제"
+            "value": "노트, 녹음, 복습, 편집, 공유, 삭제"
           }
         }
       }
@@ -15100,17 +15045,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "시간표로 계산한 수업입니다. 메뉴에서 휴강이나 결석을 고르면 회차로 저장합니다."
-          }
-        }
-      }
-    },
-    "sessions.play-recording": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "녹음 %1$lld 듣기 (%2$@)"
           }
         }
       }
@@ -15199,17 +15133,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "지우기…"
-          }
-        }
-      }
-    },
-    "sessions.remove-session-ellipsis": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "회차 삭제…"
           }
         }
       }
@@ -15397,17 +15320,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "단원 연결 필요"
-          }
-        }
-      }
-    },
-    "sessions.units-search": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원 검색"
           }
         }
       }
@@ -17036,17 +16948,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "복습 노트 작성 완료"
-          }
-        }
-      }
-    },
-    "today.note.no-review": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "복습 필요 없음"
           }
         }
       }
@@ -18910,17 +18811,6 @@
         }
       }
     },
-    "today.note.done": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다 씀"
-          }
-        }
-      }
-    },
     "today.ribbon.midnight": {
       "extractionState": "manual",
       "localizations": {
@@ -19709,17 +19599,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "새 창에서 열기"
-          }
-        }
-      }
-    },
-    "link.open-in": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다른 곳에서 열기"
           }
         }
       }
@@ -20720,7 +20599,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "같은 과목의 다음 수업이 시작하면 여기서 빠지고, 회차 메뉴의 \"수업 정리…\"로 연다"
+            "value": "같은 과목의 다음 수업이 시작하면 여기서 빠지고, 회차 메뉴의 \"편집…\"으로 연다"
           }
         }
       }
@@ -20758,17 +20637,6 @@
         }
       }
     },
-    "wrap-up.title": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수업 정리"
-          }
-        }
-      }
-    },
     "today.wrap-up.class": {
       "extractionState": "manual",
       "localizations": {
@@ -20776,28 +20644,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ · %2$@"
-          }
-        }
-      }
-    },
-    "wrap-up.units-new": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 단원"
-          }
-        }
-      }
-    },
-    "wrap-up.units-add": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원"
           }
         }
       }
@@ -20879,17 +20725,6 @@
         }
       }
     },
-    "wrap-up.title-of": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%1$@ · %2$@ 수업 정리"
-          }
-        }
-      }
-    },
     "wrap-up.later": {
       "extractionState": "manual",
       "localizations": {
@@ -20897,17 +20732,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "나중에"
-          }
-        }
-      }
-    },
-    "wrap-up.ellipsis": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "수업 정리…"
           }
         }
       }
@@ -21029,6 +20853,182 @@
           "stringUnit": {
             "state": "translated",
             "value": "빈 항목"
+          }
+        }
+      }
+    },
+    "design.more-tools": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "도구 더 보기"
+          }
+        }
+      }
+    },
+    "menu.share": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "공유"
+          }
+        }
+      }
+    },
+    "session-sheet.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ · %2$@ 수업"
+          }
+        }
+      }
+    },
+    "session-sheet.notes": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트"
+          }
+        }
+      }
+    },
+    "session-sheet.attendance": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "출결"
+          }
+        }
+      }
+    },
+    "session-sheet.info": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 정보"
+          }
+        }
+      }
+    },
+    "session-sheet.review": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습"
+          }
+        }
+      }
+    },
+    "session-sheet.review-needed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "필요"
+          }
+        }
+      }
+    },
+    "session-sheet.review-not-needed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "필요 없음"
+          }
+        }
+      }
+    },
+    "session-sheet.review-writing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "작성 중"
+          }
+        }
+      }
+    },
+    "session-sheet.review-written": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "작성 완료"
+          }
+        }
+      }
+    },
+    "sessions.review-written": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "작성 완료"
+          }
+        }
+      }
+    },
+    "sessions.play-recording-one": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 듣기 (%@)"
+          }
+        }
+      }
+    },
+    "sessions.recording-numbered": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 %1$lld (%2$@)"
+          }
+        }
+      }
+    },
+    "session-sheet.units-add": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 추가"
+          }
+        }
+      }
+    },
+    "session-sheet.units-new": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 단원 '%@'"
           }
         }
       }

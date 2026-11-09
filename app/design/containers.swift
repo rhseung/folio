@@ -26,17 +26,18 @@ struct NoticeCard<Trailing: View, Rows: View>: View {
 
     var body: some View {
         Card {
-            HStack(spacing: Theme.Space.m) {
-                Image(systemName: systemImage).foregroundStyle(Theme.Palette.warning).font(Theme.Typeface.bodyStrong)
-                VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text(title).font(Theme.Typeface.bodyStrong)
-                    if let detail {
-                        Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+            // The title stays on one line with its count whole: where the button doesn't fit beside it, the button
+            // moves under the words (#402). The detail is a sentence and wraps; its width doesn't decide the fit.
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: Theme.Space.m) {
+                    words(detailIdeal: 0)
+                    Spacer(minLength: Theme.Space.s)
+                    action
                 }
-                Spacer(minLength: Theme.Space.s)
-                trailing
+                VStack(alignment: .leading, spacing: Theme.Space.s) {
+                    words(detailIdeal: nil)
+                    action.padding(.leading, Theme.Space.m + Theme.Size.tile)
+                }
             }
             // A row's padding and height, so the banner is never slimmer than an empty card beside it.
             .padding(Theme.Inset.row)
@@ -45,6 +46,25 @@ struct NoticeCard<Trailing: View, Rows: View>: View {
             rows
         }
     }
+}
+
+extension NoticeCard {
+    func words(detailIdeal: CGFloat?) -> some View {
+        HStack(spacing: Theme.Space.m) {
+            Image(systemName: systemImage).foregroundStyle(Theme.Palette.warning).font(Theme.Typeface.bodyStrong)
+                .frame(width: Theme.Size.tile)
+            VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+                Text(title).font(Theme.Typeface.bodyStrong).lineLimit(1)
+                if let detail {
+                    Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(idealWidth: detailIdeal, maxWidth: .infinity, alignment: .leading)
+                }
+            }
+        }
+    }
+
+    var action: some View { trailing.lineLimit(1).fixedSize() }
 }
 
 extension NoticeCard where Rows == EmptyView {
@@ -80,7 +100,7 @@ struct FormRow<Control: View>: View {
         CardRow(last: last) {
             FoldingRow {
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text(label)
+                    Text(label).lineLimit(1)
                     if let detail { Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary) }
                 }
             } control: {
@@ -210,10 +230,10 @@ struct SheetForm<Rows: View>: View {
         VStack(alignment: .leading, spacing: Theme.Space.l) {
             HStack(spacing: Theme.Space.s) {
                 if let mark { mark }
-                Text(title).font(Theme.Typeface.columnTitle)
+                Text(title).font(Theme.Typeface.columnTitle).lineLimit(1)
                 if let step {
                     Spacer(minLength: Theme.Space.s)
-                    Text(step).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit()
+                    Text(step).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).monospacedDigit().fixedSize()
                 }
             }
             if let room {
@@ -287,7 +307,7 @@ struct EmptyCard: View {
                     .frame(width: Theme.Size.toolbarButton, height: Theme.Size.toolbarButton)
                     .background(tone == .plain ? Theme.Palette.fill : tone.foreground.opacity(Theme.Opacity.tint), in: .rect(cornerRadius: Theme.Radius.control))
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text(title).font(Theme.Typeface.bodyStrong)
+                    Text(title).font(Theme.Typeface.bodyStrong).lineLimit(1)
                     if let detail { Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary) }
                 }
                 Spacer(minLength: 0)

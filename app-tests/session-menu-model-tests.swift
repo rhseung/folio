@@ -2,6 +2,7 @@ import FolioActions
 import FolioDomain
 import FolioStorage
 import Foundation
+import SwiftUI
 import Testing
 @testable import Folio
 
@@ -36,58 +37,84 @@ struct SessionMenuModelTests {
         let note = try #require(model.roughNote(item))
         let s = try #require(try file(workspace).sessions.first { $0.date == item.suggestion.date })
         #expect(s.roughNoteId == note)
-        #expect(model.noteLabel(.rough, of: s) == String(localized: .sessionsOpenRoughNote))
-        #expect(model.noteLabel(.review, of: s) == String(localized: .sessionsMakeReviewNote))
     }
 
-    /// The items every screen shows: the review note can be finished and reopened, the class cancelled, its units set.
-    @Test func aSavedSessionsItemsChangeIt() throws {
+    // MARK: A saved class's menu (#403)
+
+    func source(_ workspace: Workspace, _ id: UUID, host: MenuHost = .elsewhere, sheets: ItemSheetsAction = ItemSheetsAction()) throws -> SessionMenuSource {
+        let session = try #require(try file(workspace).sessions.first { $0.id == id })
+        return SessionMenuSource(workspace: workspace, courseId: graphTheory, session: session, host: host, now: workspace.now, openNote: { _ in },
+                                 openLink: OpenLinkAction(), openURL: OpenURLAction { _ in .handled }, sheets: sheets)
+    }
+
+    func perform(_ row: MenuRow) {
+        switch row.kind {
+        case .action(let action): action()
+        case .check(let on, let set): set(!on)
+        case .submenu, .share: break
+        }
+    }
+
+    func row(_ source: SessionMenuSource, _ title: LocalizedStringResource) throws -> MenuRow {
+        try #require(source.commands.map(source.row).first { $0.title == String(localized: title) })
+    }
+
+    /// After the class: its review note to make and the one check, then editing, sharing and deleting. Off its own
+    /// screen, opening it leads.
+    @Test func afterClassTheMenuOffersTheReviewAndItsCheck() throws {
         let workspace = try fixtureWorkspace()
-        let model = SessionMenuModel(workspace: workspace, courseId: graphTheory)
-        let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now.addingTimeInterval(-86_400)))?.made)
-        func session() throws -> Session { try #require(model.session(id)) }
+        let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: workspace.now.addingTimeInterval(-86_400)))?.made)
+        let menu = try source(workspace, id)
+        #expect(menu.commands == [.open, .makeReviewNote, .review(.needed), .edit, .share, .remove])
+        #expect(menu.commands.map(menu.row).map(\.title) == ["열기", "복습 노트 만들기", "복습 필요 없음", "편집…", "공유", "삭제…"])
+        #expect(try source(workspace, id, host: .own).commands.first == .makeReviewNote)
 
-        _ = try #require(model.note(.review, of: try session()))
-        #expect(try session().reviewNoteUnfinished)
-        model.setReviewNoteUnfinished(false, of: try session())
-        #expect(try !session().reviewNoteUnfinished)
-        model.setReviewNoteUnfinished(true, of: try session())
-        #expect(try session().reviewNoteUnfinished)
+        perform(try row(menu, .sessionsSkipsReview))
+        #expect(try source(workspace, id).commands.contains(.review(.notNeeded)))
+        #expect(try file(workspace).sessions.first { $0.id == id }?.skipsReview == true)
 
-        model.setSkipsReview(true, of: try session())
-        #expect(try session().skipsReview)
+        // Made, the note is opened from here on, and the check becomes 작성 완료.
+        perform(try row(menu, .sessionsMakeReviewNote))
+        let written = try source(workspace, id)
+        #expect(written.commands.contains(.openNote(.review)) && written.commands.contains(.review(.writing)))
+        perform(try row(written, .sessionsReviewWritten))
+        #expect(try file(workspace).sessions.first { $0.id == id }?.reviewNoteUnfinished == false)
+    }
 
-        model.setAttendance(.late, of: try session())
-        #expect(model.attendance(of: try session()) == .late)
-        // A 휴강 has no attendance to count, and takes none.
-        model.setKind(.cancelled, of: try session())
-        #expect(try session().isCancelled && model.attendance(of: try session()) == .present)
-        #expect(!model.takesAttendance(try session()))
-        #expect(model.link(of: try session()) == nil)
+    /// Ahead of the class: recording, and no review yet.
+    @Test func aheadOfClassTheMenuOffersRecording() throws {
+        let workspace = try fixtureWorkspace()
+        let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: workspace.now.addingTimeInterval(2 * 86_400)))?.made)
+        let menu = try source(workspace, id, host: .own)
+        #expect(menu.commands == [.record, .edit, .share, .remove])
+    }
 
+    /// Editing and deleting go to the window, so any place that shows the class can do them.
+    @Test func editAndDeleteAskTheWindow() throws {
+        let workspace = try fixtureWorkspace()
+        let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: workspace.now.addingTimeInterval(-86_400)))?.made)
+        var presented: ItemSheet?
+        var asked: PendingAction?
+        let menu = try source(workspace, id, sheets: ItemSheetsAction(present: { presented = $0 }, confirm: { asked = $0 }))
+        perform(try row(menu, .commonEditEllipsis))
+        guard case .session(let request)? = presented else { Issue.record("no sheet"); return }
+        #expect(request.session == id && request.course == graphTheory && !request.asked)
+        perform(try row(menu, .commonDeleteEllipsis))
+        #expect(asked != nil && asked?.refusal == nil)
+        asked?.perform()
+        #expect(try file(workspace).sessions.allSatisfy { $0.id != id })
+    }
+
+    /// On a unit's page the class can be let go of that unit.
+    @Test func aUnitPageUnlinksTheClass() throws {
+        let workspace = try fixtureWorkspace()
+        let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: workspace.now.addingTimeInterval(-86_400)))?.made)
         let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
-        model.toggleUnit(unit, of: try session())
-        #expect(try session().unitIds == [unit])
-        model.toggleUnit(unit, of: try session())
-        #expect(try session().unitIds.isEmpty)
-    }
-
-    /// A makeup that was cancelled goes back to a makeup, not to a lecture.
-    @Test func theMenuPicksAnyKind() throws {
-        let workspace = try fixtureWorkspace()
-        let model = SessionMenuModel(workspace: workspace, courseId: graphTheory)
-        let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now.addingTimeInterval(-86_400), kind: .makeup))?.made)
-        func session() throws -> Session { try #require(model.session(id)) }
-        #expect(model.kindOptions.map(\.0) == [.lecture, .cancelled, .makeup])
-
-        model.setAttendance(.late, of: try session())
-        model.setKind(.cancelled, of: try session())
-        #expect(try session().kind == .cancelled && model.attendance(of: try session()) == .present)
-        model.setKind(.makeup, of: try session())
-        #expect(try session().kind == .makeup)
-        #expect(model.takesAttendance(try session()))
-        model.setKind(.lecture, of: try session())
-        #expect(try session().kind == .lecture)
+        workspace.run(UnitLink(course: graphTheory, unit: unit, sessions: [id], linked: true))
+        let menu = try source(workspace, id, host: .unit(unit))
+        #expect(menu.commands.contains(.unlink(unit: unit)))
+        perform(try row(menu, .unitsUnlinkSession))
+        #expect(try file(workspace).sessions.first { $0.id == id }?.unitIds.isEmpty == true)
     }
 
     /// One skip for every screen: the review screen's keeps the time the unit was open, a list's has none.

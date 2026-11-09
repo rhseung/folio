@@ -320,7 +320,8 @@ extension CourseSection {
 }
 
 /// "여기서 열기 · 옆 칸에서 열기 · 새 탭에서 열기 · 새 창에서 열기 · 링크 복사", the same in every item's and link's menu.
-/// A row whose menu leads with its own actions takes the openings as a submenu, after a divider (`trailing`).
+/// A row whose menu leads with its own actions takes the openings and the link as one 공유 ▸ submenu, after a divider
+/// (`trailing`), as item menus do (#403).
 struct LinkMenu: View {
     let link: AppLink
     var course: UUID?
@@ -332,8 +333,7 @@ struct LinkMenu: View {
     var body: some View {
         if trailing {
             Divider()
-            Menu(String(localized: .linkOpenIn)) { openings }
-            Button(.linkCopy, systemImage: "link") { copyLink(link) }
+            ShareMenu(link: link, course: course)
         } else {
             openings
             if copies {

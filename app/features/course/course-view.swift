@@ -156,7 +156,7 @@ struct CourseColumn: View {
                 // Code and name only; credits, grading and professors are on the overview page.
                 // Laid out like a ColumnRow, the dot in the icon column, so the title and the rows below share their edges.
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text(course.codeLine(model.workspace)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                    Text(course.codeLine(model.workspace)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1)
                         .padding(.leading, ColumnRow<EmptyView>.titleInset - Theme.Inset.listRow.leading)
                     HStack(spacing: ColumnRow<EmptyView>.gap) {
                         CourseMark(icon: course.file.course.icon, color: accent.color, font: Theme.Glyph.lineTitle)
@@ -189,7 +189,7 @@ struct CourseColumn: View {
                                     model.section = page
                                     closeColumn()
                                 } label: {
-                                    Text(page.title)
+                                    Text(page.title).lineLimit(1)
                                         .foregroundStyle(model.section == page ? accent.ink : Theme.Palette.textSecondary)
                                         .fontWeight(model.section == page ? .semibold : .regular)
                                         .padding(.leading, ColumnRow<EmptyView>.titleInset)
@@ -214,7 +214,7 @@ struct CourseColumn: View {
                             } label: {
                                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                                     Text(model.recentTitle(session, in: file)).lineLimit(1)
-                                    Text(model.recentDetail(session, in: file))
+                                    Text(model.recentDetail(session, in: file)).lineLimit(1)
                                         .font(Theme.Typeface.label.weight(.regular))
                                         .foregroundStyle(file.needsReviewNote(session, at: model.workspace.now) ? Theme.Palette.danger : Theme.Palette.textTertiary)
                                 }
@@ -223,7 +223,7 @@ struct CourseColumn: View {
                                 .contentShape(.rect)
                             }
                             .buttonStyle(.pointing(.plain))
-                            .contextMenu { SessionMenu(courseId: course.id, sessionId: session.id, openNote: model.show(note:), showSessions: { model.section = .sessions }) }
+                            .contextMenu { SessionMenu(courseId: course.id, sessionId: session.id, openNote: model.show(note:)) }
                         }
                     }
                 }
@@ -343,13 +343,13 @@ struct CourseOverview: View {
                                         .strikethrough(s.isCancelled)
                                     if s.kind == .makeup { SessionKindChip(kind: s.kind) }
                                 }
-                                Text(model.weekStatus(s, in: file, now: now))
+                                Text(model.weekStatus(s, in: file, now: now)).lineLimit(1)
                                     .font(Theme.Typeface.caption)
                                     .foregroundStyle(file.needsReviewNote(s, at: now) ? Theme.Palette.danger : Theme.Palette.textTertiary)
                             }
                             Spacer(minLength: 0)
                         }
-                        .contextMenu { SessionMenu(courseId: course.id, sessionId: s.id, openNote: model.show(note:), showSessions: { model.section = .sessions }) }
+                        .contextMenu { SessionMenu(courseId: course.id, sessionId: s.id, openNote: model.show(note:)) }
                     }
                 }
                 .opens { model.section = .sessions }
@@ -371,7 +371,7 @@ struct CourseOverview: View {
                         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                             Text(a.title).font(Theme.Typeface.bodyStrong).lineLimit(1)
                             Text(a.due?.formatted(.dateTime.month().day().weekday().hour().minute()) ?? String(localized: .courseNoDue))
-                                .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).monospacedDigit()
+                                .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).monospacedDigit().lineLimit(1)
                         }
                         Spacer(minLength: Theme.Space.s)
                         if let due = a.due {
@@ -407,7 +407,7 @@ struct CourseOverview: View {
                                 Chip(String(localized: entry.item.overdueDays > 0 ? .unitsDaysLate(entry.item.overdueDays) : .courseReviewToday),
                                      tone: entry.item.overdueDays > 0 ? .danger : .accent)
                             } else {
-                                Text(.sessionsCount(unit.sessionIds.count)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                                Text(.sessionsCount(unit.sessionIds.count)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).fixedSize()
                             }
                         }
                     }

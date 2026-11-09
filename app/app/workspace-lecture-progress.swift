@@ -3,7 +3,7 @@ import Foundation
 import PDFKit
 
 /// A class whose recording just stopped, to be asked to wrap up. The window that stopped it takes it
-/// (`ClassWrapUpPrompt`), so a second window doesn't ask again.
+/// (`ItemSheets`), so a second window doesn't ask again.
 struct ClassWrapUpAsk: Identifiable, Equatable {
     let id = UUID()
     let course: UUID

@@ -168,7 +168,6 @@ struct RootView: View {
                 .environment(\.sheetRoom, contentHeight)
                 // The window less its toolbar (and an iPad's keyboard): a sheet taller than that ran off the window.
                 .onGeometryChange(for: CGFloat.self) { $0.size.height - $0.safeAreaInsets.top - $0.safeAreaInsets.bottom } action: { contentHeight = $0 }
-                .classWrapUpPrompt(workspace)
                 .classStartPrompt(workspace, open: { open($0.link, in: $0.placement) }, showing: { navigator.current }, bringForward: bringForward)
                 #if os(iOS)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { windowWidth = $0 }
@@ -188,6 +187,8 @@ struct RootView: View {
                     }
                 }
                 .animation(.snappy(duration: 0.3), value: workspace.recorder.isActive)
+                // Outside the search overlay, so a result's menu can edit and delete as any other place can.
+                .itemSheets(workspace, openLink: openLink)
                 #if os(macOS)
                 // Closing the file on quit keeps the audio playable; the transcript so far is already on disk.
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in workspace.recorder.stopNow() }
@@ -285,7 +286,10 @@ struct RootView: View {
                 tabs.select(number: 1)
             }
             if SnapshotDriver.panes > 1, let course = workspace.currentCourses.first {
-                let lecture = course.file.materials.first { $0.path.lowercased().hasSuffix(".pdf") }.map { AppLink(.material, $0.id) }
+                // A lecture some class names pages of first: a placeholder PDF can't be read, and its pane drew no PDF bar.
+                let pdfs = course.file.materials.filter { $0.path.lowercased().hasSuffix(".pdf") }
+                let paged = pdfs.first { m in course.file.sessions.contains { $0.materials.contains { $0.materialId == m.id && $0.pages != nil } } }
+                let lecture = (paged ?? pdfs.first).map { AppLink(.material, $0.id) }
                 let besides = [lecture, AppLink.course(course.id, page: .quiz)].compactMap { $0 }.prefix(SnapshotDriver.panes - 1)
                 for tab in tabs.ids.prefix(2) {
                     for link in besides { if let entry = workspace.entry(for: link) { tabs.panes(tab)?.openBeside(entry) } }
@@ -655,7 +659,7 @@ struct RootView: View {
         // Terms already over step back, so the current and coming ones stand out in a list that grows every term.
         let past = semester.term == .credited || workspace.currentSemester.map { semester.order < $0.order } ?? false
         return Label {
-            Text(semester.title)
+            Text(semester.title).lineLimit(1)
         } icon: {
             Group {
                 if semester.term == .credited {
@@ -708,7 +712,7 @@ struct RootView: View {
                 if let ongoing {
                     Spacer(minLength: Theme.Space.xs)
                     Text(.rootMinutesLeft(Int(ongoing.end.timeIntervalSince(now) / 60) + 1)).font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
-                        .foregroundStyle(accent.ink)
+                        .foregroundStyle(accent.ink).fixedSize()
                 } else if let hint {
                     Spacer(minLength: Theme.Space.xs)
                     courseHint(hint)
@@ -733,6 +737,8 @@ struct RootView: View {
             }
         }
         .font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit()
+        // A time or D-n is never cut; the course's name gives way.
+        .fixedSize()
     }
 
     func clock(_ date: Date) -> String { date.formatted(.dateTime.hour(.defaultDigits(amPM: .omitted)).minute()) }
