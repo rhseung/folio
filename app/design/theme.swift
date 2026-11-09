@@ -96,6 +96,8 @@ enum Theme {
         /// Black over the page while a folded column is open over it (`ColumnSplit`): the page stays readable behind
         /// the glass, and reads as set aside.
         static let scrim = 0.16
+        /// Black over a note while one of its pictures is open large in the preview: the picture alone holds the eye.
+        static let figureScrim = 0.6
         /// The edge of a washed field, which without it washed out on a light wallpaper.
         static let edge = 0.12
         /// The fill inside a chosen row's line icon (`LineIcon(filled:)`).

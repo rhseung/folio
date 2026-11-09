@@ -30,7 +30,10 @@ enum NoteStyle {
             ("block-gap", NoteLook.blockGap), ("radius", NoteLook.radius), ("code-size", NoteLook.codeSize), ("label-size", NoteLook.labelSize),
         ] + NoteLook.headingSizes.enumerated().map { ("h\($0.offset + 1)", $0.element) }
             + [("fade", Theme.Space.xl)]
-        return ":root{" + values.map { String(format: "--%@:%gpx;", $0.0, Double($0.1)) }.joined() + "}"
+            // The preview's picture viewer: its pill buttons (a finger's width on a touch screen), their gap and glass.
+            + [("control", Theme.Size.toolbarButton), ("touch", Theme.Size.fab), ("gap", Theme.Space.s), ("glass-blur", Theme.Space.l)]
+        return ":root{" + values.map { String(format: "--%@:%gpx;", $0.0, Double($0.1)) }.joined()
+            + String(format: "--scrim:rgb(0 0 0 / %g);", Theme.Opacity.figureScrim) + "}"
     }()
 
     static func resource(_ name: String) -> String {

@@ -179,6 +179,39 @@ body.note.preview { padding-bottom: max(96px, calc(100vh - 2 * var(--margin))); 
 .note [id^="^"]:target { background: color-mix(in srgb, var(--accent) 14%, transparent); border-radius: 6px; transition: background 1s; }
 
 
+/* The preview's picture viewer (figures.js): a pressed picture over the dimmed note, on the card color so a transparent
+   SVG keeps the ground its ink was drawn for. Its buttons float, so they are glass pills; in a page that is a blur
+   behind a see-through card color, as the app's glass can't reach into the web view. */
+body.preview :is(img, figure.mermaid):not(a *, .ref-popover *, .figure-viewer *) { cursor: zoom-in; }
+.figure-viewer { position: fixed; inset: 0; z-index: 20; background: var(--scrim); touch-action: none; overscroll-behavior: contain;
+  -webkit-user-select: none; user-select: none; -webkit-touch-callout: none; cursor: grab; }
+.figure-viewer.dragging { cursor: grabbing; }
+@media (prefers-reduced-motion: no-preference) { .figure-viewer { animation: figure-in .16s ease-out; } }
+@keyframes figure-in { from { opacity: 0; } }
+.figure-sheet { position: absolute; left: 0; top: 0; overflow: hidden; background: var(--card); border-radius: var(--radius);
+  box-shadow: 0 var(--gap) calc(4 * var(--gap)) var(--scrim); }
+/* After `.note img`, which would give the copy the column's margins and cap. */
+.note .figure-sheet > :is(img, svg) { display: block; box-sizing: border-box; width: 100%; height: 100%; max-width: none; margin: 0; border-radius: 0; }
+.figure-bar { position: absolute; display: flex; gap: var(--gap); }
+.figure-top { top: calc(1.5 * var(--gap)); right: calc(1.5 * var(--gap)); }
+.figure-bottom { bottom: calc(1.5 * var(--gap)); left: 50%; transform: translateX(-50%); }
+.figure-nav { position: absolute; top: 50%; transform: translateY(-50%); }
+.figure-previous { left: calc(1.5 * var(--gap)); }
+.figure-next { right: calc(1.5 * var(--gap)); }
+.figure-pill { appearance: none; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; min-width: var(--control);
+  height: var(--control); padding: 0 calc(1.5 * var(--gap)); border-radius: 999px; font: 600 var(--label-size)/1 var(--sans);
+  font-variant-numeric: tabular-nums; white-space: nowrap; color: var(--text); cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--text) 12%, transparent); background: color-mix(in srgb, var(--card) 72%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(var(--glass-blur)); backdrop-filter: saturate(1.4) blur(var(--glass-blur)); }
+.figure-pill:has(> svg) { padding: 0; }
+.figure-pill[hidden] { display: none; }
+.figure-count { cursor: default; }
+.figure-actual { min-width: calc(2 * var(--control)); }
+@media (hover: hover) { button.figure-pill:hover { background: color-mix(in srgb, var(--card) 90%, transparent); } }
+button.figure-pill:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* A finger's width where the pointer is one. */
+@media (pointer: coarse) { .figure-pill { min-width: var(--touch); height: var(--touch); } .figure-actual { min-width: calc(2 * var(--touch)); } }
+
 /* A scroller that fades its edges in place of a scroll bar, as `overflowFade` does in the app: reader.js marks the
    edges with more past them. Both the bar and the mask belong on the box that scrolls: the Claude panel's page holds
    still and only its `.chat` moves, so `html { scrollbar-width: none }` and edges read from the document did nothing.

@@ -230,7 +230,19 @@ extension NotePreview: UIViewRepresentable {
         ].joined(separator: "; ")
         return "<!doctype html><html><head><meta charset=utf-8><meta http-equiv=\"Content-Security-Policy\" content=\"\(policy)\">"
             + "<base href=\"\(shellURL.absoluteString)\"><style id=\"folio-theme\">\(theme)</style><style>\(NoteStyle.css)</style></head>"
-            + "<body class=\"note preview\"></body></html>"
+            + "<body class=\"note preview\"\(figureLabels)></body></html>"
+    }
+
+    /// The picture viewer's button names (web/src/figures.js), which the page has no catalog to look up.
+    private static var figureLabels: String {
+        let labels: [(String, LocalizedStringResource)] = [
+            ("close", .notesFigureClose), ("previous", .notesFigurePrevious), ("next", .notesFigureNext),
+            ("zoom-in", .notesFigureZoomIn), ("zoom-out", .notesFigureZoomOut), ("fit", .notesFigureFit),
+        ]
+        return labels.map { name, label in
+            let text = String(localized: label).replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "\"", with: "&quot;")
+            return " data-label-\(name)=\"\(text)\""
+        }.joined()
     }
 
     private func load() {
