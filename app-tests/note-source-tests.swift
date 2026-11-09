@@ -256,6 +256,77 @@ struct NoteSourceTests {
         NoteRender.write(view, "bubble-dark")
     }
 
+    /// The bubble pads its picture evenly, and the picture is the formula's ink (`NoteMathTests.picturesAreTheirInk`),
+    /// so it hugs every shape of formula: a display formula's no wider than the formula, not the column, and one wider
+    /// than the column is shrunk into it. All of them are written on one sheet for the PR.
+    @Test func theMathBubbleHugsTheFormula() async throws {
+        let columns: [(MathSyntax, Bool)] = [(.latex, false), (.latex, true), (.asciimath, false), (.asciimath, true)]
+        for dark in [false, true] {
+            var rows: [(String, [NSBitmapImageRep])] = []
+            for shape in NoteMathTests.shapes {
+                var cells: [NSBitmapImageRep] = []
+                for (syntax, display) in columns {
+                    let source = syntax == .latex ? shape.tex : shape.ascii
+                    let text = display ? "앞\n$$\n\(source)\n$$\n뒤" : "앞 $\(source)$ 뒤"
+                    let (view, window) = Self.editor(text, width: 720, dark: dark)
+                    Self.shown(window)
+                    defer { window.orderOut(nil) }
+                    view.drawsBackground = true
+                    view.backgroundColor = NoteLook.card
+                    view.configure(accent: CourseAccent.presets[0].accent, syntax: syntax, dark: dark)
+                    window.makeFirstResponder(view)
+                    let ns = text as NSString
+                    view.setSelectedRange(NSRange(location: display ? ns.range(of: source).location + 1 : ns.range(of: "$").location + 2, length: 0))
+                    let label = "\(shape.name) \(syntax.rawValue) \(display ? "block" : "inline") \(dark ? "dark" : "light")"
+                    let bubble = try #require(await Self.bubble(view), "\(label)")
+                    let picture = try #require(bubble.subviews.first, "\(label)")
+                    let insets = [picture.frame.minX, picture.frame.minY, bubble.bounds.maxX - picture.frame.maxX, bubble.bounds.maxY - picture.frame.maxY]
+                    #expect(insets.allSatisfy { $0 == PreviewBubble.pad }, "\(label): \(insets)")
+                    #expect(bubble.frame.minX >= view.visibleRect.minX && bubble.frame.maxX <= view.visibleRect.maxX, "\(label): \(bubble.frame) in \(view.visibleRect)")
+                    let room = view.visibleRect.width - 2 * PreviewBubble.pad - 8
+                    #expect(picture.frame.width <= room.rounded(), "\(label): \(picture.frame.width) past \(room)")
+                    // As wide as the bubble, and as tall as it and the line of source it's under, whole rather than
+                    // cut through by the bubble's margin.
+                    let closing = ns.range(of: "$", options: .backwards).location
+                    let line = view.convert(window.convertFromScreen(view.firstRect(forCharacterRange: NSRange(location: closing, length: 1), actualRange: nil)), from: nil)
+                    let top = min(bubble.frame.minY - 12, line.minY - 4), bottom = max(bubble.frame.maxY + 12, line.maxY + 4)
+                    let around = CGRect(x: bubble.frame.minX - 12, y: top, width: bubble.frame.width + 24, height: bottom - top).intersection(view.bounds)
+                    if let cell = Self.cell(view, bubble, around: around) {
+                        cells.append(cell)
+                    }
+                }
+                rows.append((shape.name, cells))
+            }
+            NoteRender.sheet(rows, columns: ["TeX 인라인", "TeX 블록", "AsciiMath 인라인", "AsciiMath 블록"], dark: dark,
+                             "math-bubbles-\(dark ? "dark" : "light")")
+        }
+    }
+
+    /// The text around a bubble with the bubble over it, for the sheet. The bubble is drawn here: its card and its
+    /// picture are what a layer holds, and `cacheDisplay` draws only what views draw.
+    static func cell(_ view: SourceTextView, _ bubble: PreviewBubble, around: CGRect) -> NSBitmapImageRep? {
+        guard let rep = view.bitmapImageRepForCachingDisplay(in: around),
+              let image = (bubble.subviews.first as? NSImageView)?.image,
+              let context = NSGraphicsContext(bitmapImageRep: rep) else { return nil }
+        view.cacheDisplay(in: around, to: rep)
+        NSGraphicsContext.saveGraphicsState()
+        NSGraphicsContext.current = context
+        defer { NSGraphicsContext.restoreGraphicsState() }
+        // The text view's y runs down, the picture's up.
+        let frame = NSRect(x: bubble.frame.minX - around.minX, y: around.maxY - bubble.frame.maxY, width: bubble.frame.width, height: bubble.frame.height)
+        let pad = PreviewBubble.pad
+        view.effectiveAppearance.performAsCurrentDrawingAppearance {
+            let card = NSBezierPath(roundedRect: frame.insetBy(dx: 0.5, dy: 0.5), xRadius: NoteLook.radius, yRadius: NoteLook.radius)
+            NoteLook.card.setFill()
+            card.fill()
+            NoteLook.lineSoft.setStroke()
+            card.lineWidth = 1
+            card.stroke()
+            image.draw(in: frame.insetBy(dx: pad, dy: pad))
+        }
+        return rep
+    }
+
     @Test func theBubbleTakesItsWindowsLook() throws {
         let card = { (name: NSAppearance.Name) -> CGColor? in
             var color: CGColor?
