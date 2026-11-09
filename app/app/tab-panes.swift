@@ -96,6 +96,27 @@ final class TabPanes {
         publish()
     }
 
+    func canMerge(_ other: TabPanes) -> Bool { other !== self && layout.canMerge(other.layout, limit: limit) }
+
+    /// "옆 칸으로 합치기": another tab's panes join these before pane `index` (`PaneLayout.merge`), each with its
+    /// history, so back and forward go on in it as they did there. False, and nothing taken, past the limit. The
+    /// other tab is left as it was, for its window to close.
+    @discardableResult
+    func merge(_ other: TabPanes, at index: Int) -> Bool {
+        guard other !== self else { return false }
+        follow()
+        other.follow()
+        let at = min(max(index, 0), count)
+        guard layout.merge(other.layout, at: at, limit: limit) else { return false }
+        // New IDs and trails: the panes' screens are drawn anew in this tab, and a playing pane's old screen says it
+        // stopped by its old ID as it goes.
+        ids.insert(contentsOf: other.ids.map { _ in UUID() }, at: at)
+        navigators.insert(contentsOf: other.navigators, at: at)
+        trails.insert(contentsOf: other.ids.map { _ in CrumbTrail() }, at: at)
+        publish()
+        return true
+    }
+
     /// False, and nothing closed, for the last pane: closing it is closing the tab.
     @discardableResult
     func close(_ i: Int) -> Bool {

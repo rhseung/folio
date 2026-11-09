@@ -19,12 +19,16 @@ struct ClassStartAsk: Identifiable, Equatable {
     let course: UUID
     let session: UUID
     var opens: [ClassStartOpening] = []
+    /// The rough note and the lectures together, for a new tab of their own (`ClassStartSettings.OpenIn.splitTab`).
+    var split: PaneLayout?
     var front = false
     var asksRecording = false
     /// When a recording started for the class stops by itself.
     var stopAt: Date?
     /// `그래프 이론 · 11/2(월)`, as the recording names the class.
     var title = ""
+
+    var opensPages: Bool { !opens.isEmpty || split != nil }
 }
 
 /// What one minute's check found for the class starting: the window's part, and whether to record at once.
@@ -57,8 +61,8 @@ extension Workspace {
         stopClassRecordingIfDue(at: now)
         guard let step = classStartStep(at: now, recorderBusy: recorder.isActive) else { return }
         if step.records { recordClass(step.ask) }
-        guard step.records || step.ask.asksRecording || !step.ask.opens.isEmpty else { return }
-        if !step.ask.opens.isEmpty || step.ask.asksRecording { classStartAsk = step.ask }
+        guard step.records || step.ask.asksRecording || step.ask.opensPages else { return }
+        if step.ask.opensPages || step.ask.asksRecording { classStartAsk = step.ask }
         if !step.ask.front { NotificationScheduler.classStarted(step.ask.title, recording: step.records) }
     }
 
@@ -80,7 +84,15 @@ extension Workspace {
         var step = ClassStartStep(ask: ClassStartAsk(course: loaded.id, session: id, front: setting.screen == .front,
                                                      stopAt: ClassStart.recordingStop(c, settings: setting),
                                                      title: "\(loaded.title) · \(loaded.file.title(of: session, calendar: calendar))"))
-        if due.contains(.open) { step.ask.opens = classStartOpenings(for: session, in: loaded.id) }
+        if due.contains(.open) {
+            let pages = classStartPages(for: session, in: loaded.id)
+            if setting.openIn == .splitTab, let split = PanePreset.inClass.layout([.lecture: pages.lectures, .classNote: pages.note.map { [$0] } ?? []],
+                                                                                    focus: .classNote, limit: TabPanes.limit) {
+                step.ask.split = split
+            } else {
+                step.ask.opens = classStartOpenings(pages, session: session)
+            }
+        }
         // A recording under way is never cut short, and a class recorded already (then stopped, or on another
         // device) isn't recorded again because the app opened during it.
         if due.contains(.recording), !recorderBusy, !loaded.file.recordings.contains(where: { $0.sessionId == id }) {
@@ -93,21 +105,30 @@ extension Workspace {
         return step
     }
 
-    /// The rough note and the lectures where the settings put them, and the class itself in front unless the note
-    /// took that place. In placement order, so a pane beside opens beside what is then in front.
-    func classStartOpenings(for session: Session, in courseId: UUID) -> [ClassStartOpening] {
+    /// The class's rough note (made first when the settings say so) and its lectures, each when the settings turn it
+    /// on.
+    func classStartPages(for session: Session, in courseId: UUID) -> (note: AppLink?, lectures: [AppLink]) {
         let setting = settings.classStart
-        var opens: [ClassStartOpening] = []
+        var pages: (note: AppLink?, lectures: [AppLink]) = (nil, [])
         if setting.isOn(.roughNote, course: courseId) {
             let made = setting.roughNote == .create ? note(.rough, of: session.id, in: courseId) : session.roughNoteId
-            if let made { opens.append(ClassStartOpening(link: AppLink(.note, made), placement: LinkPlacement(setting.roughNotePlace))) }
+            pages.note = made.map { AppLink(.note, $0) }
         }
         if setting.isOn(.lecture, course: courseId), let file = course(courseId)?.file {
-            for lecture in file.startingLectures(for: session, all: setting.allLectures, resumes: setting.resumesLecture) {
-                opens.append(ClassStartOpening(link: AppLink(.material, lecture.material, anchor: lecture.page.map(AppLink.Anchor.page)),
-                                               placement: LinkPlacement(setting.lecturePlace)))
+            pages.lectures = file.startingLectures(for: session, all: setting.allLectures, resumes: setting.resumesLecture).map {
+                AppLink(.material, $0.material, anchor: $0.page.map(AppLink.Anchor.page))
             }
         }
+        return pages
+    }
+
+    /// The pages where the settings put each, and the class itself in front unless the note took that place. In
+    /// placement order, so a pane beside opens beside what is then in front.
+    func classStartOpenings(_ pages: (note: AppLink?, lectures: [AppLink]), session: Session) -> [ClassStartOpening] {
+        let setting = settings.classStart
+        var opens: [ClassStartOpening] = []
+        if let note = pages.note { opens.append(ClassStartOpening(link: note, placement: LinkPlacement(setting.roughNotePlace))) }
+        opens += pages.lectures.map { ClassStartOpening(link: $0, placement: LinkPlacement(setting.lecturePlace)) }
         if !opens.contains(where: { $0.placement == .here }) {
             opens.insert(ClassStartOpening(link: AppLink(.session, session.id), placement: .here), at: 0)
         }
@@ -117,8 +138,17 @@ extension Workspace {
     /// What a window opens of `ask`, showing `entry` in front: nothing while it shows another class (its session, its
     /// notes, its recording), which the student chose to look at.
     func classStartOpenings(_ ask: ClassStartAsk, showing entry: Navigator.Entry) -> [ClassStartOpening] {
-        guard let shown = session(shownBy: entry), shown != ask.session else { return ask.opens }
-        return []
+        leavesAlone(ask, showing: entry) ? [] : ask.opens
+    }
+
+    /// The tab of the class's pages side by side, under the same rule as `classStartOpenings`.
+    func classStartSplit(_ ask: ClassStartAsk, showing entry: Navigator.Entry) -> PaneLayout? {
+        leavesAlone(ask, showing: entry) ? nil : ask.split
+    }
+
+    private func leavesAlone(_ ask: ClassStartAsk, showing entry: Navigator.Entry) -> Bool {
+        guard let shown = session(shownBy: entry) else { return false }
+        return shown != ask.session
     }
 
     func session(shownBy entry: Navigator.Entry) -> UUID? {
@@ -159,6 +189,8 @@ extension Workspace {
 struct ClassStartPrompt: ViewModifier {
     let workspace: Workspace
     let open: @MainActor (ClassStartOpening) -> Void
+    /// A new tab of panes, focused as the layout is, the class's course for links that need one.
+    let openSplit: @MainActor (PaneLayout, UUID) -> Void
     let showing: @MainActor () -> Navigator.Entry
     let bringForward: @MainActor () -> Void
     @State private var asking: ClassStartAsk?
@@ -188,7 +220,9 @@ struct ClassStartPrompt: ViewModifier {
         guard active || !NSApp.isActive else { return }
         #endif
         workspace.classStartAsk = nil
-        for opening in workspace.classStartOpenings(ask, showing: showing()) { open(opening) }
+        let shown = showing()
+        for opening in workspace.classStartOpenings(ask, showing: shown) { open(opening) }
+        if let split = workspace.classStartSplit(ask, showing: shown) { openSplit(split, ask.course) }
         if ask.front { bringForward() }
         if ask.asksRecording { asking = ask }
     }
@@ -196,7 +230,8 @@ struct ClassStartPrompt: ViewModifier {
 
 extension View {
     func classStartPrompt(_ workspace: Workspace, open: @escaping @MainActor (ClassStartOpening) -> Void,
+                          openSplit: @escaping @MainActor (PaneLayout, UUID) -> Void,
                           showing: @escaping @MainActor () -> Navigator.Entry, bringForward: @escaping @MainActor () -> Void) -> some View {
-        modifier(ClassStartPrompt(workspace: workspace, open: open, showing: showing, bringForward: bringForward))
+        modifier(ClassStartPrompt(workspace: workspace, open: open, openSplit: openSplit, showing: showing, bringForward: bringForward))
     }
 }

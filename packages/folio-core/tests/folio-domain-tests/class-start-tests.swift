@@ -197,6 +197,16 @@ struct ClassStartTests {
         s.setOff([], for: id)
         #expect(s.courseOff.isEmpty)
     }
+
+    @Test func pagesOpenInASplitTabUnlessToldOtherwise() throws {
+        let old = try JSONDecoder().decode(ClassStartSettings.self, from: Data(#"{"lecture": "open"}"#.utf8))
+        #expect(old.openIn == .splitTab)
+        var s = Settings()
+        s.classStart.openIn = .currentTab
+        let data = try JSONEncoder().encode(s)
+        #expect(String(decoding: data, as: UTF8.self).contains(#""openIn":"currentTab""#))
+        #expect(try JSONDecoder().decode(Settings.self, from: data).classStart.openIn == .currentTab)
+    }
 }
 
 /// What any class and any minute must keep. The worked cases are in ClassStartTests.

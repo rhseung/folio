@@ -357,7 +357,7 @@ private struct ClassStartForm: View {
                         (.create, String(localized: .settingsClassStartCreate)),
                     ])
                 }
-                if s.roughNote != .off {
+                if s.roughNote != .off, s.openIn == .currentTab {
                     FormRow(label: String(localized: .settingsClassStartPlace)) {
                         ChoiceMenu(selection: $model.settings.classStart.roughNotePlace, options: [ClassStartSettings.Place.here, .beside, .tab].map { ($0, $0.label) })
                     }
@@ -368,8 +368,10 @@ private struct ClassStartForm: View {
                     ])
                 }
                 if s.lecture != .off {
-                    FormRow(label: String(localized: .settingsClassStartPlace)) {
-                        ChoiceMenu(selection: $model.settings.classStart.lecturePlace, options: [ClassStartSettings.Place.beside, .tab, .window].map { ($0, $0.label) })
+                    if s.openIn == .currentTab {
+                        FormRow(label: String(localized: .settingsClassStartPlace)) {
+                            ChoiceMenu(selection: $model.settings.classStart.lecturePlace, options: [ClassStartSettings.Place.beside, .tab, .window].map { ($0, $0.label) })
+                        }
                     }
                     FormRow(label: String(localized: .settingsClassStartLectureCount)) {
                         ChoiceMenu(selection: $model.settings.classStart.allLectures, options: [
@@ -377,6 +379,14 @@ private struct ClassStartForm: View {
                         ])
                     }
                     FormRow(label: String(localized: .settingsClassStartResume)) { Switch(isOn: $model.settings.classStart.resumesLecture) }
+                }
+                // Over the note's and the lectures' own places: in a split tab they open together, where those don't apply.
+                if s.roughNote != .off || s.lecture != .off {
+                    FormRow(label: String(localized: .settingsClassStartOpenIn)) {
+                        ChoiceMenu(selection: $model.settings.classStart.openIn, options: [
+                            (.splitTab, String(localized: .settingsClassStartOpenInSplit)), (.currentTab, String(localized: .settingsClassStartOpenInCurrent)),
+                        ])
+                    }
                 }
                 FormRow(label: String(localized: .settingsClassStartScreen), last: true) {
                     ChoiceMenu(selection: $model.settings.classStart.screen, options: [
