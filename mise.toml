@@ -18,12 +18,15 @@ description = "Run package tests, the design token check and the Application Sup
 # fixtures and expectations are in Korean time, and Apple's date detector reads phrases like 내일 7시 in the
 # machine's zone, not the test calendar's; a UTC machine (CI) would fail them.
 env = { TZ = "Asia/Seoul" }
+# folio-core is built once with its tests: `swift run` alone builds without testability and so compiles every module
+# again for the checks.
 run = [
   "swift test --package-path packages/folio-markdown",
-  "swift test --package-path packages/folio-core",
+  "swift build --build-tests --package-path packages/folio-core",
+  "swift test --skip-build --package-path packages/folio-core",
   "swift test --package-path packages/folio-ai",
-  "swift run -q --package-path packages/folio-core folio actions --check",
-  "swift run -q --package-path packages/folio-core folio-gen --check",
+  "swift run --skip-build -q --package-path packages/folio-core folio actions --check",
+  "swift run --skip-build -q --package-path packages/folio-core folio-gen --check",
   "scripts/check-design.sh",
   "scripts/check-local-folders.sh",
 ]
@@ -98,7 +101,12 @@ run = """
 id=$(xcrun simctl list devices available | grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}')
 [ -n "$id" ] || { echo "no available iPad simulator" >&2; exit 1; }
 rm -rf .build/test-ipad.xcresult
-xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
+# A simulator that hasn't run yet takes minutes to boot, so it boots while the tests build.
+xcrun simctl bootstatus "$id" -b >/dev/null &
+boot=$!
+xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" build-for-testing -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
+wait "$boot"
+xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test-without-building -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
 # -quiet leaves out the tests themselves; the count shows they ran.
 xcrun xcresulttool get test-results summary --path .build/test-ipad.xcresult --compact
 """
@@ -138,7 +146,9 @@ ditto "$FOLIO_DERIVED_DATA/Build/Products/Release/Folio.app" /Applications/Folio
 [tasks.build-ipad]
 description = "Build the app for the iPad simulator (FOLIO_CONFIGURATION=Release for a Release build)"
 depends = ["generate"]
-run = "xcodebuild -scheme Folio -configuration \"${FOLIO_CONFIGURATION:-Debug}\" -destination 'generic/platform=iOS Simulator' build -quiet -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation"
+# A generic destination builds every simulator architecture outside Debug; Intel's adds a second full compile of the
+# same code and nothing an iPad runs.
+run = "xcodebuild -scheme Folio -configuration \"${FOLIO_CONFIGURATION:-Debug}\" -destination 'generic/platform=iOS Simulator' ARCHS=arm64 build -quiet -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation"
 
 [tasks.build-web]
 description = "Bundle the note page (KaTeX math, code highlighting, diagrams, note CSS) and the edit view's code highlighting into app/resources/web"

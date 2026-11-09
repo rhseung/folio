@@ -68,12 +68,36 @@ jobs:
     runs-on: xcode-27
     steps:
       - uses: actions/checkout@v7
+      # Checkout stamps every file with the time it was written, so Xcode and SwiftPM, which compare a source's time
+      # with the one their last build recorded, would compile everything the cache holds again. A time made from the
+      # file's content (its blob hash) is the same on every runner while the content is, and a different one once it
+      # changes, so a cached build skips exactly the unchanged files. Times stay in 2001-2010, never in the future.
+      - name: Pin file times to content
+        run: git ls-files -s -z | perl -0ne 'my ($mode, $sha, $path) = /^(\d+) ([0-9a-f]+) \d+\t(.*)\0$/s or next; next unless $mode =~ /^100/; my $t = 1_000_000_000 + hex(substr($sha, 0, 7)); utime($t, $t, $path) or die "$path: $!"'
       - run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
       # Apple's date detector reads 오후 3시 or 자정 only when Korean is a preferred language; on the English runner
       # it kept the date and dropped the time.
       - run: defaults write -g AppleLanguages -array ko-KR en-US && defaults write -g AppleLocale ko_KR
+      - id: xcode
+        run: echo "version=$(DEVELOPER_DIR="$XCODE/Contents/Developer" xcodebuild -version | tr -s ' \n' '-' | sed 's/-$//')" >> "$GITHUB_OUTPUT"
+      # Each package's build folder, saved the way the Xcode builds below are.
+      - id: cache
+        uses: actions/cache/restore@v6
+        with:
+          path: packages/*/.build
+          key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved') }}-${{ github.sha }}
+          restore-keys: |
+            swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved') }}-
+            swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
       - uses: jdx/mise-action@v5
-      - run: mise run test
+      - id: run
+        run: mise run test
+      # A failed test still built everything, so its build is worth keeping.
+      - if: ${{ !cancelled() && (github.event_name == 'push' || steps.cache.outputs.cache-matched-key == '') && steps.run.outcome != 'skipped' }}
+        uses: actions/cache/save@v6
+        with:
+          path: packages/*/.build
+          key: ${{ steps.cache.outputs.cache-primary-key }}
 
   build:
     needs: changes
@@ -103,6 +127,13 @@ jobs:
         run: echo "No file in this PR reaches ${{ matrix.task }}."
       - if: env.RUN == 'true'
         uses: actions/checkout@v7
+      # Checkout stamps every file with the time it was written, so Xcode and SwiftPM, which compare a source's time
+      # with the one their last build recorded, would compile everything the cache holds again. A time made from the
+      # file's content (its blob hash) is the same on every runner while the content is, and a different one once it
+      # changes, so a cached build skips exactly the unchanged files. Times stay in 2001-2010, never in the future.
+      - if: env.RUN == 'true'
+        name: Pin file times to content
+        run: git ls-files -s -z | perl -0ne 'my ($mode, $sha, $path) = /^(\d+) ([0-9a-f]+) \d+\t(.*)\0$/s or next; next unless $mode =~ /^100/; my $t = 1_000_000_000 + hex(substr($sha, 0, 7)); utime($t, $t, $path) or die "$path: $!"'
       - if: env.RUN == 'true'
         run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
       - if: env.RUN == 'true'
@@ -122,34 +153,27 @@ jobs:
             !.build/DerivedData/Index.noindex
             !.build/DerivedData/Logs
             !.build/DerivedData/TestResults
-          key: xcode-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-${{ github.sha }}
+          key: derived-data-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-${{ github.sha }}
           restore-keys: |
-            xcode-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-
-            xcode-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
-      # Checkout stamps every source newer than the cached build, so every module compiles again; the compilation
-      # cache answers the ones whose inputs are unchanged by content, not by date, so an edit can't be skipped. The app,
-      # test and resource bundles go so that a file the branch deleted can't linger in them; Xcode copies resources
-      # into a bundle without removing old ones.
+            derived-data-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-
+            derived-data-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
+      # The app, test and resource bundles go so that a file the branch deleted can't linger in them; Xcode copies
+      # resources into a bundle without removing old ones. Xcode also takes a source whose inode changed for an edited
+      # one, and every file is new to this machine, so it is told to look at the times and sizes alone.
       - if: env.RUN == 'true'
         run: |
           rm -rf .build/DerivedData/Build/Products/*/*.app .build/DerivedData/Build/Products/*/*.xctest .build/DerivedData/Build/Products/*/*.bundle
-          # xcodebuild reads XCODE_XCCONFIG_FILE over every target's settings: the compilation cache is on in CI alone,
-          # without a setting in project.yml.
-          echo 'COMPILATION_CACHE_ENABLE_CACHING = YES' > "$RUNNER_TEMP/ci.xcconfig"
-          echo "XCODE_XCCONFIG_FILE=$RUNNER_TEMP/ci.xcconfig" >> "$GITHUB_ENV"
+          defaults write com.apple.dt.XCBuild IgnoreFileSystemDeviceInodeChanges -bool YES
       - if: env.RUN == 'true'
         uses: jdx/mise-action@v5
       - if: env.RUN == 'true'
         id: run
         run: mise run ${{ matrix.task }}
       # A run that failed to build would leave a cache without the dependencies; a failed test still saves, since the
-      # app was built. The compilation cache only grows, so past 3 GB it starts over.
+      # app was built.
       - if: ${{ !cancelled() && env.RUN == 'true' && (github.event_name == 'push' || steps.cache.outputs.cache-matched-key == '') && (steps.run.outcome == 'success' || (steps.run.outcome == 'failure' && hashFiles('.build/DerivedData/Build/Products/*/Folio.app/**/Info.plist') != '')) }}
         id: keep
-        run: |
-          cas=.build/DerivedData/CompilationCache.noindex
-          if [ -d "$cas" ] && [ "$(du -sm "$cas" | cut -f1)" -gt 3072 ]; then rm -rf "$cas"; fi
-          du -sh .build/DerivedData/* || true
+        run: du -sh .build/DerivedData/* || true
       - if: ${{ !cancelled() && steps.keep.outcome == 'success' }}
         uses: actions/cache/save@v6
         with:
