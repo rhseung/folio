@@ -637,15 +637,15 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         completion.arrived = { [weak self] in self?.placeMenu() }
     }
 
-    /// ⌃Space (편집 › 수식 기호 목록): every symbol and math snippet of the note's syntax, before anything is typed.
-    /// Only in a formula; elsewhere it beeps, as a menu command that can't act here does.
+    /// 편집 › 수식 기호 목록: types the `\` that lists every symbol and math snippet of the note's syntax, so the menu is
+    /// the one typing it opens and Esc leaves the `\` as typing does. Only in a formula; elsewhere it beeps, as a menu
+    /// command that can't act here does.
     @objc func showMathSymbols(_ sender: Any?) {
         let selection = selectedRange()
-        guard !hasMarkedText(), selection.length == 0,
-              let query = Completion.symbols(in: string as NSString, caret: selection.location, catalog: catalog) else { return NSSound.beep() }
-        completion.show(query, Completion.items(for: query, catalog: catalog))
-        hideCard()
-        placeMenu()
+        guard !hasMarkedText(), selection.length == 0, SourcePlace.typing(at: selection.location, in: string as NSString).isMath else {
+            return NSSound.beep()
+        }
+        insertText("\\", replacementRange: selection)
     }
 
     /// Opens, narrows or closes the menu for the text at the caret. Only typing opens it; a caret moved elsewhere
@@ -653,17 +653,6 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     func refreshCompletion(opening: Bool) {
         guard !hasMarkedText() else { return }
         let selection = selectedRange()
-        // The whole list stays on the word typed since ⌃Space, which the text alone wouldn't open a menu on (`al` in
-        // TeX), and goes once the caret leaves that word.
-        if let browsing = completion.query, browsing.kind == .mathSymbols {
-            if selection.length == 0, let query = Completion.symbols(in: string as NSString, caret: selection.location, catalog: catalog),
-               query.continues(browsing), case let items = Completion.items(for: query, catalog: catalog), !items.isEmpty {
-                completion.show(query, items)
-            } else {
-                completion.hide()
-            }
-            return placeMenu()
-        }
         if selection.length == 0, let query = Completion.query(in: string as NSString, caret: selection.location, catalog: catalog),
            opening || completion.query.map({ Self.sameKind($0.kind, query.kind) }) == true {
             let items = Completion.items(for: query, catalog: catalog)

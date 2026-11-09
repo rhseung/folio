@@ -174,8 +174,8 @@ struct CompletionMenuView: View {
     }
 
     var rows: some View {
-        // The whole list of a formula's symbols (⌃Space) is browsed category by category; once narrowed, best first.
-        let sections = menu.query.map { $0.kind == .mathSymbols && $0.text.isEmpty } ?? false
+        // A bare `\` lists every symbol of the formula, browsed category by category; once narrowed, best first.
+        let sections = menu.query.map { $0.kind == .texCommand && $0.text.isEmpty } ?? false
         let items = menu.items
         return VStack(spacing: 0) {
             ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
@@ -228,7 +228,7 @@ struct CompletionMenuView: View {
         switch menu.query?.kind {
         case .callout: "exclamationmark.bubble"
         case .codeLanguage: "chevron.left.forwardslash.chevron.right"
-        case .texCommand, .texEnvironment, .asciiMath, .mathSymbols: "function"
+        case .texCommand, .texEnvironment, .asciiMath: "function"
         case .link: "link"
         default: "text.insert"
         }

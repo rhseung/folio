@@ -10,7 +10,8 @@ public struct CompletionQuery: Equatable, Sendable {
         case callout
         /// An opening code fence: the block's language.
         case codeLanguage
-        /// `\` in TeX math: a command.
+        /// `\` in a formula: a TeX command, or in an AsciiMath note a symbol by its AsciiMath name, which goes in without
+        /// the `\` that asked for it. A bare `\` offers every symbol and math snippet, category by category.
         case texCommand
         /// `\begin{` in TeX math: an environment, closed with its `\end`.
         case texEnvironment
@@ -18,8 +19,6 @@ public struct CompletionQuery: Equatable, Sendable {
         case snippet
         /// A word in AsciiMath math: a symbol or function by its AsciiMath name, or a snippet.
         case asciiMath
-        /// Every symbol and math snippet of the note's syntax, asked for by ⌃Space, narrowed by the word typed since.
-        case mathSymbols
         /// Inside `[[` or `![[`: what the link points at, or the heading, block or page in it. The app finds the
         /// candidates, which come late (`CompletionMenu.more`).
         case link(LinkQuery)
@@ -169,6 +168,11 @@ public enum Completion {
             }
         case .math(_, let content):
             guard catalog.tex else {
+                // AsciiMath has no commands; a `\` here asks for its names as one does in TeX, and the name replaces it.
+                // An escape the writer means (`\ ` for a space) stays when the menu is closed with Esc.
+                if let m = prefix.firstMatch(of: #/(?:^|[^\\])\\([A-Za-z]*)$/#), caret - m.1.utf16.count - 1 >= content.location {
+                    return make(.texCommand, m.1).widened(by: 1)
+                }
                 // Two letters or more: one letter is a variable, and offering on it would cover every formula.
                 if let m = prefix.firstMatch(of: #/(?:^|[^A-Za-z\\])([A-Za-z]{2,})$/#), caret - m.1.utf16.count >= content.location,
                    !asciiMath(String(m.1), catalog: catalog).isEmpty {
@@ -205,33 +209,17 @@ public enum Completion {
             let names = catalog.languages + [CBWidget.language]
             return filter(names.map { CompletionItem(id: "language.\($0)", title: $0, body: $0) }, query.text)
         case .texCommand:
-            return filter(TeXCommands.all.map(\.item), query.text, prefixOnly: true)
+            if query.text.isEmpty { return MathSymbols.items(tex: catalog.tex, snippets: catalog.snippets) }
+            return filter(catalog.tex ? TeXCommands.all.map(\.item) : AsciiMathSymbols.items, query.text, prefixOnly: true)
         case .texEnvironment:
             return filter(TeXCommands.environments.map { CompletionItem(id: "env.\($0)", title: $0, body: $0) }, query.text, prefixOnly: true)
         case .snippet:
             return snippets(catalog, trigger: query.text, inMath: query.place.isMath)
         case .asciiMath:
             return asciiMath(query.text, catalog: catalog)
-        case .mathSymbols:
-            return filter(MathSymbols.items(tex: catalog.tex, snippets: catalog.snippets), query.text)
         case .link:
             return []
         }
-    }
-
-    /// The word before the caret in a formula, which the whole list ⌃Space opens narrows by: a TeX command's name,
-    /// its `\` typed or not, or an AsciiMath name; nil outside math. The list stays open on the word while it grows.
-    public static func symbols(in text: NSString, caret: Int, catalog: CompletionCatalog) -> CompletionQuery? {
-        let place = SourcePlace.typing(at: caret, in: text)
-        guard case .math(_, let content) = place, caret >= content.location else { return nil }
-        let line = text.lineRange(for: NSRange(location: caret, length: 0))
-        let from = max(line.location, content.location)
-        let prefix = text.substring(with: NSRange(location: from, length: caret - from))
-        guard let word = prefix.firstMatch(of: #/(\\?)([A-Za-z]*)$/#) else { return nil }
-        var n = word.0.utf16.count
-        // `\\` is a TeX line break, and AsciiMath has no `\`: neither starts the name.
-        if !word.1.isEmpty, !catalog.tex || prefix.hasSuffix("\\\\" + word.2) { n -= 1 }
-        return CompletionQuery(kind: .mathSymbols, text: String(word.2), range: NSRange(location: caret - n, length: n), place: place)
     }
 
     // Numbered, since settings don't stop two snippets sharing a trigger and the menu needs distinct ids.
@@ -319,7 +307,7 @@ public enum Completion {
                 range = NSRange(location: range.location - trailing, length: range.length + trailing)
                 body = "\n" + body
             }
-        case .texCommand, .snippet, .asciiMath, .mathSymbols, .link:
+        case .texCommand, .snippet, .asciiMath, .link:
             break
         }
         return Snippet(trigger: "", body: body, inMath: false).edit(replacing: range)

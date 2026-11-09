@@ -6,37 +6,52 @@ import Foundation
 import Testing
 @testable import Folio
 
-/// Every symbol of a formula without typing its name first (#392): ⌃Space opens the whole list in the edit view's
-/// menu, and the palette under the note bar's f(x) puts what is picked at the caret.
+/// Every symbol of a formula without typing its name first (#392): a bare `\` opens the whole list in the edit view's
+/// menu, in AsciiMath notes too, and the palette under the note bar's f(x) puts what is picked at the caret.
 @MainActor @Suite(.serialized)
 struct MathSymbolsMenuTests {
-    @Test func controlSpaceListsEverySymbolInAFormula() {
+    static func escape(_ view: SourceTextView) { view.doCommand(by: #selector(NSResponder.cancelOperation(_:))) }
+
+    @Test func aBackslashListsEverySymbolByCategory() {
         let (view, _) = NoteAssistTests.editor("")
-        NoteAssistTests.type(view, "값 $x + ")
-        #expect(NoteAssistTests.caretShown(view) == "값 $x + |$")
-        view.showMathSymbols(nil)
-        #expect(view.completion.visible && view.completion.query?.kind == .mathSymbols)
+        NoteAssistTests.type(view, "값 $x + \\")
+        #expect(view.completion.visible && view.completion.query?.kind == .texCommand)
         #expect(view.completion.items.first?.category == .snippets && view.completion.items.contains { $0.title == "\\alpha" })
-        // Typing on narrows it, as the menu that opens by itself does; Return takes the pick.
+        // Typing on narrows it as before; Return takes the pick.
         NoteAssistTests.type(view, "subsete")
         #expect(view.completion.current?.title == "\\subseteq")
         NoteAssistTests.enter(view)
         #expect(NoteAssistTests.caretShown(view) == "값 $x + \\subseteq|$" && !view.completion.visible)
     }
 
-    @Test func theListFollowsTheNotesSyntaxAndClosesOffTheWord() {
+    @Test func anAsciiMathBackslashGivesWayToTheName() {
         let (view, _) = NoteAssistTests.editor("", syntax: .asciimath)
-        NoteAssistTests.type(view, "$")
-        view.showMathSymbols(nil)
+        NoteAssistTests.type(view, "$x \\")
         #expect(view.completion.items.contains { $0.title == "alpha" } && !view.completion.items.contains { $0.title == "\\alpha" })
-        NoteAssistTests.type(view, "al")
-        #expect(view.completion.current?.title == "alpha")
-        NoteAssistTests.type(view, " ")
-        #expect(!view.completion.visible)
-        // Outside a formula there is nothing to list.
+        NoteAssistTests.type(view, "sub")
+        #expect(view.completion.current?.title == "sub")
+        NoteAssistTests.tab(view)
+        #expect(NoteAssistTests.caretShown(view) == "$x sub|$")
+    }
+
+    @Test func escLeavesABackslashMeantAsOne() {
+        let (view, _) = NoteAssistTests.editor("", syntax: .asciimath)
+        NoteAssistTests.type(view, "$a\\")
+        #expect(view.completion.visible)
+        Self.escape(view)
+        NoteAssistTests.type(view, " b")
+        #expect(NoteAssistTests.caretShown(view) == "$a\\ b|$" && !view.completion.visible)
+    }
+
+    @Test func theMenuCommandTypesTheBackslash() {
+        let (view, _) = NoteAssistTests.editor("", syntax: .asciimath)
+        NoteAssistTests.type(view, "$x + ")
+        view.showMathSymbols(nil)
+        #expect(NoteAssistTests.caretShown(view) == "$x + \\|$" && view.completion.visible)
+        // Outside a formula there is nothing to list, and nothing is typed.
         let (text, _) = NoteAssistTests.editor("값 ")
         text.showMathSymbols(nil)
-        #expect(!text.completion.visible)
+        #expect(text.string == "값 " && !text.completion.visible)
     }
 
     @Test func aPalettePickGoesInAtTheCaret() {

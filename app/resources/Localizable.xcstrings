@@ -7734,6 +7734,17 @@
         }
       }
     },
+    "notes.math-no-match": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결과 없음"
+          }
+        }
+      }
+    },
     "notes.math-search": {
       "extractionState": "manual",
       "localizations": {

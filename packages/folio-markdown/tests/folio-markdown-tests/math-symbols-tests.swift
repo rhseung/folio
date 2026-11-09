@@ -7,9 +7,16 @@ struct MathSymbolsTests {
 
     func catalog(tex: Bool) -> CompletionCatalog { CompletionCatalog(snippets: snippets, tex: tex) }
 
-    func browse(_ s: String, tex: Bool = true) -> CompletionQuery? {
+    func query(_ s: String, tex: Bool = true) -> CompletionQuery? {
         let m = Marked(s)
-        return Completion.symbols(in: m.text, caret: m.selection.location, catalog: catalog(tex: tex))
+        return Completion.query(in: m.text, caret: m.selection.location, catalog: catalog(tex: tex))
+    }
+
+    func accept(_ title: String, _ s: String, tex: Bool) throws -> String {
+        let m = Marked(s)
+        let q = try #require(Completion.query(in: m.text, caret: m.selection.location, catalog: catalog(tex: tex)))
+        let item = try #require(Completion.items(for: q, catalog: catalog(tex: tex)).first { $0.title == title })
+        return Marked.show(m.text, Completion.edit(accepting: item, for: q, in: m.text))
     }
 
     @Test func everySymbolHasOneCategory() {
@@ -45,31 +52,29 @@ struct MathSymbolsTests {
         #expect(MathSymbols.groups(tex: false, snippets: snippets, matching: "zzz").isEmpty)
     }
 
-    @Test func controlSpaceOpensTheWholeListInAFormula() throws {
-        let q = try #require(browse("$x + |$"))
-        #expect(q.kind == .mathSymbols && q.text.isEmpty && q.range == NSRange(location: 5, length: 0) && q.takesReturn)
-        let items = Completion.items(for: q, catalog: catalog(tex: true))
-        #expect(items.first?.category == .snippets && items.count == TeXCommands.all.count + 1)
-        #expect(browse("text|") == nil)
-        #expect(browse("`$x|$`") == nil)
+    @Test func aBareBackslashOffersEverythingByCategory() throws {
+        for tex in [true, false] {
+            let q = try #require(query("$x + \\|$", tex: tex))
+            #expect(q.kind == .texCommand && q.text.isEmpty && q.range == NSRange(location: 5, length: 1) && q.takesReturn)
+            let items = Completion.items(for: q, catalog: catalog(tex: tex))
+            #expect(items == MathSymbols.items(tex: tex, snippets: snippets) && items.first?.category == .snippets)
+        }
     }
 
-    @Test func typingAfterwardsNarrowsTheList() throws {
-        // With or without the backslash in TeX; the backslash goes too when a pick replaces the word.
-        let bare = try #require(browse("$x \\subsete|$"))
-        #expect(bare.text == "subsete" && bare.range == NSRange(location: 3, length: 8))
-        #expect(Completion.items(for: bare, catalog: catalog(tex: true)).first?.title == "\\subseteq")
-        let m = Marked("$x subsete|$")
-        let plain = try #require(Completion.symbols(in: m.text, caret: m.selection.location, catalog: catalog(tex: true)))
-        let item = try #require(Completion.items(for: plain, catalog: catalog(tex: true)).first)
-        #expect(Marked.show(m.text, Completion.edit(accepting: item, for: plain, in: m.text)) == "$x \\subseteq|$")
-        // A line break's `\\` starts no name.
-        #expect(browse("$$\na \\\\al|\n$$")?.range.length == 2)
-        let ascii = try #require(browse("$x in al|$", tex: false))
-        #expect(Completion.items(for: ascii, catalog: catalog(tex: false)).first?.title == "alpha")
-        // A word that grows is the same query, so the menu keeps its pick; a new word is another.
-        #expect(try #require(browse("$x \\su|$")).continues(bare))
-        #expect(try #require(browse("$x \\subsete + |$")).continues(bare) == false)
+    @Test func anAsciiMathBackslashAsksForNamesAndGoesWithThePick() throws {
+        let q = try #require(query("$x \\sub|$", tex: false))
+        #expect(q.kind == .texCommand && q.text == "sub" && q.range == NSRange(location: 3, length: 4))
+        #expect(Completion.items(for: q, catalog: catalog(tex: false)).map(\.title) == ["sub", "sube"])
+        #expect(try accept("sube", "$x \\sub|$", tex: false) == "$x sube|$")
+        #expect(try accept("//", "$x \\|$", tex: false) == "$x \\frac{|}{}$")
+        // Typed on, the names narrow from the start as TeX's commands do.
+        let narrowed = Completion.items(for: try #require(query("$\\al|$", tex: false)), catalog: catalog(tex: false))
+        #expect(narrowed.map(\.title) == ["alpha", "aleph"])
+        // An escape meant as one: past the space nothing is offered, and outside a formula a `\` is text.
+        #expect(query("$x\\ |$", tex: false) == nil)
+        #expect(query("a \\|", tex: false) == nil)
+        // TeX keeps the `\`, which is the command's own.
+        #expect(try accept("\\subseteq", "$x \\subs|$", tex: true) == "$x \\subseteq|$")
     }
 
     @Test func paletteInsertsInPlaceOrAsAFormula() {

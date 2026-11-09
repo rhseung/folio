@@ -1,7 +1,7 @@
 import Foundation
 
-/// The groups a formula's symbols are browsed in, in the order shown: the whole list ⌃Space opens in the edit view and
-/// the symbol palette both read them from `MathSymbols` (#392).
+/// The groups a formula's symbols are browsed in, in the order shown: the whole list a bare `\` opens in the edit
+/// view and the symbol palette both read them from `MathSymbols` (#392).
 public enum MathCategory: String, CaseIterable, Sendable {
     case snippets, greek, relations, operators, arrows, functions
     /// Fonts, accents and brackets: what dresses or encloses another symbol.

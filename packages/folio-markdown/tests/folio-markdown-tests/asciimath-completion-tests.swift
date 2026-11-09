@@ -20,7 +20,8 @@ struct AsciiMathCompletionTests {
         #expect(query("$a|$") == nil)
         #expect(query("$qz|$") == nil)
         #expect(query("al|") == nil)
-        #expect(query("$\\fr|$") == nil)
+        // After `\` it is a name asked for, not a word typed (MathSymbolsTests).
+        #expect(query("$\\fr|$")?.kind == .texCommand)
         #expect(query("값 mk|")?.kind == .snippet)
     }
 

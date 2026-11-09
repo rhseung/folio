@@ -25,12 +25,17 @@ final class MathPaletteModel {
     /// The tabs: categories with something in them, snippets first while settings have any for this syntax.
     var categories: [MathCategory] { groups().map(\.category) }
 
-    /// What the grid shows: the tab's symbols, or what every category finds while searching. A tab left empty by a
-    /// change of syntax (no snippets in the other) gives way to the first.
+    /// The tab shown: the one picked, or the first when a change of syntax left it empty (no snippets in the other).
+    var shown: MathCategory {
+        let all = categories
+        return all.contains(category) ? category : all.first ?? category
+    }
+
+    /// What the grid shows: the shown tab's symbols, or what every category finds while searching.
     var sections: [(category: MathCategory, items: [CompletionItem])] {
         if searching { return groups(matching: query) }
-        let all = groups()
-        return all.first { $0.category == category }.map { [$0] } ?? Array(all.prefix(1))
+        let shown = shown
+        return groups().filter { $0.category == shown }
     }
 
     func pick(_ item: CompletionItem) { editor.pendingMath = item }
