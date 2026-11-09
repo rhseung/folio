@@ -245,6 +245,8 @@ import UIKit
             if (!box || body.querySelector(".math-error")) return null;
             let r = box.getBoundingClientRect(), left = r.left, top = r.top, right = r.right, bottom = r.bottom;
             for (const el of box.querySelectorAll("*")) {
+              // A stretched brace or arrow is a 400em picture its box clips to the formula's width.
+              if (el.closest("svg")) continue;
               const q = el.getBoundingClientRect();
               if (q.width === 0 || q.height === 0) continue;
               left = Math.min(left, q.left); top = Math.min(top, q.top); right = Math.max(right, q.right); bottom = Math.max(bottom, q.bottom);

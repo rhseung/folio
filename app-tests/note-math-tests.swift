@@ -80,6 +80,8 @@ struct NoteMathTests {
         let braced = try #require(await picture(#"\underbrace{a + b}_{n}"#))
         let plain = try #require(await picture(#"{a + b}_{n}"#))
         #expect(braced.size.height > plain.size.height + 4)
+        // The brace is a 400em picture its box clips; measured whole, the picture ran the page's width.
+        #expect(braced.size.width < plain.size.width + 16, "\(braced.size) vs \(plain.size)")
     }
 
     /// The picture holds all the ink: none touches its edge, so an italic overhang or a tall accent isn't cut.
