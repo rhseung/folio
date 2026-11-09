@@ -151,8 +151,10 @@ struct SessionSheet: View {
 
     // MARK: Units
 
-    /// The class's units as chips that wrap, so a long title is read whole, and "+ 단원" for the course's whole outline.
-    /// Nothing is put forward: which unit the class covered is the user's call (#147).
+    /// The class's units as chips that wrap, so a long title is read whole, and one "단원 추가" row: it searches the
+    /// course's whole outline and makes a unit the search doesn't find. A separate "새 단원" field beside a "+ 단원"
+    /// picker read as two ways to do one thing (#403). Nothing is put forward: which unit the class covered is the
+    /// user's call (#147).
     @ViewBuilder var units: some View {
         let options = model.unitOptions
         // No chips is no units, so no row for them: an empty row held only the picker.
@@ -164,19 +166,19 @@ struct SessionSheet: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
+        // Its own row under the chips, not after them: there it moved with every pick, and the open popover, anchored to
+        // it, jumped away from the pointer.
         CardRow(last: true) {
-            Image(systemName: "plus").foregroundStyle(Theme.Palette.textTertiary)
-            TextField(String(localized: .wrapUpUnitsNew), text: $model.newUnit).textFieldStyle(.plain).onSubmit { model.addUnit() }
-            if !model.newUnit.trimmingCharacters(in: .whitespaces).isEmpty {
-                Button(.commonAdd) { model.addUnit() }.buttonStyle(.ghost)
-            }
-            // At the end of the one row that is always there, not after the chips: there it moved with every pick,
-            // and the open popover, anchored to it, jumped away from the pointer.
-            if !options.isEmpty {
-                SearchPicker(options: options, isSelected: { model.units.contains($0) }, pick: { model.pick($0) }, multiple: true,
-                             prompt: String(localized: .wrapUpUnitsSearch)) {
-                    Label(.wrapUpUnitsAdd, systemImage: "plus").labelStyle(GhostLabelStyle()).foregroundStyle(.tint)
+            SearchPicker(options: options, isSelected: { model.units.contains($0) }, pick: { model.pick($0) }, multiple: true,
+                         prompt: String(localized: .wrapUpUnitsSearch), flexible: true, create: { model.makeUnit($0) },
+                         createTitle: { String(localized: .sessionSheetUnitsNew($0)) }) {
+                HStack(spacing: Theme.Space.s) {
+                    Image(systemName: "plus")
+                    Text(.sessionSheetUnitsAdd)
+                    Spacer(minLength: 0)
                 }
+                .foregroundStyle(.tint)
+                .contentShape(.rect)
             }
         }
     }

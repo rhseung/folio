@@ -59,7 +59,6 @@ final class SessionSheetModel {
     var review: ClassReview?
     /// The class's rough note is made on saving, after the units are, so the note is named after them.
     var makesNote = false
-    var newUnit = ""
 
     // When and how the class meets.
     var start: Date
@@ -240,11 +239,10 @@ final class SessionSheetModel {
     }
 
     /// Made at once: a new unit is a unit of the course whether or not this class is saved.
-    func addUnit() {
-        let title = newUnit.trimmingCharacters(in: .whitespaces)
+    func makeUnit(_ title: String) {
+        let title = title.trimmingCharacters(in: .whitespaces)
         guard !title.isEmpty, let id = workspace.run(UnitAdd(course: courseId, title: title))?.made else { return }
         units.append(id)
-        newUnit = ""
     }
 
     // MARK: Notes

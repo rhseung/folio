@@ -20648,28 +20648,6 @@
         }
       }
     },
-    "wrap-up.units-new": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "새 단원"
-          }
-        }
-      }
-    },
-    "wrap-up.units-add": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원"
-          }
-        }
-      }
-    },
     "wrap-up.units-search": {
       "extractionState": "manual",
       "localizations": {
@@ -21029,6 +21007,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "녹음 %1$lld (%2$@)"
+          }
+        }
+      }
+    },
+    "session-sheet.units-add": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "단원 추가"
+          }
+        }
+      }
+    },
+    "session-sheet.units-new": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 단원 '%@'"
           }
         }
       }

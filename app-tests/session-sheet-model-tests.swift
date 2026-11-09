@@ -123,10 +123,9 @@ struct SessionSheetModelTests {
 
     @Test func aNewUnitIsMadeAtOnceAndChosen() throws {
         let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session)
-        model.newUnit = "  네트워크 흐름 "
-        model.addUnit()
+        model.makeUnit("  네트워크 흐름 ")
         let made = try #require(file.units.first { $0.title == "네트워크 흐름" })
-        #expect(model.units == [made.id] && model.newUnit.isEmpty)
+        #expect(model.units == [made.id])
         // Nothing of the class is written until it is saved.
         #expect(saved.unitIds.isEmpty)
     }
