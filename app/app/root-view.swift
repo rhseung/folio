@@ -280,7 +280,10 @@ struct RootView: View {
                 tabs.select(number: 1)
             }
             if SnapshotDriver.panes > 1, let course = workspace.currentCourses.first {
-                let lecture = course.file.materials.first { $0.path.lowercased().hasSuffix(".pdf") }.map { AppLink(.material, $0.id) }
+                // A lecture some class names pages of first: a placeholder PDF can't be read, and its pane drew no PDF bar.
+                let pdfs = course.file.materials.filter { $0.path.lowercased().hasSuffix(".pdf") }
+                let paged = pdfs.first { m in course.file.sessions.contains { $0.materials.contains { $0.materialId == m.id && $0.pages != nil } } }
+                let lecture = (paged ?? pdfs.first).map { AppLink(.material, $0.id) }
                 let besides = [lecture, AppLink.course(course.id, page: .quiz)].compactMap { $0 }.prefix(SnapshotDriver.panes - 1)
                 for tab in tabs.ids.prefix(2) {
                     for link in besides { if let entry = workspace.entry(for: link) { tabs.panes(tab)?.openBeside(entry) } }
