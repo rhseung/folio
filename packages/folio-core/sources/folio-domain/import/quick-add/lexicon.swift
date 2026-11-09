@@ -44,7 +44,7 @@ extension QuickAdd {
     /// The deadline's recognizers, tried on a word in this order; the first that reads it wins. A new kind of deadline
     /// word is a case here.
     enum Recognizer: CaseIterable {
-        case weekly, weekday, relativeDay, clock, numericDate, monthAndDay, month, dayOfMonth, spokenTime, minutes, midnight, noon
+        case weekly, weekday, relativeDay, clock, fullDate, numericDate, monthAndDay, month, dayOfMonth, spokenTime, minutes, midnight, noon
 
         /// The piece, and the word as Apple's detector should see it when that differs (`금` → `금요일`, `3/2` → `3월 2일`).
         func read(_ text: String, today: LocalDate, year: Int) -> (piece: Piece, normalized: String?)? {
@@ -62,6 +62,11 @@ extension QuickAdd {
             case .clock:
                 guard let m = text.wholeMatch(of: /(\d{1,2}):(\d{2})/), let h = Int(m.1), let mm = Int(m.2), h < 24, mm < 60 else { return nil }
                 return (Piece.time(h * 60 + mm, false), nil)
+            case .fullDate:
+                // `2026/3/2`: what the deadline chip writes for a day `3/2` would not read as (past, or a year out).
+                guard let m = text.wholeMatch(of: /(\d{4})[\/.\-](\d{1,2})[\/.\-](\d{1,2})\.?/), let y = Int(m.1), let mo = Int(m.2), let d = Int(m.3),
+                      let day = LocalDate(year: y, month: mo, day: d) else { return nil }
+                return (Piece.day(day), "\(y)년 \(mo)월 \(d)일")
             case .numericDate:
                 guard let m = text.wholeMatch(of: /(\d{1,2})[\/.](\d{1,2})\.?/), let mo = Int(m.1), let d = Int(m.2),
                       let day = QuickAdd.ahead(month: mo, day: d, today: today, year: year) else { return nil }
@@ -188,9 +193,11 @@ extension QuickAdd {
         return nil
     }
 
-    /// Where a course's title of two or three words is typed in full, with a particle after it or not.
+    /// Where a course's title of several words is typed in full, with a particle after it or not. Longest first, so
+    /// `일반물리학 및 연습 I` is not read as a shorter title inside it.
     static func matchCourseWords(_ words: [String], courses: [Course]) -> (at: Int, count: Int, id: UUID)? {
-        for count in [3, 2] where words.count >= count {
+        let longest = courses.map { $0.title.split(separator: " ").count }.max() ?? 0
+        for count in stride(from: longest, through: 2, by: -1) where words.count >= count {
             for at in 0...(words.count - count) {
                 let joined = words[at..<(at + count)].joined(separator: " ")
                 let bare = particles.first { joined.hasSuffix($0) }.map { String(joined.dropLast($0.count)) }
@@ -209,14 +216,15 @@ extension QuickAdd {
         return matchCourseWord(String(word.dropLast(p.count)), courses: courses, codes: codes)
     }
 
-    /// Code (`EC4207`), then title prefix, then a unique in-order letter match (`선대` → `선형대수학`).
+    /// Code (`EC4207`), then the whole title, then title prefix, then a unique in-order letter match (`선대` →
+    /// `선형대수학`). The whole title before a prefix, or `일반물리학` would read as an `일반물리학실험` listed before it.
     static func matchCourseWord(_ word: String, courses: [Course], codes: [CourseCode]) -> UUID? {
         let upper = word.uppercased()
         let prefixes = Dictionary(keepingFirst: codes.map { ($0.id, $0.prefix) })
         if let c = courses.first(where: { c in c.codes.contains { (prefixes[$0] ?? "") + (c.number.split(separator: "-").first ?? "") == upper } }) {
             return c.id
         }
-        if let c = courses.first(where: { $0.title.hasPrefix(word) }) { return c.id }
+        if let c = courses.first(where: { $0.title == word }) ?? courses.first(where: { $0.title.hasPrefix(word) }) { return c.id }
         let matches = courses.filter { isSubsequence(word, of: $0.title) }
         return matches.count == 1 ? matches[0].id : nil
     }
@@ -235,24 +243,23 @@ extension QuickAdd {
 extension AssignmentKind {
     /// `HW5`, `hw 05`, `Lab3` → kind and number; used to name the assignment folder.
     public static func parse(title: String) -> (kind: AssignmentKind, number: Int)? {
-        for kind in allCases {
-            if let m = title.firstMatch(of: try! Regex("(?i)\\b\(kind.rawValue)\\s*(\\d{1,2})(?!\\d)")),
-               let n = (m.output[1].substring).flatMap({ Int($0) }) {
-                return (kind, n)
-            }
-        }
-        return nil
+        match(in: title).map { ($0.kind, $0.number) }
     }
 
-    /// The first kind and number in a line that none of `outside` covers, kinds in the order `parse(title:)` tries them.
+    /// The first kind and number in a line that none of `outside` covers. First in the line, not in kind order: the
+    /// number chip rewrites the one it shows, and with `HW3 Lab2` in kind order a `Report3` written over `HW3` read as
+    /// the `Lab2` after it.
     public static func match(in line: String, outside: [Range<String.Index>] = []) -> (kind: AssignmentKind, number: Int, range: Range<String.Index>)? {
+        var first: (kind: AssignmentKind, number: Int, range: Range<String.Index>)?
         for kind in allCases {
             for m in line.matches(of: try! Regex("(?i)\\b\(kind.rawValue)\\s*(\\d{1,2})(?!\\d)"))
             where !outside.contains(where: { $0.overlaps(m.range) }) {
-                if let n = (m.output[1].substring).flatMap({ Int($0) }) { return (kind, n, m.range) }
+                guard let n = (m.output[1].substring).flatMap({ Int($0) }) else { continue }
+                if first.map({ m.range.lowerBound < $0.range.lowerBound }) ?? true { first = (kind, n, m.range) }
+                break
             }
         }
-        return nil
+        return first
     }
 
     public func folderName(_ number: Int) -> String {

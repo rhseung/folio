@@ -51,6 +51,7 @@ extension QuickAdd {
         }
         let title = words.filter { !$0.isDue }.map(\.text).joined(separator: " ")
         return QuickAdd(courseId: course, title: title, due: day.map { calendar.date(byAdding: .minute, value: minute ?? defaultMinute, to: $0)! },
-                        repeats: words.contains(where: \.weekly) ? .weekly : nil, spans: spans)
+                        repeats: words.contains(where: \.weekly) ? .weekly : nil, spans: spans,
+                        weeklyRanges: words.filter(\.weekly).map { $0.range.lowerBound..<line.index($0.range.lowerBound, offsetBy: 2) })
     }
 }

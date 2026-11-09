@@ -29,17 +29,16 @@ struct AddCommand: ParsableCommand {
         // The courses the line can name are the ones the app's quick add reads: this semester's.
         let current = (try? r.currentSemester()).map { s in r.courses.filter { $0.course.semesterId == s.id } } ?? []
         let read = QuickAdd.parse(line, courses: current.map(\.course), codes: (try? ctx.catalog().codes) ?? [], now: ctx.now, calendar: ctx.calendar)
-        // The options are the chips: each one stands over what the line reads, and clearing the deadline clears the
+        // The options stand over what the line reads, as the chips' picks do, and clearing the deadline clears the
         // repeat with it, as the deadline chip's clear button does.
-        var picks = QuickAddPicks()
-        if let course { picks.pickCourse(try r.course(course).id, over: read) }
-        if let due { picks.pickDue(due.value?.date, over: read) }
+        var parsed = read
+        if let course { parsed.courseId = try r.course(course).id }
+        if let due { parsed.due = due.value?.date }
         if let repeats {
-            picks.pickRepeats(repeats.value, over: read)
-        } else if case .clear? = due, read.repeats != nil {
-            picks.pickRepeats(nil, over: read)
+            parsed.repeats = repeats.value
+        } else if case .clear? = due {
+            parsed.repeats = nil
         }
-        let parsed = picks.applied(to: read)
         let ref = parsed.courseId.flatMap { id in r.courses.first { $0.id == id } }
         let shown = Read(course: ref?.code, courseId: parsed.courseId, title: parsed.title, due: parsed.due, repeats: parsed.repeats,
                          folder: parsed.folderName.map { "\(CourseFolder.assignments.rawValue)/\($0)" })
