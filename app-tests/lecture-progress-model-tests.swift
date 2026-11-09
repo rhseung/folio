@@ -34,11 +34,11 @@ struct LectureProgressModelTests {
         let ask = try #require(workspace.wrapUpAsk)
         #expect(ask.session == session && ask.viewed == [SessionMaterial(materialId: slides.id, firstPage: 6, lastPage: 11)])
 
-        let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session, viewed: ask.viewed)
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session, viewed: ask.viewed)
         #expect(model.rows == [.init(id: slides.id, first: 7, last: 11)])
         #expect(model.seen(slides.id) == 6...11)
         #expect(model.refusal == nil && model.note == nil)
-        model.wrapUp()
+        model.submit()
         #expect(links(session) == [SessionMaterial(materialId: slides.id, firstPage: 7, lastPage: 11)])
     }
 
@@ -63,7 +63,7 @@ struct LectureProgressModelTests {
     }
 
     @Test func aKeptFileNeedsBothPagesAndOnlyKeptFilesAreSaved() throws {
-        let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session)
         #expect(model.rows.isEmpty)
         // The rest of the wrap-up can be saved without any progress.
         #expect(model.refusal == nil)
@@ -77,7 +77,7 @@ struct LectureProgressModelTests {
         #expect(model.refusal == nil)
         model.toggle(slides.id)
         model.setRange(slides.id, PageRange(first: 2, last: 4))
-        model.wrapUp()
+        model.submit()
         #expect(links(session) == [SessionMaterial(materialId: slides.id, firstPage: 2, lastPage: 4)])
     }
 
@@ -92,13 +92,13 @@ struct LectureProgressModelTests {
         workspace.reload()
         #expect(links(session).isEmpty)
 
-        let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session)
         #expect(model.rows == [.init(id: slides.id, first: 7, last: 11)])
         #expect(model.seen(slides.id) == 6...11)
     }
 
     @Test func aRangeFromTheFieldIsKeptAsIs() throws {
-        let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session)
         model.add(slides.id)
         model.setRange(slides.id, PageRange(first: 9, last: 9))
         #expect(model.rows == [.init(id: slides.id, first: 9, last: 9)])

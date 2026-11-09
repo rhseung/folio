@@ -35,7 +35,7 @@ struct SessionsModelTests {
         let s = try #require(workspace.course(graphTheory)?.file.sessions.first { $0.id == id })
         let model = SessionsModel(workspace: workspace, courseId: graphTheory)
         func file() throws -> CourseFile { try #require(workspace.course(graphTheory)).file }
-        func formEnd() -> Date { SessionFormModel(workspace: workspace, courseId: graphTheory, session: s).end }
+        func formEnd() -> Date { SessionSheetModel(workspace: workspace, course: graphTheory, session: s.id).end }
 
         #expect(formEnd() == start.addingTimeInterval(TimeInterval(workspace.settings.classMinutes * 60)))
         #expect(model.offersJoin(s, in: try file(), now: formEnd().addingTimeInterval(-60)))
@@ -113,19 +113,27 @@ struct SessionsModelTests {
         #expect(workspace.course(graphTheory)?.file.sessions.count == 1)
     }
 
-    /// A refused removal says why rather than asking for something that would then fail.
+    /// A refused removal says why rather than asking for something that would then fail. The menu's 삭제… asks the
+    /// window, so every place that shows the class removes it the same way.
     @Test func removingALinkedSessionSaysWhyInsteadOfAsking() throws {
         let workspace = try fixtureWorkspace()
-        let model = SessionsModel(workspace: workspace, courseId: graphTheory)
         let free = try session(workspace, daysFromNow: 7)
-        let noted = try session(workspace, daysFromNow: 14)
+        var noted = try session(workspace, daysFromNow: 14)
         workspace.run(SessionNote(course: graphTheory, session: noted.id, kind: .rough))
+        noted = try #require(workspace.course(graphTheory)?.file.sessions.first { $0.id == noted.id })
         let count = try #require(workspace.course(graphTheory)).file.sessions.count
 
-        model.remove(noted)
-        #expect(model.pending?.refusal != nil)
-        model.remove(free)
-        let pending = try #require(model.pending)
+        var asked: PendingAction?
+        func remove(_ s: Session) {
+            let source = SessionMenuSource(workspace: workspace, courseId: graphTheory, session: s, host: .own, now: workspace.now, openNote: { _ in },
+                                           openLink: OpenLinkAction(), openURL: OpenURLAction { _ in .handled },
+                                           sheets: ItemSheetsAction(confirm: { asked = $0 }))
+            if case .action(let action) = source.row(.remove).kind { action() }
+        }
+        remove(noted)
+        #expect(asked?.refusal != nil)
+        remove(free)
+        let pending = try #require(asked)
         #expect(pending.refusal == nil && pending.question.hasPrefix("회차 ") && pending.question.hasSuffix("을(를) 지웁니다."))
         #expect(try #require(workspace.course(graphTheory)).file.sessions.count == count)
         pending.perform()

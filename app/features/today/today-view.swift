@@ -6,6 +6,8 @@ import SwiftUI
 struct TodayView: View {
     @State private var model: TodayModel
     @Environment(\.openLink) private var openLink
+    @Environment(\.openURL) private var openURL
+    @Environment(\.itemSheets) private var sheets
     @State private var hoveredNote: UUID?
 
     init(workspace: Workspace) {
@@ -43,7 +45,7 @@ struct TodayView: View {
             }
         }
         .sheet(item: $model.wrappingUp) { item in
-            ClassWrapUpSheet(workspace: model.workspace, course: item.courseId, session: item.session.id)
+            SessionSheet(workspace: model.workspace, request: SessionSheetRequest(course: item.courseId, session: item.session.id, asked: true))
         }
         .confirming($model.pending)
     }
@@ -77,8 +79,7 @@ struct TodayView: View {
                         }
                         .help(Text(.todayWrapUpHelp))
                         .contextMenu {
-                            SessionMenu(courseId: item.courseId, sessionId: item.session.id, openNote: openNote(in: item.courseId),
-                                        showSessions: { go(item.courseId, .sessions) }, wrapUp: { model.wrappingUp = item })
+                            SessionMenu(courseId: item.courseId, sessionId: item.session.id, openNote: openNote(in: item.courseId))
                         }
                     }
                 }
@@ -338,10 +339,11 @@ struct TodayView: View {
                 Label(.todayNoteUnfinished, systemImage: "pencil").labelStyle(GhostLabelStyle())
                     .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.warning)
             }
-            if finishing {
-                Button(unfinished ? String(localized: .todayNoteDone) : String(localized: .todayNoteNoReview)) {
-                    unfinished ? model.finishReviewNote(item) : model.skipReviewNote(item)
-                }
+            // The menu's review check as a button, so the row and the menu say and do the same.
+            if finishing, let source = SessionMenu.source(model.workspace, item.courseId, item.session.id, host: .elsewhere,
+                                                           openNote: openNote(in: item.courseId), openLink: openLink, openURL: openURL, sheets: sheets),
+               let review = model.workspace.course(item.courseId)?.file.review(of: item.session) {
+                ItemButton(source: source, command: .review(review))
                 .buttonStyle(.ghost)
                 .font(Theme.Typeface.caption)
                 .help(Text(unfinished ? .todayNoteFinish : .todayNoteNoReviewHelp))
@@ -351,7 +353,7 @@ struct TodayView: View {
         .padding(.vertical, Theme.Space.tight)
         .onHover { hoveredNote = $0 ? item.session.id : (hoveredNote == item.session.id ? nil : hoveredNote) }
         .contextMenu {
-            SessionMenu(courseId: item.courseId, sessionId: item.session.id, openNote: openNote(in: item.courseId), showSessions: { go(item.courseId, .sessions) })
+            SessionMenu(courseId: item.courseId, sessionId: item.session.id, openNote: openNote(in: item.courseId))
         }
     }
 

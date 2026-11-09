@@ -254,11 +254,15 @@ final class SessionsModel {
         case done(UUID), writing(UUID), missing
     }
 
-    /// The review note's state as the card's pill says it; nil when there is nothing to say (ahead, cancelled, or a
-    /// class that needs none).
+    /// The review as the card's pill says it, from the class's `ClassReview`; nil when there is nothing to say (ahead,
+    /// cancelled, or a class that needs none).
     func review(of session: Session, in file: CourseFile, now: Date) -> Review? {
-        if let id = session.reviewNoteId { return session.reviewNoteUnfinished ? .writing(id) : .done(id) }
-        return file.needsReviewNote(session, at: now) ? .missing : nil
+        switch (file.review(of: session), session.reviewNoteId) {
+        case (.written?, let id?): .done(id)
+        case (.writing?, let id?): .writing(id)
+        case (.needed?, nil) where session.date <= now: .missing
+        default: nil
+        }
     }
 
     func recordingsLabel(_ count: Int) -> String {
@@ -270,10 +274,6 @@ final class SessionsModel {
 
     // MARK: A session's actions
 
-    /// The menu every screen shows for a class; the page adds playing, editing and deleting to it.
+    /// What the card's buttons and a timetable slot's menu do; a saved class's menu is `SessionMenuSource`.
     var menu: SessionMenuModel { SessionMenuModel(workspace: workspace, courseId: courseId) }
-
-    func remove(_ session: Session) {
-        pending = workspace.ask(SessionRemove(course: courseId, sessions: [session.id]), button: .sessionsRemove)
-    }
 }

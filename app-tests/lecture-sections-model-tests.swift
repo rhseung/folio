@@ -164,9 +164,9 @@ struct LectureSectionsModelTests {
     @Test func theProgressBarReadsTheUnitsItReaches() throws {
         workspace.run(MaterialSplit(course: graphTheory, material: slides.id, sections: [LectureCut(unit: matching, firstPage: 3, lastPage: 8)]))
         let session = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now))?.made)
-        let model = ClassWrapUpModel(workspace: workspace, course: graphTheory, session: session)
-        #expect(model.sections(slides.id).map(\.pages) == [1...2, 3...8])
-        #expect(model.sections(slides.id).map(\.title) == ["", "매칭"])
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session)
+        #expect(model.zones(slides.id).map(\.pages) == [1...2, 3...8])
+        #expect(model.zones(slides.id).map(\.title) == ["", "매칭"])
         #expect(!model.changed)
 
         let units = UnitsModel(workspace: workspace, courseId: graphTheory)

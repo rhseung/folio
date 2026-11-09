@@ -51,10 +51,10 @@ struct SessionsView: View {
             }
         }
         .sheet(isPresented: $editingTimes) { ClassTimesSheet(workspace: model.workspace, course: course) }
-        .sheet(isPresented: $adding) { SessionFormSheet(workspace: model.workspace, course: course) }
+        .sheet(isPresented: $adding) { SessionSheet(workspace: model.workspace, request: SessionSheetRequest(course: course.id)) }
         .sheet(item: $model.wrapUpRun) { run in
-            ClassWrapUpSheet(workspace: model.workspace, course: course.id, session: run.current, step: model.step(of: run),
-                             saved: model.wrappedUpOne)
+            SessionSheet(workspace: model.workspace, request: SessionSheetRequest(course: course.id, session: run.current, asked: true),
+                         step: model.step(of: run), saved: model.wrappedUpOne)
                 // A new sheet model for each class: the one before's answers must not carry over.
                 .id(run.current)
         }
@@ -418,33 +418,6 @@ struct SessionKindChip: View {
     }
 }
 
-/// Adds a session, or edits one when given: off-timetable classes (a makeup, a recitation) need their own end, and an
-/// online one its meeting link.
-struct SessionFormSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var model: SessionFormModel
-
-    init(workspace: Workspace, course: LoadedCourse, session: Session? = nil) {
-        _model = State(initialValue: SessionFormModel(workspace: workspace, courseId: course.id, session: session))
-    }
-
-    var body: some View {
-        SheetForm(title: model.title, confirm: model.confirm, disabled: model.disabled, note: model.note) {
-            FormRow(label: String(localized: .sessionsDate)) { DateChip(date: Binding(get: { model.start }, set: { model.setStart($0) })) }
-            FormRow(label: String(localized: .sessionsEnd)) { TimeMenu(minute: Binding(get: { model.endMinute }, set: { model.setEnd($0) })) }
-            FormRow(label: String(localized: .sessionsLink), detail: String(localized: .sessionsLinkDetail)) {
-                InlineField(String(localized: .sessionsLinkPrompt), text: $model.link)
-            }
-            FormRow(label: String(localized: .sessionsKind), last: true) {
-                Segmented(selection: Binding(get: { model.kind }, set: { model.setKind($0) }), options: model.kindOptions)
-            }
-        } onConfirm: {
-            model.submit()
-            dismiss()
-        }
-    }
-}
-
 /// Joins an online class: Zoom links go to the Zoom app directly, and anything else (or Zoom when the app isn't
 /// installed) opens in the browser.
 struct JoinOnlineButton: View {
@@ -477,11 +450,12 @@ struct JoinOnlineButton: View {
     }
 }
 
-/// The units a session covers, linked or unlinked in place. A held class with none is flagged, since its review
-/// never reaches the unit queue.
-struct SessionUnitsPicker: View {
+/// The units a session covers, a shortcut into its sheet's 단원 group (#403). A held class with none is flagged, since
+/// its review never reaches the unit queue.
+struct SessionUnitsButton: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
+    @Environment(\.itemSheets) private var sheets
     let course: LoadedCourse
     let session: Session
     /// The icon alone, when the row's title already names the units.
@@ -495,10 +469,9 @@ struct SessionUnitsPicker: View {
         let shown = UnitTree.deepest(linked, in: file.units)
         let missing = file.needsUnits(session, at: workspace.now)
         if !file.units.isEmpty && (!linked.isEmpty || !session.skipsReview) {
-            SearchPicker(options: UnitTree.outline(file.units).map { PickOption(id: $0.unit.id, title: $0.unit.title, depth: $0.depth) },
-                         isSelected: { id in linked.contains { $0.id == id } },
-                         pick: { id in SessionMenuModel(workspace: workspace, courseId: course.id).toggleUnit(id, of: session) },
-                         multiple: true, prompt: String(localized: .sessionsUnitsSearch), flexible: true) {
+            Button {
+                sheets.present(.session(SessionSheetRequest(course: course.id, session: session.id, focus: .units)))
+            } label: {
                 if separated {
                     inline(shown: shown, missing: missing)
                 } else {
@@ -519,6 +492,7 @@ struct SessionUnitsPicker: View {
                     .contentShape(.rect)
                 }
             }
+            .buttonStyle(.pointing(.plain))
             // The label truncates on a narrow row, so the tooltip carries every title.
             .help(missing ? String(localized: .sessionsUnitsMissingHelp) : shown.isEmpty ? String(localized: .sessionsUnitsHelp) : shown.map(\.title).joined(separator: "\n"))
         }
@@ -650,10 +624,10 @@ struct SessionCard: View {
     var now = Date.now
     let openNote: (UUID) -> Void
     @Environment(\.openLink) private var openLink
-    @State private var editing = false
-    @State private var wrappingUp = false
+    @Environment(\.openURL) private var openURL
+    @Environment(\.itemSheets) private var sheets
     @State private var showsGaps = false
-    @State private var wrapUpAfterGaps = false
+    @State private var editAfterGaps = false
 
     /// The day line and its units, which the pills must leave beside them.
     static let linesRoom: CGFloat = 240
@@ -706,8 +680,6 @@ struct SessionCard: View {
         }
         .contentShape(.rect)
         .contextMenu { menuItems }
-        .sheet(isPresented: $editing) { SessionFormSheet(workspace: model.workspace, course: course, session: session) }
-        .sheet(isPresented: $wrappingUp) { ClassWrapUpSheet(workspace: model.workspace, course: course.id, session: session.id) }
     }
 
     func lines(_ file: CourseFile, live: Bool) -> some View {
@@ -739,7 +711,7 @@ struct SessionCard: View {
                 if model.link(of: session, in: file) != nil && !cancelled {
                     Image(systemName: "video").help(Text(.sessionsOnline))
                 }
-                if !cancelled { SessionUnitsPicker(course: course, session: session, compact: model.hasSubject(session, in: file), separated: true) }
+                if !cancelled { SessionUnitsButton(course: course, session: session, compact: model.hasSubject(session, in: file), separated: true) }
             }
             .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
         }
@@ -757,8 +729,8 @@ struct SessionCard: View {
                 }
             }
             if model.offersWrapUp(session) {
-                Button(.wrapUpEllipsis) {
-                    wrapUpAfterGaps = true
+                Button(.commonEditEllipsis) {
+                    editAfterGaps = true
                     showsGaps = false
                 }
                 .buttonStyle(.ghost)
@@ -770,9 +742,9 @@ struct SessionCard: View {
         // The sheet waits for the popover to be gone: opened in the same update, the iPad still presents the popover
         // from this card and drops the sheet.
         .onDisappear {
-            if wrapUpAfterGaps {
-                wrapUpAfterGaps = false
-                wrappingUp = true
+            if editAfterGaps {
+                editAfterGaps = false
+                sheets.present(.session(SessionSheetRequest(course: course.id, session: session.id)))
             }
         }
     }
@@ -817,18 +789,21 @@ struct SessionCard: View {
     @ViewBuilder func actionButtons(_ file: CourseFile) -> some View {
         if let link = model.link(of: session, in: file) { JoinOnlineButton(url: link, prominent: true) }
         if !model.workspace.recorder.isActive {
-            Button(.sessionsRecord, systemImage: "record.circle") { model.menu.record(session) }.buttonStyle(.pointing(.bordered))
+            ItemButton(source: menuSource, command: .record).buttonStyle(.pointing(.bordered))
                 .help(Text(.sessionsRecordHelp))
         }
         Button(String(localized: session.roughNoteId == nil ? .sessionsRoughNote : .sessionsOpenRoughNote), systemImage: "doc.text") { open(.rough) }
             .buttonStyle(.pointing(.bordered))
     }
 
+    /// On its own screen: no "열기", which is where the menu already is.
     var menuItems: some View {
-        SessionMenu(courseId: course.id, sessionId: session.id, openNote: openNote, edit: { editing = true },
-                    wrapUp: model.offersWrapUp(session) ? { wrappingUp = true } : nil) {
-            model.remove(session)
-        }
+        SessionMenu(courseId: course.id, sessionId: session.id, host: .own, openNote: openNote)
+    }
+
+    var menuSource: SessionMenuSource {
+        SessionMenuSource(workspace: model.workspace, courseId: course.id, session: session, host: .own, now: now, openNote: openNote,
+                          openLink: openLink, openURL: openURL, sheets: sheets)
     }
 
     func open(_ kind: NoteKind) {

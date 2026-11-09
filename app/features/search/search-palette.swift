@@ -3,6 +3,8 @@ import FolioIndex
 import SwiftUI
 
 struct SearchPalette: View {
+    @Environment(\.openLink) private var openLink
+    @Environment(\.itemSheets) private var sheets
     @State private var model: SearchModel
     let close: () -> Void
     let choose: (AppLink, UUID) -> Void
@@ -199,7 +201,30 @@ struct SearchPalette: View {
             .contentShape(.rect)
         }
         .buttonStyle(.pointing(.plain))
-        .contextMenu { Button(.commonOpen, systemImage: "arrow.right.circle") { open(hit) } }
+        .contextMenu { menu(hit) }
+    }
+
+    /// The result's own item menu, as anywhere else it shows (#403). Kinds without one yet open and share. Whatever the
+    /// menu opens, the palette steps aside for it.
+    @ViewBuilder func menu(_ hit: SearchHit) -> some View {
+        let item = hit.item
+        Group {
+            if item.kind == .session {
+                SessionMenu(courseId: item.courseId, sessionId: item.id) {
+                    close()
+                    openLink(AppLink(.note, $0), course: item.courseId)
+                }
+            } else {
+                Button(.commonOpen, systemImage: "arrow.right.circle") { open(hit) }
+                Divider()
+                ShareMenu(link: AppLink(item), course: item.courseId)
+            }
+        }
+        .environment(\.openLink, OpenLinkAction { link, placement, course in
+            close()
+            openLink(link, in: placement, course: course)
+        })
+        .environment(\.itemSheets, ItemSheetsAction(present: { close(); sheets.present($0) }, confirm: { close(); sheets.confirm($0) }))
     }
 
     /// The query's words picked out in `match`, so a long snippet shows at once why it was found.

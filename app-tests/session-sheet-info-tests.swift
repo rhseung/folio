@@ -5,12 +5,12 @@ import Testing
 @testable import Folio
 
 @MainActor
-struct SessionFormModelTests {
+struct SessionSheetInfoTests {
     func file(_ workspace: Workspace) throws -> CourseFile { try #require(workspace.course(graphTheory)).file }
 
     @Test func addingAMakeupKeepsItsEndAndLink() throws {
         let workspace = try fixtureWorkspace()
-        let model = SessionFormModel(workspace: workspace, courseId: graphTheory)
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: nil)
         let start = Calendar.current.date(bySettingHour: 21, minute: 0, second: 0, of: workspace.now.addingTimeInterval(86_400))!
         model.setStart(start)
         model.setEnd(22 * 60 + 15)
@@ -26,7 +26,7 @@ struct SessionFormModelTests {
 
     @Test func aMeetingIDOrAnEarlyEndCannotBeSaved() throws {
         let workspace = try fixtureWorkspace()
-        let model = SessionFormModel(workspace: workspace, courseId: graphTheory)
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: nil)
         // The form says what the save rules say, not a copy of them.
         model.link = "884 7010 8867"
         #expect(model.disabled && model.note?.contains("참가 링크") == true)
@@ -47,7 +47,7 @@ struct SessionFormModelTests {
             let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: monday))?.made)
             let session = try #require(try file(workspace).sessions.first { $0.id == id })
             #expect(session.end == nil)
-            let model = SessionFormModel(workspace: workspace, courseId: graphTheory, session: session)
+            let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session.id)
             model.setStart(date)
             #expect(model.note == nil || model.note == String(localized: .sessionsRenameOnMove))
             model.submit()
@@ -67,7 +67,7 @@ struct SessionFormModelTests {
         let makeupId = try #require(workspace.run(SessionAdd(course: graphTheory, date: monday.addingTimeInterval(8 * 3600),
                                                              end: monday.addingTimeInterval(8 * 3600 + 75 * 60)))?.made)
         let makeup = try #require(try file(workspace).sessions.first { $0.id == makeupId })
-        let model = SessionFormModel(workspace: workspace, courseId: graphTheory, session: makeup)
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: makeup.id)
         model.setStart(wednesday)
         #expect(model.end == wednesday.addingTimeInterval(2 * 3600))
         model.submit()
@@ -82,8 +82,8 @@ struct SessionFormModelTests {
         let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: start, link: "https://zoom.us/j/1"))?.made)
         let before = try #require(try file(workspace).sessions.first { $0.id == id })
 
-        let model = SessionFormModel(workspace: workspace, courseId: graphTheory, session: before)
-        #expect(model.title.hasSuffix("편집"))
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: before.id)
+        #expect(model.title.hasSuffix("수업"))
         model.link = ""
         model.submit()
         let after = try #require(try file(workspace).sessions.first { $0.id == id })
@@ -97,7 +97,7 @@ struct SessionFormModelTests {
         let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: midnight))?.made)
         let session = try #require(try file(workspace).sessions.first { $0.id == id })
         #expect(session.end == nil)
-        let model = SessionFormModel(workspace: workspace, courseId: graphTheory, session: session)
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session.id)
         model.link = "https://zoom.us/j/2"
         model.submit()
         #expect(try file(workspace).sessions.first { $0.id == id }?.end == nil)
@@ -111,7 +111,7 @@ struct SessionFormModelTests {
         let monday = calendar.date(byAdding: .day, value: 7, to: calendar.date(byAdding: .hour, value: 13, to: calendar.startOfWeek(containing: workspace.now))!)!
         let evening = monday.addingTimeInterval(8 * 3600)
 
-        let model = SessionFormModel(workspace: workspace, courseId: graphTheory)
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: nil)
         model.setStart(monday)
         #expect(model.kind == .lecture)
         model.setStart(evening)
@@ -119,7 +119,7 @@ struct SessionFormModelTests {
         model.submit()
         #expect(try file(workspace).sessions.first { $0.date == evening }?.kind == .makeup)
 
-        let picked = SessionFormModel(workspace: workspace, courseId: graphTheory)
+        let picked = SessionSheetModel(workspace: workspace, course: graphTheory, session: nil)
         picked.setStart(monday)
         picked.setKind(.lecture)
         picked.setStart(evening.addingTimeInterval(86_400))
@@ -128,7 +128,7 @@ struct SessionFormModelTests {
         // Moving a lecture off the timetable keeps it a lecture; picking a kind is what changes it.
         let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: monday))?.made)
         workspace.run(AttendanceSet(course: graphTheory, session: id, state: .late))
-        let edit = SessionFormModel(workspace: workspace, courseId: graphTheory, session: try #require(try file(workspace).sessions.first { $0.id == id }))
+        let edit = SessionSheetModel(workspace: workspace, course: graphTheory, session: id)
         edit.setStart(monday.addingTimeInterval(6 * 3600))
         #expect(edit.kind == .lecture)
         edit.setKind(.cancelled)
@@ -141,7 +141,7 @@ struct SessionFormModelTests {
         let workspace = try fixtureWorkspace()
         let id = try #require(workspace.run(SessionAdd(course: graphTheory, date: workspace.now))?.made)
         let session = try #require(try file(workspace).sessions.first { $0.id == id })
-        let model = SessionFormModel(workspace: workspace, courseId: graphTheory, session: session)
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session.id)
         model.setStart(session.date.addingTimeInterval(14 * 86_400))
         #expect(model.note == String(localized: .sessionsRenameOnMove))
     }

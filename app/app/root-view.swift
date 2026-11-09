@@ -164,7 +164,6 @@ struct RootView: View {
                 .toolbar { globalTools }
                 #endif
                 .environment(\.openLink, openLink)
-                .classWrapUpPrompt(workspace)
                 .classStartPrompt(workspace, open: { open($0.link, in: $0.placement) }, showing: { navigator.current }, bringForward: bringForward)
                 #if os(iOS)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { windowWidth = $0 }
@@ -184,6 +183,8 @@ struct RootView: View {
                     }
                 }
                 .animation(.snappy(duration: 0.3), value: workspace.recorder.isActive)
+                // Outside the search overlay, so a result's menu can edit and delete as any other place can.
+                .itemSheets(workspace, openLink: openLink)
                 #if os(macOS)
                 // Closing the file on quit keeps the audio playable; the transcript so far is already on disk.
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in workspace.recorder.stopNow() }
