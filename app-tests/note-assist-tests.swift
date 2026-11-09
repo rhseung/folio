@@ -123,6 +123,40 @@ struct NoteAssistTests {
         #expect(!view.completion.visible)
     }
 
+    /// Each block shows its faster way in, read from the snippets for `mk` and `dm`; the guide comes last, and taking
+    /// it takes the `/` away and opens the guide (#395).
+    @Test func theSlashMenuShowsShortcutsAndEndsWithTheGuide() {
+        let (view, _) = Self.editor("# 행렬\n\n")
+        var opened = 0
+        view.openGuide = { opened += 1 }
+        Self.type(view, "/")
+        let detail = Dictionary(uniqueKeysWithValues: view.completion.items.map { ($0.id, $0.detail) })
+        #expect(detail["slash.h2"] == "##" && detail["slash.tasks"] == "- [ ]" && detail["slash.callout"] == "> [!")
+        #expect(detail["slash.inline-math"] == "mk ⇥" && detail["slash.math"] == "dm ⇥")
+        #expect(view.completion.items.last?.id == InputGuide.menuItemID)
+        view.acceptCompletion(view.completion.items.count - 1)
+        #expect(view.string == "# 행렬\n\n" && opened == 1 && !view.completion.visible)
+    }
+
+    /// The hint sits on an empty line with the caret, as a label over the text: typing, a syllable being composed or a
+    /// caret on a line with text takes it away, and the text never holds it.
+    @Test func anEmptyLineHintsAtTheBlockMenu() {
+        let (view, _) = Self.editor("# 행렬\n\n")
+        view.updateHint()
+        #expect(view.hintShown && view.string == "# 행렬\n\n")
+        view.setMarkedText("ㅎ", selectedRange: NSRange(location: 1, length: 0), replacementRange: Self.none)
+        #expect(!view.hintShown)
+        view.insertText("하", replacementRange: Self.none)
+        #expect(!view.hintShown && view.string == "# 행렬\n\n하")
+        Self.enter(view)
+        #expect(view.hintShown)
+        view.setSelectedRange(NSRange(location: 1, length: 0))
+        #expect(!view.hintShown)
+        let (code, _) = Self.editor("```\n\n```")
+        code.setSelectedRange(NSRange(location: 4, length: 0))
+        #expect(!code.hintShown)
+    }
+
     @Test func arrowsMoveThePickAndAClickTakesOne() {
         let (view, _) = Self.editor("")
         Self.type(view, "/")

@@ -49,6 +49,7 @@ struct FolioApp: App {
             NavigationCommands()
             ColumnCommands()
             PaneCommands()
+            InputGuideCommands()
             #if os(macOS)
             TabCommands()
             #endif
@@ -65,6 +66,27 @@ private struct SettingsCommands: Commands {
             Button(.appSettingsMenu) { showSettings?(nil) }
                 .keyboardShortcut(",")
                 .disabled(showSettings == nil)
+        }
+    }
+}
+
+/// 도움말 › 입력 안내 (⌘/, #395): sent down the responder chain to the note being written, which opens the guide for
+/// its math syntax; with none, the window opens it for the syntax new notes get. ⌘/ is taken by nothing else in the
+/// app or the system (⇧⌘/ is the system's help search).
+private struct InputGuideCommands: Commands {
+    @FocusedValue(\.showInputGuide) private var show
+
+    var body: some Commands {
+        CommandGroup(after: .help) {
+            Button(.notesGuideTitle) {
+                #if os(macOS)
+                let sent = NSApp.sendAction(#selector(SourceTextView.showInputGuide(_:)), to: nil, from: nil)
+                #else
+                let sent = UIApplication.shared.sendAction(#selector(SourceTextView.showInputGuide(_:)), to: nil, from: nil, for: nil)
+                #endif
+                if !sent { show?(nil) }
+            }
+            .keyboardShortcut("/")
         }
     }
 }

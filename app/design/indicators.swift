@@ -184,6 +184,18 @@ struct Meter: View {
     }
 }
 
+/// A key, or what is typed, as a cap: the search palette's keys, the input guide's examples.
+struct KeyCap: View {
+    let key: String
+    init(_ key: String) { self.key = key }
+    var body: some View {
+        Text(key).font(Theme.Typeface.label).monospaced()
+            .foregroundStyle(Theme.Palette.textSecondary)
+            .padding(.horizontal, Theme.Space.tight).padding(.vertical, Theme.Space.xxs)
+            .background(Theme.Palette.fill, in: .rect(cornerRadius: Theme.Radius.small))
+    }
+}
+
 /// Muted line used where a list has nothing to show.
 struct EmptyLine: View {
     let text: String
