@@ -94,6 +94,7 @@ jobs:
       - run: sysctl -n hw.ncpu hw.memsize
       - id: run
         run: mise run test
+      - run: swift test --skip-build --package-path packages/folio-core --filter FolioCLITests --no-parallel 2>&1 | grep -E 'passed after|failed after' | sort -t' ' -k1 || true
       # A failed test still built everything, so its build is worth keeping.
       - if: ${{ !cancelled() && (github.event_name == 'push' || steps.cache.outputs.cache-matched-key == '') && steps.run.outcome != 'skipped' }}
         uses: actions/cache/save@v6

@@ -101,13 +101,14 @@ run = """
 id=$(xcrun simctl list devices available | grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}')
 [ -n "$id" ] || { echo "no available iPad simulator" >&2; exit 1; }
 rm -rf .build/test-ipad.xcresult
-# A simulator that hasn't run yet takes minutes to boot, so it boots while the tests build.
-xcrun simctl bootstatus "$id" -b >/dev/null &
-boot=$!
+date
 xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" build-for-testing -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
-wait "$boot"
+date
+xcrun simctl bootstatus "$id" -b
+date
 xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test-without-building -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
 # -quiet leaves out the tests themselves; the count shows they ran.
+date
 xcrun xcresulttool get test-results summary --path .build/test-ipad.xcresult --compact
 """
 
