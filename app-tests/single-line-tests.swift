@@ -63,5 +63,10 @@ struct SingleLineTests {
         #expect(header.long == header.short)
         let chipTabs = Self.heights { ChipTabs(selection: .constant(0), options: [(0, $0)]) }
         #expect(chipTabs.long == chipTabs.short)
+        // A text label never reaches the ghost label style, so the button style has to limit it too.
+        let ghost = Self.heights { Button($0) {}.buttonStyle(.ghost) }
+        #expect(ghost.long == ghost.short)
+        let ghostLabel = Self.heights { name in Button {} label: { Label(name, systemImage: "plus") }.buttonStyle(.ghost) }
+        #expect(ghostLabel.long == ghostLabel.short)
     }
 }

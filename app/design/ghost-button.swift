@@ -22,6 +22,8 @@ private struct GhostButton: View {
         Group {
             if iconOnly { configuration.label.labelStyle(.iconOnly) } else { configuration.label.labelStyle(GhostLabelStyle()) }
         }
+        // Also here, not only in `GhostLabelStyle`: a button labelled with plain text never reaches the label style (#402).
+        .lineLimit(1)
         .foregroundStyle(tint)
         // Drawn outside the label's frame, so the words stay level with the text beside them.
         .background {
