@@ -33,7 +33,7 @@ folio/
     folio-ai/         # Claude 연동 계층. 프로바이더 추상화, 맥락 구성, 작업별 요청과 응답 스키마
   app/                # 멀티플랫폼 앱 타깃(macOS, iPadOS)
   app-tests/          # 화면 모델 테스트와 노트 보기 회귀 검사(`mise run test-app`), iPad 테스트는 ipad/(`mise run test-ipad`)
-  web/                # 노트 미리보기와 Claude 패널의 페이지(KaTeX 수식, 코드 하이라이팅, mermaid 그림, 노트 CSS), 편집 보기가 JavaScriptCore로 부르는 AsciiMath 변환과 하이라이팅. 번들은 app/resources/web
+  web/                # 노트 미리보기와 Claude 패널의 페이지(KaTeX 수식, 코드 하이라이팅, mermaid 그림, 노트 CSS, 미리보기의 그림 크게 보기), 편집 보기가 JavaScriptCore로 부르는 AsciiMath 변환과 하이라이팅. 번들은 app/resources/web
 ```
 
 - `FolioCore`는 SwiftUI를 import하지 않는다.
@@ -94,7 +94,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
 | 제안 | Claude가 내놓는 분류, 추출, 일정을 승인 화면으로 받는 공통 구조 | #90 |
 | 파일 보기 렌더러 | 형식 판단과 형식별 보기. `FolioDomain`의 `MaterialFormat`이 확장자로 형식을 정하고(`material show`도 같은 값을 쓴다) `renderer`가 보기를 고른다. `app/platform/file-view/`의 `FileView` 하나가 그 보기를 그린다: PDF는 PDFKit(`PDFPane`), 마크다운은 노트 미리보기, `.tex`·코드·텍스트는 편집기(자료와 노트) 또는 읽기 전용 소스, 이미지와 오디오는 네이티브 보기, 나머지는 같은 칸 안의 Quick Look, 그것도 못 보이면 "열 수 없음"과 다른 앱으로 열기. 자료는 `folio://material` 링크로 자료 탭에서 열고(과제, 문제집, 시험, 단원, 검색이 모두 이 길), 복습의 원본과 학기의 `_Admin` 파일도 `FileView`로 보인다. 화면이 파일을 따로 열지 않는다 | 있음 |
 | 단축키 | 명령마다 한 번 등록하고 메뉴, 설정, 팔레트가 읽는 표와 키 녹음 검사 | #116 |
-| 자동 완성 메뉴 `CompletionMenu` | 편집 보기의 모든 자동 완성(`/` 블록, 콜아웃 종류, 코드 언어, TeX 명령과 환경, AsciiMath 기호, 스니펫, 링크). 무엇을 완성할지는 `FolioMarkdown`의 `Completion`이 원문에서 읽고, 메뉴는 캐럿 옆에 하나만 뜬다. 늦게 오는 후보(링크)는 `more`로 더한다. 링크 후보는 `NoteLinkCompletion`이 FolioIndex 검색 색인과 파일에서 찾고, 보일 것과 순서는 `FolioDomain`의 `LinkCandidates`가 정한다. 한글 조합 중에는 메뉴, 짝 기호, 목록 이어 쓰기가 끼어들지 않는다 | 있음(Mac). iPad 메뉴는 #31 |
+| 자동 완성 메뉴 `CompletionMenu` | 편집 보기의 모든 자동 완성(`/` 블록, 콜아웃 종류, 코드 언어, TeX 명령과 환경, AsciiMath 기호, 스니펫, 링크). 무엇을 완성할지는 `FolioMarkdown`의 `Completion`이 원문에서 읽고, 메뉴는 캐럿 옆에 하나만 뜬다. 늦게 오는 후보(링크)는 `more`로 더한다. 링크 후보는 `NoteLinkCompletion`이 FolioIndex 검색 색인과 파일에서 찾고, 보일 것과 순서는 `FolioDomain`의 `LinkCandidates`가 정한다. 한글 조합 중에는 메뉴, 짝 기호, 목록 이어 쓰기가 끼어들지 않는다. `/` 블록마다 바로 넣는 법(`##`, `mk ⇥`)을 오른쪽에 보이고, 입력 안내 시트(⌘/)는 같은 표(`/` 블록, 설정 스니펫, 콜아웃 종류, 짝 기호, 표 단축키)를 `FolioMarkdown`의 `InputGuide`로 읽어 상황별로 보인다 | 있음(Mac). iPad 메뉴는 #31 |
 | 라이브 시계 `LiveClock` | 화면이 그리는 지금 시각. 분이 바뀔 때, 앱이 앞으로 오거나 Mac이 깨어날 때 갱신한다. 분 단위로 바뀌는 뷰는 `TimelineView` 대신 `workspace.liveNow`나 `LiveTime`으로 읽는다. 초를 세는 타이머만 `TimelineView`를 쓴다 | 있음 |
 | 빠른 추가 인식기 `QuickAdd` | 빠른 추가 한 줄을 읽는 법. 낱말마다 인식기(`lexicon.swift`. 요일, 날짜, 시각, 매주는 `Recognizer`의 경우, 과목은 `readCourse`, 과제 번호는 `AssignmentKind.match`)가 읽고, 결합 규칙(`grammar.swift`의 `Rule`: [주][요일], [오전·오후][시각], [시각][분], [월][일], 홀로 선 [일])이 이웃을 묶고, 마감 뒤에 홀로 선 `까지`·`마감`은 `markEndings`가 마감에 붙이고, 해석(`resolve.swift`)이 줄의 구간 `spans`(마감, 과목, 과제 종류와 번호)와 저장할 값을 낸다. 제목은 어느 구간에도 들지 않은 글이다. 칸의 알약과 칸 아래 칩이 `spans`와 그 값만 읽는다. 새 종류(시험, 메모)는 인식기와 `Span.Field` 하나씩을 더한다. Apple의 날짜 인식기는 실제 시계로 읽으므로 표가 못 읽은 나머지에만 쓴다 | 있음 |
 
@@ -241,7 +241,7 @@ Me/GIST/
     - `NoteClickGridTests`: 연 직후와 스크롤한 뒤 격자의 모든 점이 노트(또는 그 자리의 위젯, 가로 스크롤 블록)에 닿는지, 편집 보기에서는 클릭한 자리에 캐럿이 놓이는지 본다.
     - `NoteHangulTests`: 조합 중인 글자가 SwiftUI 갱신과 저장을 견디고, 조합이 끝난 글자가 노트 파일에 들어가는지 본다. iPad 편집 보기는 `app-tests/ipad`의 `NoteHangulPadTests`가 iPad 시뮬레이터에서 같은 입력을 본다(`mise run test-ipad`).
     - 검사는 보기를 `NoteBench`(`app-tests/note-bench.swift`)로만 다룬다. 그린 픽셀, 히트한 뷰, 캐럿 위치, 스크롤 범위만 보고 TextKit이나 웹 페이지의 내부는 보지 않는다. 미리보기는 `WKWebView`라서 스냅숏을 웹 프로세스에서 받는다. 편집 보기의 구현을 바꿀 때(#267처럼)는 이 파일과 기준 이미지만 바꾸고, 배치, 클릭, 한글 검사는 그대로 통과해야 한다.
-    - 미리보기의 동작(블록 단위 갱신, 할 일 체크, 콜아웃 접기 유지, 편집 보기 따라가기, 위젯 iframe의 격리와 높이, 임베드와 블록 참조 카드, 깨진 링크)은 `NotePreviewTests`, `NoteWidgetTests`, `NoteEmbedPreviewTests`가 페이지에 스크립트를 돌려 본다. 편집 보기의 블록 참조 카드는 `NoteReferenceCardTests`가 본다.
+    - 미리보기의 동작(블록 단위 갱신, 할 일 체크, 콜아웃 접기 유지, 편집 보기 따라가기, 위젯 iframe의 격리와 높이, 임베드와 블록 참조 카드, 깨진 링크, 그림 크게 보기)은 `NotePreviewTests`, `NoteWidgetTests`, `NoteEmbedPreviewTests`가 페이지에 스크립트를 돌려 본다. 편집 보기의 블록 참조 카드는 `NoteReferenceCardTests`가 본다.
 - 노트 보기 기준 이미지(`app-tests/references/notes`)는 CI 러너가 그린 것만 커밋한다. 글꼴 렌더가 macOS마다 달라서 비교는 이미지를 그린 macOS(`machine.txt`)에서만 하고, 다른 Mac에서는 건너뛴다. CI는 `FOLIO_NOTE_SCREENS_STRICT`를 켜서 러너의 macOS가 바뀌면 건너뛰지 않고 실패한다. 기준 이미지를 바꾸는 PR은 본문에 이전과 이후 이미지를 붙인다.
 - 테스트, 미리보기, 화면 밖 렌더는 이 Mac의 `Application Support/Folio`(녹음 복구, Whisper 모델)를 쓰지 않는다. 그 폴더는 앱의 `LocalFolders`로만 얻고 패키지는 쓰지 않으며(`mise run check-local-folders`가 `app`, `app-tests`, `packages`를 검사한다), 테스트와 미리보기에서 얻으려 하면 실행이 멈춘다. 화면 모델 테스트는 `fixtureWorkspace()`, 미리보기와 렌더는 `Workspace.scenario`가 임시 폴더를 준다. `FOLIO_GIST`로 가짜 폴더를 연 앱 실행(창 스냅숏 포함)은 녹음 폴더를 그 GIST 폴더마다 따로 임시 폴더에 둔다.
 

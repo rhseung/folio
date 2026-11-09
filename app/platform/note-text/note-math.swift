@@ -20,10 +20,12 @@ import UIKit
     /// The code block languages the highlighter knows, by the name each is offered under.
     static let languages: [String] = helpers?.objectForKeyedSubscript("languages").call(withArguments: [])?.toArray()?.compactMap { $0 as? String } ?? []
 
-    static func tex(fromAsciiMath source: String) -> String {
-        if let tex = texCache[source] { return tex }
-        let tex = helpers?.objectForKeyedSubscript("toTeX").call(withArguments: [source])?.toString() ?? source
-        texCache[source] = tex
+    /// The preview reads the formula with the same `toTeX` (web/src/tex.js), so the two views agree on what it says.
+    static func tex(_ source: String, _ syntax: MathSyntax) -> String {
+        let key = "\(syntax.rawValue)|\(source)"
+        if let tex = texCache[key] { return tex }
+        let tex = helpers?.objectForKeyedSubscript("toTeX").call(withArguments: [source, syntax.rawValue])?.toString() ?? source
+        texCache[key] = tex
         return tex
     }
 
@@ -51,7 +53,7 @@ import UIKit
 
     static func tex(_ source: String, _ syntax: MathSyntax) -> String {
         // Room first: filling hides a ℝ typed in `\text{…}` inside a command, where `reserve` could no longer see it.
-        TeXGaps.fill(Blackboard.reserve(syntax == .asciimath ? NoteScripts.tex(fromAsciiMath: source) : source))
+        TeXGaps.fill(Blackboard.reserve(NoteScripts.tex(source, syntax)))
     }
 
     /// Nil when SwiftMath can't read the TeX; the caller shows the source instead.

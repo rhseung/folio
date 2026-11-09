@@ -22,6 +22,7 @@ public struct Settings: Codable, Sendable, Equatable {
     public var mathSnippets: [MathSnippet]?
     /// An AsciiMath note's formula snippets, or nil for `MathSnippet.asciiMathDefaults`, kept as `mathSnippets` is.
     public var asciiMathSnippets: [MathSnippet]?
+    public var classStart: ClassStartSettings
 
     public static let defaultNoteRules = """
     - 정의는 전제, 조건, 결론 순서로 쓴다.
@@ -32,7 +33,7 @@ public struct Settings: Codable, Sendable, Equatable {
     public init(dayBoundaryMinutes: Int = 240, review: ReviewSettings = .init(), noteRules: String = Settings.defaultNoteRules,
                 notifications: NotificationSettings = .init(), backup: BackupSettings = .init(), noteTemplates: [String: [String]] = [:],
                 newNoteMath: MathSyntax = .asciimath, sidebar: SidebarOrder = .init(), classMinutes: Int = 75,
-                mathSnippets: [MathSnippet]? = nil, asciiMathSnippets: [MathSnippet]? = nil) {
+                mathSnippets: [MathSnippet]? = nil, asciiMathSnippets: [MathSnippet]? = nil, classStart: ClassStartSettings = .init()) {
         self.dayBoundaryMinutes = dayBoundaryMinutes
         self.review = review
         self.noteRules = noteRules
@@ -44,6 +45,7 @@ public struct Settings: Codable, Sendable, Equatable {
         self.classMinutes = classMinutes
         self.mathSnippets = mathSnippets
         self.asciiMathSnippets = asciiMathSnippets
+        self.classStart = classStart
     }
 
     public init(from decoder: any Decoder) throws {
@@ -60,6 +62,7 @@ public struct Settings: Codable, Sendable, Equatable {
         classMinutes = try c.value(.classMinutes, or: d.classMinutes)
         mathSnippets = try c.decodeIfPresent([MathSnippet].self, forKey: .mathSnippets)
         asciiMathSnippets = try c.decodeIfPresent([MathSnippet].self, forKey: .asciiMathSnippets)
+        classStart = try c.value(.classStart, or: d.classStart)
     }
 
     public var snippets: [MathSnippet] { mathSnippets ?? MathSnippet.defaults }

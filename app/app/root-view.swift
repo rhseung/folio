@@ -24,6 +24,7 @@ struct RootView: View {
     @AppStorage("sidebarOpen") private var sidebarOpen = true
     @State private var showingRecording = false
     @State private var quickAdding = false
+    @State private var inputGuide: InputGuideRequest?
     @Environment(\.colorScheme) private var colorScheme
     #if os(macOS)
     /// When this window was made, which tells a window made for a link from outside from one already in use.
@@ -132,6 +133,14 @@ struct RootView: View {
         #endif
     }
 
+    /// The iPad has no way to bring an app forward; a class there starts while the app is in front or opened.
+    func bringForward() {
+        #if os(macOS)
+        NSApp.activate()
+        host.window?.makeKeyAndOrderFront(nil)
+        #endif
+    }
+
     var body: some View {
         Group {
             if workspace.gist == nil {
@@ -148,6 +157,7 @@ struct RootView: View {
                         // Roomier buttons and segmented controls, as in Alcove; text sizes stay with the tokens.
                         .controlSize(.large)
                         .environment(\.showSettings) { showSettings($0) }
+                        .environment(\.showInputGuide) { showInputGuide($0) }
                         .background { Button(.commonSearch) { searching = true }.keyboardShortcut("k").opacity(0).accessibilityHidden(true) }
                 }
                 #if os(iOS)
@@ -155,6 +165,7 @@ struct RootView: View {
                 #endif
                 .environment(\.openLink, openLink)
                 .classWrapUpPrompt(workspace)
+                .classStartPrompt(workspace, open: { open($0.link, in: $0.placement) }, showing: { navigator.current }, bringForward: bringForward)
                 #if os(iOS)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { windowWidth = $0 }
                 #endif
@@ -178,6 +189,8 @@ struct RootView: View {
                 .onReceive(NotificationCenter.default.publisher(for: NSApplication.willTerminateNotification)) { _ in workspace.recorder.stopNow() }
                 #endif
                 .focusedSceneValue(\.showSettings) { showSettings($0) }
+                .focusedSceneValue(\.showInputGuide) { showInputGuide($0) }
+                .sheet(item: $inputGuide) { InputGuideSheet(workspace: workspace, syntax: $0.syntax) }
                 .focusedSceneValue(\.navigator, navigator)
                 .focusedSceneValue(\.columnCommand, tabs.trail(tabs.selected)?.column)
                 .focusedSceneValue(\.frontPanes, tabs.front)
@@ -729,6 +742,11 @@ struct RootView: View {
     /// Nil opens the tab last picked.
     func showSettings(_ tab: SettingsTab?) {
         open(.settings(tab?.page))
+    }
+
+    /// Again while it is open (⌘/ twice) closes it.
+    func showInputGuide(_ syntax: MathSyntax?) {
+        inputGuide = inputGuide == nil ? InputGuideRequest(syntax: syntax ?? workspace.settings.newNoteMath) : nil
     }
 }
 

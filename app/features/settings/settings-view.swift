@@ -81,7 +81,9 @@ struct SettingsView: View {
         case .backup: BackupSettingsForm(model: model)
         case .catalog: CatalogEditor()
         case .notes: NoteSettingsForm(settings: $model.settings)
-        case .recording: RecordingSettings()
+        case .recording:
+            ClassStartForm(model: model)
+            RecordingSettings()
         case .claude: ClaudeSettings(model: model)
         }
     }
@@ -309,6 +311,104 @@ private struct NoteSettingsForm: View {
         case .examSummary: String(localized: .settingsTemplateExamSummary)
         case .unit: String(localized: .settingsTemplateUnit)
         default: ""
+        }
+    }
+}
+
+/// What the app does by itself when a class starts (#391). In settings.json, unlike the transcription below, so every
+/// device starts a class the same way.
+private struct ClassStartForm: View {
+    @Bindable var model: SettingsModel
+
+    var body: some View {
+        let s = model.settings.classStart
+        Block(String(localized: .settingsClassStart)) {
+            Card {
+                FormRow(label: String(localized: .settingsClassStartRecording)) {
+                    ChoiceMenu(selection: $model.settings.classStart.recording, options: [
+                        (.off, String(localized: .settingsClassStartOff)), (.ask, String(localized: .settingsClassStartAsk)),
+                        (.start, String(localized: .settingsClassStartNow)),
+                    ])
+                }
+                if s.recording != .off {
+                    FormRow(label: String(localized: .settingsClassStartRecordingAt)) {
+                        if model.recordingTiming != .onTime {
+                            ScrubField(value: Binding(get: { Double(model.recordingMinutes) }, set: { model.recordingMinutes = Int($0.rounded()) }),
+                                       range: 1...60, step: 1, width: 64)
+                            Text(.settingsUnitMinutes).foregroundStyle(Theme.Palette.textSecondary)
+                        }
+                        ChoiceMenu(selection: $model.recordingTiming, options: [
+                            (.onTime, String(localized: .settingsClassStartOnTime)), (.before, String(localized: .settingsClassStartBefore)),
+                            (.after, String(localized: .settingsClassStartAfter)),
+                        ])
+                    }
+                    FormRow(label: String(localized: .settingsClassStartStop)) {
+                        ScrubField(value: Binding(get: { Double(s.stopAfterMinutes) }, set: { model.settings.classStart.stopAfterMinutes = Int($0.rounded()) }),
+                                   range: 0...60, step: 1, width: 64)
+                            .disabled(!s.stopsRecording)
+                            .opacity(s.stopsRecording ? 1 : 0.4)
+                        Text(.settingsUnitMinutesAfter).foregroundStyle(Theme.Palette.textSecondary)
+                        Switch(isOn: $model.settings.classStart.stopsRecording)
+                    }
+                }
+                FormRow(label: String(localized: .settingsClassStartRoughNote)) {
+                    ChoiceMenu(selection: $model.settings.classStart.roughNote, options: [
+                        (.off, String(localized: .settingsClassStartOff)), (.openExisting, String(localized: .settingsClassStartOpenExisting)),
+                        (.create, String(localized: .settingsClassStartCreate)),
+                    ])
+                }
+                if s.roughNote != .off {
+                    FormRow(label: String(localized: .settingsClassStartPlace)) {
+                        ChoiceMenu(selection: $model.settings.classStart.roughNotePlace, options: [ClassStartSettings.Place.here, .beside, .tab].map { ($0, $0.label) })
+                    }
+                }
+                FormRow(label: String(localized: .settingsClassStartLecture)) {
+                    ChoiceMenu(selection: $model.settings.classStart.lecture, options: [
+                        (.off, String(localized: .settingsClassStartOff)), (.open, String(localized: .settingsClassStartOpenLinked)),
+                    ])
+                }
+                if s.lecture != .off {
+                    FormRow(label: String(localized: .settingsClassStartPlace)) {
+                        ChoiceMenu(selection: $model.settings.classStart.lecturePlace, options: [ClassStartSettings.Place.beside, .tab, .window].map { ($0, $0.label) })
+                    }
+                    FormRow(label: String(localized: .settingsClassStartLectureCount)) {
+                        ChoiceMenu(selection: $model.settings.classStart.allLectures, options: [
+                            (false, String(localized: .settingsClassStartFirstLecture)), (true, String(localized: .settingsClassStartAllLectures)),
+                        ])
+                    }
+                    FormRow(label: String(localized: .settingsClassStartResume)) { Switch(isOn: $model.settings.classStart.resumesLecture) }
+                }
+                FormRow(label: String(localized: .settingsClassStartScreen), last: true) {
+                    ChoiceMenu(selection: $model.settings.classStart.screen, options: [
+                        (.front, String(localized: .settingsClassStartFront)), (.notify, String(localized: .settingsClassStartNotify)),
+                    ])
+                }
+            }
+        }
+        let courses = model.classStartCourses
+        if !courses.isEmpty {
+            Block(String(localized: .settingsClassStartCourses)) {
+                Card {
+                    ForEach(Array(courses.enumerated()), id: \.element.id) { i, course in
+                        CardRow(last: i == courses.count - 1) {
+                            CourseMark(model.workspace, course.id)
+                            Text(course.title).lineLimit(1)
+                            Spacer(minLength: Theme.Space.s)
+                            Menu {
+                                ForEach(ClassStartSettings.Item.allCases, id: \.self) { item in
+                                    Toggle(item.label, isOn: Binding(get: { model.follows(item, course: course.id) },
+                                                                     set: { model.setFollows($0, item, course: course.id) }))
+                                }
+                            } label: {
+                                ChipLabel(model.exceptionLabel(course.id))
+                            }
+                            .menuStyle(.button)
+                            .buttonStyle(.plain).pointingHand()
+                            .fixedSize()
+                        }
+                    }
+                }
+            }
         }
     }
 }

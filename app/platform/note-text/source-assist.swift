@@ -50,10 +50,13 @@ struct NoteAssist: Equatable {
     }
 
     @MainActor func catalog(syntax: MathSyntax) -> CompletionCatalog {
-        CompletionCatalog(
-            slash: SlashBlocks.items(templates: Self.templateKinds.compactMap { kind in templates[kind].flatMap { $0.isEmpty ? nil : (kind, $0) } }),
+        let snippets = self.snippets(syntax: syntax)
+        // Each block with its fastest way in on the right (`##`, `mk ⇥`), so the menu teaches it (#395).
+        let blocks = SlashBlocks.items(templates: Self.templateKinds.compactMap { kind in templates[kind].flatMap { $0.isEmpty ? nil : (kind, $0) } })
+        return CompletionCatalog(
+            slash: InputGuide.annotated(blocks + [SlashBlocks.guide], snippets: snippets),
             languages: NoteScripts.languages + ["mermaid"],
-            snippets: snippets(syntax: syntax),
+            snippets: snippets,
             tex: syntax == .latex)
     }
 }
@@ -89,6 +92,12 @@ struct NoteAssist: Equatable {
             out.append(item("template.\(kind.rawValue)", String(localized: .notesAssistTemplate(kind.label)), "doc.text", "template", body))
         }
         return out
+    }
+
+    /// Last in the menu: the input guide, which taking puts nothing in but opens the guide (`SourceTextView`).
+    static var guide: CompletionItem {
+        CompletionItem(id: InputGuide.menuItemID, title: String(localized: .notesGuideTitle), detail: "⌘/", symbol: "keyboard",
+                       keywords: ["help", "guide", "shortcut"], body: "")
     }
 }
 
@@ -176,6 +185,10 @@ struct CompletionMenuView: View {
         VStack(spacing: 0) {
             ForEach(Array(menu.items.enumerated()), id: \.element.id) { i, item in
                 row(item, selected: i == menu.selected)
+                    // The guide is not a block: a line sets it apart, over the row so the menu keeps its height.
+                    .overlay(alignment: .top) {
+                        if item.id == InputGuide.menuItemID, i > 0 { Theme.Palette.lineSoft.frame(height: 1).padding(.horizontal, Theme.Space.s) }
+                    }
                     .id(i)
                     .contentShape(.rect)
                     .onTapGesture { pick(i) }

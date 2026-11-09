@@ -123,6 +123,40 @@ struct NoteAssistTests {
         #expect(!view.completion.visible)
     }
 
+    /// Each block shows its faster way in, read from the snippets for `mk` and `dm`; the guide comes last, and taking
+    /// it takes the `/` away and opens the guide (#395).
+    @Test func theSlashMenuShowsShortcutsAndEndsWithTheGuide() {
+        let (view, _) = Self.editor("# 행렬\n\n")
+        var opened = 0
+        view.openGuide = { opened += 1 }
+        Self.type(view, "/")
+        let detail = Dictionary(uniqueKeysWithValues: view.completion.items.map { ($0.id, $0.detail) })
+        #expect(detail["slash.h2"] == "##" && detail["slash.tasks"] == "- [ ]" && detail["slash.callout"] == "> [!")
+        #expect(detail["slash.inline-math"] == "mk ⇥" && detail["slash.math"] == "dm ⇥")
+        #expect(view.completion.items.last?.id == InputGuide.menuItemID)
+        view.acceptCompletion(view.completion.items.count - 1)
+        #expect(view.string == "# 행렬\n\n" && opened == 1 && !view.completion.visible)
+    }
+
+    /// The hint sits on an empty line with the caret, as a label over the text: typing, a syllable being composed or a
+    /// caret on a line with text takes it away, and the text never holds it.
+    @Test func anEmptyLineHintsAtTheBlockMenu() {
+        let (view, _) = Self.editor("# 행렬\n\n")
+        view.updateHint()
+        #expect(view.hintShown && view.string == "# 행렬\n\n")
+        view.setMarkedText("ㅎ", selectedRange: NSRange(location: 1, length: 0), replacementRange: Self.none)
+        #expect(!view.hintShown)
+        view.insertText("하", replacementRange: Self.none)
+        #expect(!view.hintShown && view.string == "# 행렬\n\n하")
+        Self.enter(view)
+        #expect(view.hintShown)
+        view.setSelectedRange(NSRange(location: 1, length: 0))
+        #expect(!view.hintShown)
+        let (code, _) = Self.editor("```\n\n```")
+        code.setSelectedRange(NSRange(location: 4, length: 0))
+        #expect(!code.hintShown)
+    }
+
     @Test func arrowsMoveThePickAndAClickTakesOne() {
         let (view, _) = Self.editor("")
         Self.type(view, "/")
@@ -205,6 +239,23 @@ struct NoteAssistTests {
         try rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: dir).appending(path: "\(name).png"))
     }
 
+    /// The edit view's top, its hint included, to look at.
+    static func writeText(_ view: SourceTextView, _ name: String, dark: Bool) throws {
+        guard let dir = ProcessInfo.processInfo.environment["FOLIO_NOTE_RENDER"] else { return }
+        let area = NSRect(x: 0, y: 0, width: view.bounds.width, height: 160)
+        let text = try #require(view.bitmapImageRepForCachingDisplay(in: area))
+        view.cacheDisplay(in: area, to: text)
+        let back = dark ? NSColor(white: 0.12, alpha: 1) : NSColor.white
+        let out = NSImage(size: area.size, flipped: false) { _ in
+            back.setFill()
+            area.fill()
+            text.draw(in: area)
+            return true
+        }
+        let rep = try #require(out.tiffRepresentation.flatMap(NSBitmapImageRep.init(data:)))
+        try rep.representation(using: .png, properties: [:])?.write(to: URL(filePath: dir).appending(path: "\(name).png"))
+    }
+
     @Test func renderMenu() async throws {
         for dark in [false, true] {
             let (view, window) = Self.editor("# 행렬\n\n고윳값은 ", syntax: .latex)
@@ -219,6 +270,10 @@ struct NoteAssistTests {
             third.appearance = window.appearance
             Self.type(ascii, "$la")
             try Self.writeWithMenu(ascii, "assist-asciimath-\(dark ? "dark" : "light")", dark: dark)
+            let (hint, fifth) = Self.editor("# 행렬\n\n", syntax: .latex)
+            fifth.appearance = window.appearance
+            hint.updateHint()
+            try Self.writeText(hint, "assist-hint-\(dark ? "dark" : "light")", dark: dark)
             let (link, fourth) = Self.editor("# 행렬\n\n고윳값은 ", links: StubLinks())
             fourth.appearance = window.appearance
             Self.type(link, "[[")

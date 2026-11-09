@@ -15,11 +15,13 @@ import WebKit
     let window: NSWindow
     var text: String
     var baseURL: URL?
+    var math: MathSyntax
     var accent = CourseAccent.presets[0].accent
     /// Stands for the workspace's `notesRevision`, which another note's change bumps.
     var revision = 0
 
-    init(_ text: String, baseURL: URL? = nil, editable: Bool = false, height: CGFloat = 600, embeds: NoteEmbedSource? = nil) {
+    init(_ text: String, baseURL: URL? = nil, editable: Bool = false, height: CGFloat = 600, embeds: NoteEmbedSource? = nil,
+         math: MathSyntax = .latex) {
         page = NotePreviewPage.take()
         page.embeds = embeds
         window = NSWindow(contentRect: CGRect(x: -20_000, y: -20_000, width: 900, height: height), styleMask: [.borderless], backing: .buffered, defer: false)
@@ -30,6 +32,7 @@ import WebKit
         Self.keepDrawing(page.view, in: window)
         self.text = text
         self.baseURL = baseURL
+        self.math = math
         if editable {
             page.edit = { [unowned self] from, to, old, new in
                 var lines = self.text.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
@@ -56,7 +59,7 @@ import WebKit
 
     func show(_ text: String) {
         self.text = text
-        page.show(text, baseURL: baseURL, math: .latex, accent: accent, dark: false, revision: revision)
+        page.show(text, baseURL: baseURL, math: math, accent: accent, dark: false, revision: revision)
     }
 
     func close() {
@@ -210,6 +213,16 @@ struct NotePreviewTests {
         #expect(try await rig.js("return document.querySelectorAll('.katex').length") as? Int == 1)
     }
 
+    /// AsciiMath's quoted text lands in `\text{…}` as written, so its `#` is the character there too, as the edit view
+    /// shows it.
+    @Test func asciiMathTextReadsAsWritten() async throws {
+        let rig = PreviewRig(##"$min{|F|: G - F " separates " x, y} = max{"# edge-disjoint " x,y- "paths"}$"##, math: .asciimath)
+        defer { rig.close() }
+        await rig.settle()
+        #expect(try await rig.js("return document.querySelectorAll('.math-error').length") as? Int == 0)
+        #expect(try await rig.js("return document.querySelectorAll('.katex').length") as? Int == 1)
+    }
+
     /// The page loads the note's own pictures and nothing from outside.
     @Test func picturesComeFromTheNotesFolder() async throws {
         let folder = FileManager.default.temporaryDirectory.appending(path: "preview-\(UUID().uuidString)")
@@ -223,6 +236,79 @@ struct NotePreviewTests {
         }
         #expect(try await rig.number("return document.images[0].naturalWidth") ?? 0 > 0)
         #expect(try await rig.number("return document.images[1].naturalWidth") == 0)
+    }
+
+    /// A picture or diagram pressed in the preview opens large over the note and closes by Esc, its button or a press
+    /// beside it; one inside a link opens the link instead (#378).
+    @Test func aPictureOpensLargeAndCloses() async throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "preview-\(UUID().uuidString)")
+        try FileManager.default.createDirectory(at: folder.appending(path: "assets"), withIntermediateDirectories: true)
+        for name in ["wide-proof.svg", "sample.png"] {
+            try FileManager.default.copyItem(at: NoteRender.fixtures.appending(path: "assets/\(name)"), to: folder.appending(path: "assets/\(name)"))
+        }
+        let exam = UUID()
+        let rig = PreviewRig("![](assets/wide-proof.svg)\n\n```mermaid\ngraph LR\nA-->B\n```\n\n[![](assets/sample.png)](folio://exam/\(exam))", baseURL: folder)
+        defer { rig.close() }
+        var opened: [AppLink] = []
+        rig.page.openLink = OpenLinkAction { link, _, _ in opened.append(link) }
+        await rig.settle()
+        for _ in 0..<40 where try await rig.number("return Math.min(...[...document.images].map(i => i.naturalWidth))") ?? 0 == 0 {
+            try await Task.sleep(for: .milliseconds(50))
+        }
+        let open = "return document.querySelector('.figure-viewer') != null"
+        let sheet = "return document.querySelector('.figure-sheet').getBoundingClientRect().width"
+        let key = "document.body.dispatchEvent(new KeyboardEvent('keydown', {key, metaKey: command, bubbles: true}))"
+        let column = try #require(try await rig.number("return document.images[0].getBoundingClientRect().width"))
+
+        _ = try await rig.js("document.images[0].click()")
+        #expect(try await rig.js(open) as? Bool == true)
+        // Drawn larger than the column holds it; the linked picture isn't one of those to step through.
+        let fitted = try #require(try await rig.number(sheet))
+        #expect(fitted > column)
+        #expect(try await rig.js("return document.querySelector('.figure-count').textContent") as? String == "1 / 2")
+        _ = try await rig.js(key, ["key": "=", "command": true])
+        #expect(try await rig.number(sheet) ?? 0 > fitted)
+        _ = try await rig.js(key, ["key": "0", "command": true])
+        #expect(try await rig.number(sheet) == fitted)
+        // Pressed twice: its own size, and back.
+        let tap = "const el = document.querySelector('.figure-sheet > *'), r = el.getBoundingClientRect();"
+            + "for (const type of ['pointerdown', 'pointerup']) el.dispatchEvent(new PointerEvent(type, {pointerId: 1, isPrimary: true,"
+            + " clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, bubbles: true}))"
+        _ = try await rig.js(tap)
+        _ = try await rig.js(tap)
+        #expect(try await rig.js("return document.querySelector('.figure-actual').textContent") as? String == "100%")
+        _ = try await rig.js(tap)
+        _ = try await rig.js(tap)
+        #expect(try await rig.number(sheet) == fitted)
+        // A touch pinch from the fitted picture keeps its zoom when the fingers lift, apart as they are.
+        let pinch = "const el = document.querySelector('.figure-sheet > *'), r = el.getBoundingClientRect(), y = r.top + r.height / 2, x = r.left + r.width / 2;"
+            + "const send = (type, id, at) => el.dispatchEvent(new PointerEvent(type, {pointerId: id, pointerType: 'touch', clientX: at, clientY: y, bubbles: true}));"
+            + "send('pointerdown', 1, x - 40); send('pointerdown', 2, x + 40); send('pointermove', 2, x + 240); send('pointerup', 1, x - 40); send('pointerup', 2, x + 240)"
+        _ = try await rig.js(pinch)
+        #expect(try await rig.number(sheet) ?? 0 > fitted)
+        #expect(try await rig.js("return document.querySelector('.figure-count').textContent") as? String == "1 / 2")
+        _ = try await rig.js(key, ["key": "0", "command": true])
+        // The next is the diagram, drawn again from its own SVG.
+        _ = try await rig.js(key, ["key": "ArrowRight", "command": false])
+        #expect(try await rig.js("return document.querySelector('.figure-sheet > svg') != null") as? Bool == true)
+        _ = try await rig.js(key, ["key": "Escape", "command": false])
+        #expect(try await rig.js(open) as? Bool == false)
+
+        _ = try await rig.js("document.querySelector('figure.mermaid').click()")
+        #expect(try await rig.js("return document.querySelector('.figure-count').textContent") as? String == "2 / 2")
+        _ = try await rig.js("document.querySelector('.figure-close').click()")
+        #expect(try await rig.js(open) as? Bool == false)
+
+        _ = try await rig.js("document.images[0].click()")
+        let beside = "const v = document.querySelector('.figure-viewer');"
+            + "for (const type of ['pointerdown', 'pointerup']) v.dispatchEvent(new PointerEvent(type, {pointerId: 1, isPrimary: true, clientX: 4, clientY: 300, bubbles: true}))"
+        _ = try await rig.js(beside)
+        #expect(try await rig.js(open) as? Bool == false)
+
+        _ = try await rig.js("document.querySelector('a img').click()")
+        for _ in 0..<40 where opened.isEmpty { try? await Task.sleep(for: .milliseconds(50)) }
+        #expect(try await rig.js(open) as? Bool == false)
+        #expect(opened == [AppLink(.exam, exam)])
     }
 
     /// A page handed to another note keeps nothing of the last one.

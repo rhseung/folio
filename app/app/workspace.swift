@@ -43,6 +43,12 @@ final class Workspace {
     var finishingRecordings = Set<UUID>()
     /// The class whose recording just stopped, until a window asks how far it went.
     var wrapUpAsk: ClassWrapUpAsk?
+    /// The class that just started, until a window opens it (`ClassStartPrompt`).
+    var classStartAsk: ClassStartAsk?
+    /// Each class's steps done, by `StartingClass.key`. Only for this run of the app: one opened again during the
+    /// class goes to it again, and its recording is guarded by the recordings the class already has.
+    @ObservationIgnored var classStartDone: [String: Set<ClassStart.Step>] = [:]
+    @ObservationIgnored var classRecordingStop: ClassRecordingStop?
     /// A lecture whose split screen was asked for from elsewhere (the wrap-up sheet's "단원으로 나누기"); the file view
     /// that opens it takes it.
     var splitAsk: UUID?
