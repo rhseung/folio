@@ -139,7 +139,7 @@ jobs:
       - if: env.RUN == 'true'
         run: rm -rf .build/DerivedData/Build/Products/*/*.app .build/DerivedData/Build/Products/*/*.xctest .build/DerivedData/Build/Products/*/*.bundle
       - if: env.RUN == 'true'
-        run: echo 'COMPILATION_CACHE_ENABLE_CACHING = YES' > "$XCODE_XCCONFIG_FILE"
+        run: mkdir -p .build && echo 'COMPILATION_CACHE_ENABLE_CACHING = YES' > "$XCODE_XCCONFIG_FILE"
       - if: env.RUN == 'true'
         uses: jdx/mise-action@v5
       - if: env.RUN == 'true'
