@@ -15,6 +15,7 @@ extension Workspace {
         // Before opening, whose reload recovers leftovers: left unset, the first use stops the run (LocalFolders).
         workspace.pendingRecordings = PendingRecordings(url: URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory))
         workspace.open(url, remember: false)
+        workspace.releaseNotes = ReleaseNotes(source: ReleaseList(list: ReleaseList.sample), current: ReleaseList.sample[0].version, prompts: false)
         return workspace
     }
 }

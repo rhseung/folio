@@ -267,6 +267,8 @@ struct Segmented<Value: Hashable>: View {
     var symbols: [String] = []
     /// For a bar of tools: washes of the text color instead of solid fills, and a track as tall as the bar's buttons.
     var compact = false
+    /// A label's own color, where each option stands for a kind drawn in that color elsewhere (patch notes' chips).
+    var inks: [Color?] = []
     @Environment(\.onGlass) private var onGlass
 
     var body: some View {
@@ -280,7 +282,7 @@ struct Segmented<Value: Hashable>: View {
                         if symbols.indices.contains(i) { LineIcon(symbol: symbols[i], filled: chosen) } else { Text(label).lineLimit(1) }
                     }
                         .fontWeight(chosen ? .semibold : .regular)
-                        .foregroundStyle(chosen ? Theme.Palette.text : Theme.Palette.textSecondary)
+                        .foregroundStyle(inks.indices.contains(i) ? inks[i] ?? labelColor(chosen) : labelColor(chosen))
                         .padding(Theme.Inset.toggle)
                         .background(chosen ? (compact ? AnyShapeStyle(Theme.Palette.text.opacity(Theme.Opacity.tint)) : AnyShapeStyle(Theme.Palette.card)) : AnyShapeStyle(.clear), in: .capsule)
                         .contentShape(.capsule)
@@ -295,6 +297,8 @@ struct Segmented<Value: Hashable>: View {
         .fixedSize()
         .background(compact ? AnyShapeStyle(Theme.Palette.text.opacity(Theme.Opacity.wash)) : AnyShapeStyle(Theme.Palette.fill), in: .capsule)
     }
+
+    func labelColor(_ chosen: Bool) -> Color { chosen ? Theme.Palette.text : Theme.Palette.textSecondary }
 }
 
 /// Minute of the day as a chip. Drag sideways on the hours or the minutes to scrub them, or click one to set it on a clock

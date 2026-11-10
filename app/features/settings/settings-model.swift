@@ -181,6 +181,7 @@ extension SettingsTab {
         case .notes: String(localized: .settingsTabNotes)
         case .recording: String(localized: .settingsTabRecording)
         case .claude: "Claude"
+        case .about: String(localized: .settingsTabAbout)
         }
     }
 
@@ -194,6 +195,7 @@ extension SettingsTab {
         case .notes: .notes
         case .recording: .recording
         case .claude: .claude
+        case .about: .about
         }
     }
 
@@ -207,6 +209,7 @@ extension SettingsTab {
         case .notes: .notes
         case .recording: .recording
         case .claude: .claude
+        case .about: .about
         }
     }
 

@@ -50,6 +50,7 @@ struct FolioApp: App {
             ColumnCommands()
             OutlineCommands()
             PaneCommands()
+            WhatsNewCommands()
             InputGuideCommands()
             #if os(macOS)
             TabCommands()
@@ -68,6 +69,18 @@ private struct SettingsCommands: Commands {
             Button(.appSettingsMenu) { showSettings?(nil) }
                 .keyboardShortcut(",")
                 .disabled(showSettings == nil)
+        }
+    }
+}
+
+/// 도움말 › 새 기능 (#415): the page of what each release changed, in the window in front. No key: it is opened rarely.
+private struct WhatsNewCommands: Commands {
+    @FocusedValue(\.openPlace) private var openPlace
+
+    var body: some Commands {
+        CommandGroup(after: .help) {
+            Button(.whatsNewTitle) { openPlace?(.place(.whatsNew)) }
+                .disabled(openPlace == nil)
         }
     }
 }

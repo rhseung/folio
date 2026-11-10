@@ -57,6 +57,8 @@ final class Workspace {
     /// stops there (`LocalFolders`) instead of recovering this Mac's unfinished recordings into a fixture.
     @ObservationIgnored lazy var pendingRecordings = PendingRecordings(url: LocalFolders.applicationSupport("Recording", perGIST: true))
     let transcriptions = TranscriptionQueue()
+    /// What each release changed, from GitHub, and the sheet an update brings (#415). A test hands it a feed of its own.
+    var releaseNotes = ReleaseNotes()
     @ObservationIgnored private var watcher: GISTWatcher?
     @ObservationIgnored private var lastOwnWrite = Date.distantPast
     @ObservationIgnored private var pendingReload: Task<Void, Never>?

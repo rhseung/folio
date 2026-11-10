@@ -18,8 +18,8 @@ description = "Raise the version in FolioVersion: mise run version-bump -- major
 run = "scripts/version.sh bump"
 
 [tasks.release-notes]
-description = "Draft release-notes/<version>.json from the PRs merged since the last tag: mise run release-notes [-- <since>]"
-run = "scripts/release-notes.sh file"
+description = "Print the next release's body from the patch notes of the PRs merged since the last tag: mise run release-notes [-- <since>]"
+run = "scripts/release-notes.sh preview"
 
 [tasks.release-tag]
 description = "Tag origin/main as v<version> and push the tag, which drafts its GitHub release"

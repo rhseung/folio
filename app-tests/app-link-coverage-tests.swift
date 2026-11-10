@@ -99,6 +99,7 @@ struct AppLinkCoverageTests {
             case .people: .people
             case .codes: .codes
             case .settings: .settings
+            case .whatsNew: .whatsNew
             case .semester, .course, .session, .unit, .note, .material, .assignment, .exam, .card, .problemSet, .person, .recording: nil
             }
             if let place {
@@ -118,7 +119,7 @@ struct AppLinkCoverageTests {
             case .problemSet: fixture.problemSet
             case .person: fixture.person
             case .recording: fixture.recording
-            case .today, .grades, .requirements, .people, .codes, .settings: preconditionFailure()
+            case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew: preconditionFailure()
             }
             let screen: Screen = switch kind.home {
             case .app: preconditionFailure()

@@ -69,7 +69,7 @@ struct StatStrip: View {
 
 /// Meaning carried by color in badges and figures.
 enum Tone {
-    case plain, accent, warning, danger, success
+    case plain, accent, warning, danger, success, info
 
     @MainActor var foreground: Color {
         switch self {
@@ -77,14 +77,18 @@ enum Tone {
         case .warning: Theme.Palette.warning
         case .danger: Theme.Palette.danger
         case .success: Theme.Palette.success
+        case .info: Theme.Palette.info
         }
     }
 
     @MainActor var fill: Color {
         switch self {
-        case .plain, .accent, .success: Theme.Palette.fill
+        case .plain, .accent: Theme.Palette.fill
+        // As the session tag and the quiz's grades already tinted it: on the plain gray a fix read as one more gray chip.
+        case .success: Theme.Palette.success.opacity(Theme.Opacity.tint)
         case .warning: Theme.Palette.warningFill
         case .danger: Theme.Palette.dangerFill
+        case .info: Theme.Palette.infoFill
         }
     }
 }

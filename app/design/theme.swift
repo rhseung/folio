@@ -53,6 +53,9 @@ enum Theme {
         static let danger = Color(light: 0x9C3A1E, dark: 0xF08A70)
         static let dangerFill = Color(light: 0xFBE4DD, dark: 0x3A201A)
         static let success = Color(light: 0x1E7D4F, dark: 0x5FCF98)
+        /// Neutral news, neither good nor a warning: a release's new features beside its fixes (green) and changes (amber).
+        static let info = Color(light: 0x1D4A8A, dark: 0x8DB8F2)
+        static let infoFill = Color(light: 0xE3EEFB, dark: 0x1C2C42)
 
         /// What the quick add line read, behind the words in the line and on the chip under it for the same value, so
         /// the two read as a pair: the deadline and its repeat in blue, the assignment folder in sand; the course takes

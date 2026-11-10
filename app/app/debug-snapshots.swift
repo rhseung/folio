@@ -122,7 +122,8 @@ final class SnapshotDriver {
             window.center()
         }
 
-        var plan: [(String, Screen, CourseSection?)] = [("today", .today, nil), ("grades", .grades, nil), ("requirements", .requirements, nil), ("people", .people, nil), ("codes", .codes, nil)]
+        var plan: [(String, Screen, CourseSection?)] = [("today", .today, nil), ("grades", .grades, nil), ("requirements", .requirements, nil), ("people", .people, nil), ("codes", .codes, nil),
+                                                         ("whats-new", .whatsNew, nil)]
         if let semester { plan.append(("semester", .semester(semester), nil)) }
         if let first = courses.first {
             plan += CourseSection.allCases.map { ("course-\($0)", .course(first), $0) }

@@ -15445,17 +15445,6 @@
         }
       }
     },
-    "settings.about": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "정보"
-          }
-        }
-      }
-    },
     "settings.add-heading": {
       "extractionState": "manual",
       "localizations": {
@@ -21183,6 +21172,215 @@
           "stringUnit": {
             "state": "translated",
             "value": "반복"
+          }
+        }
+      }
+    },
+    "settings.tab.about": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앱 정보"
+          }
+        }
+      }
+    },
+    "whats-new.title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "새 기능"
+          }
+        }
+      }
+    },
+    "whats-new.subtitle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folio %@"
+          }
+        }
+      }
+    },
+    "whats-new.search": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "항목 검색"
+          }
+        }
+      }
+    },
+    "whats-new.kind.all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "전체"
+          }
+        }
+      }
+    },
+    "whats-new.count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld개"
+          }
+        }
+      }
+    },
+    "whats-new.rest": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그 밖에"
+          }
+        }
+      }
+    },
+    "whats-new.current": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 버전"
+          }
+        }
+      }
+    },
+    "whats-new.loading": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "불러오는 중"
+          }
+        }
+      }
+    },
+    "whats-new.unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "불러올 수 없음"
+          }
+        }
+      }
+    },
+    "whats-new.unavailable-detail": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "인터넷에 연결되면 GitHub의 릴리스에서 받아 와요."
+          }
+        }
+      }
+    },
+    "whats-new.retry": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다시 시도"
+          }
+        }
+      }
+    },
+    "whats-new.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "패치 노트 없음"
+          }
+        }
+      }
+    },
+    "whats-new.no-items": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "항목 없음"
+          }
+        }
+      }
+    },
+    "whats-new.no-match": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "‘%@’에 맞는 항목 없음"
+          }
+        }
+      }
+    },
+    "whats-new.no-match-kind": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ (%2$@)"
+          }
+        }
+      }
+    },
+    "whats-new.see-all": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "모두 보기"
+          }
+        }
+      }
+    },
+    "whats-new.sheet-one": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folio %1$@ · %2$@"
+          }
+        }
+      }
+    },
+    "whats-new.sheet-several": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Folio %1$@ · %2$@ 이후 업데이트 %3$lld번"
           }
         }
       }
