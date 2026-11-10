@@ -46,6 +46,24 @@ struct NoteSourceTests {
         }
     }
 
+    /// The empty line under a heading is a body line, its caret as tall as body text's: at the note's end too, where
+    /// the line holds no character and the caret took the heading's height from the line break before it.
+    @Test(arguments: ["본문\n# 11-10(화)\n", "본문\n# 11-10(화)\n\n끝"])
+    func theCaretUnderAHeadingIsABodyCaret(_ text: String) throws {
+        let (view, _) = Self.typing(text)
+        let ns = text as NSString
+        let empty = text.hasSuffix("\n") ? ns.length : ns.range(of: "\n\n").location + 1
+        view.setSelectedRange(NSRange(location: empty, length: 0))
+        NoteRender.layout(view)
+        let body = try #require(NoteRender.caret(view, at: 0))
+        let heading = try #require(NoteRender.caret(view, at: ns.range(of: "11-10").location))
+        let caret = try #require(NoteRender.caret(view, at: empty))
+        #expect(heading.height > body.height)
+        #expect(caret.height == body.height, "caret \(caret), body \(body)")
+        #expect(caret.minY >= heading.maxY, "caret \(caret), heading \(heading)")
+        #expect(view.typingAttributes[.noteCaret] as? CGFloat == body.height)
+    }
+
     static func typing(_ text: String) -> (SourceTextView, NSWindow) {
         let (view, window) = editor(text)
         window.makeFirstResponder(view)
