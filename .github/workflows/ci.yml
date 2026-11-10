@@ -43,12 +43,15 @@ jobs:
           printf '%s\n' "$files"
           # Prose, the web bundle's sources (the app ships the built copy in app/resources/web) and PR pictures.
           none='^docs/|^[^/]+\.md$|^\.github/.+\.md$|^web/|^pr-renders/'
+          # Scripts these checks never run. Any other script counts: `mise run generate` runs scripts/version.sh before every
+          # build, and a script it starts to run later is covered without a change here.
+          checks='^scripts/(check-design|check-local-folders|note-screens|release-notes|install-release)\.sh$'
           # build-ipad builds the app target alone. test-app builds the same target and resources for the Mac, so a
           # resource that breaks the bundle fails there.
-          build_ipad="$none|^app-tests/|^scripts/|^\.claude/|^app/resources/web/"
-          test_app="$none|^scripts/|^\.claude/"
+          build_ipad="$none|^app-tests/|$checks|^\.claude/|^app/resources/web/"
+          test_app="$none|$checks|^\.claude/"
           # FolioPadTests compiles app-tests/ipad only.
-          test_ipad="$none|^scripts/|^\.claude/|^app-tests/[^/]+$|^app-tests/(references|fixtures)/"
+          test_ipad="$none|$checks|^\.claude/|^app-tests/[^/]+$|^app-tests/(references|fixtures)/"
           needs() { if grep -qvE "$1" <<< "$files"; then echo true; else echo false; fi; }
           # test reads app/ and app-tests/ only for their Swift files (the design, Application Support and action
           # checks), which a pattern can't say without lookahead.

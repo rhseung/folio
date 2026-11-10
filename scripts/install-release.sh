@@ -6,9 +6,10 @@ cd "$(dirname "$0")/.."
 git fetch -q origin
 ref="${1:-origin/main}"
 sha=$(git rev-parse --verify "$ref^{commit}")
-dir="$(mktemp -d)/folio"
+tmp=$(mktemp -d)
+dir="$tmp/folio"
 git worktree add -q --detach "$dir" "$sha"
-trap 'git worktree remove --force "$dir"' EXIT
+trap 'git worktree remove --force "$dir"; rmdir "$tmp"' EXIT
 cd "$dir"
 mise trust -q
 mise run install-mac
