@@ -71,6 +71,8 @@ struct MathPaletteCell: View {
     static let minWidth: CGFloat = 80
     static let height: CGFloat = 64
     static let glyphHeight: CGFloat = 28
+    /// A symbol's ink fits the glyph's height; its transparent edge may run into the cell's padding.
+    static let glyphSlot = CGSize(width: minWidth - 2 * Theme.Space.s, height: glyphHeight + 2 * NoteMath.edge(NoteLook.body))
 
     var body: some View {
         Button(action: pick) {
@@ -97,10 +99,10 @@ struct MathPaletteCell: View {
         if let formula = item.preview,
            let picture = NoteMath.shared.picture(formula, syntax: item.previewAsciiMath ? .asciimath : .latex, display: false, size: NoteLook.body,
                                                  dark: scheme == .dark) {
+            let fitted = picture.fitted(Self.glyphSlot)
             Image(platformImage: picture.image)
                 .resizable()
-                .scaledToFit()
-                .frame(maxWidth: min(picture.size.width, Self.minWidth - 2 * Theme.Space.s), maxHeight: min(picture.size.height, Self.glyphHeight))
+                .frame(width: fitted.width, height: fitted.height)
         } else {
             // Spacing and `\left` draw nothing of their own, and a symbol not drawn yet shows this until it is.
             Image(systemName: "square.dashed").font(Theme.Glyph.regular).foregroundStyle(Theme.Palette.textTertiary)

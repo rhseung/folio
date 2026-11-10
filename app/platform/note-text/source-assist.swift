@@ -170,6 +170,8 @@ struct CompletionMenuView: View {
     static let headerHeight: CGFloat = 24
     static let maxRows = 8
     static let inset = Theme.Space.xs
+    /// A preview's ink fits the row; its transparent edge may run past it.
+    static let previewSlot = CGSize(width: width / 3, height: rowHeight + 2 * NoteMath.edge(NoteLook.body))
 
     static func height(rows: Int) -> CGFloat { CGFloat(min(rows, maxRows)) * rowHeight + 2 * inset }
 
@@ -221,10 +223,10 @@ struct CompletionMenuView: View {
             if let formula = item.preview,
                let picture = NoteMath.shared.picture(formula, syntax: item.previewAsciiMath ? .asciimath : .latex, display: false, size: NoteLook.body,
                                                      dark: scheme == .dark) {
+                let fitted = picture.fitted(Self.previewSlot)
                 Image(platformImage: picture.image)
                     .resizable()
-                    .frame(width: min(picture.size.width, Self.width / 3), height: min(picture.size.height, Self.rowHeight - Theme.Space.s))
-                    .aspectRatio(contentMode: .fit)
+                    .frame(width: fitted.width, height: fitted.height)
             } else if let detail = item.detail {
                 // A snippet's detail is what it writes; a link's is where the thing is, in words.
                 Text(detail.replacingOccurrences(of: "\n", with: " ")).font(Theme.Typeface.caption).monospaced(!CompletionMenu.late(menu.query))

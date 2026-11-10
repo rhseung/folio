@@ -176,6 +176,22 @@ struct NoteMathTests {
         }
     }
 
+    /// The completion menu and the palette show a formula as big as on the note's line and in its own shape: framed to
+    /// a row's height but its own width, every snippet's preview came out squashed.
+    @Test func previewsKeepTheirSizeAndShape() async throws {
+        for tex in [#"\frac{a}{b}"#, "x^{2}", #"\sqrt{a}"#, #"\sum_{a}^{b}"#, #"\lim_{a \to b}"#] {
+            let picture = try #require(await picture(tex, trim: false), "\(tex)")
+            #expect(picture.fitted(CompletionMenuView.previewSlot) == picture.size, "\(tex): \(picture.size)")
+            #expect(picture.fitted(MathPaletteCell.glyphSlot) == picture.size, "\(tex): \(picture.size)")
+        }
+        let slot = CompletionMenuView.previewSlot
+        for size in [CGSize(width: 40, height: 120), CGSize(width: 300, height: 30)] {
+            let fitted = NoteMath.Picture(image: NSImage(), size: size).fitted(slot)
+            #expect(abs(fitted.width / fitted.height - size.width / size.height) < 0.001, "\(size) to \(fitted)")
+            #expect(fitted.width <= slot.width && fitted.height <= slot.height, "\(size) to \(fitted)")
+        }
+    }
+
     /// Drawn in the note's text color for the appearance asked for, not the page's.
     @Test func inkFollowsTheAppearance() async throws {
         for dark in [false, true] {

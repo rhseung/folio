@@ -41,7 +41,19 @@ import UIKit
     struct Picture {
         let image: PlatformImage
         let size: CGSize
+
+        /// Its size in a slot: scaled down evenly to fit, never up. A resizable picture framed to the slot's height but
+        /// its own width came out squashed, every formula in the completion menu flattened.
+        func fitted(_ slot: CGSize) -> CGSize {
+            guard size.width > 0, size.height > 0 else { return size }
+            let scale = min(1, slot.width / size.width, slot.height / size.height)
+            return CGSize(width: size.width * scale, height: size.height * scale)
+        }
     }
+
+    /// The transparent room an untrimmed picture keeps around KaTeX's boxes, on each side, in points. A slot can let
+    /// it reach past its edge: only the ink needs to fit, and counting the room shrank every symbol.
+    nonisolated static func edge(_ size: CGFloat) -> CGFloat { ceil(size * 0.25) }
 
     static let shared = NoteMath()
 
@@ -299,7 +311,7 @@ import UIKit
         let ink = CGRect(x: found[0].doubleValue, y: found[1].doubleValue, width: found[2].doubleValue, height: found[3].doubleValue)
         // Untrimmed, glyphs still reach a little past their boxes, so a quarter em of room around them; in whole
         // points either way, so the picture isn't stretched into its bounds.
-        let margin = ceil(size * (room ?? 0.25))
+        let margin = room.map { ceil(size * $0) } ?? NoteMath.edge(size)
         let rect = CGRect(x: floor(ink.minX) - margin, y: floor(ink.minY) - margin, width: 0, height: 0)
             .union(CGRect(x: ceil(ink.maxX) + margin, y: ceil(ink.maxY) + margin, width: 0, height: 0))
             .intersection(web.bounds)
