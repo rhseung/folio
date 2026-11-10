@@ -157,14 +157,7 @@ final class NoteScrollView: NSScrollView {
     // the note puts over its text (the preview bubble) takes no clicks. The room past the note's end is the clip
     // view's, under no part of the note; a click there went nowhere, so the note takes it and puts the caret at its end.
     override func hitTest(_ point: NSPoint) -> NSView? {
-        hit(point, wheel: NSApp.currentEvent?.type == .scrollWheel)
-    }
-
-    // The window sends a wheel to the view this finds, so a formula that scrolls in its bubble takes it: given to the
-    // note like a click, a sideways swipe over the bubble went nowhere and the formula couldn't be scrolled at all.
-    func hit(_ point: NSPoint, wheel: Bool) -> NSView? {
         let hit = super.hitTest(point)
-        if wheel, hit is BubbleScroller { return hit }
         guard let hit, let document = documentView, hit === self || hit === contentView || hit.isDescendant(of: document) else { return hit }
         return document
     }
@@ -450,9 +443,33 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         }
     }
 
+    // The window sends a wheel to the view under the pointer, and over the note that's this one, the bubble's
+    // scroller included (`NoteScrollView.hitTest`): left to go on up to the note, a sideways swipe over a formula that
+    // scrolls in its bubble went nowhere. Where a swipe starts decides where all of it goes, as AppKit latches one.
     override func scrollWheel(with event: NSEvent) {
+        let starts = event.phase.contains(.began) || event.phase.contains(.mayBegin) || (event.phase.isEmpty && event.momentumPhase.isEmpty)
+        if starts {
+            wheelsBubble = bubble.map { $0.scrolls && $0.frame.contains(wheelPoint(event)) } ?? false
+        }
+        if wheelsBubble, let bubble {
+            bubble.scroller.scrollWheel(with: event)
+        } else {
+            scrollNote(with: event)
+        }
+    }
+
+    private var wheelsBubble = false
+
+    /// The note's own scroll, which the bubble passes a wheel that's mostly up or down on to.
+    func scrollNote(with event: NSEvent) {
         keeping = nil
         super.scrollWheel(with: event)
+    }
+
+    // An event made in the app has no window, and its location is on the screen.
+    private func wheelPoint(_ event: NSEvent) -> NSPoint {
+        guard event.window == nil, let window else { return convert(event.locationInWindow, from: nil) }
+        return convert(window.convertPoint(fromScreen: event.locationInWindow), from: nil)
     }
 
     override func keyDown(with event: NSEvent) {
@@ -1286,7 +1303,9 @@ final class PreviewBubble: NSView {
 final class BubbleScroller: NSScrollView {
     override func scrollWheel(with event: NSEvent) {
         if abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) {
-            nextResponder?.scrollWheel(with: event)
+            // Straight to the note's scroll: up the responder chain it came back to the editor, which hands a wheel
+            // over the bubble to this.
+            if let note = superview?.superview as? SourceTextView { note.scrollNote(with: event) } else { nextResponder?.scrollWheel(with: event) }
             return
         }
         // Scrolled without the pointer moving first, it's still the pointer's.

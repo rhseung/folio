@@ -369,6 +369,7 @@ struct NoteSourceTests {
                 bubble.reveal(0)
                 view.setSelectedRange(NSRange(location: start + (source as NSString).length - 1, length: 0))
                 #expect(view.bubble === bubble && offset() == end, "\(label): \(offset()) at the end")
+                try await Self.wheelOver(bubble, in: view, label)
                 // Under the pointer it stays as the caret leaves the formula, and goes when the pointer does.
                 bubble.hovered = true
                 view.setSelectedRange(NSRange(location: 0, length: 0))
@@ -434,11 +435,45 @@ struct NoteSourceTests {
         #expect(offset() == end, "\(offset()) for \(end)")
         view.setSelectedRange(NSRange(location: ns.range(of: "$$", options: .backwards).location + 1, length: 0))
         #expect(view.bubble === bubble && offset() == end, "\(offset()) for \(end) on the closing line")
-        // A wheel over it is the bubble's; a click goes on to the note under it.
+        try await Self.wheelOver(bubble, in: view)
+    }
+
+    /// A wheel takes the window's way to the bubble: the window gives it to the view under the pointer, which over the
+    /// note is the editor, and the editor hands a sideways one over the bubble to its scroller. Up or down, the note
+    /// scrolls and the formula stays. The events are made in the app and sent to the editor; nothing reaches the screen.
+    static func wheelOver(_ bubble: PreviewBubble, in view: SourceTextView, _ label: String = "") async throws {
         let scroll = try #require(view.enclosingScrollView as? NoteScrollView)
-        let center = try #require(scroll.superview).convert(NSPoint(x: bubble.frame.midX, y: bubble.frame.midY), from: view)
-        #expect(scroll.hit(center, wheel: true) === bubble.scroller)
-        #expect(scroll.hit(center, wheel: false) === view)
+        let center = NSPoint(x: bubble.frame.midX, y: bubble.frame.midY)
+        #expect(scroll.hitTest(try #require(scroll.superview).convert(center, from: view)) === view, "\(label)")
+        func offset() -> CGFloat { bubble.scroller.contentView.bounds.minX }
+        func note() -> CGFloat { scroll.contentView.bounds.minY }
+        bubble.reveal(0)
+        let (before, top) = (offset(), note())
+        view.scrollWheel(with: try Self.wheel(x: -80, y: 0, at: center, in: view))
+        for _ in 0..<50 where offset() <= before { try? await Task.sleep(for: .milliseconds(20)) }
+        #expect(offset() > before && note() == top, "\(label): sideways moved the formula \(before) → \(offset()), the note \(top) → \(note())")
+        let sideways = offset()
+        view.scrollWheel(with: try Self.wheel(x: 0, y: -80, at: center, in: view))
+        for _ in 0..<50 where note() <= top { try? await Task.sleep(for: .milliseconds(20)) }
+        #expect(note() > top && offset() == sideways, "\(label): down moved the note \(top) → \(note()), the formula \(sideways) → \(offset())")
+        scroll.contentView.scroll(to: NSPoint(x: 0, y: top))
+        scroll.reflectScrolledClipView(scroll.contentView)
+    }
+
+    /// A trackpad's scroll by `x` and `y` points over `point` in `view`, made in the app as AppKit gets one: with no
+    /// window, at its place on the screen.
+    static func wheel(x: Int32, y: Int32, at point: NSPoint, in view: NSView) throws -> NSEvent {
+        let window = try #require(view.window)
+        let screen = window.convertPoint(toScreen: view.convert(point, to: nil))
+        let cg = try #require(CGEvent(scrollWheelEvent2Source: nil, units: .pixel, wheelCount: 2, wheel1: y, wheel2: x, wheel3: 0))
+        cg.setIntegerValueField(.scrollWheelEventIsContinuous, value: 1)
+        cg.setIntegerValueField(.scrollWheelEventPointDeltaAxis1, value: Int64(y))
+        cg.setIntegerValueField(.scrollWheelEventPointDeltaAxis2, value: Int64(x))
+        // The screen's y runs down from the top of the main display, AppKit's up from its bottom.
+        cg.location = CGPoint(x: screen.x, y: (NSScreen.screens.first?.frame.height ?? 0) - screen.y)
+        let event = try #require(NSEvent(cgEvent: cg))
+        #expect(event.type == .scrollWheel && abs(event.scrollingDeltaX) >= abs(CGFloat(x)) / 2, "\(event)")
+        return event
     }
 
     /// Within the text column, with the padding that puts the picture's start under its source's past it.
