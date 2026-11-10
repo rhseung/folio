@@ -261,6 +261,9 @@ struct QuickAddChip: View {
     let model: QuickAddModel
     let chip: QuickAddModel.Chip
     @State private var pickingDue = false
+    @State private var pickingRepeat = false
+    /// What the rule popover edits; each change is written into the line, which may read it slightly differently.
+    @State private var rule = AssignmentRepeat.weekly
 
     var body: some View {
         Group {
@@ -273,9 +276,16 @@ struct QuickAddChip: View {
         }
         #if DEBUG && os(macOS)
         .task {
-            guard case .due = chip, SnapshotDriver.shared.quickAddDueOpen else { return }
-            try? await Task.sleep(for: .seconds(0.6))
-            pickingDue = true
+            switch chip {
+            case .due where SnapshotDriver.shared.quickAddDueOpen:
+                try? await Task.sleep(for: .seconds(0.6))
+                pickingDue = true
+            case let .repeats(repeats?) where SnapshotDriver.shared.quickAddRepeatOpen:
+                try? await Task.sleep(for: .seconds(0.6))
+                rule = repeats
+                pickingRepeat = true
+            default: break
+            }
         }
         #endif
     }
@@ -323,8 +333,8 @@ struct QuickAddChip: View {
             VStack(alignment: .leading, spacing: Theme.Space.m) {
                 DatePanel(date: Binding(get: { date ?? model.newDue }, set: { model.pickDue($0) }))
                 Divider()
-                Toggle(String(localized: .quickAddRepeatWeekly), isOn: Binding(
-                    get: { model.parsed?.repeats == .weekly },
+                Toggle(String(localized: .quickAddRepeatToggle), isOn: Binding(
+                    get: { model.parsed?.repeats != nil },
                     set: { on in
                         if on, model.parsed?.due == nil { model.pickDue(model.newDue) }
                         model.pickRepeats(on ? .weekly : nil)
@@ -360,19 +370,19 @@ struct QuickAddChip: View {
 
     private func repeatsChip(_ repeats: AssignmentRepeat?) -> some View {
         Menu {
-            Button { model.pickRepeats(.weekly) } label: {
-                if repeats == .weekly { Label(String(localized: .quickAddWeekly), systemImage: "checkmark") } else { Text(.quickAddWeekly) }
-            }
-            Button { model.pickRepeats(nil) } label: {
-                if repeats == nil { Label(String(localized: .quickAddNoRepeat), systemImage: "checkmark") } else { Text(.quickAddNoRepeat) }
-            }
+            RepeatMenuItems(selection: repeats, custom: repeats.map { !AssignmentRepeat.presets.contains($0) } ?? false,
+                            pick: { model.pickRepeats($0) }, customize: {
+                                rule = repeats ?? .weekly
+                                if repeats == nil { model.pickRepeats(rule) }
+                                pickingRepeat = true
+                            })
         } label: {
             if model.isDimmed(chip) {
                 dimmed("repeat", .quickAddChipRepeat)
             } else {
                 label(fill: Theme.Palette.readDue) {
                     Image(systemName: "repeat")
-                    Text(.quickAddWeekly)
+                    Text(repeats?.label ?? "")
                 }
                 .foregroundStyle(Theme.Palette.readDueInk)
             }
@@ -381,6 +391,13 @@ struct QuickAddChip: View {
         .menuIndicator(.hidden)
         .buttonStyle(.plain).pointingHand()
         .fixedSize()
+        .popover(isPresented: $pickingRepeat, arrowEdge: .bottom) {
+            Card {
+                RepeatRuleRows(rule: Binding(get: { rule }, set: { rule = $0; model.pickRepeats($0) }), dueWeekday: model.dueWeekday, last: true)
+            }
+            .padding(Theme.Space.l)
+            .frame(width: 360)
+        }
     }
 
     private func folderChip(_ name: String?) -> some View {

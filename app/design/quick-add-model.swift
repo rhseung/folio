@@ -86,7 +86,7 @@ final class QuickAddModel {
         }
         if !isEmpty {
             chips.append(.due(shown.due))
-            if shown.repeats == .weekly { chips.append(.repeats(.weekly)) }
+            if let repeats = shown.repeats { chips.append(.repeats(repeats)) }
             if let folder = shown.folderName { chips.append(.folder(folder)) }
         }
         return chips
@@ -110,10 +110,13 @@ final class QuickAddModel {
 
     func pickCourse(_ id: UUID) { set(.course(id)) }
 
-    /// Clearing the deadline takes the repeat with it, as `매주` is one of the deadline's words.
+    /// Clearing the deadline takes the repeat with it, as `매주` and the like are among the deadline's words.
     func pickDue(_ date: Date?) { set(.due(date)) }
 
     func pickRepeats(_ repeats: AssignmentRepeat?) { set(.repeats(repeats)) }
+
+    /// The weekday a weekly rule without weekdays falls on: the deadline's.
+    var dueWeekday: Int? { parsed?.due.map { workspace.calendar.isoWeekday(of: $0) } }
 
     /// Where an empty deadline chip starts its calendar: today at the default deadline minute.
     var newDue: Date {

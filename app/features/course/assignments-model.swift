@@ -111,6 +111,8 @@ final class AssignmentSheetModel {
     var due = Date.now
     var status: AssignmentStatus = .todo
     var repeats: AssignmentRepeat?
+    /// The rule shows its parts to edit: it matches no preset, or "직접 설정" was picked.
+    var customRepeat = false
     private(set) var target = ScoreTarget.none
     /// Typed score and max per component, so switching the target keeps what was typed.
     var scores: [UUID: String] = [:]
@@ -139,7 +141,30 @@ final class AssignmentSheetModel {
     }
 
     var repeatDetail: String? {
-        repeats != .weekly ? nil : String(localized: hasDue ? .assignmentsRepeatNext : .assignmentsRepeatNeedsDue)
+        guard let repeats else { return nil }
+        guard hasDue else { return String(localized: .assignmentsRepeatNeedsDue) }
+        let next = course.file.nextDue(after: due, rule: repeats, title: assignment.title, calendar: workspace.calendar)
+        return String(localized: .assignmentsRepeatNext(CourseFile.deadline(next, calendar: workspace.calendar)))
+    }
+
+    var repeatLabel: String { repeats?.label ?? String(localized: .repeatPickerNone) }
+
+    var dueWeekday: Int? { hasDue ? workspace.calendar.isoWeekday(of: due) : nil }
+
+    func pickRepeat(_ rule: AssignmentRepeat?) {
+        repeats = rule
+        customRepeat = false
+    }
+
+    /// Starts from the rule there is, or a week on the deadline's day.
+    func customizeRepeat() {
+        if repeats == nil { repeats = .weekly }
+        customRepeat = true
+    }
+
+    var customRule: AssignmentRepeat {
+        get { repeats ?? .weekly }
+        set { repeats = newValue }
     }
 
     var sortedComponents: [GradeComponent] { course.file.components.sorted { $0.order < $1.order } }
@@ -181,6 +206,7 @@ final class AssignmentSheetModel {
         due = assignment.due ?? workspace.calendar.date(bySettingHour: 23, minute: 59, second: 0, of: workspace.now) ?? workspace.now
         status = assignment.status
         repeats = assignment.repeats
+        customRepeat = repeats.map { !AssignmentRepeat.presets.contains($0) } ?? false
         memo = assignment.memo
         let own = course.file.scores.filter { $0.assignmentId == assignment.id }
         for s in own {

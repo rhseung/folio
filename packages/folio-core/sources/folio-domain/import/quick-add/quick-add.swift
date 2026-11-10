@@ -15,12 +15,14 @@ public struct QuickAdd: Equatable, Sendable {
     /// Every part of the line that was read, and what it reads as; the title is the words in none of them. The field's
     /// marks and the chips under it read these.
     public var spans: [Span] = []
-    /// Where `매주` sits, inside the deadline's spans; the repeat chip takes it out of the line.
-    var weeklyRanges: [Range<String.Index>] = []
+    /// Where the rule's words (`매주`, `3일마다`) sit, inside the deadline's spans; the repeat chip takes them out of the line.
+    var repeatRanges: [Range<String.Index>] = []
+    /// Where a rule's weekdays (`월수`) sit; with the rule taken out they become the deadline's own weekday.
+    var weekdayRanges: [Range<String.Index>] = []
 
     public struct Span: Equatable, Sendable {
         public enum Field: Equatable, Sendable {
-            /// The deadline's words, `매주` and `까지` among them.
+            /// The deadline's words, the repeat's (`매주`, `월수`) and `까지` among them.
             case due
             /// The course the words name, which a pick on the chip may since have replaced.
             case course(UUID)
@@ -76,6 +78,7 @@ public struct QuickAdd: Equatable, Sendable {
         let year = calendar.component(.year, from: now)
         var words = found.map { Word($0.0, range: $0.1, today: today, year: year) }
         readNeighbors(&words, today: today)
+        bindWeekdays(&words)
         detect(&words)
         markEndings(&words)
         return resolve(words, line: line, course: course, courseSpan: courseSpan, now: now, calendar: calendar)

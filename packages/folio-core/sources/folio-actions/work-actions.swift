@@ -202,7 +202,8 @@ func repeatEnd(_ ctx: ActionContext, course: UUID) throws -> Date? {
 
 /// A new assignment plus its standard folder when the title names one (`HW 3` → `Assignments/HW3`).
 @Action("assignment add", "과제 추가. 제목이 HW3처럼 표준 이름이면 Assignments 폴더도 만든다", effect: .creates, done: "과제 '{title}'을(를) 추가했습니다",
-        examples: [#"folio assignment add EC4207 "HW 3" --due "2026-11-04 23:59""#, #"folio assignment add EC4207 "Weekly Quiz" --due 2026-11-02 --repeats weekly --dry-run"#],
+        examples: [#"folio assignment add EC4207 "HW 3" --due "2026-11-04 23:59""#, #"folio assignment add EC4207 "Weekly Quiz" --due 2026-11-02 --repeats weekly --dry-run"#,
+                   #"folio assignment add EC4207 "Lab 보고서" --due 2026-11-02 --repeats "격주 월수""#],
         phrases: ["과제 추가", "숙제 생김", "새 과제"])
 public struct AssignmentAdd {
     @New var id: Assignment.ID
@@ -212,7 +213,7 @@ public struct AssignmentAdd {
     @Arg var title: String
     /// 마감 일시
     var due: Date?
-    /// 반복
+    /// 반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 3일마다, 격주, 매주 월수, 월,수마다)
     var repeats: AssignmentRepeat?
 
     public func run(_ ctx: ActionContext) throws {
@@ -261,7 +262,7 @@ public struct AssignmentSave {
     var due: Patch<Date?>
     /// 상태
     var status: Patch<AssignmentStatus>
-    /// 반복
+    /// 반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 3일마다, 격주, 매주 월수, 월,수마다)
     var repeats: Patch<AssignmentRepeat?>
     /// 반영되는 성적 항목. 주면 묶음은 풀린다
     @CLIName("component") var componentId: Patch<GradeComponent.ID?>
@@ -274,9 +275,9 @@ public struct AssignmentSave {
     /// 준 항목의 점수만 바꾸고 다른 항목의 점수는 그대로 둔다. 빈 목록이면 점수를 모두 지운다
     @CLIName("score") @Parsed("score", "9/10. 묶음이면 <항목>:9/10") var score: Patch<[Score]>
 
-    // A weekly series shares one title, so each score is told apart by its date.
+    // A repeating series shares one title, so each score is told apart by its date.
     static func scoreTitle(_ title: String, repeats: AssignmentRepeat?, due: Date?) -> String {
-        repeats == .weekly ? due.map { "\(title) \($0.formatted(.dateTime.month(.defaultDigits).day()))" } ?? title : title
+        repeats != nil ? due.map { "\(title) \($0.formatted(.dateTime.month(.defaultDigits).day()))" } ?? title : title
     }
 
     public func run(_ ctx: ActionContext) throws {
@@ -357,7 +358,7 @@ public struct AssignmentSave {
     }
 }
 
-/// Handing in a weekly assignment makes the next one.
+/// Handing in a repeating assignment makes the next one.
 @Action("assignment status", "과제 상태 바꾸기. 매주 과제를 내면 다음 과제가 생긴다", done: "과제 '{assignment}'의 상태를 {status}(으)로 바꿨습니다",
         examples: ["folio assignment status EC4207/HW3 submitted"], phrases: ["제출", "냈어", "다 했어", "하는 중", "채점됨"])
 public struct AssignmentStatusSet {
@@ -442,7 +443,7 @@ public struct ScoreAdd {
 }
 
 extension CourseFile {
-    /// A weekly assignment graded by its score moves the series on, as handing it in does.
+    /// A repeating assignment graded by its score moves the series on, as handing it in does.
     mutating func scoredAssignment(_ id: UUID, until end: Date?, _ ctx: ActionContext) {
         markGraded(id, device: ctx.device, now: ctx.now)
         continueRepeating(id, until: end, calendar: ctx.calendar, device: ctx.device, now: ctx.now)

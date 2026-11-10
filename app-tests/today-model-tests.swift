@@ -222,6 +222,11 @@ struct QuickAddModelTests {
         model.pickDue(model.newDue)
         #expect(model.chips.map(\.kind) == kinds)
         #expect(model.parsed?.due == model.newDue && model.parsed?.repeats == .weekly)
+        // Another rule is written in the line's words and shown by its own name.
+        model.pickRepeats(.biweekly)
+        #expect(model.text.contains("격주") && model.chips[2] == .repeats(.biweekly))
+        model.pickRepeats(AssignmentRepeat(.week, weekdays: [1, 3]))
+        #expect(model.text.contains("매주 월수") && [1, 3].contains(model.dueWeekday ?? 0))
         model.pickDue(nil)
         #expect(model.text == "보고서 Lab3 그래프 이론")
         #expect(model.parsed?.due == nil && model.parsed?.repeats == nil)

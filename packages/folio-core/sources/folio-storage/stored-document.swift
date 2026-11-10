@@ -36,10 +36,24 @@ extension Transcript: StoredModel {
 }
 
 extension CourseFile: StoredModel {
-    public static let schemaVersion = 6
+    public static let schemaVersion = 7
     public static let migrations: [Int: @Sendable (inout JSONValue) throws -> Void] = [
-        1: dropSessionKind, 2: dropSessionIndex, 3: dropExamKind, 4: splitRolesByOrigin, 5: keepNoteLinksOnSessions,
+        1: dropSessionKind, 2: dropSessionIndex, 3: dropExamKind, 4: splitRolesByOrigin, 5: keepNoteLinksOnSessions, 6: spellOutRepeats,
     ]
+
+    /// v6 had one repeat, `"weekly"`. A rule now has an interval, a unit and weekdays, which an older app can't read,
+    /// so the version keeps it from opening the file rather than failing on the first rule it meets.
+    static func spellOutRepeats(_ raw: inout JSONValue) throws {
+        guard case .array(var assignments)? = raw["assignments"] else { return }
+        for i in assignments.indices {
+            guard case .string(let text)? = assignments[i]["repeats"] else { continue }
+            // Only `weekly` was ever written; anything else is dropped rather than left for decoding to fail on.
+            assignments[i]["repeats"] = AssignmentRepeat(text: text).map { r in
+                .object(["every": .number(Double(r.every)), "unit": .string(r.unit.rawValue), "weekdays": .array(r.weekdays.map { .number(Double($0)) })])
+            } ?? nil
+        }
+        raw["assignments"] = .array(assignments)
+    }
 
     /// v5 kept a note's session twice, as the note's `sessionId` and the session's `roughNoteId`/`reviewNoteId`, and
     /// gave rough, review and exam notes a copy of their session's units or exam's scope that never followed later

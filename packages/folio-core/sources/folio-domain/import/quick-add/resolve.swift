@@ -21,14 +21,18 @@ extension QuickAdd {
             day = calendar.date(byAdding: .day, value: weeks * 7 + w - 1, to: monday)
         }
         // A bare weekday is the next one still ahead.
-        if day == nil, let w = weekday?.weekday {
+        func upcoming(_ w: Int) -> Date {
             let ahead = (w - calendar.isoWeekday(of: start) + 7) % 7
             var d = calendar.date(byAdding: .day, value: ahead, to: start)!
             if ahead == 0, calendar.date(byAdding: .minute, value: minute ?? defaultMinute, to: d)! <= now {
                 d = calendar.date(byAdding: .day, value: 7, to: d)!
             }
-            day = d
+            return d
         }
+        if day == nil, let w = weekday?.weekday { day = upcoming(w) }
+        // `매주 월수` is due on whichever of them comes first.
+        let group = due.lazy.compactMap(\.weekdayGroup).first
+        if day == nil, let group { day = group.days.map(upcoming).min() }
         if day == nil, let d = due.compactMap(\.detected).first(where: { $0.phrase.contains(/요일|월|일|주/) }) {
             day = calendar.startOfDay(for: d.date)
         }
@@ -50,8 +54,13 @@ extension QuickAdd {
             spans.append(Span(range: m.range, field: .kind(m.kind, m.number)))
         }
         let title = words.filter { !$0.isDue }.map(\.text).joined(separator: " ")
+        // Weekdays join a weekly rule (`격주 화목`), or make one by themselves (`월,수마다`); one weekday is the deadline's.
+        var repeats = due.lazy.compactMap(\.rule).first
+        if let group, repeats == nil || repeats?.unit == .week {
+            repeats = AssignmentRepeat(every: repeats?.every ?? 1, .week, weekdays: group.days.count > 1 ? group.days : [])
+        }
         return QuickAdd(courseId: course, title: title, due: day.map { calendar.date(byAdding: .minute, value: minute ?? defaultMinute, to: $0)! },
-                        repeats: words.contains(where: \.weekly) ? .weekly : nil, spans: spans,
-                        weeklyRanges: words.filter(\.weekly).map { $0.range.lowerBound..<line.index($0.range.lowerBound, offsetBy: 2) })
+                        repeats: repeats, spans: spans, repeatRanges: due.filter { $0.rule != nil }.map { $0.core(in: line) },
+                        weekdayRanges: due.filter { $0.weekdayGroup != nil }.map { $0.core(in: line) })
     }
 }

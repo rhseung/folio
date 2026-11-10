@@ -86,7 +86,7 @@ struct MCPServer {
             result = [
                 "protocolVersion": .string(asked.flatMap { Self.versions.contains($0) ? $0 : nil } ?? Self.versions[0]),
                 "capabilities": ["tools": ["listChanged": .bool(false)]],
-                "serverInfo": ["name": "folio", "version": "1"],
+                "serverInfo": ["name": "folio", "version": .string(FolioVersion.marketing)],
                 "instructions": .string(text),
             ]
         case "ping":

@@ -97,7 +97,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
 | 자동 완성 메뉴 `CompletionMenu` | 편집 보기의 모든 자동 완성(`/` 블록, 콜아웃 종류, 코드 언어, TeX 명령과 환경, AsciiMath 기호, 스니펫, 링크, 수식에서 `\`만 쳐서 여는 기호 전체 목록). 수식 기호의 분류와 목록은 `FolioMarkdown`의 `MathSymbols`가 정하고 f(x) 기호 팔레트와 함께 쓴다. 무엇을 완성할지는 `FolioMarkdown`의 `Completion`이 원문에서 읽고, 메뉴는 캐럿 옆에 하나만 뜬다. 늦게 오는 후보(링크)는 `more`로 더한다. 링크 후보는 `NoteLinkCompletion`이 FolioIndex 검색 색인과 파일에서 찾고, 보일 것과 순서는 `FolioDomain`의 `LinkCandidates`가 정한다. 한글 조합 중에는 메뉴, 짝 기호, 목록 이어 쓰기가 끼어들지 않는다. `/` 블록마다 바로 넣는 법(`##`, `mk ⇥`)을 오른쪽에 보이고, 입력 안내 시트(⌘/)는 같은 표(`/` 블록, 설정 스니펫, 콜아웃 종류, 짝 기호, 표 단축키)를 `FolioMarkdown`의 `InputGuide`로 읽어 상황별로 보인다 | 있음(Mac). iPad 메뉴는 #31 |
 | 항목 메뉴 `ItemCommand` | 항목 종류마다 하나인 메뉴. 무슨 행이 어느 무리(`MenuGroup`: 열기, 시작, 상태, 편집, 정리, 공유, 삭제)로 서는지는 `FolioDomain`이 데이터와 시각, 연 자리(`MenuHost`)로 정하고(`CourseFile.commands(for:at:host:)`), 앱의 `ItemMenu`가 세 띠로 나눠 그린다. 오른쪽 클릭, ⋯, 검색 결과가 같은 메뉴를 쓰고, 화면의 단추는 같은 행을 `ItemButton`으로 그린다. "편집…"의 시트와 "삭제…"의 확인은 창이 띄운다(`\.itemSheets`) | 있음(회차, 검색 결과). 다른 종류는 #403 |
 | 라이브 시계 `LiveClock` | 화면이 그리는 지금 시각. 분이 바뀔 때, 앱이 앞으로 오거나 Mac이 깨어날 때 갱신한다. 분 단위로 바뀌는 뷰는 `TimelineView` 대신 `workspace.liveNow`나 `LiveTime`으로 읽는다. 초를 세는 타이머만 `TimelineView`를 쓴다 | 있음 |
-| 빠른 추가 인식기 `QuickAdd` | 빠른 추가 한 줄을 읽는 법. 낱말마다 인식기(`lexicon.swift`. 요일, 날짜, 시각, 매주는 `Recognizer`의 경우, 과목은 `readCourse`, 과제 번호는 `AssignmentKind.match`)가 읽고, 결합 규칙(`grammar.swift`의 `Rule`: [주][요일], [오전·오후][시각], [시각][분], [월][일], 홀로 선 [일])이 이웃을 묶고, 마감 뒤에 홀로 선 `까지`·`마감`은 `markEndings`가 마감에 붙이고, 해석(`resolve.swift`)이 줄의 구간 `spans`(마감, 과목, 과제 종류와 번호)와 저장할 값을 낸다. 제목은 어느 구간에도 들지 않은 글이다. 칸의 알약과 칸 아래 칩이 `spans`와 그 값만 읽는다. 새 종류(시험, 메모)는 인식기와 `Span.Field` 하나씩을 더한다. Apple의 날짜 인식기는 실제 시계로 읽으므로 표가 못 읽은 나머지에만 쓴다 | 있음 |
+| 빠른 추가 인식기 `QuickAdd` | 빠른 추가 한 줄을 읽는 법. 낱말마다 인식기(`lexicon.swift`. 요일, 날짜, 시각, 반복(`매일`, `격주`, `3일마다`, `매주 월수`의 요일 묶음)은 `Recognizer`의 경우, 과목은 `readCourse`, 과제 번호는 `AssignmentKind.match`)가 읽고, 결합 규칙(`grammar.swift`의 `Rule`: [주][요일], [오전·오후][시각], [시각][분], [월][일], 홀로 선 [일])이 이웃을 묶고, 마감 뒤에 홀로 선 `까지`·`마감`은 `markEndings`가 마감에 붙이고, 요일 묶음(`월수`)은 곁에 주 단위 반복이 있거나 `마다`가 붙을 때만 반복의 요일이고 아니면 제목이며(`bindWeekdays`), 해석(`resolve.swift`)이 줄의 구간 `spans`(마감, 과목, 과제 종류와 번호)와 저장할 값을 낸다. 제목은 어느 구간에도 들지 않은 글이다. 칸의 알약과 칸 아래 칩이 `spans`와 그 값만 읽는다. 새 종류(시험, 메모)는 인식기와 `Span.Field` 하나씩을 더한다. Apple의 날짜 인식기는 실제 시계로 읽으므로 표가 못 읽은 나머지에만 쓴다 | 있음 |
 
 축을 새로 만들면 이 표에 적는다.
 
@@ -147,6 +147,7 @@ PageHeader(title: String(localized: .sessionsAdd))   // String을 받는 API
 - 사용자가 바꿀 수 있는 값(하루 경계, 복습 간격, 알림 시점, 학점 규칙)은 코드 상수가 아니라 `settings.json`과 `transcript.json`에서 읽는다. 기본값은 Domain의 한 곳에서만 정의한다.
 - 빌드와 테스트 명령은 `mise.toml`의 작업으로만 정의한다. 문서는 `mise run <작업>`을 가리킨다.
 - Xcode 프로젝트는 `project.yml`에서 생성한다. `Folio.xcodeproj`는 커밋하지 않고 직접 고치지 않는다.
+- 버전은 `FolioDomain`의 `FolioVersion.marketing`(`X.Y.Z`)에서만 정한다. 앱의 `MARKETING_VERSION`은 `mise run generate`가 여기서 읽어 `.build/version.xcconfig`에 쓰고, CLI(`folio --version`)와 MCP는 이 상수를 그대로 쓴다. 빌드 번호는 커밋 수(`git rev-list --count HEAD`)라 파일에 두지 않는다. `main`이 스쿼시 머지뿐이라 머지할 때마다 는다.
 - 최소 지원 버전은 `project.yml`과 각 `packages/*/Package.swift`에 있다. 도구 제약으로 하나로 합칠 수 없으니 함께 고친다.
 
 ## 데이터 원칙
@@ -250,17 +251,20 @@ Me/GIST/
 
 도구 버전과 환경 변수는 `mise.toml`이 정한다. Xcode 툴체인은 전역 `xcode-select`를 바꾸지 않고 `DEVELOPER_DIR`로 이 저장소에서만 쓴다. 명령은 항상 `mise run`으로 실행한다. 정의는 `mise.toml`에 있다.
 
-- Xcode 프로젝트 생성: `mise run generate`. 그 뒤 `open Folio.xcodeproj`
+- Xcode 프로젝트 생성: `mise run generate`. 그 뒤 `open Folio.xcodeproj`. 버전과 빌드 번호도 이때 정해지므로, 커밋한 뒤 Xcode에서 빌드하면 빌드 번호는 마지막 `generate` 때의 것이다
 - 패키지 테스트: `mise run test` (모든 패키지, 디자인 토큰 검사, Application Support 경로 검사)
 - 화면 모델 테스트와 노트 보기 회귀 검사: `mise run test-app`. macOS에서 앱을 호스트로 `app-tests/`를 돌린다. 테스트 중에는 앱이 기억해 둔 GIST 폴더를 열지 않고, 창을 띄우거나 포커스를 가져가지 않는다
-- 노트 보기 기준 이미지 다시 만들기: `test-app`은 없거나 달라진 이미지를 새 이미지와 차이 이미지(`-diff.png`)로 `FOLIO_NOTE_SCREENS`(기본 `.build/note-screens`)에 남기고, CI는 실패할 때 이것을 `note-screens` 아티팩트로 올린다. 차이 이미지로 의도한 변화인지 확인한 뒤 `mise run note-screens -- <CI 실행 ID>`로 기준 이미지에 들인다. 로컬에서 그린 이미지는 기준으로 쓰지 않는다
+- 노트 보기 기준 이미지 다시 만들기: `test-app`은 없거나 달라진 이미지를 새 이미지와 차이 이미지(`-diff.png`)로 `FOLIO_NOTE_SCREENS`(기본 `.build/note-screens`)에 남기고, CI는 실패할 때 이것을 `note-screens` 아티팩트로 올린다. 차이 이미지로 의도한 변화인지 확인한 뒤 `mise run note-screens -- <CI 실행 ID>`로 기준 이미지에 들인다. 로컬에서 그린 이미지는 기준으로 쓰지 않는다. 테스트가 PR에 붙일 그림으로 펼친 판(`NoteRender.sheet`, 예: 수식 말풍선 모음)은 `FOLIO_NOTE_SCREENS/sheets`에 남고, CI는 테스트가 통과해도 `note-sheets` 아티팩트로 올린다
 - iPad 테스트: `mise run test-ipad`. 첫 번째 iPad 시뮬레이터에서 `FolioPad` 스킴으로 앱을 호스트 삼아 `app-tests/ipad/`를 돌린다. 이 파일들은 `#if os(iOS)`로 감싸서 Mac의 `FolioTests`에서는 비어 있다
 - 화면 밖 렌더: `mise run render`. `FolioFixtures`의 상황마다 모든 페이지(오늘, 학기, 과목의 각 탭과 다시 듣기, 성적, 졸업 요건, 사람, 코드, 설정의 각 탭)와 시트(입력 폼, 검색)를 라이트·다크 PNG로 `FOLIO_RENDER_DIR`(기본 `.build/renders`)의 `<상황>/`에 쓴다. 폭과 높이는 `FOLIO_RENDER_SIZES=1180,720,1440x900`(높이를 빼면 페이지 끝까지), 고르기는 `FOLIO_RENDER_SCREENS=today,course-`(이름 앞부분)와 `FOLIO_RENDER_SCENARIOS=busyDay`. 창이 뜨지 않고 실제 GIST 폴더와 시계를 쓰지 않는다. 리퀴드 글라스, 노트 보기와 `WKWebView`, 뷰 안에서 여는 시트, 창 틀은 그리지 못하니 `FOLIO_SNAPSHOT_DIR` 창 스냅숏(`docs/DESIGN.md` 마지막 절)으로 본다
 - 가짜 GIST 폴더: `mise run fixture -- <폴더> [standard|legacy|<상황>]`. 상황(`busyDay` 등)은 `Scenario`로 회차와 마감이 채워진 폴더다. 다른 `.pdf`는 열리지 않는 자리표시자지만, `busyDay`와 `manyExams`의 그래프 이론 렉처(`05_Matchings.pdf`)는 단원으로 나눈 24쪽 PDF(`SampleLecture`)다. 이미 있는 폴더에는 쓰지 않는다
 - 웹 번들: `mise run build-web`. `web/src/`를 고친 뒤 실행한다. 노트 미리보기와 Claude 패널의 색은 `theme.swift`의 값을, 크기와 간격은 `app/design/note-look.swift`의 값을 `NoteStyle`이 CSS 변수로 넘기므로 CSS에 색과 크기를 적지 않는다
 - 노트 보기 렌더: `TEST_RUNNER_FOLIO_NOTE_RENDER=<폴더>`를 주고 `NoteSourceTests`를 돌리면 `app-tests/fixtures/all-markdown.md`(모든 문법을 쓴 노트)를 편집 보기로 그린 PNG가 그 폴더에 남는다. 미리보기 그림은 `NoteScreenTests`가 `FOLIO_NOTE_SCREENS`에 남긴다
 - macOS 빌드: `mise run build-mac`. 모든 `xcodebuild` 작업은 `~/Library`의 DerivedData 대신 체크아웃 안의 `.build/DerivedData`(`FOLIO_DERIVED_DATA`)에 빌드한다. 워크트리마다 몇 GB씩 남지 않고 워크트리를 지우면 함께 지워진다. 디버그 앱은 `.build/DerivedData/Build/Products/Debug/Folio.app`이다. `FolioMacros`는 로컬 패키지라 Xcode가 매크로 신뢰를 묻지 않는다. mise 작업의 `-skipMacroValidation`은 명령줄 빌드가 멈추지 않게 하는 안전장치다
-- macOS 앱 설치: `mise run install-mac`. Release로 빌드해 `/Applications/Folio.app`을 바꾼다
+- macOS 앱 설치: `mise run install-release [-- <ref>]`. `origin/main`(또는 준 커밋, 예를 들어 PR 브랜치를 합쳐 본 임시 커밋)을 임시 워크트리에 꺼내 Release로 빌드하고, `/Applications/Folio.app`과 `~/.local/bin/folio`를 바꾼 뒤 워크트리를 지운다. 커밋하지 않은 작업과 다른 세션의 워크트리는 들어가지 않는다. 실행 중인 `/Applications/Folio.app`만 끄고, 같은 번들 ID의 Debug 앱은 건드리지 않는다. 지금 체크아웃을 그대로 설치하는 `mise run install-mac`은 그 안에서 쓰는 단계다
+- 버전 올리기: `mise run version-bump -- major|minor|patch`. 1.0 전에는 새 기능이 든 릴리스는 minor, 고침만 든 릴리스는 patch를 올리고, major는 1.0(사용자 데이터 형식과 기능 범위를 굳힐 때)에만 올린다. 올린 커밋은 PR로 머지한다
+- 릴리스 노트: `mise run release-notes [-- <since>]`가 지난 태그 뒤 머지된 PR로 `release-notes/<버전>.json` 초안을 쓴다. PR이 `release-notes/next/<PR 번호>.json` 조각을 남겼으면 그 항목을 그대로 쓰고, 없으면 `feat`·`fix`·`perf` PR마다 닫은 이슈의 기능 이름이나 PR 본문 첫머리로 항목(`kind`: `new` 새 기능, `fixed` 고침, `changed` 바뀜, `title`, `prs`, `issues`)을 만든다. 초안의 `title`은 명사구로 고친 뒤 버전 올리기와 함께 머지한다. 이 파일과 조각의 형식은 패치 노트(#415) 시안이 승인되면 그에 맞춘다. 파일이 없으면 릴리스 워크플로가 같은 방식으로 초안을 만든다
+- 릴리스: `mise run release-tag`가 `origin/main`에 `v<버전>` 태그를 달고 푸시한다. 태그가 푸시되면 `release.yml`이 Release 앱을 빌드해 `Folio-<버전>.zip`과 릴리스 노트 JSON을 붙인 GitHub Release 초안을 만들고, 본문에는 항목과 머지된 PR(제목과 한국어 요약)을 적는다. 초안은 사람이 확인하고 게시한다. 태그와 `FolioVersion`이 다르면 실패한다. 수동 실행(`workflow_dispatch`, `since` 입력)은 릴리스 없이 같은 결과를 아티팩트로만 올린다. Developer ID 서명, 공증, 자동 업데이트(#414)는 아직 없다
 - iPad 빌드: `mise run build-ipad`
 - 생성 CLI 명령: `mise run gen-cli`. `@Action` 선언을 고친 뒤 실행한다. `mise run test`가 커밋된 파일이 낡지 않았는지 본다
 - 명령줄 도구: `mise run cli -- <명령>`. `~/.local/bin`에 설치는 `mise run install-cli`. GIST 폴더는 `--gist <경로>`, `FOLIO_GIST`, 앱이 연 폴더 순으로 정한다. 모든 쓰기 명령은 `--dry-run`으로 먼저 본다. 명령 목록은 `folio help`, 자연어로 찾기는 `folio help <하고 싶은 일>`
@@ -271,7 +275,7 @@ Me/GIST/
 - 폴더 정리: `cleanup plan --out plan.json [--skip <경로>]`, 검토 뒤 `cleanup apply --plan plan.json --backup <iCloud 밖 폴더> [--include-flagged]`, 되돌리기는 `cleanup undo <batch ID>`. 계획은 `Exams/Past`를 `Inherited`로(낱개 파일은 족보로 표시), `Exam Review`와 `moves.jsonl`이 `Exam Review`에서 왔다고 기록한 `Exercises`의 파일을 `Study`로(시험 연결), `Notes/Exports`를 `Study`로 옮기고 빈 시험 폴더를 지운다. 출처가 불확실한 파일(그런 `Exercises`에 섞인 나머지, 이름에 정리·요약·대비·mock이 든 파일)은 검토 표시라 `--include-flagged` 없이는 옮기지 않는다. 되돌려도 `course.json`에 쓴 연결과 족보 표시는 남는다
 - 노션 가져오기: `import notion <export.json>`. `export.json`은 Notion MCP로 읽은 내용을 `NotionExport` 형식으로 담은 파일이며, 실제 학업 데이터라 저장소에 넣지 않는다. 새 파일만 만들고 기존 파일은 덮어쓰지 않는다
 - 노션 강의 정리와 점수: `import notes <덤프 폴더>`. 덤프 폴더는 과목마다 `<노션 페이지 ID>/index.json`, `notes/`, `assets/`를 가진다(`NotionCourseDump`). 노트 ID는 노션 페이지 ID라 다시 실행해도 중복되지 않고, 기존 항목은 덧붙이기만 한다
-- 빠른 추가 한 줄로 과제: `add "<줄>" [--course <과목>] [--due <일시>|none] [--repeats weekly|none]`. 앱의 빠른 추가와 같은 `QuickAdd.parse`로 이번 학기 과목, 제목, 마감, 반복, 폴더 이름을 읽어 보이고 `assignment add`를 실행한다. 옵션은 읽은 값을 덮어쓴다(마감을 지우면 반복도 지운다). 과목이나 제목을 읽지 못하면 무엇을 못 읽었는지 알리고 쓰지 않는다. 손으로 쓴 명령이지만 MCP에서는 쓰기 도구로 연다(`MCPServer.builds`)
+- 빠른 추가 한 줄로 과제: `add "<줄>" [--course <과목>] [--due <일시>|none] [--repeats <반복>|none]`. 반복은 `assignment add/set --repeats`와 같은 값을 받는다(`weekly`, `daily`, `2w`, `weekly:mon,wed`, `격주`, `3일마다`, `매주 월수`). 앱의 빠른 추가와 같은 `QuickAdd.parse`로 이번 학기 과목, 제목, 마감, 반복, 폴더 이름을 읽어 보이고 `assignment add`를 실행한다. 옵션은 읽은 값을 덮어쓴다(마감을 지우면 반복도 지운다). 과목이나 제목을 읽지 못하면 무엇을 못 읽었는지 알리고 쓰지 않는다. 손으로 쓴 명령이지만 MCP에서는 쓰기 도구로 연다(`MCPServer.builds`)
 - 자료 등록과 과제 폴더 반영: `material track [<과목>]`. 과목을 빼면 모든 과목의 파일을 추적 목록에 넣고, `Assignments/` 폴더 중 과제가 없는 것에 과제를 만든다
 - 시험 일정: `import exams <exams.json>`. `exams.json`은 구글 캘린더 "시험" 캘린더에서 읽은 `CalendarExam` 목록이며 저장소에 넣지 않는다. 같은 날 시험은 빈 칸만 채우고, 다른 날이면 바꾸지 않고 알린다
 - 단원: `import units <units.json>...`. 과목마다 `{"course": <과목 폴더 이름>, "units": [{"title", "sessions": ["11-03"], "children"}]}`. 제목으로 맞춰 없는 단원만 더하고 회차 연결은 더하기만 한다

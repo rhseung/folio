@@ -48,6 +48,12 @@ final class SettingsModel {
         if loaded, settings != workspace.settings { workspace.saveSettings(settings) }
     }
 
+    /// From the Info.plist, not FolioVersion: only the build knows its build number (the commit count).
+    var version: String {
+        let info = Bundle.main.infoDictionary ?? [:]
+        return String(localized: .settingsVersionBuild(info["CFBundleShortVersionString"] as? String ?? "?", info["CFBundleVersion"] as? String ?? "?"))
+    }
+
     var folderPath: String {
         workspace.gist.map { ($0.url.path as NSString).abbreviatingWithTildeInPath } ?? String(localized: .settingsNone)
     }

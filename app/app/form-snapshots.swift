@@ -49,6 +49,13 @@ enum FormSnapshots {
             a.memo = memo
             forms.append(("assignment-memo-\(name)", AnyView(AssignmentSheet(workspace: workspace, course: course, assignment: a) { _, _ in })))
         }
+        // A preset repeat, and one edited by its parts (#410).
+        for (name, rule) in [("weekly", AssignmentRepeat.weekly), ("custom", AssignmentRepeat(every: 2, .week, weekdays: [1, 3]))] {
+            var a = assignment
+            a.repeats = rule
+            a.due = a.due ?? workspace.now
+            forms.append(("assignment-repeat-\(name)", AnyView(AssignmentSheet(workspace: workspace, course: course, assignment: a) { _, _ in })))
+        }
         let users = workspace.allCourses.flatMap(\.codes)
         if let code = workspace.catalog.codes.max(by: { a, b in users.filter { $0 == a.id }.count < users.filter { $0 == b.id }.count }) {
             let courses = workspace.allCourses.filter { $0.codes.contains(code.id) }.map(\.id)

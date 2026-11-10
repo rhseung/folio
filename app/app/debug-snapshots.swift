@@ -36,8 +36,9 @@ final class SnapshotDriver {
     /// `courses`: the first tab holds two courses side by side, the walk moving the left one and the second course's
     /// overview beside it, so both fold their section columns (#62).
     static let coursePanes = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_PANES"] == "courses"
-    /// Only the page strip of a lecture with classes' pages (#147): its sections, a class's range changed, a range
-    /// picked, the class menu and the range saved, as `strip-*.png`. Set to `from-to` (`19-21`) for the range picked.
+    /// Only the page strip of a lecture with classes' pages (#147), or of the first lecture when no class has any: its
+    /// sections, a class's range changed, a range picked, the class menu and the range saved, as `strip-*.png`. Set to
+    /// `from-to` (`19-21`) for the range picked.
     static let strip = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP"]
     /// The page a section's range is changed from and the page its end goes to (`16-19`), for `strip-edit`.
     static let stripEdit = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP_EDIT"]
@@ -87,6 +88,8 @@ final class SnapshotDriver {
     var quickAddOpen = false
     /// Opens the deadline chip's calendar as the field appears.
     var quickAddDueOpen = false
+    /// Opens the repeat chip's rule popover as the field appears, as "직접 설정…" in its menu would.
+    var quickAddRepeatOpen = false
     /// The course the course chip picks once the sample line is typed, as a click in its menu would.
     var quickAddPick: UUID?
     /// Opens the f(x) palette of the open note, as its button would.
@@ -354,15 +357,18 @@ final class SnapshotDriver {
             ("empty", nil, false), ("short", "HW5 금 23:59", false),
             ("long", "Lab3 보고서 초안과 실험 데이터 정리, 그래프와 오차 분석까지 끝내고 제출 다음 주 수요일 오후 6시까지", false),
             ("wrapped", "확률과 통계 Lab3 보고서 매주 금 23:59", false), ("due-open", "HW5 금 23:59", true),
+            ("repeat", "\(named) HW 매주 월수", false), ("repeat-open", "\(named) HW 격주 월수 18:00", false),
         ]
         for (name, text, dueOpen) in steps {
             quickAddText = text
             quickAddDueOpen = dueOpen
+            quickAddRepeatOpen = name == "repeat-open"
             quickAddOpen = true
-            try? await Task.sleep(for: .seconds(dueOpen ? 3.5 : 3))
+            try? await Task.sleep(for: .seconds(dueOpen || quickAddRepeatOpen ? 3.5 : 3))
             await shot("quick-add-course-\(name)", popovers: true)
             quickAddOpen = false
             quickAddDueOpen = false
+            quickAddRepeatOpen = false
             try? await Task.sleep(for: .seconds(1))
         }
         quickAddText = nil

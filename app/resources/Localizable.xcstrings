@@ -507,24 +507,13 @@
         }
       }
     },
-    "assignments.repeat-never": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "안 함"
-          }
-        }
-      }
-    },
     "assignments.repeat-next": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "제출로 바꾸면 다음 주 같은 시각의 과제가 생깁니다"
+            "value": "제출로 바꾸면 다음 과제가 %@ 마감으로 생깁니다"
           }
         }
       }
@@ -646,17 +635,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "마감 없음 %lld개"
-          }
-        }
-      }
-    },
-    "assignments.weekly": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "매주"
           }
         }
       }
@@ -15467,6 +15445,17 @@
         }
       }
     },
+    "settings.about": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "정보"
+          }
+        }
+      }
+    },
     "settings.add-heading": {
       "extractionState": "manual",
       "localizations": {
@@ -17095,28 +17084,6 @@
         }
       }
     },
-    "quick-add.no-repeat": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "반복 없음"
-          }
-        }
-      }
-    },
-    "quick-add.repeat-weekly": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "매주 반복"
-          }
-        }
-      }
-    },
     "quick-add.kind": {
       "extractionState": "manual",
       "localizations": {
@@ -17146,17 +17113,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "빠른 추가: 선대 HW5 금 23:59"
-          }
-        }
-      }
-    },
-    "quick-add.weekly": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "매주"
           }
         }
       }
@@ -18422,6 +18378,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "Whisper"
+          }
+        }
+      }
+    },
+    "settings.version": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "버전"
+          }
+        }
+      }
+    },
+    "settings.version-build": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ (빌드 %2$@)"
           }
         }
       }
@@ -21117,6 +21095,94 @@
           "stringUnit": {
             "state": "translated",
             "value": "새 단원 '%@'"
+          }
+        }
+      }
+    },
+    "repeat-picker.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "반복 없음"
+          }
+        }
+      }
+    },
+    "repeat-picker.custom": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "직접 설정…"
+          }
+        }
+      }
+    },
+    "repeat-picker.interval": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "간격"
+          }
+        }
+      }
+    },
+    "repeat-picker.weekdays": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "요일"
+          }
+        }
+      }
+    },
+    "repeat-picker.days": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "일"
+          }
+        }
+      }
+    },
+    "repeat-picker.weeks": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "주"
+          }
+        }
+      }
+    },
+    "repeat-picker.months": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "개월"
+          }
+        }
+      }
+    },
+    "quick-add.repeat-toggle": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "반복"
           }
         }
       }

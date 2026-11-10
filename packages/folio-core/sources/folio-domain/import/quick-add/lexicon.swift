@@ -30,12 +30,16 @@ extension QuickAdd {
         case time(Int, Bool)
         /// `30분` on its own, which only counts after an hour.
         case minutes(Int)
-        case weekly
+        /// `매주`, `격주`, `3일마다`: a rule by itself.
+        case repeats(AssignmentRepeat)
+        /// `월수`, `월,수마다`: the weekdays of a weekly rule, and whether `마다` made it one by itself. Without that or a
+        /// weekly rule beside it, the word is the title's (`QuickAdd.bindWeekdays`).
+        case weekdays([Int], each: Bool)
 
         /// Whether the word is the deadline's by itself; a month, a bare day number or `30분` is only once joined.
         var isDue: Bool {
             switch self {
-            case .weekday, .day, .time, .weekly: true
+            case .weekday, .day, .time, .repeats, .weekdays: true
             case .month, .dayOfMonth, .minutes: false
             }
         }
@@ -44,18 +48,24 @@ extension QuickAdd {
     /// The deadline's recognizers, tried on a word in this order; the first that reads it wins. A new kind of deadline
     /// word is a case here.
     enum Recognizer: CaseIterable {
-        case weekly, weekday, relativeDay, clock, fullDate, numericDate, monthAndDay, month, dayOfMonth, spokenTime, minutes, midnight, noon
+        case repeats, weekday, weekdays, relativeDay, clock, fullDate, numericDate, monthAndDay, month, dayOfMonth, spokenTime, minutes, midnight, noon
 
         /// The piece, and the word as Apple's detector should see it when that differs (`금` → `금요일`, `3/2` → `3월 2일`).
         func read(_ text: String, today: LocalDate, year: Int) -> (piece: Piece, normalized: String?)? {
             switch self {
-            case .weekly:
-                guard text == "매주" else { return nil }
-                return (Piece.weekly, nil)
+            // Kept from Apple's detector, which reads the `3일` in `3일마다` as the 3rd.
+            case .repeats:
+                guard let rule = AssignmentRepeat.word(text) else { return nil }
+                return (Piece.repeats(rule), "")
             case .weekday:
                 let suffixed = QuickAdd.weekdays[String(text.prefix(1))].flatMap { text.hasSuffix("요일") ? $0 : nil }
                 guard let w = QuickAdd.weekdays[text] ?? suffixed else { return nil }
                 return (Piece.weekday(w, nil), String(text.prefix(1)) + "요일")
+            // Seen as a weekday, so the detector takes a lone `오후` beside it into the deadline as it does beside the one
+            // weekday the chip writes when the repeat is taken out; otherwise taking it out changed the title.
+            case .weekdays:
+                guard let w = AssignmentRepeat.weekdayWord(text) else { return nil }
+                return (Piece.weekdays(w.days, each: w.each), AssignmentRepeat.weekdayLetters[w.days[0] - 1] + "요일")
             case .relativeDay:
                 guard let d = QuickAdd.relativeDays[text] else { return nil }
                 return (Piece.day(today.adding(days: d)), nil)
@@ -136,7 +146,20 @@ extension QuickAdd {
             return nil
         }
 
-        var weekly: Bool { piece == .weekly }
+        var rule: AssignmentRepeat? {
+            if case let .repeats(r)? = piece { return r }
+            return nil
+        }
+
+        var weekdayGroup: (days: [Int], each: Bool)? {
+            if case let .weekdays(days, each)? = piece { return (days, each) }
+            return nil
+        }
+
+        /// The word without a `까지` after it, which stays where it is when the word is taken out.
+        func core(in line: String) -> Range<String.Index> {
+            range.lowerBound..<line.index(range.lowerBound, offsetBy: QuickAdd.core(text).count)
+        }
 
         init(_ text: String, range: Range<String.Index>, today: LocalDate, year: Int) {
             self.init(reading: text, range: range, today: today, year: year)

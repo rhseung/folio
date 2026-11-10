@@ -1,10 +1,12 @@
 import ArgumentParser
+import FolioDomain
 import Foundation
 
 struct Folio: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "folio",
         abstract: String(localized: .folioAbstract),
+        version: FolioVersion.marketing,
         groupedSubcommands: [
             CommandGroup(name: String(localized: .folioGroupToday), subcommands: [TodayCommand.self]),
             CommandGroup(name: String(localized: .folioGroupClass), subcommands: [SessionCommand.self, UnitCommand.self, AttendanceCommand.self, RecordingCommand.self]),
@@ -95,7 +97,8 @@ struct Folio: ParsableCommand {
         } catch {
             let code = exitCode(for: error)
             if code == .success {
-                let root = arguments.allSatisfy { $0.hasPrefix("-") || $0 == "help" }
+                // The footer goes under the root's help, not under `--version`'s line.
+                let root = arguments.allSatisfy { $0.hasPrefix("-") || $0 == "help" } && !arguments.contains("--version")
                 say(colored(korean(fullMessage(for: error))) + (root ? "\n\n" + footer : ""))
                 return 0
             }

@@ -34,7 +34,7 @@ struct PageStrip: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         ForEach(model.items) { item in
-                            PageStripItem(item: item, model: model, controller: controller, gutter: picks)
+                            PageStripItem(item: item, model: model, controller: controller, gutter: model.railed)
                                 .id(item.id)
                         }
                     }
