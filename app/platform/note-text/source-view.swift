@@ -1310,7 +1310,13 @@ final class BubbleScroller: NSScrollView {
         }
         // Scrolled without the pointer moving first, it's still the pointer's.
         (superview as? PreviewBubble)?.hovered = true
-        super.scrollWheel(with: event)
+        // Moved here by the swipe's own amount rather than by `NSScrollView`'s handling, which, nested in the note's
+        // scroll view and handed the swipe by the editor, left the formula where it was. A wheel's step is a line.
+        guard let document = documentView else { return }
+        let dx = event.hasPreciseScrollingDeltas ? event.scrollingDeltaX : event.scrollingDeltaX * NoteLook.body
+        let end = max(0, document.frame.width - contentView.bounds.width)
+        contentView.scroll(to: NSPoint(x: min(max(0, contentView.bounds.minX - dx), end), y: 0))
+        reflectScrolledClipView(contentView)
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? { frame.contains(point) ? self : nil }

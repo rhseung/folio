@@ -448,10 +448,11 @@ struct NoteSourceTests {
         func offset() -> CGFloat { bubble.scroller.contentView.bounds.minX }
         func note() -> CGFloat { scroll.contentView.bounds.minY }
         bubble.reveal(0)
+        bubble.hovered = false
         let (before, top) = (offset(), note())
         view.scrollWheel(with: try Self.wheel(x: -80, y: 0, at: center, in: view))
         for _ in 0..<50 where offset() <= before { try? await Task.sleep(for: .milliseconds(20)) }
-        #expect(offset() > before && note() == top, "\(label): sideways moved the formula \(before) → \(offset()), the note \(top) → \(note())")
+        #expect(offset() > before && note() == top, "\(label): sideways moved the formula \(before) → \(offset()), the note \(top) → \(note()); bubble took it: \(bubble.hovered)")
         let sideways = offset()
         view.scrollWheel(with: try Self.wheel(x: 0, y: -80, at: center, in: view))
         for _ in 0..<50 where note() <= top { try? await Task.sleep(for: .milliseconds(20)) }
@@ -473,6 +474,9 @@ struct NoteSourceTests {
         cg.location = CGPoint(x: screen.x, y: (NSScreen.screens.first?.frame.height ?? 0) - screen.y)
         let event = try #require(NSEvent(cgEvent: cg))
         #expect(event.type == .scrollWheel && abs(event.scrollingDeltaX) >= abs(CGFloat(x)) / 2, "\(event)")
+        let back = event.window == nil ? window.convertPoint(fromScreen: event.locationInWindow) : event.locationInWindow
+        #expect(abs(view.convert(back, from: nil).x - point.x) < 1 && abs(view.convert(back, from: nil).y - point.y) < 1,
+                "made at \(point), comes at \(view.convert(back, from: nil)) (\(event.locationInWindow), window \(String(describing: event.window)))")
         return event
     }
 
