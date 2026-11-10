@@ -92,25 +92,39 @@ public struct AssignmentRepeat: Hashable, Sendable {
 
     static let weekdayLetters = ["월", "화", "수", "목", "금", "토", "일"]
 
-    /// One word that is a rule by itself: `매일`, `날마다`, `매주`, `격주`, `매달`, `매월`, `3일마다`, `2주마다`,
-    /// `2달마다`, `2개월마다`.
+    static let named: [String: AssignmentRepeat] = [
+        "매일": .daily, "날마다": .daily, "매일마다": .daily, "하루마다": .daily, "하루에한번": .daily,
+        "격일": Self(every: 2, .day), "이틀마다": Self(every: 2, .day), "하루걸러": Self(every: 2, .day),
+        "매주": .weekly, "매주마다": .weekly, "주마다": .weekly, "일주일마다": .weekly, "일주일에한번": .weekly, "주에한번": .weekly,
+        "격주": .biweekly, "격주마다": .biweekly,
+        "매달": .monthly, "매월": .monthly, "매달마다": .monthly, "매월마다": .monthly, "달마다": .monthly, "달에한번": .monthly,
+        "격월": Self(every: 2, .month),
+    ]
+
+    /// A rule by itself, written without spaces: `매일`, `격일`, `매주마다`, `격주`, `매월`, `3일마다`, `2주마다`,
+    /// `1주일마다`, `2개월마다`, `2주에한번`, `한달마다`. The quick-add line and `init(text:)` take out the spaces
+    /// first, so `한 달마다` and `2주에 한 번` read as one.
     static func word(_ text: String) -> AssignmentRepeat? {
-        switch text {
-        case "매일", "날마다": return .daily
-        case "매주": return .weekly
-        case "격주": return .biweekly
-        case "매달", "매월": return .monthly
-        default:
-            guard let m = text.wholeMatch(of: /(\d{1,2})(일|주|달|개월)마다/), let n = Int(m.1), n >= 1 else { return nil }
-            return AssignmentRepeat(every: n, m.2 == "일" ? .day : m.2 == "주" ? .week : .month)
+        if let rule = named[text] { return rule }
+        if let m = text.wholeMatch(of: /(\d{1,2})(일|주일|주|달|개월)(마다|에한번)/), let n = Int(m.1), n >= 1 {
+            return AssignmentRepeat(every: n, m.2 == "일" ? .day : m.2 == "달" || m.2 == "개월" ? .month : .week)
         }
+        // Native numbers only before 주 and 달: `세일`, `네일` are other words.
+        if let m = text.wholeMatch(of: /(한|두|세)(주|달)(마다|에한번)/) {
+            return AssignmentRepeat(every: m.1 == "한" ? 1 : m.1 == "두" ? 2 : 3, m.2 == "주" ? .week : .month)
+        }
+        return nil
     }
 
+    static let weekdaySets: [String: [Int]] = ["평일": [1, 2, 3, 4, 5], "주말": [6, 7]]
+
     /// A word naming weekdays: two or more run together or split by `,`, `·`, `/` (`월수`, `월,수`, `월요일,수요일`),
-    /// or any with `마다` after (`금요일마다`, `월,수마다`), which makes it a weekly rule by itself.
+    /// `평일` and `주말`, or any with `마다` after (`금요일마다`, `월,수마다`, `평일마다`), which makes it a weekly rule by
+    /// itself.
     static func weekdayWord(_ text: String) -> (days: [Int], each: Bool)? {
         let each = text.hasSuffix("마다") && text.count > 2
         let core = each ? String(text.dropLast(2)) : text
+        if let days = weekdaySets[core] { return (days, each) }
         let parts = core.split(whereSeparator: { ",·/、".contains($0) }).map(String.init)
         var days: [Int] = []
         if parts.count == 1, core.count > 1, !core.hasSuffix("요일") {
@@ -127,6 +141,20 @@ public struct AssignmentRepeat: Hashable, Sendable {
         }
         guard !days.isEmpty, Set(days).count == days.count, each || days.count > 1 else { return nil }
         return (days.sorted(), each)
+    }
+
+    /// Weekdays listed over several words (`월 수`, `화, 목`, `월요일과 수요일마다`), read as the one word they make
+    /// once what joins each to the next is taken off.
+    static func weekdayList(_ words: [String]) -> (days: [Int], each: Bool)? {
+        guard let last = words.last else { return nil }
+        return weekdayWord((words.dropLast().map(listItem) + [last]).joined(separator: ","))
+    }
+
+    /// A word of a weekday list without the `,` or `과`, `와` that joins it to the next (`월요일,` → `월요일`).
+    static func listItem(_ word: String) -> String {
+        if let c = word.last, ",·/、".contains(c) { return String(word.dropLast()) }
+        if word.count > 1, word.hasSuffix("과") || word.hasSuffix("와") { return String(word.dropLast()) }
+        return word
     }
 
     /// The rule as typed on its own, for the CLI and action input: the words the quick-add line reads (`매주 월수`,
@@ -149,23 +177,24 @@ public struct AssignmentRepeat: Hashable, Sendable {
         }
         guard days == nil else { return nil }
         let words = text.split(whereSeparator: \.isWhitespace).map(String.init)
-        switch words.count {
-        case 1:
-            if let rule = Self.word(words[0]) {
+        guard !words.isEmpty else { return nil }
+        // The rule in as many words as read as one (`2주에 한 번`), then the weekdays it falls on.
+        if let count = (1...min(4, words.count)).reversed().first(where: { Self.word(words.prefix($0).joined()) != nil }) {
+            let rule = Self.word(words.prefix(count).joined())!
+            let rest = Array(words.dropFirst(count))
+            guard !rest.isEmpty else {
                 self = rule
-            } else if let w = Self.weekdayWord(words[0]), w.each {
-                // `금요일마다` names Friday even with a deadline on another day; the quick-add line, where the word also
-                // sets the deadline, drops the one weekday itself.
-                self = AssignmentRepeat(.week, weekdays: w.days)
-            } else {
-                return nil
+                return
             }
-        case 2:
-            guard let rule = Self.word(words[0]), rule.unit == .week, let w = Self.weekdayWord(words[1]) ?? Self.weekdayWord(words[1] + "마다") else { return nil }
+            guard rule.unit == .week, let w = Self.weekdayList(rest) ?? Self.weekdayList(Array(rest.dropLast()) + [rest.last! + "마다"]) else { return nil }
             self = AssignmentRepeat(every: rule.every, .week, weekdays: w.days)
-        default:
-            return nil
+            return
         }
+        // Text given as a rule, so weekdays alone are one (`월수`, `월요일과 수요일`), unlike in the quick-add line.
+        // `금요일마다` names Friday even with a deadline on another day; the quick-add line, where the word also sets
+        // the deadline, drops the one weekday itself.
+        guard let w = Self.weekdayList(words) else { return nil }
+        self = AssignmentRepeat(.week, weekdays: w.days)
     }
 
     private static func compact(_ text: String) -> AssignmentRepeat? {

@@ -213,7 +213,7 @@ public struct AssignmentAdd {
     @Arg var title: String
     /// 마감 일시
     var due: Date?
-    /// 반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 3일마다, 격주, 매주 월수, 월,수마다)
+    /// 반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 격일, 3일마다, 격주, 매월, 매주 월수, 월,수마다, 평일마다)
     var repeats: AssignmentRepeat?
 
     public func run(_ ctx: ActionContext) throws {
@@ -262,7 +262,7 @@ public struct AssignmentSave {
     var due: Patch<Date?>
     /// 상태
     var status: Patch<AssignmentStatus>
-    /// 반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 3일마다, 격주, 매주 월수, 월,수마다)
+    /// 반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 격일, 3일마다, 격주, 매월, 매주 월수, 월,수마다, 평일마다)
     var repeats: Patch<AssignmentRepeat?>
     /// 반영되는 성적 항목. 주면 묶음은 풀린다
     @CLIName("component") var componentId: Patch<GradeComponent.ID?>

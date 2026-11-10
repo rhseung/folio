@@ -264,7 +264,7 @@ extension AssignmentRepeat: SchemaHint {
             "unit": ["type": "string", "enum": .array(Unit.allCases.map { .string($0.rawValue) })],
             "weekdays": ["type": "array", "items": ["type": "integer", "minimum": .number(1), "maximum": .number(7)], "description": "ISO weekdays, 1 = Monday; week only"],
         ]]
-        let words: JSONValue = ["type": "string", "description": "daily, weekly, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 매일, 격주, 3일마다, 매주 월수"]
+        let words: JSONValue = ["type": "string", "description": "daily, weekly, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 매일, 격일, 3일마다, 격주, 매월, 매주 월수, 월,수마다, 평일마다"]
         return ["oneOf": .array([rule, words])]
     }
     static var example: Any { AssignmentRepeat.weekly }
