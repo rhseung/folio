@@ -253,7 +253,7 @@ Me/GIST/
 
 - Xcode 프로젝트 생성: `mise run generate`. 그 뒤 `open Folio.xcodeproj`. 버전과 빌드 번호도 이때 정해지므로, 커밋한 뒤 Xcode에서 빌드하면 빌드 번호는 마지막 `generate` 때의 것이다
 - 패키지 테스트: `mise run test` (모든 패키지, 디자인 토큰 검사, Application Support 경로 검사)
-- 화면 모델 테스트와 노트 보기 회귀 검사: `mise run test-app`. macOS에서 앱을 호스트로 `app-tests/`를 돌린다. 테스트 중에는 앱이 기억해 둔 GIST 폴더를 열지 않고, 창을 띄우거나 포커스를 가져가지 않는다
+- 화면 모델 테스트와 노트 보기 회귀 검사: `mise run test-app`. macOS에서 앱을 호스트로 `app-tests/`를 돌린다. 테스트 중에는 앱이 기억해 둔 GIST 폴더를 열지 않고, 창을 띄우거나 포커스를 가져가지 않는다. `FOLIO_TEST_PART=notes`는 노트 보기 검사(`mise.toml`의 `notes` 목록)만, `rest`는 나머지만 돌린다. CI는 두 절반을 `build (test-app-notes)`와 `build (test-app)`에서 나란히 돌리고, 룰셋이 요구하는 `build (test-app)`은 노트 절반이 실패해도 실패한다. 새 노트 보기 검사는 목록에 넣기 전까지 `rest`에서 돈다
 - 노트 보기 기준 이미지 다시 만들기: `test-app`은 없거나 달라진 이미지를 새 이미지와 차이 이미지(`-diff.png`)로 `FOLIO_NOTE_SCREENS`(기본 `.build/note-screens`)에 남기고, CI는 실패할 때 이것을 `note-screens` 아티팩트로 올린다. 차이 이미지로 의도한 변화인지 확인한 뒤 `mise run note-screens -- <CI 실행 ID>`로 기준 이미지에 들인다. 로컬에서 그린 이미지는 기준으로 쓰지 않는다. 테스트가 PR에 붙일 그림으로 펼친 판(`NoteRender.sheet`, 예: 수식 말풍선 모음)은 `FOLIO_NOTE_SCREENS/sheets`에 남고, CI는 테스트가 통과해도 `note-sheets` 아티팩트로 올린다
 - iPad 테스트: `mise run test-ipad`. 첫 번째 iPad 시뮬레이터에서 `FolioPad` 스킴으로 앱을 호스트 삼아 `app-tests/ipad/`를 돌린다. 이 파일들은 `#if os(iOS)`로 감싸서 Mac의 `FolioTests`에서는 비어 있다
 - 화면 밖 렌더: `mise run render`. `FolioFixtures`의 상황마다 모든 페이지(오늘, 학기, 과목의 각 탭과 다시 듣기, 성적, 졸업 요건, 사람, 코드, 설정의 각 탭)와 시트(입력 폼, 검색)를 라이트·다크 PNG로 `FOLIO_RENDER_DIR`(기본 `.build/renders`)의 `<상황>/`에 쓴다. 폭과 높이는 `FOLIO_RENDER_SIZES=1180,720,1440x900`(높이를 빼면 페이지 끝까지), 고르기는 `FOLIO_RENDER_SCREENS=today,course-`(이름 앞부분)와 `FOLIO_RENDER_SCENARIOS=busyDay`. 창이 뜨지 않고 실제 GIST 폴더와 시계를 쓰지 않는다. 리퀴드 글라스, 노트 보기와 `WKWebView`, 뷰 안에서 여는 시트, 창 틀은 그리지 못하니 `FOLIO_SNAPSHOT_DIR` 창 스냅숏(`docs/DESIGN.md` 마지막 절)으로 본다
@@ -303,7 +303,7 @@ Me/GIST/
 - 지금 하지 않기로 미룬 기능에는 `later` 라벨을 붙인다(`later`는 P3, Backlog). 기능의 일부만 미룰 때는 그 체크리스트 항목에 "(나중에)"를 붙인다.
 - 사용자가 지정한 일을 먼저 한다. 그 밖의 다음 할 일은 Ready 중 상위 이슈의 `Order`가 앞선 것, 같은 상위 이슈 안에서는 `Priority`가 높은 것이다. P0는 순서와 상관없이 먼저 한다. `main`의 CI가 실패하면 P0로 보고 다른 일보다 먼저 고친다.
 - 상태는 손으로 옮긴다(Project 자동화는 하위 이슈 추가만 켜 있다). 시작하면 In progress, PR 본문에 `Closes #번호`를 적고, 닫히면 Done으로 옮긴다. 닫힌 이슈에 막혀 있던 이슈는 남은 막힘이 없으면 Ready로 옮긴다. 일부만 끝냈으면 닫지 않고, 끝낸 항목을 체크하고 남은 일을 체크리스트에 적는다. 한 이슈가 테스트까지 끝나면 커밋하고 다음으로 넘어간다.
-- PR은 `main` 룰셋의 승인 1개와 검사(test, build)를 모두 채워야 머지된다. 승인은 리뷰 봇이 하고(Dependabot PR도 리뷰 봇이 리뷰한다), 문서(`docs/`, 최상위 `*.md`, `.github/**/*.md`)만 바뀐 PR은 리뷰 없이 Actions가 한다(`review.yml`). 테스트 픽스처처럼 그 밖에 있는 `.md`는 리뷰를 받는다. CI(`ci.yml`)는 PR이 바꾼 파일이 닿지 않는 검사를 건너뛰고(건너뛴 검사도 룰셋에는 통과다. 어떤 파일이 어느 검사에 닿는지는 `changes` 작업에 있다), main push가 남긴 Xcode 빌드 캐시(DerivedData와 컴파일 캐시)에서 시작한다. main push는 모든 검사를 돌린다. PR은 스쿼시로만 머지된다(룰셋이 다른 방식을 막는다). 커밋 제목은 PR 제목, 본문은 PR 본문이 되므로 PR 제목을 커밋 규칙대로 짓는다. PR을 열면 `gh pr merge --auto --squash`로 자동 머지를 걸어 둔다. 관리자 권한(`--admin`)으로 룰셋을 우회하지 않는다.
+- PR은 `main` 룰셋의 승인 1개와 검사(test, build)를 모두 채워야 머지된다. 승인은 리뷰 봇이 하고(Dependabot PR도 리뷰 봇이 리뷰한다), 문서(`docs/`, 최상위 `*.md`, `.github/**/*.md`)만 바뀐 PR은 리뷰 없이 Actions가 한다(`review.yml`). 테스트 픽스처처럼 그 밖에 있는 `.md`는 리뷰를 받는다. CI(`ci.yml`)는 PR이 바꾼 파일이 닿지 않는 검사를 건너뛰고(건너뛴 검사도 룰셋에는 통과다. 어떤 파일이 어느 검사에 닿는지는 `changes` 작업에 있다), main push가 남긴 빌드 캐시(Xcode 작업은 DerivedData, `test`는 패키지의 `.build`)에서 시작한다. 체크아웃이 모든 파일의 시각을 새로 찍으므로 CI는 파일 시각을 내용(blob 해시)에서 정해, 캐시된 빌드가 바뀐 파일만 다시 컴파일하게 한다. main push는 모든 검사를 돌린다. PR은 스쿼시로만 머지된다(룰셋이 다른 방식을 막는다). 커밋 제목은 PR 제목, 본문은 PR 본문이 되므로 PR 제목을 커밋 규칙대로 짓는다. PR을 열면 `gh pr merge --auto --squash`로 자동 머지를 걸어 둔다. 관리자 권한(`--admin`)으로 룰셋을 우회하지 않는다.
 - 사용자가 이슈 없이 시킨 일은 바로 하고, 남은 범위나 새로 정한 동작은 해당 이슈에 적거나 새 이슈로 만든다.
 
 ### PR 전 점검

@@ -124,9 +124,9 @@ jobs:
       fail-fast: false
       matrix:
         # test-app builds the Mac app to host the screen-model tests, so it stands in for build-mac. Its tests take five
-        # minutes on one main thread, so test-app-notes runs the note-view half of them on a second runner. test-ipad
-        # runs the iPad's own tests on a simulator.
-        task: [test-app, test-app-notes, build-ipad, test-ipad]
+        # minutes on one main thread, so test-app-notes runs the note-view half of them on a second runner, queued first
+        # so test-app, which waits for it, waits less. test-ipad runs the iPad's own tests on a simulator.
+        task: [test-app-notes, test-app, build-ipad, test-ipad]
     env:
       RUN: ${{ needs.changes.outputs[matrix.task] != 'false' }}
       MISE_TASK: ${{ matrix.task == 'test-app-notes' && 'test-app' || matrix.task }}
@@ -182,17 +182,13 @@ jobs:
       # one, and every file is new to this machine, so it is told to look at the times and sizes alone.
       - if: env.RUN == 'true'
         run: |
+          rm -rf .build/DerivedData/Build/Products/*/*.app .build/DerivedData/Build/Products/*/*.xctest .build/DerivedData/Build/Products/*/*.bundle
           defaults write com.apple.dt.SWBBuildService IgnoreFileSystemDeviceInodeChanges -bool YES
-          mkdir -p .build && touch .build/marker
       - if: env.RUN == 'true'
         uses: jdx/mise-action@v5
       - if: env.RUN == 'true'
         id: run
         run: mise run ${{ env.MISE_TASK }}
-      # Temporary: which targets compiled and which products linked again on a warm cache.
-      - if: ${{ !cancelled() && env.RUN == 'true' }}
-        run: |
-          find .build/DerivedData/Build -newer .build/marker -type f \( -name '*.o' -o -perm -u+x \) 2>/dev/null | sed -E 's#/[^/]+$##' | sort | uniq -c | sort -rn | head -40
       # A run that failed to build would leave a cache without the dependencies; a failed test still saves, since the
       # app was built.
       - if: ${{ !cancelled() && env.RUN == 'true' && (github.event_name == 'push' || steps.cache.outputs.cache-matched-key == '') && (steps.run.outcome == 'success' || (steps.run.outcome == 'failure' && hashFiles('.build/DerivedData/Build/Products/*/Folio.app/**/Info.plist') != '')) }}
