@@ -60,16 +60,18 @@ private struct ReleaseSection: View {
         let open = model.isOpen(release)
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             Button { withAnimation(.snappy) { model.toggle(release) } } label: {
-                HStack(spacing: Theme.Space.s) {
-                    Image(systemName: "chevron.right")
-                        .font(Theme.Glyph.small)
-                        .foregroundStyle(Theme.Palette.textTertiary)
-                        .rotationEffect(.degrees(open ? 90 : 0))
-                    Text(release.version.description).font(Theme.Typeface.figureMedium).monospacedDigit()
-                    if model.isCurrent(release) { Chip(String(localized: .whatsNewCurrent), tone: .accent) }
-                    if let date = model.date(release) { Text(date).foregroundStyle(Theme.Palette.textTertiary) }
-                    Spacer(minLength: Theme.Space.s)
-                    KindCounts(counts: model.counts(release))
+                // The counts go under the version on an iPhone, where one line runs past the side.
+                ViewThatFits(in: .horizontal) {
+                    HStack(spacing: Theme.Space.s) {
+                        title(open: open)
+                        Spacer(minLength: Theme.Space.s)
+                        KindCounts(counts: model.counts(release))
+                    }
+                    VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                        title(open: open)
+                        KindCounts(counts: model.counts(release))
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .frame(minHeight: Theme.Size.touchTarget)
                 .contentShape(.rect)
@@ -81,6 +83,19 @@ private struct ReleaseSection: View {
                 }
             }
         }
+    }
+
+    func title(open: Bool) -> some View {
+        HStack(spacing: Theme.Space.s) {
+            Image(systemName: "chevron.right")
+                .font(Theme.Glyph.small)
+                .foregroundStyle(Theme.Palette.textTertiary)
+                .rotationEffect(.degrees(open ? 90 : 0))
+            Text(release.version.description).font(Theme.Typeface.figureMedium).monospacedDigit()
+            if model.isCurrent(release) { Chip(String(localized: .whatsNewCurrent), tone: .accent) }
+            if let date = model.date(release) { Text(date).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1) }
+        }
+        .fixedSize()
     }
 }
 
