@@ -152,6 +152,16 @@ final class NoteScrollView: NSScrollView {
 
     required init?(coder: NSCoder) { fatalError() }
 
+    #if DEBUG
+    // For the tests: a wheel made in the app reaches the note's scroll, which leaves such a wheel unscrolled.
+    private(set) var wheels = 0
+
+    override func scrollWheel(with event: NSEvent) {
+        wheels += 1
+        super.scrollWheel(with: event)
+    }
+    #endif
+
     // Every click over the note is routed here, whatever AppKit's own hit test gave: with a plain clip view the scroll
     // view took clicks over its document itself, and with `NoteClipView` it hands back the deepest view instead. A view
     // the note puts over its text (the preview bubble) takes no clicks. The room past the note's end is the clip

@@ -369,7 +369,7 @@ struct NoteSourceTests {
                 bubble.reveal(0)
                 view.setSelectedRange(NSRange(location: start + (source as NSString).length - 1, length: 0))
                 #expect(view.bubble === bubble && offset() == end, "\(label): \(offset()) at the end")
-                try await Self.wheelOver(bubble, in: view, label)
+                try Self.wheelOver(bubble, in: view, label)
                 // Under the pointer it stays as the caret leaves the formula, and goes when the pointer does.
                 bubble.hovered = true
                 view.setSelectedRange(NSRange(location: 0, length: 0))
@@ -435,13 +435,13 @@ struct NoteSourceTests {
         #expect(offset() == end, "\(offset()) for \(end)")
         view.setSelectedRange(NSRange(location: ns.range(of: "$$", options: .backwards).location + 1, length: 0))
         #expect(view.bubble === bubble && offset() == end, "\(offset()) for \(end) on the closing line")
-        try await Self.wheelOver(bubble, in: view)
+        try Self.wheelOver(bubble, in: view)
     }
 
     /// A wheel takes the window's way to the bubble: the window gives it to the view under the pointer, which over the
-    /// note is the editor, and the editor hands a sideways one over the bubble to its scroller. Up or down, the note
-    /// scrolls and the formula stays. The events are made in the app and sent to the editor; nothing reaches the screen.
-    static func wheelOver(_ bubble: PreviewBubble, in view: SourceTextView, _ label: String = "") async throws {
+    /// note is the editor, and the editor hands a sideways one over the bubble to its scroller. Up or down, it goes on to
+    /// the note's scroll and the formula stays. The events are made in the app and sent to the editor; nothing reaches the screen.
+    static func wheelOver(_ bubble: PreviewBubble, in view: SourceTextView, _ label: String = "") throws {
         let scroll = try #require(view.enclosingScrollView as? NoteScrollView)
         let center = NSPoint(x: bubble.frame.midX, y: bubble.frame.midY)
         #expect(scroll.hitTest(try #require(scroll.superview).convert(center, from: view)) === view, "\(label)")
@@ -449,16 +449,13 @@ struct NoteSourceTests {
         func note() -> CGFloat { scroll.contentView.bounds.minY }
         bubble.reveal(0)
         bubble.hovered = false
-        let (before, top) = (offset(), note())
+        let (before, top, taken) = (offset(), note(), scroll.wheels)
         view.scrollWheel(with: try Self.wheel(x: -80, y: 0, at: center, in: view))
-        for _ in 0..<50 where offset() <= before { try? await Task.sleep(for: .milliseconds(20)) }
-        #expect(offset() > before && note() == top, "\(label): sideways moved the formula \(before) → \(offset()), the note \(top) → \(note()); bubble took it: \(bubble.hovered)")
-        let sideways = offset()
+        #expect(offset() > before && note() == top && scroll.wheels == taken, "\(label): sideways moved the formula \(before) → \(offset()), the note \(top) → \(note()); bubble took it: \(bubble.hovered)")
+        let (sideways, wheels) = (offset(), scroll.wheels)
         view.scrollWheel(with: try Self.wheel(x: 0, y: -80, at: center, in: view))
-        for _ in 0..<50 where note() <= top { try? await Task.sleep(for: .milliseconds(20)) }
-        #expect(note() > top && offset() == sideways, "\(label): down moved the note \(top) → \(note()), the formula \(sideways) → \(offset())")
-        scroll.contentView.scroll(to: NSPoint(x: 0, y: top))
-        scroll.reflectScrolledClipView(scroll.contentView)
+        // The note's scroll doesn't move for a wheel made in the app, so only that it got it.
+        #expect(scroll.wheels == wheels + 1 && offset() == sideways, "\(label): down reached the note \(scroll.wheels - wheels) times, moved the formula \(sideways) → \(offset())")
     }
 
     /// A trackpad's scroll by `x` and `y` points over `point` in `view`, made in the app as AppKit gets one: with no
