@@ -135,7 +135,6 @@ jobs:
       # quietly stopping. A missing or changed picture lands here and goes up as the note-screens artifact.
       FOLIO_NOTE_SCREENS_STRICT: 1
       FOLIO_NOTE_SCREENS: ${{ github.workspace }}/.build/note-screens
-      FOLIO_XCODEBUILD_FLAGS: -skipPackageUpdates
     steps:
       - if: env.RUN != 'true'
         run: echo "No file in this PR reaches ${{ matrix.task }}."
@@ -156,6 +155,11 @@ jobs:
       - if: env.RUN == 'true'
         id: xcode
         run: echo "version=$(DEVELOPER_DIR="$XCODE/Contents/Developer" xcodebuild -version | tr -s ' \n' '-' | sed 's/-$//')" >> "$GITHUB_OUTPUT"
+      - if: env.RUN == 'true'
+        id: key
+        run: |
+          echo "base=derived-data-$MISE_TASK-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}" >> "$GITHUB_OUTPUT"
+          echo "deps=${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}" >> "$GITHUB_OUTPUT"
       # One cache per task: each builds another platform or configuration into its own DerivedData. The index, logs
       # and test results are rebuilt by every run and aren't worth the download. Each push to main saves a new cache,
       # which PRs start from; a PR saves only when it found none, so its pushes don't push main's out of the 10 GB.
@@ -170,10 +174,25 @@ jobs:
             !.build/DerivedData/TestResults
             Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
             ~/Library/Caches/org.swift.swiftpm/manifests
-          key: derived-data-${{ env.MISE_TASK }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-${{ github.sha }}
+          key: ${{ steps.key.outputs.base }}-${{ steps.key.outputs.deps }}-${{ github.sha }}
           restore-keys: |
-            derived-data-${{ env.MISE_TASK }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-
-            derived-data-${{ env.MISE_TASK }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
+            ${{ steps.key.outputs.base }}-${{ steps.key.outputs.deps }}-
+            ${{ steps.key.outputs.base }}-
+      # The project's Package.resolved isn't committed (Folio.xcodeproj isn't), so the cache holds the only copy. With it
+      # xcodebuild can skip a minute of resolving (-skipPackageUpdates), but it also keeps every version it pins: only a
+      # cache made from the same committed pins and project.yml may lend it, or a bumped dependency would be built at its
+      # old version. Pushes to main resolve afresh, so a PR's versions are main's latest; without -skipPackageUpdates
+      # xcodebuild also fetches the tags the cached clones lack.
+      - if: env.RUN == 'true'
+        name: Reuse package versions only from the same dependencies
+        env:
+          SAME: ${{ github.event_name != 'push' && startsWith(steps.cache.outputs.cache-matched-key, format('{0}-{1}-', steps.key.outputs.base, steps.key.outputs.deps)) }}
+        run: |
+          if [ "$SAME" = true ]; then
+            echo "FOLIO_XCODEBUILD_FLAGS=-skipPackageUpdates" >> "$GITHUB_ENV"
+          else
+            rm -f Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+          fi
       # The app, test and resource bundles go so that a file the branch deleted can't linger in them; Xcode copies
       # resources into a bundle without removing old ones. Xcode also takes a source whose inode changed for an edited
       # one, and every file is new to this machine, so it is told to look at the times and sizes alone.
