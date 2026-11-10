@@ -176,6 +176,31 @@ struct NoteMathTests {
         }
     }
 
+    /// A big delimiter is drawn from a font of its own (KaTeX_Size1 to 4). The first formula that needed one came out
+    /// with it blank now and then, and the picture was kept: `document.fonts.ready` had settled while the font still
+    /// loaded. In a new renderer, first thing or after formulas that need none, the picture has the ink the same
+    /// formula has drawn again (untrimmed, so it isn't the kept picture).
+    @Test func bigDelimitersDrawTheFirstTime() async throws {
+        let formulas: [(String, MathSyntax)] = [
+            ("det(B - tI) = det(Q^-1AQ - tI) = det(Q^-1(A-tI)Q) =\ndet(Q^-1)det(A - tI)det(Q) = 1/(det(Q)) det(A - tI) det(Q) =\ndet(A - tI)", .asciimath),
+            (#"\det\left(Q^{-1}\right)"#, .latex),
+            (#"\left(\frac{\frac{a}{b}}{\frac{c}{d}}\right) + \left[\sum_{i=1}^{n} x_i\right]"#, .latex),
+        ]
+        let long = try #require(Self.shapes.first { $0.name == "긴 줄" })
+        for (source, syntax) in formulas {
+            for after in [[], [(long.tex, MathSyntax.latex, false), (long.ascii, .asciimath, true)]] {
+                let math = NoteMath()
+                for (other, otherSyntax, dark) in after {
+                    #expect(await picture(other, otherSyntax, display: true, dark: dark, by: math) != nil)
+                }
+                let first = try #require(await picture(source, syntax, display: true, by: math), "\(source)")
+                let again = try #require(await picture(source, syntax, display: true, trim: false, by: math), "\(source)")
+                let (a, b) = (try Pixels(first.image).inked, try Pixels(again.image).inked)
+                #expect(a == b, "\(source), \(after.isEmpty ? "first" : "after others"): \(a) inked pixels, \(b) drawn again")
+            }
+        }
+    }
+
     /// Drawn in the note's text color for the appearance asked for, not the page's.
     @Test func inkFollowsTheAppearance() async throws {
         for dark in [false, true] {

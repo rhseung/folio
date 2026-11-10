@@ -250,10 +250,19 @@ import UIKit
 
     func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
         guard navigation === loading else { return }
-        loading = nil
-        loaded = true
-        onLoad.forEach { $0.resume() }
-        onLoad = []
+        let finished = navigation
+        Task {
+            // Every KaTeX font before the first formula. A font loads when a formula first needs it, and
+            // `document.fonts.ready` was seen settled while it still loaded: a big delimiter's (KaTeX_Size1) came out
+            // blank, and that picture was kept.
+            _ = try? await web.callAsyncJavaScript("await Promise.all([...document.fonts].map(f => f.load().catch(() => null)))",
+                                                   arguments: [:], in: nil, contentWorld: .defaultClient)
+            guard finished === loading else { return }
+            loading = nil
+            loaded = true
+            onLoad.forEach { $0.resume() }
+            onLoad = []
+        }
     }
 
     enum Drawn {
@@ -276,9 +285,13 @@ import UIKit
             body.dataset.math = syntax;
             body.style.fontSize = size + "px";
             window.folioReader.update(html);
-            // Laying out starts KaTeX's fonts loading, which `ready` then waits for.
+            // The page loads every font first; one that is loading again anyway is waited for itself, not by
+            // `document.fonts.ready`, which can settle before it has.
             body.getBoundingClientRect();
-            await document.fonts.ready;
+            for (let loading; (loading = [...document.fonts].filter(f => f.status === "loading")).length;) {
+              await Promise.all(loading.map(f => f.loaded.catch(() => null)));
+              body.getBoundingClientRect();
+            }
             const box = body.querySelector(".katex-display > .katex") ?? body.querySelector(".katex");
             if (!box || body.querySelector(".math-error")) return null;
             let r = box.getBoundingClientRect(), left = r.left, top = r.top, right = r.right, bottom = r.bottom;
