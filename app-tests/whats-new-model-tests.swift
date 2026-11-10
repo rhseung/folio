@@ -126,6 +126,18 @@ struct WhatsNewModelTests {
         #expect(model.noMatch == "‘창’에 맞는 항목 없음 (fix)")
     }
 
+    /// An iPhone folds every version's counts under it, one with a single kind too; a pane or a window folds none.
+    @Test func theCountsFoldForThePageNotPerVersion() throws {
+        let model = try makeModel()
+        #expect(model.countsBelow)
+        model.width = 390 - 32
+        #expect(model.countsBelow)
+        for width: CGFloat in [720 - 64, 760] {
+            model.width = width
+            #expect(!model.countsBelow, "\(width)")
+        }
+    }
+
     @Test func offlineSaysSoAndRetries() async throws {
         let model = try makeModel(fails: true)
         await model.load()

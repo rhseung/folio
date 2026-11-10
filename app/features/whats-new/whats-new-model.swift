@@ -12,6 +12,15 @@ final class WhatsNewModel {
     var kind: PatchNotes.Kind?
     /// Versions opened or closed by hand: the running one starts open, the rest closed.
     private var toggled: Set<PatchNotes.Version> = []
+    /// The list's width, measured. Zero until then, so a first frame never runs past the side.
+    var width: CGFloat = 0
+
+    /// A version's heading at its widest: version, 지금 버전, date and all three kinds' chips and counts.
+    static let oneLineHeading: CGFloat = 480
+
+    /// One choice for the page, not one per version: a heading with fewer kinds would otherwise stay on one line
+    /// beside headings that fold, and the versions would not line up.
+    var countsBelow: Bool { width < Self.oneLineHeading }
 
     init(workspace: Workspace) {
         self.workspace = workspace

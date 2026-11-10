@@ -31,6 +31,7 @@ struct WhatsNewView: View {
                         EmptyLine(model.noMatch)
                     }
                 }
+                .onGeometryChange(for: CGFloat.self, of: \.size.width) { model.width = $0 }
             }
         }
         .task { await model.load() }
@@ -60,18 +61,20 @@ private struct ReleaseSection: View {
         let open = model.isOpen(release)
         VStack(alignment: .leading, spacing: Theme.Space.s) {
             Button { withAnimation(.snappy) { model.toggle(release) } } label: {
-                // The counts go under the version on an iPhone, where one line runs past the side.
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: Theme.Space.s) {
-                        title(open: open)
-                        Spacer(minLength: Theme.Space.s)
-                        KindCounts(counts: model.counts(release))
+                Group {
+                    if model.countsBelow {
+                        VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                            title(open: open)
+                            KindCounts(counts: model.counts(release))
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    } else {
+                        HStack(spacing: Theme.Space.s) {
+                            title(open: open)
+                            Spacer(minLength: Theme.Space.s)
+                            KindCounts(counts: model.counts(release))
+                        }
                     }
-                    VStack(alignment: .leading, spacing: Theme.Space.xs) {
-                        title(open: open)
-                        KindCounts(counts: model.counts(release))
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .frame(minHeight: Theme.Size.touchTarget)
                 .contentShape(.rect)
