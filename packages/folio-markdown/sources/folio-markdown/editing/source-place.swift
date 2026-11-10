@@ -7,11 +7,14 @@ public enum SourcePlace: Equatable, Sendable {
     /// A fenced code block's lines, the closing fence included; the opening fence is text, where its language is typed.
     case code(language: String)
     case inlineCode
-    /// Inside `$…$`, or a `$$` block. `content` is the math between its delimiters, up to the caret's line end or the
-    /// block's last line when it isn't closed yet.
-    case math(display: Bool, content: NSRange)
+    /// Inside `$…$`, a `$$` block or a math fence's body. `content` is the math between its delimiters, up to the
+    /// caret's line end or the block's last line when it isn't closed yet. `fence` is the syntax a math fence chose;
+    /// nil is the note's.
+    case math(display: Bool, content: NSRange, fence: MathFence.Syntax? = nil)
 
     public var isMath: Bool { if case .math = self { true } else { false } }
+    /// The syntax a math fence chose for the formula here, or nil where the note's applies.
+    public var fence: MathFence.Syntax? { if case .math(_, _, let fence) = self { fence } else { nil } }
     public var isCode: Bool {
         switch self {
         case .code, .inlineCode: true
@@ -21,10 +24,11 @@ public enum SourcePlace: Equatable, Sendable {
 
     /// Fences and `$$` blocks are read as `MathScan` and the markdown parser read them: a fence is three or more
     /// backticks or tildes, closed by a run of the same character at least as long; a `$$` line opens a block that the
-    /// first line ending in `$$` closes.
+    /// first line ending in `$$` closes. A math fence's body is math, its closing fence code as any fence's.
     public static func at(_ caret: Int, in text: NSString) -> SourcePlace {
         let caret = min(max(0, caret), text.length)
         var fence: Fence?
+        var fenceBody = 0
         var mathStart: Int?
         var at = 0
         while true {
@@ -33,8 +37,13 @@ public enum SourcePlace: Equatable, Sendable {
             let s = text.substring(with: content)
             let here = caret >= content.location && caret <= NSMaxRange(content)
             if let open = fence {
-                if here { return .code(language: open.info) }
-                if let close = Fence(s), close.char == open.char, close.count >= open.count, close.info.isEmpty { fence = nil }
+                let closes = Fence(s).map { $0.closes(open) } ?? false
+                if here {
+                    guard !closes, let syntax = MathFence.syntax(open.info) else { return .code(language: open.info) }
+                    let end = SourceLines.fenceEnd(text, after: line, open: open)
+                    return .math(display: true, content: NSRange(location: fenceBody, length: end - fenceBody), fence: syntax)
+                }
+                if closes { fence = nil }
             } else if let start = mathStart {
                 let closes = s.trimmingCharacters(in: .whitespaces).hasSuffix("$$")
                 if here {
@@ -46,6 +55,7 @@ public enum SourcePlace: Equatable, Sendable {
             } else if let open = Fence(s) {
                 if here { return .text }
                 fence = open
+                fenceBody = NSMaxRange(line)
             } else if let opener = SourceLines.displayOpener(s) {
                 let bodyStart = content.location + opener
                 let rest = (s as NSString).substring(from: opener).trimmingCharacters(in: .whitespaces)
@@ -72,8 +82,8 @@ public enum SourcePlace: Equatable, Sendable {
         let caret = min(max(0, caret), text.length)
         let probe = NSMutableString(string: text)
         probe.insert("x", at: caret)
-        guard case .math(let display, let content) = at(caret, in: probe) else { return at(caret, in: probe) }
-        return .math(display: display, content: NSRange(location: content.location, length: max(0, content.length - 1)))
+        guard case .math(let display, let content, let fence) = at(caret, in: probe) else { return at(caret, in: probe) }
+        return .math(display: display, content: NSRange(location: content.location, length: max(0, content.length - 1)), fence: fence)
     }
 
     /// Code spans and `$…$` on the caret's line, as `MathScan.scanInline` reads them. A span still open at the caret
@@ -149,6 +159,11 @@ struct Fence {
         count = run
         self.info = info
     }
+
+    /// Whether this line closes the block `open` opened.
+    func closes(_ open: Fence) -> Bool {
+        char == open.char && count >= open.count && info.isEmpty
+    }
 }
 
 enum SourceLines {
@@ -170,6 +185,21 @@ enum SourceLines {
             if s.trimmingCharacters(in: .whitespaces).hasSuffix("$$") {
                 return content.location + (s as NSString).range(of: "$$", options: .backwards).location
             }
+            at = NSMaxRange(next)
+        }
+        return text.length
+    }
+
+    /// Where a fenced block's body ends: at the end of its last line before the fence that closes `open`, else at the
+    /// end of the text. `line` is a body line.
+    static func fenceEnd(_ text: NSString, after line: NSRange, open: Fence) -> Int {
+        var end = NSMaxRange(content(line, in: text))
+        var at = NSMaxRange(line)
+        while at < text.length {
+            let next = text.lineRange(for: NSRange(location: at, length: 0))
+            let body = content(next, in: text)
+            if let f = Fence(text.substring(with: body)), f.closes(open) { return end }
+            end = NSMaxRange(body)
             at = NSMaxRange(next)
         }
         return text.length

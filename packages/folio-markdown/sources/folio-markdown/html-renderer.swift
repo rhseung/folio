@@ -13,6 +13,11 @@ public struct HTMLRenderer {
         render(ParsedNote(markdown))
     }
 
+    /// An answer in the Claude panel: as a note, but `tex` and `latex` fences stay code.
+    public static func render(answer: String) -> String {
+        blocks(ParsedNote(answer), embeds: nil, lines: false, mathFences: false).map(\.html).joined()
+    }
+
     /// A top-level block of a note and the body lines it was written on.
     public struct Block: Equatable, Sendable {
         public var html: String
@@ -25,8 +30,9 @@ public struct HTMLRenderer {
         blocks(note, embeds: embeds, lines: true)
     }
 
-    static func blocks(_ note: ParsedNote, embeds: NoteEmbeds?, lines: Bool) -> [Block] {
+    static func blocks(_ note: ParsedNote, embeds: NoteEmbeds?, lines: Bool, mathFences: Bool = true) -> [Block] {
         var r = HTMLRenderer()
+        r.mathFences = mathFences
         if lines { r.note = note }
         r.embeds = embeds
         r.trail = embeds?.key.map { [$0] } ?? []
@@ -57,6 +63,14 @@ public struct HTMLRenderer {
     var footnotes: FootnoteBook?
     /// Inside a markdown link's text, where an address can't be a link of its own: anchors don't nest.
     var inLink = false
+    /// Off in the Claude panel, whose `tex` and `latex` fences hold source to copy, not a formula to read; `math` is
+    /// a formula there too, as it was before fences chose a syntax.
+    var mathFences = true
+
+    func mathFence(_ language: String) -> MathFence.Syntax? {
+        guard let syntax = MathFence.syntax(language) else { return nil }
+        return mathFences || language.split(whereSeparator: \.isWhitespace).first == "math" ? syntax : nil
+    }
 
     /// A renderer for part of this note's page (a table cell, an embed) that draws embeds and references as it does.
     func inner() -> HTMLRenderer {
@@ -66,6 +80,7 @@ public struct HTMLRenderer {
         r.nested = nested
         r.previewing = previewing
         r.footnotes = footnotes
+        r.mathFences = mathFences
         return r
     }
 
@@ -179,6 +194,9 @@ public struct HTMLRenderer {
         switch c.language {
         case MathProtection.blockLanguage:
             return "<div class=\"math display\">\(Self.escape(code))</div>\n"
+        case let language? where mathFence(language) != nil:
+            // Its own `data-math`, which the page reads before the note's (web/src/reader.js).
+            return "<div class=\"math display\"\(Self.mathAttribute(mathFence(language)?.rawValue))>\(Self.escape(code))</div>\n"
         case CBTable.language:
             let r = inner()
             return CBTable.render(json: code) { text in

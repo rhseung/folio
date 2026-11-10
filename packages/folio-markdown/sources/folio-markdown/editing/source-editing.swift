@@ -110,12 +110,17 @@ public enum SourceEditing {
     /// What Tab does: expand a snippet whose trigger is just before the caret, move to a formula's next argument, or
     /// indent. Shift-Tab steps back through the arguments, or outdents. AsciiMath puts arguments in brackets, as
     /// `frac(a)(b)`, where TeX uses braces.
+    public static func tab(_ text: NSString, _ selection: NSRange, back: Bool, catalog: CompletionCatalog) -> Edit {
+        let here = catalog.at(SourcePlace.at(selection.location, in: text))
+        return tab(text, selection, back: back, snippets: here.snippets, asciiMath: !here.tex)
+    }
+
     public static func tab(_ text: NSString, _ selection: NSRange, back: Bool, snippets: [Snippet] = [], asciiMath: Bool = false) -> Edit {
         let place = SourcePlace.at(selection.location, in: text)
         if !back, selection.length == 0, let (snippet, range) = Snippet.match(snippets, in: text, caret: selection.location, place: place) {
             return snippet.edit(replacing: range)
         }
-        if case .math(_, let content) = place, let slot = slot(text, from: selection.location, in: content, back: back, opener: asciiMath ? 0x28 : 0x7B) {
+        if case .math(_, let content, _) = place, let slot = slot(text, from: selection.location, in: content, back: back, opener: asciiMath ? 0x28 : 0x7B) {
             return Edit(range: NSRange(location: slot, length: 0), text: "", caret: slot)
         }
         // Lines in a code block are code: `1.` there is not a list to number again.
@@ -220,7 +225,7 @@ public enum SourceEditing {
     }
 
     private static func isEmptyPair(_ place: SourcePlace) -> Bool {
-        if case .math(false, let content) = place { return content.length == 0 }
+        if case .math(false, let content, _) = place { return content.length == 0 }
         return false
     }
 
