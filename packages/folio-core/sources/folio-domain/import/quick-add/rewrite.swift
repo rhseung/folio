@@ -98,13 +98,22 @@ extension QuickAdd {
                 case let rule?:
                     // The weekdays name the day, so the deadline's day words give way to them and only its time stays.
                     guard let due = before.due else {
-                        tries = [plain.appending(word: rule.phrase)]
+                        // `한 달마다 까지` without the rule leaves `까지` alone, where it reads as the title's.
+                        let swapped = before.repeatRanges.first.map { first in
+                            [line.splicing([(first, rule.phrase)] + before.repeatRanges.dropFirst().map { (line.wordRange($0), "") })]
+                        } ?? []
+                        tries = [plain.appending(word: rule.phrase)] + swapped
                         break
                     }
                     let words = rule.phrase + " " + text(of: due).split(separator: " ").last!
                     let ranges = stripped.dueRanges.map(plain.wordRange)
+                    // `오후 3일마다 18:00` without the rule puts `오후` against the time, where it reads as the time's, so
+                    // the rule also goes in place of the old one and the deadline, keeping them apart.
+                    let others = (before.repeatRanges + before.weekdayRanges).filter { r in !before.dueRanges.contains { $0.overlaps(r) } }
+                    let gone = (Array(before.dueRanges.dropFirst()) + others).map { (line.wordRange($0), "") }
+                    let inPlace = before.dueRanges.first.map { [line.splicing([($0, words)] + gone)] } ?? []
                     tries = (stripped.dueRanges.first.map { [plain.splicing([($0, words)] + ranges.dropFirst().map { ($0, "") })] } ?? [])
-                        + [plain.splicing(ranges.map { ($0, "") }).appending(word: words)]
+                        + [plain.splicing(ranges.map { ($0, "") }).appending(word: words)] + inPlace
                 }
             case let .kind(kind, number):
                 let word = "\(kind.rawValue)\(number)"
