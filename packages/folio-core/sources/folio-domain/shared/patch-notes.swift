@@ -272,25 +272,8 @@ public enum PatchNotes {
         }
     }
 
-    public struct Group: Hashable, Sendable {
-        public var kind: Kind
-        public var items: [Item]
-
-        public init(kind: Kind, items: [Item]) {
-            self.kind = kind
-            self.items = items
-        }
-    }
-
-    /// A release's items in groups by kind, in `Kind` order, each in the order written.
-    public static func grouped(_ items: [Item]) -> [Group] {
-        Kind.allCases.compactMap { kind in
-            let of = items.filter { $0.kind == kind }
-            return of.isEmpty ? nil : Group(kind: kind, items: of)
-        }
-    }
-
-    public static func counts(_ items: [Item]) -> [Count] {
-        grouped(items).map { Count(kind: $0.kind, count: $0.items.count) }
+    /// A release's items in one list, kind by kind in `Kind` order, each kind in the order written.
+    public static func ordered(_ items: [Item]) -> [Item] {
+        Kind.allCases.flatMap { kind in items.filter { $0.kind == kind } }
     }
 }

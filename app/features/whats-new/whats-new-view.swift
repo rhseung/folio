@@ -58,77 +58,43 @@ struct WhatsNewView: View {
     }
 }
 
-/// One version: its heading, which opens and closes it, then its items in groups by kind.
+/// One version: its heading, which opens and closes it, then its items.
 private struct ReleaseSection: View {
     let model: WhatsNewModel
     let release: PatchNotes.Release
-
-    static let chevron: CGFloat = 12
 
     var body: some View {
         let open = model.isOpen(release)
         VStack(alignment: .leading, spacing: Theme.Space.l) {
             Button { withAnimation(.snappy) { model.toggle(release) } } label: {
-                Group {
-                    if model.narrow {
-                        VStack(alignment: .leading, spacing: Theme.Space.s) {
-                            title(open: open)
-                            if model.showsCounts(release) {
-                                // Under the version number, past the chevron.
-                                KindCounts(counts: model.counts(release)).padding(.leading, Self.chevron + Theme.Space.s)
-                            }
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    } else {
-                        HStack(spacing: Theme.Space.s) {
-                            title(open: open)
-                            Spacer(minLength: Theme.Space.s)
-                            if model.showsCounts(release) { KindCounts(counts: model.counts(release)) }
-                        }
-                    }
+                HStack(spacing: Theme.Space.s) {
+                    Image(systemName: "chevron.right")
+                        .font(Theme.Glyph.small)
+                        .foregroundStyle(Theme.Palette.textTertiary)
+                        .rotationEffect(.degrees(open ? 90 : 0))
+                    Text(release.version.description).font(Theme.Typeface.figureMedium).monospacedDigit()
+                    if model.isCurrent(release) { Chip(String(localized: .whatsNewCurrent), tone: .accent) }
+                    if let date = model.date(release) { Text(date).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1) }
                 }
-                .frame(minHeight: Theme.Size.touchTarget)
+                .frame(maxWidth: .infinity, minHeight: Theme.Size.touchTarget, alignment: .leading)
                 .contentShape(.rect)
             }
             .buttonStyle(.pointing(.plain))
-            if open {
-                VStack(alignment: .leading, spacing: Theme.Space.xl) {
-                    ForEach(PatchNotes.grouped(release.items), id: \.kind) { group in
-                        PatchNoteGroup(group: group)
-                    }
-                }
-            }
+            if open { PatchNoteList(items: model.items(release)) }
         }
-    }
-
-    func title(open: Bool) -> some View {
-        HStack(spacing: Theme.Space.s) {
-            Image(systemName: "chevron.right")
-                .font(Theme.Glyph.small)
-                .foregroundStyle(Theme.Palette.textTertiary)
-                .rotationEffect(.degrees(open ? 90 : 0))
-                .frame(width: Self.chevron)
-            Text(release.version.description).font(Theme.Typeface.figureMedium).monospacedDigit()
-            if model.isCurrent(release) { Chip(String(localized: .whatsNewCurrent), tone: .accent) }
-            if let date = model.date(release) { Text(date).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1) }
-        }
-        .fixedSize()
     }
 }
 
-/// The items of one kind under its chip (`feat`, `fix`, `change`), on the page and in the sheet alike.
-struct PatchNoteGroup: View {
-    let group: PatchNotes.Group
+/// Items in one card, each after its kind's chip, on the page and in the sheet alike.
+struct PatchNoteList: View {
+    let items: [PatchNotes.Item]
     /// Before a row's link opens: the sheet closes itself first.
     var opening: () -> Void = {}
 
     var body: some View {
-        VStack(alignment: .leading, spacing: Theme.Space.s) {
-            Chip(group.kind.label, tone: group.kind.tone)
-            Card {
-                ForEach(Array(group.items.enumerated()), id: \.offset) { i, item in
-                    CardRow(last: i == group.items.count - 1) { PatchNoteRow(item: item, opening: opening) }
-                }
+        Card {
+            ForEach(Array(items.enumerated()), id: \.offset) { i, item in
+                CardRow(last: i == items.count - 1) { PatchNoteRow(item: item, opening: opening) }
             }
         }
     }
@@ -151,13 +117,18 @@ struct KindCounts: View {
     }
 }
 
-/// One item: its sentence and, when it names a place, 열기.
+/// One item: its kind, its sentence and, when it names a place, 열기.
 struct PatchNoteRow: View {
     let item: PatchNotes.Item
     var opening: () -> Void = {}
     @Environment(\.openLink) private var openLink
 
     var body: some View {
+        // As wide as the widest kind's chip, so every row's sentence starts at one edge.
+        ZStack(alignment: .leading) {
+            ForEach(PatchNotes.Kind.allCases, id: \.self) { Chip($0.label, tone: $0.tone).hidden() }
+            Chip(item.kind.label, tone: item.kind.tone)
+        }
         Text(item.text).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity, alignment: .leading)
         if let link = item.link {
             Button(.commonOpen) {

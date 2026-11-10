@@ -28,7 +28,7 @@ struct UpdateSheet: View {
                 Text(summary.subtitle(calendar: calendar)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
             }
             .frame(maxWidth: .infinity)
-            PatchNoteGroup(group: PatchNotes.Group(kind: .feat, items: summary.items), opening: { dismiss() })
+            PatchNoteList(items: summary.items, opening: { dismiss() })
                 .environment(\.openLink, OpenLinkAction { link, _, _ in open(link) })
             ViewThatFits(in: .horizontal) {
                 HStack(spacing: Theme.Space.s) {

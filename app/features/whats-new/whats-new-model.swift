@@ -15,17 +15,11 @@ final class WhatsNewModel {
     /// The page's width, measured. Zero until then, so a first frame never runs past the side.
     var width: CGFloat = 0
 
-    /// The search field at a useful width beside the kinds, and a version's heading at its widest (version, 지금 버전,
-    /// date and all three kinds' chips and counts) on one line.
+    /// The search field at a useful width beside the kinds.
     static let wideFrom: CGFloat = 560
 
-    /// One choice for the page, not one per version: a heading with fewer kinds would otherwise stay on one line
-    /// beside headings that fold, and the versions would not line up. Narrow, the search field takes its own line and
-    /// a closed version's counts go under it.
+    /// Narrow, the search field takes its own line with the kinds under it.
     var narrow: Bool { width < Self.wideFrom }
-
-    /// A closed version's counts say what is inside; an open one shows its groups, which say the same.
-    func showsCounts(_ release: PatchNotes.Release) -> Bool { !isOpen(release) }
 
     init(workspace: Workspace) {
         self.workspace = workspace
@@ -76,8 +70,7 @@ final class WhatsNewModel {
         release.date.map { Self.day($0, calendar: workspace.calendar) }
     }
 
-    /// How many of each kind are shown, for the version's heading.
-    func counts(_ release: PatchNotes.Release) -> [PatchNotes.Count] { PatchNotes.counts(release.items) }
+    func items(_ release: PatchNotes.Release) -> [PatchNotes.Item] { PatchNotes.ordered(release.items) }
 
     var noMatch: String {
         let words = query.trimmingCharacters(in: .whitespaces)
@@ -95,7 +88,7 @@ extension PatchNotes.Kind {
     /// As commits name it, untranslated (2026-11-10 사용자).
     var label: String { rawValue }
 
-    /// Three hues told apart at a glance wherever a kind shows: its chips, its counts and the kind filter. Not the
+    /// Three hues told apart at a glance wherever a kind shows: its chips, the sheet's counts and the kind filter. Not the
     /// accent, which an app page draws gray.
     var tone: Tone {
         switch self {

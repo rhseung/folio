@@ -111,7 +111,7 @@ struct WhatsNewModelTests {
         model.toggle(shown[1])
         model.toggle(shown[0])
         #expect(!model.isOpen(shown[0]) && model.isOpen(shown[1]))
-        #expect(model.counts(shown[0]) == [PatchNotes.Count(kind: .fix, count: 1)])
+        #expect(model.items(shown[0]).map(\.text) == ["칸 닫기"])
     }
 
     @Test func searchingOpensEveryMatch() async throws {
@@ -126,9 +126,8 @@ struct WhatsNewModelTests {
         #expect(model.noMatch == "‘창’에 맞는 항목 없음 (fix)")
     }
 
-    /// An iPhone folds every version's heading and the search field, one with a single kind too; a pane or a window
-    /// folds none.
-    @Test func thePageFoldsAsAWholeNotPerVersion() throws {
+    /// An iPhone puts the kinds under the search field; a pane or a window keeps them beside it.
+    @Test func narrowPutsTheKindsUnderTheSearch() throws {
         let model = try makeModel()
         #expect(model.narrow)
         model.width = 390 - 64
@@ -137,16 +136,6 @@ struct WhatsNewModelTests {
             model.width = width
             #expect(!model.narrow, "\(width)")
         }
-    }
-
-    /// An open version's groups already count its items.
-    @Test func onlyAClosedVersionShowsItsCounts() async throws {
-        let model = try makeModel()
-        await model.load()
-        guard case .releases(let shown) = model.state else { Issue.record("\(model.state)"); return }
-        #expect(!model.showsCounts(shown[0]) && model.showsCounts(shown[1]))
-        model.toggle(shown[0])
-        #expect(model.showsCounts(shown[0]))
     }
 
     /// Each kind its own hue, so feat and change are not two grays.

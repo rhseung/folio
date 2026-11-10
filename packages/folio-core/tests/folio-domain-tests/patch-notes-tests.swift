@@ -151,7 +151,9 @@ struct PatchNotesTests {
         #expect(fixes.allSatisfy { $0.items.allSatisfy { $0.kind == .fix } })
         #expect(PatchNotes.filter(history, kind: nil, query: "0.2.1").map(\.version) == [V(0, 2, 1)])
         #expect(PatchNotes.filter(history, kind: .feat, query: "0.2.1").isEmpty)
-        #expect(PatchNotes.grouped(Self.feed[2].items).map(\.kind) == [.feat, .fix, .change])
+        let ordered = PatchNotes.ordered(PatchNotes.items(in: Self.body))
+        #expect(ordered.map(\.kind) == [.feat, .feat, .fix, .fix, .fix, .change])
+        #expect(ordered.filter { $0.kind == .fix }.map(\.text) == ["수식 말풍선 위와 오른쪽 여백", "회차 노트의 링크", "소제목 뒤의 항목"])
     }
 
     // MARK: Properties
