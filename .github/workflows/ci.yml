@@ -97,7 +97,6 @@ jobs:
             swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved') }}-
             swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
       - uses: jdx/mise-action@v5
-      - run: sysctl -n hw.ncpu hw.memsize
       - id: run
         run: mise run test
       # A failed test still built everything, so its build is worth keeping.
@@ -183,7 +182,6 @@ jobs:
       # one, and every file is new to this machine, so it is told to look at the times and sizes alone.
       - if: env.RUN == 'true'
         run: |
-          ls -la Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/ ~/Library/Caches/org.swift.swiftpm || true
           defaults write com.apple.dt.SWBBuildService IgnoreFileSystemDeviceInodeChanges -bool YES
       - if: env.RUN == 'true'
         uses: jdx/mise-action@v5
@@ -195,12 +193,6 @@ jobs:
       - if: ${{ !cancelled() && env.RUN == 'true' && (github.event_name == 'push' || steps.cache.outputs.cache-matched-key == '') && (steps.run.outcome == 'success' || (steps.run.outcome == 'failure' && hashFiles('.build/DerivedData/Build/Products/*/Folio.app/**/Info.plist') != '')) }}
         id: keep
         run: du -sh .build/DerivedData/* || true
-      - if: ${{ !cancelled() && env.RUN == 'true' }}
-        uses: actions/upload-artifact@v7
-        with:
-          name: diag-${{ matrix.task }}
-          path: .build/*.xcresult
-          if-no-files-found: ignore
       - if: ${{ !cancelled() && steps.keep.outcome == 'success' }}
         uses: actions/cache/save@v6
         with:
@@ -227,15 +219,15 @@ jobs:
           echo "build (test-app-notes): ${state#completed }"
           [ "$state" = "completed success" ]
       # Sheets of pictures a test lays out for a PR (app-tests/note-render.swift), passing or not; not references.
-      # Either half may lay one out; a half that laid none uploads nothing.
-      - if: ${{ !cancelled() && env.RUN == 'true' && startsWith(matrix.task, 'test-app') }}
+      # NoteSourceTests lays them out, in the test-app half; two uploads under one name would fail.
+      - if: ${{ !cancelled() && env.RUN == 'true' && matrix.task == 'test-app' }}
         uses: actions/upload-artifact@v7
         with:
           name: note-sheets
           path: .build/note-screens/sheets
           if-no-files-found: ignore
-      # `mise run note-screens -- <run ID>` takes these as the new references.
-      - if: failure() && startsWith(matrix.task, 'test-app')
+      # `mise run note-screens -- <run ID>` takes these as the new references, which only NoteScreenTests compares.
+      - if: failure() && matrix.task == 'test-app-notes'
         uses: actions/upload-artifact@v7
         with:
           name: note-screens
