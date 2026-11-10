@@ -41,7 +41,7 @@ public struct ClassStartSettings: Codable, Sendable, Equatable {
     /// From the class's start: negative before it, positive after.
     public var recordingOffsetMinutes = 0
     public var stopsRecording = false
-    /// After the class's end, when `stopsRecording`.
+    /// From the class's end, when `stopsRecording`: negative before it, positive after (#416).
     public var stopAfterMinutes = 0
     public var roughNote = RoughNote.off
     public var roughNotePlace = Place.here
@@ -155,19 +155,28 @@ public enum ClassStart {
         return last.count == 1 ? last[0] : nil
     }
 
+    /// The class under way at `now`, or else the next to start, whatever is set to start by itself: the class the
+    /// settings' recording span is shown for (`9:55 – 11:20`).
+    public static func next(_ courses: [Course], settings: Settings, now: Date, calendar: Calendar) -> StartingClass? {
+        courses.flatMap { classes(of: $0, settings: settings, around: now, days: 9, calendar: calendar, onlyOn: false) }
+            .filter { $0.end > now }
+            .min { $0.start < $1.start }
+    }
+
     /// The course's classes near `now`: its sessions with a known end, and the timetable's classes from the day
-    /// before to the day after that no session stands for (`SessionPlanner.planned`).
-    static func classes(of course: Course, settings: Settings, around now: Date, calendar: Calendar) -> [StartingClass] {
+    /// before to `days - 2` days after that no session stands for (`SessionPlanner.planned`).
+    static func classes(of course: Course, settings: Settings, around now: Date, days: Int = 3, calendar: Calendar,
+                        onlyOn: Bool = true) -> [StartingClass] {
         let file = course.file
         let id = file.course.id
-        guard settings.classStart.isOn(for: id) else { return [] }
+        guard !onlyOn || settings.classStart.isOn(for: id) else { return [] }
         let sessions: [StartingClass] = file.sessions.compactMap { s in
             guard !s.isCancelled, let end = s.end(schedule: file.course.schedule, calendar: calendar) else { return nil }
             return StartingClass(courseId: id, sessionId: s.id, start: s.date, end: end)
         }
         // From the day before, so a class that began before midnight is still found after it.
         let planned = SessionPlanner.planned(schedule: file.course.schedule, sessions: file.sessions, from: course.term?.start, to: course.term?.end,
-                                             examWeeks: course.term?.examWeeks ?? [], days: 3,
+                                             examWeeks: course.term?.examWeeks ?? [], days: days,
                                              now: now.addingTimeInterval(-86_400), calendar: calendar)
             .map { StartingClass(courseId: id, sessionId: nil, start: $0.date, end: $0.end) }
         return sessions + planned
@@ -178,14 +187,19 @@ public enum ClassStart {
     public static func due(_ c: StartingClass, settings: ClassStartSettings, now: Date) -> Set<Step> {
         guard now < c.end, settings.isOn(for: c.courseId) else { return [] }
         var due: Set<Step> = now >= c.start ? [.open] : []
-        let recordingAt = c.start.addingTimeInterval(TimeInterval(settings.recordingOffsetMinutes * 60))
-        if settings.isOn(.recording, course: c.courseId), now >= recordingAt { due.insert(.recording) }
+        if settings.isOn(.recording, course: c.courseId), now >= recordingStart(c, settings: settings) { due.insert(.recording) }
         return due
     }
 
-    /// When a recording the class started stops by itself; nil when it runs until stopped.
+    public static func recordingStart(_ c: StartingClass, settings: ClassStartSettings) -> Date {
+        c.start.addingTimeInterval(TimeInterval(settings.recordingOffsetMinutes * 60))
+    }
+
+    /// When a recording the class started stops by itself; nil when it runs until stopped. Never before it starts:
+    /// a stop set before the end of a short class would otherwise come ahead of the start.
     public static func recordingStop(_ c: StartingClass, settings: ClassStartSettings) -> Date? {
-        settings.stopsRecording ? c.end.addingTimeInterval(TimeInterval(max(0, settings.stopAfterMinutes) * 60)) : nil
+        guard settings.stopsRecording else { return nil }
+        return max(c.end.addingTimeInterval(TimeInterval(settings.stopAfterMinutes * 60)), recordingStart(c, settings: settings))
     }
 }
 

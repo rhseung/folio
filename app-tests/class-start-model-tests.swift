@@ -142,18 +142,37 @@ struct ClassStartModelTests {
         #expect(workspace.classStartSplit(split, showing: Navigator.Entry(link: .place(.today))) == split.split)
     }
 
-    @Test func settingsShowTheOffsetAndTheExceptions() {
-        let model = SettingsModel(workspace: workspace, tab: .recording)
+    @Test func settingsChipsKeepEachItemsWay() {
+        let model = SettingsModel(workspace: workspace, tab: .classes)
         model.load()
-        #expect(model.recordingTiming == .onTime)
-        model.recordingTiming = .before
-        #expect(model.settings.classStart.recordingOffsetMinutes == -SettingsModel.defaultLead)
-        model.recordingMinutes = 10
-        model.recordingTiming = .after
-        #expect(model.settings.classStart.recordingOffsetMinutes == 10)
-        model.recordingTiming = .onTime
-        #expect(model.settings.classStart.recordingOffsetMinutes == 0)
+        #expect(model.classStartItems.isEmpty)
+        model.classStartItems = [.recording, .roughNote, .lecture]
+        #expect(model.settings.classStart.recording == .start && model.settings.classStart.roughNote == .create && model.settings.classStart.lecture == .open)
+        // A chip turned off and on again comes back as it was set, not as the default.
+        model.settings.classStart.recording = .ask
+        model.settings.classStart.roughNote = .openExisting
+        model.classStartItems = [.lecture]
+        #expect(model.settings.classStart.recording == .off && model.settings.classStart.roughNote == .off)
+        model.classStartItems = [.recording, .roughNote, .lecture]
+        #expect(model.settings.classStart.recording == .ask && model.settings.classStart.roughNote == .openExisting)
+    }
 
+    @Test func settingsShowTheSpanAtARealClass() throws {
+        let model = SettingsModel(workspace: workspace, tab: .classes)
+        model.load()
+        model.settings.classStart.recordingOffsetMinutes = -5
+        let c = try #require(model.referenceClass)
+        #expect(c.end > workspace.liveNow)
+        let start = SettingsModel.clock(c.start.addingTimeInterval(-300))
+        #expect(model.recordingSpanTimes == "\(start) – \(String(localized: .settingsClassStartManualStop))")
+        model.settings.classStart.stopsRecording = true
+        model.settings.classStart.stopAfterMinutes = -10
+        #expect(model.recordingSpanTimes == "\(start) – \(SettingsModel.clock(c.end.addingTimeInterval(-600)))")
+    }
+
+    @Test func settingsShowTheExceptions() {
+        let model = SettingsModel(workspace: workspace, tab: .classes)
+        model.load()
         #expect(model.exceptionLabel(course) == String(localized: .settingsClassStartFollows))
         model.setFollows(false, .recording, course: course)
         #expect(model.exceptionLabel(course) == "녹음 제외")

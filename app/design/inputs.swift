@@ -301,6 +301,81 @@ struct Segmented<Value: Hashable>: View {
     func labelColor(_ chosen: Bool) -> Color { chosen ? Theme.Palette.text : Theme.Palette.textSecondary }
 }
 
+/// Things each turned on or off by pressing it, any number of them, none included: what a class starts by itself
+/// (녹음 · 러프 노트 · 렉처). `Segmented` is for one of several.
+struct ToggleChips<Value: Hashable>: View {
+    struct Option {
+        let value: Value
+        let label: String
+        let symbol: String
+    }
+
+    @Binding var selection: Set<Value>
+    let options: [Option]
+
+    var body: some View {
+        FlowLayout(spacing: Theme.Space.tight, centered: true) {
+            ForEach(options.indices, id: \.self) { i in
+                let option = options[i]
+                let on = selection.contains(option.value)
+                Button {
+                    if on { selection.remove(option.value) } else { selection.insert(option.value) }
+                } label: {
+                    HStack(spacing: Theme.Space.xs) {
+                        Image(systemName: option.symbol).imageScale(.small)
+                        Text(option.label).lineLimit(1)
+                    }
+                    .fontWeight(on ? .semibold : .regular)
+                    // `card` on the solid fill, not `onFill`: dark mode's light blue leaves white under 3:1.
+                    .foregroundStyle(on ? Theme.Palette.card : Theme.Palette.textSecondary)
+                    .padding(Theme.Inset.toggle)
+                    .background(on ? Theme.Palette.info : Theme.Palette.fill, in: .capsule)
+                    .contentShape(.capsule)
+                    .fixedSize()
+                }
+                .buttonStyle(.pointing(.plain))
+                .accessibilityAddTraits(on ? .isSelected : [])
+            }
+        }
+    }
+}
+
+/// Two to four options drawn as small pictures of what each does, the name under each: where a word alone doesn't say
+/// how the result looks (수업 시작의 배치).
+struct PictureChoice<Value: Hashable, Picture: View>: View {
+    @Binding var selection: Value
+    let options: [(Value, String)]
+    @ViewBuilder var picture: (Value) -> Picture
+
+    var body: some View {
+        HStack(spacing: Theme.Space.s) {
+            ForEach(options.indices, id: \.self) { i in
+                let (value, label) = options[i]
+                let chosen = selection == value
+                Button { selection = value } label: {
+                    VStack(spacing: Theme.Space.xs) {
+                        picture(value).frame(width: Self.picture.width, height: Self.picture.height)
+                        Text(label).font(Theme.Typeface.caption).lineLimit(1)
+                    }
+                    .fontWeight(chosen ? .semibold : .regular)
+                    .foregroundStyle(chosen ? Theme.Palette.info : Theme.Palette.textSecondary)
+                    .padding(.vertical, Theme.Space.tight)
+                    .padding(.horizontal, Theme.Space.s)
+                    .background(chosen ? Theme.Palette.info.opacity(Theme.Opacity.tint) : .clear, in: .rect(cornerRadius: Theme.Radius.control))
+                    .overlay(RoundedRectangle(cornerRadius: Theme.Radius.control).strokeBorder(chosen ? Theme.Palette.info : Theme.Palette.lineSoft))
+                    .contentShape(.rect(cornerRadius: Theme.Radius.control))
+                    .fixedSize()
+                }
+                .buttonStyle(.pointing(.plain))
+                .accessibilityLabel(label)
+                .accessibilityAddTraits(chosen ? .isSelected : [])
+            }
+        }
+    }
+
+    static var picture: CGSize { CGSize(width: 44, height: 28) }
+}
+
 /// Minute of the day as a chip. Drag sideways on the hours or the minutes to scrub them, or click one to set it on a clock
 /// face; nothing is typed, so every value it can hold is a real time.
 struct TimeMenu: View {

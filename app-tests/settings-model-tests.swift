@@ -35,15 +35,35 @@ struct SettingsModelTests {
 
     @Test func showsTheTabTheLinkNames() throws {
         let model = SettingsModel(workspace: try fixtureWorkspace(), tab: .notes)
-        model.follow(.settings(.letters))
-        #expect(model.tab == .catalog)
+        model.follow(.settings(.review))
+        #expect(model.tab == .review)
         // A link naming no tab, or another screen's, leaves the tab as it was.
         model.follow(.place(.settings))
         model.follow(.place(.grades))
-        #expect(model.tab == .catalog)
+        #expect(model.tab == .review)
+        // Tabs #416 merged open the tab that took them over.
+        model.follow(try #require(AppLink(string: "folio://settings/letters")))
+        #expect(model.tab == .record)
+        model.follow(try #require(AppLink(string: "folio://settings/recording")))
+        #expect(model.tab == .classes)
     }
 
-    @Test func tabLabelsKeepTheStoredNames() {
-        #expect(SettingsTab.allCases.allSatisfy { $0.label == $0.rawValue })
+    @Test func aTabRememberedByItsFormerNameStillOpens() {
+        let saved = UserDefaults.standard.string(forKey: SettingsTab.storageKey)
+        defer { UserDefaults.standard.set(saved, forKey: SettingsTab.storageKey) }
+        for (stored, tab) in [("녹음", SettingsTab.classes), ("평어", .record), ("알림", .notifications), ("review", .review), ("없는 탭", .general)] {
+            UserDefaults.standard.set(stored, forKey: SettingsTab.storageKey)
+            #expect(SettingsTab.remembered == tab)
+        }
+    }
+
+    @Test func reviewDaysCountFromToday() throws {
+        let workspace = try fixtureWorkspace()
+        let model = SettingsModel(workspace: workspace)
+        model.load()
+        model.settings.review.intervals = [1, 3]
+        let today = workspace.today
+        let days = [today.adding(days: 1), today.adding(days: 4)].map(SettingsModel.monthDay).joined(separator: " · ")
+        #expect(model.reviewDays == "\(SettingsModel.monthDay(today)) → \(days)")
     }
 }

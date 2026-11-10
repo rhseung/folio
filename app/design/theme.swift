@@ -128,6 +128,8 @@ enum Theme {
         static let zoneAlt = 0.18
         /// The zone picked on a section bar, above `onTint`, which the zone under the pointer takes.
         static let zonePicked = 0.3
+        /// The wash under an open `DisclosureRow`'s rows.
+        static let folded = 0.32
     }
 
     enum Space {

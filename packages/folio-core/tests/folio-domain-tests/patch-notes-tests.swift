@@ -32,7 +32,7 @@ struct PatchNotesTests {
     @Test func readsTheSectionOfABody() {
         #expect(PatchNotes.items(in: Self.body) == [
             Item(kind: .feat, text: "노트 옆 칸의 제목 목차"),
-            Item(kind: .feat, text: "수업 시작 자동 실행", link: .settings(.recording)),
+            Item(kind: .feat, text: "수업 시작 자동 실행", link: .settings(.classes)),
             Item(kind: .change, text: "빠른 추가 칩이 처음부터 흐리게 보임", link: .place(.today)),
             Item(kind: .fix, text: "수식 말풍선 위와 오른쪽 여백"),
             // A note is somebody's own: the link goes, the sentence stays.

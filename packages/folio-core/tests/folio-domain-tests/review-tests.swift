@@ -45,6 +45,12 @@ struct DayBoundaryTests {
         #expect(s.interval(atStep: 9) == 30 && s.interval(atStep: 0) == 1)
     }
 
+    @Test func reviewDaysAddUpTheIntervals() {
+        let days = ReviewSettings().reviewDays(after: LocalDate("2026-11-10")!)
+        // 1 · 3 · 7 · 14 · 30 days after the one before, across the month and the year.
+        #expect(days.map(\.description) == ["2026-11-11", "2026-11-14", "2026-11-21", "2026-12-05", "2027-01-04"])
+    }
+
     @Test func studyTimeMergesOverlapsAndUsesStudyDay() {
         let course = UUID()
         let sessions = [

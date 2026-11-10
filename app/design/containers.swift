@@ -4,12 +4,16 @@ import SwiftUI
 /// White rounded card that holds rows separated by inset hairlines.
 struct Card<Content: View>: View {
     var padding: CGFloat = 0
+    /// For rows with a wash of their own (an open `DisclosureRow` last in the card), which would square off its corners.
+    var clipped = false
     @ViewBuilder var content: Content
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) { content }
+        let rows = VStack(alignment: .leading, spacing: 0) { content }
             .padding(padding)
             .frame(maxWidth: .infinity, alignment: .leading)
+        // Only when asked: clipping every card cut what a row draws past its edge.
+        Group { if clipped { rows.clipShape(.rect(cornerRadius: Theme.Radius.card)) } else { rows } }
             .surface(Theme.Palette.card, in: .rect(cornerRadius: Theme.Radius.card))
             .overlay(RoundedRectangle(cornerRadius: Theme.Radius.card).strokeBorder(Theme.Palette.lineSoft))
     }
@@ -93,6 +97,10 @@ struct CardRow<Content: View>: View {
 struct FormRow<Control: View>: View {
     let label: String
     var detail: String?
+    /// A value this device keeps for itself (its appearance, its Whisper model) rather than settings.json.
+    var device = false
+    /// The detail is a problem to fix (Claude Code not found), not a fact about the value.
+    var warns = false
     var last = false
     @ViewBuilder var control: Control
 
@@ -100,11 +108,63 @@ struct FormRow<Control: View>: View {
         CardRow(last: last) {
             FoldingRow {
                 VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    Text(label).lineLimit(1)
-                    if let detail { Text(detail).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary) }
+                    HStack(spacing: Theme.Space.tight) {
+                        Text(label).lineLimit(1)
+                        if device { DeviceTag() }
+                    }
+                    if let detail {
+                        Text(detail).font(Theme.Typeface.caption).foregroundStyle(warns ? Theme.Palette.warning : Theme.Palette.textTertiary)
+                    }
                 }
             } control: {
                 control
+            }
+        }
+    }
+}
+
+/// "이 기기" beside a row's name: the value isn't shared with the student's other devices.
+struct DeviceTag: View {
+    var body: some View {
+        Text(.designThisDevice)
+            .font(Theme.Typeface.label)
+            .foregroundStyle(Theme.Palette.textTertiary)
+            .lineLimit(1)
+            .padding(.horizontal, Theme.Space.tight)
+            .padding(.vertical, Theme.Space.xxs)
+            .overlay(Capsule().strokeBorder(Theme.Palette.line))
+            // After the padding: a narrow row would otherwise squeeze the outline inside the text.
+            .fixedSize()
+    }
+}
+
+/// A row in a `Card` that folds the rows under it: values a student rarely changes (수업 시작과 복습의 세부, 노트의
+/// 소제목). The rows sit indented on a faint wash, so they read as this row's and not as the card's next rows.
+struct DisclosureRow<Rows: View>: View {
+    let label: String
+    @Binding var isOpen: Bool
+    var last = false
+    @ViewBuilder var rows: Rows
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button { withAnimation(.snappy) { isOpen.toggle() } } label: {
+                CardRow(last: last && !isOpen) {
+                    Text(label).lineLimit(1)
+                    Spacer(minLength: Theme.Space.s)
+                    Image(systemName: "chevron.right")
+                        .font(Theme.Glyph.small)
+                        .foregroundStyle(Theme.Palette.textTertiary)
+                        .rotationEffect(.degrees(isOpen ? 90 : 0))
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(.pointing(.plain))
+            .accessibilityValue(Text(isOpen ? .designExpanded : .designCollapsed))
+            if isOpen {
+                VStack(alignment: .leading, spacing: 0) { rows }
+                    .padding(.leading, Theme.Space.l)
+                    .background(Theme.Palette.fill.opacity(Theme.Opacity.folded))
             }
         }
     }

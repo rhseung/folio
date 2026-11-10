@@ -6387,7 +6387,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "과목의 페이지(sessions, units, notes, materials, quiz, cards, stats, problems, assignments, exams, grades)나 설정의 탭(profile, general, notifications, backup, letters, notes, recording, claude, about)"
+            "value": "과목의 페이지(sessions, units, notes, materials, quiz, cards, stats, problems, assignments, exams, grades)나 설정의 탭(general, record, class, notes, review, notifications, claude, backup, about)"
           }
         }
       }

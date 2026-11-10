@@ -7,15 +7,11 @@ struct CatalogEditor: View {
     var body: some View {
         let device = workspace.device
         CatalogEditing { $catalog in
-            // No block title: the tab already says 평어. The header row names the columns instead.
-            VStack(alignment: .leading, spacing: Theme.Space.s) {
-                // The flags under the rest of the row where the row doesn't fit, beside a course column at 720 and
-                // on an iPhone; one table for both, so the header and the rows always fold together.
-                ViewThatFits(in: .horizontal) {
-                    table($catalog.letterGrades, device: device, wide: true)
-                    table($catalog.letterGrades, device: device, wide: false)
-                }
-                Footnote(String(localized: .letterGradesFootnote))
+            // The flags under the rest of the row where the row doesn't fit, beside a course column at 720 and on an
+            // iPhone; one table for both, so the header and the rows always fold together.
+            ViewThatFits(in: .horizontal) {
+                table($catalog.letterGrades, device: device, wide: true)
+                table($catalog.letterGrades, device: device, wide: false)
             }
         }
     }

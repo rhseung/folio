@@ -100,7 +100,16 @@ public struct AppLink: Hashable, Sendable {
     /// A tab is a screen of its own, like a course's page, so it is a path and not an anchor: the window's history
     /// compares links without anchors and would take two tabs for one step.
     public enum SettingsPage: String, CaseIterable, Sendable {
-        case profile, general, notifications, backup, letters, notes, recording, claude, about
+        case general, record, classes = "class", notes, review, notifications, claude, backup, about
+
+        /// Tabs before #416 merged or renamed them. Links in patch notes, notes and remembered tabs still name them,
+        /// so they are read as the tab that took them over and written by the new name.
+        static let formerNames: [String: SettingsPage] = ["profile": .record, "letters": .record, "recording": .classes]
+
+        public init?(rawValue: String) {
+            guard let page = Self.allCases.first(where: { $0.rawValue == rawValue }) ?? Self.formerNames[rawValue] else { return nil }
+            self = page
+        }
     }
 
     public private(set) var kind: Kind
