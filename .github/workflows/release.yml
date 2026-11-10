@@ -5,6 +5,7 @@ name: Release
 on:
   push:
     tags: ['v*']
+    branches: [rhseung/versioning]
   workflow_dispatch:
     inputs:
       since:
@@ -57,7 +58,7 @@ jobs:
       - name: Notes
         env:
           VERSION: ${{ steps.version.outputs.version }}
-          SINCE: ${{ inputs.since }}
+          SINCE: ${{ inputs.since || 'HEAD~10' }}
         run: |
           if [ -z "$SINCE" ]; then
             # From the tag's parent, so a tag never finds itself.
