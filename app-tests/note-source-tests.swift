@@ -300,10 +300,9 @@ struct NoteSourceTests {
                     let bubble = try #require(await Self.bubble(view), "\(label)")
                     let image = try #require(bubble.picture.image, "\(label)")
                     #expect(bubble.picture.frame.size == image.size, "\(label): \(bubble.picture.frame.size) for \(image.size)")
-                    #expect(bubble.frame.minX >= view.visibleRect.minX && bubble.frame.maxX <= view.visibleRect.maxX, "\(label): \(bubble.frame) in \(view.visibleRect)")
-                    let room = view.visibleRect.width - 2 * PreviewBubble.pad - 8
+                    #expect(Self.inColumn(bubble, view), "\(label): \(bubble.frame) for \(view.column)")
                     if bubble.scrolls {
-                        #expect(bubble.frame.width == room + 2 * PreviewBubble.pad, "\(label): \(bubble.frame.width) for \(room)")
+                        #expect(bubble.frame.width == view.columnWidth + 2 * PreviewBubble.pad, "\(label): \(bubble.frame.width) for \(view.columnWidth)")
                     } else {
                         let picture = bubble.convert(bubble.picture.bounds, from: bubble.picture)
                         let insets = [picture.minX, picture.minY, bubble.bounds.maxX - picture.maxX, bubble.bounds.maxY - picture.maxY]
@@ -351,10 +350,10 @@ struct NoteSourceTests {
                 let bubble = try #require(await Self.bubble(view), "\(label)")
                 let image = try #require(bubble.picture.image, "\(label)")
                 let document = try #require(bubble.scroller.documentView, "\(label)")
-                let room = view.visibleRect.width - 2 * PreviewBubble.pad - 8
                 #expect(bubble.scrolls, "\(label)")
                 #expect(bubble.picture.frame.size == image.size, "\(label): shrunk to \(bubble.picture.frame.size) from \(image.size)")
-                #expect(bubble.frame.width == room + 2 * PreviewBubble.pad, "\(label): \(bubble.frame.width)")
+                #expect(bubble.frame.width == view.columnWidth + 2 * PreviewBubble.pad, "\(label): \(bubble.frame.width)")
+                #expect(Self.inColumn(bubble, view), "\(label): \(bubble.frame) for \(view.column)")
                 // The picture and its padding, inside the border.
                 #expect(document.frame.width == image.size.width + 2 * (PreviewBubble.pad - 1), "\(label): \(document.frame.width) for \(image.size.width)")
                 let end = document.frame.width - bubble.scroller.bounds.width
@@ -379,6 +378,7 @@ struct NoteSourceTests {
             }
             NoteRender.sheet(rows, columns: ["처음", "끝"], dark: dark, "math-bubble-scroll-\(dark ? "dark" : "light")")
         }
+        try await multilineBlockScrolls()
         // A formula that fits has nothing to scroll: under the pointer or not, it goes with the caret, rather than
         // staying over the line the caret went to.
         let (view, window) = Self.editor("앞 $x^2$ 뒤", width: 720)
@@ -391,6 +391,59 @@ struct NoteSourceTests {
         short.hovered = true
         view.setSelectedRange(NSRange(location: 0, length: 0))
         #expect(view.bubble == nil)
+    }
+
+    /// A block written over several lines is one formula, as long as its lines together: at its size, in a bubble no
+    /// wider than the column, opening at the caret's line from its start, and taking a wheel over it, which the note
+    /// took before, so it couldn't be scrolled at all.
+    func multilineBlockScrolls() async throws {
+        let lines = ["det(B - tI) = det(Q^-1AQ - tI) = det(Q^-1(A-tI)Q) =",
+                     "det(Q^-1)det(A - tI)det(Q) = 1/(det(Q)) det(A - tI) det(Q) =",
+                     "det(A - tI)"]
+        let text = "앞\n$$\n" + lines.joined(separator: "\n") + "\n$$\n뒤"
+        let (view, window) = Self.editor(text, width: 720)
+        Self.shown(window)
+        defer { window.orderOut(nil) }
+        view.configure(accent: CourseAccent.presets[0].accent, syntax: .asciimath, dark: false)
+        window.makeFirstResponder(view)
+        let ns = text as NSString
+        let open = ns.range(of: "$$").location, source = ns.substring(with: NSRange(location: open, length: ns.range(of: "뒤").location - open))
+        view.setSelectedRange(NSRange(location: open + 1, length: 0))
+        let bubble = try #require(await Self.bubble(view))
+        let image = try #require(bubble.picture.image)
+        let document = try #require(bubble.scroller.documentView)
+        let visible = bubble.scroller.bounds.width, end = document.frame.width - visible
+        func offset() -> CGFloat { bubble.scroller.contentView.bounds.minX }
+        #expect(bubble.scrolls)
+        #expect(bubble.picture.frame.size == image.size, "shrunk to \(bubble.picture.frame.size) from \(image.size)")
+        #expect(document.frame.width == image.size.width + 2 * (PreviewBubble.pad - 1), "\(document.frame.width) for \(image.size.width)")
+        #expect(bubble.frame.width == view.columnWidth + 2 * PreviewBubble.pad, "\(bubble.frame.width)")
+        #expect(Self.inColumn(bubble, view), "\(bubble.frame) for \(view.column)")
+        // On the `$$` line, the formula's start.
+        #expect(offset() == 0 && bubble.leading.isHidden && !bubble.trailing.isHidden, "opened at \(offset())")
+        // On the second line, that line's part from its start, the same bubble scrolled to it.
+        let second = ns.range(of: lines[1]).location
+        view.setSelectedRange(NSRange(location: second, length: 0))
+        #expect(view.bubble === bubble)
+        let line = SourceTextView.blockPlace(in: source, at: second - open).line
+        let x = bubble.picture.frame.minX + line * bubble.picture.frame.width
+        #expect(line > 0.2 && line < 0.6, "\(line)")
+        #expect(offset() > 0 && x >= offset() && x <= offset() + visible, "line at \(x), shown from \(offset())")
+        // On the last line, which ends the formula, and on the closing `$$`, its end.
+        view.setSelectedRange(NSRange(location: ns.range(of: lines[2], options: .backwards).location + 4, length: 0))
+        #expect(offset() == end, "\(offset()) for \(end)")
+        view.setSelectedRange(NSRange(location: ns.range(of: "$$", options: .backwards).location + 1, length: 0))
+        #expect(view.bubble === bubble && offset() == end, "\(offset()) for \(end) on the closing line")
+        // A wheel over it is the bubble's; a click goes on to the note under it.
+        let scroll = try #require(view.enclosingScrollView as? NoteScrollView)
+        let center = try #require(scroll.superview).convert(NSPoint(x: bubble.frame.midX, y: bubble.frame.midY), from: view)
+        #expect(scroll.hit(center, wheel: true) === bubble.scroller)
+        #expect(scroll.hit(center, wheel: false) === view)
+    }
+
+    /// Within the text column, with the padding that puts the picture's start under its source's past it.
+    static func inColumn(_ bubble: PreviewBubble, _ view: SourceTextView) -> Bool {
+        bubble.frame.minX >= view.column.lowerBound - PreviewBubble.pad && bubble.frame.maxX <= view.column.upperBound + PreviewBubble.pad
     }
 
     /// A bubble, and the line of source it's under.

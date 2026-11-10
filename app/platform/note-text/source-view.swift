@@ -157,7 +157,14 @@ final class NoteScrollView: NSScrollView {
     // the note puts over its text (the preview bubble) takes no clicks. The room past the note's end is the clip
     // view's, under no part of the note; a click there went nowhere, so the note takes it and puts the caret at its end.
     override func hitTest(_ point: NSPoint) -> NSView? {
+        hit(point, wheel: NSApp.currentEvent?.type == .scrollWheel)
+    }
+
+    // The window sends a wheel to the view this finds, so a formula that scrolls in its bubble takes it: given to the
+    // note like a click, a sideways swipe over the bubble went nowhere and the formula couldn't be scrolled at all.
+    func hit(_ point: NSPoint, wheel: Bool) -> NSView? {
         let hit = super.hitTest(point)
+        if wheel, hit is BubbleScroller { return hit }
         guard let hit, let document = documentView, hit === self || hit === contentView || hit.isDescendant(of: document) else { return hit }
         return document
     }
@@ -223,6 +230,9 @@ class NoteTextView: NSTextView {
 
     /// The text column's width, which the bubble's pictures fit.
     var columnWidth: CGFloat { max(120, min(NoteLook.measure, bounds.width) - 2 * NoteLook.margin) }
+
+    /// Where the text column runs across the view.
+    var column: ClosedRange<CGFloat> { textContainerOrigin.x...(textContainerOrigin.x + columnWidth) }
 
     func accentColors(_ accent: CourseAccent) {
         insertionPointColor = accent.native
@@ -959,16 +969,18 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             // The same picture keeps its view, and where it's scrolled to follows the caret.
             if let found, found.image === kept.picture.image, found.size == kept.picture.frame.size, let origin = bubbleOrigin(kept.frame.size, found.span) {
                 kept.setFrameOrigin(origin)
-                kept.reveal(found.at)
+                kept.reveal(found.at, line: found.line)
                 return
             }
         }
         bubble?.removeFromSuperview()
         bubble = nil
         guard let found else { return }
-        // At its own size: a formula wider than the editor scrolls sideways in the bubble, as it does in the preview,
-        // since shrunk to fit it was too small to read. A picture is already cut to a preview's size.
-        let room = visibleRect.width - 2 * PreviewBubble.pad - 8
+        // At its own size: a formula wider than the column scrolls sideways in the bubble, as it does in the preview,
+        // since shrunk to fit it was too small to read. A picture is already cut to a preview's size. The picture shows
+        // as wide as the column, with the padding past it on either side: as wide as the view, the bubble ran into the
+        // window's edge and its scroller.
+        let room = columnWidth
         let scale = found.math ? 1 : min(1, room / max(1, found.size.width))
         let view = PreviewBubble(image: found.image, size: CGSize(width: (found.size.width * scale).rounded(), height: (found.size.height * scale).rounded()),
                                  width: room + 2 * PreviewBubble.pad)
@@ -976,12 +988,12 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         view.setFrameOrigin(origin)
         view.onLeave = { [weak self] in self?.updateBubble() }
         addSubview(view)
-        view.reveal(found.at)
+        view.reveal(found.at, line: found.line)
         bubble = view
     }
 
     /// By the source at `span`: the formula starting where its source does, the padding reaching out to the left of it,
-    /// under the source, or over it when the screen ends first; never pushing the text.
+    /// within the column and that padding, under the source, or over it when the screen ends first; never pushing the text.
     private func bubbleOrigin(_ size: CGSize, _ span: NSRange) -> NSPoint? {
         guard let window, let storage = textStorage, NSMaxRange(span) <= storage.length, span.length > 0 else { return nil }
         let text = storage.string as NSString
@@ -989,7 +1001,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         while end > span.location + 1, text.character(at: end - 1) == 0x0A { end -= 1 }
         let line = { (i: Int) in self.convert(window.convertFromScreen(self.firstRect(forCharacterRange: NSRange(location: i, length: 1), actualRange: nil)), from: nil) }
         let first = line(span.location), last = line(end - 1)
-        let x = max(0, min(first.minX - PreviewBubble.pad, bounds.maxX - size.width - 4))
+        let x = max(column.lowerBound - PreviewBubble.pad, min(first.minX - PreviewBubble.pad, column.upperBound + PreviewBubble.pad - size.width))
         let under = last.maxY + 4, over = first.minY - 4 - size.height
         // In whole points: the scroller's clip view aligns itself to the screen's pixels, and off them it shifted the
         // picture by the fraction.
@@ -997,13 +1009,14 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     }
 
     /// What the bubble shows: its picture, the source it's for, and how far into that source the caret is, which a
-    /// formula wider than the bubble is scrolled to.
+    /// formula wider than the bubble is scrolled to. In a block, also how far in the caret's line starts.
     private struct Rendering {
         let image: NSImage
         let size: CGSize
         let span: NSRange
         let math: Bool
         let at: CGFloat
+        var line: CGFloat?
     }
 
     /// The math is drawn after the caret came to it (`NoteMath`), and the caret may have moved on by then.
@@ -1038,9 +1051,30 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
         if let tex = storage.attribute(.noteMathBlock, at: min(caret, storage.length - 1), longestEffectiveRange: &span, in: all) as? String,
            let picture = NoteMath.shared.picture(tex, syntax: styler.syntax, display: true, size: NoteLook.body, dark: styler.dark, trim: true,
                                                  ready: redrawBubble) {
-            return Rendering(image: picture.image, size: picture.size, span: span, math: true, at: at(span))
+            let place = Self.blockPlace(in: (storage.string as NSString).substring(with: span), at: caret - span.location)
+            return Rendering(image: picture.image, size: picture.size, span: span, math: true, at: place.caret, line: place.line)
         }
         return nil
+    }
+
+    /// How far into a math block's formula `offset` in its source is, and the start of the line it's on, counted in
+    /// the characters that draw: the `$$` lines and the line breaks draw nothing, and counted they put the caret on a
+    /// block's second line well off where that line's part of the formula is.
+    static func blockPlace(in source: String, at offset: Int) -> (caret: CGFloat, line: CGFloat) {
+        let text = source as NSString
+        var skip = IndexSet()
+        let open = text.range(of: "$$"), close = text.range(of: "$$", options: .backwards)
+        if open.location != NSNotFound { skip.insert(integersIn: open.location..<NSMaxRange(open)) }
+        if close.location != NSNotFound, close.location >= NSMaxRange(open) { skip.insert(integersIn: close.location..<NSMaxRange(close)) }
+        let blank = CharacterSet.whitespacesAndNewlines
+        func ink(_ end: Int) -> Int {
+            (0..<min(max(0, end), text.length)).count(where: { i in
+                !skip.contains(i) && !(UnicodeScalar(text.character(at: i)).map { blank.contains($0) } ?? false)
+            })
+        }
+        let total = CGFloat(max(1, ink(text.length)))
+        let start = text.lineRange(for: NSRange(location: min(max(0, offset), text.length), length: 0)).location
+        return (CGFloat(ink(offset)) / total, CGFloat(ink(start)) / total)
     }
 
     // MARK: Files
@@ -1191,12 +1225,16 @@ final class PreviewBubble: NSView {
 
     required init?(coder: NSCoder) { fatalError() }
 
-    /// Scrolls to the part of the picture `fraction` of the way across it, the caret's place in the source,
-    /// centered where the picture's ends allow.
-    func reveal(_ fraction: CGFloat) {
+    /// Scrolls to the part of the picture `fraction` of the way across it, the caret's place in the source, centered
+    /// where the picture's ends allow. A block's caret `line` shows from its start, just past the fade, when the caret
+    /// shows with it: centered on the caret, a block opened on its second line showed the end of the first.
+    func reveal(_ fraction: CGFloat, line: CGFloat? = nil) {
         guard scrolls, let document = scroller.documentView else { return }
         let visible = scroller.bounds.width
-        let x = min(max(0, fraction * document.frame.width - visible / 2), document.frame.width - visible)
+        let across = { (f: CGFloat) in self.picture.frame.minX + f * self.picture.frame.width }
+        var x = across(fraction) - visible / 2
+        if let line, across(fraction) <= across(line) + visible - 2 * Self.fade { x = across(line) - Self.fade }
+        x = min(max(0, x), document.frame.width - visible)
         scroller.contentView.scroll(to: NSPoint(x: x.rounded(), y: 0))
         scroller.reflectScrolledClipView(scroller.contentView)
     }
