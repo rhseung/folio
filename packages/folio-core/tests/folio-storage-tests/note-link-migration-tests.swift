@@ -91,6 +91,6 @@ struct NoteLinkMigrationTests {
         try doc.write(to: url)
         let written = try JSONFormat.decoder.decode(JSONValue.self, from: Data(contentsOf: url))
         guard case .array(let saved)? = written["notes"] else { Issue.record("no notes"); return }
-        #expect(saved[0]["sessionId"] == nil && written["schemaVersion"] == .number(6))
+        #expect(saved[0]["sessionId"] == nil && written["schemaVersion"] == .number(Double(CourseFile.schemaVersion)))
     }
 }

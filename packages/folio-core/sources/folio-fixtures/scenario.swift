@@ -200,8 +200,12 @@ private struct Builder {
             (graph, "SP2", at(12, 2, 23, 59), .todo),
             (robotics, "Final Project", at(12, 18, 23, 59), .todo),
         ]
+        // Repeats of each kind, for the assignment list's labels.
+        let repeats: [String: AssignmentRepeat] = ["HW6": .biweekly, "HW5": .weekly, "SP2": AssignmentRepeat(.week, weekdays: [1, 3]),
+                                                   "HW4": AssignmentRepeat(every: 3, .day),
+                                                   "Lab5 보고서": AssignmentRepeat(.week, weekdays: [1, 3])]
         for (course, title, due, status) in deadlines {
-            let id = try run(AssignmentAdd(course: course, title: title, due: due), at: at(10, 20, 9))
+            let id = try run(AssignmentAdd(course: course, title: title, due: due, repeats: repeats[title]), at: at(10, 20, 9))
             if status != .todo { try run(AssignmentStatusSet(course: course, assignment: id, status: status), at: at(11, 3, 20)) }
         }
 

@@ -64,7 +64,7 @@ struct AddCommand: ParsableCommand {
         } else {
             row(String(localized: .addFieldDue), String(localized: .addNoDue).styled(.dim))
         }
-        if read.repeats == .weekly { row(String(localized: .addFieldRepeats), String(localized: .addWeekly)) }
+        if let repeats = read.repeats { row(String(localized: .addFieldRepeats), repeats.label) }
         if let folder = read.folder { row(String(localized: .addFieldFolder), folder) }
     }
 }

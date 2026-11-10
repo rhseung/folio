@@ -75,10 +75,6 @@ public enum AssignmentSource: String, Codable, Sendable, CaseIterable {
     case manual, file, lms
 }
 
-public enum AssignmentRepeat: String, Codable, Sendable, CaseIterable {
-    case weekly
-}
-
 public struct Assignment: Entity {
     public var id: UUID
     public var createdAt: Date
@@ -117,17 +113,25 @@ public struct Assignment: Entity {
 }
 
 extension CourseFile {
-    /// Once a repeating assignment is handed in, the next one: a week later, same title, group and component, as long
-    /// as it falls by `end` and isn't there yet. Only the one just handed in moves the series on, so deleting a later
-    /// one ends it.
+    /// Once a repeating assignment is handed in, the next one: on the rule's next deadline, same title, rule, group and
+    /// component, as long as it falls by `end` and isn't there yet. Only the one just handed in moves the series on, so
+    /// deleting a later one ends it.
     public mutating func continueRepeating(_ id: UUID, until end: Date?, calendar: Calendar, device: DeviceID, now: Date) {
-        guard let a = assignments.first(where: { $0.id == id }), a.repeats == .weekly, !a.status.isOpen, let due = a.due,
-              let next = calendar.date(byAdding: .day, value: 7, to: due), end.map({ next <= $0 }) ?? true,
+        guard let a = assignments.first(where: { $0.id == id }), let rule = a.repeats, !a.status.isOpen, let due = a.due,
               !assignments.contains(where: { $0.title == a.title && ($0.due ?? .distantPast) > due }) else { return }
+        let next = nextDue(after: due, rule: rule, title: a.title, calendar: calendar)
+        guard end.map({ next <= $0 }) ?? true else { return }
         var made = Assignment(device: device, at: now, title: a.title, due: next)
-        made.repeats = .weekly
+        made.repeats = rule
         made.componentId = a.componentId
         made.componentGroup = a.componentGroup
         assignments.append(made)
+    }
+
+    /// The deadline after `due` in the series titled `title`. A monthly series keeps the day it started on, so one
+    /// clamped to a short month's end goes back to the 31st; the sheet's hint and the next assignment both ask here.
+    public func nextDue(after due: Date, rule: AssignmentRepeat, title: String, calendar: Calendar) -> Date {
+        let first = (assignments.filter { $0.title == title && $0.repeats?.unit == .month }.compactMap(\.due) + [due]).min()!
+        return rule.next(after: due, day: calendar.component(.day, from: first), calendar: calendar)
     }
 }

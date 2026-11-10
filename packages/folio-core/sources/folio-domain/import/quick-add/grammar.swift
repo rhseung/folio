@@ -109,6 +109,16 @@ extension QuickAdd {
         }
     }
 
+    /// `월수` names a weekly rule's weekdays only beside one (`매주 월수`, `격주 화목`) or with `마다` (`월,수마다`);
+    /// otherwise it is a word of the title.
+    static func bindWeekdays(_ words: inout [Word]) {
+        let weekly = words.contains { $0.rule?.unit == .week }
+        for i in words.indices where words[i].weekdayGroup?.each == false && !weekly {
+            words[i].piece = nil
+            words[i].normalized = words[i].text
+        }
+    }
+
     /// `까지` or `마감` as a word of its own belongs to the deadline before it (`금 마감`), and to the title otherwise.
     static func markEndings(_ words: inout [Word]) {
         for i in words.indices.dropFirst() where dueEndings.contains(words[i].text) && words[i - 1].isDue {

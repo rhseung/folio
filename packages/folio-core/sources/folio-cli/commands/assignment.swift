@@ -55,7 +55,7 @@ struct AssignmentCommand: ParsableCommand {
             say(a.title.styled(.bold))
             if let due = a.due { say(String(localized: .assignmentShowDue(when(due, now: r.ctx.now, time: true)))) }
             say(String(localized: .assignmentShowStatus(a.status.rawValue.toned)))
-            if a.repeats == .weekly { say(String(localized: .assignmentShowWeekly)) }
+            if let repeats = a.repeats { say(String(localized: .assignmentShowRepeats(repeats.label))) }
             if !a.memo.isEmpty { say(String(localized: .assignmentShowMemo(a.memo))) }
             let scores = f.scores.filter { $0.assignmentId == a.id }
             if !scores.isEmpty {

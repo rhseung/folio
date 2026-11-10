@@ -95,7 +95,7 @@ struct AssignmentsView: View {
                 .foregroundStyle(done ? Theme.Palette.textTertiary : Theme.Palette.text)
                 .animation(.easeOut(duration: 0.25), value: done)
             let meta = HStack(spacing: Theme.Space.s) {
-                if a.repeats == .weekly { Label(.assignmentsWeekly, systemImage: "repeat") }
+                if let repeats = a.repeats { Label(repeats.label, systemImage: "repeat") }
                 if row.problems > 0 { Label(.assignmentsProblems(row.problems), systemImage: "doc") }
                 if row.submissions > 0 { Label(.assignmentsSubmissions(row.submissions), systemImage: "paperplane") }
                 if let component = row.component { Label(component, systemImage: "chart.pie") }
@@ -148,8 +148,17 @@ struct AssignmentSheet: View {
                         }
                     }
                     FormRow(label: String(localized: .assignmentsFieldRepeat), detail: model.repeatDetail) {
-                        ChoiceMenu(selection: $model.repeats, options: [(AssignmentRepeat?.none, String(localized: .assignmentsRepeatNever)),
-                                                                        (.weekly, String(localized: .assignmentsWeekly))])
+                        Menu {
+                            RepeatMenuItems(selection: model.repeats, custom: model.customRepeat, pick: model.pickRepeat, customize: model.customizeRepeat)
+                        } label: {
+                            ChipLabel(model.repeatLabel)
+                        }
+                        .menuStyle(.button)
+                        .buttonStyle(.plain).pointingHand()
+                        .fixedSize()
+                    }
+                    if model.customRepeat {
+                        RepeatRuleRows(rule: $model.customRule, dueWeekday: model.dueWeekday)
                     }
                     FormRow(label: String(localized: .assignmentsStatus), last: true) {
                         ChoiceMenu(selection: $model.status, options: [AssignmentStatus.todo, .doing, .submitted, .graded].map { ($0, $0.label) })

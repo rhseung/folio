@@ -11,7 +11,9 @@ extension NoteFormat: ExpressibleByArgument {}
 extension MathSyntax: ExpressibleByArgument {}
 extension AttendanceState: ExpressibleByArgument {}
 extension AssignmentStatus: ExpressibleByArgument {}
-extension AssignmentRepeat: ExpressibleByArgument {}
+extension AssignmentRepeat: ExpressibleByArgument {
+    public init?(argument: String) { self.init(text: argument) }
+}
 extension MaterialStatus: ExpressibleByArgument {}
 extension GradingMode: ExpressibleByArgument {}
 extension Term: ExpressibleByArgument {}

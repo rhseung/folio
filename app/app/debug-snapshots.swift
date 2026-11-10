@@ -88,6 +88,8 @@ final class SnapshotDriver {
     var quickAddOpen = false
     /// Opens the deadline chip's calendar as the field appears.
     var quickAddDueOpen = false
+    /// Opens the repeat chip's rule popover as the field appears, as "직접 설정…" in its menu would.
+    var quickAddRepeatOpen = false
     /// The course the course chip picks once the sample line is typed, as a click in its menu would.
     var quickAddPick: UUID?
     /// Opens the f(x) palette of the open note, as its button would.
@@ -355,15 +357,18 @@ final class SnapshotDriver {
             ("empty", nil, false), ("short", "HW5 금 23:59", false),
             ("long", "Lab3 보고서 초안과 실험 데이터 정리, 그래프와 오차 분석까지 끝내고 제출 다음 주 수요일 오후 6시까지", false),
             ("wrapped", "확률과 통계 Lab3 보고서 매주 금 23:59", false), ("due-open", "HW5 금 23:59", true),
+            ("repeat", "\(named) HW 매주 월수", false), ("repeat-open", "\(named) HW 격주 월수 18:00", false),
         ]
         for (name, text, dueOpen) in steps {
             quickAddText = text
             quickAddDueOpen = dueOpen
+            quickAddRepeatOpen = name == "repeat-open"
             quickAddOpen = true
-            try? await Task.sleep(for: .seconds(dueOpen ? 3.5 : 3))
+            try? await Task.sleep(for: .seconds(dueOpen || quickAddRepeatOpen ? 3.5 : 3))
             await shot("quick-add-course-\(name)", popovers: true)
             quickAddOpen = false
             quickAddDueOpen = false
+            quickAddRepeatOpen = false
             try? await Task.sleep(for: .seconds(1))
         }
         quickAddText = nil
