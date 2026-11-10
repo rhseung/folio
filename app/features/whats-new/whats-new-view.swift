@@ -8,6 +8,7 @@ struct WhatsNewView: View {
     init(workspace: Workspace) { _model = State(initialValue: WhatsNewModel(workspace: workspace)) }
 
     var body: some View {
+        // Each part a block of the page, `section` apart: the tools, then every version.
         Page(maxWidth: 760) {
             PageHeader(title: String(localized: .whatsNewTitle), subtitle: model.subtitle)
             switch model.state {
@@ -21,34 +22,39 @@ struct WhatsNewView: View {
             case .empty:
                 EmptyCard(symbol: "doc.text", title: String(localized: .whatsNewEmpty))
             case .noMatch, .releases:
-                VStack(alignment: .leading, spacing: Theme.Space.l) {
-                    tools
-                    if case .releases(let releases) = model.state {
-                        ForEach(releases, id: \.version) { release in
-                            ReleaseSection(model: model, release: release)
-                        }
-                    } else {
-                        EmptyLine(model.noMatch)
+                tools
+                if case .releases(let releases) = model.state {
+                    ForEach(releases, id: \.version) { release in
+                        ReleaseSection(model: model, release: release)
                     }
+                } else {
+                    EmptyLine(model.noMatch)
                 }
-                .onGeometryChange(for: CGFloat.self, of: \.size.width) { model.width = $0 }
             }
         }
         .task { await model.load() }
     }
 
     var tools: some View {
-        // Side by side where they fit; the kinds under the search field in a narrow pane.
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: Theme.Space.m) {
-                SearchField(prompt: String(localized: .whatsNewSearch), text: $model.query).frame(maxWidth: 280)
-                Segmented(selection: $model.kind, options: model.kindOptions)
-            }
-            VStack(alignment: .leading, spacing: Theme.Space.s) {
-                SearchField(prompt: String(localized: .whatsNewSearch), text: $model.query)
-                Segmented(selection: $model.kind, options: model.kindOptions)
+        Group {
+            if model.narrow {
+                VStack(alignment: .leading, spacing: Theme.Space.m) {
+                    SearchField(prompt: String(localized: .whatsNewSearch), text: $model.query)
+                    kinds
+                }
+            } else {
+                HStack(spacing: Theme.Space.m) {
+                    SearchField(prompt: String(localized: .whatsNewSearch), text: $model.query).frame(maxWidth: 280)
+                    kinds
+                }
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .onGeometryChange(for: CGFloat.self, of: \.size.width) { model.width = $0 }
+    }
+
+    var kinds: some View {
+        Segmented(selection: $model.kind, options: model.kindOptions, inks: model.kindOptions.map { $0.0?.tone.foreground })
     }
 }
 
@@ -57,22 +63,27 @@ private struct ReleaseSection: View {
     let model: WhatsNewModel
     let release: PatchNotes.Release
 
+    static let chevron: CGFloat = 12
+
     var body: some View {
         let open = model.isOpen(release)
-        VStack(alignment: .leading, spacing: Theme.Space.s) {
+        VStack(alignment: .leading, spacing: Theme.Space.l) {
             Button { withAnimation(.snappy) { model.toggle(release) } } label: {
                 Group {
-                    if model.countsBelow {
-                        VStack(alignment: .leading, spacing: Theme.Space.xs) {
+                    if model.narrow {
+                        VStack(alignment: .leading, spacing: Theme.Space.s) {
                             title(open: open)
-                            KindCounts(counts: model.counts(release))
+                            if model.showsCounts(release) {
+                                // Under the version number, past the chevron.
+                                KindCounts(counts: model.counts(release)).padding(.leading, Self.chevron + Theme.Space.s)
+                            }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     } else {
                         HStack(spacing: Theme.Space.s) {
                             title(open: open)
                             Spacer(minLength: Theme.Space.s)
-                            KindCounts(counts: model.counts(release))
+                            if model.showsCounts(release) { KindCounts(counts: model.counts(release)) }
                         }
                     }
                 }
@@ -81,8 +92,10 @@ private struct ReleaseSection: View {
             }
             .buttonStyle(.pointing(.plain))
             if open {
-                ForEach(PatchNotes.grouped(release.items), id: \.kind) { group in
-                    PatchNoteGroup(group: group)
+                VStack(alignment: .leading, spacing: Theme.Space.xl) {
+                    ForEach(PatchNotes.grouped(release.items), id: \.kind) { group in
+                        PatchNoteGroup(group: group)
+                    }
                 }
             }
         }
@@ -94,6 +107,7 @@ private struct ReleaseSection: View {
                 .font(Theme.Glyph.small)
                 .foregroundStyle(Theme.Palette.textTertiary)
                 .rotationEffect(.degrees(open ? 90 : 0))
+                .frame(width: Self.chevron)
             Text(release.version.description).font(Theme.Typeface.figureMedium).monospacedDigit()
             if model.isCurrent(release) { Chip(String(localized: .whatsNewCurrent), tone: .accent) }
             if let date = model.date(release) { Text(date).foregroundStyle(Theme.Palette.textTertiary).lineLimit(1) }

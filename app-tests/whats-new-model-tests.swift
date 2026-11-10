@@ -126,16 +126,34 @@ struct WhatsNewModelTests {
         #expect(model.noMatch == "‘창’에 맞는 항목 없음 (fix)")
     }
 
-    /// An iPhone folds every version's counts under it, one with a single kind too; a pane or a window folds none.
-    @Test func theCountsFoldForThePageNotPerVersion() throws {
+    /// An iPhone folds every version's heading and the search field, one with a single kind too; a pane or a window
+    /// folds none.
+    @Test func thePageFoldsAsAWholeNotPerVersion() throws {
         let model = try makeModel()
-        #expect(model.countsBelow)
-        model.width = 390 - 32
-        #expect(model.countsBelow)
+        #expect(model.narrow)
+        model.width = 390 - 64
+        #expect(model.narrow)
         for width: CGFloat in [720 - 64, 760] {
             model.width = width
-            #expect(!model.countsBelow, "\(width)")
+            #expect(!model.narrow, "\(width)")
         }
+    }
+
+    /// An open version's groups already count its items.
+    @Test func onlyAClosedVersionShowsItsCounts() async throws {
+        let model = try makeModel()
+        await model.load()
+        guard case .releases(let shown) = model.state else { Issue.record("\(model.state)"); return }
+        #expect(!model.showsCounts(shown[0]) && model.showsCounts(shown[1]))
+        model.toggle(shown[0])
+        #expect(model.showsCounts(shown[0]))
+    }
+
+    /// Each kind its own hue, so feat and change are not two grays.
+    @Test func everyKindHasItsOwnTone() {
+        let tones = PatchNotes.Kind.allCases.map(\.tone)
+        #expect(Set(tones.map { "\($0)" }).count == tones.count)
+        #expect(!tones.contains(.plain) && !tones.contains(.accent))
     }
 
     @Test func offlineSaysSoAndRetries() async throws {
