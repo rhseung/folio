@@ -64,12 +64,16 @@ struct AppLinkTests {
     @Test func settingsTabsArePathsLikeACoursesPages() {
         #expect(AppLink.settings(.claude).string == "folio://settings/claude")
         #expect(AppLink.settings(nil) == .place(.settings))
-        #expect(AppLink(string: "folio://Settings/Letters") == .settings(.letters))
-        #expect(AppLink(string: "folio://settings/letters#x") == .settings(.letters))
+        #expect(AppLink(string: "folio://Settings/Review") == .settings(.review))
+        #expect(AppLink(string: "folio://settings/class#x") == .settings(.classes))
         // Another tab is another step in a window's history.
         #expect(AppLink.settings(.claude).withoutAnchor != AppLink.settings(.general).withoutAnchor)
         #expect(AppLink.settings(.claude).with(.heading("x")) == .settings(.claude))
         #expect(AppLink(string: "folio://settings/nowhere") == nil)
+        // Tabs #416 merged: old links open the tab that took them over, and are written by its name.
+        #expect(AppLink(string: "folio://settings/profile") == .settings(.record))
+        #expect(AppLink(string: "folio://Settings/Letters") == .settings(.record))
+        #expect(AppLink(string: "folio://settings/recording")?.string == "folio://settings/class")
         #expect(AppLink(string: "folio://grades/claude") == nil)
     }
 

@@ -8,18 +8,29 @@ struct ScrubField: View {
     let step: Double
     var fractionLength = 0
     var width: CGFloat = 80
+    /// Shows and takes the size alone, the words beside it saying which way (`[5] 분 전`): typing keeps the sign.
+    var magnitude = false
     @State private var start: Double?
     @State private var typing = false
     @FocusState private var focused: Bool
 
     static let pointsPerStep: CGFloat = 6
 
-    var text: String { value.formatted(.number.grouping(.never).precision(.fractionLength(fractionLength))) }
+    var text: String { shown.formatted(.number.grouping(.never).precision(.fractionLength(fractionLength))) }
+
+    var shown: Double { magnitude ? abs(value) : value }
+
+    var typed: Binding<Double> {
+        guard magnitude else { return $value }
+        return Binding(get: { abs(value) }, set: { n in
+            value = min(max((value < 0 ? -1 : 1) * abs(n), range.lowerBound), range.upperBound)
+        })
+    }
 
     var body: some View {
         Group {
             if typing {
-                TextField("", value: $value, format: .number.grouping(.never))
+                TextField("", value: typed, format: .number.grouping(.never))
                     .focused($focused)
                     .onSubmit { typing = false }
                     .onChange(of: focused) { _, now in if !now { typing = false } }

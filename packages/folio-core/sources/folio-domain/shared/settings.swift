@@ -104,6 +104,13 @@ public struct ReviewSettings: Codable, Sendable, Equatable {
     /// The interval at `step`; steps past the last keep the last interval.
     public func interval(atStep step: Int) -> Int { intervals[min(max(step, 0), intervals.count - 1)] }
 
+    /// The days a unit studied on `day` comes back when each review is done on its day: what the settings show
+    /// under the intervals (`11/10 → 11/11 · 11/14 · …`).
+    public func reviewDays(after day: LocalDate) -> [LocalDate] {
+        var next = day
+        return intervals.map { next = next.adding(days: $0); return next }
+    }
+
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         let d = ReviewSettings()

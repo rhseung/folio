@@ -154,6 +154,21 @@ struct ClassStartTests {
         s.stopsRecording = true
         s.stopAfterMinutes = 5
         #expect(ClassStart.recordingStop(c, settings: s) == at(2, 11, 50))
+        // Before the end too (끝나기 10분 전), but never before the recording starts.
+        s.stopAfterMinutes = -10
+        #expect(ClassStart.recordingStop(c, settings: s) == at(2, 11, 35))
+        s.recordingOffsetMinutes = 60
+        s.stopAfterMinutes = -60
+        #expect(ClassStart.recordingStop(c, settings: s) == at(2, 11, 30))
+    }
+
+    @Test func theNextClassIsTheOneUnderWayOrNextToStart() {
+        var file = course()
+        file.sessions = [Session(device: device, at: at(1, 9), week: 10, date: at(2, 10, 30))]
+        // Nothing set to start by itself: still the class the settings show the span for.
+        let s = Settings()
+        #expect(ClassStart.next([ClassStart.Course(file: file, term: nil)], settings: s, now: at(2, 9), calendar: calendar)?.start == at(2, 10, 30))
+        #expect(ClassStart.next([ClassStart.Course(file: file, term: nil)], settings: s, now: at(2, 11), calendar: calendar)?.start == at(2, 10, 30))
     }
 
     @Test func theLinkedLecturesFromWhereTheLastClassStopped() throws {

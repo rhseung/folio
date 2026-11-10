@@ -3,22 +3,32 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
+/// One tab for each thing a student comes to change (#416), in three runs down the column: what is set once, what
+/// changes over a term, and the app and what it connects to. The raw value is the tab's name in `folio://settings/…`.
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case profile = "내 정보", general = "일반", notifications = "알림", backup = "백업", catalog = "평어", notes = "노트", recording = "녹음", claude = "Claude", about = "앱 정보"
+    case general, record, classes = "class", notes, review, notifications, claude, backup, about
     var id: Self { self }
     static let storageKey = "settingsTab"
 
     var symbol: String {
         switch self {
-        case .profile: "person.crop.circle"
         case .general: "gearshape"
-        case .notifications: "bell"
-        case .backup: "externaldrive"
-        case .catalog: "graduationcap"
+        case .record: "graduationcap"
+        case .classes: "display"
         case .notes: "doc.text"
-        case .recording: "waveform"
+        case .review: "repeat"
+        case .notifications: "bell"
         case .claude: "sparkle"
+        case .backup: "externaldrive"
         case .about: "info.circle"
+        }
+    }
+
+    var run: Int {
+        switch self {
+        case .general, .record: 0
+        case .classes, .notes, .review: 1
+        case .notifications, .claude, .backup, .about: 2
         }
     }
 }
@@ -71,21 +81,16 @@ struct SettingsView: View {
 
     @ViewBuilder func content(_ tab: SettingsTab) -> some View {
         switch tab {
-        case .profile:
-            // No block title: the page header already says 내 정보.
-            VStack(alignment: .leading, spacing: Theme.Space.s) {
-                ProfileCard(workspace: model.workspace)
-                Footnote(String(localized: .settingsProfileFootnote))
-            }
         case .general: GeneralSettings(model: model)
+        case .record:
+            Block(String(localized: .settingsProfile)) { ProfileCard(workspace: model.workspace) }
+            Block(String(localized: .settingsLetters)) { CatalogEditor() }
+        case .classes: ClassSettings(model: model)
+        case .notes: NoteSettingsForm(model: model)
+        case .review: ReviewSettingsForm(model: model)
         case .notifications: NotificationSettingsForm(settings: $model.settings.notifications)
-        case .backup: BackupSettingsForm(model: model)
-        case .catalog: CatalogEditor()
-        case .notes: NoteSettingsForm(settings: $model.settings)
-        case .recording:
-            ClassStartForm(model: model)
-            RecordingSettings()
         case .claude: ClaudeSettings(model: model)
+        case .backup: BackupSettingsForm(model: model)
         case .about: AboutSettings(model: model)
         }
     }
@@ -101,13 +106,17 @@ private struct SettingsColumn: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Space.l) {
                 Text(.settingsTitle).font(Theme.Typeface.columnTitle).padding(.horizontal, Theme.Inset.listRow.leading)
-                VStack(spacing: Theme.Space.xxs) {
-                    ForEach(SettingsTab.allCases) { t in
-                        Button {
-                            pick(t)
-                            closeColumn()
-                        } label: { ColumnRow(title: t.label, symbol: t.symbol, chosen: tab == t) }
-                        .buttonStyle(.pointing(.plain))
+                VStack(spacing: Theme.Space.m) {
+                    ForEach(0..<3, id: \.self) { run in
+                        VStack(spacing: Theme.Space.xxs) {
+                            ForEach(SettingsTab.allCases.filter { $0.run == run }) { t in
+                                Button {
+                                    pick(t)
+                                    closeColumn()
+                                } label: { ColumnRow(title: t.label, symbol: t.symbol, chosen: tab == t) }
+                                .buttonStyle(.pointing(.plain))
+                            }
+                        }
                     }
                 }
             }
@@ -128,16 +137,12 @@ private struct GeneralSettings: View {
     @AppStorage(Appearance.storageKey) private var appearance: Appearance = .system
 
     var body: some View {
-        Block(String(localized: .settingsScreen)) {
+        Block(String(localized: .settingsScreenAndFolder)) {
             Card {
-                FormRow(label: String(localized: .settingsAppearance), detail: String(localized: .settingsAppearanceDetail), last: true) {
+                FormRow(label: String(localized: .settingsAppearance), device: true) {
                     Segmented(selection: $appearance, options: Appearance.allCases.map { ($0, $0.label) }, symbols: Appearance.allCases.map(\.symbol))
                 }
-            }
-        }
-        Block(String(localized: .settingsGistFolder)) {
-            Card {
-                FormRow(label: String(localized: .settingsLocation), detail: model.folderPath, last: true) {
+                FormRow(label: String(localized: .settingsGistFolder), detail: model.folderPath, device: true, last: true) {
                     Button(.settingsPickFolder) { pickingFolder = true }
                 }
             }
@@ -145,27 +150,48 @@ private struct GeneralSettings: View {
         .fileImporter(isPresented: $pickingFolder, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result { model.workspace.open(url) }
         }
-        Block(String(localized: .settingsDayAndReview)) {
+        Block(String(localized: .settingsDay)) {
             Card {
-                FormRow(label: String(localized: .settingsDayBoundary), detail: String(localized: .settingsDayBoundaryDetail)) {
+                FormRow(label: String(localized: .settingsDayBoundary), last: true) {
                     TimeMenu(minute: $model.settings.dayBoundaryMinutes, hours: 0...8)
                 }
-                FormRow(label: String(localized: .settingsClassMinutes), detail: String(localized: .settingsClassMinutesDetail)) {
-                    ScrubField(value: Binding(get: { Double(model.settings.classMinutes) }, set: { model.settings.classMinutes = Int($0.rounded()) }),
-                               range: 10...300, step: 5, width: 80)
-                    Text(.settingsUnitMinutes).foregroundStyle(Theme.Palette.textSecondary)
+            }
+        }
+    }
+}
+
+/// No block title: the page header already says 복습.
+private struct ReviewSettingsForm: View {
+    @Bindable var model: SettingsModel
+    @State private var details = false
+
+    var body: some View {
+        let review = $model.settings.review
+        Card(clipped: true) {
+            FormRow(label: String(localized: .settingsIntervals), detail: model.reviewDays) {
+                IntListField(values: review.intervals, unit: String(localized: .settingsUnitDays), range: 1...365)
+            }
+            FormRow(label: String(localized: .settingsDailyLimit)) {
+                let limit = model.settings.review.dailyLimit
+                ScrubField(value: Binding(get: { Double(limit ?? 10) }, set: { model.settings.review.dailyLimit = Int($0.rounded()) }),
+                           range: 1...50, step: 1, width: 80)
+                    .disabled(limit == nil)
+                    .opacity(limit == nil ? 0.4 : 1)
+                Text(.settingsUnits).foregroundStyle(Theme.Palette.textSecondary)
+                Switch(isOn: Binding(get: { limit != nil }, set: { model.settings.review.dailyLimit = $0 ? 10 : nil }))
+            }
+            DisclosureRow(label: String(localized: .settingsDetails), isOpen: $details, last: true) {
+                FormRow(label: String(localized: .settingsExamWindow)) {
+                    IntScrub(value: review.examWindowDays, range: 0...30)
+                    Text(.settingsUnitDaysBefore).foregroundStyle(Theme.Palette.textSecondary)
                 }
-                FormRow(label: String(localized: .settingsDailyLimit), detail: String(localized: .settingsDailyLimitDetail)) {
-                    let limit = model.settings.review.dailyLimit
-                    ScrubField(value: Binding(get: { Double(limit ?? 10) }, set: { model.settings.review.dailyLimit = Int($0.rounded()) }),
-                               range: 1...50, step: 1, width: 80)
-                        .disabled(limit == nil)
-                        .opacity(limit == nil ? 0.4 : 1)
-                    Text(.settingsUnits).foregroundStyle(Theme.Palette.textSecondary)
-                    Switch(isOn: Binding(get: { limit != nil }, set: { model.settings.review.dailyLimit = $0 ? 10 : nil }))
+                FormRow(label: String(localized: .settingsCardsPerReview)) {
+                    IntScrub(value: review.cardsPerReview, range: 1...20)
+                    Text(.settingsUnitCards).foregroundStyle(Theme.Palette.textSecondary)
                 }
-                FormRow(label: String(localized: .settingsIntervals), detail: String(localized: .settingsIntervalsDetail), last: true) {
-                    IntListField(values: $model.settings.review.intervals, unit: String(localized: .settingsUnitDays), range: 1...365)
+                FormRow(label: String(localized: .settingsSettleAfter), last: true) {
+                    IntScrub(value: review.settleAfterPasses, range: 1...5)
+                    Text(.settingsUnitPasses).foregroundStyle(Theme.Palette.textSecondary)
                 }
             }
         }
@@ -203,7 +229,7 @@ private struct NotificationSettingsForm: View {
             Card {
                 FormRow(label: String(localized: .settingsDueAlert), last: !settings.assignmentDue) { Switch(isOn: $settings.assignmentDue) }
                 if settings.assignmentDue {
-                    FormRow(label: String(localized: .settingsAlertLead), detail: String(localized: .settingsAlertLeadDetail), last: true) {
+                    FormRow(label: String(localized: .settingsAlertLead), last: true) {
                         IntListField(values: $settings.assignmentLeadHours, unit: String(localized: .settingsUnitHoursBefore), range: 1...336)
                     }
                 }
@@ -223,13 +249,12 @@ private struct NotificationSettingsForm: View {
         }
         Block(String(localized: .settingsReviewAndAttendance)) {
             Card {
-                FormRow(label: String(localized: .settingsDailyReview), detail: String(localized: .settingsDailyReviewDetail)) {
+                FormRow(label: String(localized: .settingsDailyReview)) {
                     TimeMenu(minute: $settings.dailyReviewMinute).disabled(!settings.dailyReview).opacity(settings.dailyReview ? 1 : 0.4)
                     Switch(isOn: $settings.dailyReview)
                 }
                 FormRow(label: String(localized: .settingsAttendanceAlert), last: true) { Switch(isOn: $settings.attendance) }
             }
-            Footnote(String(localized: .settingsNotificationsFootnote))
         }
     }
 }
@@ -242,14 +267,16 @@ private struct BackupSettingsForm: View {
 
     var body: some View {
         #if os(macOS)
+        let on = model.settings.backup.enabled
         Block(String(localized: .settingsAutoBackup)) {
             Card {
-                FormRow(label: String(localized: .settingsDailyBackup), detail: String(localized: .settingsDailyBackupDetail(model.settings.backup.dailyDays))) {
+                FormRow(label: String(localized: .settingsDailyBackup)) {
                     Switch(isOn: $model.settings.backup.enabled)
                 }
                 FormRow(label: String(localized: .settingsLocation), detail: model.backupFolder) {
                     Button(.settingsChange) { picking = true }
                 }
+                .opacity(on ? 1 : 0.4)
                 FormRow(label: String(localized: .settingsLastBackup), detail: model.lastBackup, last: true) {
                     Button(model.backingUp ? .settingsBackingUp : .settingsBackUpNow) {
                         Task { await model.backUpNow() }
@@ -257,7 +284,6 @@ private struct BackupSettingsForm: View {
                     .disabled(model.backingUp)
                 }
             }
-            Footnote(String(localized: .settingsBackupFootnote))
         }
         .fileImporter(isPresented: $picking, allowedContentTypes: [.folder]) { result in
             if case .success(let url) = result { model.pickBackupFolder(url) }
@@ -276,7 +302,6 @@ private struct BackupSettingsForm: View {
                     }
                 }
             }
-            Footnote(String(localized: .settingsRestoreFootnote))
         }
         .onAppear(perform: model.refreshArchives)
         .onChange(of: model.workspace.settings.backup) { _, _ in model.refreshArchives() }
@@ -299,35 +324,49 @@ private struct BackupSettingsForm: View {
 }
 
 private struct NoteSettingsForm: View {
-    @Binding var settings: FolioDomain.Settings
+    @Bindable var model: SettingsModel
+    @State private var open: Set<NoteKind> = []
+    /// Nil until picked: the list for the math new notes get comes first.
+    @State private var snippets: MathSyntax?
+
+    static let kinds: [NoteKind] = [.review, .examSummary, .unit]
 
     var body: some View {
-        ForEach([NoteKind.review, .examSummary, .unit], id: \.self) { kind in
-            Block(String(localized: .settingsTemplate(Self.name(kind))), note: kind == .review ? String(localized: .settingsTemplateNote) : nil) {
-                // The raw list, blanks included, so a row just added stays until it's typed into.
-                HeadingList(lines: Binding(
-                    get: { settings.noteTemplates[kind.rawValue] ?? NoteTemplate.defaultSections(for: kind) },
-                    set: { settings.noteTemplates[kind.rawValue] = $0 == NoteTemplate.defaultSections(for: kind) ? nil : $0 }
-                ))
-            }
-        }
-        Block(String(localized: .settingsMath), note: String(localized: .settingsMathNote)) {
-            Card {
-                FormRow(label: String(localized: .settingsMathSyntax), detail: String(localized: .settingsMathSyntaxDetail), last: true) {
-                    ChoiceMenu(selection: $settings.newNoteMath, options: MathSyntax.allCases.map { ($0, $0.label) })
+        let settings = $model.settings
+        Block(String(localized: .settingsNewNote)) {
+            Card(clipped: true) {
+                FormRow(label: String(localized: .settingsMathSyntax)) {
+                    ChoiceMenu(selection: settings.newNoteMath, options: MathSyntax.allCases.map { ($0, $0.label) })
+                }
+                ForEach(Self.kinds, id: \.self) { kind in
+                    let last = kind == Self.kinds.last
+                    DisclosureRow(label: String(localized: .settingsTemplateHeadings(Self.name(kind))),
+                                  isOpen: Binding(get: { open.contains(kind) }, set: { if $0 { open.insert(kind) } else { open.remove(kind) } }),
+                                  last: last) {
+                        // The raw list, blanks included, so a row just added stays until it's typed into.
+                        HeadingRows(lines: Binding(
+                            get: { model.settings.noteTemplates[kind.rawValue] ?? NoteTemplate.defaultSections(for: kind) },
+                            set: { model.settings.noteTemplates[kind.rawValue] = $0 == NoteTemplate.defaultSections(for: kind) ? nil : $0 }
+                        ), last: last)
+                    }
                 }
             }
         }
-        Block(String(localized: .settingsSnippets), note: String(localized: .settingsSnippetsNote)) {
+        let shown = snippets ?? model.settings.newNoteMath
+        Block(title: String(localized: .settingsSnippets), trailing: {
+            Segmented(selection: Binding(get: { shown }, set: { snippets = $0 }),
+                      options: [(.latex, MathSyntax.latex.label), (.asciimath, MathSyntax.asciimath.label)], compact: true)
+        }) {
             // Stored only once changed, so a note editor keeps getting the app's defaults until then.
-            SnippetList(snippets: Binding(get: { settings.snippets }, set: { settings.mathSnippets = $0 == MathSnippet.defaults ? nil : $0 }))
+            switch shown {
+            case .latex:
+                SnippetList(snippets: Binding(get: { model.settings.snippets }, set: { model.settings.mathSnippets = $0 == MathSnippet.defaults ? nil : $0 }))
+            case .asciimath:
+                SnippetList(snippets: Binding(get: { model.settings.asciiSnippets },
+                                              set: { model.settings.asciiMathSnippets = $0 == MathSnippet.asciiMathDefaults ? nil : $0 }),
+                            defaults: MathSnippet.asciiMathDefaults, placed: false)
+            }
         }
-        Block(String(localized: .settingsSnippetsAsciimath), note: String(localized: .settingsSnippetsAsciimathNote)) {
-            SnippetList(snippets: Binding(get: { settings.asciiSnippets },
-                                          set: { settings.asciiMathSnippets = $0 == MathSnippet.asciiMathDefaults ? nil : $0 }),
-                        defaults: MathSnippet.asciiMathDefaults, placed: false)
-        }
-        FormTextArea(label: String(localized: .settingsNoteRules), detail: String(localized: .settingsNoteRulesDetail), text: $settings.noteRules)
     }
 
     static func name(_ kind: NoteKind) -> String {
@@ -340,150 +379,6 @@ private struct NoteSettingsForm: View {
     }
 }
 
-/// What the app does by itself when a class starts (#391). In settings.json, unlike the transcription below, so every
-/// device starts a class the same way.
-private struct ClassStartForm: View {
-    @Bindable var model: SettingsModel
-
-    var body: some View {
-        let s = model.settings.classStart
-        Block(String(localized: .settingsClassStart)) {
-            Card {
-                FormRow(label: String(localized: .settingsClassStartRecording)) {
-                    ChoiceMenu(selection: $model.settings.classStart.recording, options: [
-                        (.off, String(localized: .settingsClassStartOff)), (.ask, String(localized: .settingsClassStartAsk)),
-                        (.start, String(localized: .settingsClassStartNow)),
-                    ])
-                }
-                if s.recording != .off {
-                    FormRow(label: String(localized: .settingsClassStartRecordingAt)) {
-                        if model.recordingTiming != .onTime {
-                            ScrubField(value: Binding(get: { Double(model.recordingMinutes) }, set: { model.recordingMinutes = Int($0.rounded()) }),
-                                       range: 1...60, step: 1, width: 64)
-                            Text(.settingsUnitMinutes).foregroundStyle(Theme.Palette.textSecondary)
-                        }
-                        ChoiceMenu(selection: $model.recordingTiming, options: [
-                            (.onTime, String(localized: .settingsClassStartOnTime)), (.before, String(localized: .settingsClassStartBefore)),
-                            (.after, String(localized: .settingsClassStartAfter)),
-                        ])
-                    }
-                    FormRow(label: String(localized: .settingsClassStartStop)) {
-                        ScrubField(value: Binding(get: { Double(s.stopAfterMinutes) }, set: { model.settings.classStart.stopAfterMinutes = Int($0.rounded()) }),
-                                   range: 0...60, step: 1, width: 64)
-                            .disabled(!s.stopsRecording)
-                            .opacity(s.stopsRecording ? 1 : 0.4)
-                        Text(.settingsUnitMinutesAfter).foregroundStyle(Theme.Palette.textSecondary)
-                        Switch(isOn: $model.settings.classStart.stopsRecording)
-                    }
-                }
-                FormRow(label: String(localized: .settingsClassStartRoughNote)) {
-                    ChoiceMenu(selection: $model.settings.classStart.roughNote, options: [
-                        (.off, String(localized: .settingsClassStartOff)), (.openExisting, String(localized: .settingsClassStartOpenExisting)),
-                        (.create, String(localized: .settingsClassStartCreate)),
-                    ])
-                }
-                if s.roughNote != .off, s.openIn == .currentTab {
-                    FormRow(label: String(localized: .settingsClassStartPlace)) {
-                        ChoiceMenu(selection: $model.settings.classStart.roughNotePlace, options: [ClassStartSettings.Place.here, .beside, .tab].map { ($0, $0.label) })
-                    }
-                }
-                FormRow(label: String(localized: .settingsClassStartLecture)) {
-                    ChoiceMenu(selection: $model.settings.classStart.lecture, options: [
-                        (.off, String(localized: .settingsClassStartOff)), (.open, String(localized: .settingsClassStartOpenLinked)),
-                    ])
-                }
-                if s.lecture != .off {
-                    if s.openIn == .currentTab {
-                        FormRow(label: String(localized: .settingsClassStartPlace)) {
-                            ChoiceMenu(selection: $model.settings.classStart.lecturePlace, options: [ClassStartSettings.Place.beside, .tab, .window].map { ($0, $0.label) })
-                        }
-                    }
-                    FormRow(label: String(localized: .settingsClassStartLectureCount)) {
-                        ChoiceMenu(selection: $model.settings.classStart.allLectures, options: [
-                            (false, String(localized: .settingsClassStartFirstLecture)), (true, String(localized: .settingsClassStartAllLectures)),
-                        ])
-                    }
-                    FormRow(label: String(localized: .settingsClassStartResume)) { Switch(isOn: $model.settings.classStart.resumesLecture) }
-                }
-                // Over the note's and the lectures' own places: in a split tab they open together, where those don't apply.
-                if s.roughNote != .off || s.lecture != .off {
-                    FormRow(label: String(localized: .settingsClassStartOpenIn)) {
-                        ChoiceMenu(selection: $model.settings.classStart.openIn, options: [
-                            (.splitTab, String(localized: .settingsClassStartOpenInSplit)), (.currentTab, String(localized: .settingsClassStartOpenInCurrent)),
-                        ])
-                    }
-                }
-                FormRow(label: String(localized: .settingsClassStartScreen), last: true) {
-                    ChoiceMenu(selection: $model.settings.classStart.screen, options: [
-                        (.front, String(localized: .settingsClassStartFront)), (.notify, String(localized: .settingsClassStartNotify)),
-                    ])
-                }
-            }
-        }
-        let courses = model.classStartCourses
-        if !courses.isEmpty {
-            Block(String(localized: .settingsClassStartCourses)) {
-                Card {
-                    ForEach(Array(courses.enumerated()), id: \.element.id) { i, course in
-                        CardRow(last: i == courses.count - 1) {
-                            CourseMark(model.workspace, course.id)
-                            Text(course.title).lineLimit(1)
-                            Spacer(minLength: Theme.Space.s)
-                            Menu {
-                                ForEach(ClassStartSettings.Item.allCases, id: \.self) { item in
-                                    Toggle(item.label, isOn: Binding(get: { model.follows(item, course: course.id) },
-                                                                     set: { model.setFollows($0, item, course: course.id) }))
-                                }
-                            } label: {
-                                ChipLabel(model.exceptionLabel(course.id))
-                            }
-                            .menuStyle(.button)
-                            .buttonStyle(.plain).pointingHand()
-                            .fixedSize()
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// This device's choices, not settings.json's: the Whisper model is downloaded per device.
-private struct RecordingSettings: View {
-    @AppStorage(TranscriptionEngine.storageKey) private var engine: TranscriptionEngine = .standard
-    private var whisper: WhisperModel { .shared }
-
-    var body: some View {
-        Block(String(localized: .settingsTranscription)) {
-            VStack(alignment: .leading, spacing: Theme.Space.s) {
-                Card {
-                    FormRow(label: String(localized: .settingsTranscriptionEngine), detail: String(localized: .settingsTranscriptionEngineDetail)) {
-                        ChoiceMenu(selection: $engine, options: [(.apple, String(localized: .settingsTranscriptionApple)),
-                                                                 (.whisper, String(localized: .settingsTranscriptionWhisper))])
-                    }
-                    FormRow(label: String(localized: .settingsWhisperModel), detail: String(localized: .settingsWhisperModelDetail), last: true) {
-                        if let fraction = whisper.downloading {
-                            ProgressView(value: fraction).progressViewStyle(.linear).frame(width: 96)
-                            Text(.settingsWhisperDownloading(Int(fraction * 100))).monospacedDigit().foregroundStyle(Theme.Palette.textSecondary)
-                        } else if whisper.ready {
-                            Text(.settingsWhisperReady).foregroundStyle(Theme.Palette.textSecondary)
-                            Button(.settingsWhisperDelete, role: .destructive) { whisper.delete() }.buttonStyle(.ghost)
-                                .disabled(whisper.busy)
-                                .help(whisper.busy ? String(localized: .settingsWhisperDeleteBusy) : "")
-                        } else {
-                            if let failure = whisper.failure {
-                                Text(failure).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.danger).lineLimit(2)
-                            }
-                            Button(.settingsWhisperDownload) { whisper.download() }.buttonStyle(.pointing(.bordered))
-                        }
-                    }
-                }
-                Footnote(String(localized: .settingsTranscriptionFootnote))
-            }
-        }
-    }
-}
-
 private struct ClaudeSettings: View {
     @Bindable var model: SettingsModel
     @AppStorage(Workspace.subscriptionKey) private var subscription = true
@@ -492,18 +387,28 @@ private struct ClaudeSettings: View {
         Block(String(localized: .settingsConnection)) {
             Card {
                 #if os(macOS)
-                FormRow(label: String(localized: .settingsConnectionMethod), detail: model.connectionDetail(subscription: subscription)) {
+                FormRow(label: String(localized: .settingsConnectionMethod), detail: model.connectionDetail(subscription: subscription),
+                        device: true, warns: model.connectionWarns(subscription: subscription)) {
                     ChoiceMenu(selection: $subscription, options: [(true, String(localized: .settingsSubscription)), (false, String(localized: .settingsApiKey))])
                 }
                 .onChange(of: subscription) { model.workspace.claudeRevision += 1 }
                 #endif
-                FormRow(label: String(localized: .settingsApiKey), detail: String(localized: .settingsApiKeyDetail), last: true) {
-                    SecureField(model.keySaved ? String(localized: .settingsSaved) : "sk-ant-…", text: $model.apiKey).pill(width: 180).onSubmit(model.saveKey)
-                    Button(.commonSave, action: model.saveKey).disabled(model.apiKey.isEmpty)
+                if let hint = model.keyHint, !model.replacingKey {
+                    FormRow(label: String(localized: .settingsApiKey), last: true) {
+                        Text(hint).font(Theme.Typeface.mono).foregroundStyle(Theme.Palette.textSecondary)
+                        Button(.settingsChange) { model.replacingKey = true }
+                    }
+                } else {
+                    FormRow(label: String(localized: .settingsApiKey),
+                            detail: model.keyMissing(subscription: subscription) ? String(localized: .settingsApiKeyMissing) : nil, warns: true, last: true) {
+                        SecureField("sk-ant-…", text: $model.apiKey).pill(width: 180).onSubmit(model.saveKey)
+                        Button(.commonSave, action: model.saveKey).disabled(model.apiKey.isEmpty)
+                    }
                 }
             }
         }
-        Block(String(localized: .settingsUsage), note: String(localized: .settingsUsageNote)) {
+        FormTextArea(label: String(localized: .settingsNoteRules), text: $model.settings.noteRules)
+        Block(String(localized: .settingsUsage)) {
             Card {
                 let shown = Array(model.usage.prefix(6))
                 if shown.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .settingsNoRequests)) } }
@@ -522,22 +427,22 @@ private struct ClaudeSettings: View {
     }
 }
 
-/// An explanation under a settings card, where a long block note would wrap beside its title.
-struct Footnote: View {
-    let text: String
-    init(_ text: String) { self.text = text }
-
-    var body: some View {
-        Text(text).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
-            .padding(.horizontal, Theme.Space.l)
-            .fixedSize(horizontal: false, vertical: true)
-    }
-}
-
 struct Switch: View {
     @Binding var isOn: Bool
     var body: some View {
         Toggle("", isOn: $isOn).labelsHidden().toggleStyle(.switch)
+    }
+}
+
+/// A whole number to scrub, for settings.json's counts.
+struct IntScrub: View {
+    @Binding var value: Int
+    let range: ClosedRange<Int>
+    var width: CGFloat = 64
+
+    var body: some View {
+        ScrubField(value: Binding(get: { Double(value) }, set: { value = Int($0.rounded()) }),
+                   range: Double(range.lowerBound)...Double(range.upperBound), step: 1, width: width)
     }
 }
 
@@ -642,31 +547,31 @@ struct SnippetList: View {
     }
 }
 
-struct HeadingList: View {
+/// A template's headings as rows of the card they open in; `last` when nothing follows them there.
+struct HeadingRows: View {
     @Binding var lines: [String]
+    var last = false
 
     var body: some View {
-        Card {
-            ForEach(lines.indices, id: \.self) { i in
-                CardRow {
-                    Text("\(i + 1)").monospacedDigit().foregroundStyle(Theme.Palette.textTertiary).frame(width: 18, alignment: .trailing)
-                    // Guarded: a removed row can still be asked for its text once while the list redraws.
-                    TextField(String(localized: .settingsHeading), text: Binding(get: { lines.indices.contains(i) ? lines[i] : "" }, set: { if lines.indices.contains(i) { lines[i] = $0 } }))
-                        .textFieldStyle(.plain)
-                    Button { lines.remove(at: i) } label: {
-                        Image(systemName: "minus.circle").foregroundStyle(Theme.Palette.textTertiary)
-                    }
-                    .buttonStyle(.pointing(.plain))
-                    .help(Text(.commonDelete))
-                }
-                .contextMenu { Button(.commonDelete, role: .destructive) { if lines.indices.contains(i) { lines.remove(at: i) } } }
-            }
-            CardRow(last: true) {
-                Button { lines.append("") } label: {
-                    Label(.settingsAddHeading, systemImage: "plus").foregroundStyle(Theme.Palette.textSecondary)
+        ForEach(lines.indices, id: \.self) { i in
+            CardRow {
+                Text("\(i + 1)").monospacedDigit().foregroundStyle(Theme.Palette.textTertiary).frame(width: 18, alignment: .trailing)
+                // Guarded: a removed row can still be asked for its text once while the list redraws.
+                TextField(String(localized: .settingsHeading), text: Binding(get: { lines.indices.contains(i) ? lines[i] : "" }, set: { if lines.indices.contains(i) { lines[i] = $0 } }))
+                    .textFieldStyle(.plain)
+                Button { lines.remove(at: i) } label: {
+                    Image(systemName: "minus.circle").foregroundStyle(Theme.Palette.textTertiary)
                 }
                 .buttonStyle(.pointing(.plain))
+                .help(Text(.commonDelete))
             }
+            .contextMenu { Button(.commonDelete, role: .destructive) { if lines.indices.contains(i) { lines.remove(at: i) } } }
+        }
+        CardRow(last: last) {
+            Button { lines.append("") } label: {
+                Label(.settingsAddHeading, systemImage: "plus").foregroundStyle(Theme.Palette.textSecondary)
+            }
+            .buttonStyle(.pointing(.plain))
         }
     }
 }

@@ -451,7 +451,7 @@ struct ProfileCard: View {
             FormRow(label: String(localized: .profileEmail)) {
                 InlineField("name@gm.gist.ac.kr", text: $model.email)
             }
-            FormRow(label: String(localized: .profileAdmissionYear), detail: String(localized: .profileAdmissionYearDetail)) {
+            FormRow(label: String(localized: .profileAdmissionYear)) {
                 TextField(String(localized: .profileAdmissionYearExample), value: Binding(get: { rule.admissionYear }, set: { y in model.update { $0.admissionYear = y } }),
                           format: .number.grouping(.never))
                     .pill(width: 72)
