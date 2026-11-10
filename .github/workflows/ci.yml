@@ -24,6 +24,7 @@ jobs:
       test: ${{ steps.files.outputs.test }}
       test-app: ${{ steps.files.outputs.test-app }}
       test-app-notes: ${{ steps.files.outputs.test-app }}
+      test-app-rest: ${{ steps.files.outputs.test-app }}
       build-ipad: ${{ steps.files.outputs.build-ipad }}
       test-ipad: ${{ steps.files.outputs.test-ipad }}
     steps:
@@ -116,21 +117,17 @@ jobs:
     runs-on: ${{ needs.changes.outputs[matrix.task] == 'false' && 'ubuntu-latest' || 'xcode-27' }}
     # A test stuck on the main thread outlives its own time limit; without this the job would run for six hours.
     timeout-minutes: 45
-    # The test-app half reads the notes half's result (below).
-    permissions:
-      contents: read
-      actions: read
     strategy:
       fail-fast: false
       matrix:
         # test-app builds the Mac app to host the screen-model tests, so it stands in for build-mac. Its tests take five
-        # minutes on one main thread, so test-app-notes runs the note-view half of them on a second runner, queued first
-        # so test-app, which waits for it, waits less. test-ipad runs the iPad's own tests on a simulator.
-        task: [test-app-notes, test-app, build-ipad, test-ipad]
+        # minutes on one main thread, so two runners split them: the note-view suites and the rest. The test-app job
+        # below reports both. test-ipad runs the iPad's own tests on a simulator.
+        task: [test-app-notes, test-app-rest, build-ipad, test-ipad]
     env:
       RUN: ${{ needs.changes.outputs[matrix.task] != 'false' }}
-      MISE_TASK: ${{ matrix.task == 'test-app-notes' && 'test-app' || matrix.task }}
-      FOLIO_TEST_PART: ${{ matrix.task == 'test-app-notes' && 'notes' || matrix.task == 'test-app' && 'rest' || '' }}
+      MISE_TASK: ${{ startsWith(matrix.task, 'test-app-') && 'test-app' || matrix.task }}
+      FOLIO_TEST_PART: ${{ matrix.task == 'test-app-notes' && 'notes' || matrix.task == 'test-app-rest' && 'rest' || '' }}
       # Every other check builds Debug, so the iPad build goes Release: it also catches code that reaches what only
       # exists under #if DEBUG. It runs on PRs because macOS-only APIs broke main three times when it ran after merging.
       FOLIO_CONFIGURATION: ${{ matrix.task == 'build-ipad' && 'Release' || 'Debug' }}
@@ -205,23 +202,9 @@ jobs:
             Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
             ~/Library/Caches/org.swift.swiftpm/manifests
           key: ${{ steps.cache.outputs.cache-primary-key }}
-      # The ruleset requires build (test-app), so it fails when the notes half does. The halves run side by side, so
-      # the wait is short.
-      - if: ${{ !cancelled() && env.RUN == 'true' && matrix.task == 'test-app' }}
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          jobs="repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100"
-          while :; do
-            state=$(gh api "$jobs" --jq '.jobs[] | select(.name == "build (test-app-notes)") | "\(.status) \(.conclusion)"')
-            case "$state" in "completed "*) break ;; esac
-            sleep 10
-          done
-          echo "build (test-app-notes): ${state#completed }"
-          [ "$state" = "completed success" ]
       # Sheets of pictures a test lays out for a PR (app-tests/note-render.swift), passing or not; not references.
-      # NoteSourceTests lays them out, in the test-app half; two uploads under one name would fail.
-      - if: ${{ !cancelled() && env.RUN == 'true' && matrix.task == 'test-app' }}
+      # NoteSourceTests lays them out, in the rest half; two uploads under one name would fail.
+      - if: ${{ !cancelled() && env.RUN == 'true' && matrix.task == 'test-app-rest' }}
         uses: actions/upload-artifact@v7
         with:
           name: note-sheets
@@ -234,3 +217,30 @@ jobs:
           name: note-screens
           path: .build/note-screens
           if-no-files-found: ignore
+
+  # The ruleset requires build (test-app), which the two halves above run between them; this reports both under that
+  # name. It waits on Linux so it never holds one of the few macOS runners while a half is still queued for one: with
+  # every runner taken by a job waiting on a half, no half could start.
+  test-app:
+    name: build (test-app)
+    needs: changes
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - if: needs.changes.outputs.test-app != 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          jobs="repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100"
+          halves='["build (test-app-notes)", "build (test-app-rest)"]'
+          while :; do
+            states=$(gh api "$jobs" --jq "[.jobs[] | select(.name as \$n | $halves | index(\$n))] | sort_by(.name)[] | \"\(.name): \(.status) \(.conclusion)\"") || states=
+            [ "$(grep -c ': completed ' <<< "$states")" = 2 ] && break
+            sleep 15
+          done
+          echo "$states"
+          ! grep -v ': completed success$' <<< "$states"
