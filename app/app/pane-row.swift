@@ -15,8 +15,8 @@ struct PaneRow: View {
     /// A pane's screen saying it plays a recording (with how to pause it) or has stopped, by the pane's id: the tab
     /// marks the playing pane's icon (`WindowTabs.play`).
     var play: (UUID, (@MainActor () -> Void)?) -> Void = { _, _ in }
-    /// Takes a pane out into a tab of its own.
-    var newTab: ((Navigator) -> Void)?
+    /// Takes a pane out into a tab of its own, with the columns it had hidden.
+    var newTab: ((Navigator, ColumnPrefs) -> Void)?
     @State private var sizes = PaneSizes()
     @State private var drag = PaneDrag()
     /// Back to false however the drag ends: a drag the system cancels (the window losing the pointer) has no end.
@@ -93,6 +93,7 @@ struct PaneRow: View {
                 .environment(\.openLink, openLink(navigator))
                 .environment(\.tabPlaying) { [play] pause in play(id, pause) }
                 .environment(\.paneFocused, i == panes.focus)
+                .environment(\.columnPrefs, panes.columns[i])
                 .environment(\.paneInsert, inserts[id])
                 .environment(\.askClaude, askClaude)
                 .modifier(PaneScreenWidth(panes: panes, index: i, kept: kept, sizes: sizes))
@@ -392,7 +393,7 @@ private struct Sideways: Layout {
 struct PaneMenu: View {
     let panes: TabPanes
     let index: Int
-    var newTab: ((Navigator) -> Void)?
+    var newTab: ((Navigator, ColumnPrefs) -> Void)?
 
     var body: some View {
         // 칸 접기 from a segment, a strip, or the divider beside it (2026-11-08 사용자); on a strip, opening it again.
@@ -407,7 +408,8 @@ struct PaneMenu: View {
         if let newTab {
             Button(.panesToTab, systemImage: "macwindow.badge.plus") {
                 let navigator = panes.navigators[index]
-                if panes.close(index) { newTab(navigator) }
+                let columns = panes.columns[index]
+                if panes.close(index) { newTab(navigator, columns) }
             }
             .disabled(panes.count < 2)
         }

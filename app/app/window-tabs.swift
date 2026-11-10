@@ -75,7 +75,9 @@ final class WindowTabs {
     func panes(holding navigator: Navigator) -> TabPanes? { tabs.values.first { $0.index(of: navigator) != nil } }
 
     /// `fromLink`: beside the tab in front rather than last.
-    func open(_ navigator: Navigator = Navigator(), fromLink: Bool = false) { open(TabPanes(navigator), fromLink: fromLink) }
+    func open(_ navigator: Navigator = Navigator(), columns: ColumnPrefs? = nil, fromLink: Bool = false) {
+        open(TabPanes(navigator, columns: columns), fromLink: fromLink)
+    }
 
     func open(_ panes: TabPanes, fromLink: Bool = false) {
         let id = UUID()
@@ -204,14 +206,15 @@ struct TabScreens: View {
     /// "새 탭으로 옮기기" from a pane's menu: a tab of its own, its history with it. The iPad's tabs are its windows,
     /// so there it goes to a window of its own, and nowhere where the system allows only one; a tab there would be one
     /// with no bar to find it by.
-    var newTab: ((Navigator) -> Void)? {
+    var newTab: ((Navigator, ColumnPrefs) -> Void)? {
         #if os(macOS)
-        return { [tabs] navigator in tabs.open(navigator, fromLink: true) }
+        return { [tabs] navigator, columns in tabs.open(navigator, columns: columns, fromLink: true) }
         #else
         guard multipleWindows else { return nil }
-        return { [openWindow] navigator in
-            openWindow(id: FolioApp.mainWindow,
-                       value: WindowRequest(link: navigator.current.link, course: navigator.current.course, history: navigator.history))
+        return { [openWindow] navigator, columns in
+            var request = WindowRequest(link: navigator.current.link, course: navigator.current.course, history: navigator.history)
+            request.columns = [columns.names]
+            openWindow(id: FolioApp.mainWindow, value: request)
         }
         #endif
     }
@@ -541,7 +544,7 @@ struct TabBar: View {
                            pause: { [tabs] in tabs.pause(pane: segment.id) })
                     .contextMenu {
                         if let i = panes.ids.firstIndex(of: segment.id) {
-                            PaneMenu(panes: panes, index: i) { [tabs] navigator in tabs.open(navigator, fromLink: true) }
+                            PaneMenu(panes: panes, index: i) { [tabs] navigator, columns in tabs.open(navigator, columns: columns, fromLink: true) }
                         }
                     }
             }

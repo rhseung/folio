@@ -88,7 +88,7 @@ extension ScreenFitTests {
         let screen = ScreenView(workspace: workspace, entry: entry)
             .environment(workspace)
             .environment(\.revealsOverflow, true)
-            .environment(\.columnPrefs, ColumnPrefs(defaults: nil, collapsed: collapsed))
+            .environment(\.columnPrefs, ColumnPrefs(collapsed: collapsed))
             .onPreferenceChange(ColumnButtonLabels.self) { labels in MainActor.assumeIsolated { seen.labels = labels } }
         let drawn = try #require(try await measureOffscreen([RenderJob(name: "column", view: AnyView(screen), width: width, height: nil, scheme: .light)]).first)
         return (drawn, seen.labels)

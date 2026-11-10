@@ -13,6 +13,8 @@ struct WindowRequest: Codable, Hashable {
     var panes: [LinkHistory<Navigator.Entry>]?
     var shares: [Double]?
     var focus: Int?
+    /// The list columns each pane had hidden (`ColumnPrefs.names`), in the order of `panes`, or the one of `history`.
+    var columns: [[String]]?
 
     static func == (a: Self, b: Self) -> Bool { a.id == b.id }
     func hash(into hasher: inout Hasher) { hasher.combine(id) }

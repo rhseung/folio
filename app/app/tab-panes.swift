@@ -13,6 +13,10 @@ final class TabPanes {
     private(set) var ids: [UUID]
     private(set) var navigators: [Navigator]
     private(set) var trails: [CrumbTrail]
+    /// The list columns each pane has hidden by hand: its own, which a new pane starts from the last choice
+    /// (2026-11-10 사용자).
+    private(set) var columns: [ColumnPrefs]
+    @ObservationIgnored private let memory: ColumnMemory
     private(set) var focus = 0
     /// Read only by the panes' row.
     private(set) var shares: [Double] = [1]
@@ -33,17 +37,21 @@ final class TabPanes {
         #endif
     }
 
-    init(_ navigator: Navigator, limit: Int = TabPanes.limit) {
+    /// `columns`: a pane moved out to a tab of its own keeps them; a new tab starts from the last choice.
+    init(_ navigator: Navigator, columns: ColumnPrefs? = nil, limit: Int = TabPanes.limit, memory: ColumnMemory = .shared) {
         layout = PaneLayout(navigator.current.link)
         ids = [UUID()]
         navigators = [navigator]
         trails = [CrumbTrail()]
+        self.columns = [columns ?? memory.newPane()]
+        self.memory = memory
         self.limit = limit
     }
 
-    /// A tab moved to a window of its own: its panes go on from where they were, back and forward included. Nil
-    /// without a history.
-    init?(histories: [LinkHistory<Navigator.Entry>], shares: [Double]?, focus: Int, limit: Int = TabPanes.limit) {
+    /// A tab moved to a window of its own: its panes go on from where they were, back and forward included, and with
+    /// the columns each had hidden (`WindowRequest.columns`; nil for panes opened anew). Nil without a history.
+    init?(histories: [LinkHistory<Navigator.Entry>], shares: [Double]?, focus: Int, columns: [[String]]? = nil,
+          limit: Int = TabPanes.limit, memory: ColumnMemory = .shared) {
         let histories = Array(histories.prefix(max(1, limit)))
         guard var layout = PaneLayout(links: histories.map(\.current.link), shares: shares, limit: limit) else { return nil }
         layout.press(min(max(focus, 0), histories.count - 1))
@@ -51,6 +59,8 @@ final class TabPanes {
         ids = histories.map { _ in UUID() }
         navigators = histories.map(Navigator.init(history:))
         trails = histories.map { _ in CrumbTrail() }
+        self.columns = histories.indices.map { i in memory.pane(columns.flatMap { $0.indices.contains(i) ? $0[i] : nil }) }
+        self.memory = memory
         self.limit = limit
         publish()
     }
@@ -90,6 +100,7 @@ final class TabPanes {
             ids.insert(UUID(), at: i)
             navigators.insert(Navigator(entry), at: i)
             trails.insert(CrumbTrail(), at: i)
+            columns.insert(memory.newPane(), at: i)
         } else {
             navigators[layout.focus].go(entry)
         }
@@ -113,6 +124,8 @@ final class TabPanes {
         ids.insert(contentsOf: other.ids.map { _ in UUID() }, at: at)
         navigators.insert(contentsOf: other.navigators, at: at)
         trails.insert(contentsOf: other.ids.map { _ in CrumbTrail() }, at: at)
+        // Each pane keeps the columns it had hidden in its tab, as it keeps its history.
+        columns.insert(contentsOf: other.columns, at: at)
         publish()
         return true
     }
@@ -124,6 +137,7 @@ final class TabPanes {
         ids.remove(at: i)
         navigators.remove(at: i)
         trails.remove(at: i)
+        columns.remove(at: i)
         publish()
         return true
     }
@@ -145,6 +159,7 @@ final class TabPanes {
         ids.swapAt(i, j)
         navigators.swapAt(i, j)
         trails.swapAt(i, j)
+        columns.swapAt(i, j)
         publish()
     }
 

@@ -41,7 +41,7 @@ struct RootView: View {
     init(request: WindowRequest? = nil) {
         self.request = request
         if let request, let histories = request.panes,
-           let panes = TabPanes(histories: histories, shares: request.shares, focus: request.focus ?? 0) {
+           let panes = TabPanes(histories: histories, shares: request.shares, focus: request.focus ?? 0, columns: request.columns) {
             _tabs = State(initialValue: WindowTabs(panes))
             return
         }
@@ -50,7 +50,7 @@ struct RootView: View {
         } else {
             Navigator(request.map { Navigator.Entry(link: $0.link, course: $0.course) } ?? Navigator.Entry(link: .place(.today)))
         }
-        _tabs = State(initialValue: WindowTabs(navigator))
+        _tabs = State(initialValue: WindowTabs(TabPanes(navigator, columns: ColumnMemory.shared.pane(request?.columns?.first))))
     }
 
     /// The history of the focused pane in the tab in front.
@@ -143,6 +143,7 @@ struct RootView: View {
             request.shares = moved.shares
             request.focus = moved.focus
         }
+        request.columns = moved.columns.map(\.names)
         openWindow(id: FolioApp.mainWindow, value: request)
     }
     #endif
