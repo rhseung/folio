@@ -108,7 +108,14 @@ extension QuickAdd {
                 }
             case let .kind(kind, number):
                 let word = "\(kind.rawValue)\(number)"
-                tries = [before.kindRange.map { line.splicing([($0, word)]) } ?? line.appending(word: word)]
+                if let range = before.kindRange {
+                    tries = [line.splicing([(range, word)])]
+                } else {
+                    // After a rule that ends the line it would make the rule a title word (`매주 HW2`), so before the
+                    // deadline next.
+                    tries = [line.appending(word: word)]
+                        + (before.dueRanges.first.map { [line.splicing([($0.lowerBound..<$0.lowerBound, word + " ")])] } ?? [])
+                }
             }
             return tries.first { holds(value, read($0), over: before) } ?? line
         }

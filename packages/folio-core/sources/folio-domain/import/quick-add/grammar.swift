@@ -109,6 +109,75 @@ extension QuickAdd {
         }
     }
 
+    /// A rule said in several words (`한 달마다`, `2주에 한 번`, `하루 걸러`) becomes one word, longest first, before
+    /// any word is read beside its neighbors.
+    static func joinRules(_ words: inout [Word], line: String) {
+        var i = 0
+        while i < words.count {
+            for count in stride(from: min(4, words.count - i), through: 2, by: -1) {
+                let run = Array(words[i..<(i + count)])
+                // `까지` only on the last word, so a `까지` standing after the rule stays its own word.
+                guard adjoin(run, in: line),
+                      let rule = AssignmentRepeat.word(run.dropLast().map(\.text).joined() + QuickAdd.core(run[count - 1].text)) else { continue }
+                var merged = words[i]
+                merged.range = run[0].range.lowerBound..<run[count - 1].range.upperBound
+                merged.text = String(line[merged.range])
+                merged.piece = .repeats(rule)
+                merged.normalized = ""
+                words.replaceSubrange(i..<(i + count), with: [merged])
+                break
+            }
+            i += 1
+        }
+    }
+
+    /// A rule word among title words is the title's (`매일 묵상 노트`, `보고서 매주 정리`), as weekdays with no rule
+    /// beside them are: it is the repeat only touching the deadline (`매주 금`, `금 매주`, `매일 23:59`, `매주 월요일과
+    /// 수요일`) or ending the line (`복습 3일마다`). `까지` and `오후` count as the deadline's here, since a time written
+    /// after `오후` makes it one and the rule would then change under a chip's pick. The rule word stays hidden from
+    /// Apple's detector, which reads the `3일` in `3일마다` as the 3rd.
+    static func bindRules(_ words: inout [Word]) {
+        for i in words.indices where words[i].rule != nil && i < words.count - 1 && !touchesDeadline(words, i - 1) && !touchesDeadline(words, i + 1) {
+            words[i].piece = nil
+        }
+    }
+
+    static func touchesDeadline(_ words: [Word], _ i: Int) -> Bool {
+        guard words.indices.contains(i) else { return false }
+        let text = words[i].text
+        return words[i].isDue || dueEndings.contains(text) || morning.contains(text) || evening.contains(text)
+            || AssignmentRepeat.weekdayWord(AssignmentRepeat.listItem(text) + "마다") != nil
+    }
+
+    /// Weekdays listed over several words (`매주 월 수`, `격주 화, 목`, `월요일과 수요일마다`) become one word naming
+    /// them, when a weekly rule comes right before or `마다` ends them; otherwise each stays as it was.
+    static func joinWeekdays(_ words: inout [Word], line: String) {
+        var i = 0
+        while i < words.count {
+            let afterRule = i > 0 && words[i - 1].rule?.unit == .week
+            for count in stride(from: min(7, words.count - i), through: 2, by: -1) {
+                let run = Array(words[i..<(i + count)])
+                guard adjoin(run, in: line),
+                      let list = AssignmentRepeat.weekdayList(run.dropLast().map(\.text) + [QuickAdd.core(run[count - 1].text)]),
+                      list.each || afterRule else { continue }
+                var merged = words[i]
+                merged.range = run[0].range.lowerBound..<run[count - 1].range.upperBound
+                merged.text = String(line[merged.range])
+                merged.piece = .weekdays(list.days, each: list.each)
+                merged.normalized = AssignmentRepeat.weekdayLetters[list.days[0] - 1] + "요일"
+                merged.joined = false
+                words.replaceSubrange(i..<(i + count), with: [merged])
+                break
+            }
+            i += 1
+        }
+    }
+
+    /// Only spaces between the words: a course read out of the line between them parts them.
+    static func adjoin(_ run: [Word], in line: String) -> Bool {
+        zip(run, run.dropFirst()).allSatisfy { pair in line[pair.0.range.upperBound..<pair.1.range.lowerBound].allSatisfy(\.isWhitespace) }
+    }
+
     /// `월수` names a weekly rule's weekdays only beside one (`매주 월수`, `격주 화목`) or with `마다` (`월,수마다`);
     /// otherwise it is a word of the title.
     static func bindWeekdays(_ words: inout [Word]) {

@@ -133,8 +133,36 @@ struct QuickAddCorpusTests {
         Case(line: "선대 복습 3일마다", course: 0, title: "복습", due: nil, repeats: AssignmentRepeat(every: 3, .day)),
         Case(line: "확통 정리 매달 30일", course: 4, title: "정리", due: "2026-10-30 23:59", repeats: .monthly),
         Case(line: "확통 정리 2개월마다 30일", course: 4, title: "정리", due: "2026-10-30 23:59", repeats: AssignmentRepeat(every: 2, .month)),
+        // Other words for the unit, some in several words
+        Case(line: "확통 정리 매월 30일", course: 4, title: "정리", due: "2026-10-30 23:59", repeats: .monthly),
+        Case(line: "선대 복습 한 달마다", course: 0, title: "복습", due: nil, repeats: .monthly),
+        Case(line: "선대 복습 달마다", course: 0, title: "복습", due: nil, repeats: .monthly),
+        Case(line: "선대 복습 격일", course: 0, title: "복습", due: nil, repeats: AssignmentRepeat(every: 2, .day)),
+        Case(line: "선대 복습 이틀마다 18:00", course: 0, title: "복습", due: "2026-10-22 18:00", repeats: AssignmentRepeat(every: 2, .day)),
+        Case(line: "선대 복습 하루걸러", course: 0, title: "복습", due: nil, repeats: AssignmentRepeat(every: 2, .day)),
+        Case(line: "선대 복습 하루 걸러 23:59", course: 0, title: "복습", due: "2026-10-22 23:59", repeats: AssignmentRepeat(every: 2, .day)),
+        Case(line: "로봇 보고서 매주마다 금", course: 3, title: "보고서", due: "2026-10-23 23:59", repeats: .weekly),
+        Case(line: "그래프 HW 2주에 한 번 수", course: 1, title: "HW", due: "2026-10-28 23:59", repeats: .biweekly),
+        // Weekdays named together
+        Case(line: "선대 퀴즈 평일마다", course: 0, title: "퀴즈", due: "2026-10-22 23:59", repeats: AssignmentRepeat(.week, weekdays: [1, 2, 3, 4, 5])),
+        Case(line: "로봇 실습 주말마다", course: 3, title: "실습", due: "2026-10-24 23:59", repeats: AssignmentRepeat(.week, weekdays: [6, 7])),
+        Case(line: "선대 HW 매주 월 수", course: 0, title: "HW", due: "2026-10-26 23:59", repeats: AssignmentRepeat(.week, weekdays: [1, 3])),
+        Case(line: "선대 HW 매주 월/수", course: 0, title: "HW", due: "2026-10-26 23:59", repeats: AssignmentRepeat(.week, weekdays: [1, 3])),
+        Case(line: "선대 HW 매주 월·수", course: 0, title: "HW", due: "2026-10-26 23:59", repeats: AssignmentRepeat(.week, weekdays: [1, 3])),
+        Case(line: "컴네 퀴즈 월요일, 수요일마다", course: 2, title: "퀴즈", due: "2026-10-26 23:59", repeats: AssignmentRepeat(.week, weekdays: [1, 3])),
+        Case(line: "컴네 퀴즈 월 수마다 18:00", course: 2, title: "퀴즈", due: "2026-10-26 18:00", repeats: AssignmentRepeat(.week, weekdays: [1, 3])),
+        Case(line: "선대 HW 매주 월요일과 수요일", course: 0, title: "HW", due: "2026-10-26 23:59", repeats: AssignmentRepeat(.week, weekdays: [1, 3])),
+        Case(line: "선대 HW 매주 월, 수까지", course: 0, title: "HW", due: "2026-10-26 23:59", repeats: AssignmentRepeat(.week, weekdays: [1, 3])),
+        Case(line: "로봇 실험 3주마다 화목", course: 3, title: "실험", due: "2026-10-22 23:59", repeats: AssignmentRepeat(every: 3, .week, weekdays: [2, 4])),
+        Case(line: "로봇 보고서 격주 화, 목", course: 3, title: "보고서", due: "2026-10-22 23:59", repeats: AssignmentRepeat(every: 2, .week, weekdays: [2, 4])),
         // Weekdays with no repeat beside them are the title's.
         Case(line: "선대 월수 정리", course: 0, title: "월수 정리", due: nil),
+        // So is a rule among title words, touching no deadline word and not ending the line.
+        Case(line: "선대 매일 묵상 노트", course: 0, title: "매일 묵상 노트", due: nil),
+        Case(line: "선대 매일 묵상 노트 금", course: 0, title: "매일 묵상 노트", due: "2026-10-23 23:59"),
+        Case(line: "선대 보고서 매주 정리", course: 0, title: "보고서 매주 정리", due: nil),
+        Case(line: "선대 묵상 노트 매일", course: 0, title: "묵상 노트", due: nil, repeats: .daily),
+        Case(line: "선대 묵상 노트 매일 23:59", course: 0, title: "묵상 노트", due: "2026-10-22 23:59", repeats: .daily),
         // Numbers and day-like words that belong to the title
         Case(line: "선대 3장 풀기 금", course: 0, title: "3장 풀기", due: "2026-10-23 23:59"),
         Case(line: "선대 2장 연습문제 1-10번 금", course: 0, title: "2장 연습문제 1-10번", due: "2026-10-23 23:59"),
@@ -235,6 +263,13 @@ struct QuickAddCorpusTests {
         #expect(reader.line("오후 3일마다 18:00", setting: .repeats(nil)) == "오후 10/22 18:00")
         #expect(reader.line("오후 3일마다 18:00", setting: .repeats(.daily)) == "오후 매일 18:00")
         #expect(reader.line("선대 HW 매주 월수", setting: .due(date("2026-11-14 23:59"))) == "선대 HW 매주 월수 11/14 23:59")
+        // Words read as one rule or one set of weekdays are rewritten whole.
+        #expect(reader.line("선대 HW 격주 화, 목", setting: .repeats(nil)) == "선대 HW 목")
+        #expect(reader.line("선대 복습 한 달마다", setting: .repeats(.weekly)) == "선대 복습 매주")
+        #expect(reader.line("선대 HW 2주에 한 번 금", setting: .due(date("2026-11-14 23:59"))) == "선대 HW 격주 11/14 23:59")
+        // A rule among title words stays there, and a number written after a rule ending the line goes before it.
+        #expect(reader.line("선대 매일 묵상 노트", setting: .repeats(.daily)) == "선대 매일 묵상 노트 매일")
+        #expect(reader.line("선대 보고서 매주", setting: .kind(.homework, 2)) == "선대 보고서 HW2 매주")
         // A one-word title another course's title starts with reads as that course only typed whole.
         let physics = Course(device: device, at: .now, title: "일반물리학실험", codes: [], number: "1101")
         let wide = QuickAdd.Reader(courses: [physics] + courses, codes: codes, now: now, calendar: calendar)
@@ -243,10 +278,12 @@ struct QuickAddCorpusTests {
 
     static let titleWords = ["보고서", "HW3", "정리", "Lab2", "실험", "3장", "읽기", "1-10번", "초안", "까지", "오후"]
     static let dueWords = ["금", "다음 주 수요일까지", "11/20 오후 3시", "내일 자정", "금 마감", "매주 금 23:59", "매주", "11월 3일 오전 9시", "모레 23:59",
-                           "격주 월수", "3일마다 18:00", "월,수마다", "매달 30일"]
+                           "격주 월수", "3일마다 18:00", "월,수마다", "매달 30일", "평일마다", "매주 월 수", "월요일, 수요일마다", "격주 화, 목",
+                           "2주에 한 번 금", "한 달마다", "격일 18:00", "매주 월요일과 수요일"]
     static let rules: [AssignmentRepeat?] = [nil, .daily, .weekly, .biweekly, .monthly, AssignmentRepeat(every: 3, .day), AssignmentRepeat(every: 3, .week),
                                              AssignmentRepeat(every: 2, .month), AssignmentRepeat(.week, weekdays: [1, 3]),
-                                             AssignmentRepeat(every: 2, .week, weekdays: [2, 4, 5]), AssignmentRepeat(.week, weekdays: [6])]
+                                             AssignmentRepeat(every: 2, .week, weekdays: [2, 4, 5]), AssignmentRepeat(.week, weekdays: [6]),
+                                             AssignmentRepeat(every: 2, .day), AssignmentRepeat(.week, weekdays: [1, 2, 3, 4, 5])]
     static let courseWords = ["", "선대", "그래프 이론", "컴네", "확률과 통계", "EC4207", "운체"]
 
     /// Whatever the line, a value written into it reads back as that value, and nothing else it read changes.

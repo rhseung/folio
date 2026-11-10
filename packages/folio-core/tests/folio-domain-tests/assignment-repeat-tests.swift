@@ -104,9 +104,30 @@ struct AssignmentRepeatTests {
         // Typed on its own, one weekday is kept: the deadline may fall on another day.
         #expect(AssignmentRepeat(text: "금요일마다") == AssignmentRepeat(.week, weekdays: [5]))
         #expect(AssignmentRepeat(text: "매주 금") == AssignmentRepeat(.week, weekdays: [5]))
+        // Other words for the unit, some in several words.
+        for text in ["매월", "한 달마다", "달마다", "매달마다", "한 달에 한 번"] { #expect(AssignmentRepeat(text: text) == .monthly, "\(text)") }
+        for text in ["격일", "이틀마다", "하루걸러", "하루 걸러"] { #expect(AssignmentRepeat(text: text) == AssignmentRepeat(every: 2, .day), "\(text)") }
+        for text in ["매주마다", "주마다", "일주일에 한 번"] { #expect(AssignmentRepeat(text: text) == .weekly, "\(text)") }
+        for text in ["2주에 한 번", "2주 마다", "격주마다", "두 주마다"] { #expect(AssignmentRepeat(text: text) == .biweekly, "\(text)") }
+        #expect(AssignmentRepeat(text: "1주일마다") == .weekly)
+        #expect(AssignmentRepeat(text: "격월") == AssignmentRepeat(every: 2, .month))
+        // Weekdays named together, with or without the rule before them.
+        #expect(AssignmentRepeat(text: "평일마다") == AssignmentRepeat(.week, weekdays: [1, 2, 3, 4, 5]))
+        #expect(AssignmentRepeat(text: "주말마다") == AssignmentRepeat(.week, weekdays: [6, 7]))
+        #expect(AssignmentRepeat(text: "매주 평일") == AssignmentRepeat(.week, weekdays: [1, 2, 3, 4, 5]))
+        for text in ["월 수", "월/수", "월·수", "월수", "월요일, 수요일마다", "월요일과 수요일", "매주 월 수", "매주 월요일과 수요일"] {
+            #expect(AssignmentRepeat(text: text) == AssignmentRepeat(.week, weekdays: [1, 3]), "\(text)")
+        }
+        #expect(AssignmentRepeat(text: "3주마다 화목") == AssignmentRepeat(every: 3, .week, weekdays: [2, 4]))
+        #expect(AssignmentRepeat(text: "격주 화, 목") == AssignmentRepeat(every: 2, .week, weekdays: [2, 4]))
+        #expect(AssignmentRepeat(text: "2주에 한 번 화목") == AssignmentRepeat(every: 2, .week, weekdays: [2, 4]))
         #expect(AssignmentRepeat(text: "daily:mon") == nil)
         #expect(AssignmentRepeat(text: "0일마다") == nil)
         #expect(AssignmentRepeat(text: "가끔") == nil)
+        // One weekday is a rule only with `마다` or the rule before it: alone it may be a deadline.
+        #expect(AssignmentRepeat(text: "금") == nil)
+        #expect(AssignmentRepeat(text: "매일 월수") == nil)
+        #expect(AssignmentRepeat(text: "세일마다") == nil)
 
         #expect(AssignmentRepeat.daily.label == "매일")
         #expect(AssignmentRepeat.biweekly.label == "격주")
