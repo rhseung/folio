@@ -23,6 +23,7 @@ jobs:
     outputs:
       test: ${{ steps.files.outputs.test }}
       test-app: ${{ steps.files.outputs.test-app }}
+      test-app-notes: ${{ steps.files.outputs.test-app }}
       build-ipad: ${{ steps.files.outputs.build-ipad }}
       test-ipad: ${{ steps.files.outputs.test-ipad }}
     steps:
@@ -113,14 +114,21 @@ jobs:
     runs-on: ${{ needs.changes.outputs[matrix.task] == 'false' && 'ubuntu-latest' || 'xcode-27' }}
     # A test stuck on the main thread outlives its own time limit; without this the job would run for six hours.
     timeout-minutes: 45
+    # The test-app half reads the notes half's result (below).
+    permissions:
+      contents: read
+      actions: read
     strategy:
       fail-fast: false
       matrix:
-        # test-app builds the Mac app to host the screen-model tests, so it stands in for build-mac. test-ipad runs the
-        # iPad's own tests on a simulator.
-        task: [test-app, build-ipad, test-ipad]
+        # test-app builds the Mac app to host the screen-model tests, so it stands in for build-mac. Its tests take five
+        # minutes on one main thread, so test-app-notes runs the note-view half of them on a second runner. test-ipad
+        # runs the iPad's own tests on a simulator.
+        task: [test-app, test-app-notes, build-ipad, test-ipad]
     env:
       RUN: ${{ needs.changes.outputs[matrix.task] != 'false' }}
+      MISE_TASK: ${{ matrix.task == 'test-app-notes' && 'test-app' || matrix.task }}
+      FOLIO_TEST_PART: ${{ matrix.task == 'test-app-notes' && 'notes' || matrix.task == 'test-app' && 'rest' || '' }}
       # Every other check builds Debug, so the iPad build goes Release: it also catches code that reaches what only
       # exists under #if DEBUG. It runs on PRs because macOS-only APIs broke main three times when it ran after merging.
       FOLIO_CONFIGURATION: ${{ matrix.task == 'build-ipad' && 'Release' || 'Debug' }}
@@ -163,10 +171,10 @@ jobs:
             !.build/DerivedData/TestResults
             Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
             ~/Library/Caches/org.swift.swiftpm/manifests
-          key: derived-data-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-${{ github.sha }}
+          key: derived-data-${{ env.MISE_TASK }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-${{ github.sha }}
           restore-keys: |
-            derived-data-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-
-            derived-data-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
+            derived-data-${{ env.MISE_TASK }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-
+            derived-data-${{ env.MISE_TASK }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
       # The app, test and resource bundles go so that a file the branch deleted can't linger in them; Xcode copies
       # resources into a bundle without removing old ones. Xcode also takes a source whose inode changed for an edited
       # one, and every file is new to this machine, so it is told to look at the times and sizes alone.
@@ -178,7 +186,7 @@ jobs:
         uses: jdx/mise-action@v5
       - if: env.RUN == 'true'
         id: run
-        run: mise run ${{ matrix.task }}
+        run: mise run ${{ env.MISE_TASK }}
       # A run that failed to build would leave a cache without the dependencies; a failed test still saves, since the
       # app was built.
       - if: ${{ !cancelled() && env.RUN == 'true' && (github.event_name == 'push' || steps.cache.outputs.cache-matched-key == '') && (steps.run.outcome == 'success' || (steps.run.outcome == 'failure' && hashFiles('.build/DerivedData/Build/Products/*/Folio.app/**/Info.plist') != '')) }}
@@ -201,8 +209,22 @@ jobs:
             Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
             ~/Library/Caches/org.swift.swiftpm/manifests
           key: ${{ steps.cache.outputs.cache-primary-key }}
+      # The ruleset requires build (test-app), so it fails when the notes half does. The halves run side by side, so
+      # the wait is short.
+      - if: ${{ !cancelled() && env.RUN == 'true' && matrix.task == 'test-app' }}
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          jobs="repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100"
+          while :; do
+            state=$(gh api "$jobs" --jq '.jobs[] | select(.name == "build (test-app-notes)") | "\(.status) \(.conclusion)"')
+            case "$state" in "completed "*) break ;; esac
+            sleep 10
+          done
+          echo "build (test-app-notes): ${state#completed }"
+          [ "$state" = "completed success" ]
       # `mise run note-screens -- <run ID>` takes these as the new references.
-      - if: failure() && matrix.task == 'test-app'
+      - if: failure() && matrix.task == 'test-app-notes'
         uses: actions/upload-artifact@v7
         with:
           name: note-screens

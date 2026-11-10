@@ -77,8 +77,17 @@ description = "Run the app's tests on macOS: screen models, and the note views a
 depends = ["generate"]
 # xcodebuild passes TEST_RUNNER_-prefixed variables to the tests without the prefix. A note-view picture that is missing
 # or differs from its reference lands in FOLIO_NOTE_SCREENS; FOLIO_NOTE_SCREENS_STRICT fails a run on a macOS other than
-# the one the references were made on, instead of skipping the comparison (CI sets it).
+# the one the references were made on, instead of skipping the comparison (CI sets it). FOLIO_TEST_PART=notes runs only
+# the slow note-view suites and FOLIO_TEST_PART=rest everything else, so CI can run the halves side by side; a new
+# suite lands in rest until it is listed here.
 run = """
+notes="NoteScreenTests NoteLayoutTests NoteClickGridTests NoteHangulTests NoteMathTests NoteTypingTests"
+case "${FOLIO_TEST_PART:-}" in
+  "") part="" ;;
+  notes) part=$(for s in $notes; do printf ' -only-testing:FolioTests/%s' "$s"; done) ;;
+  rest) part=$(for s in $notes; do printf ' -skip-testing:FolioTests/%s' "$s"; done) ;;
+  *) echo "FOLIO_TEST_PART is notes or rest, not $FOLIO_TEST_PART" >&2; exit 2 ;;
+esac
 out="${FOLIO_NOTE_SCREENS:-.build/note-screens}"
 case "$out" in /*) ;; *) out="$PWD/$out" ;; esac
 # Only the pictures a run leaves: FOLIO_NOTE_SCREENS may name a folder that holds other files.
@@ -86,7 +95,7 @@ if [ -d "$out" ]; then find "$out" -maxdepth 1 -type f -name '*.png' -delete; rm
 rm -rf .build/test-app.xcresult
 status=0
 TEST_RUNNER_FOLIO_NOTE_SCREENS="$out" TEST_RUNNER_FOLIO_NOTE_SCREENS_STRICT="${FOLIO_NOTE_SCREENS_STRICT:-}" \
-xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation $FOLIO_XCODEBUILD_FLAGS || status=$?
+xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation $part $FOLIO_XCODEBUILD_FLAGS || status=$?
 # -quiet leaves out why a test failed; the summary has each failure's message.
 if [ "$status" -ne 0 ] && [ -d .build/test-app.xcresult ]; then
   xcrun xcresulttool get test-results summary --path .build/test-app.xcresult --compact
