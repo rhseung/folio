@@ -232,6 +232,8 @@ struct QuickAddCorpusTests {
         #expect(reader.line("선대 HW 매주 월수", setting: .repeats(.weekly)) == "선대 HW 매주 월")
         // A lone `오후` stays the deadline's after the weekdays shrink to one, as it was beside them.
         #expect(reader.line("격주 월수 오후", setting: .repeats(nil)) == "월 오후")
+        #expect(reader.line("오후 3일마다 18:00", setting: .repeats(nil)) == "오후 10/22 18:00")
+        #expect(reader.line("오후 3일마다 18:00", setting: .repeats(.daily)) == "오후 매일 18:00")
         #expect(reader.line("선대 HW 매주 월수", setting: .due(date("2026-11-14 23:59"))) == "선대 HW 매주 월수 11/14 23:59")
         // A one-word title another course's title starts with reads as that course only typed whole.
         let physics = Course(device: device, at: .now, title: "일반물리학실험", codes: [], number: "1101")
