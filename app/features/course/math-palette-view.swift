@@ -70,7 +70,8 @@ struct MathPaletteCell: View {
 
     static let minWidth: CGFloat = 80
     static let height: CGFloat = 64
-    static let glyphHeight: CGFloat = 28
+    /// A fraction's ink at the note's size (30pt) fits without shrinking; the caption still fits the cell's height.
+    static let glyphHeight: CGFloat = 32
     /// A symbol's ink fits the glyph's height; its transparent edge may run into the cell's padding.
     static let glyphSlot = CGSize(width: minWidth - 2 * Theme.Space.s, height: glyphHeight + 2 * NoteMath.edge(NoteLook.body))
 
