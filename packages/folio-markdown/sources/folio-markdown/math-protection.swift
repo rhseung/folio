@@ -1,11 +1,13 @@
 /// Markdown escapes would eat TeX (`\{` becomes `{`, `a_1_b` turns into emphasis), so math is wrapped
-/// in code before parsing: `$$...$$` becomes a ```` ```math ```` block and `$...$` an inline code span
+/// in code before parsing: `$$...$$` becomes a fenced block in `blockLanguage` and `$...$` an inline code span
 /// starting with `mathMarker`. Code spans and fenced code are left alone, and `\$` is a literal dollar.
 /// A `|` inside `[[…]]` is escaped too: in a table row GFM would split the cell there and drop the cells past the
 /// header's width, as `[[note:<ID>|title]]` always has one. GFM unescapes `\|` in a cell and markdown elsewhere, so
 /// the renderer still reads `[[target|alias]]`.
 public enum MathProtection {
-    public static let blockLanguage = "math"
+    /// Not `math`: that is a fence the writer chose, which is TeX whatever the note's syntax (`MathFence`), while a
+    /// `$$` block is in the note's syntax. The private-use character keeps the two apart.
+    public static let blockLanguage = "\u{E000}math"
     /// Private-use character marking an inline code span that holds math.
     public static let marker: Character = "\u{E000}"
 
@@ -113,5 +115,26 @@ public enum MathProtection {
             previous = c
         }
         return nil
+    }
+}
+
+/// A fenced block written as a formula in a syntax of its own, so one block of an AsciiMath note can be TeX (which has
+/// `\begin{align}` and the other environments AsciiMath lacks) without the whole note changing. `$…$` and `$$…$$` stay
+/// in the note's syntax.
+public enum MathFence {
+    /// The same raw values as the note's `math` frontmatter, so the app reads them as its own syntax.
+    public enum Syntax: String, Sendable, CaseIterable {
+        case latex, asciimath
+    }
+
+    /// The fence names, in the order the language menu offers them.
+    public static let languages: [(name: String, syntax: Syntax)] = [
+        ("math", .latex), ("tex", .latex), ("latex", .latex), ("asciimath", .asciimath), ("am", .asciimath),
+    ]
+
+    /// The syntax a fence's info string (or just its language) names, or nil for a code block.
+    public static func syntax(_ info: String?) -> Syntax? {
+        guard let word = info?.split(whereSeparator: \.isWhitespace).first?.lowercased() else { return nil }
+        return languages.first { $0.name == word }?.syntax
     }
 }

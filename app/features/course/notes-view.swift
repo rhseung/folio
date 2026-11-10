@@ -195,7 +195,10 @@ struct NoteEditor: View {
                 }
                 // An icon like the bar's other items; the syntax in use is chosen on top of the palette and named in
                 // the tooltip.
-                Button { showsMath.toggle() } label: {
+                Button {
+                    palette.fence = writing ? outline.views.editor?.caretFence : nil
+                    showsMath.toggle()
+                } label: {
                     Label(String(localized: .notesMathLabel(model.meta.math.label)), systemImage: "function")
                 }
                 .help(Text(.notesMathHelp(model.meta.math.label)))

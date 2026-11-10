@@ -18,11 +18,30 @@ extension NSAttributedString.Key {
     static let noteMath = NSAttributedString.Key("folio.math")
     /// A math block's TeX, on all its lines, and an image link's source, on the link: shown in the same bubble.
     static let noteMathBlock = NSAttributedString.Key("folio.math-block")
+    /// The syntax a math fence chose (`MathSyntax`'s raw value), on its body's lines; a block without it is in the note's.
+    static let noteMathSyntax = NSAttributedString.Key("folio.math-syntax")
     static let noteImage = NSAttributedString.Key("folio.image")
     /// Lines of a fenced code block, where Enter is only a line break.
     static let noteCode = NSAttributedString.Key("folio.code")
     /// How tall the caret stands on the paragraph's lines: its text's, not the whole fixed line's.
     static let noteCaret = NSAttributedString.Key("folio.caret")
+}
+
+extension MathSyntax {
+    init(_ fence: MathFence.Syntax) {
+        switch fence {
+        case .latex: self = .latex
+        case .asciimath: self = .asciimath
+        }
+    }
+}
+
+extension NSAttributedString {
+    /// The syntax a math fence chose for the block at `index`, or nil where the note's applies.
+    func mathFence(at index: Int) -> MathSyntax? {
+        guard index < length else { return nil }
+        return (attribute(.noteMathSyntax, at: index, effectiveRange: nil) as? String).flatMap(MathSyntax.init(rawValue:))
+    }
 }
 
 /// Styles the note's markdown source in place: marks stay in the text, dimmed, and the text after them takes fonts,
@@ -126,6 +145,7 @@ extension NSAttributedString.Key {
         for block in math.blocks {
             for n in block.lines {
                 w.set(Self.withBreak(lines[n], in: storage), [Self.mono: true, .foregroundColor: accent.inkNative, .noteMathBlock: block.tex])
+                if let syntax = block.syntax { w.set(Self.withBreak(lines[n], in: storage), [.noteMathSyntax: syntax.rawValue]) }
             }
         }
 
@@ -307,7 +327,8 @@ extension NSAttributedString.Key {
             if lines.count > 1, w.text.substring(with: last).trimmingCharacters(in: .whitespaces).hasPrefix(String(w.text.substring(with: first).trimmingCharacters(in: .whitespaces).prefix(3))) {
                 w.marks.append(last)
             }
-            if let language = block.language, lines.count > 2 {
+            // A math fence's body is drawn as math below, not as code.
+            if let language = block.language, MathFence.syntax(language) == nil, lines.count > 2 {
                 let body = NSRange(location: lines[1].location, length: NSMaxRange(lines[lines.count - 2]) - lines[1].location)
                 for token in NoteScripts.highlight(w.text.substring(with: body), language: language) {
                     guard let look = NoteLook.token(token.classes) else { continue }
@@ -357,10 +378,17 @@ private struct Columns {
     }
 }
 
-/// Where math is in the source, read as `MathProtection` reads it, so the source and the read view agree.
+/// Where math is in the source, read as `MathProtection` reads it, so the source and the read view agree. A math
+/// fence's body is a block too, in the syntax the fence chose (`MathFence`).
 struct MathScan {
     struct Inline { let range: NSRange; let tex: String }
-    struct Block { let lines: ClosedRange<Int>; let tex: String; let ranges: [NSRange] }
+    struct Block {
+        let lines: ClosedRange<Int>
+        let tex: String
+        let ranges: [NSRange]
+        /// The math fence's syntax; nil for a `$$` block, which is in the note's.
+        var syntax: MathSyntax?
+    }
 
     var inline: [Inline] = []
     var blocks: [Block] = []
@@ -368,17 +396,31 @@ struct MathScan {
     init(text: String, lines: [NSRange]) {
         let ns = text as NSString
         var fence: String?
+        var fenced: (syntax: MathSyntax, first: Int)?
+        var fencedBlocks: [Block] = []
+        func closeFenced(last: Int) {
+            guard let open = fenced, open.first <= last else { return }
+            let ranges = Array(lines[open.first...last])
+            let tex = ranges.map { ns.substring(with: $0) }.joined(separator: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
+            if !tex.isEmpty { fencedBlocks.append(Block(lines: open.first...last, tex: tex, ranges: ranges, syntax: open.syntax)) }
+        }
         var i = 0
         while i < lines.count {
             let line = ns.substring(with: lines[i])
             let trimmed = line.trimmingCharacters(in: .whitespaces)
             defer { i += 1 }
             if let open = fence {
-                if trimmed.hasPrefix(open) { fence = nil }
+                if trimmed.hasPrefix(open) {
+                    fence = nil
+                    closeFenced(last: i - 1)
+                    fenced = nil
+                }
                 continue
             }
             if trimmed.hasPrefix("```") || trimmed.hasPrefix("~~~") {
                 fence = String(trimmed.prefix(3))
+                let info = String(trimmed.drop { $0 == "`" || $0 == "~" })
+                fenced = MathFence.syntax(info).map { MathSyntax($0) }.map { (syntax: $0, first: i + 1) }
                 continue
             }
             let prefix = line.prefix { $0 == " " || $0 == ">" }.utf16.count
@@ -399,6 +441,9 @@ struct MathScan {
             }
             scanInline(line, at: lines[i].location)
         }
+        // A fence left open runs to the end, as the markdown parser reads it.
+        if fence != nil { closeFenced(last: lines.count - 1) }
+        blocks += fencedBlocks
     }
 
     private mutating func scanInline(_ line: String, at offset: Int) {

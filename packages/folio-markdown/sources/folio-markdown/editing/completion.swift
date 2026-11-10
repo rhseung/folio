@@ -125,12 +125,31 @@ public struct CompletionCatalog: Sendable {
     public var snippets: [Snippet]
     /// TeX commands and math snippets are TeX; an AsciiMath note's formulas have their own short forms.
     public var tex: Bool
+    /// The math snippets of the syntax the note doesn't use, for a math fence written in that one.
+    public var otherMath: [Snippet]
 
-    public init(slash: [CompletionItem] = [], languages: [String] = [], snippets: [Snippet] = [], tex: Bool = true) {
+    public init(slash: [CompletionItem] = [], languages: [String] = [], snippets: [Snippet] = [], tex: Bool = true, otherMath: [Snippet] = []) {
         self.slash = slash
         self.languages = languages
         self.snippets = snippets
         self.tex = tex
+        self.otherMath = otherMath
+    }
+
+    /// What a fence can say after its backticks: the math fences first, then the code languages (less the ones a math
+    /// fence took) and the widget.
+    public var fenceNames: [String] {
+        MathFence.languages.map(\.name) + languages.filter { MathFence.syntax($0) == nil } + [CBWidget.language]
+    }
+
+    /// The catalog for the formula at `place`: in a math fence of the other syntax, that syntax's commands and snippets.
+    public func at(_ place: SourcePlace) -> CompletionCatalog {
+        guard let fence = place.fence, (fence == .latex) != tex else { return self }
+        var other = self
+        other.tex = fence == .latex
+        other.snippets = snippets.filter { !$0.inMath } + otherMath
+        other.otherMath = snippets.filter(\.inMath)
+        return other
     }
 }
 
@@ -138,6 +157,7 @@ public enum Completion {
     /// The completion the text calls for at the caret, or nil.
     public static func query(in text: NSString, caret: Int, catalog: CompletionCatalog) -> CompletionQuery? {
         let place = SourcePlace.at(caret, in: text)
+        let catalog = catalog.at(place)
         let line = text.lineRange(for: NSRange(location: caret, length: 0))
         let content = SourceLines.content(line, in: text)
         let prefix = text.substring(with: NSRange(location: content.location, length: caret - content.location))
@@ -166,7 +186,7 @@ public enum Completion {
             if let (snippet, range) = Snippet.match(catalog.snippets, in: text, caret: caret, place: place) {
                 return CompletionQuery(kind: .snippet, text: snippet.trigger, range: range, place: place)
             }
-        case .math(_, let content):
+        case .math(_, let content, _):
             guard catalog.tex else {
                 // AsciiMath has no commands; a `\` here asks for its names as one does in TeX, and the name replaces it.
                 // An escape the writer means (`\ ` for a space) stays when the menu is closed with Esc.
@@ -200,14 +220,14 @@ public enum Completion {
 
     /// The candidates for `query`, best first.
     public static func items(for query: CompletionQuery, catalog: CompletionCatalog) -> [CompletionItem] {
+        let catalog = catalog.at(query.place)
         switch query.kind {
         case .slash:
             return filter(catalog.slash, query.text)
         case .callout:
             return filter(CalloutHeader.known.map { CompletionItem(id: "callout.\($0)", title: $0, body: $0) }, query.text)
         case .codeLanguage:
-            let names = catalog.languages + [CBWidget.language]
-            return filter(names.map { CompletionItem(id: "language.\($0)", title: $0, body: $0) }, query.text)
+            return filter(catalog.fenceNames.map { CompletionItem(id: "language.\($0)", title: $0, body: $0) }, query.text)
         case .texCommand:
             if query.text.isEmpty { return MathSymbols.items(tex: catalog.tex, snippets: catalog.snippets) }
             return filter(catalog.tex ? TeXCommands.all.map(\.item) : AsciiMathSymbols.items, query.text, prefixOnly: true)
@@ -296,7 +316,7 @@ public enum Completion {
                 body = item.body + "\n$0\n" + fence
             }
         case .texEnvironment:
-            let display: Bool = if case .math(true, _) = query.place { true } else { false }
+            let display: Bool = if case .math(true, _, _) = query.place { true } else { false }
             body = display ? "\(item.body)}\n$1\n\\end{\(item.body)}" : "\(item.body)} $1 \\end{\(item.body)}"
         case .slash:
             let line = text.lineRange(for: NSRange(location: range.location, length: 0))

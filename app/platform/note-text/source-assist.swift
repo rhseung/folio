@@ -51,13 +51,15 @@ struct NoteAssist: Equatable {
 
     @MainActor func catalog(syntax: MathSyntax) -> CompletionCatalog {
         let snippets = self.snippets(syntax: syntax)
+        let other = self.snippets(syntax: syntax == .latex ? .asciimath : .latex).filter(\.inMath)
         // Each block with its fastest way in on the right (`##`, `mk ⇥`), so the menu teaches it (#395).
         let blocks = SlashBlocks.items(templates: Self.templateKinds.compactMap { kind in templates[kind].flatMap { $0.isEmpty ? nil : (kind, $0) } })
         return CompletionCatalog(
             slash: InputGuide.annotated(blocks + [SlashBlocks.guide], snippets: snippets),
             languages: NoteScripts.languages + ["mermaid"],
             snippets: snippets,
-            tex: syntax == .latex)
+            tex: syntax == .latex,
+            otherMath: other)
     }
 }
 

@@ -601,9 +601,12 @@ struct DatePanel: View {
                     Spacer()
                     TimeMenu(minute: Binding(get: { minuteOfDay }, set: { setMinute($0) }))
                 }
-                HStack(spacing: Theme.Space.tight) {
+                // The four times run wider than the 280pt popover: in one row they squeezed into "오전 9…" or broke
+                // "오전" from "9:00". Each keeps its own width and the last ones take a second row.
+                FlowLayout(spacing: Theme.Space.tight) {
                     ForEach(Self.presets, id: \.self) { m in
                         Button(TimeMenu.label(m)) { setMinute(m) }
+                            .lineLimit(1)
                             .buttonStyle(.pointing(.plain))
                             .font(Theme.Typeface.caption.monospacedDigit())
                             .foregroundStyle(m == minuteOfDay ? Theme.Palette.text : Theme.Palette.textSecondary)

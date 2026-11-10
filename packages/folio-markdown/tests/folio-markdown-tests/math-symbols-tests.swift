@@ -93,7 +93,7 @@ struct MathSymbolsTests {
         #expect(put(alpha, "각 |는") == "각 $\\alpha|$는")
         #expect(put(frac, "«old»") == "$\\frac{|}{}$")
         // Code takes the name bare.
-        #expect(put(alpha, "```tex\n|\n```") == "```tex\n\\alpha|\n```")
+        #expect(put(alpha, "```python\n|\n```") == "```python\n\\alpha|\n```")
         #expect(put(alpha, "`x |`") == "`x \\alpha|`")
         // AsciiMath names are only letters: a space keeps them from the letters beside them.
         let ascii = AsciiMathSymbols.all.first { $0.name == "alpha" }!.item
