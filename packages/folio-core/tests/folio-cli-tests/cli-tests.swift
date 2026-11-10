@@ -92,6 +92,12 @@ struct SessionCommandTests {
         #expect(json.err.hasPrefix(#"{"error":{"candidates":"#))
     }
 
+    @Test func versionIsOneLine() throws {
+        let r = h.cli(["--version"], gist: try Harness.fixtureCopy())
+        #expect(r.code == 0)
+        #expect(r.out == FolioVersion.marketing)
+    }
+
     @Test func hangulCountsTwoColumns() {
         #expect("그래프 이론".columns == 11)
         #expect("EC4207".columns == 6)

@@ -10,8 +10,20 @@ FOLIO_DERIVED_DATA = "{{config_root}}/.build/DerivedData"
 xcodegen = "2.46.0"
 
 [tasks.generate]
-description = "Generate Folio.xcodeproj from project.yml"
-run = "xcodegen generate"
+description = "Generate Folio.xcodeproj from project.yml, with the version and build number"
+run = ["scripts/version.sh xcconfig", "xcodegen generate"]
+
+[tasks.version-bump]
+description = "Raise the version in FolioVersion: mise run version-bump -- major|minor|patch"
+run = "scripts/version.sh bump"
+
+[tasks.release-notes]
+description = "Draft release-notes/<version>.json from the PRs merged since the last tag: mise run release-notes [-- <since>]"
+run = "scripts/release-notes.sh file"
+
+[tasks.release-tag]
+description = "Tag origin/main as v<version> and push the tag, which drafts its GitHub release"
+run = "scripts/version.sh tag"
 
 [tasks.test]
 description = "Run package tests, the design token check and the Application Support check"
@@ -123,17 +135,29 @@ xcodebuild -scheme Folio -destination 'platform=macOS,arch=arm64' test -quiet -d
 echo "$dir"
 """
 
-[tasks.install-mac]
-description = "Build a Release app and install it to /Applications"
+[tasks.build-release]
+description = "Build the Release app for macOS into .build/DerivedData/Build/Products/Release"
 depends = ["generate"]
-# A running copy is quit first so it is replaced whole.
+run = "xcodebuild -scheme Folio -configuration Release -destination 'platform=macOS' build -quiet -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation"
+
+[tasks.install-mac]
+description = "Build this checkout's Release app and install it to /Applications"
+depends = ["build-release"]
+# Only the installed copy is stopped: a Debug build running from DerivedData shares the bundle ID, so quitting by
+# name or ID would take it down too. It is stopped before the copy so the bundle is replaced whole.
 run = """
-xcodebuild -scheme Folio -configuration Release -destination 'platform=macOS' build -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
-osascript -e 'quit app "Folio"' 2>/dev/null || true
+installed='^/Applications/Folio[.]app/Contents/MacOS/Folio( |$)'
+if pkill -f "$installed"; then
+  for _ in $(seq 50); do pgrep -f "$installed" >/dev/null || break; sleep 0.2; done
+fi
 # The app was Coursebook.app before it was renamed; the old copy goes so only one remains.
 rm -rf /Applications/Coursebook.app /Applications/Folio.app
 ditto "$FOLIO_DERIVED_DATA/Build/Products/Release/Folio.app" /Applications/Folio.app
 """
+
+[tasks.install-release]
+description = "Install origin/main (or a given ref) as the app and the CLI, built in a clean temporary worktree: mise run install-release [-- <ref>]"
+run = "scripts/install-release.sh"
 
 [tasks.build-ipad]
 description = "Build the app for the iPad simulator (FOLIO_CONFIGURATION=Release for a Release build)"
