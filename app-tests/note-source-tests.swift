@@ -258,7 +258,8 @@ struct NoteSourceTests {
 
     /// The bubble pads its picture evenly, and the picture is the formula's ink (`NoteMathTests.picturesAreTheirInk`),
     /// so it hugs every shape of formula: a display formula's no wider than the formula, not the column, and one wider
-    /// than the column is shrunk into it. All of them are written on one sheet for the PR.
+    /// than the column is drawn at its size, scrolling in a bubble as wide as the column lets it be
+    /// (`longMathScrollsInTheBubble`). All of them are written on one sheet for the PR.
     @Test func theMathBubbleHugsTheFormula() async throws {
         let columns: [(MathSyntax, Bool)] = [(.latex, false), (.latex, true), (.asciimath, false), (.asciimath, true)]
         for dark in [false, true] {
@@ -279,12 +280,17 @@ struct NoteSourceTests {
                     view.setSelectedRange(NSRange(location: display ? ns.range(of: source).location + 1 : ns.range(of: "$").location + 2, length: 0))
                     let label = "\(shape.name) \(syntax.rawValue) \(display ? "block" : "inline") \(dark ? "dark" : "light")"
                     let bubble = try #require(await Self.bubble(view), "\(label)")
-                    let picture = try #require(bubble.subviews.first, "\(label)")
-                    let insets = [picture.frame.minX, picture.frame.minY, bubble.bounds.maxX - picture.frame.maxX, bubble.bounds.maxY - picture.frame.maxY]
-                    #expect(insets.allSatisfy { $0 == PreviewBubble.pad }, "\(label): \(insets)")
+                    let image = try #require(bubble.picture.image, "\(label)")
+                    #expect(bubble.picture.frame.size == image.size, "\(label): \(bubble.picture.frame.size) for \(image.size)")
                     #expect(bubble.frame.minX >= view.visibleRect.minX && bubble.frame.maxX <= view.visibleRect.maxX, "\(label): \(bubble.frame) in \(view.visibleRect)")
                     let room = view.visibleRect.width - 2 * PreviewBubble.pad - 8
-                    #expect(picture.frame.width <= room.rounded(), "\(label): \(picture.frame.width) past \(room)")
+                    if bubble.scrolls {
+                        #expect(bubble.frame.width == room + 2 * PreviewBubble.pad, "\(label): \(bubble.frame.width) for \(room)")
+                    } else {
+                        let picture = bubble.convert(bubble.picture.bounds, from: bubble.picture)
+                        let insets = [picture.minX, picture.minY, bubble.bounds.maxX - picture.maxX, bubble.bounds.maxY - picture.maxY]
+                        #expect(insets.allSatisfy { $0 == PreviewBubble.pad }, "\(label): \(insets)")
+                    }
                     // As wide as the bubble, and as tall as it and the line of source it's under, whole rather than
                     // cut through by the bubble's margin.
                     let closing = ns.range(of: "$", options: .backwards).location
@@ -302,28 +308,98 @@ struct NoteSourceTests {
         }
     }
 
-    /// The text around a bubble with the bubble over it, for the sheet. The bubble is drawn here: its card and its
-    /// picture are what a layer holds, and `cacheDisplay` draws only what views draw.
+    /// A formula wider than the column isn't shrunk into the bubble but scrolls in it, at its size: the bubble's as
+    /// wide as the column lets it be, it scrolls by the picture's width, opens at the part the caret is in, fades at an
+    /// edge the formula runs on past, and stays while the pointer is over it, for it to be scrolled. Its start and end
+    /// are written on a sheet for the PR.
+    @Test func longMathScrollsInTheBubble() async throws {
+        let shape = try #require(NoteMathTests.shapes.first { $0.name == "긴 줄" })
+        let columns: [(MathSyntax, Bool)] = [(.latex, false), (.latex, true), (.asciimath, false), (.asciimath, true)]
+        for dark in [false, true] {
+            var rows: [(String, [NSBitmapImageRep])] = []
+            for (syntax, display) in columns {
+                let source = syntax == .latex ? shape.tex : shape.ascii
+                let text = display ? "앞\n$$\n\(source)\n$$\n뒤" : "앞 $\(source)$ 뒤"
+                let (view, window) = Self.editor(text, width: 720, dark: dark)
+                Self.shown(window)
+                defer { window.orderOut(nil) }
+                view.drawsBackground = true
+                view.backgroundColor = NoteLook.card
+                view.configure(accent: CourseAccent.presets[0].accent, syntax: syntax, dark: dark)
+                window.makeFirstResponder(view)
+                let ns = text as NSString, start = ns.range(of: source).location
+                let label = "\(syntax.rawValue) \(display ? "block" : "inline") \(dark ? "dark" : "light")"
+                view.setSelectedRange(NSRange(location: start + 1, length: 0))
+                let bubble = try #require(await Self.bubble(view), "\(label)")
+                let image = try #require(bubble.picture.image, "\(label)")
+                let document = try #require(bubble.scroller.documentView, "\(label)")
+                let room = view.visibleRect.width - 2 * PreviewBubble.pad - 8
+                #expect(bubble.scrolls, "\(label)")
+                #expect(bubble.picture.frame.size == image.size, "\(label): shrunk to \(bubble.picture.frame.size) from \(image.size)")
+                #expect(bubble.frame.width == room + 2 * PreviewBubble.pad, "\(label): \(bubble.frame.width)")
+                // The picture and its padding, inside the border.
+                #expect(document.frame.width == image.size.width + 2 * (PreviewBubble.pad - 1), "\(label): \(document.frame.width) for \(image.size.width)")
+                let end = document.frame.width - bubble.scroller.bounds.width
+                func offset() -> CGFloat { bubble.scroller.contentView.bounds.minX }
+                #expect(offset() == 0 && bubble.leading.isHidden && !bubble.trailing.isHidden, "\(label): opened at \(offset())")
+                var cells = [try #require(Self.cell(view, bubble, around: Self.around(bubble, in: view)), "\(label)")]
+                bubble.reveal(1)
+                #expect(offset() == end && !bubble.leading.isHidden && bubble.trailing.isHidden, "\(label): \(offset()) for \(end)")
+                cells.append(try #require(Self.cell(view, bubble, around: Self.around(bubble, in: view)), "\(label)"))
+                rows.append(("\(syntax == .latex ? "TeX" : "AsciiMath") \(display ? "블록" : "인라인")", cells))
+                // At the formula's end the caret opens it there, the same bubble scrolled rather than a new one.
+                view.setSelectedRange(NSRange(location: start + 2, length: 0))
+                bubble.reveal(0)
+                view.setSelectedRange(NSRange(location: start + (source as NSString).length - 1, length: 0))
+                #expect(view.bubble === bubble && offset() == end, "\(label): \(offset()) at the end")
+                // Under the pointer it stays as the caret leaves the formula, and goes when the pointer does.
+                bubble.hovered = true
+                view.setSelectedRange(NSRange(location: 0, length: 0))
+                #expect(view.bubble === bubble, "\(label): gone while hovered")
+                bubble.left()
+                #expect(view.bubble == nil, "\(label): kept after the pointer left")
+            }
+            NoteRender.sheet(rows, columns: ["처음", "끝"], dark: dark, "math-bubble-scroll-\(dark ? "dark" : "light")")
+        }
+        // A formula that fits has nothing to scroll: under the pointer or not, it goes with the caret, rather than
+        // staying over the line the caret went to.
+        let (view, window) = Self.editor("앞 $x^2$ 뒤", width: 720)
+        Self.shown(window)
+        defer { window.orderOut(nil) }
+        window.makeFirstResponder(view)
+        view.setSelectedRange(NSRange(location: 4, length: 0))
+        let short = try #require(await Self.bubble(view))
+        #expect(!short.scrolls)
+        short.hovered = true
+        view.setSelectedRange(NSRange(location: 0, length: 0))
+        #expect(view.bubble == nil)
+    }
+
+    /// A bubble, and the line of source it's under.
+    static func around(_ bubble: PreviewBubble, in view: SourceTextView) -> CGRect {
+        let frame = bubble.frame
+        return CGRect(x: frame.minX - 12, y: frame.minY - 40, width: frame.width + 24, height: frame.height + 52).intersection(view.bounds)
+    }
+
+    /// The text around a bubble with the bubble over it, for the sheet. The bubble's layers are drawn here, scrolled as
+    /// they are: `cacheDisplay` draws only what views draw, and the card, the picture and the fades are layers.
     static func cell(_ view: SourceTextView, _ bubble: PreviewBubble, around: CGRect) -> NSBitmapImageRep? {
-        guard let rep = view.bitmapImageRepForCachingDisplay(in: around),
-              let image = (bubble.subviews.first as? NSImageView)?.image,
+        guard let rep = view.bitmapImageRepForCachingDisplay(in: around), let layer = bubble.layer,
               let context = NSGraphicsContext(bitmapImageRep: rep) else { return nil }
         view.cacheDisplay(in: around, to: rep)
+        // The colors come in the window's display pass, which a window off every screen doesn't run; and `render(in:)`
+        // draws a shadow unblurred, as a band under the card.
+        for layered in [bubble, bubble.leading, bubble.trailing] as [NSView] { layered.updateLayer() }
+        let shadow = layer.shadowOpacity
+        layer.shadowOpacity = 0
+        defer { layer.shadowOpacity = shadow }
         NSGraphicsContext.saveGraphicsState()
         NSGraphicsContext.current = context
         defer { NSGraphicsContext.restoreGraphicsState() }
-        // The text view's y runs down, the picture's up.
-        let frame = NSRect(x: bubble.frame.minX - around.minX, y: around.maxY - bubble.frame.maxY, width: bubble.frame.width, height: bubble.frame.height)
-        let pad = PreviewBubble.pad
-        view.effectiveAppearance.performAsCurrentDrawingAppearance {
-            let card = NSBezierPath(roundedRect: frame.insetBy(dx: 0.5, dy: 0.5), xRadius: NoteLook.radius, yRadius: NoteLook.radius)
-            NoteLook.card.setFill()
-            card.fill()
-            NoteLook.lineSoft.setStroke()
-            card.lineWidth = 1
-            card.stroke()
-            image.draw(in: frame.insetBy(dx: pad, dy: pad))
-        }
+        // The text view's y runs down, the layer's up.
+        let cg = context.cgContext
+        cg.translateBy(x: bubble.frame.minX - around.minX, y: around.maxY - bubble.frame.maxY)
+        layer.render(in: cg)
         return rep
     }
 
@@ -334,7 +410,7 @@ struct NoteSourceTests {
             return color
         }
         for (look, other) in [(NSAppearance.Name.aqua, NSAppearance.Name.darkAqua), (.darkAqua, .aqua)] {
-            let bubble = PreviewBubble(image: NSImage(size: NSSize(width: 20, height: 10)), size: CGSize(width: 20, height: 10))
+            let bubble = PreviewBubble(image: NSImage(size: NSSize(width: 20, height: 10)), size: CGSize(width: 20, height: 10), width: 400)
             bubble.appearance = NSAppearance(named: look)
             // Whatever the app's appearance is while the layer is updated, the bubble's own decides.
             NSAppearance(named: other)?.performAsCurrentDrawingAppearance { bubble.updateLayer() }
