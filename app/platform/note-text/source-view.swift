@@ -774,6 +774,8 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     override func mouseDown(with event: NSEvent) {
         keeping = nil
         hideCard()
+        // A click moves the caret where it's meant to go, under the bubble too, which mustn't stay over it.
+        bubble?.hovered = false
         let point = convert(event.locationInWindow, from: nil)
         if let i = characterIndex(at: point) {
             if openLink(at: i, event: event) { return }
@@ -945,9 +947,10 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             found = rendering(at: caret.location, in: storage)
         }
         if let kept = bubble {
-            // Under the pointer it stays while the caret goes elsewhere, or a long formula couldn't be scrolled to its
-            // end; it goes when the pointer leaves (`PreviewBubble.onLeave`).
-            if kept.hovered, found == nil || found?.image === kept.picture.image { return }
+            // A formula that scrolls stays under the pointer while the caret goes elsewhere, or it couldn't be scrolled
+            // to its end; it goes when the pointer leaves (`PreviewBubble.onLeave`). One that doesn't scroll has
+            // nothing to keep it for, and kept it covered the line the caret went to.
+            if kept.scrolls, kept.hovered, found == nil || found?.image === kept.picture.image { return }
             // The same picture keeps its view, and where it's scrolled to follows the caret.
             if let found, found.image === kept.picture.image, found.size == kept.picture.frame.size, let origin = bubbleOrigin(kept.frame.size, found.span) {
                 kept.setFrameOrigin(origin)
@@ -1132,7 +1135,8 @@ final class PreviewBubble: NSView {
     let picture: NSImageView
     let scroller: BubbleScroller
     let leading = EdgeFade(leading: true), trailing = EdgeFade(leading: false)
-    /// Whether the pointer is over it, which keeps it while the caret goes elsewhere (`SourceTextView.updateBubble`).
+    /// Whether the pointer moved onto it, which keeps one that scrolls while the caret goes elsewhere
+    /// (`SourceTextView.updateBubble`). Not a pointer it merely came up under: typing on, that held it over the text.
     var hovered = false
     var onLeave: (() -> Void)?
     let scrolls: Bool
@@ -1204,22 +1208,20 @@ final class PreviewBubble: NSView {
         scrolls && frame.contains(point) ? scroller : nil
     }
 
+    // Always active: tracked only in the key window, a pointer leaving while another was key left it held.
     override func updateTrackingAreas() {
         super.updateTrackingAreas()
         trackingAreas.forEach(removeTrackingArea)
-        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .activeInKeyWindow, .inVisibleRect], owner: self, userInfo: nil))
+        addTrackingArea(NSTrackingArea(rect: .zero, options: [.mouseEnteredAndExited, .mouseMoved, .activeAlways, .inVisibleRect], owner: self, userInfo: nil))
     }
 
-    // Shown under a pointer that hasn't moved, it gets no `mouseEntered`.
-    override func viewDidMoveToWindow() {
-        super.viewDidMoveToWindow()
-        if let window { hovered = bounds.contains(convert(window.mouseLocationOutsideOfEventStream, from: nil)) }
-    }
-
+    // Moving within it counts too: shown under the pointer, it gets no `mouseEntered`.
     override func mouseEntered(with event: NSEvent) { hovered = true }
+    override func mouseMoved(with event: NSEvent) { hovered = true }
     override func mouseExited(with event: NSEvent) { left() }
 
     func left() {
+        guard hovered else { return }
         hovered = false
         onLeave?()
     }
@@ -1240,7 +1242,13 @@ final class PreviewBubble: NSView {
 /// can't go that way; a click goes on up to the text under it.
 final class BubbleScroller: NSScrollView {
     override func scrollWheel(with event: NSEvent) {
-        if abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) { nextResponder?.scrollWheel(with: event) } else { super.scrollWheel(with: event) }
+        if abs(event.scrollingDeltaY) > abs(event.scrollingDeltaX) {
+            nextResponder?.scrollWheel(with: event)
+            return
+        }
+        // Scrolled without the pointer moving first, it's still the pointer's.
+        (superview as? PreviewBubble)?.hovered = true
+        super.scrollWheel(with: event)
     }
 
     override func hitTest(_ point: NSPoint) -> NSView? { frame.contains(point) ? self : nil }

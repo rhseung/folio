@@ -361,6 +361,18 @@ struct NoteSourceTests {
             }
             NoteRender.sheet(rows, columns: ["처음", "끝"], dark: dark, "math-bubble-scroll-\(dark ? "dark" : "light")")
         }
+        // A formula that fits has nothing to scroll: under the pointer or not, it goes with the caret, rather than
+        // staying over the line the caret went to.
+        let (view, window) = Self.editor("앞 $x^2$ 뒤", width: 720)
+        Self.shown(window)
+        defer { window.orderOut(nil) }
+        window.makeFirstResponder(view)
+        view.setSelectedRange(NSRange(location: 4, length: 0))
+        let short = try #require(await Self.bubble(view))
+        #expect(!short.scrolls)
+        short.hovered = true
+        view.setSelectedRange(NSRange(location: 0, length: 0))
+        #expect(view.bubble == nil)
     }
 
     /// A bubble, and the line of source it's under.
