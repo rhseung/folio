@@ -91,6 +91,19 @@ struct MathPaletteModelTests {
         #expect(editor.meta.math == .asciimath && palette.sections[0].items.first?.title == "alpha")
     }
 
+    /// In a math fence the palette shows the fence's symbols, and the note's syntax can't be changed from there (#16).
+    @Test func insideAFenceItsSyntaxHolds() {
+        let palette = MathPaletteModel(editor: editor)
+        editor.meta.math = .latex
+        palette.fence = .asciimath
+        palette.category = .greek
+        #expect(palette.syntax == .asciimath && palette.sections[0].items.first?.title == "alpha")
+        palette.syntax = .asciimath
+        #expect(editor.meta.math == .latex)
+        palette.fence = nil
+        #expect(palette.syntax == .latex && palette.sections[0].items.first?.title == "\\alpha")
+    }
+
     @Test func aPickWaitsForTheEditor() {
         let palette = MathPaletteModel(editor: editor)
         let item = palette.sections[0].items[0]

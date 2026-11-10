@@ -49,7 +49,7 @@ public struct Snippet: Equatable, Sendable {
             let n = snippet.trigger.utf16.count
             guard caret >= n, text.substring(with: NSRange(location: caret - n, length: n)) == snippet.trigger else { continue }
             let start = caret - n
-            if case .math(_, let content) = place, start < content.location { continue }
+            if case .math(_, let content, _) = place, start < content.location { continue }
             if start > 0 {
                 let before = text.character(at: start - 1)
                 if before == 0x5C { continue }

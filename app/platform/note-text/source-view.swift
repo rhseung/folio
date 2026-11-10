@@ -589,11 +589,11 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
     }
 
     override func insertTab(_ sender: Any?) {
-        apply(SourceEditing.tab(string as NSString, selectedRange(), back: false, snippets: catalog.snippets, asciiMath: !catalog.tex))
+        apply(SourceEditing.tab(string as NSString, selectedRange(), back: false, catalog: catalog))
     }
 
     override func insertBacktab(_ sender: Any?) {
-        apply(SourceEditing.tab(string as NSString, selectedRange(), back: true, snippets: catalog.snippets, asciiMath: !catalog.tex))
+        apply(SourceEditing.tab(string as NSString, selectedRange(), back: true, catalog: catalog))
     }
 
     // Nothing here acts while a syllable is being composed: the input method owns those keys, and a pair closed or a
@@ -653,6 +653,11 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             completion.more = nil
         }
         completion.arrived = { [weak self] in self?.placeMenu() }
+    }
+
+    /// The syntax of the math fence the caret is in, which the math palette's symbols follow; nil where the note's applies.
+    var caretFence: MathSyntax? {
+        SourcePlace.at(selectedRange().location, in: string as NSString).fence.map { MathSyntax($0) }
     }
 
     /// 편집 › 수식 기호 목록: types the `\` that lists every symbol and math snippet of the note's syntax, so the menu is
@@ -1036,7 +1041,7 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
             }
         }
         if let tex = storage.attribute(.noteMathBlock, at: min(caret, storage.length - 1), longestEffectiveRange: &span, in: all) as? String,
-           let picture = NoteMath.shared.picture(tex, syntax: styler.syntax, display: true, size: NoteLook.body, dark: styler.dark, trim: true,
+           let picture = NoteMath.shared.picture(tex, syntax: storage.mathFence(at: span.location) ?? styler.syntax, display: true, size: NoteLook.body, dark: styler.dark, trim: true,
                                                  ready: redrawBubble) {
             return Rendering(image: picture.image, size: picture.size, span: span, math: true, at: at(span))
         }
@@ -1393,9 +1398,9 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
     var saveFile: (String, Data) -> String? = { _, _ in nil }
     private var styler: SourceStyler?
     private var lineStarts: [Int] = [0]
-    private var snippets: [Snippet] = []
+    private var catalog = CompletionCatalog()
+    private var assisting: (NoteAssist, MathSyntax)?
     private var revealing: Int?
-    private var asciiMath = false
 
     override init() {
         super.init()
@@ -1440,8 +1445,13 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
     /// The completion menu, and so link completion, is Mac-only for now (#31); pairs, lists and snippets on Tab work
     /// here too.
     func setAssist(_ assist: NoteAssist, syntax: MathSyntax) {
-        snippets = assist.snippets(syntax: syntax)
-        asciiMath = syntax == .asciimath
+        if let assisting, assisting.0 == assist, assisting.1 == syntax { return }
+        assisting = (assist, syntax)
+        catalog = assist.catalog(syntax: syntax)
+    }
+
+    var caretFence: MathSyntax? {
+        SourcePlace.at(selectedRange.location, in: textStorage.string as NSString).fence.map { MathSyntax($0) }
     }
 
     func restyle() {
@@ -1510,7 +1520,7 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
         }
         let source = textStorage.string as NSString
         if text == "\t" {
-            apply(SourceEditing.tab(source, range, back: false, snippets: snippets, asciiMath: asciiMath))
+            apply(SourceEditing.tab(source, range, back: false, catalog: catalog))
             return false
         }
         if text.isEmpty, range.length == 1, selectedRange.length == 0,

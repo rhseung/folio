@@ -56,7 +56,7 @@ struct SourcePlaceTests {
         #expect(place("$$\nx\n$$\n뒤|") == .text)
         #expect(place("$$|$$").isMath)
         #expect(place("가격은 \\$5|") == .text)
-        if case .math(false, let content) = place("값 $\\frac{a}{|b}$") {
+        if case .math(false, let content, _) = place("값 $\\frac{a}{|b}$") {
             #expect(content == NSRange(location: 3, length: 11))
         } else {
             Issue.record("not math")

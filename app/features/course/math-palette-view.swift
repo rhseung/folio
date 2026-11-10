@@ -18,6 +18,7 @@ struct MathPalette: View {
                 Text(.notesMathSyntax).foregroundStyle(Theme.Palette.textSecondary)
                 Spacer(minLength: Theme.Space.s)
                 Segmented(selection: $model.syntax, options: MathSyntax.allCases.map { ($0, $0.label) }, compact: true)
+                    .disabled(model.fence != nil)
             }
             .padding(Theme.Space.m)
             if writing {

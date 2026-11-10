@@ -74,7 +74,7 @@ public enum InputGuide {
 
     static func menuEntries(_ catalog: CompletionCatalog) -> [Entry] {
         let blocks = catalog.slash.filter { $0.id != menuItemID }
-        let languages = catalog.languages + [CBWidget.language]
+        let languages = catalog.fenceNames
         var out = [
             Entry("menu.blocks", .menu, .phrase(.blocks), note: .list(blocks.map(\.title)), [.key("/"), .result(.phrase(.blockList))],
                   keywords: blocks.flatMap { [$0.title] + $0.keywords }),
