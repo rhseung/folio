@@ -462,10 +462,10 @@ final class ClaudeModel {
     /// The whole conversation as one page. `column-reverse` keeps the newest message in view without JavaScript.
     static func html(_ chat: Chat, partial: String? = nil, cards: Bool = true, superseded: Set<ProposalRef> = [],
                      describe: (ActionProposal) -> ProposalLine = { ProposalLine(text: $0.command) }) -> String {
-        let writing = partial.map { #"<div class="msg assistant">\#(HTMLRenderer.render(markdown: $0))</div>"# }
+        let writing = partial.map { #"<div class="msg assistant">\#(HTMLRenderer.render(answer: $0))</div>"# }
         let card = String(localized: .claudeAnswerCard)
         let messages = (writing.map { [$0] } ?? []) + chat.messages.reversed().map { m in
-            let body = HTMLRenderer.render(markdown: m.text)
+            let body = HTMLRenderer.render(answer: m.text)
             switch m.role {
             case .user:
                 return #"<div class="msg user">\#(body)</div>"#

@@ -15,9 +15,13 @@ final class MathPaletteModel {
         category = categories.first ?? .greek
     }
 
+    /// The syntax of the math fence the caret was in when the palette opened. Its symbols are that block's, and the
+    /// note's syntax above can't be changed from inside it: the choice would show the block's, not the note's.
+    var fence: MathSyntax?
+
     var syntax: MathSyntax {
-        get { editor.meta.math }
-        set { editor.meta.math = newValue }
+        get { fence ?? editor.meta.math }
+        set { if fence == nil { editor.meta.math = newValue } }
     }
 
     var searching: Bool { !query.isEmpty }

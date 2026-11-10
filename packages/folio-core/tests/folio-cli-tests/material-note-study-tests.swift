@@ -100,6 +100,20 @@ struct MaterialNoteStudyTests {
         #expect(try h.file(GISTStore(url: gist)).attendance.filter { $0.sessionId == s.id }.map(\.id) == [entry.id])
     }
 
+    /// A class under way (09:30, the harness's clock at 10:00) is wrapped up by a save only from the prompt of a
+    /// recording just stopped, which isn't in course.json yet: its audio is still being compressed.
+    @Test func wrapUpDuringTheClassCountsOnlyAfterARecording() throws {
+        let gist = try Harness.fixtureCopy()
+        let id = UUID(uuidString: "A0000000-0000-4000-8000-0000000000F1")!
+        #expect(h.cli(["session", "add", "EC4207", "--date", "2026-10-28 09:30", "--id", id.uuidString], gist: gist).code == 0)
+        let wrapped = { try h.file(GISTStore(url: gist)).sessions.first { $0.id == id }?.isWrappedUp }
+        try h.direct(SessionWrapUp(course: course, session: id, attendance: .set(.present)), gist: gist)
+        #expect(try wrapped() == false)
+        #expect(try !h.file(GISTStore(url: gist)).recordings.contains { $0.sessionId == id })
+        try h.direct(SessionWrapUp(course: course, session: id, attendance: .set(.present), recorded: true), gist: gist)
+        #expect(try wrapped() == true)
+    }
+
     @Test func linkUnit() throws {
         try h.expectSame(["material", "link-unit", "EC4207/05_Matchings.pdf", "매칭"], setup: [Self.track, Self.addUnit]) { gist in
             MaterialLinkUnit(course: course, material: try material(gist, "05_Matchings.pdf"), unit: Self.unit, linked: true)

@@ -492,8 +492,8 @@ enum GeneratedCommands {
     }
 
     struct SessionWrapUp: ParsableCommand {
-        static let configuration = CommandConfiguration(commandName: "wrap-up", abstract: "회차 편집과 수업 정리: 렉처 진도, 단원, 출결, 복습, 일시, 종류, 온라인 링크를 한 번에 적는다. 시작한 수업이면 정리했다고 표시한다", discussion: """
-            렉처 파일은 <자료>:<시작>-<끝>으로 쓴다. 주지 않은 것은 그대로 둔다. 시작한 수업(휴강 아님)이면 정리했다고 표시해 오늘 화면의 수업 정리에서 뺀다.
+        static let configuration = CommandConfiguration(commandName: "wrap-up", abstract: "회차 편집과 수업 정리: 렉처 진도, 단원, 출결, 복습, 일시, 종류, 온라인 링크를 한 번에 적는다. 끝난 수업이면 정리했다고 표시한다", discussion: """
+            렉처 파일은 <자료>:<시작>-<끝>으로 쓴다. 주지 않은 것은 그대로 둔다. 끝났거나 녹음을 마친 수업(휴강 아님)이면 정리했다고 표시해 오늘 화면의 수업 정리에서 뺀다.
 
             예시:
               folio session wrap-up EC4207/10-26 05_Matchings.pdf:7-11 --unit 매칭
@@ -527,7 +527,8 @@ enum GeneratedCommands {
                 link: link.map { p in Patch.set(p.value) } ?? .keep,
                 kind: kind.map { Patch.set($0) } ?? .keep,
                 skipsReview: skipsReview.map { Patch.set($0.value) } ?? .keep,
-                reviewUnfinished: reviewUnfinished.map { Patch.set($0.value) } ?? .keep
+                reviewUnfinished: reviewUnfinished.map { Patch.set($0.value) } ?? .keep,
+                recorded: false
             )
             try perform(spec: action, g, ctx: ctx)
         }
@@ -937,7 +938,7 @@ enum GeneratedCommands {
         @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
         @Argument(help: "과제 제목") var title: String
         @Option(help: ArgumentHelp("마감 일시", valueName: "date")) var due: DateArg?
-        @Option(help: "반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 3일마다, 격주, 매주 월수, 월,수마다)") var repeats: AssignmentRepeat?
+        @Option(help: "반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 격일, 3일마다, 격주, 매월, 매주 월수, 월,수마다, 평일마다)") var repeats: AssignmentRepeat?
 
         func run() throws {
             let ctx = try CLI.context(g)
@@ -970,7 +971,7 @@ enum GeneratedCommands {
         @Option(help: "새 제목") var title: String?
         @Option(help: ArgumentHelp("마감 일시. none이면 지운다", valueName: "date")) var due: Clearable<DateArg>?
         @Option(help: "상태") var status: AssignmentStatus?
-        @Option(help: "반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 3일마다, 격주, 매주 월수, 월,수마다). none이면 지운다") var repeats: Clearable<AssignmentRepeat>?
+        @Option(help: "반복. weekly, daily, biweekly, monthly, 3d, 2w, 1m, weekly:mon,wed, 또는 빠른 추가의 말(매일, 격일, 3일마다, 격주, 매월, 매주 월수, 월,수마다, 평일마다). none이면 지운다") var repeats: Clearable<AssignmentRepeat>?
         @Option(name: .customLong("component"), help: ArgumentHelp("반영되는 성적 항목. 주면 묶음은 풀린다. none이면 지운다", valueName: "component"), completion: Complete.ref("GradeComponent")) var componentId: Clearable<String>?
         @Option(name: .customLong("group"), help: "한꺼번에 점수를 매기는 성적 항목 묶음. 주면 성적 항목 하나는 풀린다. none이면 지운다") var componentGroup: Clearable<String>?
         @Option(help: "메모") var memo: String?

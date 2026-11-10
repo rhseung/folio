@@ -82,12 +82,6 @@ public enum SessionSection: String, CaseIterable, Sendable {
 }
 
 extension Session {
-    /// Saving the class's sheet counts as wrapping it up once the class has begun: every wrap-up field was there to
-    /// see. A class still ahead, or one that didn't happen, has nothing to wrap up yet.
-    public static func savingWrapsUp(kind: Kind, start: Date, at now: Date) -> Bool {
-        kind != .cancelled && start <= now
-    }
-
     /// Before its end the class is still to be held, so its menu offers what holding it takes; after, what follows it.
     public func isOver(at now: Date, schedule: [ClassTime], classMinutes: Int, calendar: Calendar) -> Bool {
         now >= expectedEnd(schedule: schedule, classMinutes: classMinutes, calendar: calendar)

@@ -293,7 +293,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "줄에서 읽은 반복 대신 쓸 반복(매일, 격주, 3일마다, 매주 월수, weekly:mon,wed). none이면 반복하지 않는다"
+            "value": "줄에서 읽은 반복 대신 쓸 반복(매일, 격일, 3일마다, 격주, 매월, 매주 월수, 평일마다, weekly:mon,wed). none이면 반복하지 않는다"
           }
         }
       }
