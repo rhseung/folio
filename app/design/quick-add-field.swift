@@ -349,6 +349,8 @@ struct QuickAddChip: View {
             }
             .padding(Theme.Space.l)
             .frame(width: 280)
+            // A popover proposes the height it opened with: picking a first date adds the clear button under it.
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -397,6 +399,9 @@ struct QuickAddChip: View {
             }
             .padding(Theme.Space.l)
             .frame(width: 360)
+            // A popover proposes the height it last took: switching to 개월 and back to 주 squeezed the weekday row
+            // into the shorter height, and the rows spilled over the card's edges.
+            .fixedSize(horizontal: false, vertical: true)
         }
     }
 
