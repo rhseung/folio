@@ -36,8 +36,9 @@ final class SnapshotDriver {
     /// `courses`: the first tab holds two courses side by side, the walk moving the left one and the second course's
     /// overview beside it, so both fold their section columns (#62).
     static let coursePanes = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_PANES"] == "courses"
-    /// Only the page strip of a lecture with classes' pages (#147): its sections, a class's range changed, a range
-    /// picked, the class menu and the range saved, as `strip-*.png`. Set to `from-to` (`19-21`) for the range picked.
+    /// Only the page strip of a lecture with classes' pages (#147), or of the first lecture when no class has any: its
+    /// sections, a class's range changed, a range picked, the class menu and the range saved, as `strip-*.png`. Set to
+    /// `from-to` (`19-21`) for the range picked.
     static let strip = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP"]
     /// The page a section's range is changed from and the page its end goes to (`16-19`), for `strip-edit`.
     static let stripEdit = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP_EDIT"]
