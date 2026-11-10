@@ -6332,7 +6332,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "가리킬 종류. today, grades, requirements, people, codes, settings, semester, course, session, unit, note, material, assignment, exam, card, problem-set, person, recording"
+            "value": "가리킬 종류. today, grades, requirements, people, codes, settings, whats-new, semester, course, session, unit, note, material, assignment, exam, card, problem-set, person, recording"
           }
         }
       }
@@ -6387,7 +6387,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "과목의 페이지(sessions, units, notes, materials, quiz, cards, stats, problems, assignments, exams, grades)나 설정의 탭(profile, general, notifications, backup, letters, notes, recording, claude)"
+            "value": "과목의 페이지(sessions, units, notes, materials, quiz, cards, stats, problems, assignments, exams, grades)나 설정의 탭(profile, general, notifications, backup, letters, notes, recording, claude, about)"
           }
         }
       }

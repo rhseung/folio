@@ -23,6 +23,8 @@ struct WindowRequest: Codable, Hashable {
 extension FocusedValues {
     /// The key window's history, for the menu bar's back and forward.
     @Entry var navigator: Navigator?
+    /// Opens a link in the window in front, for menu items that go to a page (도움말 › 새 기능).
+    @Entry var openPlace: (@MainActor (AppLink) -> Void)?
 }
 
 /// Back and forward in the toolbar. A click steps once; holding the button lists the places it would step through.

@@ -197,6 +197,7 @@ struct RootView: View {
                 .onGeometryChange(for: CGFloat.self) { $0.size.height - $0.safeAreaInsets.top - $0.safeAreaInsets.bottom } action: { contentHeight = $0 }
                 .classStartPrompt(workspace, open: { open($0.link, in: $0.placement) }, openSplit: { openTab($0, course: $1) },
                                   showing: { navigator.current }, bringForward: bringForward)
+                .whatsNewPrompt(workspace) { open($0) }
                 #if os(iOS)
                 .onGeometryChange(for: CGFloat.self, of: \.size.width) { windowWidth = $0 }
                 #endif
@@ -223,6 +224,7 @@ struct RootView: View {
                 #endif
                 .focusedSceneValue(\.showSettings) { showSettings($0) }
                 .focusedSceneValue(\.showInputGuide) { showInputGuide($0) }
+                .focusedSceneValue(\.openPlace) { open($0) }
                 .sheet(item: $inputGuide) { InputGuideSheet(workspace: workspace, syntax: $0.syntax) }
                 .focusedSceneValue(\.navigator, navigator)
                 .focusedSceneValue(\.columnCommand, tabs.trail(tabs.selected)?.column)

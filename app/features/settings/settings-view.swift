@@ -4,7 +4,7 @@ import FolioStorage
 import SwiftUI
 
 enum SettingsTab: String, CaseIterable, Identifiable {
-    case profile = "내 정보", general = "일반", notifications = "알림", backup = "백업", catalog = "평어", notes = "노트", recording = "녹음", claude = "Claude"
+    case profile = "내 정보", general = "일반", notifications = "알림", backup = "백업", catalog = "평어", notes = "노트", recording = "녹음", claude = "Claude", about = "앱 정보"
     var id: Self { self }
     static let storageKey = "settingsTab"
 
@@ -18,6 +18,7 @@ enum SettingsTab: String, CaseIterable, Identifiable {
         case .notes: "doc.text"
         case .recording: "waveform"
         case .claude: "sparkle"
+        case .about: "info.circle"
         }
     }
 }
@@ -85,6 +86,7 @@ struct SettingsView: View {
             ClassStartForm(model: model)
             RecordingSettings()
         case .claude: ClaudeSettings(model: model)
+        case .about: AboutSettings(model: model)
         }
     }
 }
@@ -167,12 +169,28 @@ private struct GeneralSettings: View {
                 }
             }
         }
-        Block(String(localized: .settingsAbout)) {
-            Card {
-                FormRow(label: String(localized: .settingsVersion), last: true) {
-                    Text(model.version).foregroundStyle(Theme.Palette.textSecondary).textSelection(.enabled)
-                }
+    }
+}
+
+/// 앱 정보 (#415): the version, and the page of what each release changed. Automatic updates (#414) join this tab.
+private struct AboutSettings: View {
+    let model: SettingsModel
+    @Environment(\.openLink) private var openLink
+
+    var body: some View {
+        Card {
+            FormRow(label: String(localized: .settingsVersion)) {
+                Text(model.version).foregroundStyle(Theme.Palette.textSecondary).textSelection(.enabled)
             }
+            Button { openLink(.place(.whatsNew)) } label: {
+                CardRow(last: true) {
+                    Text(.whatsNewTitle)
+                    Spacer(minLength: Theme.Space.s)
+                    Image(systemName: "chevron.right").font(Theme.Glyph.small).foregroundStyle(Theme.Palette.textTertiary)
+                }
+                .contentShape(.rect)
+            }
+            .buttonStyle(.pointing(.plain))
         }
     }
 }
