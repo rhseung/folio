@@ -81,7 +81,7 @@ struct ScreenRenders {
         // The list columns hidden by hand where they would fit (#62). Open over the page they need the glass this render
         // cannot draw, so the window snapshot (`FOLIO_SNAPSHOT_COLUMN=open`) shows that.
         let columns = ScreenCatalog.columns(workspace)
-        let hidden = ColumnPrefs(defaults: nil, collapsed: Set(ColumnKind.allCases))
+        let hidden = ColumnPrefs(collapsed: Set(ColumnKind.allCases))
         var batches = [plain, Batch(pages: columns.map { name, entry in
             ("column-hidden-\(name)", { AnyView(ScreenView(workspace: workspace, entry: entry).environment(\.columnPrefs, hidden)) })
         })]

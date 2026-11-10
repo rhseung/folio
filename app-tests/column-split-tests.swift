@@ -34,24 +34,71 @@ struct ColumnFitTests {
         #expect(!ColumnFit(roomy: false, collapsed: false, fold: .sections).listAlone)
     }
 
-    @Test func handHidingIsRememberedPerKind() throws {
+    @Test func handHidingIsRememberedPerKindAsTheLastChoice() throws {
         let suite = "folio.column-fit-tests.\(UUID())"
         let defaults = try #require(UserDefaults(suiteName: suite))
         defer { defaults.removePersistentDomain(forName: suite) }
-        let prefs = ColumnPrefs(defaults: defaults)
+        let prefs = ColumnMemory(defaults: defaults).newPane()
         prefs.set(.courseSections, collapsed: true)
         #expect(prefs.isCollapsed(.courseSections))
         #expect(!prefs.isCollapsed(.people))
-        // Another window reads the same choice.
-        #expect(ColumnPrefs(defaults: defaults).isCollapsed(.courseSections))
+        // The app opened again starts its panes from it.
+        #expect(ColumnMemory(defaults: defaults).newPane().isCollapsed(.courseSections))
         prefs.set(.courseSections, collapsed: false)
-        #expect(!ColumnPrefs(defaults: defaults).isCollapsed(.courseSections))
+        #expect(!ColumnMemory(defaults: defaults).newPane().isCollapsed(.courseSections))
     }
 
-    @Test func inMemoryPrefsDontTouchTheDefaults() {
-        let prefs = ColumnPrefs(defaults: nil, collapsed: [.people])
+    @Test func prefsWithoutAMemoryDontTouchTheLastChoice() {
+        let before = ColumnMemory.shared.last
+        let prefs = ColumnPrefs(collapsed: [.people])
         #expect(prefs.isCollapsed(.people))
-        prefs.set(.settingsTabs, collapsed: true)
-        #expect(prefs.isCollapsed(.settingsTabs))
+        prefs.set(.settingsTabs, collapsed: !before.contains(.settingsTabs))
+        #expect(prefs.isCollapsed(.settingsTabs) != before.contains(.settingsTabs))
+        #expect(ColumnMemory.shared.last == before)
+    }
+}
+
+/// Each tab and each pane of a split keeps its own hidden columns; a new one starts from the last choice
+/// (2026-11-10 사용자).
+@MainActor
+struct PaneColumnTests {
+    let grades = Navigator.Entry(link: .place(.grades))
+    let people = Navigator.Entry(link: .place(.people))
+
+    @Test func twoPanesKeepTheirOwnAndANewPaneTakesTheLastChoice() {
+        let memory = ColumnMemory(defaults: nil)
+        let panes = TabPanes(Navigator(), limit: 3, memory: memory)
+        panes.openBeside(grades)
+        let (left, right) = (panes.columns[0], panes.columns[1])
+        #expect(left !== right)
+        left.set(.courseSections, collapsed: true)
+        #expect(left.isCollapsed(.courseSections) && !right.isCollapsed(.courseSections))
+        // The next pane, and the next tab, start from the choice made last.
+        panes.openBeside(people)
+        #expect(panes.columns[2].isCollapsed(.courseSections))
+        #expect(TabPanes(Navigator(), limit: 3, memory: memory).columns[0].isCollapsed(.courseSections))
+        right.set(.courseSections, collapsed: false)
+        #expect(left.isCollapsed(.courseSections))
+        #expect(!TabPanes(Navigator(), limit: 3, memory: memory).columns[0].isCollapsed(.courseSections))
+    }
+
+    @Test func aPaneKeepsItsColumnsAsItMoves() throws {
+        let memory = ColumnMemory(defaults: nil)
+        let panes = TabPanes(Navigator(), limit: 3, memory: memory)
+        panes.openBeside(grades)
+        let hidden = panes.columns[1]
+        hidden.set(.people, collapsed: true)
+        memory.remember(.people, collapsed: false)
+        panes.swap(0, 1)
+        #expect(panes.columns[0] === hidden)
+        // Joining another tab, each pane brings its own.
+        let other = TabPanes(Navigator(people), limit: 3, memory: memory)
+        #expect(panes.close(1) && panes.merge(other, at: 0))
+        #expect(panes.columns[1] === hidden && !panes.columns[0].isCollapsed(.people))
+        // Out to a window of its own: what it had hidden goes with it, a pane without any starts from the last choice.
+        let window = try #require(TabPanes(histories: panes.navigators.map(\.history), shares: panes.shares, focus: 0,
+                                           columns: [[], hidden.names], limit: 3, memory: memory))
+        #expect(!window.columns[0].isCollapsed(.people) && window.columns[1].isCollapsed(.people))
+        #expect(memory.pane(nil).collapsed == memory.last && memory.pane(["gone", "people"]).collapsed == [.people])
     }
 }

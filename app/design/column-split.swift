@@ -1,7 +1,7 @@
 import SwiftUI
 
-/// Which list column a `ColumnSplit` holds. Hiding one by hand is remembered for its kind, so every window and pane
-/// showing that kind follows it (#62).
+/// Which list column a `ColumnSplit` holds. Hiding one by hand is remembered for its kind, in the pane it was hidden
+/// in (`ColumnPrefs`, #62).
 enum ColumnKind: String, CaseIterable {
     case courseSections, settingsTabs, people, quizScope
 
@@ -43,12 +43,35 @@ struct ColumnFit: Equatable {
     var show: Show { roomy ? .dock : .overlay }
 }
 
-/// The columns hidden by hand, on this device: a choice about the screen, not GIST data, so in `UserDefaults` rather
-/// than `settings.json`. One object for the app, so every window and pane follows a change at once.
+/// The list columns hidden by hand in one pane (2026-11-10 사용자): each tab, and each pane of a split, keeps its own,
+/// so hiding the course column in one leaves the others as they were. Nested splits in a pane share its prefs.
 @MainActor @Observable final class ColumnPrefs {
+    private(set) var collapsed: Set<ColumnKind>
+    @ObservationIgnored private let memory: ColumnMemory?
+
+    /// Without a memory the choice stays in this pane: renders and tests, which mustn't change what new panes start as.
+    init(collapsed: Set<ColumnKind> = [], memory: ColumnMemory? = nil) {
+        self.collapsed = collapsed
+        self.memory = memory
+    }
+
+    /// For what draws a screen outside a tab's panes (renders, previews).
+    static let loose = ColumnMemory.shared.newPane()
+
+    func isCollapsed(_ kind: ColumnKind) -> Bool { collapsed.contains(kind) }
+
+    func set(_ kind: ColumnKind, collapsed on: Bool) {
+        if on { collapsed.insert(kind) } else { collapsed.remove(kind) }
+        memory?.remember(kind, collapsed: on)
+    }
+}
+
+/// The last choice made in any pane, which a new tab or pane starts from: on this device, a choice about the screen
+/// and not GIST data, so in `UserDefaults` rather than `settings.json`.
+@MainActor final class ColumnMemory {
     /// A test host, a window-snapshot run or a resize probe shares the installed app's bundle ID, so its defaults are
     /// the user's: a column they hid would change what is measured or drawn, and one the run hides would stay hidden.
-    static let shared = ColumnPrefs(defaults: isolated ? nil : .standard)
+    static let shared = ColumnMemory(defaults: isolated ? nil : .standard)
     private static var isolated: Bool {
         #if DEBUG && os(macOS)
         if SnapshotDriver.directory != nil { return true }
@@ -58,23 +81,35 @@ struct ColumnFit: Equatable {
         #endif
         return LocalFolders.isIsolated()
     }
-    @ObservationIgnored private let defaults: UserDefaults?
-    private var collapsed: Set<ColumnKind>
+    private let defaults: UserDefaults?
+    private(set) var last: Set<ColumnKind>
 
-    /// Nil defaults keep the choice in memory only: renders and tests, which mustn't write the installed app's.
+    /// Nil defaults keep the last choice in memory only.
     init(defaults: UserDefaults?, collapsed: Set<ColumnKind> = []) {
         self.defaults = defaults
-        self.collapsed = defaults.map { d in Set(ColumnKind.allCases.filter { d.bool(forKey: Self.key($0)) }) } ?? collapsed
+        last = defaults.map { d in Set(ColumnKind.allCases.filter { d.bool(forKey: Self.key($0)) }) } ?? collapsed
     }
 
     static func key(_ kind: ColumnKind) -> String { "columnCollapsed.\(kind.rawValue)" }
 
-    func isCollapsed(_ kind: ColumnKind) -> Bool { collapsed.contains(kind) }
-
-    func set(_ kind: ColumnKind, collapsed on: Bool) {
-        if on { collapsed.insert(kind) } else { collapsed.remove(kind) }
+    func remember(_ kind: ColumnKind, collapsed on: Bool) {
+        if on { last.insert(kind) } else { last.remove(kind) }
         defaults?.set(on, forKey: Self.key(kind))
     }
+
+    func newPane() -> ColumnPrefs { ColumnPrefs(collapsed: last, memory: self) }
+
+    /// A pane brought into a new window (`WindowRequest.columns`) keeps what it had hidden; nil is a new pane. Raw
+    /// names, so a kind a later build drops is skipped rather than failing the whole request, and the window with it.
+    func pane(_ kinds: [String]?) -> ColumnPrefs {
+        guard let kinds else { return newPane() }
+        return ColumnPrefs(collapsed: Set(kinds.compactMap(ColumnKind.init(rawValue:))), memory: self)
+    }
+}
+
+extension ColumnPrefs {
+    /// For `WindowRequest.columns`.
+    var names: [String] { collapsed.map(\.rawValue).sorted() }
 }
 
 /// The menu bar's 구역 열 보기·숨기기 for the focused pane's outermost column, which the pane's screen leaves in its
@@ -104,6 +139,7 @@ extension EnvironmentValues {
     @Entry var columnButtons = 0
     /// Closes the folded column open over the page, for a row picked in it that leaves the window's place as it was.
     @Entry var closeColumn: @MainActor () -> Void = {}
+    /// The pane's own (`TabPanes.columns`).
     @Entry var columnPrefs: ColumnPrefs?
     /// Set by an outer `ColumnSplit` on what it holds: only the outermost column answers the menu bar.
     @Entry var insideColumnSplit = false
@@ -169,7 +205,7 @@ struct ColumnSplit<Column: View, Content: View>: View {
     /// How much of the pane the open column leaves uncovered at its trailing side, to click back to the page.
     static var pageEdge: CGFloat { buttonRow }
 
-    var prefs: ColumnPrefs { givenPrefs ?? .shared }
+    var prefs: ColumnPrefs { givenPrefs ?? .loose }
     var fit: ColumnFit { ColumnFit(roomy: roomy, collapsed: prefs.isCollapsed(kind), fold: fold) }
     var buttons: Int { outerButtons + 1 }
 
