@@ -30,12 +30,15 @@ description = "Run package tests, the design token check and the Application Sup
 # fixtures and expectations are in Korean time, and Apple's date detector reads phrases like 내일 7시 in the
 # machine's zone, not the test calendar's; a UTC machine (CI) would fail them.
 env = { TZ = "Asia/Seoul" }
+# folio-core is built once with its tests: `swift run` alone builds without testability and so compiles every module
+# again for the checks.
 run = [
   "swift test --package-path packages/folio-markdown",
-  "swift test --package-path packages/folio-core",
+  "swift build --build-tests --package-path packages/folio-core",
+  "swift test --skip-build --package-path packages/folio-core",
   "swift test --package-path packages/folio-ai",
-  "swift run -q --package-path packages/folio-core folio actions --check",
-  "swift run -q --package-path packages/folio-core folio-gen --check",
+  "swift run --skip-build -q --package-path packages/folio-core folio actions --check",
+  "swift run --skip-build -q --package-path packages/folio-core folio-gen --check",
   "scripts/check-design.sh",
   "scripts/check-local-folders.sh",
 ]
@@ -86,8 +89,17 @@ description = "Run the app's tests on macOS: screen models, and the note views a
 depends = ["generate"]
 # xcodebuild passes TEST_RUNNER_-prefixed variables to the tests without the prefix. A note-view picture that is missing
 # or differs from its reference lands in FOLIO_NOTE_SCREENS; FOLIO_NOTE_SCREENS_STRICT fails a run on a macOS other than
-# the one the references were made on, instead of skipping the comparison (CI sets it).
+# the one the references were made on, instead of skipping the comparison (CI sets it). FOLIO_TEST_PART=notes runs only
+# the slow note-view suites and FOLIO_TEST_PART=rest everything else, so CI can run the halves side by side; a new
+# suite lands in rest until it is listed here.
 run = """
+notes="NoteScreenTests NoteLayoutTests NoteClickGridTests NoteHangulTests NoteMathTests NoteTypingTests"
+case "${FOLIO_TEST_PART:-}" in
+  "") part="" ;;
+  notes) part=$(for s in $notes; do printf ' -only-testing:FolioTests/%s' "$s"; done) ;;
+  rest) part=$(for s in $notes; do printf ' -skip-testing:FolioTests/%s' "$s"; done) ;;
+  *) echo "FOLIO_TEST_PART is notes or rest, not $FOLIO_TEST_PART" >&2; exit 2 ;;
+esac
 out="${FOLIO_NOTE_SCREENS:-.build/note-screens}"
 case "$out" in /*) ;; *) out="$PWD/$out" ;; esac
 # Only the pictures a run leaves: FOLIO_NOTE_SCREENS may name a folder that holds other files.
@@ -95,7 +107,7 @@ if [ -d "$out" ]; then find "$out" -maxdepth 1 -type f -name '*.png' -delete; rm
 rm -rf .build/test-app.xcresult
 status=0
 TEST_RUNNER_FOLIO_NOTE_SCREENS="$out" TEST_RUNNER_FOLIO_NOTE_SCREENS_STRICT="${FOLIO_NOTE_SCREENS_STRICT:-}" \
-xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation || status=$?
+xcodebuild -scheme Folio -destination 'platform=macOS' -resultBundlePath .build/test-app.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation $part $FOLIO_XCODEBUILD_FLAGS || status=$?
 # -quiet leaves out why a test failed; the summary has each failure's message.
 if [ "$status" -ne 0 ] && [ -d .build/test-app.xcresult ]; then
   xcrun xcresulttool get test-results summary --path .build/test-app.xcresult --compact
@@ -110,7 +122,7 @@ run = """
 id=$(xcrun simctl list devices available | grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}')
 [ -n "$id" ] || { echo "no available iPad simulator" >&2; exit 1; }
 rm -rf .build/test-ipad.xcresult
-xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation
+xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation $FOLIO_XCODEBUILD_FLAGS
 # -quiet leaves out the tests themselves; the count shows they ran.
 xcrun xcresulttool get test-results summary --path .build/test-ipad.xcresult --compact
 """
@@ -162,7 +174,9 @@ run = "scripts/install-release.sh"
 [tasks.build-ipad]
 description = "Build the app for the iPad simulator (FOLIO_CONFIGURATION=Release for a Release build)"
 depends = ["generate"]
-run = "xcodebuild -scheme Folio -configuration \"${FOLIO_CONFIGURATION:-Debug}\" -destination 'generic/platform=iOS Simulator' build -quiet -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation"
+# A generic destination builds every simulator architecture outside Debug; Intel's adds a second full compile of the
+# same code and nothing an iPad runs.
+run = "xcodebuild -scheme Folio -configuration \"${FOLIO_CONFIGURATION:-Debug}\" -destination 'generic/platform=iOS Simulator' ARCHS=arm64 build -quiet -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation $FOLIO_XCODEBUILD_FLAGS"
 
 [tasks.build-web]
 description = "Bundle the note page (KaTeX math, code highlighting, diagrams, note CSS) and the edit view's code highlighting into app/resources/web"

@@ -18,10 +18,28 @@ struct SpecEquivalenceTests {
     static let examples: [(String, String)] = Actions.all.filter { $0.spec.generated && !outsideGIST.contains($0.command) }
         .flatMap { type in type.spec.examples.filter(HelpExampleTests.runnable).map { (type.command, $0.replacing(/\s{2,}\S.*$/, with: "")) } }
 
+    // Preparing runs two dozen commands, and every example starts from the same prepared folder, so it is prepared
+    // once and copied. The copy takes the backup folder along and points the settings at it: examples running side by
+    // side must not write into one backup folder.
+    static let prepared = Result {
+        let gist = try Harness.fixtureCopy()
+        try HelpExampleTests().prepare(gist)
+        return gist.deletingLastPathComponent()
+    }
+
+    func preparedCopy() throws -> URL {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "folio-\(UUID().uuidString)")
+        try FileManager.default.copyItem(at: try Self.prepared.get(), to: folder)
+        let gist = folder.appending(path: "GIST")
+        var settings = try GISTStore(url: gist).loadSettings().model
+        settings.backup.folder = folder.appending(path: "backups").path
+        try h.direct(SettingsSet(settings: settings), gist: gist)
+        return gist
+    }
+
     @Test(arguments: examples)
     func threeWaysAgree(_ command: String, _ example: String) throws {
-        let base = try Harness.fixtureCopy()
-        try HelpExampleTests().prepare(base)
+        let base = try preparedCopy()
         let args = Array(HelpExampleTests.words(example).dropFirst()).filter { $0 != "--dry-run" } + ["--yes"]
         let copies = try (0..<3).map { _ in try copy(base) }
 

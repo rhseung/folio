@@ -23,6 +23,8 @@ jobs:
     outputs:
       test: ${{ steps.files.outputs.test }}
       test-app: ${{ steps.files.outputs.test-app }}
+      test-app-notes: ${{ steps.files.outputs.test-app }}
+      test-app-rest: ${{ steps.files.outputs.test-app }}
       build-ipad: ${{ steps.files.outputs.build-ipad }}
       test-ipad: ${{ steps.files.outputs.test-ipad }}
     steps:
@@ -71,12 +73,41 @@ jobs:
     runs-on: xcode-27
     steps:
       - uses: actions/checkout@v7
+      # Checkout stamps every file with the time it was written, so Xcode and SwiftPM, which compare a source's time
+      # with the one their last build recorded, would compile everything the cache holds again. A time made from the
+      # file's content (its blob hash) is the same on every runner while the content is, and a different one once it
+      # changes, so a cached build skips exactly the unchanged files. Times stay in 2001-2010, never in the future.
+      - name: Pin file times to content
+        run: |
+          git ls-files -s -z | perl -0ne 'my ($mode, $sha, $path) = /^(\d+) ([0-9a-f]+) \d+\t(.*)\0$/s or next; next unless $mode =~ /^100/; my $t = 1_000_000_000 + hex(substr($sha, 0, 7)); utime($t, $t, $path) or die "$path: $!"'
       - run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
       # Apple's date detector reads 오후 3시 or 자정 only when Korean is a preferred language; on the English runner
       # it kept the date and dropped the time.
       - run: defaults write -g AppleLanguages -array ko-KR en-US && defaults write -g AppleLocale ko_KR
+      - id: xcode
+        run: echo "version=$(DEVELOPER_DIR="$XCODE/Contents/Developer" xcodebuild -version | tr -s ' \n' '-' | sed 's/-$//')" >> "$GITHUB_OUTPUT"
+      # Each package's build folder, saved the way the Xcode builds below are.
+      - id: cache
+        uses: actions/cache/restore@v6
+        with:
+          path: |
+            packages/*/.build
+            ~/Library/Caches/org.swift.swiftpm/manifests
+          key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved') }}-${{ github.sha }}
+          restore-keys: |
+            swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved') }}-
+            swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
       - uses: jdx/mise-action@v5
-      - run: mise run test
+      - id: run
+        run: mise run test
+      # A failed test still built everything, so its build is worth keeping.
+      - if: ${{ !cancelled() && (github.event_name == 'push' || steps.cache.outputs.cache-matched-key == '') && steps.run.outcome != 'skipped' }}
+        uses: actions/cache/save@v6
+        with:
+          path: |
+            packages/*/.build
+            ~/Library/Caches/org.swift.swiftpm/manifests
+          key: ${{ steps.cache.outputs.cache-primary-key }}
 
   build:
     needs: changes
@@ -89,11 +120,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # test-app builds the Mac app to host the screen-model tests, so it stands in for build-mac. test-ipad runs the
-        # iPad's own tests on a simulator.
-        task: [test-app, build-ipad, test-ipad]
+        # test-app builds the Mac app to host the screen-model tests, so it stands in for build-mac. Its tests take five
+        # minutes on one main thread, so two runners split them: the note-view suites and the rest. The test-app job
+        # below reports both. test-ipad runs the iPad's own tests on a simulator.
+        task: [test-app-notes, test-app-rest, build-ipad, test-ipad]
     env:
       RUN: ${{ needs.changes.outputs[matrix.task] != 'false' }}
+      MISE_TASK: ${{ startsWith(matrix.task, 'test-app-') && 'test-app' || matrix.task }}
+      FOLIO_TEST_PART: ${{ matrix.task == 'test-app-notes' && 'notes' || matrix.task == 'test-app-rest' && 'rest' || '' }}
       # Every other check builds Debug, so the iPad build goes Release: it also catches code that reaches what only
       # exists under #if DEBUG. It runs on PRs because macOS-only APIs broke main three times when it ran after merging.
       FOLIO_CONFIGURATION: ${{ matrix.task == 'build-ipad' && 'Release' || 'Debug' }}
@@ -106,6 +140,14 @@ jobs:
         run: echo "No file in this PR reaches ${{ matrix.task }}."
       - if: env.RUN == 'true'
         uses: actions/checkout@v7
+      # Checkout stamps every file with the time it was written, so Xcode and SwiftPM, which compare a source's time
+      # with the one their last build recorded, would compile everything the cache holds again. A time made from the
+      # file's content (its blob hash) is the same on every runner while the content is, and a different one once it
+      # changes, so a cached build skips exactly the unchanged files. Times stay in 2001-2010, never in the future.
+      - if: env.RUN == 'true'
+        name: Pin file times to content
+        run: |
+          git ls-files -s -z | perl -0ne 'my ($mode, $sha, $path) = /^(\d+) ([0-9a-f]+) \d+\t(.*)\0$/s or next; next unless $mode =~ /^100/; my $t = 1_000_000_000 + hex(substr($sha, 0, 7)); utime($t, $t, $path) or die "$path: $!"'
       - if: env.RUN == 'true'
         run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
       - if: env.RUN == 'true'
@@ -113,6 +155,11 @@ jobs:
       - if: env.RUN == 'true'
         id: xcode
         run: echo "version=$(DEVELOPER_DIR="$XCODE/Contents/Developer" xcodebuild -version | tr -s ' \n' '-' | sed 's/-$//')" >> "$GITHUB_OUTPUT"
+      - if: env.RUN == 'true'
+        id: key
+        run: |
+          echo "base=derived-data-$MISE_TASK-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}" >> "$GITHUB_OUTPUT"
+          echo "deps=${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}" >> "$GITHUB_OUTPUT"
       # One cache per task: each builds another platform or configuration into its own DerivedData. The index, logs
       # and test results are rebuilt by every run and aren't worth the download. Each push to main saves a new cache,
       # which PRs start from; a PR saves only when it found none, so its pushes don't push main's out of the 10 GB.
@@ -125,34 +172,44 @@ jobs:
             !.build/DerivedData/Index.noindex
             !.build/DerivedData/Logs
             !.build/DerivedData/TestResults
-          key: xcode-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-${{ github.sha }}
+            Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+            ~/Library/Caches/org.swift.swiftpm/manifests
+          key: ${{ steps.key.outputs.base }}-${{ steps.key.outputs.deps }}-${{ github.sha }}
           restore-keys: |
-            xcode-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}-
-            xcode-${{ matrix.task }}-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
-      # Checkout stamps every source newer than the cached build, so every module compiles again; the compilation
-      # cache answers the ones whose inputs are unchanged by content, not by date, so an edit can't be skipped. The app,
-      # test and resource bundles go so that a file the branch deleted can't linger in them; Xcode copies resources
-      # into a bundle without removing old ones.
+            ${{ steps.key.outputs.base }}-${{ steps.key.outputs.deps }}-
+            ${{ steps.key.outputs.base }}-
+      # The project's Package.resolved isn't committed (Folio.xcodeproj isn't), so the cache holds the only copy. With it
+      # xcodebuild can skip a minute of resolving (-skipPackageUpdates), but it also keeps every version it pins: only a
+      # cache made from the same committed pins and project.yml may lend it, or a bumped dependency would be built at its
+      # old version. Pushes to main resolve afresh, so a PR's versions are main's latest; without -skipPackageUpdates
+      # xcodebuild also fetches the tags the cached clones lack.
+      - if: env.RUN == 'true'
+        name: Reuse package versions only from the same dependencies
+        env:
+          SAME: ${{ github.event_name != 'push' && startsWith(steps.cache.outputs.cache-matched-key, format('{0}-{1}-', steps.key.outputs.base, steps.key.outputs.deps)) }}
+        run: |
+          if [ "$SAME" = true ]; then
+            echo "FOLIO_XCODEBUILD_FLAGS=-skipPackageUpdates" >> "$GITHUB_ENV"
+          else
+            rm -f Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+          fi
+      # The app, test and resource bundles go so that a file the branch deleted can't linger in them; Xcode copies
+      # resources into a bundle without removing old ones. Xcode also takes a source whose inode changed for an edited
+      # one, and every file is new to this machine, so it is told to look at the times and sizes alone.
       - if: env.RUN == 'true'
         run: |
           rm -rf .build/DerivedData/Build/Products/*/*.app .build/DerivedData/Build/Products/*/*.xctest .build/DerivedData/Build/Products/*/*.bundle
-          # xcodebuild reads XCODE_XCCONFIG_FILE over every target's settings: the compilation cache is on in CI alone,
-          # without a setting in project.yml.
-          echo 'COMPILATION_CACHE_ENABLE_CACHING = YES' > "$RUNNER_TEMP/ci.xcconfig"
-          echo "XCODE_XCCONFIG_FILE=$RUNNER_TEMP/ci.xcconfig" >> "$GITHUB_ENV"
+          defaults write com.apple.dt.SWBBuildService IgnoreFileSystemDeviceInodeChanges -bool YES
       - if: env.RUN == 'true'
         uses: jdx/mise-action@v5
       - if: env.RUN == 'true'
         id: run
-        run: mise run ${{ matrix.task }}
+        run: mise run ${{ env.MISE_TASK }}
       # A run that failed to build would leave a cache without the dependencies; a failed test still saves, since the
-      # app was built. The compilation cache only grows, so past 3 GB it starts over.
+      # app was built.
       - if: ${{ !cancelled() && env.RUN == 'true' && (github.event_name == 'push' || steps.cache.outputs.cache-matched-key == '') && (steps.run.outcome == 'success' || (steps.run.outcome == 'failure' && hashFiles('.build/DerivedData/Build/Products/*/Folio.app/**/Info.plist') != '')) }}
         id: keep
-        run: |
-          cas=.build/DerivedData/CompilationCache.noindex
-          if [ -d "$cas" ] && [ "$(du -sm "$cas" | cut -f1)" -gt 3072 ]; then rm -rf "$cas"; fi
-          du -sh .build/DerivedData/* || true
+        run: du -sh .build/DerivedData/* || true
       - if: ${{ !cancelled() && steps.keep.outcome == 'success' }}
         uses: actions/cache/save@v6
         with:
@@ -161,18 +218,48 @@ jobs:
             !.build/DerivedData/Index.noindex
             !.build/DerivedData/Logs
             !.build/DerivedData/TestResults
+            Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
+            ~/Library/Caches/org.swift.swiftpm/manifests
           key: ${{ steps.cache.outputs.cache-primary-key }}
       # Sheets of pictures a test lays out for a PR (app-tests/note-render.swift), passing or not; not references.
-      - if: ${{ !cancelled() && env.RUN == 'true' && matrix.task == 'test-app' }}
+      # NoteSourceTests lays them out, in the rest half; two uploads under one name would fail.
+      - if: ${{ !cancelled() && env.RUN == 'true' && matrix.task == 'test-app-rest' }}
         uses: actions/upload-artifact@v7
         with:
           name: note-sheets
           path: .build/note-screens/sheets
           if-no-files-found: ignore
-      # `mise run note-screens -- <run ID>` takes these as the new references.
-      - if: failure() && matrix.task == 'test-app'
+      # `mise run note-screens -- <run ID>` takes these as the new references, which only NoteScreenTests compares.
+      - if: failure() && matrix.task == 'test-app-notes'
         uses: actions/upload-artifact@v7
         with:
           name: note-screens
           path: .build/note-screens
           if-no-files-found: ignore
+
+  # The ruleset requires build (test-app), which the two halves above run between them; this reports both under that
+  # name. It waits on Linux so it never holds one of the few macOS runners while a half is still queued for one: with
+  # every runner taken by a job waiting on a half, no half could start.
+  test-app:
+    name: build (test-app)
+    needs: changes
+    if: ${{ !cancelled() }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+    steps:
+      - if: needs.changes.outputs.test-app != 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          jobs="repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/attempts/$GITHUB_RUN_ATTEMPT/jobs?per_page=100"
+          halves='["build (test-app-notes)", "build (test-app-rest)"]'
+          while :; do
+            states=$(gh api "$jobs" --jq "[.jobs[] | select(.name as \$n | $halves | index(\$n))] | sort_by(.name)[] | \"\(.name): \(.status) \(.conclusion)\"") || states=
+            [ "$(grep -c ': completed ' <<< "$states")" = 2 ] && break
+            sleep 15
+          done
+          echo "$states"
+          ! grep -v ': completed success$' <<< "$states"

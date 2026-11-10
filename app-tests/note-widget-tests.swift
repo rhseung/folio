@@ -147,7 +147,10 @@ struct NoteWidgetTests {
         await rig.settle()
         _ = try await Self.value(rig, "1")
         try await Task.sleep(for: .milliseconds(200))
-        #expect(rig.page.view.url == NotePreviewPage.shellURL)
+        // A page recycled from a note that followed a footnote keeps that anchor in its address; only a move counts.
+        var address = try #require(rig.page.view.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) })
+        address.fragment = nil
+        #expect(address.url == NotePreviewPage.shellURL)
         #expect(try await rig.js("return document.querySelector('h1')?.textContent") as? String == "Title")
     }
 
