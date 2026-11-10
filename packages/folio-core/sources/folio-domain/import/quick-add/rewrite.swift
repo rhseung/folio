@@ -77,6 +77,14 @@ extension QuickAdd {
                 let letter = before.due.map { AssignmentRepeat.weekdayLetters[calendar.isoWeekday(of: $0) - 1] } ?? ""
                 let plain = line.splicing(before.repeatRanges.map { (line.wordRange($0), "") } + before.weekdayRanges.map { ($0, letter) })
                 let stripped = read(plain)
+                // The old rule's words giving way in place, as taking them out can change how their neighbors read: `오후`
+                // goes against the time in `오후 3일마다 18:00`, and `까지` is left as the title's in `한 달마다 까지`.
+                let swapped = { (phrase: String) in
+                    before.repeatRanges.first.map { first in
+                        [line.splicing([(first, phrase)] + before.repeatRanges.dropFirst().map { (line.wordRange($0), "") }
+                            + before.weekdayRanges.map { ($0, letter) })]
+                    } ?? []
+                }
                 switch repeats {
                 case nil:
                     // `매주 까지` with no day: the `까지` was the repeat's, and taken out with it.
@@ -88,27 +96,17 @@ extension QuickAdd {
                     // date written out in full keeps them apart.
                     tries = [plain, line.splicing([(first, text(of: due))] + before.dueRanges.dropFirst().map { (line.wordRange($0), "") })]
                 case let rule? where rule.weekdays.isEmpty:
-                    // The old rule's words first give way in place, as taking them out can put `오후` against the time.
-                    let swapped = before.repeatRanges.first.map { first in
-                        [line.splicing([(first, rule.phrase)] + before.repeatRanges.dropFirst().map { (line.wordRange($0), "") }
-                            + before.weekdayRanges.map { ($0, letter) })]
-                    } ?? []
-                    tries = swapped + (stripped.dueRanges.first.map { [plain.splicing([($0.lowerBound..<$0.lowerBound, rule.phrase + " ")])] } ?? [])
+                    tries = swapped(rule.phrase) + (stripped.dueRanges.first.map { [plain.splicing([($0.lowerBound..<$0.lowerBound, rule.phrase + " ")])] } ?? [])
                         + [plain.appending(word: rule.phrase)]
                 case let rule?:
                     // The weekdays name the day, so the deadline's day words give way to them and only its time stays.
                     guard let due = before.due else {
-                        // `한 달마다 까지` without the rule leaves `까지` alone, where it reads as the title's.
-                        let swapped = before.repeatRanges.first.map { first in
-                            [line.splicing([(first, rule.phrase)] + before.repeatRanges.dropFirst().map { (line.wordRange($0), "") })]
-                        } ?? []
-                        tries = [plain.appending(word: rule.phrase)] + swapped
+                        tries = [plain.appending(word: rule.phrase)] + swapped(rule.phrase)
                         break
                     }
                     let words = rule.phrase + " " + text(of: due).split(separator: " ").last!
                     let ranges = stripped.dueRanges.map(plain.wordRange)
-                    // `오후 3일마다 18:00` without the rule puts `오후` against the time, where it reads as the time's, so
-                    // the rule also goes in place of the old one and the deadline, keeping them apart.
+                    // Like `swapped`, with the deadline's words going too.
                     let others = (before.repeatRanges + before.weekdayRanges).filter { r in !before.dueRanges.contains { $0.overlaps(r) } }
                     let gone = (Array(before.dueRanges.dropFirst()) + others).map { (line.wordRange($0), "") }
                     let inPlace = before.dueRanges.first.map { [line.splicing([($0, words)] + gone)] } ?? []
