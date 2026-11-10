@@ -146,6 +146,10 @@ struct QuickAddCorpusTests {
         // Weekdays named together
         Case(line: "선대 퀴즈 평일마다", course: 0, title: "퀴즈", due: "2026-10-22 23:59", repeats: AssignmentRepeat(.week, weekdays: [1, 2, 3, 4, 5])),
         Case(line: "로봇 실습 주말마다", course: 3, title: "실습", due: "2026-10-24 23:59", repeats: AssignmentRepeat(.week, weekdays: [6, 7])),
+        Case(line: "선대 퀴즈 매주 평일", course: 0, title: "퀴즈", due: "2026-10-22 23:59", repeats: AssignmentRepeat(.week, weekdays: [1, 2, 3, 4, 5])),
+        // `평일` and `주말` without `마다` or the rule right before are the title's.
+        Case(line: "선대 주말 과제 매주 금", course: 0, title: "주말 과제", due: "2026-10-23 23:59", repeats: .weekly),
+        Case(line: "평일 복습 매일", course: nil, title: "평일 복습", due: nil, repeats: .daily),
         Case(line: "선대 HW 매주 월 수", course: 0, title: "HW", due: "2026-10-26 23:59", repeats: AssignmentRepeat(.week, weekdays: [1, 3])),
         Case(line: "선대 HW 매주 월/수", course: 0, title: "HW", due: "2026-10-26 23:59", repeats: AssignmentRepeat(.week, weekdays: [1, 3])),
         Case(line: "선대 HW 매주 월·수", course: 0, title: "HW", due: "2026-10-26 23:59", repeats: AssignmentRepeat(.week, weekdays: [1, 3])),

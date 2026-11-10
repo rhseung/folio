@@ -161,12 +161,16 @@ extension QuickAdd {
     }
 
     /// `월수` names a weekly rule's weekdays only beside one (`매주 월수`, `격주 화목`) or with `마다` (`월,수마다`);
-    /// otherwise it is a word of the title.
+    /// otherwise it is a word of the title. `평일` and `주말` are title words too often (`주말 과제 매주 금`), so they
+    /// count only right after the rule (`매주 평일`).
     static func bindWeekdays(_ words: inout [Word]) {
         let weekly = words.contains { $0.rule?.unit == .week }
-        for i in words.indices where words[i].weekdayGroup?.each == false && !weekly {
+        for i in words.indices where words[i].weekdayGroup?.each == false {
+            let set = AssignmentRepeat.weekdaySets[QuickAdd.core(words[i].text)] != nil
+            guard set ? !(i > 0 && words[i - 1].rule?.unit == .week) : !weekly else { continue }
             words[i].piece = nil
-            words[i].normalized = words[i].text
+            // Kept from Apple's detector, which could read `주말` as a date and take it out of the title.
+            words[i].normalized = set ? "" : words[i].text
         }
     }
 
