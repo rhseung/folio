@@ -527,7 +527,8 @@ enum GeneratedCommands {
                 link: link.map { p in Patch.set(p.value) } ?? .keep,
                 kind: kind.map { Patch.set($0) } ?? .keep,
                 skipsReview: skipsReview.map { Patch.set($0.value) } ?? .keep,
-                reviewUnfinished: reviewUnfinished.map { Patch.set($0.value) } ?? .keep
+                reviewUnfinished: reviewUnfinished.map { Patch.set($0.value) } ?? .keep,
+                recorded: false
             )
             try perform(spec: action, g, ctx: ctx)
         }

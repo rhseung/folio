@@ -41,6 +41,9 @@ struct LectureProgressModelTests {
         #expect(model.refusal == nil && model.note == nil)
         model.submit()
         #expect(links(session) == [SessionMaterial(materialId: slides.id, firstPage: 7, lastPage: 11)])
+        // Saved before its end and before the recording reached course.json, it is still the wrap-up.
+        #expect(!file.recordings.contains { $0.sessionId == session })
+        #expect(file.sessions.first { $0.id == session }?.isWrappedUp == true)
     }
 
     /// A recording without a class has nothing to wrap up. A course without lecture files still has units and a

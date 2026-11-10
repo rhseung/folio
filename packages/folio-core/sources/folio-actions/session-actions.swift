@@ -500,6 +500,8 @@ public struct SessionWrapUp {
     var skipsReview: Patch<Bool>
     /// 복습 노트를 마저 써야 하는지
     var reviewUnfinished: Patch<Bool>
+    /// 녹음을 막 멈춘 수업. 앱이 녹음을 멈출 때 연 시트가 준다. 녹음은 압축이 끝나야 course.json에 기록되고 압축이 실패하면 끝내 기록되지 않으므로, 이 값 없이는 끝 시각 전에 저장한 정리가 정리로 남지 않는다
+    @Hidden var recorded = false
 
     public func run(_ ctx: ActionContext) throws {
         let start = try date.value == nil ? nil : ctx.semester(of: ctx.file(course).course)?.start
@@ -526,7 +528,7 @@ public struct SessionWrapUp {
             let s = f.sessions[i]
             // Again after the attendance above: a class that didn't happen has none to count.
             if s.isCancelled { f.attendance.removeAll { $0.sessionId == session } }
-            if f.savingWrapsUp(s, at: ctx.now, classMinutes: classMinutes, calendar: ctx.calendar) { f.sessions[i].isWrappedUp = true }
+            if f.savingWrapsUp(s, recorded: recorded, at: ctx.now, classMinutes: classMinutes, calendar: ctx.calendar) { f.sessions[i].isWrappedUp = true }
         }
     }
 }

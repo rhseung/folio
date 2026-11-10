@@ -405,7 +405,9 @@ final class SessionSheetModel {
                              link: storedLink == session.link ? .keep : .set(storedLink),
                              kind: kind == session.kind ? .keep : .set(kind),
                              skipsReview: review?.skipsReview.map(Patch.set) ?? .keep,
-                             reviewUnfinished: review?.reviewUnfinished.map(Patch.set) ?? .keep)
+                             reviewUnfinished: review?.reviewUnfinished.map(Patch.set) ?? .keep,
+                             // The recording may not be in course.json yet: the save wraps up as the sheet opened.
+                             recorded: recorded)
     }
 
     /// Why saving is off: a kept file without both pages says nothing about how far the class went.

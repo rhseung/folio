@@ -15,11 +15,12 @@ extension CourseFile {
             || session.isOver(at: now, schedule: course.schedule, classMinutes: classMinutes, calendar: calendar)
     }
 
-    /// Saving the class's sheet counts as wrapping it up once the sheet is its wrap-up: every wrap-up field was there
-    /// to see. A class still ahead or under way, or one that didn't happen, has nothing to wrap up yet; counting a
-    /// save made during the class (to link its units) would stop the today card asking for its progress.
-    public func savingWrapsUp(_ session: Session, at now: Date, classMinutes: Int, calendar: Calendar) -> Bool {
-        !session.isCancelled && isWrappingUp(session, at: now, classMinutes: classMinutes, calendar: calendar)
+    /// Saving the class's sheet counts as wrapping it up once the sheet is its wrap-up, by the same rule the sheet
+    /// opened with: every wrap-up field was there to see. A class still ahead or under way, or one that didn't happen,
+    /// has nothing to wrap up yet; counting a save made during the class (to link its units) would stop the today card
+    /// asking for its progress.
+    public func savingWrapsUp(_ session: Session, recorded: Bool = false, at now: Date, classMinutes: Int, calendar: Calendar) -> Bool {
+        !session.isCancelled && isWrappingUp(session, recorded: recorded, at: now, classMinutes: classMinutes, calendar: calendar)
     }
 
     /// What `session` has nothing for yet, in asking order. `recorded`: a recording of it has just stopped and isn't

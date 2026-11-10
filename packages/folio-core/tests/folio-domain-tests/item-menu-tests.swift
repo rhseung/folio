@@ -144,6 +144,8 @@ struct ItemMenuTests {
         #expect(!wraps(f, at(2, 10, 30)))
         #expect(!wraps(f, at(2, 11, 44)))
         #expect(wraps(f, at(2, 11, 45)))
+        // A recording just stopped, not in the course yet: its prompt passes it.
+        #expect(f.savingWrapsUp(f.sessions[0], recorded: true, at: at(2, 11), classMinutes: 75, calendar: calendar))
         f.recordings = [recording(f, 0)]
         #expect(wraps(f, at(2, 11)))
         f.sessions[0].kind = .makeup
