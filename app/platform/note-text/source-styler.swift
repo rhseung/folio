@@ -475,7 +475,7 @@ struct MathScan {
 /// shift its line and every line of the paragraph is the same. TextKit 2 sits the text on the bottom of a line this tall
 /// and leaves the gap above it, with nothing drawn in it; the caret it reports is the whole line, so `caret` cuts it to
 /// the text. With `lineSpacing` alone the caret on an empty line stood a gap taller than on a line with text.
-enum NoteLines {
+@MainActor enum NoteLines {
     static func fix(_ text: NSMutableAttributedString) {
         let ns = text.string as NSString
         var at = 0
@@ -502,9 +502,27 @@ enum NoteLines {
 
     /// The caret over the text at the bottom of its line, not the whole line.
     static func caret(_ rect: CGRect, at offset: Int, in text: NSAttributedString) -> CGRect {
-        guard text.length > 0, let height = text.attribute(.noteCaret, at: min(offset, text.length - 1), effectiveRange: nil) as? CGFloat,
-              height < rect.height else { return rect }
+        let height = afterLastBreak(offset, in: text)
+            ? bodyLine[.noteCaret] as? CGFloat
+            : text.attribute(.noteCaret, at: min(offset, text.length - 1), effectiveRange: nil) as? CGFloat
+        guard let height, height < rect.height else { return rect }
         return CGRect(x: rect.minX, y: rect.maxY - height, width: rect.width, height: height)
+    }
+
+    /// Whether `offset` is on the empty line after the note's last line break, or in an empty note: a line with no
+    /// character of its own, so reading the character before took the line above's, and after a heading the caret
+    /// stood as tall as the heading on a line that isn't one.
+    static func afterLastBreak(_ offset: Int, in text: NSAttributedString) -> Bool {
+        offset >= text.length && (text.length == 0 || (text.string as NSString).character(at: text.length - 1) == 0x0A)
+    }
+
+    /// A body paragraph's attributes, for that line: what's typed on it is body text until the styler says otherwise.
+    static var bodyLine: [NSAttributedString.Key: Any] {
+        let line = NSMutableAttributedString(string: "\n", attributes: [
+            .font: NoteLook.font(NoteLook.body), .foregroundColor: NoteLook.text, .paragraphStyle: SourceStyler.paragraph(),
+        ])
+        fix(line)
+        return line.attributes(at: 0, effectiveRange: nil)
     }
 }
 

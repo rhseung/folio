@@ -482,8 +482,13 @@ final class SourceTextView: NoteTextView, NSTextViewDelegate {
 
     /// What's typed next looks like the text around it until it's styled; a plain-text view would use its own font.
     private func matchTyping() {
-        guard let storage = textStorage, storage.length > 0 else { return }
+        guard let storage = textStorage else { return }
         let caret = min(selectedRange().location, storage.length)
+        // The text before is the line above's, a heading's after `# 제목⏎`, which would lay this line out heading-tall.
+        if NoteLines.afterLastBreak(caret, in: storage) {
+            typingAttributes = NoteLines.bodyLine
+            return
+        }
         let paragraph = (storage.string as NSString).paragraphRange(for: NSRange(location: caret, length: 0))
         let at = caret > paragraph.location ? caret - 1 : min(caret, storage.length - 1)
         let around = storage.attributes(at: at, effectiveRange: nil)
@@ -1518,6 +1523,13 @@ final class SourceTextView: NoteTextView, UITextViewDelegate {
             return false
         }
         return true
+    }
+
+    // As on the Mac (`matchTyping`): UIKit takes the attributes before the caret, a heading's on the line after one at
+    // the note's end.
+    func textViewDidChangeSelection(_ textView: UITextView) {
+        guard markedTextRange == nil, NoteLines.afterLastBreak(selectedRange.location, in: textStorage) else { return }
+        typingAttributes = NoteLines.bodyLine
     }
 
     // UIKit drops the composition if the marked text's attributes change under it.
