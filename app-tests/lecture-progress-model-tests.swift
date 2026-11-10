@@ -34,7 +34,8 @@ struct LectureProgressModelTests {
         let ask = try #require(workspace.wrapUpAsk)
         #expect(ask.session == session && ask.viewed == [SessionMaterial(materialId: slides.id, firstPage: 6, lastPage: 11)])
 
-        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session, viewed: ask.viewed)
+        // As the app opens it: a stopped recording's prompt is the wrap-up, though the class hasn't reached its end.
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session, viewed: ask.viewed, recorded: true)
         #expect(model.rows == [.init(id: slides.id, first: 7, last: 11)])
         #expect(model.seen(slides.id) == 6...11)
         #expect(model.refusal == nil && model.note == nil)

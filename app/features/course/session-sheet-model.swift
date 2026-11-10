@@ -23,7 +23,7 @@ struct SessionSheetRequest: Identifiable {
 
 /// A class's one sheet (#403): what it covered (progress, units), its notes and review, its attendance, and when and
 /// how it meets. A plain form (2026-11-08): every field holds what the class has or the suggestion for it, and saving
-/// writes what differs in one action. Saving a class that has begun wraps it up (`Session.savingWrapsUp`).
+/// writes what differs in one action. Saving a class that is over, or recorded, wraps it up (`CourseFile.savingWrapsUp`).
 @MainActor @Observable
 final class SessionSheetModel {
     struct Row: Identifiable, Equatable {
@@ -155,8 +155,10 @@ final class SessionSheetModel {
 
     private func suggest() {
         guard let file, let session else { return }
+        let wrappingUp = file.isWrappingUp(session, recorded: recorded, at: workspace.now,
+                                           classMinutes: workspace.settings.classMinutes, calendar: calendar)
         rows = file.suggestedProgress(for: session, viewed: viewed, pageCounts: pageCounts)
-            .map { Row(id: $0.materialId, included: session.wrapUpChecks($0), first: $0.firstPage, last: $0.lastPage) }
+            .map { Row(id: $0.materialId, included: session.wrapUpChecks($0, wrappingUp: wrappingUp), first: $0.firstPage, last: $0.lastPage) }
     }
 
     /// Counts tell where a file ends: the first page stays within it, and a finished file hands over to the next.
@@ -209,7 +211,15 @@ final class SessionSheetModel {
     }
 
     func toggle(_ id: UUID) { change(id) { $0.included.toggle() } }
-    func setRange(_ id: UUID, _ range: PageRange) { change(id) { $0.range = range } }
+
+    /// Picking pages on a bar left unchecked (a suggestion during the class) means to save them: the row is checked
+    /// and from then on asks for both ends.
+    func setRange(_ id: UUID, _ range: PageRange) {
+        change(id) { row in
+            row.range = range
+            row.included = true
+        }
+    }
 
     private func change(_ id: UUID, _ edit: (inout Row) -> Void) {
         guard let i = rows.firstIndex(where: { $0.id == id }) else { return }
@@ -415,11 +425,11 @@ final class SessionSheetModel {
 
     var disabled: Bool { refusal != nil }
 
-    /// Only what the form itself can't show (2026-11-08): a row lacking an end already reads so on its bar, with
-    /// 저장 off, so the sheet adds no sentence for it. Moving a class to another week renames it, which no field shows.
+    /// Why 저장 is off, a row lacking an end included (2026-11-10): the lone handle and the dimmed button alone left
+    /// the user unable to tell why the class couldn't be saved. Moving a class to another week renames it, which no
+    /// field shows.
     var note: String? {
-        if keptRows.contains(where: { $0.first == nil || $0.last == nil }) { return nil }
-        if let refusal = workspace.refusal(action) { return refusal }
+        if let refusal { return refusal }
         if let session, let file, movesWeek(session, file) { return String(localized: .sessionsRenameOnMove) }
         return nil
     }

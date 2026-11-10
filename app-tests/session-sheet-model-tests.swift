@@ -170,8 +170,8 @@ struct SessionSheetModelTests {
         model.add(slides.id)
         #expect(model.rows.first?.range.lone == .first)
         #expect(model.refusal == String(localized: .sessionsProgressMissingLast("05_Matchings.pdf")))
-        // The bar says it lacks an end, and 저장 is off: no sentence under the form.
-        #expect(model.note == nil)
+        // 저장 is off, and the sheet says why (2026-11-10): the lone handle alone didn't tell the user.
+        #expect(model.disabled && model.note == model.refusal)
         model.setRange(slides.id, PageRange(first: 1).tapping(1, pages: 20))
         #expect(model.refusal == nil)
         #expect(model.submit())
@@ -241,6 +241,43 @@ struct SessionSheetModelTests {
         model.submit()
         let made = try #require(saved.roughNoteId)
         #expect(made != free && saved.reviewNoteId == review)
+    }
+
+    // MARK: Opened during the class (2026-11-10)
+
+    /// The user's case: during the class, with no recording, the sheet is opened to link a unit ahead. The progress
+    /// suggested from the last class (a start, no end) waits unchecked, so the unit saves at once and the class is
+    /// still asked about once it ends. Touching the bar checks the row, which then asks for its end.
+    @Test func duringTheClassASuggestionWaitsUncheckedAndTheUnitsSave() throws {
+        let earlier = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now.addingTimeInterval(-7 * 86_400)))?.made)
+        workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: earlier, firstPage: 1, lastPage: 6))
+        let current = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now.addingTimeInterval(-5 * 60)))?.made)
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: current)
+        #expect(model.sections.first == .progress)
+        #expect(model.rows == [.init(id: slides.id, included: false, first: 7, last: nil)])
+        #expect(!model.disabled && model.note == nil)
+        model.pick(unit)
+        #expect(model.submit())
+        let s = try #require(file.sessions.first { $0.id == current })
+        #expect(s.unitIds == [unit] && s.materials.isEmpty)
+        #expect(!s.isWrappedUp)
+
+        let again = SessionSheetModel(workspace: workspace, course: graphTheory, session: current)
+        again.setRange(slides.id, PageRange(first: 7))
+        #expect(again.rows.first?.included == true)
+        #expect(again.disabled && again.note == String(localized: .sessionsProgressMissingLast("05_Matchings.pdf")))
+        again.setRange(slides.id, PageRange(first: 7, last: 9))
+        #expect(!again.disabled && again.submit())
+        #expect(file.sessions.first { $0.id == current }?.materials == [SessionMaterial(materialId: slides.id, firstPage: 7, lastPage: 9)])
+    }
+
+    /// Once the class is over the same suggestion is checked, and 저장 waits for the end with the reason under the form.
+    @Test func afterTheClassTheSuggestionIsCheckedAndSaysWhatItLacks() throws {
+        let earlier = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now.addingTimeInterval(-7 * 86_400)))?.made)
+        workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: earlier, firstPage: 1, lastPage: 6))
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session)
+        #expect(model.rows == [.init(id: slides.id, included: true, first: 7, last: nil)])
+        #expect(model.disabled && model.note == String(localized: .sessionsProgressMissingLast("05_Matchings.pdf")))
     }
 
     // MARK: One sheet for the class (#403)
