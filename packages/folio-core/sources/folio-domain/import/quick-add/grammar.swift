@@ -131,24 +131,6 @@ extension QuickAdd {
         }
     }
 
-    /// A rule word among title words is the title's (`매일 묵상 노트`, `보고서 매주 정리`), as weekdays with no rule
-    /// beside them are: it is the repeat only touching the deadline (`매주 금`, `금 매주`, `매일 23:59`, `매주 월요일과
-    /// 수요일`) or ending the line (`복습 3일마다`). `까지` and `오후` count as the deadline's here, since a time written
-    /// after `오후` makes it one and the rule would then change under a chip's pick. The rule word stays hidden from
-    /// Apple's detector, which reads the `3일` in `3일마다` as the 3rd.
-    static func bindRules(_ words: inout [Word]) {
-        for i in words.indices where words[i].rule != nil && i < words.count - 1 && !touchesDeadline(words, i - 1) && !touchesDeadline(words, i + 1) {
-            words[i].piece = nil
-        }
-    }
-
-    static func touchesDeadline(_ words: [Word], _ i: Int) -> Bool {
-        guard words.indices.contains(i) else { return false }
-        let text = words[i].text
-        return words[i].isDue || dueEndings.contains(text) || morning.contains(text) || evening.contains(text)
-            || AssignmentRepeat.weekdayWord(AssignmentRepeat.listItem(text) + "마다") != nil
-    }
-
     /// Weekdays listed over several words (`매주 월 수`, `격주 화, 목`, `월요일과 수요일마다`) become one word naming
     /// them, when a weekly rule comes right before or `마다` ends them; otherwise each stays as it was.
     static func joinWeekdays(_ words: inout [Word], line: String) {

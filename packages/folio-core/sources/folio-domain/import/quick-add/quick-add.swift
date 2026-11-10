@@ -79,7 +79,6 @@ public struct QuickAdd: Equatable, Sendable {
         var words = found.map { Word($0.0, range: $0.1, today: today, year: year) }
         joinRules(&words, line: line)
         readNeighbors(&words, today: today)
-        bindRules(&words)
         joinWeekdays(&words, line: line)
         bindWeekdays(&words)
         detect(&words)

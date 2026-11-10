@@ -30,7 +30,7 @@ extension QuickAdd {
         case time(Int, Bool)
         /// `30분` on its own, which only counts after an hour.
         case minutes(Int)
-        /// `매주`, `격주`, `3일마다`: a rule by itself. Among title words it is the title's (`QuickAdd.bindRules`).
+        /// `매주`, `격주`, `3일마다`: a rule by itself.
         case repeats(AssignmentRepeat)
         /// `월수`, `월,수마다`: the weekdays of a weekly rule, and whether `마다` made it one by itself. Without that or a
         /// weekly rule beside it, the word is the title's (`QuickAdd.bindWeekdays`).

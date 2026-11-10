@@ -261,9 +261,8 @@ struct QuickAddModelTests {
         model.text = ""
         model.pickRepeats(.weekly)
         #expect(model.text == "매주" && model.chips[2] == .repeats(.weekly))
-        // Written after the rule it would make `매주` a title word, so it goes before it.
         model.renumber(kind: .homework, number: 2)
-        #expect(model.text == "HW2 매주" && model.chips[2] == .repeats(.weekly))
+        #expect(model.text == "매주 HW2")
         // The assignments screen shows only what was read.
         let plain = QuickAddModel(workspace: workspace, fixedCourse: graphTheory)
         #expect(plain.chips.isEmpty)

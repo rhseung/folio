@@ -157,12 +157,10 @@ struct QuickAddCorpusTests {
         Case(line: "로봇 보고서 격주 화, 목", course: 3, title: "보고서", due: "2026-10-22 23:59", repeats: AssignmentRepeat(every: 2, .week, weekdays: [2, 4])),
         // Weekdays with no repeat beside them are the title's.
         Case(line: "선대 월수 정리", course: 0, title: "월수 정리", due: nil),
-        // So is a rule among title words, touching no deadline word and not ending the line.
-        Case(line: "선대 매일 묵상 노트", course: 0, title: "매일 묵상 노트", due: nil),
-        Case(line: "선대 매일 묵상 노트 금", course: 0, title: "매일 묵상 노트", due: "2026-10-23 23:59"),
-        Case(line: "선대 보고서 매주 정리", course: 0, title: "보고서 매주 정리", due: nil),
-        Case(line: "선대 묵상 노트 매일", course: 0, title: "묵상 노트", due: nil, repeats: .daily),
-        Case(line: "선대 묵상 노트 매일 23:59", course: 0, title: "묵상 노트", due: "2026-10-22 23:59", repeats: .daily),
+        // A rule word is the repeat wherever it sits, title words between it and the deadline too (2026-11-10 user).
+        Case(line: "선대 매주 퀴즈 금", course: 0, title: "퀴즈", due: "2026-10-23 23:59", repeats: .weekly),
+        Case(line: "선대 매주 HW2", course: 0, title: "HW2", due: nil, repeats: .weekly),
+        Case(line: "선대 매일 묵상 노트", course: 0, title: "묵상 노트", due: nil, repeats: .daily),
         // Numbers and day-like words that belong to the title
         Case(line: "선대 3장 풀기 금", course: 0, title: "3장 풀기", due: "2026-10-23 23:59"),
         Case(line: "선대 2장 연습문제 1-10번 금", course: 0, title: "2장 연습문제 1-10번", due: "2026-10-23 23:59"),
@@ -267,9 +265,7 @@ struct QuickAddCorpusTests {
         #expect(reader.line("선대 HW 격주 화, 목", setting: .repeats(nil)) == "선대 HW 목")
         #expect(reader.line("선대 복습 한 달마다", setting: .repeats(.weekly)) == "선대 복습 매주")
         #expect(reader.line("선대 HW 2주에 한 번 금", setting: .due(date("2026-11-14 23:59"))) == "선대 HW 격주 11/14 23:59")
-        // A rule among title words stays there, and a number written after a rule ending the line goes before it.
-        #expect(reader.line("선대 매일 묵상 노트", setting: .repeats(.daily)) == "선대 매일 묵상 노트 매일")
-        #expect(reader.line("선대 보고서 매주", setting: .kind(.homework, 2)) == "선대 보고서 HW2 매주")
+        #expect(reader.line("선대 보고서 매주", setting: .kind(.homework, 2)) == "선대 보고서 매주 HW2")
         // A one-word title another course's title starts with reads as that course only typed whole.
         let physics = Course(device: device, at: .now, title: "일반물리학실험", codes: [], number: "1101")
         let wide = QuickAdd.Reader(courses: [physics] + courses, codes: codes, now: now, calendar: calendar)
