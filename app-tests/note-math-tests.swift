@@ -176,6 +176,22 @@ struct NoteMathTests {
         }
     }
 
+    /// The completion menu and the palette show a formula as big as on the note's line and in its own shape: framed to
+    /// a row's height but its own width, every snippet's preview came out squashed.
+    @Test func previewsKeepTheirSizeAndShape() async throws {
+        for tex in [#"\frac{a}{b}"#, "x^{2}", #"\sqrt{a}"#, #"\sum_{a}^{b}"#, #"\lim_{a \to b}"#] {
+            let picture = try #require(await picture(tex, trim: false), "\(tex)")
+            #expect(picture.fitted(CompletionMenuView.previewSlot) == picture.size, "\(tex): \(picture.size)")
+            #expect(picture.fitted(MathPaletteCell.glyphSlot) == picture.size, "\(tex): \(picture.size)")
+        }
+        let slot = CompletionMenuView.previewSlot
+        for size in [CGSize(width: 40, height: 120), CGSize(width: 300, height: 30)] {
+            let fitted = NoteMath.Picture(image: NSImage(), size: size).fitted(slot)
+            #expect(abs(fitted.width / fitted.height - size.width / size.height) < 0.001, "\(size) to \(fitted)")
+            #expect(fitted.width <= slot.width && fitted.height <= slot.height, "\(size) to \(fitted)")
+        }
+    }
+
     /// A big delimiter is drawn from a font of its own (KaTeX_Size1 to 4). The first formula that needed one came out
     /// with it blank now and then, and the picture was kept: `document.fonts.ready` had settled while the font still
     /// loaded. In a new renderer, first thing or after formulas that need none, the picture has the ink the same
