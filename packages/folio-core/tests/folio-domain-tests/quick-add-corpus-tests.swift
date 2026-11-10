@@ -264,6 +264,10 @@ struct QuickAddCorpusTests {
         #expect(reader.line("격주 월수 오후", setting: .repeats(nil)) == "월 오후")
         #expect(reader.line("오후 3일마다 18:00", setting: .repeats(nil)) == "오후 10/22 18:00")
         #expect(reader.line("오후 3일마다 18:00", setting: .repeats(.daily)) == "오후 매일 18:00")
+        // Weekdays go in place of the old rule when taking it out would join `오후` to the time or leave `까지` as a title
+        // word (aWrittenValueReadsBack, seed t1DEwiqJR8EPn2nhhlxfHUxNZp0n4Dzp9XES9Gco2i4= before #426).
+        #expect(reader.line("오후 3일마다 18:00", setting: .repeats(AssignmentRepeat(.week, weekdays: [1, 3]))) == "오후 매주 월수 18:00")
+        #expect(reader.line("보고서 한 달마다 까지", setting: .repeats(AssignmentRepeat(.week, weekdays: [1, 3]))) == "보고서 매주 월수 까지")
         #expect(reader.line("선대 HW 매주 월수", setting: .due(date("2026-11-14 23:59"))) == "선대 HW 매주 월수 11/14 23:59")
         // Words read as one rule or one set of weekdays are rewritten whole.
         #expect(reader.line("선대 HW 격주 화, 목", setting: .repeats(nil)) == "선대 HW 목")
