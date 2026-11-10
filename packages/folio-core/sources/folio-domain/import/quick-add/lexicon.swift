@@ -61,9 +61,11 @@ extension QuickAdd {
                 let suffixed = QuickAdd.weekdays[String(text.prefix(1))].flatMap { text.hasSuffix("요일") ? $0 : nil }
                 guard let w = QuickAdd.weekdays[text] ?? suffixed else { return nil }
                 return (Piece.weekday(w, nil), String(text.prefix(1)) + "요일")
+            // Seen as a weekday, so the detector takes a lone `오후` beside it into the deadline as it does beside the one
+            // weekday the chip writes when the repeat is taken out; otherwise taking it out changed the title.
             case .weekdays:
                 guard let w = AssignmentRepeat.weekdayWord(text) else { return nil }
-                return (Piece.weekdays(w.days, each: w.each), "")
+                return (Piece.weekdays(w.days, each: w.each), AssignmentRepeat.weekdayLetters[w.days[0] - 1] + "요일")
             case .relativeDay:
                 guard let d = QuickAdd.relativeDays[text] else { return nil }
                 return (Piece.day(today.adding(days: d)), nil)
