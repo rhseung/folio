@@ -143,7 +143,7 @@ final class AssignmentSheetModel {
     var repeatDetail: String? {
         guard let repeats else { return nil }
         guard hasDue else { return String(localized: .assignmentsRepeatNeedsDue) }
-        let next = repeats.next(after: due, calendar: workspace.calendar)
+        let next = course.file.nextDue(after: due, rule: repeats, title: assignment.title, calendar: workspace.calendar)
         return String(localized: .assignmentsRepeatNext(CourseFile.deadline(next, calendar: workspace.calendar)))
     }
 

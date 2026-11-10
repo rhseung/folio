@@ -101,7 +101,9 @@ struct AssignmentRepeatTests {
         #expect(AssignmentRepeat(text: "2개월마다") == AssignmentRepeat(every: 2, .month))
         #expect(AssignmentRepeat(text: "매주 월수") == AssignmentRepeat(.week, weekdays: [1, 3]))
         #expect(AssignmentRepeat(text: "월,수마다") == AssignmentRepeat(.week, weekdays: [1, 3]))
-        #expect(AssignmentRepeat(text: "금요일마다") == .weekly)
+        // Typed on its own, one weekday is kept: the deadline may fall on another day.
+        #expect(AssignmentRepeat(text: "금요일마다") == AssignmentRepeat(.week, weekdays: [5]))
+        #expect(AssignmentRepeat(text: "매주 금") == AssignmentRepeat(.week, weekdays: [5]))
         #expect(AssignmentRepeat(text: "daily:mon") == nil)
         #expect(AssignmentRepeat(text: "0일마다") == nil)
         #expect(AssignmentRepeat(text: "가끔") == nil)
@@ -141,7 +143,9 @@ struct AssignmentRepeatTests {
         #expect(file.assignments.map(\.due) == [date("2026-10-31 23:59", c), date("2026-11-30 23:59", c)])
         file.assignments[1].status = .submitted
         file.continueRepeating(file.assignments[1].id, until: nil, calendar: c, device: device, now: now)
-        // The series started on the 31st, so December's falls on the 31st again.
+        // The series started on the 31st, so December's falls on the 31st again, as the sheet's hint says.
+        let november = file.assignments[1]
+        #expect(file.nextDue(after: november.due!, rule: .monthly, title: november.title, calendar: c) == date("2026-12-31 23:59", c))
         #expect(file.assignments.last?.due == date("2026-12-31 23:59", c))
         #expect(file.assignments.allSatisfy { $0.repeats == .monthly })
     }

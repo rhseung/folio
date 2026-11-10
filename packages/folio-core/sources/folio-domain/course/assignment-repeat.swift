@@ -154,7 +154,9 @@ public struct AssignmentRepeat: Hashable, Sendable {
             if let rule = Self.word(words[0]) {
                 self = rule
             } else if let w = Self.weekdayWord(words[0]), w.each {
-                self = AssignmentRepeat(.week, weekdays: w.days.count > 1 ? w.days : [])
+                // `금요일마다` names Friday even with a deadline on another day; the quick-add line, where the word also
+                // sets the deadline, drops the one weekday itself.
+                self = AssignmentRepeat(.week, weekdays: w.days)
             } else {
                 return nil
             }
