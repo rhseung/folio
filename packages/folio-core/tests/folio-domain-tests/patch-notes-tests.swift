@@ -188,14 +188,14 @@ struct PatchNotesTests {
             let step = PatchNotes.step(seen: seen, current: current, feed: .loaded(releases), busy: false)
             guard case .show(let s) = step else {
                 if case .markSeen = step {
-                    #expect(!PatchNotes.between(releases, after: seen, upTo: current).contains(where: \.hasNewFeature))
+                    #expect(!PatchNotes.between(releases, after: seen, upTo: current).contains { $0.hasNewFeature })
                 }
                 return
             }
             #expect(seen < current)
             #expect(s.latest.version == current)
             #expect(s.releases.allSatisfy { seen < $0.version && $0.version <= current })
-            #expect(s.releases.contains(where: \.hasNewFeature))
+            #expect(s.releases.contains { $0.hasNewFeature })
             #expect(!s.items.isEmpty && s.items.count <= PatchNotes.sheetLimit && s.items.allSatisfy { $0.kind == .feat })
             // Shown and counted, every item of every unseen version is accounted for once.
             let total = s.releases.reduce(0) { $0 + $1.items.count }
