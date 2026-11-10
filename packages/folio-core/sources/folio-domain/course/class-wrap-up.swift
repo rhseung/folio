@@ -7,6 +7,21 @@ public enum WrapUpItem: String, CaseIterable, Sendable {
 }
 
 extension CourseFile {
+    /// Whether the class's sheet is its wrap-up: the class is over, or a recording of it has stopped (`recorded`: one
+    /// that just did and isn't saved yet). Before that the sheet is opened to link units, a note or the class's link
+    /// ahead (2026-11-10). Real time, not the study day: the class ends at its own end.
+    public func isWrappingUp(_ session: Session, recorded: Bool = false, at now: Date, classMinutes: Int, calendar: Calendar) -> Bool {
+        recorded || recordings.contains { $0.sessionId == session.id }
+            || session.isOver(at: now, schedule: course.schedule, classMinutes: classMinutes, calendar: calendar)
+    }
+
+    /// Saving the class's sheet counts as wrapping it up once the sheet is its wrap-up: every wrap-up field was there
+    /// to see. A class still ahead or under way, or one that didn't happen, has nothing to wrap up yet; counting a
+    /// save made during the class (to link its units) would stop the today card asking for its progress.
+    public func savingWrapsUp(_ session: Session, at now: Date, classMinutes: Int, calendar: Calendar) -> Bool {
+        !session.isCancelled && isWrappingUp(session, at: now, classMinutes: classMinutes, calendar: calendar)
+    }
+
     /// What `session` has nothing for yet, in asking order. `recorded`: a recording of it has just stopped and isn't
     /// saved yet. Progress is asked only of a course with lecture files to go through.
     public func wrapUpGaps(of session: Session, recorded: Bool = false) -> [WrapUpItem] {
@@ -90,11 +105,15 @@ extension CourseFile {
 }
 
 extension Session {
-    /// Whether the wrap-up starts a suggested range checked. A file the class already links that nothing gives both
+    /// Whether the sheet starts a suggested range checked. A file the class already links that nothing gives both
     /// ends for keeps its link as it is: checked, it would hold the save until an end is picked, for a class that
     /// linked the file whole on purpose. Unchecked leaves a link alone, so saving with it unchecked writes nothing.
-    public func wrapUpChecks(_ range: SessionMaterial) -> Bool {
-        (range.firstPage != nil && range.lastPage != nil) || !materials.contains { $0.materialId == range.materialId }
+    /// Until the class is wrapped up (`CourseFile.isWrappingUp`) only the pages it has saved start checked
+    /// (2026-11-10): the sheet is opened then to link units or a note ahead, and a suggestion checked would hold that
+    /// save until an end the class hasn't reached is picked, or write pages it is still going through.
+    public func wrapUpChecks(_ range: SessionMaterial, wrappingUp: Bool) -> Bool {
+        guard wrappingUp else { return range.firstPage != nil && range.lastPage != nil && materials.contains(range) }
+        return (range.firstPage != nil && range.lastPage != nil) || !materials.contains { $0.materialId == range.materialId }
     }
 
     /// The ranges among `ranges` the class doesn't have yet. The wrap-up shows every class's current pages, so a

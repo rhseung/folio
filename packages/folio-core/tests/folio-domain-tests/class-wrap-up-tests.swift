@@ -206,11 +206,48 @@ struct ClassWrapUpTests {
         let (a, b) = (UUID(), UUID())
         var session = course().sessions[0]
         session.materials = [SessionMaterial(materialId: a)]
-        #expect(!session.wrapUpChecks(SessionMaterial(materialId: a, firstPage: 5)))
-        #expect(!session.wrapUpChecks(SessionMaterial(materialId: a)))
+        #expect(!session.wrapUpChecks(SessionMaterial(materialId: a, firstPage: 5), wrappingUp: true))
+        #expect(!session.wrapUpChecks(SessionMaterial(materialId: a), wrappingUp: true))
         // A recording saw where the class went: both ends are known, so it is asked.
-        #expect(session.wrapUpChecks(SessionMaterial(materialId: a, firstPage: 5, lastPage: 9)))
+        #expect(session.wrapUpChecks(SessionMaterial(materialId: a, firstPage: 5, lastPage: 9), wrappingUp: true))
         // A new suggestion is checked even with an end missing: picking it is the question.
-        #expect(session.wrapUpChecks(SessionMaterial(materialId: b, firstPage: 5)))
+        #expect(session.wrapUpChecks(SessionMaterial(materialId: b, firstPage: 5), wrappingUp: true))
+    }
+
+    /// Until the class is wrapped up, the sheet is opened to link units or a note ahead (2026-11-10): a suggestion
+    /// starts unchecked so it neither holds that save nor writes pages the class is still going through. The pages
+    /// the class has saved are its own and stay checked.
+    @Test func aSuggestionStartsCheckedOnlyWhileWrappingUp() {
+        let (a, b) = (UUID(), UUID())
+        var session = course().sessions[0]
+        session.materials = [SessionMaterial(materialId: a, firstPage: 3, lastPage: 9)]
+        let own = SessionMaterial(materialId: a, firstPage: 3, lastPage: 9)
+        for suggested in [SessionMaterial(materialId: b, firstPage: 5), SessionMaterial(materialId: b, firstPage: 5, lastPage: 8),
+                          SessionMaterial(materialId: a, firstPage: 3, lastPage: 12)] {
+            #expect(!session.wrapUpChecks(suggested, wrappingUp: false))
+            #expect(session.wrapUpChecks(suggested, wrappingUp: true))
+        }
+        #expect(session.wrapUpChecks(own, wrappingUp: false) && session.wrapUpChecks(own, wrappingUp: true))
+    }
+
+    /// The class (10:30–11:45) is wrapped up from its end on, by the clock rather than the study day, or once a
+    /// recording of it has stopped.
+    @Test func aClassIsWrappedUpFromItsEndOrItsRecording() {
+        var f = course()
+        let wrapping = { (f: CourseFile, now: Date, recorded: Bool) in
+            f.isWrappingUp(f.sessions[0], recorded: recorded, at: now, classMinutes: 75, calendar: calendar)
+        }
+        #expect(!wrapping(f, at(2, 10, 30), false))
+        #expect(!wrapping(f, at(2, 11, 44), false))
+        #expect(wrapping(f, at(2, 11, 45), false))
+        // A recording just stopped, saved or not.
+        #expect(wrapping(f, at(2, 11), true))
+        f.recordings = [Recording(device: device, at: at(2, 11), sessionId: f.sessions[0].id, file: "Recordings/a.m4a")]
+        #expect(wrapping(f, at(2, 11), false))
+        // A class with its own end ends there, not at the slot's.
+        f.recordings = []
+        f.sessions[0].end = at(2, 11)
+        #expect(!wrapping(f, at(2, 10, 59), false))
+        #expect(wrapping(f, at(2, 11), false))
     }
 }

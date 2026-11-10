@@ -135,10 +135,20 @@ struct ItemMenuTests {
         #expect(g.sections(of: s, kind: .lecture, start: s.date, at: at(2, 12), takesAttendance: false) == [.units, .notes, .info])
     }
 
-    @Test func savingWrapsUpABegunHeldClassOnly() {
-        #expect(Session.savingWrapsUp(kind: .lecture, start: at(2, 10, 30), at: at(2, 10, 30)))
-        #expect(!Session.savingWrapsUp(kind: .lecture, start: at(2, 10, 30), at: at(2, 10, 29)))
-        #expect(!Session.savingWrapsUp(kind: .cancelled, start: at(2, 10, 30), at: at(2, 12)))
-        #expect(Session.savingWrapsUp(kind: .makeup, start: at(2, 10, 30), at: at(2, 12)))
+    /// A save during the class (linking its units ahead, 2026-11-10) leaves it to be asked about once it ends. A
+    /// stopped recording's prompt is the wrap-up, whenever it comes.
+    @Test func savingWrapsUpAnEndedOrRecordedHeldClassOnly() {
+        var f = course()
+        let wraps = { (f: CourseFile, now: Date) in f.savingWrapsUp(f.sessions[0], at: now, classMinutes: 75, calendar: calendar) }
+        #expect(!wraps(f, at(2, 10, 29)))
+        #expect(!wraps(f, at(2, 10, 30)))
+        #expect(!wraps(f, at(2, 11, 44)))
+        #expect(wraps(f, at(2, 11, 45)))
+        f.recordings = [recording(f, 0)]
+        #expect(wraps(f, at(2, 11)))
+        f.sessions[0].kind = .makeup
+        #expect(wraps(f, at(2, 12)))
+        f.sessions[0].kind = .cancelled
+        #expect(!wraps(f, at(2, 12)))
     }
 }

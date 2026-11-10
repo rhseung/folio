@@ -469,10 +469,10 @@ public struct SessionProgress {
 }
 
 /// Everything a class's sheet saves, in one action so a part the rules refuse leaves the rest unwritten too: what the
-/// class covered (progress, units), how it was attended and reviewed, and when and how it meets. Once the class has
-/// begun, saving marks it wrapped up, which is what stops it being asked about: what was left empty stays so on purpose.
-@Action("session wrap-up", "회차 편집과 수업 정리: 렉처 진도, 단원, 출결, 복습, 일시, 종류, 온라인 링크를 한 번에 적는다. 시작한 수업이면 정리했다고 표시한다",
-        discussion: "렉처 파일은 <자료>:<시작>-<끝>으로 쓴다. 주지 않은 것은 그대로 둔다. 시작한 수업(휴강 아님)이면 정리했다고 표시해 오늘 화면의 수업 정리에서 뺀다.",
+/// class covered (progress, units), how it was attended and reviewed, and when and how it meets. Once the class is
+/// over or recorded, saving marks it wrapped up, which is what stops it being asked about: what was left empty stays so on purpose.
+@Action("session wrap-up", "회차 편집과 수업 정리: 렉처 진도, 단원, 출결, 복습, 일시, 종류, 온라인 링크를 한 번에 적는다. 끝난 수업이면 정리했다고 표시한다",
+        discussion: "렉처 파일은 <자료>:<시작>-<끝>으로 쓴다. 주지 않은 것은 그대로 둔다. 끝났거나 녹음을 마친 수업(휴강 아님)이면 정리했다고 표시해 오늘 화면의 수업 정리에서 뺀다.",
         done: "회차 '{session}'을(를) 저장했습니다",
         examples: ["folio session wrap-up EC4207/10-26 05_Matchings.pdf:7-11 --unit 매칭", "folio session wrap-up EC4207/10-26 --attendance late --dry-run",
                    "folio session wrap-up EC4207/10-26 --review-unfinished false --kind makeup --dry-run"],
@@ -503,6 +503,7 @@ public struct SessionWrapUp {
 
     public func run(_ ctx: ActionContext) throws {
         let start = try date.value == nil ? nil : ctx.semester(of: ctx.file(course).course)?.start
+        let classMinutes = try ctx.settings().classMinutes
         try ctx.edit(course) { f in
             _ = try index(session, in: f.sessions, .valueSession)
             try f.set(session: session, date: date, end: end, link: link, kind: kind, skipsReview: skipsReview, reviewUnfinished: reviewUnfinished,
@@ -525,7 +526,7 @@ public struct SessionWrapUp {
             let s = f.sessions[i]
             // Again after the attendance above: a class that didn't happen has none to count.
             if s.isCancelled { f.attendance.removeAll { $0.sessionId == session } }
-            if Session.savingWrapsUp(kind: s.kind, start: s.date, at: ctx.now) { f.sessions[i].isWrappedUp = true }
+            if f.savingWrapsUp(s, at: ctx.now, classMinutes: classMinutes, calendar: ctx.calendar) { f.sessions[i].isWrappedUp = true }
         }
     }
 }
