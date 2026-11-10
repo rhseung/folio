@@ -53,23 +53,17 @@ jobs:
         run: |
           mkdir -p .build/release
           ditto -c -k --sequesterRsrc --keepParent .build/DerivedData/Build/Products/Release/Folio.app ".build/release/Folio-$VERSION.zip"
-      # release-notes/<version>.json, edited and merged before the tag, wins over a draft from the PRs.
+      # The patch notes are the merged PRs' `## 패치 노트` sections, read from their bodies now; the app reads them back
+      # from this release's body (#415). A body fixed after the draft is made needs a rerun of the tag's workflow.
       - name: Notes
         env:
-          VERSION: ${{ steps.version.outputs.version }}
           SINCE: ${{ inputs.since }}
         run: |
           if [ -z "$SINCE" ]; then
             # From the tag's parent, so a tag never finds itself.
             SINCE=$(git describe --tags --abbrev=0 --match 'v*' HEAD^ 2>/dev/null || true)
           fi
-          notes=".build/release/release-notes-$VERSION.json"
-          if [ -f "release-notes/$VERSION.json" ]; then
-            cp "release-notes/$VERSION.json" "$notes"
-          else
-            scripts/release-notes.sh draft "$SINCE" > "$notes"
-          fi
-          scripts/release-notes.sh body "$notes" "$SINCE" > .build/release/body.md
+          scripts/release-notes.sh body "$SINCE" > .build/release/body.md
           cat .build/release/body.md >> "$GITHUB_STEP_SUMMARY"
       - if: github.ref_type != 'tag'
         uses: actions/upload-artifact@v7
@@ -81,10 +75,10 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          files=(".build/release/Folio-$VERSION.zip" ".build/release/release-notes-$VERSION.json")
+          zip=".build/release/Folio-$VERSION.zip"
           if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" "${files[@]}" --clobber
+            gh release upload "$GITHUB_REF_NAME" "$zip" --clobber
             gh release edit "$GITHUB_REF_NAME" --notes-file .build/release/body.md
           else
-            gh release create "$GITHUB_REF_NAME" "${files[@]}" --draft --verify-tag --title "Folio $VERSION" --notes-file .build/release/body.md
+            gh release create "$GITHUB_REF_NAME" "$zip" --draft --verify-tag --title "Folio $VERSION" --notes-file .build/release/body.md
           fi
