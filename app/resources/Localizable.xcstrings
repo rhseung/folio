@@ -1288,6 +1288,28 @@
         }
       }
     },
+    "claude.tool.searching": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "액션 찾는 중"
+          }
+        }
+      }
+    },
+    "claude.tool.choosing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "실행할 액션 고르는 중"
+          }
+        }
+      }
+    },
     "claude.tool.proposing": {
       "extractionState": "manual",
       "localizations": {

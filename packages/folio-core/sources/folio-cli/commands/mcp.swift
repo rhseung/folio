@@ -142,6 +142,7 @@ struct MCPServer {
 
     /// The way to every action the panel doesn't list. Opening all of them would send some 20k tokens of definitions
     /// with each question; leaning on the client's own deferred tool loading would tie the panel to how that works.
+    /// The app's panel names these two in its progress line (`ClaudeModel.toolLabel`), which can't link this module.
     static func generalTools(propose: Bool) -> [Tool] {
         var run: JSONValue = [
             "action": ["type": "string", "description": .string(String(localized: .mcpRunActionHelp))],
@@ -182,7 +183,8 @@ struct MCPServer {
         guard case .string(let query)? = arguments["query"], !query.trimmingCharacters(in: .whitespaces).isEmpty else {
             return Self.failure(String(localized: .mcpSearchNoQuery))
         }
-        let limit = if case .number(let n)? = arguments["limit"] { min(max(Int(n), 1), Self.searchMost) } else { 5 }
+        // Clamped as a Double: `Int(1e300)` traps and would end the server.
+        let limit = if case .number(let n)? = arguments["limit"] { Int(min(max(n, 1), Double(Self.searchMost))) } else { 5 }
         let listed = Set(tools.map(\.name))
         // Asked for more than shown: some matches are commands that aren't tools (`run`, `unlock`) and drop out.
         let found = Finder.find(query, limit: Self.searchMost * 2).compactMap { m -> JSONValue? in

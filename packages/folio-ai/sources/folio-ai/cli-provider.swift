@@ -143,7 +143,9 @@ public struct CLIProvider: ClaudeProvider {
             guard let block = event["content_block"], block["type"] == .string("tool_use"), case .string(let name)? = block["name"] else { return nil }
             return .tool(name)
         case .string("content_block_delta"):
-            guard let delta = event["delta"], delta["type"] == .string("text_delta"), case .string(let text)? = delta["text"] else { return nil }
+            guard let delta = event["delta"] else { return nil }
+            if delta["type"] == .string("input_json_delta"), case .string(let json)? = delta["partial_json"] { return .toolInput(json) }
+            guard delta["type"] == .string("text_delta"), case .string(let text)? = delta["text"] else { return nil }
             return .text(text)
         default:
             return nil

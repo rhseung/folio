@@ -163,6 +163,9 @@ struct MCPTests {
         let unlock = try found(MCPServer(gist: nil, propose: false), gist, "성적 보이게 해줘")
         #expect(!unlock.contains { $0["command"] == "unlock" })
         #expect(try call(panel, gist, "action_search", ["query": ""]).0)
+        // A limit past Int's range is clamped rather than ending the server.
+        let (huge, texts) = try call(panel, gist, "action_search", ["query": "시험 추가", "limit": .number(1e300)])
+        #expect(!huge, "\(texts)")
     }
 
     @Test func runningAnyActionInThePanelOnlyProposes() throws {
