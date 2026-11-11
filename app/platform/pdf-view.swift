@@ -201,38 +201,64 @@ struct DarkPaper {
 /// at any scale, so going back to it after the pages are scaled again shows the same place.
 final class SteadyPDFView: PDFView {
     private var held: PDFDestination?
+    private var letGo: DispatchWorkItem?
 
-    /// Taken once, before the first of a run of width changes: going there after each one, the spot never drifts.
+    /// Taken once, before the first of a run of width changes (a divider dragged frame by frame), and let go only once
+    /// the width has stayed put for a beat. Taken again at each frame, the spot came from pages PDFKit had already
+    /// scaled about the scroll offset, and the drift added up: a dragged divider moved page 6 to page 9. Every change
+    /// counts, however small: panes gliding into place nudge the width by a fraction of a point for a second, and
+    /// those added up too.
     private func hold(newWidth: CGFloat) {
-        guard held == nil, document != nil, bounds.width > 0, newWidth > 0, abs(newWidth - bounds.width) >= 0.5,
-              let spot = currentDestination, spot.page != nil else { return }
-        held = spot
-        // Once the pages have been scaled to the new width, which PDFKit may leave past the layout pass.
-        DispatchQueue.main.async { [weak self] in self?.release() }
+        guard document != nil, newWidth > 0, newWidth != bounds.width else { return }
+        if held == nil {
+            guard bounds.width > 0, let spot = currentDestination, spot.page != nil else { return }
+            held = spot
+        }
+        letGo?.cancel()
+        // Past the layout pass, since PDFKit may scale the pages to the new width after it.
+        let work = DispatchWorkItem { [weak self] in self?.release() }
+        letGo = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.settling, execute: work)
     }
+
+    static let settling: TimeInterval = 0.2
 
     /// `keep`: go there now and again once the run is over, for a layout pass that may come before the pages are
     /// scaled.
     private func release(keep: Bool = false) {
         guard let spot = held else { return }
-        if !keep { held = nil }
+        if !keep { forget() }
         super.go(to: spot)
+    }
+
+    private func forget() {
+        held = nil
+        letGo?.cancel()
+        letGo = nil
     }
 
     // A move asked for (the page the view opens at, a page picked in the strip, a found word, a link) is where to be
     // instead: a spot held from before it would take the view back.
     override func go(to page: PDFPage) {
-        held = nil
+        forget()
         super.go(to: page)
+        waitForWidth(PDFDestination(page: page, at: CGPoint(x: 0, y: page.bounds(for: displayBox).maxY)))
     }
 
     override func go(to destination: PDFDestination) {
-        held = nil
+        forget()
         super.go(to: destination)
+        waitForWidth(destination)
+    }
+
+    // A pane opening goes to its page before it has a width; the first width then scaled the pages about the scroll
+    // offset like any other, and the page slid by one.
+    private func waitForWidth(_ spot: PDFDestination) {
+        if bounds.width == 0 { held = spot }
     }
 
     override func go(to selection: PDFSelection) {
-        held = nil
+        forget()
         super.go(to: selection)
     }
 
