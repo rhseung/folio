@@ -25,10 +25,14 @@ final class NoteEditModel {
         self.moves = moves
         name = note.title
         folder = NoteListModel.folder(of: note, in: course.store)
-        math = note.meta.math
+        math = (course.store.note(at: course.store.notePath(of: note.url), in: course.file) ?? note).meta.math
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
+
+    /// From course.json as it is now: the bar's link menu, the Claude panel or the CLI may have linked the note since
+    /// `note` was read, and writing the old links back with the syntax would undo that.
+    private var meta: NoteMeta { (course.store.note(at: course.store.notePath(of: note.url), in: course.file) ?? note).meta }
 
     var folders: [String] {
         let all = course.store.noteFolders()
@@ -50,7 +54,7 @@ final class NoteEditModel {
     var target: String? { targetURL.flatMap { NoteListModel.notesPath(of: $0, in: course.store) } }
 
     var relocates: Bool { target.map { $0 != NoteListModel.notesPath(of: note.url, in: course.store) } ?? false }
-    var changesMath: Bool { choosesMath && math != note.meta.math }
+    var changesMath: Bool { choosesMath && math != meta.math }
 
     var canSave: Bool { target != nil && (relocates || changesMath) }
 
@@ -70,9 +74,9 @@ final class NoteEditModel {
     func save() -> Bool {
         guard canSave, let target, let path = course.store.coursePath(of: note.url) else { return false }
         if changesMath, let id = note.meta.id {
-            let meta = note.meta
-            guard workspace.run(NoteLink(course: course.id, note: id, kind: meta.kind, session: meta.sessionId, exam: meta.examId,
-                                         units: meta.unitIds, math: math)) != nil else { return false }
+            let now = meta
+            guard workspace.run(NoteLink(course: course.id, note: id, kind: now.kind, session: now.sessionId, exam: now.examId,
+                                         units: now.unitIds, math: math)) != nil else { return false }
         }
         guard relocates else { return true }
         let ran = workspace.run(NoteMove(course: course.id, note: path, to: target))

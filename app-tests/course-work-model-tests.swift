@@ -440,6 +440,19 @@ struct NotesModelTests {
         #expect(course.store.coursePath(of: note.url) == "Notes/정리/행렬식.md" && note.meta.math == math)
     }
 
+    /// Links made after the sheet opened (the bar's menu, the Claude panel) stay when only the syntax is saved.
+    @Test func theNoteSheetKeepsLinksMadeSinceItOpened() throws {
+        let (workspace, course) = try fixtureCourse()
+        let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
+        let unit = try #require(workspace.run(UnitAdd(course: linearAlgebra, title: "행렬식"))?.made)
+        let sheet = NoteEditModel(workspace: workspace, course: course, note: try #require(try course.store.note(id: id)))
+        try #require(workspace.run(NoteLink(course: linearAlgebra, note: id, kind: .unit, units: [unit])))
+        sheet.math = sheet.math == .latex ? .asciimath : .latex
+        #expect(sheet.save())
+        let meta = try #require(workspace.course(course.id)?.file.notes.first { $0.id == id })
+        #expect(meta.kind == .unit && meta.unitIds == [unit])
+    }
+
     /// With no folder in Notes/ yet, a note still moves into a new one; the sheet names the folder it makes and refuses
     /// names a note can't be in.
     @Test func movingIntoANewFolderMakesIt() throws {

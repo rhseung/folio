@@ -18,11 +18,11 @@ struct ExamMenuSource: ItemMenuSource {
 
     private var link: AppLink { AppLink(.exam, exam.id) }
 
-    var commands: [ExamCommand] {
+    var commands: [ExamMenuCommand] {
         workspace.course(courseId)?.file.commands(for: exam, host: host) ?? []
     }
 
-    func row(_ command: ExamCommand) -> MenuRow {
+    func row(_ command: ExamMenuCommand) -> MenuRow {
         switch command {
         case .open:
             .open(command) { openLink(link, course: courseId) }
@@ -103,9 +103,9 @@ struct PlanItemMenuSource: ItemMenuSource {
     let toggle: () -> Void
     let sheets: ItemSheetsAction
 
-    var commands: [PlanItemCommand] { ExamPlanItem.commands(done: done) }
+    var commands: [PlanItemMenuCommand] { ExamPlanItem.commands(done: done) }
 
-    func row(_ command: PlanItemCommand) -> MenuRow {
+    func row(_ command: PlanItemMenuCommand) -> MenuRow {
         switch command {
         case .done(let on):
             MenuRow(command, .menuDone, "checkmark.circle", .check(on) { _ in toggle() })

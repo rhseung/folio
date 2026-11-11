@@ -45,7 +45,7 @@ public enum ClassReview: Hashable, Sendable, CaseIterable {
 
 /// What a saved class's menu can hold. Rows for things the class doesn't have are left out rather than greyed: no
 /// open-note row without the note, no recording row without a recording.
-public enum SessionCommand: ItemCommand {
+public enum SessionMenuCommand: ItemCommand {
     /// The class on its own screen, from anywhere else.
     case open
     case join
@@ -103,8 +103,8 @@ extension CourseFile {
 
     /// A class's menu at `now`, in menu order. Ahead and under way: joining, the rough note, recording. Once over: the
     /// notes, the review check and the recordings. Editing, sharing and deleting always.
-    public func commands(for session: Session, at now: Date, host: MenuHost, classMinutes: Int, calendar: Calendar) -> [SessionCommand] {
-        var commands: [SessionCommand] = []
+    public func commands(for session: Session, at now: Date, host: MenuHost, classMinutes: Int, calendar: Calendar) -> [SessionMenuCommand] {
+        var commands: [SessionMenuCommand] = []
         if host.opensItem { commands.append(.open) }
         let held = !session.isCancelled
         if session.isOver(at: now, schedule: course.schedule, classMinutes: classMinutes, calendar: calendar) {

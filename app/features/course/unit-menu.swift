@@ -14,17 +14,15 @@ struct UnitMenuSource: ItemMenuSource {
 
     private var link: AppLink { AppLink(.unit, unit.id) }
 
-    /// Due on the study day or overdue, as Today lists it.
     private var dueToday: Bool {
-        guard let due = workspace.reviewStates(of: courseId, now: workspace.liveNow)[unit.id]?.due else { return false }
-        return due.days(until: workspace.today) >= 0
+        workspace.reviewStates(of: courseId, now: workspace.liveNow)[unit.id]?.isDue(on: workspace.today) ?? false
     }
 
-    var commands: [UnitCommand] {
+    var commands: [UnitMenuCommand] {
         workspace.course(courseId)?.file.commands(for: unit, host: host, dueToday: dueToday) ?? []
     }
 
-    func row(_ command: UnitCommand) -> MenuRow {
+    func row(_ command: UnitMenuCommand) -> MenuRow {
         switch command {
         case .open:
             .open(command) { openLink(link, course: courseId) }

@@ -6,7 +6,7 @@ import Foundation
 
 // MARK: Exam
 
-public enum ExamCommand: ItemCommand {
+public enum ExamMenuCommand: ItemCommand {
     case open
     /// The summary note: opened when it exists, made from its template when not. Which of the two is a note file's
     /// fact, so the app names the row.
@@ -28,8 +28,8 @@ public enum ExamCommand: ItemCommand {
 
 extension CourseFile {
     /// Files can be added only once the exam has a folder to take them.
-    public func commands(for exam: Exam, host: MenuHost) -> [ExamCommand] {
-        var commands: [ExamCommand] = host.opensItem ? [.open] : []
+    public func commands(for exam: Exam, host: MenuHost) -> [ExamMenuCommand] {
+        var commands: [ExamMenuCommand] = host.opensItem ? [.open] : []
         commands.append(.summary)
         if exam.folder != nil { commands.append(.addFiles) }
         commands += [.edit, .share, .remove]
@@ -39,7 +39,7 @@ extension CourseFile {
 
 // MARK: Exam plan item
 
-public enum PlanItemCommand: ItemCommand {
+public enum PlanItemMenuCommand: ItemCommand {
     /// The one state an item has, checked once done.
     case done(Bool)
     case remove
@@ -54,12 +54,12 @@ public enum PlanItemCommand: ItemCommand {
 
 extension ExamPlanItem {
     /// No sheet: an item is a day and a title, typed again rather than edited.
-    public static func commands(done: Bool) -> [PlanItemCommand] { [.done(done), .remove] }
+    public static func commands(done: Bool) -> [PlanItemMenuCommand] { [.done(done), .remove] }
 }
 
 // MARK: Assignment
 
-public enum AssignmentCommand: ItemCommand {
+public enum AssignmentMenuCommand: ItemCommand {
     case open
     case addFiles
     /// 상태 ▸, holding the status checked now.
@@ -82,8 +82,8 @@ public enum AssignmentCommand: ItemCommand {
 
 extension CourseFile {
     /// `revealable`: the platform has a Finder and the assignment's folder is on disk.
-    public func commands(for assignment: Assignment, host: MenuHost, revealable: Bool) -> [AssignmentCommand] {
-        var commands: [AssignmentCommand] = host.opensItem ? [.open] : []
+    public func commands(for assignment: Assignment, host: MenuHost, revealable: Bool) -> [AssignmentMenuCommand] {
+        var commands: [AssignmentMenuCommand] = host.opensItem ? [.open] : []
         commands += [.addFiles, .status(assignment.status), .edit, .share]
         if revealable { commands.append(.showInFinder) }
         commands.append(.remove)
@@ -93,7 +93,7 @@ extension CourseFile {
 
 // MARK: Unit
 
-public enum UnitCommand: ItemCommand {
+public enum UnitMenuCommand: ItemCommand {
     case open
     case review
     /// Only for a unit whose review is due on the study day.
@@ -117,8 +117,8 @@ public enum UnitCommand: ItemCommand {
 extension CourseFile {
     /// The unit's page is its editor (name, parent, links), so there's no 편집… row. Moving it among its siblings is
     /// offered where the units are listed in order, and only the ways it can go.
-    public func commands(for unit: Unit, host: MenuHost, dueToday: Bool) -> [UnitCommand] {
-        var commands: [UnitCommand] = host.opensItem ? [.open] : []
+    public func commands(for unit: Unit, host: MenuHost, dueToday: Bool) -> [UnitMenuCommand] {
+        var commands: [UnitMenuCommand] = host.opensItem ? [.open] : []
         commands.append(.review)
         if dueToday { commands.append(.skipToday) }
         commands.append(.addCard)
@@ -134,7 +134,7 @@ extension CourseFile {
 
 // MARK: Note
 
-public enum NoteCommand: ItemCommand {
+public enum NoteMenuCommand: ItemCommand {
     case open
     /// The PDF a `.tex` note was built into.
     case openPDF
@@ -161,8 +161,8 @@ public enum NoteCommand: ItemCommand {
 
     /// `builds`: a `.tex` note on a platform that runs TeX. `review`: the state of the class the note reviews, if it
     /// is a review note. `finder`: the platform has one.
-    public static func commands(host: MenuHost, builtPDF: Bool, builds: Bool, review: ClassReview?, finder: Bool) -> [NoteCommand] {
-        var commands: [NoteCommand] = host.opensItem ? [.open] : []
+    public static func commands(host: MenuHost, builtPDF: Bool, builds: Bool, review: ClassReview?, finder: Bool) -> [NoteMenuCommand] {
+        var commands: [NoteMenuCommand] = host.opensItem ? [.open] : []
         if builtPDF { commands.append(.openPDF) }
         if builds { commands.append(.build) }
         if let review, review == .writing || review == .written { commands.append(.review(review)) }
@@ -175,7 +175,7 @@ public enum NoteCommand: ItemCommand {
 
 // MARK: Material
 
-public enum MaterialCommand: ItemCommand {
+public enum MaterialMenuCommand: ItemCommand {
     /// A folder opens in Finder on the Mac.
     case open
     case openWithDefault
@@ -207,9 +207,9 @@ public enum MaterialCommand: ItemCommand {
 extension CourseFile {
     /// `pdf`: the `.tex` file's built PDF. `mac`: the platform has Finder and other apps to hand a file to. A missing
     /// file has only the two ways out of it.
-    public func commands(for material: Material, host: MenuHost, pdf: UUID?, mac: Bool) -> [MaterialCommand] {
+    public func commands(for material: Material, host: MenuHost, pdf: UUID?, mac: Bool) -> [MaterialMenuCommand] {
         if material.status == .missing { return [.relink, .untrack] }
-        var commands: [MaterialCommand] = []
+        var commands: [MaterialMenuCommand] = []
         // A folder opens nowhere but Finder; iPadOS has none to hand it to.
         if host.opensItem && (mac || !material.isFolder) { commands.append(.open) }
         if mac && !material.isFolder { commands.append(.openWithDefault) }
@@ -230,7 +230,7 @@ extension CourseFile {
 
 // MARK: Course and semester
 
-public enum CourseCommand: ItemCommand {
+public enum CourseMenuCommand: ItemCommand {
     case open
     /// While one of the course's classes is under way.
     case record
@@ -250,8 +250,8 @@ public enum CourseCommand: ItemCommand {
 
     /// No delete: a course folder holds a semester's files, and leaving it is done in Finder. `order` is where the
     /// course stands among the ones it is listed with, for the sidebar's moves.
-    public static func commands(host: MenuHost, recordable: Bool, order: (index: Int, count: Int)?, finder: Bool) -> [CourseCommand] {
-        var commands: [CourseCommand] = host.opensItem ? [.open] : []
+    public static func commands(host: MenuHost, recordable: Bool, order: (index: Int, count: Int)?, finder: Bool) -> [CourseMenuCommand] {
+        var commands: [CourseMenuCommand] = host.opensItem ? [.open] : []
         if recordable { commands.append(.record) }
         commands.append(.edit)
         if host.orders, let order {
@@ -264,7 +264,7 @@ public enum CourseCommand: ItemCommand {
     }
 }
 
-public enum SemesterCommand: ItemCommand {
+public enum SemesterMenuCommand: ItemCommand {
     case open
     case addCourse
     /// The sidebar's fold, holding whether it is open now.
@@ -281,8 +281,8 @@ public enum SemesterCommand: ItemCommand {
     }
 
     /// The semester's page is its editor, so there's no 편집…; a course can be added only where `addsCourse` says.
-    public static func commands(host: MenuHost, addsCourse: Bool, folded: Bool?) -> [SemesterCommand] {
-        var commands: [SemesterCommand] = host.opensItem ? [.open] : []
+    public static func commands(host: MenuHost, addsCourse: Bool, folded: Bool?) -> [SemesterMenuCommand] {
+        var commands: [SemesterMenuCommand] = host.opensItem ? [.open] : []
         if addsCourse { commands.append(.addCourse) }
         if host.orders, let folded { commands.append(.fold(open: !folded)) }
         commands.append(.share)
@@ -292,7 +292,7 @@ public enum SemesterCommand: ItemCommand {
 
 // MARK: Grades
 
-public enum ComponentCommand: ItemCommand {
+public enum ComponentMenuCommand: ItemCommand {
     case addScore, edit, moveUp, moveDown, remove
 
     public var group: MenuGroup {
@@ -304,8 +304,8 @@ public enum ComponentCommand: ItemCommand {
         }
     }
 
-    public static func commands(addsScore: Bool, index: Int, count: Int) -> [ComponentCommand] {
-        var commands: [ComponentCommand] = addsScore ? [.addScore] : []
+    public static func commands(addsScore: Bool, index: Int, count: Int) -> [ComponentMenuCommand] {
+        var commands: [ComponentMenuCommand] = addsScore ? [.addScore] : []
         commands.append(.edit)
         if index > 0 { commands.append(.moveUp) }
         if index < count - 1 { commands.append(.moveDown) }
@@ -314,7 +314,7 @@ public enum ComponentCommand: ItemCommand {
     }
 }
 
-public enum ScoreCommand: ItemCommand {
+public enum ScoreMenuCommand: ItemCommand {
     /// 반영: checked while the score counts toward the grade.
     case counts(Bool)
     case edit, remove
@@ -327,12 +327,12 @@ public enum ScoreCommand: ItemCommand {
         }
     }
 
-    public static func commands(excused: Bool) -> [ScoreCommand] { [.counts(!excused), .edit, .remove] }
+    public static func commands(excused: Bool) -> [ScoreMenuCommand] { [.counts(!excused), .edit, .remove] }
 }
 
 // MARK: Quiz
 
-public enum CardCommand: ItemCommand {
+public enum CardMenuCommand: ItemCommand {
     /// On the statistics screen: drilling the card's unit's wrong answers.
     case solveWrong
     case edit, share, remove
@@ -346,12 +346,12 @@ public enum CardCommand: ItemCommand {
         }
     }
 
-    public static func commands(solvesWrong: Bool) -> [CardCommand] {
+    public static func commands(solvesWrong: Bool) -> [CardMenuCommand] {
         (solvesWrong ? [.solveWrong] : []) + [.edit, .share, .remove]
     }
 }
 
-public enum ProblemSetCommand: ItemCommand {
+public enum ProblemSetMenuCommand: ItemCommand {
     case openSheet, openSolution, share, remove
 
     public var group: MenuGroup {
@@ -363,12 +363,12 @@ public enum ProblemSetCommand: ItemCommand {
     }
 
     /// No sheet: a set is made once from its PDF. The set opens at the problems page, so it can be shared.
-    public static func commands(hasSheet: Bool, hasSolution: Bool) -> [ProblemSetCommand] {
+    public static func commands(hasSheet: Bool, hasSolution: Bool) -> [ProblemSetMenuCommand] {
         (hasSheet ? [.openSheet] : []) + (hasSolution ? [.openSolution] : []) + [.share, .remove]
     }
 }
 
-public enum ProblemCommand: ItemCommand {
+public enum ProblemMenuCommand: ItemCommand {
     /// The problem sheet, at the problem's page when it has one.
     case openSheet
     /// 풀이 기록 ▸: adding an attempt, so not a state with a value checked.
@@ -384,14 +384,14 @@ public enum ProblemCommand: ItemCommand {
         }
     }
 
-    public static func commands(hasSheet: Bool, hasUnits: Bool) -> [ProblemCommand] {
+    public static func commands(hasSheet: Bool, hasUnits: Bool) -> [ProblemMenuCommand] {
         (hasSheet ? [.openSheet] : []) + [.record] + (hasUnits ? [.units] : [])
     }
 }
 
 // MARK: Recording
 
-public enum RecordingCommand: ItemCommand {
+public enum RecordingMenuCommand: ItemCommand {
     case open
     /// Transcribing again, which replaces the transcript.
     case transcribe
@@ -408,8 +408,8 @@ public enum RecordingCommand: ItemCommand {
         }
     }
 
-    public static func commands(host: MenuHost, transcribes: Bool, hasTranscript: Bool) -> [RecordingCommand] {
-        var commands: [RecordingCommand] = host.opensItem ? [.open] : []
+    public static func commands(host: MenuHost, transcribes: Bool, hasTranscript: Bool) -> [RecordingMenuCommand] {
+        var commands: [RecordingMenuCommand] = host.opensItem ? [.open] : []
         if transcribes { commands.append(.transcribe) }
         commands.append(.share)
         if hasTranscript { commands.append(.copyTranscript) }
@@ -420,7 +420,7 @@ public enum RecordingCommand: ItemCommand {
 
 // MARK: People, codes, requirements
 
-public enum PersonCommand: ItemCommand {
+public enum PersonMenuCommand: ItemCommand {
     case open, mail, share, remove
 
     public var group: MenuGroup {
@@ -433,12 +433,12 @@ public enum PersonCommand: ItemCommand {
     }
 
     /// The person's page is their editor.
-    public static func commands(host: MenuHost, hasMail: Bool) -> [PersonCommand] {
+    public static func commands(host: MenuHost, hasMail: Bool) -> [PersonMenuCommand] {
         (host.opensItem ? [.open] : []) + (hasMail ? [.mail] : []) + [.share, .remove]
     }
 }
 
-public enum CodeCommand: ItemCommand {
+public enum CodeMenuCommand: ItemCommand {
     case edit, remove
 
     public var group: MenuGroup {
@@ -448,10 +448,10 @@ public enum CodeCommand: ItemCommand {
         }
     }
 
-    public static var commands: [CodeCommand] { [.edit, .remove] }
+    public static var commands: [CodeMenuCommand] { [.edit, .remove] }
 }
 
-public enum RequirementCommand: ItemCommand {
+public enum RequirementMenuCommand: ItemCommand {
     /// The course a category row stands for, when it stands for one.
     case openCourse
     case edit, remove
@@ -464,7 +464,7 @@ public enum RequirementCommand: ItemCommand {
         }
     }
 
-    public static func commands(hasCourse: Bool) -> [RequirementCommand] {
+    public static func commands(hasCourse: Bool) -> [RequirementMenuCommand] {
         (hasCourse ? [.openCourse] : []) + [.edit, .remove]
     }
 }

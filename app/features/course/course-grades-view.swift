@@ -354,9 +354,9 @@ struct ComponentMenuSource: ItemMenuSource {
     let index: Int
     let count: Int
 
-    var commands: [ComponentCommand] { ComponentCommand.commands(addsScore: addsScore, index: index, count: count) }
+    var commands: [ComponentMenuCommand] { ComponentMenuCommand.commands(addsScore: addsScore, index: index, count: count) }
 
-    func row(_ command: ComponentCommand) -> MenuRow {
+    func row(_ command: ComponentMenuCommand) -> MenuRow {
         switch command {
         case .addScore: MenuRow(command, .courseGradesAddScoreEllipsis, "plus", .action { model.addScore(component) })
         case .edit: .edit(command) { model.editingComponent = component }
@@ -373,9 +373,9 @@ struct ScoreMenuSource: ItemMenuSource {
     let model: CourseGradesModel
     let entry: ScoreEntry
 
-    var commands: [ScoreCommand] { ScoreCommand.commands(excused: entry.excused) }
+    var commands: [ScoreMenuCommand] { ScoreMenuCommand.commands(excused: entry.excused) }
 
-    func row(_ command: ScoreCommand) -> MenuRow {
+    func row(_ command: ScoreMenuCommand) -> MenuRow {
         switch command {
         case .counts(let on): MenuRow(command, .menuCounts, "checkmark.circle", .check(on) { model.setExcused(entry, !$0) })
         case .edit: .edit(command) { model.editingEntry = entry }

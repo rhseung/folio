@@ -24,7 +24,7 @@ struct MaterialMenuSource: ItemMenuSource {
     private var url: URL? { course?.store.fileURL(material.path) }
     private var pdf: FolioDomain.Material? { course?.file.materials.builtPDF(of: material) }
 
-    var commands: [MaterialCommand] {
+    var commands: [MaterialMenuCommand] {
         #if os(macOS)
         let mac = true
         #else
@@ -33,7 +33,7 @@ struct MaterialMenuSource: ItemMenuSource {
         return course?.file.commands(for: material, host: host, pdf: pdf.map(\.id), mac: mac) ?? []
     }
 
-    func row(_ command: MaterialCommand) -> MenuRow {
+    func row(_ command: MaterialMenuCommand) -> MenuRow {
         switch command {
         case .open:
             MenuRow(command, material.isFolder ? .materialsOpenInFinder : .commonOpen, "arrow.right.circle", .action(open))

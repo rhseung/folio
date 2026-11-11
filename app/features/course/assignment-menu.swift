@@ -18,7 +18,7 @@ struct AssignmentMenuSource: ItemMenuSource {
     private var folder: String { AssignmentFiles.path(of: assignment) }
     private var folderURL: URL? { workspace.course(courseId)?.store.fileURL(folder) }
 
-    var commands: [AssignmentCommand] {
+    var commands: [AssignmentMenuCommand] {
         #if os(macOS)
         let revealable = folderURL.map { FileManager.default.fileExists(atPath: $0.path) } ?? false
         #else
@@ -27,7 +27,7 @@ struct AssignmentMenuSource: ItemMenuSource {
         return workspace.course(courseId)?.file.commands(for: assignment, host: host, revealable: revealable) ?? []
     }
 
-    func row(_ command: AssignmentCommand) -> MenuRow {
+    func row(_ command: AssignmentMenuCommand) -> MenuRow {
         switch command {
         case .open:
             .open(command) { openLink(link, course: courseId) }

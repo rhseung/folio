@@ -65,6 +65,9 @@ public struct ReviewState: Sendable, Equatable {
         self.settled = settled
         self.writeNoteFirst = writeNoteFirst
     }
+
+    /// Due on the study day or overdue: what Today lists, and what the menus can skip for today.
+    public func isDue(on today: LocalDate) -> Bool { due.map { $0 <= today } ?? false }
 }
 
 public enum ReviewScheduler {
@@ -142,7 +145,7 @@ public enum ReviewScheduler {
         let byUnit = Dictionary(keepingFirst: inputs.map { ($0.unitId, $0) })
         let w = settings.weights
         var items = states.compactMap { state -> Item? in
-            guard let due = state.due, due <= today, let input = byUnit[state.unitId] else { return nil }
+            guard state.isDue(on: today), let due = state.due, let input = byUnit[state.unitId] else { return nil }
             let overdue = due.days(until: today)
             let interval = Double(settings.interval(atStep: state.step))
             var priority = w.overdue * Double(overdue) / interval

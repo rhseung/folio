@@ -12,9 +12,9 @@ struct CardMenuSource: ItemMenuSource {
     var solveWrong: (() -> Void)?
     let sheets: ItemSheetsAction
 
-    var commands: [CardCommand] { CardCommand.commands(solvesWrong: solveWrong != nil) }
+    var commands: [CardMenuCommand] { CardMenuCommand.commands(solvesWrong: solveWrong != nil) }
 
-    func row(_ command: CardCommand) -> MenuRow {
+    func row(_ command: CardMenuCommand) -> MenuRow {
         switch command {
         case .solveWrong:
             MenuRow(command, .quizStatsSolveUnitWrong, "arrow.counterclockwise", .action { solveWrong?() })
@@ -55,11 +55,11 @@ struct ProblemSetMenuSource: ItemMenuSource {
         id.flatMap { id in file?.materials.first { $0.id == id } }
     }
 
-    var commands: [ProblemSetCommand] {
-        ProblemSetCommand.commands(hasSheet: material(set.materialId) != nil, hasSolution: material(set.solutionMaterialId) != nil)
+    var commands: [ProblemSetMenuCommand] {
+        ProblemSetMenuCommand.commands(hasSheet: material(set.materialId) != nil, hasSolution: material(set.solutionMaterialId) != nil)
     }
 
-    func row(_ command: ProblemSetCommand) -> MenuRow {
+    func row(_ command: ProblemSetMenuCommand) -> MenuRow {
         switch command {
         case .openSheet:
             MenuRow(command, .quizProblemsOpenSheet, "doc.richtext", .action { open(set.materialId) })
@@ -101,9 +101,9 @@ struct ProblemMenuSource: ItemMenuSource {
     let mark: (Verdict) -> Void
     let toggleUnit: (UUID) -> Void
 
-    var commands: [ProblemCommand] { ProblemCommand.commands(hasSheet: openSheet != nil, hasUnits: !units.isEmpty) }
+    var commands: [ProblemMenuCommand] { ProblemMenuCommand.commands(hasSheet: openSheet != nil, hasUnits: !units.isEmpty) }
 
-    func row(_ command: ProblemCommand) -> MenuRow {
+    func row(_ command: ProblemMenuCommand) -> MenuRow {
         switch command {
         case .openSheet:
             MenuRow(command, .quizProblemsOpenSheet, "doc.richtext", .action { openSheet?() })

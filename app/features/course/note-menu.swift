@@ -39,19 +39,19 @@ struct NoteMenuSource: ItemMenuSource {
         return course?.file.sessions.filter { $0.reviewNoteId == id }.max { $0.date < $1.date }
     }
 
-    var commands: [NoteCommand] {
+    var commands: [NoteMenuCommand] {
         #if os(macOS)
         let finder = true
         #else
         let finder = false
         #endif
         let review = reviewed.flatMap { course?.file.review(of: $0) }
-        let all = NoteCommand.commands(host: host, builtPDF: builtPDF != nil, builds: build != nil, review: review, finder: finder)
+        let all = NoteMenuCommand.commands(host: host, builtPDF: builtPDF != nil, builds: build != nil, review: review, finder: finder)
         // A note with no ID yet has no link to share.
         return note.meta.id == nil ? all.filter { $0 != .share } : all
     }
 
-    func row(_ command: NoteCommand) -> MenuRow {
+    func row(_ command: NoteMenuCommand) -> MenuRow {
         switch command {
         case .open:
             .open(command) {

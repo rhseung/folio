@@ -39,20 +39,20 @@ struct ItemCommandsTests {
             ordered(f.commands(for: f.exams[a ? 0 : 1], host: host))
             ordered(f.commands(for: f.assignments[0], host: host, revealable: a))
             ordered(f.commands(for: f.units[a ? 0 : 2], host: host, dueToday: b))
-            ordered(NoteCommand.commands(host: host, builtPDF: a, builds: b, review: c ? .writing : nil, finder: a))
+            ordered(NoteMenuCommand.commands(host: host, builtPDF: a, builds: b, review: c ? .writing : nil, finder: a))
             ordered(f.commands(for: f.materials[a ? 0 : 1], host: host, pdf: b ? UUID() : nil, mac: c))
-            ordered(CourseCommand.commands(host: host, recordable: a, order: (b ? 0 : 1, 2), finder: c), removes: false)
-            ordered(SemesterCommand.commands(host: host, addsCourse: a, folded: b), removes: false)
-            ordered(RecordingCommand.commands(host: host, transcribes: a, hasTranscript: b))
-            ordered(PersonCommand.commands(host: host, hasMail: a))
+            ordered(CourseMenuCommand.commands(host: host, recordable: a, order: (b ? 0 : 1, 2), finder: c), removes: false)
+            ordered(SemesterMenuCommand.commands(host: host, addsCourse: a, folded: b), removes: false)
+            ordered(RecordingMenuCommand.commands(host: host, transcribes: a, hasTranscript: b))
+            ordered(PersonMenuCommand.commands(host: host, hasMail: a))
         }
-        ordered(ComponentCommand.commands(addsScore: true, index: 1, count: 3))
-        ordered(ScoreCommand.commands(excused: false))
-        ordered(CardCommand.commands(solvesWrong: true))
-        ordered(ProblemSetCommand.commands(hasSheet: true, hasSolution: true))
-        ordered(ProblemCommand.commands(hasSheet: true, hasUnits: true), removes: false)
-        ordered(RequirementCommand.commands(hasCourse: true))
-        ordered(CodeCommand.commands)
+        ordered(ComponentMenuCommand.commands(addsScore: true, index: 1, count: 3))
+        ordered(ScoreMenuCommand.commands(excused: false))
+        ordered(CardMenuCommand.commands(solvesWrong: true))
+        ordered(ProblemSetMenuCommand.commands(hasSheet: true, hasSolution: true))
+        ordered(ProblemMenuCommand.commands(hasSheet: true, hasUnits: true), removes: false)
+        ordered(RequirementMenuCommand.commands(hasCourse: true))
+        ordered(CodeMenuCommand.commands)
         ordered(ExamPlanItem.commands(done: true))
     }
 
@@ -63,7 +63,7 @@ struct ItemCommandsTests {
         #expect(!f.commands(for: f.exams[0], host: .own).contains(.open))
         #expect(f.commands(for: f.assignments[0], host: .elsewhere, revealable: false).first == .open)
         #expect(!f.commands(for: f.units[0], host: .own, dueToday: false).contains(.open))
-        #expect(NoteCommand.commands(host: .elsewhere, builtPDF: false, builds: false, review: nil, finder: false).first == .open)
+        #expect(NoteMenuCommand.commands(host: .elsewhere, builtPDF: false, builds: false, review: nil, finder: false).first == .open)
     }
 
     // MARK: Per kind
@@ -98,13 +98,13 @@ struct ItemCommandsTests {
 
     /// Only a review note has the 작성 완료 row, and only once it is one.
     @Test func aNoteHasTheReviewRowOnlyWhenItReviewsAClass() {
-        let plain = NoteCommand.commands(host: .own, builtPDF: false, builds: false, review: nil, finder: false)
+        let plain = NoteMenuCommand.commands(host: .own, builtPDF: false, builds: false, review: nil, finder: false)
         #expect(plain == [.edit, .move, .share, .remove])
-        let review = NoteCommand.commands(host: .own, builtPDF: false, builds: false, review: .writing, finder: false)
+        let review = NoteMenuCommand.commands(host: .own, builtPDF: false, builds: false, review: .writing, finder: false)
         #expect(review.contains(.review(.writing)))
         // A class without a note yet: nothing for a note's menu to check.
-        #expect(!NoteCommand.commands(host: .own, builtPDF: false, builds: false, review: .needed, finder: false).contains { $0.group == .state })
-        let tex = NoteCommand.commands(host: .own, builtPDF: true, builds: true, review: nil, finder: true)
+        #expect(!NoteMenuCommand.commands(host: .own, builtPDF: false, builds: false, review: .needed, finder: false).contains { $0.group == .state })
+        let tex = NoteMenuCommand.commands(host: .own, builtPDF: true, builds: true, review: nil, finder: true)
         #expect(tex == [.openPDF, .build, .edit, .move, .share, .showInFinder, .remove])
     }
 
@@ -126,13 +126,13 @@ struct ItemCommandsTests {
     }
 
     @Test func aCourseMovesOnlyInTheSidebarAndHasNoDelete() {
-        #expect(CourseCommand.commands(host: .list, recordable: false, order: (0, 3), finder: false) == [.open, .edit, .moveDown, .share])
-        #expect(CourseCommand.commands(host: .own, recordable: true, order: (1, 3), finder: true) == [.record, .edit, .share, .showInFinder])
+        #expect(CourseMenuCommand.commands(host: .list, recordable: false, order: (0, 3), finder: false) == [.open, .edit, .moveDown, .share])
+        #expect(CourseMenuCommand.commands(host: .own, recordable: true, order: (1, 3), finder: true) == [.record, .edit, .share, .showInFinder])
     }
 
     @Test func aScoreCountsUnlessExcused() {
-        #expect(ScoreCommand.commands(excused: false).first == .counts(true))
-        #expect(ScoreCommand.commands(excused: true).first == .counts(false))
-        #expect(ComponentCommand.commands(addsScore: false, index: 0, count: 1) == [.edit, .remove])
+        #expect(ScoreMenuCommand.commands(excused: false).first == .counts(true))
+        #expect(ScoreMenuCommand.commands(excused: true).first == .counts(false))
+        #expect(ComponentMenuCommand.commands(addsScore: false, index: 0, count: 1) == [.edit, .remove])
     }
 }
