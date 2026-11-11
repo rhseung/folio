@@ -100,6 +100,10 @@ final class PageStripModel {
 
     private func setOpen(_ session: UUID, _ open: Bool) {
         folds[session] = open
+        saveFolds()
+    }
+
+    private func saveFolds() {
         guard let materialId else { return }
         defaults?.set(Dictionary(uniqueKeysWithValues: folds.map { ($0.key.uuidString, $0.value) }), forKey: Self.key(materialId))
     }
@@ -246,5 +250,38 @@ final class PageStripModel {
             fresh = session
         }
         clear()
+    }
+
+    // MARK: Removing
+
+    /// Takes the file off the class, as unticking its row in the wrap-up does. Not confirmed: no file goes, only the
+    /// link, and the range can be picked again.
+    private func removal(of session: UUID) -> MaterialLinkSession? {
+        guard let courseId, let materialId else { return nil }
+        return MaterialLinkSession(course: courseId, material: materialId, session: session, linked: false)
+    }
+
+    var canRemove: Bool { editing.flatMap { removal(of: $0) }.map { workspace.can($0) } ?? false }
+
+    /// The section being changed, from its row.
+    func remove() {
+        guard let editing else { return }
+        unlink(editing)
+    }
+
+    /// A header's menu: straight from the section, without changing its range first.
+    func remove(_ section: Section) { unlink(section.id) }
+
+    private func unlink(_ session: UUID) {
+        guard let action = removal(of: session), workspace.run(action) != nil else { return }
+        forgetFold(session)
+        if fresh == session { fresh = nil }
+        clear()
+    }
+
+    /// A fold kept for a class with no section here would come back on its next range, folded or not as it was.
+    private func forgetFold(_ session: UUID) {
+        guard folds.removeValue(forKey: session) != nil else { return }
+        saveFolds()
     }
 }

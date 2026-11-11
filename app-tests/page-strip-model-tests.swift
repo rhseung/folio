@@ -234,6 +234,27 @@ struct PageStripModelTests {
         #expect(model.editing == earlier && model.selection == 1...4)
     }
 
+    /// The edit row, and the header's menu without editing first, take the file off the class as the wrap-up's
+    /// unticked row does. The class is offered for a new range again, and its fold is forgotten.
+    @Test func aSectionsProgressIsRemoved() throws {
+        link(earlier, 1...4)
+        link(session, 9...12)
+        let defaults = try #require(UserDefaults(suiteName: "PageStripModelTests.\(UUID())"))
+        let model = model(defaults: defaults)
+        #expect(!model.canRemove)
+        model.toggle(model.sections[1])
+        model.edit(model.sections[1])
+        #expect(model.canRemove)
+        model.remove()
+        #expect(links(session).isEmpty && model.editing == nil && model.selection == nil && !model.canRemove)
+        #expect(model.sections.map(\.id) == [earlier] && column(model)[8] == " 9")
+        #expect((defaults.dictionary(forKey: PageStripModel.key(slides.id)) as? [String: Bool])?[session.uuidString] == nil)
+        #expect(model.choices.map(\.id) == [session])
+        model.remove(model.sections[0])
+        #expect(links(earlier).isEmpty && model.sections.isEmpty && !model.railed)
+        #expect(links(upcoming).isEmpty)
+    }
+
     /// The rule behind the stop: a save that would share a page is refused, naming the other class's pages.
     @Test func anOverlappingSaveIsRefused() {
         link(earlier, 1...7)

@@ -20835,6 +20835,17 @@
         }
       }
     },
+    "file-view.progress.remove": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "진도 지우기"
+          }
+        }
+      }
+    },
     "file-view.progress.no-class": {
       "extractionState": "manual",
       "localizations": {

@@ -103,6 +103,13 @@ private struct PageStripItem: View {
             case .header(let section, let open)?:
                 StripHeader(section: section, open: open, lit: model.fresh == section.id, help: Text(.fileViewProgressPickHelp),
                             toggle: { model.toggle(section) }, edit: { model.edit(section) })
+                    .contextMenu {
+                        Button(.commonEdit, systemImage: "pencil") { model.edit(section) }
+                        Divider()
+                        Button(.fileViewProgressRemove, systemImage: "link.badge.minus", role: .destructive) {
+                            withAnimation(.snappy(duration: 0.2)) { model.remove(section) }
+                        }
+                    }
             case .edit(let section)?: SaveRow(model: model, editing: section)
             case .draft?: SaveRow(model: model, editing: nil)
             case nil: EmptyView()
@@ -174,7 +181,22 @@ private struct SaveRow: View {
             .fixedSize()
         } extra: {
             if editing == nil, today == nil { classMenu }
+            if editing != nil { removeButton }
         }
+    }
+
+    /// In the row, not only the header's menu: a touch screen has nothing that shows a long press opens one.
+    private var removeButton: some View {
+        Button(role: .destructive) { withAnimation(.snappy(duration: 0.2)) { model.remove() } } label: {
+            Label(String(localized: .fileViewProgressRemove), systemImage: "link.badge.minus")
+                #if os(iOS)
+                .frame(minHeight: Theme.Size.touchTarget)
+                .contentShape(.rect)
+                #endif
+        }
+        .buttonStyle(.ghost)
+        .controlSize(.small)
+        .disabled(!model.canRemove)
     }
 
     /// Opens to the trailing side, over the page rather than the thumbnails the range was picked on.
