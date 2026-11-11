@@ -193,6 +193,30 @@ struct NoteSourceTests {
         #expect(box.text == "가나")
     }
 
+    /// What the asset tray puts in through `insert` reaches `text` with nothing typed after it (#399): put in while
+    /// SwiftUI updated the view it never did, and the update that clearing the binding set off swapped it back out.
+    @Test func textPutInThroughTheBindingReachesTheNote() async throws {
+        final class Box {
+            var text = "앞 "
+            var insert: String? = "![](assets/그림.png)"
+        }
+        let box = Box()
+        let editor = MarkdownEditor(text: Binding(get: { box.text }, set: { box.text = $0 }), baseURL: nil, math: .latex,
+                                    insert: Binding(get: { box.insert }, set: { box.insert = $0 }), saveFile: { _, _ in nil }, openNote: { _ in })
+        let coordinator = editor.makeCoordinator()
+        let (view, _) = Self.typing(box.text)
+        view.onChange = { coordinator.changed() }
+        coordinator.view = view
+        let accent = CourseAccent.presets[0].accent
+        editor.update(view, coordinator, accent: accent, dark: false)
+        // The editor puts it in on the main queue after the update; this runs after that.
+        await withCheckedContinuation { done in DispatchQueue.main.async { done.resume() } }
+        #expect(box.insert == nil)
+        #expect(box.text == "앞 ![](assets/그림.png)")
+        editor.update(view, coordinator, accent: accent, dark: false)
+        #expect(view.string == "앞 ![](assets/그림.png)")
+    }
+
     /// Enter then Tab under `- 셋` starts a sub-item; CommonMark alone would make `셋` a heading until it has text.
     @Test func startingASubItemKeepsTheItemAbove() throws {
         let (view, _) = Self.typing("- 하나\n- 셋")

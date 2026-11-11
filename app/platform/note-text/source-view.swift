@@ -76,18 +76,19 @@ struct MarkdownEditor {
             coordinator.revealed = anchor
             if let location = anchor.location(in: text) { view.reveal(location) }
         }
-        if let insert {
-            view.insertAtCaret(insert)
-            DispatchQueue.main.async { self.insert = nil }
-        }
-        // Put in after the update: an edit made during it doesn't reach the binding (`updating`), and the next update
-        // would swap the text back. Checked again there, so an update run twice before it inserts once.
-        if insertMath.wrappedValue != nil {
-            DispatchQueue.main.async {
-                guard let item = self.insertMath.wrappedValue else { return }
-                self.insertMath.wrappedValue = nil
-                view.insertMath(item)
-            }
+        afterUpdate($insert) { view.insertAtCaret($0) }
+        afterUpdate(insertMath) { view.insertMath($0) }
+    }
+
+    /// Puts in what a binding holds once the update is over: an edit made during it doesn't reach `text` (`updating`),
+    /// and the update that clearing the binding sets off would swap the text back (#399). Checked again there, so an
+    /// update run twice before it inserts once.
+    @MainActor private func afterUpdate<Value>(_ binding: Binding<Value?>, _ put: @escaping @MainActor (Value) -> Void) {
+        guard binding.wrappedValue != nil else { return }
+        DispatchQueue.main.async {
+            guard let value = binding.wrappedValue else { return }
+            binding.wrappedValue = nil
+            put(value)
         }
     }
 }
