@@ -382,7 +382,7 @@ struct CourseOverview: View {
                             }
                         }
                     }
-                    .contextMenu { Button(.courseShowAssignments, systemImage: "checklist") { model.section = .assignments } }
+                    .contextMenu { AssignmentMenu(courseId: course.id, assignmentId: a.id) }
                 }
                 if open.count > shown.count {
                     CardRow(last: true) { EmptyLine(String(localized: .commonMoreCount(open.count - shown.count))) }
@@ -411,12 +411,7 @@ struct CourseOverview: View {
                             }
                         }
                     }
-                    .contextMenu {
-                        Button(.courseShowUnits, systemImage: "list.bullet") { model.section = .units }
-                        if entry != nil {
-                            Button(.courseSkipReviewToday, systemImage: "forward") { model.skipReview(unit) }
-                        }
-                    }
+                    .contextMenu { UnitMenu(courseId: course.id, unitId: unit.id) }
                 }
             }
             .opens { model.section = .units }

@@ -33,6 +33,17 @@ public enum MenuHost: Hashable, Sendable {
     case own
     /// A unit's page, which lists the item as linked to that unit.
     case unit(UUID)
+    /// An exam's card, which lists the item as linked to that exam.
+    case exam(UUID)
+    /// The list that keeps the items in an order of their own (the sidebar's courses, a course's units): opening one
+    /// is still a step, and moving it up and down is offered.
+    case list
+
+    /// Everywhere but the item's own screen the menu leads with "열기".
+    public var opensItem: Bool { self != .own }
+
+    /// Only where the items are listed in the order the user sets: moving one from anywhere else moves it out of sight.
+    public var orders: Bool { self == .list }
 }
 
 extension Array where Element: ItemCommand {

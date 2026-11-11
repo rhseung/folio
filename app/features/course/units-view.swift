@@ -133,14 +133,9 @@ struct UnitsView: View {
         }
     }
 
-    @ViewBuilder func menu(_ unit: FolioDomain.Unit) -> some View {
-        Button(.commonOpen) { model.openUnit = unit.id }
-        LinkMenu(link: AppLink(.unit, unit.id), course: course.id, trailing: true)
-        Divider()
-        Button(.unitsMoveUp) { model.move(unit, by: -1) }
-        Button(.unitsMoveDown) { model.move(unit, by: 1) }
-        Divider()
-        Button(.commonDeleteEllipsis, role: .destructive) { model.remove(unit) }
+    /// The unit's one menu (#403). The list keeps the units in their order, so it moves them too.
+    func menu(_ unit: FolioDomain.Unit) -> some View {
+        UnitMenu(courseId: course.id, unitId: unit.id, host: .list)
     }
 
     /// Held classes no unit covers, newest first: linking one here starts its unit's review from that class.
@@ -221,6 +216,7 @@ struct UnitDetail: View {
                 Button { reviewing = true } label: { Label(.unitsStartReview, systemImage: "play.fill") }
                     .buttonStyle(.prominent)
                     .controlSize(.large)
+                PageMenuButton { UnitMenu(courseId: course.id, unitId: unit.id, host: .own) }
             }
 
             StatStrip(items: model.stats(unit, state: state, reviews: history.count))

@@ -205,7 +205,7 @@ struct SemesterView: View {
                     // Past exams stay for reference but step back behind the coming ones.
                     .opacity(start > now ? 1 : 0.6)
                     .opens { showExams(item.course.id) }
-                    .contextMenu { Button(.commonShowExams, systemImage: "calendar.badge.exclamationmark") { showExams(item.course.id) } }
+                    .contextMenu { ExamMenu(courseId: item.course.id, examId: item.exam.id) }
                 }
             }
         }

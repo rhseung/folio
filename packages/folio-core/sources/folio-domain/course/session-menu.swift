@@ -105,7 +105,7 @@ extension CourseFile {
     /// notes, the review check and the recordings. Editing, sharing and deleting always.
     public func commands(for session: Session, at now: Date, host: MenuHost, classMinutes: Int, calendar: Calendar) -> [SessionCommand] {
         var commands: [SessionCommand] = []
-        if host != .own { commands.append(.open) }
+        if host.opensItem { commands.append(.open) }
         let held = !session.isCancelled
         if session.isOver(at: now, schedule: course.schedule, classMinutes: classMinutes, calendar: calendar) {
             if session.roughNoteId != nil { commands.append(.openNote(.rough)) }
