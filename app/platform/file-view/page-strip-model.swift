@@ -100,6 +100,10 @@ final class PageStripModel {
 
     private func setOpen(_ session: UUID, _ open: Bool) {
         folds[session] = open
+        saveFolds()
+    }
+
+    private func saveFolds() {
         guard let materialId else { return }
         defaults?.set(Dictionary(uniqueKeysWithValues: folds.map { ($0.key.uuidString, $0.value) }), forKey: Self.key(materialId))
     }
@@ -111,7 +115,22 @@ final class PageStripModel {
         if let editing, let selection, let i = shown.firstIndex(where: { $0.id == editing }) {
             shown[i] = Section(id: editing, pages: selection, title: shown[i].title)
         }
-        return Item.column(pageCount: pageCount, sections: shown, editing: editing, draft: editing == nil ? selection : nil, isOpen: isOpen)
+        return Item.column(pageCount: pageCount, sections: shown, editing: editing, draft: editing == nil ? selection : nil,
+                           draftBelow: draftBelow, isOpen: isOpen)
+    }
+
+    /// A new range's row stands at the end it was picked out to, so it is saved where ⇧ (or the next tap) ended it:
+    /// under the range when picked downward from the anchor. Picked upward, or one page alone, it stays over it. A
+    /// class's range being changed keeps its row in the header's place.
+    var draftBelow: Bool {
+        guard editing == nil, let selection, let anchor else { return false }
+        return selection.lowerBound == anchor && selection.upperBound > anchor
+    }
+
+    /// The page whose item holds a new range's row, for the column to keep it in sight as it moves end to end.
+    var draftItemID: ItemID? {
+        guard editing == nil, let selection else { return nil }
+        return .page(draftBelow ? selection.upperBound : selection.lowerBound)
     }
 
     /// Where the column scrolls for the PDF's page: the page, or the header of the folded section holding it.
@@ -246,5 +265,44 @@ final class PageStripModel {
             fresh = session
         }
         clear()
+    }
+
+    // MARK: Removing
+
+    /// Takes the file off the class, as unticking its row in the wrap-up does. Not confirmed: no file goes, only the
+    /// link, and the range can be picked again.
+    private func removal(of session: UUID) -> MaterialLinkSession? {
+        guard let courseId, let materialId else { return nil }
+        return MaterialLinkSession(course: courseId, material: materialId, session: session, linked: false)
+    }
+
+    var canRemove: Bool { editing.map { canRemove($0) } ?? false }
+
+    func canRemove(_ section: Section) -> Bool { canRemove(section.id) }
+
+    private func canRemove(_ session: UUID) -> Bool { removal(of: session).map { workspace.can($0) } ?? false }
+
+    /// The section being changed, from its row.
+    func remove() {
+        guard let editing else { return }
+        unlink(editing)
+    }
+
+    /// A header's menu: straight from the section, without changing its range first.
+    func remove(_ section: Section) { unlink(section.id) }
+
+    private func unlink(_ session: UUID) {
+        guard let action = removal(of: session), workspace.run(action) != nil else { return }
+        forgetFold(session)
+        if fresh == session { fresh = nil }
+        // Only the section's own row closes: from another header's menu, a range being changed or picked stays. A new
+        // range can't hold the removed section's pages, so nothing picked goes stale.
+        if editing == session { clear() }
+    }
+
+    /// A fold kept for a class with no section here would come back on its next range, folded or not as it was.
+    private func forgetFold(_ session: UUID) {
+        guard folds.removeValue(forKey: session) != nil else { return }
+        saveFolds()
     }
 }

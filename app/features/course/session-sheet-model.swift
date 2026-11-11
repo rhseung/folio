@@ -29,6 +29,8 @@ final class SessionSheetModel {
     struct Row: Identifiable, Equatable {
         let id: UUID
         var included = true
+        /// Checked when the sheet opened: only such a row of a file the class links drops the link when unchecked.
+        var started = true
         var first: Int?
         var last: Int?
 
@@ -158,7 +160,10 @@ final class SessionSheetModel {
         let wrappingUp = file.isWrappingUp(session, recorded: recorded, at: workspace.now,
                                            classMinutes: workspace.settings.classMinutes, calendar: calendar)
         rows = file.suggestedProgress(for: session, viewed: viewed, pageCounts: pageCounts)
-            .map { Row(id: $0.materialId, included: session.wrapUpChecks($0, wrappingUp: wrappingUp), first: $0.firstPage, last: $0.lastPage) }
+            .map { range in
+                let checked = session.wrapUpChecks(range, wrappingUp: wrappingUp)
+                return Row(id: range.materialId, included: checked, started: checked, first: range.firstPage, last: range.lastPage)
+            }
     }
 
     /// Counts tell where a file ends: the first page stays within it, and a finished file hands over to the next.
@@ -388,6 +393,13 @@ final class SessionSheetModel {
         return session?.changedRanges(kept) ?? kept
     }
 
+    /// Files the class links whose rows were unchecked: the save takes them off, pages and all. None while progress
+    /// is hidden, where no row could have been unchecked.
+    var unlinked: [UUID] {
+        guard shows(.progress), let session else { return [] }
+        return session.droppedLinks(started: Set(rows.filter(\.started).map(\.id)), kept: Set(keptRows.map(\.id)))
+    }
+
     /// The one action the sheet saves with: every group at once, so a part the rules refuse leaves the rest unwritten.
     /// Groups the sheet hides keep what the class has.
     var action: any Action {
@@ -397,7 +409,7 @@ final class SessionSheetModel {
                               units: shows(.units) ? units : [])
         }
         let review = showsReview && shows(.notes) && review != initial.review ? review : nil
-        return SessionWrapUp(course: courseId, session: session.id, ranges: ranges,
+        return SessionWrapUp(course: courseId, session: session.id, ranges: ranges, unlinked: unlinked,
                              units: shows(.units) ? .set(units) : .keep,
                              attendance: shows(.attendance) ? .set(attendance) : .keep,
                              date: start == session.date ? .keep : .set(start),

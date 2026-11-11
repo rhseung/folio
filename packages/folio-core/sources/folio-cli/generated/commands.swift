@@ -503,6 +503,7 @@ enum GeneratedCommands {
         @OptionGroup var g: GlobalOptions
         @Argument(help: ArgumentHelp("<과목>/<회차>", valueName: "session"), completion: Complete.ref("Session")) var session: String
         @Argument(help: ArgumentHelp("렉처 파일마다 이번 수업이 다룬 쪽. 적지 않은 파일의 연결은 그대로 둔다. 05_Matchings.pdf:3-12. 여러 번 줄 수 있다", valueName: "material:pages")) var ranges: [String] = []
+        @Option(name: .customLong("unlink"), help: ArgumentHelp("회차에서 뗄 자료. 그 자료의 진도도 함께 지운다. 여러 번 줄 수 있다", valueName: "unlink"), completion: Complete.ref("Material")) var unlinked: [String] = []
         @Option(name: .customLong("unit"), help: ArgumentHelp("회차의 단원. 주면 이것으로 바뀐다. 여러 번 줄 수 있다. 주면 목록 전체를 바꾸고, none이면 비운다", valueName: "unit"), completion: Complete.ref("Unit")) var units: [String] = []
         @Option(help: "출결") var attendance: AttendanceState?
         @Option(help: ArgumentHelp("일시. 회차를 가리키는 날짜(11-03)도 따라 바뀐다", valueName: "date")) var date: DateArg?
@@ -520,6 +521,7 @@ enum GeneratedCommands {
                 course: c.id,
                 session: try r.id("Session", sessionName, in: c),
                 ranges: try ranges.map { try r.parse($0, in: c) },
+                unlinked: try unlinked.map { try r.id("Material", $0, in: c) },
                 units: units.isEmpty ? .keep : .set(try units.clearing.map { try r.id("Unit", $0, in: c) }),
                 attendance: attendance.map { Patch.set($0) } ?? .keep,
                 date: date.map { Patch.set($0.date) } ?? .keep,

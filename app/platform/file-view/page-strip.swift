@@ -4,7 +4,7 @@ import SwiftUI
 /// A PDF's pages small, down the side of its file view. Pressing one goes to it. On a course's lecture file the pages
 /// fall into sections, one per class that went through them, each under a one-line header that folds it; a range
 /// picked on the plain pages (⇧-click on a Mac, a long press then taps on iPad) is saved as a class's progress from a
-/// row above it, and a header pressed changes that class's range the same way (#147). The iPad also has a button over
+/// row at the end it was picked out to, and a header pressed changes that class's range the same way (#147). The iPad also has a button over
 /// the pages that starts picking, since nothing shows that a long press does.
 ///
 /// Drawn here rather than with PDFKit's `PDFThumbnailView`, which picks no more than one page on iPad and takes nothing
@@ -42,6 +42,12 @@ struct PageStrip: View {
                 }
                 .overflowFade(.vertical)
                 .onChange(of: controller.page, initial: true) { _, page in proxy.scrollTo(model.itemID(showing: page + 1)) }
+                .task(id: model.draftItemID) {
+                    guard let id = model.draftItemID else { return }
+                    // After the row has moved: scrolled to at once, the column still had it at the range's other end.
+                    try? await Task.sleep(for: .seconds(0.25))
+                    withAnimation(.snappy(duration: 0.2)) { proxy.scrollTo(id) }
+                }
             }
         }
         .animation(.snappy(duration: 0.2), value: model.items)
@@ -70,6 +76,9 @@ struct PageStrip: View {
                 go(to: to)
             case .choose?: model.choosing = model.onlyToday == nil
             case .save?: model.commit()
+            case .remove(let page)?:
+                if let section = model.sections.first(where: { $0.pages.contains(page) }) { model.remove(section) }
+                go(to: page + 1)
             case nil: break
             }
         }
@@ -99,19 +108,32 @@ private struct PageStripItem: View {
 
     var body: some View {
         StripItemFrame(item: item) {
-            switch item.lead {
-            case .header(let section, let open)?:
-                StripHeader(section: section, open: open, lit: model.fresh == section.id, help: Text(.fileViewProgressPickHelp),
-                            toggle: { model.toggle(section) }, edit: { model.edit(section) })
-            case .edit(let section)?: SaveRow(model: model, editing: section)
-            case .draft?: SaveRow(model: model, editing: nil)
-            case nil: EmptyView()
-            }
+            lead(item.lead)
             if let page = item.page {
                 StripPage(controller: controller, page: page, picked: item.mark == .picked, gutter: gutter, ranging: model.pickingShown,
                           press: { page, extend in extend ? model.extend(to: page) : model.press(page) },
                           start: { model.start(at: $0) })
             }
+            lead(item.trail)
+        }
+    }
+
+    @ViewBuilder private func lead(_ lead: StripItem.Lead?) -> some View {
+        switch lead {
+        case .header(let section, let open)?:
+            StripHeader(section: section, open: open, lit: model.fresh == section.id, help: Text(.fileViewProgressPickHelp),
+                        toggle: { model.toggle(section) }, edit: { model.edit(section) })
+                .contextMenu {
+                    Button(.commonEdit, systemImage: "pencil") { model.edit(section) }
+                    Divider()
+                    Button(.fileViewProgressRemove, systemImage: "link.badge.minus", role: .destructive) {
+                        withAnimation(.snappy(duration: 0.2)) { model.remove(section) }
+                    }
+                    .disabled(!model.canRemove(section))
+                }
+        case .edit(let section)?: SaveRow(model: model, editing: section)
+        case .draft?: SaveRow(model: model, editing: nil)
+        case nil: EmptyView()
         }
     }
 }
@@ -150,7 +172,7 @@ private struct PickBar: View {
 }
 #endif
 
-/// The row a range is saved from: above a new range, which class it was; in place of a section's header, its range
+/// The row a range is saved from: at a new range's picked end, which class it was; in place of a section's header, its range
 /// changed. Saving is `material link`, the same action as the wrap-up's.
 private struct SaveRow: View {
     @Bindable var model: PageStripModel
@@ -174,7 +196,22 @@ private struct SaveRow: View {
             .fixedSize()
         } extra: {
             if editing == nil, today == nil { classMenu }
+            if editing != nil { removeButton }
         }
+    }
+
+    /// In the row, not only the header's menu: a touch screen has nothing that shows a long press opens one.
+    private var removeButton: some View {
+        Button(role: .destructive) { withAnimation(.snappy(duration: 0.2)) { model.remove() } } label: {
+            Label(String(localized: .fileViewProgressRemove), systemImage: "link.badge.minus")
+                #if os(iOS)
+                .frame(minHeight: Theme.Size.touchTarget)
+                .contentShape(.rect)
+                #endif
+        }
+        .buttonStyle(.ghost)
+        .controlSize(.small)
+        .disabled(!model.canRemove)
     }
 
     /// Opens to the trailing side, over the page rather than the thumbnails the range was picked on.
