@@ -157,6 +157,106 @@ private struct GeneralSettings: View {
                 }
             }
         }
+        PaneLayoutSettings(model: model)
+    }
+}
+
+/// 칸 배치 (#62, 2026-11-11 사용자, 시안 3-C): the layout a class's start opens, and every layout to choose from in a
+/// tab's "배치 ▸", the built-in ones fixed first and the user's after them to rename, reorder and delete. Choosing and
+/// saving happen in the tab's menu, where the panes are.
+private struct PaneLayoutSettings: View {
+    @Bindable var model: SettingsModel
+    @State private var renaming: PanePreset?
+    @State private var name = ""
+
+    var body: some View {
+        Block(String(localized: .settingsPaneLayouts)) {
+            VStack(alignment: .leading, spacing: Theme.Space.s) {
+                Card {
+                    FormRow(label: String(localized: .settingsClassStartLayout), last: true) {
+                        ChoiceMenu(selection: $model.classStartPreset, options: model.classStartPresets.map { ($0.id, $0.title) })
+                    }
+                }
+                Card {
+                    let all = model.settings.presets
+                    ForEach(all) { preset in
+                        row(preset, last: preset.id == all.last?.id)
+                    }
+                }
+                if model.settings.panePresets.isEmpty {
+                    Text(.settingsPaneLayoutsEmpty).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+                        .padding(.horizontal, Theme.Space.l)
+                }
+            }
+        }
+        .alert(String(localized: .panesPresetsRenameTitle), isPresented: Binding(get: { renaming != nil }, set: { if !$0 { renaming = nil } })) {
+            TextField(String(localized: .panesPresetsNameField), text: $name)
+            Button(String(localized: .commonSave)) {
+                if let renaming { model.rename(renaming.id, to: name) }
+                renaming = nil
+            }
+            .disabled(name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+            Button(String(localized: .commonCancel), role: .cancel) { renaming = nil }
+        }
+    }
+
+    func row(_ preset: PanePreset, last: Bool) -> some View {
+        CardRow(last: last) {
+            LayoutGlyph(shares: preset.shares)
+            VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+                HStack(spacing: Theme.Space.s) {
+                    Text(preset.title).lineLimit(1)
+                    if preset.isBuiltIn { Chip(String(localized: .settingsPaneLayoutsBuiltIn)) }
+                }
+                Text(model.summary(of: preset)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+                    .lineLimit(1).truncationMode(.middle)
+            }
+            Spacer(minLength: Theme.Space.s)
+            if !preset.isBuiltIn { menu(preset) }
+        }
+    }
+
+    func menu(_ preset: PanePreset) -> some View {
+        Menu {
+            Button(String(localized: .settingsPaneLayoutsRename)) {
+                name = preset.title
+                renaming = preset
+            }
+            Button(String(localized: .settingsPaneLayoutsMoveUp)) { model.move(preset.id, by: -1) }
+                .disabled(!model.canMove(preset.id, by: -1))
+            Button(String(localized: .settingsPaneLayoutsMoveDown)) { model.move(preset.id, by: 1) }
+                .disabled(!model.canMove(preset.id, by: 1))
+            Divider()
+            Button(String(localized: .settingsPaneLayoutsDelete), role: .destructive) { model.delete(preset.id) }
+        } label: {
+            Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary)
+                .frame(width: Theme.Size.toolbarButton, height: Theme.Size.toolbarButton).contentShape(.rect)
+        }
+        .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.borderless).pointingHand().fixedSize()
+        .help(Text(.settingsPaneLayoutsMore))
+        .accessibilityLabel(Text(.settingsPaneLayoutsMore))
+    }
+}
+
+/// The panes side by side at their widths, small: how the layout splits the window.
+private struct LayoutGlyph: View {
+    let shares: [Double]
+
+    var body: some View {
+        GeometryReader { proxy in
+            let gap = Theme.Space.xxs
+            let room = proxy.size.width - gap * CGFloat(max(0, shares.count - 1))
+            HStack(spacing: gap) {
+                ForEach(shares.indices, id: \.self) { i in
+                    let shape = RoundedRectangle(cornerRadius: Theme.Radius.mark)
+                    shape.fill(Theme.Palette.text.opacity(Theme.Opacity.tint))
+                        .overlay { shape.strokeBorder(Theme.Palette.text.opacity(Theme.Opacity.edge)) }
+                        .frame(width: max(0, room * shares[i]))
+                }
+            }
+        }
+        .frame(width: 40, height: 28)
+        .accessibilityHidden(true)
     }
 }
 
