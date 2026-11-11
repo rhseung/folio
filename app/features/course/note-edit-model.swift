@@ -25,7 +25,9 @@ final class NoteEditModel {
         self.moves = moves
         name = note.title
         folder = NoteListModel.folder(of: note, in: course.store)
-        math = (course.store.note(at: course.store.notePath(of: note.url), in: course.file) ?? note).meta.math
+        math = note.meta.math
+        // The course handed in may predate the note's entry; read as `meta` does, or the sheet opens already changed.
+        math = meta.math
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
