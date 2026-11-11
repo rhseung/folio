@@ -129,6 +129,7 @@ private struct PageStripItem: View {
                     Button(.fileViewProgressRemove, systemImage: "link.badge.minus", role: .destructive) {
                         withAnimation(.snappy(duration: 0.2)) { model.remove(section) }
                     }
+                    .disabled(!model.canRemove(section))
                 }
         case .edit(let section)?: SaveRow(model: model, editing: section)
         case .draft?: SaveRow(model: model, editing: nil)

@@ -276,7 +276,11 @@ final class PageStripModel {
         return MaterialLinkSession(course: courseId, material: materialId, session: session, linked: false)
     }
 
-    var canRemove: Bool { editing.flatMap { removal(of: $0) }.map { workspace.can($0) } ?? false }
+    var canRemove: Bool { editing.map { canRemove($0) } ?? false }
+
+    func canRemove(_ section: Section) -> Bool { canRemove(section.id) }
+
+    private func canRemove(_ session: UUID) -> Bool { removal(of: session).map { workspace.can($0) } ?? false }
 
     /// The section being changed, from its row.
     func remove() {
@@ -291,7 +295,9 @@ final class PageStripModel {
         guard let action = removal(of: session), workspace.run(action) != nil else { return }
         forgetFold(session)
         if fresh == session { fresh = nil }
-        clear()
+        // Only the section's own row closes: from another header's menu, a range being changed or picked stays. A new
+        // range can't hold the removed section's pages, so nothing picked goes stale.
+        if editing == session { clear() }
     }
 
     /// A fold kept for a class with no section here would come back on its next range, folded or not as it was.

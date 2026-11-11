@@ -293,6 +293,23 @@ struct PageStripModelTests {
         #expect(links(upcoming).isEmpty)
     }
 
+    /// From one header's menu, another section being changed or a new range being picked stays as it was.
+    @Test func removingFromAMenuKeepsOtherWork() {
+        link(earlier, 1...4)
+        link(session, 9...12)
+        let model = model()
+        model.edit(model.sections[1])
+        model.extend(to: 10)
+        #expect(model.canRemove(model.sections[0]))
+        model.remove(model.sections[0])
+        #expect(links(earlier).isEmpty && model.editing == session && model.selection == 9...10)
+        model.clear()
+        model.press(15)
+        model.extend(to: 17)
+        model.remove(model.sections[0])
+        #expect(links(session).isEmpty && model.selection == 15...17)
+    }
+
     /// The rule behind the stop: a save that would share a page is refused, naming the other class's pages.
     @Test func anOverlappingSaveIsRefused() {
         link(earlier, 1...7)
