@@ -299,13 +299,27 @@ struct PanePresetTests {
         let s = Self.session()
         let l = try #require(PanePreset.inClass.layout(session: s, course: Self.course, limit: 3))
         #expect(l.links == [AppLink(.material, s.materials[0].materialId, anchor: .page(4)), AppLink(.note, s.roughNoteId!)])
-        #expect(l.shares == [0.55, 0.45] && l.focus == 0)
+        #expect(l.shares == [0.55, 0.45] && l.focus == 1)
     }
 
     @Test func rolesWithNothingAreLeftOut() throws {
-        let l = try #require(PanePreset.review.layout(session: Self.session(), course: Self.course, limit: 2))
-        #expect(l.links == [.course(Self.course, page: .quiz)] && l.shares == [1])
-        #expect(PanePreset.problems.layout(session: Self.session(), course: Self.course, limit: 2) == nil)
+        let s = Self.session()
+        let l = try #require(PanePreset.review.layout(session: s, course: Self.course, limit: 3))
+        #expect(l.links == [AppLink(.material, s.materials[0].materialId, anchor: .page(4)), AppLink(.note, s.roughNoteId!)])
+        #expect(approx(l.shares[0], 0.4 / 0.7) && l.focus == 0)
+        #expect(PanePreset.review.layout(session: Self.session(material: nil, rough: nil), course: Self.course, limit: 3) == nil)
+    }
+
+    // "복습" is written from the lecture and the class's note (2026-11-11 사용자); with two panes, the note in
+    // between gives way and the review note, where the writing goes, stays.
+    @Test func reviewIsTheLectureTheClassNoteAndTheReviewNote() throws {
+        let s = Self.session(review: UUID())
+        let lecture = AppLink(.material, s.materials[0].materialId, anchor: .page(4))
+        let mac = try #require(PanePreset.review.layout(session: s, course: Self.course, limit: 3))
+        #expect(mac.links == [lecture, AppLink(.note, s.roughNoteId!), AppLink(.note, s.reviewNoteId!)])
+        #expect(approx(mac.shares[0], 0.4) && approx(mac.shares[1], 0.3) && approx(mac.shares[2], 0.3) && mac.focus == 2)
+        let pad = try #require(PanePreset.review.layout(session: s, course: Self.course, limit: 2))
+        #expect(pad.links == [lecture, AppLink(.note, s.reviewNoteId!)] && pad.focus == 1)
     }
 
     @Test func aLayoutGoesByItsPresetWhateverPageItIsAt() throws {
@@ -390,21 +404,22 @@ struct PanePresetTests {
     }
 
     @Test func aClassStartsOnlyInALayoutWithItsLectureOrNote() {
-        #expect(PanePreset.inClass.opensClass && PanePreset.concepts.opensClass && !PanePreset.problems.opensClass)
+        #expect(PanePreset.builtIn.allSatisfy { $0.opensClass })
         #expect(!PanePreset(name: "성적", slots: [.link(.place(.grades)), .role(.quiz)], shares: [0.5, 0.5]).opensClass)
     }
 
     @Test func aClassWithoutItsLectureOrNoteStartsThePlainWay() throws {
         let course = UUID(), lecture = AppLink(.material, UUID()), note = AppLink(.note, UUID())
         let quiz = AppLink.course(course, page: .quiz)
-        // "개념 다지기" with no lecture: the quiz alone is no class's tab.
-        #expect(PanePreset.concepts.startLayout([.quiz: [quiz], .classNote: [note]], limit: 3) == nil)
+        let concepts = PanePreset(name: "개념", slots: [.role(.lecture), .role(.quiz)], shares: [0.6, 0.4])
+        // A lecture and the quiz with no lecture: the quiz alone is no class's tab.
+        #expect(concepts.startLayout([.quiz: [quiz], .classNote: [note]], limit: 3) == nil)
         let mine = PanePreset(name: "성적과 노트", slots: [.link(.place(.grades)), .role(.classNote)], shares: [0.3, 0.7])
         #expect(mine.startLayout([.quiz: [quiz]], limit: 3) == nil)
         let opened = try #require(mine.startLayout([.classNote: [note]], limit: 3))
         #expect(opened.links == [.place(.grades), note])
         #expect(opened.focus == 1)
-        #expect(PanePreset.concepts.startLayout([.lecture: [lecture], .quiz: [quiz]], limit: 3)?.links == [lecture, quiz])
+        #expect(concepts.startLayout([.lecture: [lecture], .quiz: [quiz]], limit: 3)?.links == [lecture, quiz])
     }
 
     @Test func aFreeNameCountsUp() {

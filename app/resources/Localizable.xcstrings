@@ -20527,28 +20527,6 @@
         }
       }
     },
-    "panes.preset.concepts": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "개념 다지기"
-          }
-        }
-      }
-    },
-    "panes.preset.problems": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문제 풀이"
-          }
-        }
-      }
-    },
     "panes.preset.review": {
       "extractionState": "manual",
       "localizations": {
@@ -21447,28 +21425,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "퀴즈"
-          }
-        }
-      }
-    },
-    "panes.role.problems": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문제지"
-          }
-        }
-      }
-    },
-    "panes.role.canvas": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "캔버스"
           }
         }
       }
