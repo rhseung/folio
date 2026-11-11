@@ -6,7 +6,12 @@ import SwiftUI
 /// Owns one PDFKit view so SwiftUI buttons (zoom, find, page) can drive it; SwiftUI has no PDF view of its own.
 @MainActor @Observable
 final class PDFController {
-    @ObservationIgnored let view = PDFView()
+    #if DEBUG
+    // `FOLIO_PLAIN_PDF` draws PDFKit's own view, for the window snapshots of what `SteadyPDFView` fixes (#62).
+    @ObservationIgnored let view: PDFView = ProcessInfo.processInfo.environment["FOLIO_PLAIN_PDF"] != nil ? PDFView() : SteadyPDFView()
+    #else
+    @ObservationIgnored let view: PDFView = SteadyPDFView()
+    #endif
     /// 0-based, follows scrolling.
     private(set) var page = 0
     let pageCount: Int
@@ -189,6 +194,107 @@ struct DarkPaper {
     }
 }
 #endif
+
+/// A PDF view that stays on the spot it shows when it changes width: two panes merging, a divider dragged, the window
+/// resized (#62, #408). Left to PDFKit, a narrower view scaled its pages down about the scroll offset, not the page,
+/// and the next page came up in its place (1/2 became 2/2). The spot is held in page space, where it stays the same
+/// at any scale, so going back to it after the pages are scaled again shows the same place.
+final class SteadyPDFView: PDFView {
+    private var held: PDFDestination?
+    private var letGo: DispatchWorkItem?
+
+    /// Taken once, before the first of a run of width changes (a divider dragged frame by frame), and let go only once
+    /// the width has stayed put for a beat. Taken again at each frame, the spot came from pages PDFKit had already
+    /// scaled about the scroll offset, and the drift added up: a dragged divider moved page 6 to page 9. Every change
+    /// counts, however small: panes gliding into place nudge the width by a fraction of a point for a second, and
+    /// those added up too.
+    private func hold(newWidth: CGFloat) {
+        guard document != nil, newWidth > 0, newWidth != bounds.width else { return }
+        if held == nil {
+            guard bounds.width > 0, let spot = currentDestination, spot.page != nil else { return }
+            held = spot
+        }
+        letGo?.cancel()
+        // Past the layout pass, since PDFKit may scale the pages to the new width after it.
+        let work = DispatchWorkItem { [weak self] in self?.release() }
+        letGo = work
+        DispatchQueue.main.asyncAfter(deadline: .now() + Self.settling, execute: work)
+    }
+
+    static let settling: TimeInterval = 0.2
+
+    /// `keep`: go there now and again once the run is over, for a layout pass that may come before the pages are
+    /// scaled.
+    private func release(keep: Bool = false) {
+        guard let spot = held else { return }
+        if !keep { forget() }
+        super.go(to: spot)
+    }
+
+    private func forget() {
+        held = nil
+        letGo?.cancel()
+        letGo = nil
+    }
+
+    // A move asked for (the page the view opens at, a page picked in the strip, a found word, a link) is where to be
+    // instead: a spot held from before it would take the view back.
+    override func go(to page: PDFPage) {
+        forget()
+        super.go(to: page)
+        waitForWidth(PDFDestination(page: page, at: CGPoint(x: 0, y: page.bounds(for: displayBox).maxY)))
+    }
+
+    override func go(to destination: PDFDestination) {
+        forget()
+        super.go(to: destination)
+        waitForWidth(destination)
+    }
+
+    // A pane opening goes to its page before it has a width; the first width then scaled the pages about the scroll
+    // offset like any other, and the page slid by one.
+    private func waitForWidth(_ spot: PDFDestination) {
+        if bounds.width == 0 { held = spot }
+    }
+
+    override func go(to selection: PDFSelection) {
+        forget()
+        super.go(to: selection)
+    }
+
+    #if os(macOS)
+    override func setFrameSize(_ newSize: NSSize) {
+        hold(newWidth: newSize.width)
+        super.setFrameSize(newSize)
+    }
+
+    override func layout() {
+        super.layout()
+        release(keep: true)
+    }
+    #else
+    override var frame: CGRect {
+        get { super.frame }
+        set {
+            hold(newWidth: newValue.width)
+            super.frame = newValue
+        }
+    }
+
+    override var bounds: CGRect {
+        get { super.bounds }
+        set {
+            hold(newWidth: newValue.width)
+            super.bounds = newValue
+        }
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        release(keep: true)
+    }
+    #endif
+}
 
 struct PDFKitView {
     let controller: PDFController

@@ -6,6 +6,7 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.openWindow) private var openWindow
     @Environment(\.supportsMultipleWindows) private var multipleWindows
+    @Environment(\.paneMemory) private var paneMemory
     /// The window's tabs, each with the history every move in it goes through, so back and forward cover the sidebar,
     /// search and links alike. The iPad has one, its windows being its tabs.
     @State private var tabs: WindowTabs
@@ -76,12 +77,16 @@ struct RootView: View {
         let pane = pane ?? navigator
         switch placement {
         case .here:
+            // Opening a class's note, not moving about in it.
+            if pane.current.link.withoutAnchor != entry.link.withoutAnchor, let tab = tabs.panes(holding: pane), restoresSession(entry, in: tab) { return }
             pane.go(entry)
         case .beside:
             (tabs.panes(holding: pane) ?? tabs.front)?.openBeside(entry, from: pane)
         case .tab:
             #if os(macOS)
-            tabs.open(Navigator(entry), fromLink: true)
+            let tab = TabPanes(Navigator(entry))
+            restoresSession(entry, in: tab)
+            tabs.open(tab, fromLink: true)
             #else
             // The iPad has no tabs, so a tab there is a window of its own.
             openInWindow(entry, else: pane)
@@ -91,18 +96,33 @@ struct RootView: View {
         }
     }
 
+    /// A tab of one pane opening a class's note or recording becomes the class's layout as it was last left on this
+    /// device (#62, `PaneMemory.restoring`). A tab of more panes is the student's own arrangement and is left alone.
+    @discardableResult
+    func restoresSession(_ entry: Navigator.Entry, in tab: TabPanes) -> Bool {
+        guard tab.count == 1, let paneMemory, let file = entry.course.flatMap({ workspace.course($0) })?.file,
+              let session = file.session(holding: entry.link),
+              let saved = paneMemory.memory.restoring(entry.link, session: session, limit: tab.limit) else { return false }
+        let entries = saved.panes.indices.map { i in i == saved.focus ? entry : workspace.entry(for: saved.panes[i].link, hint: entry.course) }
+        return tab.restore(saved, entries: entries)
+    }
+
     /// A new tab of panes side by side, as a class's start opens its pages (`ClassStartSettings.OpenIn.splitTab`). On the
     /// iPad, whose windows are its tabs, a window of its own; where it allows only one window, the pages open in the
     /// tab in front, the first in the focused pane and the rest beside it.
     func openTab(_ layout: PaneLayout, course hint: UUID?) {
         let found = layout.panes.indices.compactMap { i in workspace.entry(for: layout.panes[i].link, hint: hint).map { (i, $0) } }
         guard !found.isEmpty else { return }
+        #if os(macOS)
+        // From the layout itself, so a class's layout remembered with its notes' modes and folds keeps them.
+        if let kept = layout.keeping({ i in found.contains { $0.0 == i } }),
+           let panes = TabPanes(layout: kept, entries: found.map(\.1)) {
+            tabs.open(panes, fromLink: true)
+        }
+        #else
         let histories = found.map { LinkHistory($0.1) }
         let shares = found.map { layout.panes[$0.0].share }
         let focus = found.firstIndex { $0.0 == layout.focus } ?? 0
-        #if os(macOS)
-        if let panes = TabPanes(histories: histories, shares: shares, focus: focus) { tabs.open(panes, fromLink: true) }
-        #else
         if multipleWindows {
             let focused = found[focus].1
             var request = WindowRequest(link: focused.link, course: focused.course)
@@ -274,6 +294,7 @@ struct RootView: View {
         #if DEBUG && os(macOS)
         .task {
             await TabMemoryProbe.run(tabs: tabs, workspace: workspace)
+            await PaneSessionProbe.run(tabs: tabs, workspace: workspace, memory: paneMemory) { open($0, in: .tab) }
             // Snapshots are for checking layout; a Touch ID prompt would stall them on locked screens.
             if SnapshotDriver.directory != nil { workspace.gradesUnlocked = true }
             if SnapshotDriver.recording, let course = workspace.currentCourses.first, let session = course.file.sessions.first {

@@ -64,17 +64,23 @@ private struct RememberingPanes: ViewModifier {
     @Binding var panes: NotePanes
     let id: UUID?
     @Environment(\.paneMemory) private var paneMemory
+    @Environment(\.paneNotes) private var paneNotes
 
     func body(content: Content) -> some View {
         content
+            // The pane's own first: a class's layout brought back shows its note as it was left there, before how the
+            // note was last shown anywhere (#62).
             .onAppear {
-                if let id, let mode = paneMemory?.memory.noteMode(note: id) {
+                guard let id else { return }
+                if let mode = paneNotes?.mode(of: id) ?? paneMemory?.memory.noteMode(note: id) {
                     panes = NotePanes(remembered: mode)
-                    paneMemory?.touch(note: id)
                 }
+                paneMemory?.touch(note: id)
             }
             .onChange(of: panes.mode) { _, mode in
-                if let id { paneMemory?.remember(mode, note: id) }
+                guard let id else { return }
+                paneNotes?.show(mode, of: id)
+                paneMemory?.remember(mode, note: id)
             }
             .background {
                 Button("") { panes.toggle() }.keyboardShortcut("e")

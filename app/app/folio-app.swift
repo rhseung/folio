@@ -3,7 +3,7 @@ import SwiftUI
 @main
 struct FolioApp: App {
     @State private var workspace = Workspace()
-    @State private var paneMemory = Self.hostingTests ? nil : PaneMemoryStore(defaults: .standard)
+    @State private var paneMemory = Self.hostingTests ? nil : PaneMemoryStore.forThisRun()
     /// Under tests the app is only their host: no window of its own and no focus taken from what the user is doing.
     private static let hostingTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     static let mainWindow = "main"

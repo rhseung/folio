@@ -212,12 +212,33 @@ public struct PaneLayout: Hashable, Sendable {
     public func limited(to limit: Int) -> PaneLayout {
         guard panes.count > max(1, limit) else { return self }
         let kept = Set(panes.indices.sorted { panes[$0].pressed > panes[$1].pressed }.prefix(max(1, limit)))
+        return keeping(kept.contains) ?? self
+    }
+
+    /// Only the panes `keep` takes, in their order, their shares made whole again: a remembered layout without the
+    /// panes whose item is gone. The focus stays where it was if that pane is kept, else goes to the pane pressed
+    /// most recently. Nil when none is kept.
+    public func keeping(_ keep: (Int) -> Bool) -> PaneLayout? {
+        let kept = panes.indices.filter(keep)
+        guard !kept.isEmpty else { return nil }
         var copy = self
-        copy.panes = panes.indices.filter(kept.contains).map { panes[$0] }
+        copy.panes = kept.map { panes[$0] }
         let total = copy.panes.map(\.share).reduce(0, +)
         for i in copy.panes.indices { copy.panes[i].share /= total }
-        copy.refocus()
+        if let focused = kept.firstIndex(of: focus) {
+            copy.focus = focused
+            copy.panes[focused].collapsed = false
+        } else {
+            copy.refocus()
+        }
         return copy
+    }
+
+    /// The class this layout is laid out for (#62): the one session its notes and recordings belong to, in any of
+    /// `files`. Nil when they belong to none, or to more than one, so a tab showing two classes' notes is neither's.
+    public func session(in files: [CourseFile]) -> UUID? {
+        let sessions = Set(panes.compactMap { pane in files.lazy.compactMap { $0.session(holding: pane.link) }.first })
+        return sessions.count == 1 ? sessions.first : nil
     }
 
     // MARK: Fit
@@ -322,6 +343,25 @@ extension PaneLayout: Codable {
             try p.encode(pane.pressed, forKey: .pressed)
         }
         try c.encode(focus, forKey: .focus)
+    }
+}
+
+private extension PaneLayout {
+    var nilIfAlone: PaneLayout? { panes.count > 1 ? self : nil }
+}
+
+extension CourseFile {
+    /// The class `link` belongs to, for a layout to be remembered by: a class's rough or review note, or its
+    /// recording. Not the class's own link, which opens the course's list of classes.
+    public func session(holding link: AppLink) -> UUID? {
+        guard let id = link.id else { return nil }
+        switch link.kind {
+        case .note: return sessions.first { $0.roughNoteId == id || $0.reviewNoteId == id }?.id
+        case .recording: return recordings.first { $0.id == id }?.sessionId
+        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .semester, .course, .session, .unit,
+             .material, .assignment, .exam, .card, .problemSet, .person:
+            return nil
+        }
     }
 }
 
@@ -436,10 +476,29 @@ public struct PaneMemory: Codable, Hashable, Sendable {
         Self.trim(&layouts)
     }
 
-    /// The mode a note was last left in: in the session's layout when opened there, else wherever it was opened.
+    /// What opening `link` turns a tab of one pane into: the session's layout as it was last left, with `link` in its
+    /// pane and that pane focused (2026-11-11). Only a layout that has `link` in it, since one without it is not the
+    /// one being opened, and of more than one pane, which is what the tab is already. Past `limit` (a Mac's layout on
+    /// an iPad) the panes pressed longest ago are left out, never the note's.
+    public func restoring(_ link: AppLink, session: UUID, limit: Int) -> PaneLayout? {
+        guard var saved = layout(session: session),
+              let i = saved.panes.firstIndex(where: { $0.link.withoutAnchor == link.withoutAnchor }) else { return nil }
+        saved.open(link, in: i)
+        saved.press(i)
+        return saved.limited(to: limit).nilIfAlone
+    }
+
+    /// The session's layout for a class that starts again (its pages opened side by side, #391), in place of the
+    /// preset; nil without one of more than one pane.
+    public func layout(session: UUID, limit: Int) -> PaneLayout? {
+        layout(session: session)?.limited(to: limit).nilIfAlone
+    }
+
+    /// The mode a note (or a text file) was last left in: in the session's layout when opened there, else wherever it
+    /// was opened.
     public func noteMode(note: UUID, session: UUID? = nil) -> NoteViewMode? {
         if let session, let layout = layout(session: session),
-           let pane = layout.panes.first(where: { $0.link.kind == .note && $0.link.id == note }), let mode = pane.noteMode {
+           let pane = layout.panes.first(where: { $0.link.id == note }), let mode = pane.noteMode {
             return mode
         }
         return noteModes[note.uuidString]?.value

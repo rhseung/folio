@@ -198,6 +198,41 @@ struct PaneLayoutTests {
         #expect(approx(l.shares.reduce(0, +), 1))
     }
 
+    @Test func keepingSomePanesKeepsTheirFocusAndShares() throws {
+        var l = Self.three()
+        l.press(2)
+        let kept = try #require(l.keeping { $0 != 0 })
+        #expect(kept.links == [note, quiz] && kept.focus == 1)
+        #expect(approx(kept.shares.reduce(0, +), 1))
+        // The focused pane left out: the focus goes to the pane pressed most recently of those kept.
+        let without = try #require(l.keeping { $0 != 2 })
+        #expect(without.links == [lecture, note] && without.links[without.focus] == note)
+        #expect(l.keeping { _ in false } == nil)
+    }
+
+    @Test func aLayoutIsTheClassWhoseNotesItShows() throws {
+        let device = UUID(), now = Date(timeIntervalSince1970: 0)
+        var a = Session(device: device, at: now, week: 1, date: now)
+        a.roughNoteId = note.id
+        var b = Session(device: device, at: now, week: 2, date: now)
+        b.reviewNoteId = other.id
+        let recording = Recording(device: device, at: now, sessionId: a.id, file: "Recordings/x.m4a")
+        let file = CourseFile(course: Course(device: device, at: now, title: "그래프 이론"), sessions: [a, b], recordings: [recording])
+
+        #expect(file.session(holding: note) == a.id && file.session(holding: other) == b.id)
+        #expect(file.session(holding: AppLink(.recording, recording.id)) == a.id)
+        // The class's own link opens the list of classes, which is no class's layout.
+        #expect(file.session(holding: AppLink(.session, a.id)) == nil && file.session(holding: lecture) == nil)
+
+        let lectureAndNote = try #require(PaneLayout(links: [lecture, note, quiz], limit: 3))
+        #expect(lectureAndNote.session(in: [file]) == a.id)
+        let twoClasses = try #require(PaneLayout(links: [note, other], limit: 3))
+        #expect(twoClasses.session(in: [file]) == nil)
+        let noClass = try #require(PaneLayout(links: [lecture, quiz], limit: 3))
+        #expect(noClass.session(in: [file]) == nil)
+        #expect(PaneLayout(AppLink(.recording, recording.id)).session(in: [file]) == a.id)
+    }
+
     @Test func anotherTabJoinsAtAnEdgeWithItsFocus() {
         // A tab of one joining a tab of one halves the row; the other tab's focus comes along and takes the focus.
         var l = PaneLayout(lecture)
@@ -318,6 +353,39 @@ struct PaneMemoryTests {
         #expect(memory.noteMode(note: noteID, session: session) == .read)
         #expect(memory.noteMode(note: noteID) == .write)
         #expect(memory.layout(session: session) == layout)
+    }
+
+    @Test func openingTheNoteBringsBackTheSessionsLayout() throws {
+        let session = UUID()
+        var memory = PaneMemory()
+        var left = try #require(PaneLayout(links: [lecture, note, quiz], shares: [0.5, 0.3, 0.2], limit: 3))
+        left.show(.read, in: 1)
+        left.press(2)
+        memory.remember(left, session: session, at: Date(timeIntervalSince1970: 0))
+
+        let heading = note.with(.heading("Hall"))
+        let restored = try #require(memory.restoring(heading, session: session, limit: 3))
+        #expect(restored.links == [lecture, heading, quiz] && restored.focus == 1)
+        #expect(restored.focused.noteMode == .read)
+        #expect(zip(restored.shares, [0.5, 0.3, 0.2]).allSatisfy { approx($0, $1) })
+
+        // A note the layout doesn't show, a session with none remembered: nothing to bring back.
+        #expect(memory.restoring(other, session: session, limit: 3) == nil)
+        #expect(memory.restoring(note, session: UUID(), limit: 3) == nil)
+        // An iPad keeps the two pressed most recently, the note among them.
+        let pad = try #require(memory.restoring(note, session: session, limit: 2))
+        #expect(pad.links == [note, quiz] && pad.focus == 0)
+    }
+
+    @Test func aLayoutOfOnePaneIsNothingToBringBack() {
+        let session = UUID()
+        var memory = PaneMemory()
+        memory.remember(PaneLayout(note), session: session, at: Date(timeIntervalSince1970: 0))
+        #expect(memory.restoring(note, session: session, limit: 3) == nil)
+        #expect(memory.layout(session: session, limit: 3) == nil)
+        memory.remember(PaneLayout(links: [lecture, note], limit: 3)!, session: session, at: Date(timeIntervalSince1970: 1))
+        #expect(memory.layout(session: session, limit: 3)?.links == [lecture, note])
+        #expect(memory.layout(session: session, limit: 1) == nil)
     }
 
     @Test func forgetsWhatWasUsedLongestAgo() throws {

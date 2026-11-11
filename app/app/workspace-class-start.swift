@@ -152,13 +152,8 @@ extension Workspace {
     }
 
     func session(shownBy entry: Navigator.Entry) -> UUID? {
-        guard let id = entry.link.id, let file = entry.course.flatMap(course)?.file else { return nil }
-        switch entry.link.kind {
-        case .session: return id
-        case .note: return file.sessions.first { $0.roughNoteId == id || $0.reviewNoteId == id }?.id
-        case .recording: return file.recordings.first { $0.id == id }?.sessionId
-        default: return nil
-        }
+        guard let file = entry.course.flatMap(course)?.file else { return nil }
+        return entry.link.kind == .session ? entry.link.id : file.session(holding: entry.link)
     }
 
     /// From the prompt, too, once the student said yes. The microphone's refusal is the recorder's error, shown as
@@ -194,6 +189,7 @@ struct ClassStartPrompt: ViewModifier {
     let showing: @MainActor () -> Navigator.Entry
     let bringForward: @MainActor () -> Void
     @State private var asking: ClassStartAsk?
+    @Environment(\.paneMemory) private var paneMemory
     #if os(macOS)
     @Environment(\.appearsActive) private var active
     #endif
@@ -222,7 +218,10 @@ struct ClassStartPrompt: ViewModifier {
         workspace.classStartAsk = nil
         let shown = showing()
         for opening in workspace.classStartOpenings(ask, showing: shown) { open(opening) }
-        if let split = workspace.classStartSplit(ask, showing: shown) { openSplit(split, ask.course) }
+        // The class laid out as it was last left on this device, if it was, in place of the preset (#62).
+        if let split = workspace.classStartSplit(ask, showing: shown) {
+            openSplit(paneMemory?.memory.layout(session: ask.session, limit: TabPanes.limit) ?? split, ask.course)
+        }
         if ask.front { bringForward() }
         if ask.asksRecording { asking = ask }
     }
