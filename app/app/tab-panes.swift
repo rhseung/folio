@@ -22,6 +22,8 @@ final class TabPanes {
     private(set) var shares: [Double] = [1]
     /// The panes folded by hand (`collapse`).
     private(set) var collapsed: Set<Int> = []
+    /// How each pane shows its note, which only what remembers the layout reads.
+    private(set) var noteModes: [NoteViewMode?] = [nil]
     /// How many panes the row has room to keep open with two panes and with three (`PaneLayout.openCount`). The row
     /// sets it only where its width crosses a count, so a live resize sets it a few times, not every frame.
     var room = [2, 3]
@@ -65,7 +67,65 @@ final class TabPanes {
         publish()
     }
 
+    /// A tab laid out as `layout` was left, note modes and folds included (a class's layout, #62), each pane a history
+    /// of its own at `entries`, which go with the layout's panes. Nil when they don't.
+    init?(layout: PaneLayout, entries: [Navigator.Entry], limit: Int = TabPanes.limit, memory: ColumnMemory = .shared) {
+        guard entries.count == layout.panes.count, layout.panes.count <= max(1, limit) else { return nil }
+        self.layout = layout
+        ids = entries.map { _ in UUID() }
+        navigators = entries.map { Navigator($0) }
+        trails = entries.map { _ in CrumbTrail() }
+        columns = entries.map { _ in memory.newPane() }
+        self.memory = memory
+        self.limit = limit
+        publish()
+    }
+
     var count: Int { ids.count }
+
+    /// The layout with the links each pane's history has gone on to, as it is remembered.
+    var current: PaneLayout {
+        follow()
+        return layout
+    }
+
+    /// A tab of one pane opening a class's note becomes the class's layout as it was last left (#62,
+    /// `PaneMemory.restoring`). The pane goes on to the note with its history, screen and columns, in the layout's
+    /// focused pane; the others open beside it, each from `entries`, where a nil is an item gone and its pane is left
+    /// out. False, and nothing changed, for a tab of more panes or a layout left with one.
+    @discardableResult
+    func restore(_ saved: PaneLayout, entries: [Navigator.Entry?]) -> Bool {
+        guard count == 1, entries.count == saved.panes.count, let entry = entries[saved.focus],
+              let kept = saved.keeping({ entries[$0] != nil }), kept.panes.count > 1, kept.panes.count <= limit else { return false }
+        let found = entries.compactMap { $0 }
+        let at = kept.focus
+        let navigator = navigators[0], id = ids[0], trail = trails[0], column = columns[0]
+        navigator.go(entry)
+        navigators = found.indices.map { $0 == at ? navigator : Navigator(found[$0]) }
+        ids = found.indices.map { $0 == at ? id : UUID() }
+        trails = found.indices.map { $0 == at ? trail : CrumbTrail() }
+        columns = found.indices.map { $0 == at ? column : memory.newPane() }
+        layout = kept
+        publish()
+        return true
+    }
+
+    /// How pane `pane` last showed the note or text file `item`, while it still shows it.
+    func noteMode(of item: UUID, pane: UUID) -> NoteViewMode? {
+        guard let i = ids.firstIndex(of: pane) else { return nil }
+        follow()
+        return layout.panes[i].link.id == item ? layout.panes[i].noteMode : nil
+    }
+
+    /// Pane `pane` shows the note or text file `item` as `mode`, which its layout keeps (`PaneLayout.Pane.noteMode`), so
+    /// a class's layout brings the note back the way it was left.
+    func show(_ mode: NoteViewMode, of item: UUID, pane: UUID) {
+        guard let i = ids.firstIndex(of: pane) else { return }
+        follow()
+        guard layout.panes[i].link.id == item, layout.panes[i].noteMode != mode else { return }
+        layout.show(mode, in: i)
+        publish()
+    }
 
     /// The panes drawn as strips: folded by hand, or for want of room.
     var folded: Set<Int> {
@@ -206,6 +266,8 @@ final class TabPanes {
         if focus != layout.focus { focus = layout.focus }
         if shares != layout.shares { shares = layout.shares }
         if collapsed != layout.collapsed { collapsed = layout.collapsed }
+        let modes = layout.panes.map(\.noteMode)
+        if noteModes != modes { noteModes = modes }
     }
 }
 
