@@ -125,4 +125,11 @@ extension Session {
             return had.firstPage != r.firstPage || had.lastPage != r.lastPage
         }
     }
+
+    /// The files whose links a save takes off: those the class links whose rows started checked and were unchecked.
+    /// A row that started unchecked (a file linked whole, kept as it is; a suggestion while the class is on) writes
+    /// nothing however it is left, or opening the sheet and saving would drop links nobody touched.
+    public func droppedLinks(started: Set<UUID>, kept: Set<UUID>) -> [UUID] {
+        materials.map(\.materialId).filter { started.contains($0) && !kept.contains($0) }
+    }
 }

@@ -484,6 +484,8 @@ public struct SessionWrapUp {
     @Arg var session: Session.ID
     /// 렉처 파일마다 이번 수업이 다룬 쪽. 적지 않은 파일의 연결은 그대로 둔다
     @Arg @Parsed("material:pages", "05_Matchings.pdf:3-12") var ranges: [SessionMaterial] = []
+    /// 회차에서 뗄 자료. 그 자료의 진도도 함께 지운다
+    @CLIName("unlink") var unlinked: [Material.ID] = []
     /// 회차의 단원. 주면 이것으로 바뀐다
     @CLIName("unit") var units: Patch<[FolioDomain.Unit.ID]>
     /// 출결
@@ -511,6 +513,11 @@ public struct SessionWrapUp {
             try f.set(session: session, date: date, end: end, link: link, kind: kind, skipsReview: skipsReview, reviewUnfinished: reviewUnfinished,
                       termStart: start, calendar: ctx.calendar)
             let i = try index(session, in: f.sessions, .valueSession)
+            // Before the ranges: a file both given and unlinked ends up linked with the pages given.
+            for material in unlinked {
+                _ = try index(material, in: f.materials, .valueMaterial)
+                f.unlinkMaterial(material, session: session)
+            }
             for range in ranges {
                 _ = try index(range.materialId, in: f.materials, .valueMaterial)
                 f.linkMaterial(range.materialId, session: session, firstPage: range.firstPage, lastPage: range.lastPage)
