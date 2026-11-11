@@ -9,6 +9,8 @@ struct MenuRow: Identifiable {
         let id: AnyHashable
         let title: String
         let symbol: String
+        /// A value of a state submenu (상태 ▸), checked while it holds. Nil for a plain action.
+        var checked: Bool? = nil
         let action: @MainActor () -> Void
     }
 
@@ -28,6 +30,48 @@ struct MenuRow: Identifiable {
     var role: ButtonRole?
     var disabled = false
     let kind: Kind
+
+    init(id: AnyHashable, group: MenuGroup, title: String, symbol: String, role: ButtonRole? = nil, disabled: Bool = false, kind: Kind) {
+        self.id = id
+        self.group = group
+        self.title = title
+        self.symbol = symbol
+        self.role = role
+        self.disabled = disabled
+        self.kind = kind
+    }
+
+    init<C: ItemCommand>(_ command: C, _ title: LocalizedStringResource, _ symbol: String, role: ButtonRole? = nil, disabled: Bool = false, _ kind: Kind) {
+        self.init(id: command, group: command.group, title: String(localized: title), symbol: symbol, role: role, disabled: disabled, kind: kind)
+    }
+
+    /// "삭제…" and the like: the same title and symbol on every item, in red.
+    static func remove<C: ItemCommand>(_ command: C, _ action: @escaping @MainActor () -> Void) -> MenuRow {
+        MenuRow(command, .commonDeleteEllipsis, "trash", role: .destructive, .action(action))
+    }
+
+    static func edit<C: ItemCommand>(_ command: C, _ action: @escaping @MainActor () -> Void) -> MenuRow {
+        MenuRow(command, .commonEditEllipsis, "pencil", .action(action))
+    }
+
+    static func open<C: ItemCommand>(_ command: C, _ action: @escaping @MainActor () -> Void) -> MenuRow {
+        MenuRow(command, .commonOpen, "arrow.right.circle", .action(action))
+    }
+
+    static func share<C: ItemCommand>(_ command: C, _ link: AppLink, course: UUID?) -> MenuRow {
+        MenuRow(command, .menuShare, "square.and.arrow.up", .share(link, course: course))
+    }
+
+    static func showInFinder<C: ItemCommand>(_ command: C, _ url: URL) -> MenuRow {
+        MenuRow(command, .commonShowInFinder, "folder", .action { revealInFinder(url) })
+    }
+}
+
+/// Finder's window on the file, selected. Nothing on iPadOS, whose menus don't offer it.
+@MainActor func revealInFinder(_ url: URL) {
+    #if os(macOS)
+    NSWorkspace.shared.activateFileViewerSelecting([url])
+    #endif
 }
 
 /// An item kind's menu: which commands the data allows (from `FolioDomain`, in menu order) and how each is drawn and
@@ -85,7 +129,14 @@ struct MenuRowView: View {
                 .disabled(row.disabled)
         case .submenu(let leaves):
             Menu {
-                ForEach(leaves) { leaf in Button(leaf.title, systemImage: leaf.symbol) { leaf.action() } }
+                ForEach(leaves) { leaf in
+                    if let checked = leaf.checked {
+                        // A Toggle, so iPad's menu draws its checkmark as the Mac's does.
+                        Toggle(isOn: Binding(get: { checked }, set: { _ in leaf.action() })) { Label(leaf.title, systemImage: leaf.symbol) }
+                    } else {
+                        Button(leaf.title, systemImage: leaf.symbol) { leaf.action() }
+                    }
+                }
             } label: {
                 Label(row.title, systemImage: row.symbol)
             }
@@ -113,6 +164,33 @@ struct ShareMenu: View {
             Button(.linkCopy, systemImage: "link") { copyLink(link) }
         } label: {
             Label(.menuShare, systemImage: "square.and.arrow.up")
+        }
+    }
+}
+
+/// The `⋯` of a page that shows one item (a note, a file, a unit, a recording, a course), at the end of its bar or
+/// header: the item's own menu, always shown so a touch finds what a right-click would (#403). In a `PageBar` it takes
+/// the bar's button style like the bar's other items.
+struct PageMenuButton<Items: View>: View {
+    var inBar = false
+    @ViewBuilder var items: Items
+
+    var body: some View {
+        if inBar {
+            Menu { items } label: { Label(.menuMore, systemImage: "ellipsis") }
+                .help(Text(.menuMore))
+        } else {
+            Menu { items } label: {
+                Label(.menuMore, systemImage: "ellipsis").labelStyle(.iconOnly)
+                    .foregroundStyle(Theme.Palette.textSecondary)
+                    .frame(width: Theme.Size.toolbarButton, height: Theme.Size.toolbarButton)
+                    .contentShape(.rect)
+            }
+            .menuStyle(.button)
+            .menuIndicator(.hidden)
+            .buttonStyle(.borderless).pointingHand()
+            .fixedSize()
+            .help(Text(.menuMore))
         }
     }
 }

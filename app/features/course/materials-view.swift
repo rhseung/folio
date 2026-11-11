@@ -48,13 +48,6 @@ struct MaterialsView: View {
             NewMaterialFileSheet(workspace: model.workspace, course: model.course, folder: model.newFileFolder) { model.created($0) }
         }
         .confirming($model.pending)
-        .alert(String(localized: .materialsRename), isPresented: Binding(get: { model.renaming != nil }, set: { if !$0 { model.renaming = nil } }), presenting: model.renaming) { m in
-            TextField(String(localized: .materialsRenameField), text: $model.newName)
-            Button(.materialsRenameConfirm) { model.rename(m) }
-            Button(.commonCancel, role: .cancel) {}
-        } message: { m in
-            Text(model.renameMessage(m))
-        }
         // The window's place opens a file, at a page if the link names one; back to the section closes it.
         .onChange(of: place, initial: true) { _, link in
             if let m = model.follow(link), !m.isFolder { open(m) }
@@ -120,7 +113,7 @@ struct MaterialsView: View {
                             .contextMenu {
                                 switch row {
                                 case .folder(let folder, _): folderMenu(folder)
-                                case .file(let m, _, _): fileContextMenu(m, pdf: section.pdfs[m.id])
+                                case .file(let m, _, _): menu(m)
                                 }
                             }
                         }
@@ -184,55 +177,10 @@ struct MaterialsView: View {
         #endif
     }
 
-    @ViewBuilder func fileContextMenu(_ m: FolioDomain.Material, pdf: FolioDomain.Material?) -> some View {
-        if m.status == .missing {
-            Button(.materialsRelinkEllipsis) { model.relinking = m.id }
-            Divider()
-            Button(.materialsUntrackEllipsis, role: .destructive) { model.disconnecting = m }
-        } else {
-            #if os(macOS)
-            Button(m.isFolder ? .materialsOpenInFinder : .materialsOpen) { open(m) }
-            #else
-            if !m.isFolder { Button(.materialsOpen) { open(m) } }
-            #endif
-            Button(.materialsLinkEllipsis) { model.linking = m.id }
-            if !m.isFolder { LinkMenu(link: AppLink(.material, m.id), course: model.course.id, trailing: true) }
-            Divider()
-            fileMenuItems(m)
-            if let pdf { pdfMenu(pdf) }
-        }
-    }
-
-    /// Everything the PDF's own row had, since the list shows it only through its `.tex` (#109): links that exams and
-    /// units count, renaming, and trashing a bad build.
-    @ViewBuilder func pdfMenu(_ pdf: FolioDomain.Material) -> some View {
-        Divider()
-        // Titled by the file name, which is data rather than a phrase to translate.
-        Menu((pdf.path as NSString).lastPathComponent) {
-            Button(.materialsOpen) { model.open(pdf) }
-            Button(.materialsLinkEllipsis) { model.linking = pdf.id }
-            LinkMenu(link: AppLink(.material, pdf.id), course: model.course.id, trailing: true)
-            Divider()
-            fileMenuItems(pdf)
-        }
-    }
-
-    @ViewBuilder func fileMenuItems(_ m: FolioDomain.Material) -> some View {
-        #if os(macOS)
-        // A folder's own app is Finder, which "Finder에서 열기" already is.
-        if !m.isFolder { Button(.materialsOpenWithDefault) { NSWorkspace.shared.open(model.fileURL(m.path)) } }
-        Button(.materialsShowInFinder) { NSWorkspace.shared.activateFileViewerSelecting([model.fileURL(m.path)]) }
-        if m.isFolder { EditorMenu(url: model.fileURL(m.path)) }
-        Divider()
-        #endif
-        Button(.materialsRenameEllipsis) { model.startRenaming(m) }
-        Menu(String(localized: .materialsMoveTo)) {
-            ForEach(model.moveTargets(m), id: \.self) { place in
-                Button(place) { model.move(m, into: place) }
-            }
-        }
-        Divider()
-        Button(.materialsTrashEllipsis, role: .destructive) { model.trash(m) }
+    /// A `.tex` row's menu opens its PDF too; the PDF's own menu is on its page's `⋯`.
+    func menu(_ m: FolioDomain.Material) -> some View {
+        MaterialMenu(courseId: model.course.id, materialId: m.id, host: .list, moves: model.moves,
+                     relink: { model.relinking = m.id }, untrack: { model.disconnecting = m })
     }
 
     @ViewBuilder func fileRow(_ m: FolioDomain.Material, name: String, pdf: FolioDomain.Material?) -> some View {
@@ -261,13 +209,8 @@ struct MaterialsView: View {
             // iPadOS has no Finder to hand a folder to.
             if !m.isFolder { Button(.materialsOpen) { open(m) }.buttonStyle(.ghost) }
             #endif
-            Menu {
-                // Also here, not only on a long press, so a touch finds it.
-                Button(.materialsLinkEllipsis) { model.linking = m.id }
-                Divider()
-                fileMenuItems(m)
-                if let pdf { pdfMenu(pdf) }
-            } label: {
+            // Also here, not only on a long press, so a touch finds it.
+            Menu { menu(m) } label: {
                 Image(systemName: "ellipsis")
             }
             .menuStyle(.button)
@@ -344,9 +287,11 @@ private struct LinkedFile: Identifiable {
     let id: UUID
 }
 
+/// A file's one sheet (#403): its name, then what it is linked to. The links write as they are toggled; the name waits
+/// for its button, since the sheet shows the new name first and pressing it is the approval.
 struct MaterialLinksEditor: View {
     @Environment(\.dismiss) private var dismiss
-    let model: MaterialsModel
+    @Bindable var model: MaterialsModel
     let materialId: UUID
 
     static let width: CGFloat = 560
@@ -359,6 +304,22 @@ struct MaterialLinksEditor: View {
             dismiss()
         }
         .task(id: materialId) { await model.loadPageCount(materialId) }
+        .onAppear { if let m = model.materials.first(where: { $0.id == materialId }) { model.startRenaming(m) } }
+    }
+
+    private func name(_ m: FolioDomain.Material) -> some View {
+        let new = model.renamed(m)
+        return Block(String(localized: .materialsRenameField), note: new ?? model.renameMessage(m)) {
+            Card {
+                CardRow(last: true) {
+                    InlineField(String(localized: .materialsRenameField), text: $model.newName)
+                        .onSubmit { model.rename(m) }
+                    Button(.materialsRenameConfirm) { model.rename(m) }
+                        .buttonStyle(.ghost)
+                        .disabled(new == nil)
+                }
+            }
+        }
     }
 
     @ViewBuilder private var links: some View {
@@ -369,7 +330,8 @@ struct MaterialLinksEditor: View {
         let exams = model.exams
         ScrollView {
             VStack(alignment: .leading, spacing: Theme.Space.l) {
-                if model.isLecture(materialId) { LectureProgressBlock(workspace: model.workspace, course: model.course.id, material: materialId) { model.linking = nil } }
+                if let m = model.materials.first(where: { $0.id == materialId }) { name(m) }
+                if model.isLecture(materialId) { LectureProgressBlock(workspace: model.workspace, course: model.course.id, material: materialId) { dismiss() } }
                 Block(String(localized: .materialsLinksSessions)) {
                     Card {
                         if sessions.isEmpty { CardRow(last: true) { EmptyLine(String(localized: .materialsLinksNoSessions)) } }

@@ -52,6 +52,8 @@ struct ExamsView: View {
         #endif
         .confirming($model.pending)
         .task(id: model.course.id) { model.load() }
+        // A summary made from a menu elsewhere (Today, search) renames the card's button.
+        .onChange(of: model.workspace.notesRevision) { model.load() }
     }
 
     func section(_ exam: Exam, states: [UUID: ReviewState]) -> some View {
@@ -97,11 +99,7 @@ struct ExamsView: View {
                         Spacer(minLength: 0)
                     }
                     .opens(m.status == .missing ? nil : { openMaterial(m) })
-                    .contextMenu {
-                        if m.status != .missing { Button(.commonOpen) { openMaterial(m) } }
-                        Divider()
-                        Button(.examsUnlinkMaterial) { model.toggle(material: m.id, in: exam) }
-                    }
+                    .contextMenu { MaterialMenu(courseId: model.course.id, materialId: m.id, host: .exam(exam.id)) }
                 }
             }
             .contextMenu { actions(exam) }
@@ -194,13 +192,9 @@ struct ExamsView: View {
         if let id = model.openSummary(exam) { openNote(id) }
     }
 
-    /// The ⋯ menu and the right-click menu, so both offer the same things.
-    @ViewBuilder func actions(_ exam: Exam) -> some View {
-        Button(model.summaryTitle(exam)) { openSummary(exam) }
-        Button(.commonEditEllipsis) { model.editing = exam }
-        LinkMenu(link: AppLink(.exam, exam.id), course: model.course.id, trailing: true)
-        Divider()
-        Button(.commonDeleteEllipsis, role: .destructive) { model.remove(exam) }
+    /// The ⋯ menu and the right-click menu: the exam's one menu (#403), told the summary the page has read.
+    func actions(_ exam: Exam) -> some View {
+        ExamMenu(courseId: model.course.id, examId: exam.id, host: .own, summary: .some(model.notes[exam.id]))
     }
 
     func menu(_ exam: Exam) -> some View {
@@ -266,9 +260,7 @@ struct ExamPlanCard: View {
                 }
                 .contentShape(.rect)
                 .contextMenu {
-                    Button(on ? .examsPlanUndo : .examsPlanCheck) { model.toggle(item.id) }
-                    Divider()
-                    Button(.examsPlanRemove, role: .destructive) { model.removePlanItem(item.id, of: exam) }
+                    PlanItemMenu(courseId: model.course.id, examId: exam.id, item: item.id, done: on) { model.toggle(item.id) }
                 }
             }
             CardRow(last: true) {
@@ -379,7 +371,9 @@ struct ExamPlanTodayBlock: View {
                             Spacer()
                         }
                         .contentShape(.rect)
-                        .contextMenu { Button(done.contains(entry.item.id) ? .examsPlanUndo : .examsPlanCheck) { toggle(entry) } }
+                        .contextMenu {
+                            PlanItemMenu(courseId: entry.courseId, examId: entry.exam.id, item: entry.item.id, done: done.contains(entry.item.id)) { toggle(entry) }
+                        }
                     }
                 }
             }

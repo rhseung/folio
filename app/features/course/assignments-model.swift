@@ -31,8 +31,6 @@ final class AssignmentsModel {
         return AssignmentGroup.allCases.compactMap { g in grouped[g].map { (g, g.sorted($0)) } }
     }
 
-    func remove(_ a: Assignment) { pending = workspace.ask(AssignmentRemove(course: course.id, assignment: a.id)) }
-
     func setStatus(_ a: Assignment, _ status: AssignmentStatus) {
         workspace.run(AssignmentStatusSet(course: course.id, assignment: a.id, status: status))
     }

@@ -6942,6 +6942,61 @@
         }
       }
     },
+    "menu.add-card": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 추가"
+          }
+        }
+      }
+    },
+    "menu.add-files-ellipsis": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 추가…"
+          }
+        }
+      }
+    },
+    "menu.counts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "반영"
+          }
+        }
+      }
+    },
+    "menu.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "완료"
+          }
+        }
+      }
+    },
+    "menu.more": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 보기"
+          }
+        }
+      }
+    },
     "notes.assets": {
       "extractionState": "manual",
       "localizations": {
@@ -7180,6 +7235,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "위젯"
+          }
+        }
+      }
+    },
+    "notes.edit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 편집"
+          }
+        }
+      }
+    },
+    "notes.edit-folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더"
           }
         }
       }
@@ -7833,17 +7910,6 @@
         }
       }
     },
-    "notes.delete-ellipsis": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트 삭제…"
-          }
-        }
-      }
-    },
     "notes.embed-loop": {
       "extractionState": "manual",
       "localizations": {
@@ -8482,17 +8548,6 @@
         }
       }
     },
-    "notes.open": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "열기"
-          }
-        }
-      }
-    },
     "notes.outline.hide": {
       "extractionState": "manual",
       "localizations": {
@@ -8566,39 +8621,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "단원 노트"
-          }
-        }
-      }
-    },
-    "notes.rename": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트 이름 바꾸기"
-          }
-        }
-      }
-    },
-    "notes.rename-confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "바꾸기"
-          }
-        }
-      }
-    },
-    "notes.rename-ellipsis": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이름 바꾸기…"
           }
         }
       }
@@ -10414,6 +10436,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "문제 %lld개"
+          }
+        }
+      }
+    },
+    "quiz.problems.record": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "풀이 기록"
           }
         }
       }

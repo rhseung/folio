@@ -38,6 +38,7 @@ struct RecordingPage: View {
                 if model.hasLines {
                     TextField(String(localized: .recordingSearch), text: $model.query).pill(width: 180)
                 }
+                PageMenuButton { ItemMenu(source: RecordingMenuSource(model: model, host: .own, remove: { deleting = true }, openLink: openLink)) }
             }
             if recording.hasAudio {
                 transport
@@ -335,7 +336,7 @@ private extension View {
     }
 }
 
-@MainActor private func writePasteboard(_ text: String) {
+@MainActor func writePasteboard(_ text: String) {
     #if os(macOS)
     NSPasteboard.general.clearContents()
     NSPasteboard.general.setString(text, forType: .string)

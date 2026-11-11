@@ -51,12 +51,7 @@ struct CourseGradesView: View {
                         case .entry(let e, let indented):
                             Button { model.editingEntry = e } label: { EntryRow(entry: e, indented: indented, last: last) }
                                 .buttonStyle(.pointing(.plain))
-                                .contextMenu {
-                                    Button(.courseGradesEditEllipsis) { model.editingEntry = e }
-                                    Button(e.excused ? .courseGradesInclude : .courseGradesExcuse) { model.setExcused(e, !e.excused) }
-                                    Divider()
-                                    Button(.courseGradesRemoveScoreEllipsis, role: .destructive) { model.remove(e) }
-                                }
+                                .contextMenu { ItemMenu(source: ScoreMenuSource(model: model, entry: e)) }
                         }
                     }
                 }
@@ -124,15 +119,7 @@ struct CourseGradesView: View {
         // Not a Button: the add button inside would never get its clicks.
         .opens { model.editingComponent = c }
         .help(Text(.courseGradesEditComponentHelp(c.name)))
-        .contextMenu {
-            Button(.courseGradesEditEllipsis) { model.editingComponent = c }
-            if canAdd { Button(.courseGradesAddScoreEllipsis, action: add) }
-            Divider()
-            Button(.courseGradesMoveUp) { model.move(c.id, by: -1) }.disabled(i == 0)
-            Button(.courseGradesMoveDown) { model.move(c.id, by: 1) }.disabled(i == components.count - 1)
-            Divider()
-            Button(.courseGradesRemoveComponentEllipsis, role: .destructive) { model.remove(c) }
-        }
+        .contextMenu { ItemMenu(source: ComponentMenuSource(model: model, component: c, addsScore: canAdd, index: i, count: components.count)) }
     }
 
     func attendance(_ file: CourseFile) -> some View {
@@ -355,5 +342,44 @@ struct StandingCurve: View {
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(s.map { String(localized: .courseGradesStandingAccessibility(Int(($0.above * 100).rounded()), String(localized: $0.inTopGrade ? .courseGradesStandingInA : .courseGradesStandingOutA))) }
             ?? gap.map { String(localized: $0 >= 0 ? .courseGradesStandingAboveMean : .courseGradesStandingBelowMean) } ?? String(localized: .courseGradesStandingUnknownPlace))
+    }
+}
+
+/// A grade component's menu. Only the grades page shows components, so its sheet stays the page's.
+@MainActor
+struct ComponentMenuSource: ItemMenuSource {
+    let model: CourseGradesModel
+    let component: GradeComponent
+    let addsScore: Bool
+    let index: Int
+    let count: Int
+
+    var commands: [ComponentMenuCommand] { ComponentMenuCommand.commands(addsScore: addsScore, index: index, count: count) }
+
+    func row(_ command: ComponentMenuCommand) -> MenuRow {
+        switch command {
+        case .addScore: MenuRow(command, .courseGradesAddScoreEllipsis, "plus", .action { model.addScore(component) })
+        case .edit: .edit(command) { model.editingComponent = component }
+        case .moveUp: MenuRow(command, .courseGradesMoveUp, "arrow.up", .action { model.move(component.id, by: -1) })
+        case .moveDown: MenuRow(command, .courseGradesMoveDown, "arrow.down", .action { model.move(component.id, by: 1) })
+        case .remove: .remove(command) { model.remove(component) }
+        }
+    }
+}
+
+/// A score's menu: whether it counts, as a check row, then its sheet.
+@MainActor
+struct ScoreMenuSource: ItemMenuSource {
+    let model: CourseGradesModel
+    let entry: ScoreEntry
+
+    var commands: [ScoreMenuCommand] { ScoreMenuCommand.commands(excused: entry.excused) }
+
+    func row(_ command: ScoreMenuCommand) -> MenuRow {
+        switch command {
+        case .counts(let on): MenuRow(command, .menuCounts, "checkmark.circle", .check(on) { model.setExcused(entry, !$0) })
+        case .edit: .edit(command) { model.editingEntry = entry }
+        case .remove: .remove(command) { model.remove(entry) }
+        }
     }
 }

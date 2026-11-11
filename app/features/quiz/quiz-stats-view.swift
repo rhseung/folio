@@ -38,10 +38,11 @@ struct QuizStatsView: View {
                             }
                             Spacer(minLength: Theme.Space.m)
                             Chip(chip.text, tone: chip.tone)
-                            Button(.quizStatsSolve) { solve(model.solveWrong(of: card.unitId, units: stats.units)) }
+                            // The menu's own row, so the button and the menu say the same thing.
+                            Button(.quizStatsSolveUnitWrong) { solve(model.solveWrong(of: card.unitId, units: stats.units)) }
                                 .buttonStyle(.ghost)
                         }
-                        .contextMenu { Button(.quizStatsSolveUnitWrong) { solve(model.solveWrong(of: card.unitId, units: stats.units)) } }
+                        .contextMenu { CardMenu(courseId: course.id, card: card) { solve(model.solveWrong(of: card.unitId, units: stats.units)) } }
                     }
                 }
             }

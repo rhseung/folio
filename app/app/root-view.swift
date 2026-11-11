@@ -394,7 +394,7 @@ struct RootView: View {
                     let courses = workspace.sidebarCourses(in: semester)
                     let current = semester.id == workspace.currentSemester?.id
                     let open = !courses.isEmpty && current != toggledTerms.contains(semester.id)
-                    semesterRow(semester, open: open)
+                    semesterRow(semester, open: open, menu: semesterMenu(semester, current: current, hasCourses: !courses.isEmpty, open: open))
                         .rowTools(add: current ? String(localized: .rootAddCourse) : nil, action: { addingCourse = true }, open: courses.isEmpty ? nil : openBinding(semester, current: current)) { over in
                             if over { hoveredTerm = semester.id } else if hoveredTerm == semester.id { hoveredTerm = nil }
                         }
@@ -685,7 +685,15 @@ struct RootView: View {
         }
     }
 
-    func semesterRow(_ semester: Semester, open: Bool) -> some View {
+    // Built apart from the list: inline, the closures made the sidebar's expression too much for the iPad build to check.
+    func semesterMenu(_ semester: Semester, current: Bool, hasCourses: Bool, open: Bool) -> SemesterMenu {
+        var add: (@MainActor () -> Void)?
+        if current { add = { addingCourse = true } }
+        let fold: @MainActor () -> Void = { openBinding(semester, current: current).wrappedValue.toggle() }
+        return SemesterMenu(semesterId: semester.id, host: .list, addCourse: add, folded: hasCourses ? !open : nil, fold: fold)
+    }
+
+    func semesterRow(_ semester: Semester, open: Bool, menu: SemesterMenu) -> some View {
         let chosen = selection == .semester(semester.id)
         // Terms already over step back, so the current and coming ones stand out in a list that grows every term.
         let past = semester.term == .credited || workspace.currentSemester.map { semester.order < $0.order } ?? false
@@ -703,7 +711,7 @@ struct RootView: View {
         }
         // On the label, under `sidebarRow`, so a chosen past term's row fill stays full strength.
         .opacity(past && !chosen ? Theme.Opacity.ended : 1)
-        .sidebarRow(.semester(semester.id), selectionBinding, guide: .stem, guideShown: open)
+        .sidebarRow(.semester(semester.id), selectionBinding, guide: .stem, guideShown: open, menu: AnyView(menu))
     }
 
     func sidebarIcon(_ symbol: String, _ destination: Screen) -> some View {
@@ -755,7 +763,8 @@ struct RootView: View {
         }
         .help(detail ?? "")
         .padding(.leading, SidebarGuide.indent)
-        .sidebarRow(.course(course.id), selectionBinding, fill: accent.tint, guide: last ? .lastCourse : .course, progress: ongoing?.fraction(at: now), note: detail)
+        .sidebarRow(.course(course.id), selectionBinding, fill: accent.tint, guide: last ? .lastCourse : .course, progress: ongoing?.fraction(at: now), note: detail,
+                    menu: AnyView(CourseMenu(courseId: course.id, host: .list)))
     }
 
     @ViewBuilder func courseHint(_ hint: TodaySummary.CourseHint) -> some View {
@@ -919,12 +928,13 @@ private extension View {
     }
 
     /// `note` heads the menu with what the row's tooltip says (what is due, when the class is), which touch never shows.
-    @ViewBuilder func rowMenu(_ destination: Screen, note: String?) -> some View {
+    /// A course's and a term's rows have their item's menu (#403); the places have only their link.
+    @ViewBuilder func rowMenu(_ destination: Screen, note: String?, menu: AnyView?) -> some View {
         if let note {
             Text(note)
             Divider()
         }
-        if let link = destination.link { LinkMenu(link: link) }
+        if let menu { menu } else if let link = destination.link { LinkMenu(link: link) }
     }
 
     /// On the Mac each row picks itself and draws its own fill: the Mac sidebar's selection is one gray whatever the
@@ -934,7 +944,7 @@ private extension View {
     /// spacing, so the segments join without overlapping (a see-through line darkens where segments overlap).
     /// `guideShown` fades the line rather than leaving it out: the Mac list doesn't redraw a row background whose views
     /// come and go, only one whose values change, and rebuilding the row instead made it jump as it opened.
-    @ViewBuilder func sidebarRow(_ destination: Screen, _ selection: Binding<Screen?>, fill: Color = Theme.Palette.sidebarSelection, guide: SidebarGuide? = nil, guideShown: Bool = true, progress: Double? = nil, note: String? = nil) -> some View {
+    @ViewBuilder func sidebarRow(_ destination: Screen, _ selection: Binding<Screen?>, fill: Color = Theme.Palette.sidebarSelection, guide: SidebarGuide? = nil, guideShown: Bool = true, progress: Double? = nil, note: String? = nil, menu: AnyView? = nil) -> some View {
         let line = guide.map { GuideSegment(guide: $0).stroke(Theme.Palette.chromeLine, lineWidth: 1).frame(width: SidebarGuide.reach + 1) }
         #if os(macOS)
         let chosen = selection.wrappedValue == destination
@@ -964,10 +974,10 @@ private extension View {
         )
         .accessibilityAddTraits(chosen ? [.isButton, .isSelected] : .isButton)
         .accessibilityAction { selection.wrappedValue = destination }
-        .contextMenu { rowMenu(destination, note: note) }
+        .contextMenu { rowMenu(destination, note: note, menu: menu) }
         #else
         tag(destination)
-            .contextMenu { rowMenu(destination, note: note) }
+            .contextMenu { rowMenu(destination, note: note, menu: menu) }
             .background(alignment: .leading) {
                 if guide != .stem, let line { line.padding(.vertical, -Theme.Space.xs).padding(.leading, Theme.Size.tile / 2) }
             }

@@ -84,11 +84,18 @@ struct QuizModelTests {
         #expect(f.model.linkedTitles(set.problems[0], units: f.course.outline.map(\.unit)) == "그래프")
     }
 
+    /// The card's menu asks the window, and the list reads the cards again when the quizzes change.
     @Test func removingACardReloadsTheList() throws {
         let f = try QuizFixture()
-        f.model.remove(f.cards[2], in: f.course)
+        var asked: PendingAction?
+        let menu = CardMenuSource(workspace: f.workspace, courseId: f.courseId, card: f.cards[2], sheets: ItemSheetsAction(confirm: { asked = $0 }))
+        let remove = try #require(menu.commands.map(menu.row).first { $0.group == .remove })
+        if case .action(let action) = remove.kind { action() }
         #expect(f.model.cards.count == 3)
-        try #require(f.model.pending).perform()
+        let revision = f.workspace.quizRevision
+        try #require(asked).perform()
+        #expect(f.workspace.quizRevision > revision)
+        f.model.load(f.course)
         #expect(f.model.cards.map(\.id) == [f.cards[0].id, f.cards[1].id])
     }
 }

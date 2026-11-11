@@ -101,10 +101,6 @@ final class QuizModel {
         [card.type.label, card.category.label, card.source == .ai ? "Claude" : nil].compactMap { $0 }.joined(separator: " · ")
     }
 
-    func remove(_ card: QuizCard, in course: LoadedCourse) {
-        pending = workspace.ask(QuizCardRemove(course: course.id, unit: card.unitId, card: card.id)) { [weak self] _ in self?.load(course) }
-    }
-
     // MARK: Statistics
 
     struct Stats {
@@ -207,9 +203,5 @@ final class QuizModel {
 
     func toggle(_ unit: UUID, set: UUID, problem: ProblemSet.Problem, in course: LoadedCourse) {
         workspace.run(ProblemLinkUnit(course: course.id, set: set, number: problem.number, unit: unit, linked: !problem.unitIds.contains(unit)))
-    }
-
-    func remove(_ set: ProblemSet, in course: LoadedCourse) {
-        pending = workspace.ask(ProblemSetRemove(course: course.id, set: set.id))
     }
 }

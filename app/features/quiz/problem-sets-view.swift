@@ -41,7 +41,7 @@ struct ProblemSetsView: View {
             HStack(spacing: Theme.Space.m) {
                 if let m = model.material(set.materialId, in: course) { Button(.quizProblemsSheet) { open(m) }.buttonStyle(.ghost) }
                 if let m = model.material(set.solutionMaterialId, in: course) { Button(.quizProblemsSolution) { open(m) }.buttonStyle(.ghost) }
-                Menu { setItems(set) } label: { Image(systemName: "ellipsis") }
+                Menu { ProblemSetMenu(courseId: course.id, set: set) } label: { Image(systemName: "ellipsis") }
                     .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.borderless).pointingHand().fixedSize()
             }
         }) {
@@ -49,8 +49,10 @@ struct ProblemSetsView: View {
                 LazyVGrid(columns: [GridItem(.adaptive(minimum: 46), spacing: Theme.Space.s)], spacing: Theme.Space.s) {
                     ForEach(set.problems, id: \.number) { problem in
                         let history = model.history(set: set.id, number: problem.number)
+                        let sheet = model.material(set.materialId, in: course)
                         ProblemCell(set: set, problem: problem, history: history, units: units,
-                                    linked: model.linkedTitles(problem, units: units), historyLine: model.historyLine(history)) { verdict in
+                                    linked: model.linkedTitles(problem, units: units), historyLine: model.historyLine(history),
+                                    openSheet: sheet.map { m in { openLink(AppLink(.material, m.id, anchor: problem.page.map { AppLink.Anchor.page($0) }), course: course.id) } }) { verdict in
                             model.record(verdict, set: set.id, number: problem.number, in: course)
                         } toggleUnit: { unit in
                             model.toggle(unit, set: set.id, problem: problem, in: course)
@@ -59,16 +61,7 @@ struct ProblemSetsView: View {
                 }
             }
         }
-        .contextMenu { setItems(set) }
-    }
-
-    @ViewBuilder func setItems(_ set: ProblemSet) -> some View {
-        let sheet = model.material(set.materialId, in: course)
-        let solution = model.material(set.solutionMaterialId, in: course)
-        if let m = sheet { Button(.quizProblemsOpenSheet) { open(m) } }
-        if let m = solution { Button(.quizProblemsOpenSolution) { open(m) } }
-        if sheet != nil || solution != nil { Divider() }
-        Button(.quizProblemsRemoveEllipsis, role: .destructive) { model.remove(set, in: course) }
+        .contextMenu { ProblemSetMenu(courseId: course.id, set: set) }
     }
 
     /// In the materials page's file view, through the window's history like any other move.
@@ -114,6 +107,7 @@ struct ProblemCell: View {
     let units: [FolioDomain.Unit]
     let linked: String
     let historyLine: String
+    let openSheet: (() -> Void)?
     let mark: (Verdict) -> Void
     let toggleUnit: (UUID) -> Void
     @State private var open = false
@@ -140,17 +134,7 @@ struct ProblemCell: View {
         .buttonStyle(.pointing(.plain))
         .help(linked)
         .contextMenu {
-            Button(correct) { mark(.correct) }
-            Button(Verdict.partial.label) { mark(.partial) }
-            Button(Verdict.wrong.label) { mark(.wrong) }
-            Divider()
-            Menu(String(localized: .quizUnit)) {
-                ForEach(units) { u in
-                    Button { toggleUnit(u.id) } label: {
-                        if problem.unitIds.contains(u.id) { Label(u.title, systemImage: "checkmark") } else { Text(u.title) }
-                    }
-                }
-            }
+            ItemMenu(source: ProblemMenuSource(problem: problem, units: units, correct: correct, openSheet: openSheet, mark: mark, toggleUnit: toggleUnit))
         }
         .popover(isPresented: $open) {
             VStack(alignment: .leading, spacing: Theme.Space.m) {

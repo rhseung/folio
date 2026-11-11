@@ -54,8 +54,6 @@ final class ExamsModel {
         editing = Exam(device: workspace.device, at: .now, title: "", start: start)
     }
 
-    func remove(_ exam: Exam) { pending = workspace.ask(ExamRemove(course: course.id, exam: exam.id)) }
-
     func folder(of exam: Exam) -> String? { MaterialIntake.folder(of: exam) }
 
     func drop(_ urls: [URL], on exam: Exam) {
