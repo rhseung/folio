@@ -81,10 +81,6 @@ final class PageStripModel {
         }
     }
 
-    /// Pages keep clear of the line's gutter only once the file has a class's pages: with none, a gutter left empty put
-    /// the pages off the column's middle. A range being picked doesn't count, so the pages hold still while it is.
-    var railed: Bool { !sections.isEmpty }
-
     // MARK: Folding
 
     /// Unfolded until folded by hand: the two latest sections, where the lecture is now and the class before it.

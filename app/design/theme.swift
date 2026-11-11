@@ -174,6 +174,9 @@ enum Theme {
         static let control: CGFloat = 8
         static let card: CGFloat = 14
         static let floating: CGFloat = 16
+        /// A thumbnail column's current-page wash and a class's run of pages under it: one corner, so the wash sits in
+        /// the run as one shape.
+        static let strip: CGFloat = 12
     }
 
     enum Size {
@@ -202,6 +205,9 @@ enum Theme {
         static let paneStrip: CGFloat = 40
         #endif
         static let dot: CGFloat = 8
+        /// The box a lecture's page is fitted into in its thumbnail column, whatever its shape: a 16:9 slide fills it,
+        /// a 4:3 one is as tall and narrower. Wide for slides, which most lectures are.
+        static let pageThumbnail = CGSize(width: 152, height: 84)
         static let rowHeight: CGFloat = 44
         /// The least a finger can hit on each side, whatever the drawn size (`TouchTarget`).
         static let touchTarget: CGFloat = 44

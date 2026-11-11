@@ -20,9 +20,14 @@ struct PageStrip: View {
     }
 
     static let column: CGFloat = 128
-    /// A lecture file's column: wide enough for the saving row's "11/4(수) 오늘 19–21쪽" on one line, and for the
-    /// gutter its sections' line runs down, under the headers' dots.
-    static let lectureColumn: CGFloat = 208
+    /// A lecture file's column: its sections' tint reaches the column's margins and holds the pages `Space.s` in on
+    /// each side, the current page's wash just filling it.
+    static let lectureColumn = Theme.Size.pageThumbnail.width + Theme.Space.s * 4
+
+    /// The box a page is fitted into: a lecture's, or what a plain column holds inside its margins.
+    static func box(lecture: Bool) -> CGSize {
+        lecture ? Theme.Size.pageThumbnail : CGSize(width: column - Theme.Space.s * 2, height: Theme.Size.pageThumbnail.height)
+    }
 
     var body: some View {
         let picks = model.picks
@@ -34,7 +39,7 @@ struct PageStrip: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         ForEach(model.items) { item in
-                            PageStripItem(item: item, model: model, controller: controller, gutter: model.railed)
+                            PageStripItem(item: item, model: model, controller: controller)
                                 .id(item.id)
                         }
                     }
@@ -104,13 +109,12 @@ private struct PageStripItem: View {
     let item: StripItem
     @Bindable var model: PageStripModel
     let controller: PDFController
-    let gutter: Bool
 
     var body: some View {
         StripItemFrame(item: item) {
             lead(item.lead)
             if let page = item.page {
-                StripPage(controller: controller, page: page, picked: item.mark == .picked, gutter: gutter, ranging: model.pickingShown,
+                StripPage(controller: controller, page: page, picked: item.mark == .picked, box: PageStrip.box(lecture: model.picks), ranging: model.pickingShown,
                           press: { page, extend in extend ? model.extend(to: page) : model.press(page) },
                           start: { model.start(at: $0) })
             }
@@ -291,6 +295,7 @@ struct PageThumbnail: View {
     let page: Int
     let current: Bool
     var picked = false
+    let box: CGSize
     @State private var image: CGImage?
     @Environment(\.accent) private var accent
 
@@ -298,27 +303,38 @@ struct PageThumbnail: View {
         VStack(spacing: Theme.Space.xxs) {
             Group {
                 if let image {
-                    Image(decorative: image, scale: 1).resizable().scaledToFit()
+                    Image(decorative: image, scale: 1).resizable()
                 } else {
                     Theme.Palette.fill
                 }
             }
-            .frame(height: 84)
+            .frame(width: size.width, height: size.height)
             .clipShape(.rect(cornerRadius: Theme.Radius.small))
             .overlay(RoundedRectangle(cornerRadius: Theme.Radius.small).strokeBorder(picked ? accent.color : Theme.Palette.lineSoft, lineWidth: picked ? 2 : 1))
+            // Every page in a slot as tall as the box, so a column of wide slides doesn't shift as their images come in.
+            .frame(height: box.height)
             Text("\(page)").font(picked || current ? Theme.Typeface.label : Theme.Typeface.label.weight(.regular)).monospacedDigit()
                 .foregroundStyle(picked ? accent.ink : current ? Theme.Palette.text : Theme.Palette.textTertiary)
         }
         .padding(.vertical, Theme.Space.s)
         .background {
             // Sideways the wash reaches into the column's margins rather than padding the page in, so a strip of fixed
-            // width keeps its pages as wide as they were. Its corner is the page's plus the reach, to run alongside it.
+            // width keeps its pages as wide as they were. Its corner is the page's plus the reach, to run alongside it, and
+            // a class's tint's, to sit in it as one shape.
             if current {
-                RoundedRectangle(cornerRadius: Theme.Radius.small + Theme.Space.s)
+                RoundedRectangle(cornerRadius: Theme.Radius.strip)
                     .fill(Theme.Palette.currentPage)
                     .padding(.horizontal, -Theme.Space.s)
             }
         }
         .task(id: page) { image = await thumbnails.image(page) }
+    }
+
+    /// The page fitted into the box, so its ring and corners hug it: a wide slide comes out shorter, a portrait page
+    /// narrower. Until it is drawn, the whole box.
+    private var size: CGSize {
+        guard let image, image.width > 0, image.height > 0 else { return box }
+        let scale = min(box.width / CGFloat(image.width), box.height / CGFloat(image.height))
+        return CGSize(width: (CGFloat(image.width) * scale).rounded(), height: (CGFloat(image.height) * scale).rounded())
     }
 }
