@@ -130,15 +130,13 @@ struct PatchNotesTests {
         #expect(s.releases.map(\.version) == [V(0, 3, 1), V(0, 3, 0), V(0, 2, 1)])
         #expect(s.latest.version == V(0, 3, 1))
         #expect(s.since == V(0, 2, 0))
-        #expect(s.items.map(\.text) == ["0.3.0 0", "0.3.0 1"])
-        #expect(s.rest == [PatchNotes.Count(kind: .fix, count: 4), PatchNotes.Count(kind: .change, count: 1)])
+        #expect(s.items.map(\.text) == ["0.3.0 0", "0.3.0 1", "0.3.1 0", "0.3.1 1", "0.3.0 3", "0.2.1 0", "0.3.0 2"])
     }
 
-    @Test func theSheetKeepsSixNewFeaturesAndCountsTheRest() throws {
-        let big = PatchNotes.Release(version: V(1, 0, 0), items: (0..<9).map { Item(kind: .feat, text: "\($0)") })
+    @Test func theSheetKeepsEveryItem() throws {
+        let big = PatchNotes.Release(version: V(1, 0, 0), items: (0..<9).map { Item(kind: $0 % 3 == 0 ? .fix : .feat, text: "\($0)") })
         let s = try #require(PatchNotes.summary([big], since: V(0, 9, 0)))
-        #expect(s.items.count == PatchNotes.sheetLimit)
-        #expect(s.rest == [PatchNotes.Count(kind: .feat, count: 3)])
+        #expect(s.items.map(\.text) == ["1", "2", "4", "5", "7", "8", "0", "3", "6"])
     }
 
     // MARK: The page
@@ -185,7 +183,7 @@ struct PatchNotesTests {
         }
     }
 
-    @Test func theSheetShowsOnlyAnUpdatesNewFeatures() async {
+    @Test func theSheetShowsEverythingAnUpdateBrought() async {
         await propertyCheck(input: Self.releases, Self.version, Self.version) { releases, seen, current in
             let step = PatchNotes.step(seen: seen, current: current, feed: .loaded(releases), busy: false)
             guard case .show(let s) = step else {
@@ -198,10 +196,10 @@ struct PatchNotesTests {
             #expect(s.latest.version == current)
             #expect(s.releases.allSatisfy { seen < $0.version && $0.version <= current })
             #expect(s.releases.contains { $0.hasNewFeature })
-            #expect(!s.items.isEmpty && s.items.count <= PatchNotes.sheetLimit && s.items.allSatisfy { $0.kind == .feat })
-            // Shown and counted, every item of every unseen version is accounted for once.
-            let total = s.releases.reduce(0) { $0 + $1.items.count }
-            #expect(s.items.count + s.rest.reduce(0) { $0 + $1.count } == total)
+            #expect(s.items.first?.kind == .feat)
+            // Every item of every unseen version, once, kind by kind.
+            #expect(s.items.count == s.releases.reduce(0) { $0 + $1.items.count })
+            #expect(s.items == PatchNotes.ordered(s.items))
         }
     }
 

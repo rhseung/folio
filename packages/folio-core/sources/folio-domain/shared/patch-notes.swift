@@ -214,28 +214,14 @@ public enum PatchNotes {
         releases.filter { seen < $0.version && $0.version <= current }.sorted { $0.version > $1.version }
     }
 
-    /// The sheet's new features at most; the rest are counted and left to the page.
-    public static let sheetLimit = 6
-
-    public struct Count: Hashable, Sendable {
-        public var kind: Kind
-        public var count: Int
-
-        public init(kind: Kind, count: Int) {
-            self.kind = kind
-            self.count = count
-        }
-    }
-
     /// One sheet for the versions an update brought, however many were skipped.
     public struct Summary: Hashable, Sendable {
         /// Newest first, never empty.
         public var releases: [Release]
         public var since: Version
-        /// The new features, the newest version's first, at most `sheetLimit`.
+        /// Every item of those versions, as one list the way the page lists a version: kind by kind, each kind's newest
+        /// version first.
         public var items: [Item]
-        /// What the sheet leaves out, by kind in `Kind` order, without the kinds left out of none.
-        public var rest: [Count]
 
         public var latest: Release { releases[0] }
     }
@@ -243,13 +229,7 @@ public enum PatchNotes {
     public static func summary(_ releases: [Release], since: Version) -> Summary? {
         let ordered = releases.sorted { $0.version > $1.version }
         guard !ordered.isEmpty else { return nil }
-        let all = ordered.flatMap(\.items)
-        let shown = Array(all.filter { $0.kind == .feat }.prefix(sheetLimit))
-        let rest = Kind.allCases.compactMap { kind -> Count? in
-            let n = all.count(where: { $0.kind == kind }) - shown.count(where: { $0.kind == kind })
-            return n > 0 ? Count(kind: kind, count: n) : nil
-        }
-        return Summary(releases: ordered, since: since, items: shown, rest: rest)
+        return Summary(releases: ordered, since: since, items: Self.ordered(ordered.flatMap(\.items)))
     }
 
     // MARK: The page
