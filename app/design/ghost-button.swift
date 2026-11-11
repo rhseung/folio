@@ -79,7 +79,7 @@ private struct ToolbarButton: View {
                     .padding(Theme.Space.xxs)
             }
             .contentShape(.capsule)
-            .opacity(isEnabled ? 1 : 0.45)
+            .opacity(isEnabled ? 1 : Theme.Opacity.disabled)
             .onHover { hovering = $0 }
     }
 }

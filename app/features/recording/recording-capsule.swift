@@ -24,13 +24,20 @@ struct RecordingCapsule<Idle: View>: View {
     }
 
     var body: some View {
-        HStack(spacing: Theme.Space.xxs) {
+        HStack(spacing: 0) {
             if expanded {
                 time
                 if openCard == nil {
                     divider
-                    mark
-                    if model.paused { stop.transition(.opacity.combined(with: .scale(scale: 0.6))) }
+                    // The marks sit a little further from the round end than from the rule: the end's curve eats
+                    // into the room, and measured evenly the mark looked pushed against it (2026-11-11 사용자).
+                    HStack(spacing: Theme.Space.xs) {
+                        mark
+                        if model.paused { stop.transition(.opacity.combined(with: .scale(scale: 0.6))) }
+                    }
+                    .buttonStyle(CapsuleIconStyle())
+                    .padding(.leading, Theme.Space.s)
+                    .padding(.trailing, Theme.Space.m)
                 }
             } else {
                 idle.transition(.opacity)
@@ -49,8 +56,8 @@ struct RecordingCapsule<Idle: View>: View {
         .animation(.smooth(duration: 0.34), value: model.paused)
     }
 
-    // From the capsule's leading edge to the dot's middle: the button's hover inset, its padding, half the dot.
-    static var dotCenter: CGFloat { Theme.Space.xxs + Theme.Space.s + Theme.Size.dot / 2 }
+    // From the capsule's leading edge to the dot's middle: the time's padding, half the dot.
+    static var dotCenter: CGFloat { Theme.Space.m + Theme.Size.dot / 2 }
 
     var time: some View {
         Button {
@@ -67,8 +74,7 @@ struct RecordingCapsule<Idle: View>: View {
                     .foregroundStyle(model.paused ? Theme.Palette.textSecondary : Theme.Palette.text)
                     .contentTransition(.numericText())
             }
-            .padding(.leading, Theme.Space.s)
-            .padding(.trailing, Theme.Space.m)
+            .padding(.horizontal, Theme.Space.m)
         }
         .disabled(openCard == nil && model.settling)
         .help(Text(openCard != nil ? .rootRecording : model.paused ? .recordingResume : .recordingPause))
@@ -79,7 +85,6 @@ struct RecordingCapsule<Idle: View>: View {
     var divider: some View {
         (model.paused ? CourseAccent.gray : model.accent).color.opacity(Theme.Opacity.innerFill * 2)
             .frame(width: 1, height: Theme.Space.l)
-            .padding(.horizontal, Theme.Space.xxs)
     }
 
     var mark: some View {
@@ -99,4 +104,34 @@ struct RecordingCapsule<Idle: View>: View {
             .help(Text(.recordingStop))
             .disabled(model.settling)
     }
+}
+
+/// The capsule's mark and stop: the time's size, not a toolbar button's, so they don't loom over the digits, and a
+/// circle to hover that fits the capsule's height.
+private struct CapsuleIconStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        CapsuleIcon(configuration: configuration)
+    }
+}
+
+private struct CapsuleIcon: View {
+    let configuration: ButtonStyleConfiguration
+    @Environment(\.isEnabled) private var isEnabled
+    @State private var hovering = false
+
+    var body: some View {
+        configuration.label.labelStyle(.iconOnly)
+            .font(Theme.Typeface.bodyStrong)
+            .foregroundStyle(Theme.Palette.chromeIcon)
+            .frame(width: Self.side, height: Self.side)
+            .background {
+                Circle().fill(Theme.Palette.text).opacity(configuration.isPressed ? Theme.Opacity.pressed : hovering && isEnabled ? Theme.Opacity.hover : 0)
+            }
+            .frame(height: Theme.Size.toolbarButton)
+            .contentShape(.rect)
+            .opacity(isEnabled ? 1 : Theme.Opacity.disabled)
+            .onHover { hovering = $0 }
+    }
+
+    static let side = Theme.Size.toolbarButton - Theme.Space.s
 }
