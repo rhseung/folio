@@ -27,7 +27,8 @@ public struct ClassStartSettings: Codable, Sendable, Equatable {
     }
 
     /// Where the rough note and the lectures open (2026-11-09 사용자): together in a new tab, side by side as the
-    /// "수업 중" preset lays them out (`PanePreset.inClass`), or in the tab in front, each at its own `Place`.
+    /// layout chosen for it lays them out (`Settings.classStartPreset`, "수업 중" unless another is chosen), or in the
+    /// tab in front, each at its own `Place`.
     public enum OpenIn: String, Codable, Sendable, CaseIterable {
         case splitTab, currentTab
     }
@@ -53,6 +54,8 @@ public struct ClassStartSettings: Codable, Sendable, Equatable {
     /// At the page after where the last class stopped, when one did.
     public var resumesLecture = true
     public var screen = Screen.notify
+    /// The layout the pages open in (`Settings.classStartPreset`), by id; nil for "수업 중".
+    public var preset: String?
     /// Items a course turns off, by course ID (a course where recording isn't allowed). Strings, not UUIDs: JSON
     /// writes a dictionary keyed by anything else as a flat array.
     public var courseOff: [String: [Item]] = [:]
@@ -74,6 +77,7 @@ public struct ClassStartSettings: Codable, Sendable, Equatable {
         allLectures = try c.value(.allLectures, or: d.allLectures)
         resumesLecture = try c.value(.resumesLecture, or: d.resumesLecture)
         screen = try c.value(.screen, or: d.screen)
+        preset = try c.decodeIfPresent(String.self, forKey: .preset)
         courseOff = try c.value(.courseOff, or: d.courseOff)
     }
 

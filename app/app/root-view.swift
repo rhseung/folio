@@ -25,6 +25,8 @@ struct RootView: View {
     @AppStorage("sidebarOpen") private var sidebarOpen = true
     @State private var showingRecording = false
     @State private var quickAdding = false
+    /// The tab whose panes "지금 배치 저장…" is naming.
+    @State private var namingLayout: TabPanes?
     @State private var inputGuide: InputGuideRequest?
     @State private var contentHeight: CGFloat?
     @Environment(\.colorScheme) private var colorScheme
@@ -95,6 +97,9 @@ struct RootView: View {
             openInWindow(entry, else: pane)
         }
     }
+
+    /// "배치 관리…": 일반, where the layouts are named, ordered and deleted.
+    func manageLayouts() { open(.settings(.general)) }
 
     /// A tab of one pane opening a class's note or recording becomes the class's layout as it was last left on this
     /// device (#62, `PaneMemory.restoring`). A tab of more panes is the student's own arrangement and is left alone.
@@ -250,6 +255,10 @@ struct RootView: View {
                 .focusedSceneValue(\.columnCommand, tabs.trail(tabs.selected)?.column)
                 .focusedSceneValue(\.outlineCommand, tabs.trail(tabs.selected)?.outline)
                 .focusedSceneValue(\.frontPanes, tabs.front)
+                .focusedSceneValue(\.layoutChoices, tabs.front.map { panes in
+                    workspace.layoutChoices(for: panes, save: { namingLayout = panes }, manage: manageLayouts)
+                })
+                .modifier(LayoutNaming(workspace: workspace, panes: $namingLayout))
                 .onAppear { MemoryPressure.start() }
                 .onReceive(MemoryPressure.publisher) { _ in tabs.dropBackground() }
                 // Minute by minute, for the screens that have waited behind too long.
@@ -302,6 +311,7 @@ struct RootView: View {
                 workspace.recorder.stage(recording, course: course.id, title: "\(course.title) · \(course.file.title(of: session, calendar: workspace.calendar))",
                                          paused: SnapshotDriver.recordingPaused, level: SnapshotDriver.recordingLevel)
             }
+            if LayoutSnapshots.mode != nil { return await LayoutSnapshots.run(tabs: tabs, workspace: workspace) }
             let ids = workspace.currentCourses.map(\.id)
             // The first lecture file some class names pages of, or with none, the first lecture file: its strip with no
             // progress yet.
@@ -511,10 +521,12 @@ struct RootView: View {
                     .background { ResizeMarker(name: "back") }
                     #endif
             }
-            TabBar(tabs: tabs, workspace: workspace, crumbs: crumbs, toolbar: row, moveToWindow: moveToWindow)
+            TabBar(tabs: tabs, workspace: workspace, crumbs: crumbs, toolbar: row, moveToWindow: moveToWindow,
+                   nameLayout: { namingLayout = $0 }, manageLayouts: manageLayouts)
         } trailing: {
             HStack(spacing: Theme.Space.s) {
                 searchButton
+                recordButton
                 tools
             }
             .onGeometryChange(for: CGFloat.self, of: \.size.width) { row.trailingWidth = $0 }
@@ -542,6 +554,8 @@ struct RootView: View {
         ToolbarItem { searchButton }
             .sharedBackgroundVisibility(.hidden)
         ToolbarSpacer(.flexible)
+        ToolbarItem { recordButton }
+            .sharedBackgroundVisibility(.hidden)
         ToolbarItem { tools }
             .sharedBackgroundVisibility(.hidden)
     }
@@ -586,7 +600,6 @@ struct RootView: View {
                         // A popover proposes the height it opened with; at its own height it grows as the line wraps.
                         .fixedSize(horizontal: false, vertical: true)
                 }
-            recordButton
             timerButton
             Button(workspace.gradesUnlocked ? .rootLockGrades : .commonUnlockGrades, systemImage: workspace.gradesUnlocked ? "lock.open" : "lock") {
                 if workspace.gradesUnlocked { workspace.lockGrades() } else { Task { await workspace.unlockGrades() } }
@@ -638,49 +651,27 @@ struct RootView: View {
     /// held at this width, a short "9:48" sat in a wide gap and crowded the toolbar.
     static let recordingTimeWidth: CGFloat = 96
 
+    /// A group of its own (`RecordingCapsule`). On the Mac the capsule stands in for the sidebar's card while the
+    /// sidebar is folded; open, the card has the recording and the mic waits beside the search field.
     @ViewBuilder var recordButton: some View {
         #if os(macOS)
-        // The recording's card lives in the sidebar; folded away, the time stands in for it here and opens it.
-        if workspace.recorder.isActive && !sidebarOpen {
-            Button { sidebarOpen = true } label: { recordingTime }
-                .help(Text(.rootRecording))
-        } else {
-            recordMenu
-        }
+        RecordingCapsule(workspace: workspace, expanded: workspace.recorder.isActive && !sidebarOpen) { recordMenu }
         #else
         // Always here on the iPad, with the card in a popover: the split view hides its sidebar in portrait, compact
         // widths and Slide Over without telling us, and a hidden card left no way to see or stop the recording.
-        Group {
-            if workspace.recorder.isActive {
-                Button { showingRecording = true } label: { recordingTime }
-                    .help(Text(.rootRecording))
-                    .popover(isPresented: $showingRecording, arrowEdge: .bottom) {
-                        RecordingBar(workspace: workspace) { link in
-                            showingRecording = false
-                            open(link)
-                        }
-                        .frame(width: Theme.Size.sidebar)
-                        .padding(Theme.Space.m)
-                    }
-            } else {
-                recordMenu
+        RecordingCapsule(workspace: workspace, expanded: workspace.recorder.isActive, openCard: { showingRecording = true }) { recordMenu }
+            .popover(isPresented: $showingRecording, arrowEdge: .bottom) {
+                RecordingBar(workspace: workspace) { link in
+                    showingRecording = false
+                    open(link)
+                }
+                .frame(width: Theme.Size.sidebar)
+                .padding(Theme.Space.m)
             }
-        }
-        // On the Group, not the button: stopping from the popover removes the button, which takes the popover down
-        // without writing false back, and left true the next recording would open it unasked.
-        .onChange(of: workspace.recorder.isActive) { _, active in if !active { showingRecording = false } }
+            // Stopping from the popover takes the capsule down to the mic, which takes the popover down without
+            // writing false back; left true, the next recording would open it unasked.
+            .onChange(of: workspace.recorder.isActive) { _, active in if !active { showingRecording = false } }
         #endif
-    }
-
-    var recordingTime: some View {
-        Label {
-            Text(RecordingTime.label(workspace.recorder.elapsed)).monospacedDigit()
-        } icon: {
-            Image(systemName: "record.circle").foregroundStyle(Theme.Palette.danger)
-        }
-        .labelStyle(.titleAndIcon)
-        // Even digits keep it from shifting each second; it widens only at "10:00" and "1:00:00".
-        .fixedSize()
     }
 
     var recordMenu: some View {

@@ -73,6 +73,20 @@ struct ClassStartModelTests {
         #expect(step.ask.opens.isEmpty)
     }
 
+    /// The layout chosen in 일반 › 칸 배치 opens instead (#62): a layout of the user's with the class's note beside a
+    /// fixed page, the note's role filled with this class's.
+    @Test func theChosenLayoutOpensTheClass() throws {
+        let saved = PanePreset(name: "노트와 성적", slots: [.link(.place(.grades)), .role(.classNote)], shares: [0.3, 0.7])
+        var s = workspace.settings
+        s.panePresets = [saved]
+        workspace.saveSettings(s)
+        set { $0.roughNote = .create; $0.preset = saved.id }
+        let step = try #require(workspace.classStartStep(at: at(21, 5), recorderBusy: false))
+        let note = try #require(session(at: at(21))?.roughNoteId)
+        let split = try #require(step.ask.split)
+        #expect(split.links == [.place(.grades), AppLink(.note, note)] && split.shares == saved.shares && split.focus == 1)
+    }
+
     /// With nothing to put side by side, the class itself opens in front, as it does in the tab in front.
     @Test func withoutPagesTheClassOpensInFront() throws {
         set { $0.roughNote = .openExisting }

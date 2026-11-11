@@ -335,7 +335,105 @@ struct PanePresetTests {
 
     @Test func builtInIDsAreUnique() {
         #expect(Set(PanePreset.builtIn.map(\.id)).count == PanePreset.builtIn.count)
-        #expect(PanePreset.builtIn.allSatisfy { $0.roles.count == $0.shares.count })
+        #expect(PanePreset.builtIn.allSatisfy { $0.slots.count == $0.shares.count && $0.name == nil && $0.isBuiltIn })
+    }
+
+    // "지금 배치 저장…" (2026-11-11 사용자): the class's own pages are kept as roles, anything else at its address.
+    @Test func savingKeepsTheClassesPagesAsRolesAndTheRestAsAddresses() throws {
+        let s = Self.session(review: UUID())
+        let textbook = AppLink(.material, UUID(), anchor: .page(30))
+        let at = try #require(PaneLayout(links: [AppLink(.note, s.reviewNoteId!), AppLink(.material, s.materials[0].materialId, anchor: .page(9)), textbook],
+                                         shares: [2, 1, 1], limit: 3))
+        let saved = PanePreset.saving(at, name: "정리", session: s, course: Self.course)
+        #expect(saved.slots == [.role(.reviewNote), .role(.lecture), .link(textbook)])
+        #expect(saved.name == "정리" && !saved.isBuiltIn && saved.needsClass && approx(saved.shares[0], 0.5))
+        // Chosen in another class's tab, it takes that class's note and lecture, and the textbook as it was.
+        let next = Self.session(page: nil, review: UUID())
+        let filled = try #require(saved.layout(session: next, course: Self.course, limit: 3))
+        #expect(filled.links == [AppLink(.note, next.reviewNoteId!), AppLink(.material, next.materials[0].materialId), textbook])
+        #expect(saved.matches(filled, session: next, course: Self.course, limit: 3))
+        // Off where there is no class to fill it from.
+        #expect(saved.layout(session: nil, course: nil, limit: 3) == nil)
+    }
+
+    @Test func aLayoutOfAddressesAloneNeedsNoClass() throws {
+        let grades = AppLink.place(.grades)
+        let at = try #require(PaneLayout(links: [grades, other], limit: 3))
+        let saved = PanePreset.saving(at, name: "성적과 메모", session: nil, course: nil)
+        #expect(saved.slots == [.link(grades), .link(other)] && !saved.needsClass)
+        #expect(saved.layout(session: nil, course: nil, limit: 3)?.links == [grades, other])
+        #expect(PanePreset.matching(at, among: PanePreset.builtIn + [saved], in: nil, limit: 3) == saved)
+    }
+
+    @Test func aRoleInTwoSlotsTakesALinkEach() throws {
+        let preset = PanePreset(name: "렉처 둘", slots: [.role(.lecture), .role(.classNote), .role(.lecture)], shares: [0.4, 0.2, 0.4])
+        let lectures = [AppLink(.material, UUID()), AppLink(.material, UUID()), AppLink(.material, UUID())]
+        let l = try #require(preset.layout([.lecture: lectures, .classNote: [note]], limit: 3))
+        #expect(l.links == [lectures[0], note, lectures[1]])
+        let spread = try #require(preset.layout([.lecture: lectures], limit: 3))
+        #expect(spread.links == [lectures[0], lectures[1], lectures[2]])
+    }
+
+    @Test func aSavedLayoutRoundTripsThroughSettings() throws {
+        let saved = PanePreset(name: "수업 + 성적", slots: [.role(.classNote), .link(.place(.grades))], shares: [0.7, 0.3])
+        var settings = Settings(panePresets: [saved])
+        settings.classStart.preset = saved.id
+        let back = try JSONDecoder().decode(Settings.self, from: JSONEncoder().encode(settings))
+        #expect(back.panePresets == [saved] && back.classStartPreset == saved)
+        #expect(back.presets.map(\.id) == PanePreset.builtIn.map(\.id) + [saved.id])
+        // A deleted layout, or none chosen, starts a class in "수업 중".
+        settings.panePresets = []
+        #expect(settings.classStartPreset == .inClass && Settings().classStartPreset == .inClass)
+        #expect(try JSONDecoder().decode(Settings.self, from: Data("{}".utf8)).panePresets.isEmpty)
+        let broken = Data(#"{"id":"x","panes":[{"role":"lecture"}],"shares":[0.5,0.5]}"#.utf8)
+        #expect(throws: DecodingError.self) { try JSONDecoder().decode(PanePreset.self, from: broken) }
+    }
+
+    @Test func aClassStartsOnlyInALayoutWithItsLectureOrNote() {
+        #expect(PanePreset.inClass.opensClass && PanePreset.concepts.opensClass && !PanePreset.problems.opensClass)
+        #expect(!PanePreset(name: "성적", slots: [.link(.place(.grades)), .role(.quiz)], shares: [0.5, 0.5]).opensClass)
+    }
+
+    @Test func aFreeNameCountsUp() {
+        #expect(PanePreset.freeName("내 배치", taken: []) == "내 배치")
+        #expect(PanePreset.freeName("내 배치", taken: ["내 배치", "내 배치 2"]) == "내 배치 3")
+    }
+}
+
+struct PaneLessonTests {
+    static let device = UUID()
+
+    static func file(_ sessions: [Session]) -> CourseFile {
+        CourseFile(course: Course(device: device, at: .init(timeIntervalSince1970: 0), title: "그래프 이론"), sessions: sessions)
+    }
+
+    static func session(day: Double, material: UUID, cancelled: Bool = false, rough: UUID? = nil) -> Session {
+        let date = Date(timeIntervalSince1970: day * 86400)
+        var s = Session(device: device, at: date, week: 1, date: date)
+        s.materials = [SessionMaterial(materialId: material, firstPage: nil)]
+        s.isCancelled = cancelled
+        s.roughNoteId = rough
+        return s
+    }
+
+    @Test func aNoteNamesItsClass() throws {
+        let lecture = UUID(), rough = UUID()
+        let first = Self.session(day: 1, material: lecture, rough: rough), later = Self.session(day: 8, material: lecture)
+        let file = Self.file([first, later])
+        let l = try #require(PaneLayout(links: [AppLink(.material, lecture), AppLink(.note, rough)], limit: 3))
+        #expect(l.lesson(in: [file], now: .init(timeIntervalSince1970: 20 * 86400))?.session.id == first.id)
+    }
+
+    @Test func aLectureNamesTheLastClassItWasGivenInByNow() throws {
+        let lecture = UUID()
+        let a = Self.session(day: 1, material: lecture), b = Self.session(day: 8, material: lecture)
+        let holiday = Self.session(day: 10, material: lecture, cancelled: true), c = Self.session(day: 15, material: lecture)
+        let file = Self.file([c, a, holiday, b])
+        let l = PaneLayout(AppLink(.material, lecture, anchor: .page(3)))
+        #expect(l.lesson(in: [file], now: .init(timeIntervalSince1970: 11 * 86400))?.session.id == b.id)
+        // Before any, the first to come.
+        #expect(l.lesson(in: [file], now: .init(timeIntervalSince1970: 0))?.session.id == a.id)
+        #expect(PaneLayout(.place(.grades)).lesson(in: [file], now: .now) == nil)
     }
 }
 

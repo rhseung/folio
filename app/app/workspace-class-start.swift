@@ -86,8 +86,11 @@ extension Workspace {
                                                      title: "\(loaded.title) · \(loaded.file.title(of: session, calendar: calendar))"))
         if due.contains(.open) {
             let pages = classStartPages(for: session, in: loaded.id)
-            if setting.openIn == .splitTab, let split = PanePreset.inClass.layout([.lecture: pages.lectures, .classNote: pages.note.map { [$0] } ?? []],
-                                                                                    focus: .classNote, limit: TabPanes.limit) {
+            // The class's own lectures and note where the settings open them, its review note and the quiz as they are.
+            var links = PanePreset.links(session: session, course: loaded.id)
+            links[.lecture] = pages.lectures
+            links[.classNote] = pages.note.map { [$0] } ?? []
+            if setting.openIn == .splitTab, let split = settings.classStartPreset.layout(links, focus: .classNote, limit: TabPanes.limit) {
                 step.ask.split = split
             } else {
                 step.ask.opens = classStartOpenings(pages, session: session)

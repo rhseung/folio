@@ -91,7 +91,10 @@ struct RecordingBar: View {
         .padding(Theme.Space.m)
         // Paused, the card goes gray and its words fade, like a control switched off; the buttons keep their color, since
         // resume and stop are what the card is for then.
-        .background { RecordingCardFace(accent: model.paused ? CourseAccent.gray : model.accent, recording: model.recording, level: recorder.level) }
+        .background {
+            RecordingFace(shape: RoundedRectangle(cornerRadius: Theme.Radius.floating), accent: model.paused ? CourseAccent.gray : model.accent,
+                          recording: model.recording, level: recorder.level)
+        }
         .animation(.smooth, value: model.paused)
         .environment(\.onGlass, true)
     }
@@ -100,32 +103,34 @@ struct RecordingBar: View {
 /// The course's tint and edge, like the 지금 수업 card on 오늘: the course's color without another icon or dot in a
 /// sidebar already full of them. A tint, not a fill, since the sidebar is glass.
 ///
-/// While it records, a glow swells from the level meter's corner as the lecturer speaks and settles in a pause: a
-/// whole-card fade on a fixed beat read as blinking, not listening.
-private struct RecordingCardFace: View {
+/// While it records, a glow swells from `origin` (the card's level meter, the toolbar capsule's dot) as the lecturer
+/// speaks and settles in a pause: a whole-card fade on a fixed beat read as blinking, not listening.
+struct RecordingFace<Outline: InsettableShape>: View {
+    let shape: Outline
     let accent: CourseAccent
     let recording: Bool
     let level: Float
+    /// Where the glow swells from, in the face's own size.
+    var origin: (CGSize) -> CGPoint = { CGPoint(x: 0, y: $0.height) }
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: Theme.Radius.floating)
         let voice = recording ? CGFloat(level) : 0
         ZStack {
             shape.fill(accent.tint)
             shape.strokeBorder(accent.color.opacity(Theme.Opacity.innerFill))
             GeometryReader { proxy in
                 let reach = max(proxy.size.width, proxy.size.height)
-                // A circle around the corner, not a gradient filling the card: shrunk below the card's height, the card-
-                // sized fill showed its top edge as a line across the glow.
+                // A circle around the origin, not a gradient filling the card: shrunk below the card's height, the
+                // card-sized fill showed its top edge as a line across the glow.
                 Circle()
                     .fill(RadialGradient(colors: [accent.color.opacity(Theme.Opacity.voiceGlow), accent.color.opacity(0)],
                                          center: .center, startRadius: 0, endRadius: reach))
                     .frame(width: reach * 2, height: reach * 2)
-                    .position(x: 0, y: proxy.size.height)
-                    // Scaled from the corner, not the radius changed: SwiftUI eases a scale between level samples, where a
-                    // new gradient radius jumps.
-                    .scaleEffect(reduceMotion ? 1 : 0.5 + 1.1 * voice, anchor: .bottomLeading)
+                    .position(origin(proxy.size))
+                    // Scaled from the origin, not the radius changed: SwiftUI eases a scale between level samples,
+                    // where a new gradient radius jumps.
+                    .scaleEffect(reduceMotion ? 1 : 0.5 + 1.1 * voice, anchor: Self.anchor(origin(proxy.size), in: proxy.size))
                     // Square root: the size already grows with the voice, and a linear fade on top of it left a
                     // speaking voice barely brighter than silence.
                     .opacity(Double(voice).squareRoot())
@@ -134,6 +139,10 @@ private struct RecordingCardFace: View {
         }
         // Eased, not sprung: the level comes five times a second, and a spring overshot each sample into a flicker.
         .animation(.smooth(duration: 0.35), value: voice)
+    }
+
+    private static func anchor(_ point: CGPoint, in size: CGSize) -> UnitPoint {
+        UnitPoint(x: size.width > 0 ? point.x / size.width : 0, y: size.height > 0 ? point.y / size.height : 0)
     }
 }
 

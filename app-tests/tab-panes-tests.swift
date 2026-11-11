@@ -205,7 +205,7 @@ struct TabPanesTests {
     }
 
     @Test func eachPresetHasAName() {
-        for preset in PanePreset.builtIn { #expect(preset.name != preset.id) }
+        for preset in PanePreset.builtIn { #expect(preset.title != preset.id) }
     }
 
     // MARK: A class's layout (#62)
