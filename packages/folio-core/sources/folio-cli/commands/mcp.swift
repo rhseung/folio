@@ -36,12 +36,15 @@ struct MCPServer {
     let gist: String?
     let propose: Bool
     let tools: [Tool]
+    /// Every action and read command, listed or not: what `action_search` finds and `action_run` runs.
+    let catalog: [Tool]
 
     init(gist: String?, propose: Bool) {
         self.gist = gist
         self.propose = propose
         let all = Self.writeTools(propose: propose) + Self.readTools().map { Self.builds[$0.command] == nil ? $0 : Self.writing($0, propose: propose) }
-        tools = propose ? all.filter { Self.inPanel($0.command) } : all
+        catalog = all
+        tools = (propose ? all.filter { Self.inPanel($0.command) } : all) + Self.generalTools(propose: propose)
     }
 
     /// Commands written by hand that write by building one action (`add` reads a quick-add line into `assignment add`).
@@ -105,6 +108,11 @@ struct MCPServer {
     }
 
     func call(_ tool: Tool, _ arguments: JSONValue) -> JSONValue {
+        switch tool.name {
+        case Self.searchTool: return search(arguments)
+        case Self.runTool: return runAny(arguments)
+        default: break
+        }
         var argv = tool.argv(arguments)
         var options = gist.map { ["--gist", $0] } ?? []
         if tool.write, propose || arguments["dryRun"] == .bool(true) { options.append("--dry-run") }
@@ -125,6 +133,88 @@ struct MCPServer {
             content.append(["type": "text", "text": .string(ActionProposal(command: Self.builds[tool.command] ?? tool.command, input: input).text)])
         }
         return ["content": .array(content), "isError": .bool(code != 0)]
+    }
+
+    // MARK: Any action
+
+    static let searchTool = "action_search"
+    static let runTool = "action_run"
+
+    /// The way to every action the panel doesn't list. Opening all of them would send some 20k tokens of definitions
+    /// with each question; leaning on the client's own deferred tool loading would tie the panel to how that works.
+    static func generalTools(propose: Bool) -> [Tool] {
+        var run: JSONValue = [
+            "action": ["type": "string", "description": .string(String(localized: .mcpRunActionHelp))],
+            "input": ["type": "object", "description": .string(String(localized: .mcpRunInputHelp))],
+        ]
+        if !propose { run["dryRun"] = ["type": "boolean", "description": .string(String(localized: .mcpDryRunHelp))] }
+        let search: JSONValue = [
+            "name": .string(searchTool),
+            "title": .string(String(localized: .mcpSearchTitle)),
+            "description": .string(String(localized: .mcpSearchDescription)),
+            "inputSchema": [
+                "type": "object",
+                "properties": [
+                    "query": ["type": "string", "description": .string(String(localized: .mcpSearchQueryHelp))],
+                    "limit": ["type": "integer", "minimum": .number(1), "maximum": .number(Double(searchMost))],
+                ],
+                "required": .array(["query"]),
+            ],
+            "annotations": ["readOnlyHint": .bool(true), "openWorldHint": .bool(false)],
+        ]
+        let runSpec: JSONValue = [
+            "name": .string(runTool),
+            "title": .string(String(localized: .mcpRunTitle)),
+            "description": .string(String(localized: .mcpRunDescription) + " " + String(localized: .mcpRemovesNote)),
+            "inputSchema": ["type": "object", "properties": run, "required": .array(["action"])],
+            "annotations": ["readOnlyHint": .bool(false), "destructiveHint": .bool(true), "openWorldHint": .bool(false)],
+        ]
+        return [
+            Tool(name: searchTool, command: "", write: false, spec: search) { _ in [] },
+            Tool(name: runTool, command: "", write: true, spec: runSpec) { _ in [] },
+        ]
+    }
+
+    static let searchMost = 10
+
+    /// `folio help <request>`'s ranking, kept to what `action_run` can run, with each one's input schema.
+    func search(_ arguments: JSONValue) -> JSONValue {
+        guard case .string(let query)? = arguments["query"], !query.trimmingCharacters(in: .whitespaces).isEmpty else {
+            return Self.failure(String(localized: .mcpSearchNoQuery))
+        }
+        let limit = if case .number(let n)? = arguments["limit"] { min(max(Int(n), 1), Self.searchMost) } else { 5 }
+        let listed = Set(tools.map(\.name))
+        // Asked for more than shown: some matches are commands that aren't tools (`run`, `unlock`) and drop out.
+        let found = Finder.find(query, limit: Self.searchMost * 2).compactMap { m -> JSONValue? in
+            let command = String(m.command.dropFirst("folio ".count))
+            guard let t = catalog.first(where: { $0.command == command }) else { return nil }
+            var one: JSONValue = [
+                "command": .string(command), "summary": t.spec["description"] ?? .string(m.abstract), "write": .bool(t.write),
+                "inputSchema": t.spec["inputSchema"] ?? [:], "examples": .array(m.examples.map(JSONValue.string)),
+            ]
+            if listed.contains(t.name) { one["tool"] = .string(t.name) }
+            return one
+        }.prefix(limit)
+        guard !found.isEmpty else { return Self.failure(String(localized: .finderNoMatch(query))) }
+        return ["content": .array([["type": "text", "text": .string(Self.string(Self.pruned(.array(Array(found)))))]]), "isError": .bool(false)]
+    }
+
+    /// Runs one catalog entry as its own tool would, so writes are dry runs and proposals under `--propose`, and the
+    /// grades lock is the command's own.
+    func runAny(_ arguments: JSONValue) -> JSONValue {
+        guard case .string(let given)? = arguments["action"] else { return Self.failure(String(localized: .mcpRunNoAction)) }
+        let name = given.trimmingCharacters(in: .whitespaces).replacing(/^folio\s+/, with: "")
+        guard let tool = catalog.first(where: { $0.command == name || $0.name == name }) else {
+            return Self.failure(String(localized: .mcpRunUnknown(name)))
+        }
+        var input = arguments["input"] ?? [:]
+        guard case .object = input else { return Self.failure(String(localized: .runNotObject)) }
+        if arguments["dryRun"] == .bool(true) { input["dryRun"] = .bool(true) }
+        return call(tool, input)
+    }
+
+    static func failure(_ text: String) -> JSONValue {
+        ["content": .array([["type": "text", "text": .string(text)]]), "isError": .bool(true)]
     }
 
     // MARK: Tools
