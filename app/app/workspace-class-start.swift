@@ -90,7 +90,7 @@ extension Workspace {
             var links = PanePreset.links(session: session, course: loaded.id)
             links[.lecture] = pages.lectures
             links[.classNote] = pages.note.map { [$0] } ?? []
-            if setting.openIn == .splitTab, let split = settings.classStartPreset.layout(links, focus: .classNote, limit: TabPanes.limit) {
+            if setting.openIn == .splitTab, let split = settings.classStartPreset.startLayout(links, limit: TabPanes.limit) {
                 step.ask.split = split
             } else {
                 step.ask.opens = classStartOpenings(pages, session: session)

@@ -108,6 +108,15 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
         return layout
     }
 
+    /// The preset filled for a class's start, focused on its note. Nil when none of the class's own lectures or note
+    /// made it in: "개념 다지기" for a class with no lecture would open a tab of the quiz alone, and the note just made
+    /// for the class would open nowhere. The class then opens the plain way.
+    public func startLayout(_ links: [Role: [AppLink]], limit: Int) -> PaneLayout? {
+        guard let layout = layout(links, focus: .classNote, limit: limit) else { return nil }
+        let own = (links[.lecture] ?? []) + (links[.classNote] ?? [])
+        return layout.links.contains(where: own.contains) ? layout : nil
+    }
+
     /// The preset filled in for a session, a pane to a slot, without the slots it has nothing for. Nil when it has
     /// none, and for a preset with a role and no session.
     public func layout(session: Session?, course: UUID?, limit: Int) -> PaneLayout? {

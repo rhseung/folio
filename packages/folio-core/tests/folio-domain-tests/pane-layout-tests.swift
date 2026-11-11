@@ -394,6 +394,19 @@ struct PanePresetTests {
         #expect(!PanePreset(name: "성적", slots: [.link(.place(.grades)), .role(.quiz)], shares: [0.5, 0.5]).opensClass)
     }
 
+    @Test func aClassWithoutItsLectureOrNoteStartsThePlainWay() throws {
+        let course = UUID(), lecture = AppLink(.material, UUID()), note = AppLink(.note, UUID())
+        let quiz = AppLink.course(course, page: .quiz)
+        // "개념 다지기" with no lecture: the quiz alone is no class's tab.
+        #expect(PanePreset.concepts.startLayout([.quiz: [quiz], .classNote: [note]], limit: 3) == nil)
+        let mine = PanePreset(name: "성적과 노트", slots: [.link(.place(.grades)), .role(.classNote)], shares: [0.3, 0.7])
+        #expect(mine.startLayout([.quiz: [quiz]], limit: 3) == nil)
+        let opened = try #require(mine.startLayout([.classNote: [note]], limit: 3))
+        #expect(opened.links == [.place(.grades), note])
+        #expect(opened.focus == 1)
+        #expect(PanePreset.concepts.startLayout([.lecture: [lecture], .quiz: [quiz]], limit: 3)?.links == [lecture, quiz])
+    }
+
     @Test func aFreeNameCountsUp() {
         #expect(PanePreset.freeName("내 배치", taken: []) == "내 배치")
         #expect(PanePreset.freeName("내 배치", taken: ["내 배치", "내 배치 2"]) == "내 배치 3")
