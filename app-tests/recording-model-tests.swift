@@ -426,3 +426,38 @@ struct LectureLoudnessTests {
         #expect(LectureLoudness.level(-10) == 1)
     }
 }
+
+struct MicrophoneTapTests {
+    private let mac = MicrophoneTap.Stream(sampleRate: 48_000, channels: 1)
+    private let airPods = MicrophoneTap.Stream(sampleRate: 24_000, channels: 1)
+
+    @Test func tapsWhenTheNodeRunsAtTheHardwareRate() {
+        #expect(MicrophoneTap.plan(hardware: mac, node: mac) == .tap)
+        #expect(MicrophoneTap.plan(hardware: mac, node: .init(sampleRate: 48_000, channels: 2)) == .tap)
+    }
+
+    /// The crash of 2026-11-11: the hardware was back at 48 kHz while the engine still read the AirPods' 24 kHz.
+    @Test func rebuildsWhenTheNodeHoldsAnotherDevicesRate() {
+        #expect(MicrophoneTap.plan(hardware: mac, node: airPods) == .rebuild)
+        #expect(MicrophoneTap.plan(hardware: airPods, node: mac) == .rebuild)
+        #expect(MicrophoneTap.plan(hardware: mac, node: .init(sampleRate: 0, channels: 0)) == .rebuild)
+        #expect(MicrophoneTap.plan(hardware: mac, node: .init(sampleRate: 48_000, channels: 0)) == .rebuild)
+    }
+
+    @Test func noInputWithoutAMicrophone() {
+        #expect(MicrophoneTap.plan(hardware: .init(sampleRate: 0, channels: 0), node: .init(sampleRate: 0, channels: 0)) == .noInput)
+        #expect(MicrophoneTap.plan(hardware: .init(sampleRate: 48_000, channels: 0), node: mac) == .noInput)
+    }
+
+    @Test func restartsAStoppedOrSilentEngineOnceItHadTimeToStart() {
+        // Running and hearing buffers: leave it.
+        #expect(!MicrophoneTap.restartDue(running: true, sinceHeard: 0.1, sinceRestart: 30))
+        // Stopped by a device change or sleep.
+        #expect(MicrophoneTap.restartDue(running: false, sinceHeard: 0.1, sinceRestart: 30))
+        // Running with a tap that never delivers ("config change pending").
+        #expect(MicrophoneTap.restartDue(running: true, sinceHeard: 2.5, sinceRestart: 2.5))
+        #expect(!MicrophoneTap.restartDue(running: true, sinceHeard: 1.9, sinceRestart: 1.9))
+        // A new engine gets its second to start.
+        #expect(!MicrophoneTap.restartDue(running: false, sinceHeard: 0.5, sinceRestart: 0.5))
+    }
+}

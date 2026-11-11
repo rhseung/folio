@@ -11859,6 +11859,17 @@
         }
       }
     },
+    "recording.error.no-signal": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마이크에서 소리가 들어오지 않아 녹음을 시작하지 못했습니다. 입력 장치를 확인한 뒤 다시 시작해 주세요."
+          }
+        }
+      }
+    },
     "recording.expand": {
       "extractionState": "manual",
       "localizations": {

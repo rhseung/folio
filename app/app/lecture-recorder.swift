@@ -29,7 +29,12 @@ final class LectureRecorder {
     private(set) var locale = Locale(identifier: "ko-KR")
     private(set) var transcriptionNote: String?
 
-    @ObservationIgnored private let engine = AVAudioEngine()
+    /// A new engine for each start, resume and device change: a long-lived one kept the format of the microphone it
+    /// first saw (AirPods at 24 kHz) after the hardware went back to 48 kHz, and tapping it recorded nothing or crashed.
+    @ObservationIgnored private var engine: AVAudioEngine?
+    @ObservationIgnored private var engineObserver: NSObjectProtocol?
+    @ObservationIgnored private var heardBuffers = 0
+    @ObservationIgnored private var lastHeard = Date.distantPast
     @ObservationIgnored private var sink: AudioSink?
     @ObservationIgnored private var analyzer: SpeechAnalyzer?
     @ObservationIgnored private var resultsTask: Task<Void, Never>?
@@ -76,15 +81,6 @@ final class LectureRecorder {
             try AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .spokenAudio, options: [.defaultToSpeaker, .allowBluetoothHFP])
             try AVAudioSession.sharedInstance().setActive(true)
             #endif
-            let input = engine.inputNode.outputFormat(forBus: 0)
-            guard input.sampleRate > 0, let fileFormat = AVAudioFormat(standardFormatWithSampleRate: input.sampleRate, channels: 1) else {
-                throw RecorderError.noMicrophone
-            }
-            let audioFile = try AVAudioFile(forWriting: file, settings: [
-                AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: input.sampleRate, AVNumberOfChannelsKey: 1,
-                AVLinearPCMBitDepthKey: 16, AVLinearPCMIsFloatKey: false,
-            ], commonFormat: .pcmFormatFloat32, interleaved: false)
-
             var transcription: (SpeechTranscriber, AVAudioFormat, Locale)?
             switch await Self.transcriber(for: locale) {
             case .ready(let t, let format, let supported): transcription = (t, format, supported)
@@ -99,16 +95,26 @@ final class LectureRecorder {
                 self.analyzer = analyzer
                 analyzerInput = continuation
             }
-            guard let sink = AudioSink(file: audioFile, input: input, fileFormat: fileFormat, analyzerFormat: transcription?.1, analyzer: analyzerInput) else {
+            // The microphone's format is read only now, after the waits above: the device can change during them,
+            // and a tap in a format read before that raises an Objective-C exception, which ends the app.
+            guard let (engine, input) = Self.tappableEngine(),
+                  let fileFormat = AVAudioFormat(standardFormatWithSampleRate: input.sampleRate, channels: 1) else {
+                analyzerInput?.finish()
                 throw RecorderError.noMicrophone
             }
-            // A second tap on the bus raises an Objective-C exception, which ends the app.
-            engine.inputNode.removeTap(onBus: 0)
-            sink.install(on: engine.inputNode, format: input)
-            engine.prepare()
-            try engine.start()
-
+            let audioFile = try AVAudioFile(forWriting: file, settings: [
+                AVFormatIDKey: kAudioFormatLinearPCM, AVSampleRateKey: input.sampleRate, AVNumberOfChannelsKey: 1,
+                AVLinearPCMBitDepthKey: 16, AVLinearPCMIsFloatKey: false,
+            ], commonFormat: .pcmFormatFloat32, interleaved: false)
+            guard let sink = AudioSink(file: audioFile, input: input, fileFormat: fileFormat, analyzerFormat: transcription?.1, analyzer: analyzerInput) else {
+                analyzerInput?.finish()
+                throw RecorderError.noMicrophone
+            }
             self.sink = sink
+            lastRestart = .now
+            try run(engine, tapping: input, into: sink)
+            try await waitForSignal(sink)
+
             self.locale = transcription?.2 ?? locale
             state = .recording
             #if os(iOS)
@@ -128,9 +134,18 @@ final class LectureRecorder {
                     guard !Task.isCancelled, let self, let sink = self.sink else { return }
                     self.elapsed = sink.seconds
                     self.level = self.state == .recording ? LectureLoudness.level(sink.takeDecibels()) : 0
-                    // A changed microphone (AirPods, a dock), an interruption or sleep stops the engine without telling
-                    // the recording; restart it on the new input.
-                    if self.state == .recording, !self.engine.isRunning, Date.now.timeIntervalSince(self.lastRestart) > 1 {
+                    let buffers = sink.buffers
+                    if buffers != self.heardBuffers {
+                        self.heardBuffers = buffers
+                        self.lastHeard = .now
+                    }
+                    // Backs up the configuration change notice: an interruption or sleep can stop the engine without
+                    // one, and a tap made while a change was pending runs on without a sound.
+                    let now = Date.now
+                    if self.state == .recording, MicrophoneTap.restartDue(
+                        running: self.engine?.isRunning ?? false,
+                        sinceHeard: now.timeIntervalSince(max(self.lastHeard, self.lastRestart)),
+                        sinceRestart: now.timeIntervalSince(self.lastRestart)) {
                         self.restartEngine()
                     }
                 }
@@ -165,27 +180,79 @@ final class LectureRecorder {
         return .ready(transcriber, format, supported)
     }
 
-    private func restartEngine() {
-        guard let sink else { return }
-        lastRestart = .now
-        engine.stop()
-        engine.inputNode.removeTap(onBus: 0)
-        let input = engine.inputNode.outputFormat(forBus: 0)
-        guard input.sampleRate > 0, sink.retarget(input) else { return }  // no microphone right now; tried again shortly
-        sink.install(on: engine.inputNode, format: input)
+    /// An engine whose input node runs at the hardware's rate, so it can be tapped. A fresh engine can still read the
+    /// old rate while a device change is under way; a second one is tried once, and then the caller tries again later.
+    private static func tappableEngine() -> (AVAudioEngine, AVAudioFormat)? {
+        for _ in 0..<2 {
+            let engine = AVAudioEngine()
+            let node = engine.inputNode
+            let format = node.outputFormat(forBus: 0)
+            switch MicrophoneTap.plan(hardware: .init(node.inputFormat(forBus: 0)), node: .init(format)) {
+            case .tap: return (engine, format)
+            case .rebuild: continue
+            case .noInput: return nil
+            }
+        }
+        return nil
+    }
+
+    /// `format` must come from `tappableEngine` just before, with no wait in between.
+    private func run(_ engine: AVAudioEngine, tapping format: AVAudioFormat, into sink: AudioSink) throws {
+        self.engine = engine
+        engineObserver = NotificationCenter.default.addObserver(forName: .AVAudioEngineConfigurationChange, object: engine, queue: .main) { [weak self] _ in
+            MainActor.assumeIsolated { self?.engineChanged() }
+        }
+        sink.install(on: engine.inputNode, format: format)
         engine.prepare()
-        try? engine.start()
+        try engine.start()
+    }
+
+    /// The engine stops itself when the input device or its format changes (AirPods connecting, a dock); the new
+    /// device can run at another rate, so it is tapped on a new engine. A paused recording gets one when it resumes.
+    private func engineChanged() {
+        guard state == .recording || state == .preparing else { return }
+        restartEngine()
+    }
+
+    /// A start can install the tap and run the engine with no sound ever reaching it ("Failed to create tap, config
+    /// change pending!"); a lecture recorded that way stayed silent to the end, so the start fails instead.
+    private func waitForSignal(_ sink: AudioSink) async throws {
+        for attempt in 0..<2 {
+            let deadline = ContinuousClock.now + .seconds(MicrophoneTap.stall)
+            while ContinuousClock.now < deadline {
+                if sink.buffers > 0 { return }
+                try await Task.sleep(for: .milliseconds(50))
+            }
+            if attempt == 0 { restartEngine() }
+        }
+        throw RecorderError.noSignal
+    }
+
+    @discardableResult
+    private func restartEngine() -> Bool {
+        guard let sink else { return false }
+        lastRestart = .now
+        retireEngine()
+        // No microphone right now; the clock tries again shortly.
+        guard let (engine, input) = Self.tappableEngine(), sink.retarget(input) else { return false }
+        do {
+            try run(engine, tapping: input, into: sink)
+            return true
+        } catch {
+            retireEngine()
+            return false
+        }
     }
 
     func pause() {
         guard state == .recording else { return }
-        engine.pause()
+        engine?.pause()
         state = .paused
     }
 
     func resume() throws {
         guard state == .paused else { return }
-        try engine.start()
+        guard restartEngine() else { throw RecorderError.noMicrophone }
         state = .recording
     }
 
@@ -302,8 +369,15 @@ final class LectureRecorder {
         clockTask?.cancel()
         clockTask = nil
         level = 0
-        engine.inputNode.removeTap(onBus: 0)
-        engine.stop()
+        retireEngine()
+    }
+
+    private func retireEngine() {
+        if let engineObserver { NotificationCenter.default.removeObserver(engineObserver) }
+        engineObserver = nil
+        engine?.inputNode.removeTap(onBus: 0)
+        engine?.stop()
+        engine = nil
     }
 
     private func teardown() {
@@ -322,12 +396,13 @@ final class LectureRecorder {
 }
 
 enum RecorderError: LocalizedError {
-    case microphoneDenied, noMicrophone, localeUnsupported
+    case microphoneDenied, noMicrophone, noSignal, localeUnsupported
 
     var errorDescription: String? {
         switch self {
         case .microphoneDenied: String(localized: .recordingErrorMicrophoneDenied)
         case .noMicrophone: String(localized: .recordingErrorNoMicrophone)
+        case .noSignal: String(localized: .recordingErrorNoSignal)
         case .localeUnsupported: String(localized: .recordingErrorLocaleUnsupported)
         }
     }
@@ -366,6 +441,7 @@ private final class AudioSink: @unchecked Sendable {
     private let analyzerFormat: AVAudioFormat?
     private let analyzer: AsyncStream<AnalyzerInput>.Continuation?
     private var frames: AVAudioFramePosition = 0
+    private var received = 0
     private var energy: Float = 0
     private var energyFrames = 0
 
@@ -391,6 +467,8 @@ private final class AudioSink: @unchecked Sendable {
     }
 
     var seconds: TimeInterval { lock.withLock { Double(frames) / fileFormat.sampleRate } }
+    /// Buffers the tap has delivered; counted even when converting fails, so it tells a dead tap from a bad converter.
+    var buffers: Int { lock.withLock { received } }
     /// The mean loudness since the last call, in dB: the clock asks every 200 ms, and the last 85 ms buffer alone swung
     /// with each syllable.
     func takeDecibels() -> Float {
@@ -406,6 +484,7 @@ private final class AudioSink: @unchecked Sendable {
 
     func consume(_ buffer: AVAudioPCMBuffer) {
         lock.withLock {
+            received += 1
             guard let file else { return }
             if let mono = Self.convert(buffer, with: toFile, to: fileFormat) {
                 try? file.write(from: mono)
@@ -446,6 +525,41 @@ private final class AudioSink: @unchecked Sendable {
         var sum: Float = 0
         for i in 0..<Int(buffer.frameLength) { sum += data[i] * data[i] }
         return sum
+    }
+}
+
+/// Whether the microphone can be tapped, and when a running recording needs a new engine. The input node can't convert
+/// sample rates: tapping it while it still reads another rate than the hardware either records nothing ("config change
+/// pending") or raises an Objective-C exception (`installTapOnBus` "Format mismatch: input hw 48000 Hz, client 24000 Hz"),
+/// which Swift can't catch and which ends the app.
+enum MicrophoneTap {
+    struct Stream: Equatable {
+        var sampleRate: Double
+        var channels: UInt32
+    }
+
+    enum Plan: Equatable { case tap, rebuild, noInput }
+
+    /// How long a running engine may go without a buffer before it is rebuilt; the tap delivers one every ~85 ms,
+    /// silence included.
+    static let stall: TimeInterval = 2
+    /// Time a new engine gets to start before it is judged.
+    static let settle: TimeInterval = 1
+
+    static func plan(hardware: Stream, node: Stream) -> Plan {
+        guard hardware.sampleRate > 0, hardware.channels > 0 else { return .noInput }
+        return node.sampleRate == hardware.sampleRate && node.channels > 0 ? .tap : .rebuild
+    }
+
+    /// `sinceHeard` counts from the last buffer or the last restart, whichever is later.
+    static func restartDue(running: Bool, sinceHeard: TimeInterval, sinceRestart: TimeInterval) -> Bool {
+        sinceRestart > settle && (!running || sinceHeard > stall)
+    }
+}
+
+extension MicrophoneTap.Stream {
+    init(_ format: AVAudioFormat) {
+        self.init(sampleRate: format.sampleRate, channels: format.channelCount)
     }
 }
 
