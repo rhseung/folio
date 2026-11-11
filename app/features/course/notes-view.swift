@@ -50,12 +50,6 @@ struct NoteList: View {
                 selection = id
             }
         }
-        .sheet(isPresented: Binding(get: { model.renaming != nil }, set: { if !$0 { model.renaming = nil } })) {
-            if let note = model.renaming { NoteRenameSheet(workspace: model.workspace, course: model.course, note: note, moves: model.moves) }
-        }
-        .sheet(isPresented: Binding(get: { model.newFolder != nil }, set: { if !$0 { model.newFolder = nil } })) {
-            if let note = model.newFolder { NoteFolderSheet(workspace: model.workspace, course: model.course, note: note, moves: model.moves) }
-        }
         .confirming($model.pending)
         // Notes made elsewhere (the Claude panel, a session's rough note) and links changed in the editor show up here too.
         .onChange(of: model.workspace.notesRevision) { model.reload() }
@@ -86,21 +80,9 @@ struct NoteList: View {
         .buttonStyle(.pointing(.plain))
         .help(note.title)
         .contextMenu {
-            Button(.notesOpen) { open(note) }
-            if let id = note.meta.id { LinkMenu(link: AppLink(.note, id), course: model.course.id, trailing: true) }
-            Divider()
-            Button(.notesRenameEllipsis) { model.renaming = note }
-            // Shown with no folder yet too: a new folder is where the first one comes from.
-            Menu(String(localized: .notesMoveTo)) {
-                let targets = model.moveTargets(note)
-                ForEach(targets, id: \.self) { folder in Button(model.folderLabel(folder)) { model.move(note, into: folder) } }
-                if !targets.isEmpty { Divider() }
-                Button(.notesFolderNewEllipsis) { model.newFolder = note }
-            }
-            Divider()
-            Button(.notesDeleteEllipsis, systemImage: "trash", role: .destructive) {
-                model.delete(note) { if note.meta.id != nil && note.meta.id == selection { selection = nil } }
-            }
+            NoteMenu(courseId: model.course.id, note: note, host: .list, moves: model.moves, open: { open(note) }, removed: {
+                if note.meta.id != nil && note.meta.id == selection { selection = nil }
+            })
         }
     }
 
@@ -216,6 +198,7 @@ struct NoteEditor: View {
                     .help(Text(.notesGuideTitle))
                 }
                 outlineButton
+                PageMenuButton(inBar: true) { NoteMenu(courseId: model.course.id, note: model.note, host: .own, moves: moves, save: model.saveIfDirty) }
             }
             if writing && showsAssets {
                 AssetTray(model: model)
@@ -262,7 +245,7 @@ struct NoteEditor: View {
             model.saveIfDirty()
             renaming = true
         })
-        .sheet(isPresented: $renaming) { NoteRenameSheet(workspace: model.workspace, course: model.course, note: model.note, moves: moves) }
+        .sheet(isPresented: $renaming) { NoteEditSheet(workspace: model.workspace, course: model.course, note: model.note, moves: moves) }
         .onAppear(perform: model.load)
         .rememberingPanes($panes, id: model.note.meta.id)
         // Saved a moment after typing stops, and whenever the note goes away: switching notes or courses, closing the

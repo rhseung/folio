@@ -1,4 +1,5 @@
 import FolioDomain
+import FolioStorage
 import SwiftUI
 
 /// A sheet an item menu opens. Shown by the window rather than the row that asked, so every place that shows an item
@@ -12,14 +13,27 @@ enum ItemSheet: Identifiable {
     case card(course: UUID, draft: CardDraft)
     /// Cards made by Claude for a unit.
     case generateCards(course: UUID, unit: UUID)
+    case note(NoteSheetRequest)
+    /// 옮기기 ▸ 새 폴더….
+    case noteFolder(NoteSheetRequest)
 
     var id: UUID {
         switch self {
         case .session(let request): request.id
         case .exam(_, let id), .assignment(_, let id), .review(_, let id), .generateCards(_, let id): id
         case .card(_, let draft): draft.id
+        case .note(let request), .noteFolder(let request): request.id
         }
     }
+}
+
+/// A note by its file: one moved in from an old folder has no ID until it is opened. `moves` is the notes section's
+/// undo, which a rename from its list or its open note lands in.
+struct NoteSheetRequest {
+    let id = UUID()
+    let course: UUID
+    let note: NoteFile
+    var moves: MoveUndo?
 }
 
 /// Files picked to go into a course folder, as dropping them there does.
@@ -99,6 +113,14 @@ struct ItemSheets: ViewModifier {
                 case .generateCards(let course, let unit):
                     if let course = workspace.course(course), let unit = course.file.units.first(where: { $0.id == unit }) {
                         GenerateCardsSheet(workspace: workspace, course: course, unit: unit) {}
+                    }
+                case .note(let request):
+                    if let course = workspace.course(request.course) {
+                        NoteEditSheet(workspace: workspace, course: course, note: request.note, moves: request.moves)
+                    }
+                case .noteFolder(let request):
+                    if let course = workspace.course(request.course) {
+                        NoteFolderSheet(workspace: workspace, course: course, note: request.note, moves: request.moves)
                     }
                 }
             }

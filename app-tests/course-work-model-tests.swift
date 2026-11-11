@@ -354,10 +354,16 @@ struct NotesModelTests {
 
         model.filter = nil
         #expect(model.parts.map(\.title) == ["수업 노트", "단원 노트"])
+        // Deleting is the note menu's, which asks the window first.
         var closed = false
-        model.delete(model.shown.first { $0.meta.id == id }!) { closed = true }
+        var asked: PendingAction?
+        let menu = NoteMenuSource(workspace: workspace, courseId: course.id, note: model.shown.first { $0.meta.id == id }!, host: .list,
+                                  removed: { closed = true }, openLink: OpenLinkAction(), sheets: ItemSheetsAction(confirm: { asked = $0 }))
+        let remove = try #require(menu.commands.map(menu.row).first { $0.group == .remove })
+        if case .action(let action) = remove.kind { action() }
         #expect(!closed && model.parts.map(\.title) == ["수업 노트", "단원 노트"])
-        try #require(model.pending).perform()
+        try #require(asked).perform()
+        model.reload()
         #expect(closed && model.parts.map(\.title) == ["수업 노트"])
     }
 
@@ -368,16 +374,16 @@ struct NotesModelTests {
         let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
         try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "고윳값")))
         let note = try #require(try course.store.note(id: id))
-        let sheet = NoteRenameModel(workspace: workspace, course: course, note: note)
+        let sheet = NoteEditModel(workspace: workspace, course: course, note: note)
         #expect(!sheet.canSave)
         sheet.name = "  "
         #expect(!sheet.canSave && sheet.message == "새 이름을 적습니다.")
         sheet.name = "고윳값"
-        #expect(sheet.target == "고윳값 2.md" && sheet.message.hasPrefix("Notes/고윳값 2.md(으)로 바꿉니다."))
+        #expect(sheet.target == "고윳값 2.md" && sheet.message?.hasPrefix("Notes/고윳값 2.md(으)로 바꿉니다.") == true)
         sheet.name = "a/b"
         #expect(sheet.target == "a-b.md")
         let revision = workspace.notesRevision
-        #expect(sheet.rename())
+        #expect(sheet.save())
         #expect(workspace.notesRevision > revision)
         let notes = NotesModel(workspace: workspace, course: course)
         #expect(notes.note(id)?.title == "a-b")
@@ -392,11 +398,11 @@ struct NotesModelTests {
         try FileManager.default.createDirectory(at: output, withIntermediateDirectories: true)
         try Data("%PDF".utf8).write(to: output.appending(path: "built.pdf"))
         try #require(workspace.run(NoteBuild(course: linearAlgebra, note: "Notes/증명.tex", pdf: output.appending(path: "built.pdf").path)))
-        let sheet = NoteRenameModel(workspace: workspace, course: course, note: note)
+        let sheet = NoteEditModel(workspace: workspace, course: course, note: note)
         #expect(sheet.pdfName == nil)
         sheet.name = "귀류법"
         #expect(sheet.pdfName == "Study/귀류법.pdf" && sheet.pdfDetail == "Folio가 빌드한 Study/증명.pdf도 이름을 따라 바꿉니다")
-        #expect(sheet.rename())
+        #expect(sheet.save())
         #expect(FileManager.default.fileExists(atPath: course.store.fileURL("Study/귀류법.pdf").path))
     }
 
@@ -405,16 +411,33 @@ struct NotesModelTests {
         let (workspace, course) = try fixtureCourse()
         let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
         try FileManager.default.createDirectory(at: course.store.url.appending(path: "Notes/정리"), withIntermediateDirectories: true)
-        let model = NoteListModel(workspace: workspace, course: course)
-        model.reload()
-        let note = try #require(model.notes.first { $0.meta.id == id })
-        #expect(model.moveTargets(note) == ["정리"] && model.folderLabel("정리") == "Notes/정리" && model.folderLabel("") == "Notes")
-        model.move(note, into: "정리")
-        let pending = try #require(model.pending)
+        let note = try #require(try course.store.note(id: id))
+        #expect(NoteListModel.moveTargets(note, in: course.store) == ["정리"])
+        #expect(NoteListModel.folderLabel("정리") == "Notes/정리" && NoteListModel.folderLabel("") == "Notes")
+        let moves = MoveUndo()
+        let pending = try #require(NoteListModel.askMove(note, into: "정리", course: course, workspace: workspace) { moves.keep($0) })
         #expect(pending.question.contains("Notes/정리/행렬식.md"))
         pending.perform()
-        let moved = try #require(model.notes.first { $0.meta.id == id })
-        #expect(course.store.coursePath(of: moved.url) == "Notes/정리/행렬식.md" && model.moveTargets(moved) == [""])
+        let moved = try #require(try course.store.note(id: id))
+        #expect(course.store.coursePath(of: moved.url) == "Notes/정리/행렬식.md" && NoteListModel.moveTargets(moved, in: course.store) == [""])
+        #expect(moves.batch != nil)
+    }
+
+    /// The note's one sheet moves it to another folder and changes its math syntax in one save.
+    @Test func theNoteSheetMovesAndSetsTheSyntax() throws {
+        let (workspace, course) = try fixtureCourse()
+        let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
+        try FileManager.default.createDirectory(at: course.store.url.appending(path: "Notes/정리"), withIntermediateDirectories: true)
+        let sheet = NoteEditModel(workspace: workspace, course: course, note: try #require(try course.store.note(id: id)))
+        #expect(sheet.folders.contains("정리") && sheet.choosesMath && !sheet.canSave)
+        sheet.math = sheet.math == .latex ? .asciimath : .latex
+        let math = sheet.math
+        #expect(sheet.canSave && sheet.message == nil)
+        sheet.folder = "정리"
+        #expect(sheet.target == "정리/행렬식.md")
+        #expect(sheet.save())
+        let note = try #require(try workspace.course(course.id)?.store.note(id: id))
+        #expect(course.store.coursePath(of: note.url) == "Notes/정리/행렬식.md" && note.meta.math == math)
     }
 
     /// With no folder in Notes/ yet, a note still moves into a new one; the sheet names the folder it makes and refuses
@@ -449,9 +472,9 @@ struct NotesModelTests {
         let moves = MoveUndo()
         let list = NoteListModel(workspace: workspace, course: course, moves: moves)
         list.reload()
-        let sheet = NoteRenameModel(workspace: workspace, course: course, note: try #require(try course.store.note(id: id)), moves: moves)
+        let sheet = NoteEditModel(workspace: workspace, course: course, note: try #require(try course.store.note(id: id)), moves: moves)
         sheet.name = "고윳값"
-        #expect(moves.batch == nil && sheet.rename() && moves.batch != nil)
+        #expect(moves.batch == nil && sheet.save() && moves.batch != nil)
 
         list.undoMove()
         let pending = try #require(list.pending)

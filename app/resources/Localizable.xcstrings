@@ -7217,6 +7217,28 @@
         }
       }
     },
+    "notes.edit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 편집"
+          }
+        }
+      }
+    },
+    "notes.edit-folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더"
+          }
+        }
+      }
+    },
     "notes.guide.math-symbols": {
       "extractionState": "manual",
       "localizations": {
@@ -7866,17 +7888,6 @@
         }
       }
     },
-    "notes.delete-ellipsis": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트 삭제…"
-          }
-        }
-      }
-    },
     "notes.embed-loop": {
       "extractionState": "manual",
       "localizations": {
@@ -8515,17 +8526,6 @@
         }
       }
     },
-    "notes.open": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "열기"
-          }
-        }
-      }
-    },
     "notes.outline.hide": {
       "extractionState": "manual",
       "localizations": {
@@ -8599,39 +8599,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "단원 노트"
-          }
-        }
-      }
-    },
-    "notes.rename": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트 이름 바꾸기"
-          }
-        }
-      }
-    },
-    "notes.rename-confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "바꾸기"
-          }
-        }
-      }
-    },
-    "notes.rename-ellipsis": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이름 바꾸기…"
           }
         }
       }
