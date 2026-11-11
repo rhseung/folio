@@ -36,7 +36,8 @@ struct PageStripModelTests {
         workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: pages.lowerBound, lastPage: pages.upperBound))
     }
     /// What the column shows, top to bottom: `h` a header (`H` open), `e` the edit row, `d` the draft row, then the
-    /// page, `|` for a page beside its section's line and `*` for one picked.
+    /// page, `|` for a page beside its section's line and `*` for one picked, then ` /d` and its range for a draft row
+    /// under the page.
     func column(_ model: PageStripModel) -> [String] {
         model.items.map { item in
             let lead: String = switch item.lead {
@@ -50,7 +51,8 @@ struct PageStripModelTests {
             case .line: "|"
             case .picked: "*"
             }
-            return lead + (item.page.map { " \($0)\(mark)" } ?? "")
+            let trail: String = if case .draft(let pages)? = item.trail { " /d" + Session.pagesLabel(pages) } else { "" }
+            return lead + (item.page.map { " \($0)\(mark)" } ?? "") + trail
         }
     }
 
@@ -118,6 +120,42 @@ struct PageStripModelTests {
         let fresh = self.model()
         fresh.extend(to: 6)
         #expect(fresh.selection == 6...6)
+    }
+
+    /// The draft row stands at the end the range was picked out to: under it picked downward, over it picked upward
+    /// or with one page alone, and the column scrolls to the item that holds it.
+    @Test func theDraftRowFollowsThePickedEnd() {
+        let model = model()
+        model.press(4)
+        model.extend(to: 9)
+        #expect(model.selection == 4...9 && model.draftBelow && model.draftItemID == .page(9))
+        let down = column(model)
+        #expect(down[3] == " 4*" && down[8] == " 9* /d4–9쪽" && down[9] == " 10")
+        // ⇧ back above the anchor turns it round: the row goes over the range, by its first page.
+        model.extend(to: 2)
+        #expect(model.selection == 2...4 && !model.draftBelow && model.draftItemID == .page(2))
+        let up = column(model)
+        #expect(up[1] == "d2–4쪽 2*" && up[3] == " 4*")
+        // One page alone keeps the row over it.
+        model.extend(to: 4)
+        #expect(model.selection == 4...4 && !model.draftBelow && column(model)[3] == "d4쪽 4*")
+        // iPad: a long press then a tap further down does the same.
+        model.start(at: 12)
+        #expect(!model.draftBelow && model.draftItemID == .page(12))
+        model.extend(to: 15)
+        #expect(model.draftBelow && column(model)[14] == " 15* /d12–15쪽")
+        model.clear()
+        #expect(model.draftItemID == nil)
+    }
+
+    /// A class's range being changed keeps its row in the header's place, whichever way it is widened.
+    @Test func theEditRowStaysInTheHeadersPlace() {
+        link(session, 9...12)
+        let model = model()
+        model.edit(model.sections[0])
+        model.extend(to: 14)
+        #expect(!model.draftBelow && model.draftItemID == nil)
+        #expect(column(model)[8] == "e9–14쪽 9*" && !column(model).contains { $0.contains("/d") })
     }
 
     /// A range stops at another class's pages, and a press on one of them starts nothing.

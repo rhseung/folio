@@ -115,7 +115,22 @@ final class PageStripModel {
         if let editing, let selection, let i = shown.firstIndex(where: { $0.id == editing }) {
             shown[i] = Section(id: editing, pages: selection, title: shown[i].title)
         }
-        return Item.column(pageCount: pageCount, sections: shown, editing: editing, draft: editing == nil ? selection : nil, isOpen: isOpen)
+        return Item.column(pageCount: pageCount, sections: shown, editing: editing, draft: editing == nil ? selection : nil,
+                           draftBelow: draftBelow, isOpen: isOpen)
+    }
+
+    /// A new range's row stands at the end it was picked out to, so it is saved where ⇧ (or the next tap) ended it:
+    /// under the range when picked downward from the anchor. Picked upward, or one page alone, it stays over it. A
+    /// class's range being changed keeps its row in the header's place.
+    var draftBelow: Bool {
+        guard editing == nil, let selection, let anchor else { return false }
+        return selection.lowerBound == anchor && selection.upperBound > anchor
+    }
+
+    /// The page whose item holds a new range's row, for the column to keep it in sight as it moves end to end.
+    var draftItemID: ItemID? {
+        guard editing == nil, let selection else { return nil }
+        return .page(draftBelow ? selection.upperBound : selection.lowerBound)
     }
 
     /// Where the column scrolls for the PDF's page: the page, or the header of the folded section holding it.
