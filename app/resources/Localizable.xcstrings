@@ -6942,6 +6942,17 @@
         }
       }
     },
+    "menu.counts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "반영"
+          }
+        }
+      }
+    },
     "menu.done": {
       "extractionState": "manual",
       "localizations": {
@@ -10436,6 +10447,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "문제 %lld개"
+          }
+        }
+      }
+    },
+    "quiz.problems.record": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "풀이 기록"
           }
         }
       }

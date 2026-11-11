@@ -51,12 +51,7 @@ struct QuizCardsView: View {
                 .linkTarget(card.id)
                 .opens { model.editing = CardDraft(card) }
                 .help(Text(.quizCardEdit))
-                .contextMenu {
-                    Button(.commonEdit) { model.editing = CardDraft(card) }
-                    LinkMenu(link: AppLink(.card, card.id), course: course.id, trailing: true)
-                    Divider()
-                    Button(.commonDeleteEllipsis, role: .destructive) { model.remove(card, in: course) }
-                }
+                .contextMenu { CardMenu(courseId: course.id, card: card) }
             }
         }
     }
