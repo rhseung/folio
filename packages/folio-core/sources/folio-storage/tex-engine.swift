@@ -99,13 +99,19 @@ public struct TexEngine: Sendable {
         return SyncTeX(text: String(decoding: data, as: UTF8.self))
     }
 
+    public static func outputFolder(for source: URL) -> URL { TexOutput.folder(for: source) }
+}
+#endif
+
+/// Where a build of a `.tex` leaves its PDF, on the Mac (Tectonic) and the iPad (the web engine) alike. The build
+/// actions take a PDF only from here, so a file passed in can't put itself over a course PDF.
+public enum TexOutput {
     /// One folder per source, reused by every build of it, so builds don't pile up in the temporary folder.
-    public static func outputFolder(for source: URL) -> URL {
+    public static func folder(for source: URL) -> URL {
         let key = SHA256.hash(data: Data(source.standardizedFileURL.path.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
         return FileManager.default.temporaryDirectory.appending(path: "folio-tex").appending(path: key)
     }
 }
-#endif
 
 /// Tectonic writes SyncTeX data gzipped. Foundation inflates only a bare DEFLATE stream, so the gzip header and
 /// trailer (RFC 1952) are stepped over here instead of adding a package for them.

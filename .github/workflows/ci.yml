@@ -200,6 +200,15 @@ jobs:
         run: |
           rm -rf .build/DerivedData/Build/Products/*/*.app .build/DerivedData/Build/Products/*/*.xctest .build/DerivedData/Build/Products/*/*.bundle
           defaults write com.apple.dt.SWBBuildService IgnoreFileSystemDeviceInodeChanges -bool YES
+      # The iPad's TeX engine as `mise run tex-engine` unpacks it from a 220 MB download checked by its pinned hash; it
+      # changes only with the pin or that step, whose stamp (pin) lets it skip the download.
+      - if: env.RUN == 'true' && (matrix.task == 'build-ipad' || matrix.task == 'test-ipad')
+        uses: actions/cache@v6
+        with:
+          path: |
+            .build/tex-engine/TexEngine
+            .build/tex-engine/pin
+          key: tex-engine-${{ hashFiles('app/resources/tex-engine.json', 'scripts/tex-engine.sh') }}
       - if: env.RUN == 'true'
         uses: jdx/mise-action@v5
       - if: env.RUN == 'true'

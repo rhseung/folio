@@ -16,7 +16,7 @@
 - Swift 6 언어 모드를 쓰고 strict concurrency 검사를 켠다.
 - UI는 SwiftUI로 만든다. AppKit과 UIKit은 SwiftUI로 할 수 없는 부분에만 쓴다. 예를 들어 PencilKit 캔버스와 PDFKit 뷰가 여기에 해당한다.
 - 직접 구현보다 잘 관리되는 라이브러리를 먼저 쓴다. 표준 라이브러리와 Apple 프레임워크로 되지 않는 일이면, 직접 짜기 전에 널리 쓰이고 유지되는 Swift 패키지가 있는지 찾는다. 라이브러리가 데이터 원칙을 어기는 경우(예: 노트 frontmatter의 원문을 보존하지 못하는 YAML 파서)에만 직접 구현하고, 그 이유를 코드 주석에 남긴다.
-- 외부 의존성은 Swift Package Manager로만 추가한다. 새 의존성은 넣은 뒤 사용자에게 무엇을 왜 넣었는지 알리고, 커밋 메시지에도 남긴다. 예외는 수식 변환과 코드 하이라이팅, 노트 미리보기와 Claude 패널에 쓰는 웹 번들(`web/`)로, npm 패키지를 정확한 버전으로 고정하고 `mise run build-web`으로 `app/resources/web/`에 묶는다. 묶은 결과는 커밋해서 앱 빌드에 node가 필요 없게 한다.
+- 외부 의존성은 Swift Package Manager로만 추가한다. 새 의존성은 넣은 뒤 사용자에게 무엇을 왜 넣었는지 알리고, 커밋 메시지에도 남긴다. 예외는 수식 변환과 코드 하이라이팅, 노트 미리보기와 Claude 패널, iPad의 TeX 빌드에 쓰는 웹 번들(`web/`)로, npm 패키지를 정확한 버전으로 고정하고 `mise run build-web`으로 `app/resources/web/`에 묶는다. 묶은 결과는 커밋해서 앱 빌드에 node가 필요 없게 한다. iPad의 TeX 엔진(Siglum의 BusyTeX, TeX Live를 WebAssembly로 옮긴 것)은 코드라 앱에 넣고 앱이 내려받지 않는다(App Store 2.5.2). 엔진 파일은 커밋하지 않고 `mise run tex-engine`이 `app/resources/tex-engine.json`에 고정한 버전을 sha256으로 확인해 `.build/tex-engine`에 받으며, iPad 빌드만 이것을 묶는다. 엔진에 없는 TeX Live 패키지는 데이터라 앱이 CTAN 미러에서 받아 Caches에 둔다(xz가 아닌 답은 버린다).
 
 ## 프로젝트 구조
 
@@ -33,7 +33,7 @@ folio/
     folio-ai/         # Claude 연동 계층. 프로바이더 추상화, 맥락 구성, 작업별 요청과 응답 스키마
   app/                # 멀티플랫폼 앱 타깃(macOS, iPadOS)
   app-tests/          # 화면 모델 테스트와 노트 보기 회귀 검사(`mise run test-app`), iPad 테스트는 ipad/(`mise run test-ipad`)
-  web/                # 노트 미리보기와 Claude 패널의 페이지(KaTeX 수식, 코드 하이라이팅, mermaid 그림, 노트 CSS, 미리보기의 그림 크게 보기), 편집 보기가 JavaScriptCore로 부르는 코드 하이라이팅. 편집 보기의 수식 말풍선과 자동 완성 미리보기도 미리보기와 같은 KaTeX와 노트 CSS로, 숨은 페이지에서 그린다(`NoteMath`). 번들은 app/resources/web
+  web/                # 노트 미리보기와 Claude 패널의 페이지(KaTeX 수식, 코드 하이라이팅, mermaid 그림, 노트 CSS, 미리보기의 그림 크게 보기), 편집 보기가 JavaScriptCore로 부르는 코드 하이라이팅, iPad의 TeX 빌드(`tex-engine.js`, 고친 Siglum worker `tex-worker.js`). 편집 보기의 수식 말풍선과 자동 완성 미리보기도 미리보기와 같은 KaTeX와 노트 CSS로, 숨은 페이지에서 그린다(`NoteMath`). 번들은 app/resources/web
 ```
 
 - `FolioCore`는 SwiftUI를 import하지 않는다.
@@ -258,6 +258,7 @@ Me/GIST/
 - iPad 테스트: `mise run test-ipad`. 첫 번째 iPad 시뮬레이터에서 `FolioPad` 스킴으로 앱을 호스트 삼아 `app-tests/ipad/`를 돌린다. 이 파일들은 `#if os(iOS)`로 감싸서 Mac의 `FolioTests`에서는 비어 있다
 - 화면 밖 렌더: `mise run render`. `FolioFixtures`의 상황마다 모든 페이지(오늘, 학기, 과목의 각 탭과 다시 듣기, 성적, 졸업 요건, 사람, 코드, 설정의 각 탭)와 시트(입력 폼, 검색)를 라이트·다크 PNG로 `FOLIO_RENDER_DIR`(기본 `.build/renders`)의 `<상황>/`에 쓴다. 폭과 높이는 `FOLIO_RENDER_SIZES=1180,720,1440x900`(높이를 빼면 페이지 끝까지), 고르기는 `FOLIO_RENDER_SCREENS=today,course-`(이름 앞부분)와 `FOLIO_RENDER_SCENARIOS=busyDay`. 창이 뜨지 않고 실제 GIST 폴더와 시계를 쓰지 않는다. 리퀴드 글라스, 노트 보기와 `WKWebView`, 뷰 안에서 여는 시트, 창 틀은 그리지 못하니 `FOLIO_SNAPSHOT_DIR` 창 스냅숏(`docs/DESIGN.md` 마지막 절)으로 본다
 - 가짜 GIST 폴더: `mise run fixture -- <폴더> [standard|legacy|<상황>]`. 상황(`busyDay` 등)은 `Scenario`로 회차와 마감이 채워진 폴더다. 다른 `.pdf`는 열리지 않는 자리표시자지만, `busyDay`와 `manyExams`의 그래프 이론 렉처(`05_Matchings.pdf`)는 단원으로 나눈 24쪽 PDF(`SampleLecture`)다. 이미 있는 폴더에는 쓰지 않는다
+- iPad TeX 엔진: `mise run tex-engine`(`build-ipad`, `test-ipad`가 먼저 돌린다). 엔진 종류(`engine`, 지금 pdfLaTeX. Siglum 0.2.2의 XeLaTeX는 글꼴 초기화에서 멈춘다), 런타임과 패키지 목록(TeX Live 스냅숏)의 주소와 sha256, 패키지를 받을 미러, 빼는 번들은 `app/resources/tex-engine.json` 한 곳에 있다. iPad 빌드는 오류에서 멈추지 않고(`--halt-on-error`를 뺀다) kotex의 한글 글꼴을 받도록 Siglum을 고친다(`web/build.mjs`, 정확히 맞지 않으면 번들이 실패한다). 서문으로 만든 서식과 페이지 쪽 패키지 캐시는 쓰지 않고, xz 묶음은 한 번에 하나씩 풀며, 파일이 든 패키지는 앱의 파일 표(`/api/package-of`)로 찾아 한 번만 받고, 빌드마다 컴파일러를 새로 만든다(`web/src/tex-engine.js`). 모두 두 번째 한글 빌드가 실패하던 원인이다. 빌드가 실패하면 Mac과 엔진이 다르다는 안내와 fontspec 문서는 Mac에서 빌드하라는 안내를 오류 아래에 둔다(`TexWebNotice`)
 - 웹 번들: `mise run build-web`. `web/src/`를 고친 뒤 실행한다. 노트 미리보기와 Claude 패널의 색은 `theme.swift`의 값을, 크기와 간격은 `app/design/note-look.swift`의 값을 `NoteStyle`이 CSS 변수로 넘기므로 CSS에 색과 크기를 적지 않는다
 - 노트 보기 렌더: `TEST_RUNNER_FOLIO_NOTE_RENDER=<폴더>`를 주고 `NoteSourceTests`를 돌리면 `app-tests/fixtures/all-markdown.md`(모든 문법을 쓴 노트)를 편집 보기로 그린 PNG가 그 폴더에 남는다. 미리보기 그림은 `NoteScreenTests`가 `FOLIO_NOTE_SCREENS`에 남긴다
 - macOS 빌드: `mise run build-mac`. 모든 `xcodebuild` 작업은 `~/Library`의 DerivedData 대신 체크아웃 안의 `.build/DerivedData`(`FOLIO_DERIVED_DATA`)에 빌드한다. 워크트리마다 몇 GB씩 남지 않고 워크트리를 지우면 함께 지워진다. 디버그 앱은 `.build/DerivedData/Build/Products/Debug/Folio.app`이다. `FolioMacros`는 로컬 패키지라 Xcode가 매크로 신뢰를 묻지 않는다. mise 작업의 `-skipMacroValidation`은 명령줄 빌드가 멈추지 않게 하는 안전장치다

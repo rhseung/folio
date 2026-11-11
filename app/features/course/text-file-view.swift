@@ -39,7 +39,7 @@ struct TextFileView: View {
     var body: some View {
         VStack(spacing: 0) {
             bar
-            // iPadOS can't run Tectonic, so it gets no build button and no advice to install it.
+            // The iPad's engine ships with the app, so there is nothing to install.
             #if os(macOS)
             if model.isTex, model.engineMissing { installHint }
             #endif
@@ -139,20 +139,30 @@ struct TextFileView: View {
                 #if os(macOS)
                 Text(model.engineMissing ? .textFileNoPdfEngine : model.errors.isEmpty ? .textFileNoPdfBuild : .textFileNoPdfErrors)
                 #else
-                Text(.textFileNoPdfMac)
+                // An iPad build made without the engine (`mise run tex-engine`) can still show the Mac's PDF.
+                Text(model.engineMissing ? .textFileNoPdfMac : model.errors.isEmpty ? .textFileNoPdfBuildPad : .textFileNoPdfErrors)
                 #endif
             } actions: {
-                #if os(macOS)
-                Button(.textFileBuild) { Task { await model.build() } }
-                    .buttonStyle(.prominent)
-                    .disabled(!model.canBuild)
-                #endif
+                if !model.engineMissing || isMac {
+                    Button(.textFileBuild) { Task { await model.build() } }
+                        .buttonStyle(.prominent)
+                        .disabled(!model.canBuild)
+                }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
     var shown: NotePanes.Mode { panes.shown(wide: wide) }
+
+    /// The Mac keeps its build button without Tectonic, beside the hint to install it; the iPad has nothing to install.
+    private var isMac: Bool {
+        #if os(macOS)
+        true
+        #else
+        false
+        #endif
+    }
 
     /// A link to a page of this `.tex` is a page of its PDF, so the PDF comes into view if the source alone was.
     func showPDF() {
@@ -162,8 +172,7 @@ struct TextFileView: View {
     var bar: some View {
         PageBar {
             if model.isTex { NotePanesPicker(panes: $panes, wide: wide) }
-            #if os(macOS)
-            if model.isTex {
+            if model.isTex, !model.engineMissing || isMac {
                 Button(.textFileBuild, systemImage: "hammer") { Task { await model.build() } }
                     .help(Text(.textFileBuildHelp))
                     .keyboardShortcut("b")
@@ -174,7 +183,6 @@ struct TextFileView: View {
                     Text(.textFileErrorCount(model.errors.count)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.danger)
                 }
             }
-            #endif
         } trailing: {
             if let links { NoteLinkMenu(model: links) }
             #if os(macOS)
@@ -201,6 +209,15 @@ struct TextFileView: View {
             Theme.Palette.lineSoft.frame(height: 1)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
+                    ForEach(model.noticeLines, id: \.self) { line in
+                        HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
+                            Image(systemName: "info.circle").foregroundStyle(Theme.Palette.textSecondary)
+                            Text(line).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, Theme.Space.l)
+                        .padding(.vertical, Theme.Space.xs)
+                    }
                     ForEach(Array(model.shownIssues.enumerated()), id: \.offset) { _, issue in
                         Button { model.jump(to: issue) } label: {
                             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {

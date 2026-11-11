@@ -89,7 +89,7 @@ public enum TexLog {
     }
 }
 
-private extension Array where Element == TexIssue {
+extension Array where Element == TexIssue {
     func uniqued() -> [TexIssue] {
         var seen: [TexIssue] = []
         for issue in self where !seen.contains(issue) { seen.append(issue) }

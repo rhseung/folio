@@ -18998,6 +18998,50 @@
         }
       }
     },
+    "text-file.engine-unavailable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "TeX 엔진 없음"
+          }
+        }
+      }
+    },
+    "text-file.no-pdf-build-pad": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "빌드하면 여기에 PDF가 보입니다."
+          }
+        }
+      }
+    },
+    "text-file.notice-other-engine": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "iPad 빌드는 %@: Mac(XeLaTeX)과 줄바꿈과 글꼴이 다를 수 있음"
+          }
+        }
+      }
+    },
+    "text-file.notice-needs-xetex": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "fontspec 문서: iPad 빌드 불가, Mac에서 빌드"
+          }
+        }
+      }
+    },
     "text-file.unreadable": {
       "extractionState": "manual",
       "localizations": {

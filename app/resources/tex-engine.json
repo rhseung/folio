@@ -1,0 +1,18 @@
+{
+  "engine": "pdflatex",
+  "runtime": {
+    "version": "0.2.2",
+    "url": "https://github.com/SiglumProject/siglum/releases/download/v0.2.2/siglum-runtime-v0.2.2.tar.gz",
+    "sha256": "7d09309610344e7b89570aa22192505b4064bc3bc629e5a9c3a7952d919224b6"
+  },
+  "texlive": {
+    "archive": "https://mirror.ctan.org/systems/texlive/tlnet/archive/",
+    "tlpdb": "https://texlive.info/tlnet-archive/2026/06/05/tlnet/tlpkg/texlive.tlpdb.xz",
+    "tlpdbSha256": "5b59f7454a4c9752b3e506ff25034fd4110111e1315b9937a9792c8b8d5cd4c6"
+  },
+  "leaveOut": [
+    "cm-super",
+    "fmt-xelatex", "fmt-lualatex", "fonts-lm-otf", "extra-xetex-lang",
+    "tex-xetex", "tex-xelatex", "tex-luatex", "tex-lualatex", "tex-context", "tex-optex"
+  ]
+}

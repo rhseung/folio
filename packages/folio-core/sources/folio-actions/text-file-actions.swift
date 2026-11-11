@@ -91,7 +91,7 @@ public struct MaterialBuild {
     @Arg var course: Course.ID
     /// .tex 자료
     @Arg var material: Material.ID
-    /// 앱이 이 자료를 Tectonic으로 빌드해 둔 PDF. 빌드 출력 폴더 밖의 파일은 받지 않는다. 빼면 직접 빌드한다
+    /// 앱이 이 자료를 빌드해 둔 PDF(Mac은 Tectonic, iPad는 웹 엔진). 빌드 출력 폴더 밖의 파일은 받지 않는다. 빼면 직접 빌드한다
     @Hidden var pdf: String?
     /// 같은 이름의 PDF가 Folio가 만든 것이 아니어도 바꾼다
     var overwrite = false
@@ -129,14 +129,10 @@ public struct MaterialBuild {
     /// The file takes a tracked PDF's place and its hash is marked as built, so the next build replaces it without
     /// asking. Any other file passed in could put itself over a course PDF that way.
     static func output(_ path: String, of source: URL) throws -> URL {
-        #if os(macOS)
-        let folder = TexEngine.outputFolder(for: source).resolvingSymlinksInPath().path + "/"
+        let folder = TexOutput.folder(for: source).resolvingSymlinksInPath().path + "/"
         let url = URL(filePath: path).resolvingSymlinksInPath()
         guard url.path.hasPrefix(folder) else { throw ActionError.rule(String(localized: .errorBuildOutputElsewhere(path))) }
         return url
-        #else
-        throw ActionError.rule(String(localized: .errorTexMacOnly))
-        #endif
     }
 
     static func compile(_ source: URL, _ ctx: ActionContext) throws -> URL {
@@ -163,7 +159,7 @@ public struct NoteBuild {
     @Arg var course: Course.ID
     /// .tex 노트
     @Arg var note: Note.Path
-    /// 앱이 이 노트를 Tectonic으로 빌드해 둔 PDF. 빌드 출력 폴더 밖의 파일은 받지 않는다. 빼면 직접 빌드한다
+    /// 앱이 이 노트를 빌드해 둔 PDF(Mac은 Tectonic, iPad는 웹 엔진). 빌드 출력 폴더 밖의 파일은 받지 않는다. 빼면 직접 빌드한다
     @Hidden var pdf: String?
     /// 그 자리의 PDF가 이 노트를 빌드한 것이 아니어도 바꾼다
     var overwrite = false
