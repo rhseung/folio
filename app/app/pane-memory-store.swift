@@ -1,3 +1,4 @@
+import CryptoKit
 import FolioDomain
 import Foundation
 import SwiftUI
@@ -8,12 +9,25 @@ import SwiftUI
     static let key = "paneMemory"
 
     private let defaults: UserDefaults
+    private let key: String
     private(set) var memory: PaneMemory
 
-    init(defaults: UserDefaults) {
+    init(defaults: UserDefaults, key: String = PaneMemoryStore.key) {
         self.defaults = defaults
+        self.key = key
         // Unreadable (a newer build's shape, say) is the same as nothing remembered: it only costs the defaults.
-        memory = defaults.data(forKey: Self.key).flatMap { try? JSONDecoder().decode(PaneMemory.self, from: $0) } ?? PaneMemory()
+        memory = defaults.data(forKey: key).flatMap { try? JSONDecoder().decode(PaneMemory.self, from: $0) } ?? PaneMemory()
+    }
+
+    /// A run on a fixture (`FOLIO_GIST`, window snapshots included) keeps its own memory, apart from the user's: the
+    /// debug app shares the installed app's defaults, and a fixture's classes would push the user's own out of
+    /// `PaneMemory.capacity`. Per folder, so a fixture's layouts still come back when the app opens it again.
+    static func forThisRun(environment: [String: String] = ProcessInfo.processInfo.environment) -> PaneMemoryStore {
+        guard let gist = environment[Workspace.environmentKey], let fixtures = UserDefaults(suiteName: "folio-fixtures") else {
+            return PaneMemoryStore(defaults: .standard)
+        }
+        let digest = SHA256.hash(data: Data(gist.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
+        return PaneMemoryStore(defaults: fixtures, key: "\(key).\(digest)")
     }
 
     func remember(_ mode: NoteViewMode, note: UUID) {
@@ -37,7 +51,7 @@ import SwiftUI
     }
 
     private func save() {
-        if let data = try? JSONEncoder().encode(memory) { defaults.set(data, forKey: Self.key) }
+        if let data = try? JSONEncoder().encode(memory) { defaults.set(data, forKey: key) }
     }
 }
 

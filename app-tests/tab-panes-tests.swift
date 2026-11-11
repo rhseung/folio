@@ -282,4 +282,18 @@ struct TabPanesTests {
         PaneMemoryStore(defaults: defaults).remember(layout, session: session)
         #expect(PaneMemoryStore(defaults: defaults).memory.layout(session: session) == layout)
     }
+
+    @Test func aFixtureRunKeepsItsLayoutsApartFromTheUsers() throws {
+        let fixture = ["FOLIO_GIST": "/tmp/folio-tests-\(UUID().uuidString)"]
+        let other = ["FOLIO_GIST": "/tmp/folio-tests-\(UUID().uuidString)"]
+        let session = UUID()
+        let layout = try #require(PaneLayout(links: [grades.link, AppLink(.note, UUID())], limit: 3))
+        let before = UserDefaults.standard.data(forKey: PaneMemoryStore.key)
+        PaneMemoryStore.forThisRun(environment: fixture).remember(layout, session: session)
+        #expect(PaneMemoryStore.forThisRun(environment: fixture).memory.layout(session: session) == layout)
+        #expect(PaneMemoryStore.forThisRun(environment: other).memory.layout(session: session) == nil)
+        #expect(UserDefaults.standard.data(forKey: PaneMemoryStore.key) == before)
+        let fixtures = try #require(UserDefaults(suiteName: "folio-fixtures"))
+        for key in fixtures.dictionaryRepresentation().keys where key.hasPrefix(PaneMemoryStore.key + ".") { fixtures.removeObject(forKey: key) }
+    }
 }
