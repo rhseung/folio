@@ -284,16 +284,7 @@ struct UnitDetail: View {
                             if missing { Chip(String(localized: .unitsFileMissing), tone: .danger) }
                         }
                         .opens(missing ? nil : { openMaterial(m) })
-                        .contextMenu {
-                            if !missing { Button(.commonOpen) { openMaterial(m) } }
-                            #if os(macOS)
-                            if !missing { Button(.unitsShowInFinder) { NSWorkspace.shared.activateFileViewerSelecting([course.store.fileURL(m.path)]) } }
-                            #endif
-                            if item.direct {
-                                Divider()
-                                Button(.unitsUnlinkMaterial) { model.toggle(material: m.id, in: unit, file: file) }
-                            }
-                        }
+                        .contextMenu { MaterialMenu(courseId: course.id, materialId: m.id, host: .unit(unit.id)) }
                     }
                 }
             }

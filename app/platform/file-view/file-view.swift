@@ -52,7 +52,7 @@ struct FileView: View {
 
     var shown: some View {
         VStack(spacing: 0) {
-            if model.opensElsewhere || isPDF { bar }
+            if model.opensElsewhere || isPDF || model.material != nil { bar }
             content.frame(maxWidth: .infinity, maxHeight: .infinity)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -168,6 +168,9 @@ struct FileView: View {
                 }
             }
             if model.opensElsewhere { OpenElsewhereButton(url: model.url) }
+            if let m = model.material, let course = model.course {
+                PageMenuButton(inBar: true) { MaterialMenu(courseId: course.id, materialId: m.id, host: .own) }
+            }
         }
     }
 

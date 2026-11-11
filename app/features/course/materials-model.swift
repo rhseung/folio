@@ -11,7 +11,7 @@ final class MaterialsModel {
     let workspace: Workspace
     private let initial: LoadedCourse
     private(set) var suggestions: [PlannedMove]?
-    let moves = MoveUndo()
+    let moves: MoveUndo
     private var assignmentFolders: [String] = []
     var viewing: UUID? { didSet { if viewing != oldValue { shownPage = nil } } }
     /// The 0-based page a link asked the viewer for, taken once by it.
@@ -23,7 +23,6 @@ final class MaterialsModel {
     var relinking: UUID?
     var disconnecting: FolioDomain.Material?
     var incoming: [URL] = []
-    var renaming: FolioDomain.Material?
     var newName = ""
     var pending: PendingAction?
     /// Folder paths opened in the tree; folders start closed so a course with many reports stays short.
@@ -32,9 +31,11 @@ final class MaterialsModel {
     /// Where the new-file sheet starts; nil picks the newest assignment's folder.
     var newFileFolder: String?
 
-    init(workspace: Workspace, course: LoadedCourse) {
+    /// `moves`: the materials page's, when its file is edited from a sheet the window shows.
+    init(workspace: Workspace, course: LoadedCourse, moves: MoveUndo = MoveUndo()) {
         self.workspace = workspace
         initial = course
+        self.moves = moves
     }
 
     /// Looked up each time, so a saved change shows without the page being handed the course again.
@@ -173,7 +174,6 @@ final class MaterialsModel {
     func startRenaming(_ m: FolioDomain.Material) {
         let name = (m.path as NSString).lastPathComponent
         newName = m.isFolder ? name : (name as NSString).deletingPathExtension
-        renaming = m
     }
 
     func renameMessage(_ m: FolioDomain.Material) -> String {
@@ -181,12 +181,17 @@ final class MaterialsModel {
         return String(localized: ext.isEmpty ? .materialsRenameMessagePlain : .materialsRenameMessage(ext))
     }
 
-    func rename(_ m: FolioDomain.Material) {
+    /// The file name `newName` gives, with its extension kept; nil while it is empty or the same.
+    func renamed(_ m: FolioDomain.Material) -> String? {
         let ext = kept(m)
         let base = newName.trimmingCharacters(in: .whitespaces).replacingOccurrences(of: "/", with: "-")
         let name = ext.isEmpty ? base : "\(base).\(ext)"
-        guard !base.isEmpty, name != (m.path as NSString).lastPathComponent else { return }
-        // The rename alert shows the new name, so pressing it is the approval; asking again would ask twice.
+        return base.isEmpty || name == (m.path as NSString).lastPathComponent ? nil : name
+    }
+
+    func rename(_ m: FolioDomain.Material) {
+        guard let name = renamed(m) else { return }
+        // The sheet shows the new name, so pressing it is the approval; asking again would ask twice.
         moves.keep(workspace.run(MaterialMove(course: course.id, material: m.id, to: (dir(m.path) as NSString).appendingPathComponent(name))))
     }
 

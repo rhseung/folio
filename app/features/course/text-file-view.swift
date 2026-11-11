@@ -181,7 +181,9 @@ struct TextFileView: View {
             Button(.materialsOpenWithDefault, systemImage: "arrow.up.forward.app") { NSWorkspace.shared.open(model.fileURL) }
                 .help(Text(.materialsOpenWithDefault))
             #endif
-            if let links {
+            if case .material(let id) = model.source {
+                PageMenuButton(inBar: true) { MaterialMenu(courseId: model.course.id, materialId: id, host: .own) }
+            } else if let links {
                 PageMenuButton(inBar: true) {
                     NoteMenu(courseId: links.course.id, note: links.note, host: .own, moves: moves, build: texBuild, canBuild: model.canBuild,
                              save: model.saveIfDirty)

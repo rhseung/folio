@@ -99,11 +99,7 @@ struct ExamsView: View {
                         Spacer(minLength: 0)
                     }
                     .opens(m.status == .missing ? nil : { openMaterial(m) })
-                    .contextMenu {
-                        if m.status != .missing { Button(.commonOpen) { openMaterial(m) } }
-                        Divider()
-                        Button(.examsUnlinkMaterial) { model.toggle(material: m.id, in: exam) }
-                    }
+                    .contextMenu { MaterialMenu(courseId: model.course.id, materialId: m.id, host: .exam(exam.id)) }
                 }
             }
             .contextMenu { actions(exam) }

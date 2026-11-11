@@ -16,6 +16,7 @@ enum ItemSheet: Identifiable {
     case note(NoteSheetRequest)
     /// 옮기기 ▸ 새 폴더….
     case noteFolder(NoteSheetRequest)
+    case material(MaterialSheetRequest)
 
     var id: UUID {
         switch self {
@@ -23,6 +24,7 @@ enum ItemSheet: Identifiable {
         case .exam(_, let id), .assignment(_, let id), .review(_, let id), .generateCards(_, let id): id
         case .card(_, let draft): draft.id
         case .note(let request), .noteFolder(let request): request.id
+        case .material(let request): request.material
         }
     }
 }
@@ -34,6 +36,26 @@ struct NoteSheetRequest {
     let course: UUID
     let note: NoteFile
     var moves: MoveUndo?
+}
+
+struct MaterialSheetRequest {
+    let course: UUID
+    let material: UUID
+    /// The materials page's undo, which a rename from it lands in.
+    var moves: MoveUndo?
+}
+
+/// The file's sheet, with a materials model of its own, since the window shows it from anywhere.
+struct MaterialSheet: View {
+    @State private var model: MaterialsModel
+    let material: UUID
+
+    init(workspace: Workspace, course: LoadedCourse, request: MaterialSheetRequest) {
+        _model = State(initialValue: MaterialsModel(workspace: workspace, course: course, moves: request.moves ?? MoveUndo()))
+        material = request.material
+    }
+
+    var body: some View { MaterialLinksEditor(model: model, materialId: material) }
 }
 
 /// Files picked to go into a course folder, as dropping them there does.
@@ -121,6 +143,10 @@ struct ItemSheets: ViewModifier {
                 case .noteFolder(let request):
                     if let course = workspace.course(request.course) {
                         NoteFolderSheet(workspace: workspace, course: course, note: request.note, moves: request.moves)
+                    }
+                case .material(let request):
+                    if let course = workspace.course(request.course) {
+                        MaterialSheet(workspace: workspace, course: course, request: request).environment(\.openLink, openLink)
                     }
                 }
             }
