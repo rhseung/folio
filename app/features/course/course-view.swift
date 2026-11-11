@@ -287,6 +287,7 @@ struct CourseOverview: View {
                 Chip(file.course.gradingMode.label)
                 Spacer()
                 Button(.courseEdit, systemImage: "slider.horizontal.3") { editing = true }.buttonStyle(.ghost)
+                PageMenuButton { CourseMenu(courseId: course.id, host: .own) }
             }
             .sheet(isPresented: $editing) { EditCourseSheet(workspace: model.workspace, course: course) }
             #if DEBUG && os(macOS)

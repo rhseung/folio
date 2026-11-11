@@ -119,14 +119,7 @@ struct SemesterView: View {
         .contentShape(.rect)
     }
 
-    @ViewBuilder func courseMenu(_ course: LoadedCourse) -> some View {
-        Button(.commonOpen, systemImage: "arrow.right.circle") { openCourse(course.id) }
-        LinkMenu(link: .course(course.id), course: course.id, trailing: true)
-        Divider()
-        #if os(macOS)
-        Button(.commonShowInFinder, systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([course.store.url]) }
-        #endif
-    }
+    func courseMenu(_ course: LoadedCourse) -> some View { CourseMenu(courseId: course.id) }
 
     func open(_ course: Course) { openCourse(course.id) }
 

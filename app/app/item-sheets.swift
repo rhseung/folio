@@ -17,6 +17,7 @@ enum ItemSheet: Identifiable {
     /// 옮기기 ▸ 새 폴더….
     case noteFolder(NoteSheetRequest)
     case material(MaterialSheetRequest)
+    case course(UUID)
 
     var id: UUID {
         switch self {
@@ -25,6 +26,7 @@ enum ItemSheet: Identifiable {
         case .card(_, let draft): draft.id
         case .note(let request), .noteFolder(let request): request.id
         case .material(let request): request.material
+        case .course(let id): id
         }
     }
 }
@@ -144,6 +146,8 @@ struct ItemSheets: ViewModifier {
                     if let course = workspace.course(request.course) {
                         NoteFolderSheet(workspace: workspace, course: course, note: request.note, moves: request.moves)
                     }
+                case .course(let id):
+                    if let course = workspace.course(id) { EditCourseSheet(workspace: workspace, course: course) }
                 case .material(let request):
                     if let course = workspace.course(request.course) {
                         MaterialSheet(workspace: workspace, course: course, request: request).environment(\.openLink, openLink)
