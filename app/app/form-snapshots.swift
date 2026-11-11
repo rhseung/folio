@@ -71,6 +71,45 @@ enum FormSnapshots {
         forms += lectureSections(workspace, places: importPlaces)
         forms += wrapUps(workspace)
         forms += sessionMenus(workspace)
+        forms += itemMenus(workspace)
+        return forms
+    }
+
+    /// Each other kind's menu as its list shows it (the sidebar for a course and a term), drawn like `sessionMenus`.
+    @MainActor static func itemMenus(_ workspace: Workspace) -> [(String, AnyView)] {
+        let link = OpenLinkAction(), sheets = ItemSheetsAction()
+        var forms: [(String, AnyView)] = []
+        func add<S: ItemMenuSource>(_ name: String, _ source: S) {
+            if !forms.contains(where: { $0.0 == name }) { forms.append((name, AnyView(MenuPicture(rows: source.commands.map(source.row))))) }
+        }
+        for course in workspace.currentCourses {
+            let file = course.file, id = course.id
+            if let note = (try? course.store.notes())?.first {
+                add("menu-note", NoteMenuSource(workspace: workspace, courseId: id, note: note, host: .list, open: {}, openLink: link, sheets: sheets))
+            }
+            if let lecture = file.lectureFiles.first(where: { $0.status != .missing }) {
+                add("menu-material", MaterialMenuSource(workspace: workspace, courseId: id, material: lecture, host: .list, openLink: link, sheets: sheets))
+            }
+            if let assignment = file.assignments.first {
+                add("menu-assignment", AssignmentMenuSource(workspace: workspace, courseId: id, assignment: assignment, host: .list, openLink: link, sheets: sheets))
+            }
+            if let exam = file.exams.first {
+                add("menu-exam", ExamMenuSource(workspace: workspace, courseId: id, exam: exam, host: .list, openLink: link, sheets: sheets))
+            }
+            if let unit = UnitTree.outline(file.units).first?.unit {
+                add("menu-unit", UnitMenuSource(workspace: workspace, courseId: id, unit: unit, host: .list, openLink: link, sheets: sheets))
+            }
+            if let recording = file.recordings.first {
+                let model = RecordingPlayerModel(workspace: workspace, courseId: id, store: course.store, recording: recording)
+                add("menu-recording", RecordingMenuSource(model: model, host: .own, remove: {}, openLink: link))
+            }
+        }
+        if let course = workspace.currentCourses.first {
+            add("menu-course", CourseMenuSource(workspace: workspace, courseId: course.id, host: .list, openLink: link, sheets: sheets))
+        }
+        if let semester = workspace.currentSemester {
+            add("menu-semester", SemesterMenuSource(semesterId: semester.id, host: .list, addCourse: {}, folded: false, fold: {}, openLink: link))
+        }
         return forms
     }
 
