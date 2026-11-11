@@ -294,6 +294,7 @@ struct RootView: View {
         #if DEBUG && os(macOS)
         .task {
             await TabMemoryProbe.run(tabs: tabs, workspace: workspace)
+            await PaneSessionProbe.run(tabs: tabs, workspace: workspace, memory: paneMemory) { open($0, in: .tab) }
             // Snapshots are for checking layout; a Touch ID prompt would stall them on locked screens.
             if SnapshotDriver.directory != nil { workspace.gradesUnlocked = true }
             if SnapshotDriver.recording, let course = workspace.currentCourses.first, let session = course.file.sessions.first {

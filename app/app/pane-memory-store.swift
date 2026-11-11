@@ -50,6 +50,14 @@ import SwiftUI
         save()
     }
 
+    #if DEBUG
+    /// For `PaneSessionProbe`'s pictures of a tab before the class's layout was remembered.
+    func forget() {
+        memory = PaneMemory()
+        save()
+    }
+    #endif
+
     private func save() {
         if let data = try? JSONEncoder().encode(memory) { defaults.set(data, forKey: key) }
     }

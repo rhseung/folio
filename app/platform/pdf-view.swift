@@ -6,7 +6,12 @@ import SwiftUI
 /// Owns one PDFKit view so SwiftUI buttons (zoom, find, page) can drive it; SwiftUI has no PDF view of its own.
 @MainActor @Observable
 final class PDFController {
+    #if DEBUG
+    // `FOLIO_PLAIN_PDF` draws PDFKit's own view, for the window snapshots of what `SteadyPDFView` fixes (#62).
+    @ObservationIgnored let view: PDFView = ProcessInfo.processInfo.environment["FOLIO_PLAIN_PDF"] != nil ? PDFView() : SteadyPDFView()
+    #else
     @ObservationIgnored let view: PDFView = SteadyPDFView()
+    #endif
     /// 0-based, follows scrolling.
     private(set) var page = 0
     let pageCount: Int
