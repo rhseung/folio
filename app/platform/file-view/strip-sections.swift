@@ -6,14 +6,15 @@ import SwiftUI
 /// below, so a section reads the same in either place.
 struct StripSection: Identifiable, Equatable {
     enum Kind: Equatable {
-        /// A class's pages, or a unit's: a filled dot, and the course-colour line down its pages.
+        /// A class's pages, or a unit's: on the course's tint, under a course-colour chevron.
         case held
-        /// A unit made when the split is saved: an open dot, as on a range not saved yet, and the line.
+        /// A unit made when the split is saved: on the tint too, its name in the course's ink as a range not saved yet
+        /// names itself.
         case new
-        /// Pages that go to no unit: a grey open dot and no line, as pages with no progress have none.
+        /// Pages that go to no unit: no tint and a grey chevron, as pages with no progress have neither.
         case none
 
-        var lined: Bool { self != .none }
+        var tinted: Bool { self != .none }
     }
 
     /// The class's or the split section's id.
@@ -42,8 +43,8 @@ struct StripItem: Identifiable, Equatable {
 
     enum Mark: Equatable {
         case plain
-        /// In an unfolded section: the course-colour line runs down beside it, ending at the section's last page.
-        case line(last: Bool)
+        /// On its section's tint, which ends under the section's last page, or under a folded section's header.
+        case tinted(last: Bool)
         /// In the range being picked or changed.
         case picked
     }
@@ -75,9 +76,9 @@ struct StripItem: Identifiable, Equatable {
                 if s.id == editing {
                     items += run(s.pages, lead: .edit(s)) { _ in .picked }
                 } else if isOpen(s) {
-                    items += run(s.pages, lead: .header(s, open: true)) { s.kind.lined ? .line(last: $0 == s.pages.upperBound) : .plain }
+                    items += run(s.pages, lead: .header(s, open: true)) { s.kind.tinted ? .tinted(last: $0 == s.pages.upperBound) : .plain }
                 } else {
-                    items.append(StripItem(lead: .header(s, open: false), page: nil, mark: .plain))
+                    items.append(StripItem(lead: .header(s, open: false), page: nil, mark: s.kind.tinted ? .tinted(last: true) : .plain))
                 }
                 page = s.pages.upperBound + 1
             } else if let draft, draft.lowerBound == page {
@@ -97,21 +98,17 @@ struct StripItem: Identifiable, Equatable {
 }
 
 enum StripMetrics {
-    static let gutter: CGFloat = 32
     /// A header's row: a finger's height on a touch screen, where it is what a range is changed from.
     #if os(iOS)
     static let header: CGFloat = 44
     #else
     static let header: CGFloat = Theme.Size.toolbarButton - Theme.Space.xs
     #endif
-    static let line: CGFloat = 4
-    /// From the column's leading edge to the line's middle: under the header's dot, past its chevron.
-    static let lineCenter: CGFloat = Theme.Space.s + Theme.Space.m + Theme.Space.xs + Theme.Size.dot / 2
 }
 
-/// An item's place in the column: its insets, and its section's line beside a page of an unfolded section, from just
-/// under the header's dot on the first page down to above the last page's number. Square where it meets the next
-/// page, so the pages' pieces read as one line.
+/// An item's place in the column, and its piece of its section's tint. The pieces of a section meet square and round
+/// only at its header's top and under its last page, so an unfolded section reads as one surface from its header down.
+/// Every page sits in the column's middle, so crossing into or out of a section moves no thumbnail sideways.
 struct StripItemFrame<Content: View>: View {
     let item: StripItem
     @ViewBuilder var content: Content
@@ -119,43 +116,25 @@ struct StripItemFrame<Content: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) { content }
-            .padding(.leading, Theme.Space.s)
-            .padding(.trailing, Theme.Space.m)
-            .background(alignment: .topLeading) { line }
+            .background { tint }
+            .padding(.horizontal, Theme.Space.s)
     }
 
-    @ViewBuilder private var line: some View {
-        if case .line(let last) = item.mark {
+    @ViewBuilder private var tint: some View {
+        if case .tinted(let last) = item.mark {
             let first = item.lead != nil
-            let round = StripMetrics.line / 2
-            UnevenRoundedRectangle(topLeadingRadius: first ? round : 0, bottomLeadingRadius: last ? round : 0,
-                                   bottomTrailingRadius: last ? round : 0, topTrailingRadius: first ? round : 0)
-                .fill(accent.color)
-                .frame(width: StripMetrics.line)
-                .padding(.top, first ? StripMetrics.header / 2 + Theme.Size.dot / 2 + Theme.Space.xs : 0)
-                .padding(.bottom, last ? Theme.Space.xl : 0)
-                .offset(x: StripMetrics.lineCenter - StripMetrics.line / 2)
+            let r = Theme.Radius.strip
+            UnevenRoundedRectangle(topLeadingRadius: first ? r : 0, bottomLeadingRadius: last ? r : 0,
+                                   bottomTrailingRadius: last ? r : 0, topTrailingRadius: first ? r : 0)
+                .fill(accent.tint)
+                // Short of the gap under the last page, or under a folded header, so the next item stands apart.
+                .padding(.bottom, last ? Theme.Space.xs : 0)
         }
     }
 }
 
-/// The section's dot: filled for pages held, open for pages a save will give, grey and open for pages that go to
-/// nothing.
-struct StripDot: View {
-    let kind: StripSection.Kind
-    @Environment(\.accent) private var accent
-
-    var body: some View {
-        switch kind {
-        case .held: CourseDot(color: accent.color)
-        case .new: Circle().strokeBorder(accent.color, lineWidth: 2).frame(width: Theme.Size.dot, height: Theme.Size.dot)
-        case .none: Circle().strokeBorder(Theme.Palette.textTertiary, lineWidth: 2).frame(width: Theme.Size.dot, height: Theme.Size.dot)
-        }
-    }
-}
-
-/// A section's one-line header: the fold chevron, then the dot, title and range, which change its range when pressed.
-/// The pointer lights the part that does, so a first look finds it.
+/// A section's one-line header: the fold chevron in the course's colour where it is tinted, then the title and range,
+/// which change its range when pressed. The pointer lights the part that does, so a first look finds it.
 struct StripHeader: View {
     let section: StripSection
     let open: Bool
@@ -172,17 +151,17 @@ struct StripHeader: View {
             Button { withAnimation(.snappy(duration: 0.2)) { toggle() } } label: {
                 Image(systemName: open ? "chevron.down" : "chevron.right")
                     .font(Theme.Glyph.small)
-                    .foregroundStyle(Theme.Palette.textSecondary)
+                    .foregroundStyle(section.kind.tinted ? accent.ink : Theme.Palette.textTertiary)
                     .frame(width: Theme.Space.m, height: StripMetrics.header)
+                    .padding(.leading, Theme.Space.tight)
                     .chevronReach()
             }
             .buttonStyle(.pointing(.plain))
             .help(Text(open ? .commonCollapse : .commonExpand))
             Button(action: edit) {
-                HStack(spacing: Theme.Space.tight) {
-                    StripDot(kind: section.kind)
+                HStack(spacing: Theme.Space.xs) {
                     Text(section.title).font(Theme.Typeface.bodyStrong).lineLimit(1).truncationMode(.tail)
-                        .foregroundStyle(section.kind == .none ? Theme.Palette.textTertiary : open ? Theme.Palette.text : Theme.Palette.textSecondary)
+                        .foregroundStyle(titleColor)
                     Spacer(minLength: Theme.Space.xs)
                     Text(section.label).font(Theme.Typeface.caption).monospacedDigit().fixedSize().foregroundStyle(Theme.Palette.textSecondary)
                 }
@@ -193,16 +172,24 @@ struct StripHeader: View {
             .help(help)
         }
         .frame(height: StripMetrics.header)
-        .padding(.trailing, Theme.Space.xs)
-        .background(lit ? accent.tint : hovering ? Theme.Palette.fill : .clear, in: .rect(cornerRadius: Theme.Radius.control))
+        .padding(.trailing, Theme.Space.s)
+        .background(lit ? accent.tint : hovering ? Theme.Palette.fill : .clear, in: .rect(cornerRadius: Theme.Radius.strip))
         .onHover { hovering = $0 }
-        .padding(.bottom, open ? Theme.Space.s : Theme.Space.xxs)
+        .padding(.bottom, open ? Theme.Space.s : Theme.Space.xs)
+    }
+
+    private var titleColor: Color {
+        switch section.kind {
+        case .held: open ? Theme.Palette.text : Theme.Palette.textSecondary
+        case .new: accent.ink
+        case .none: Theme.Palette.textTertiary
+        }
     }
 }
 
 private extension View {
-    /// The chevron is as narrow as the gutter its dot and line keep to, so on a touch screen its press reaches out over
-    /// the column's margin to the edge, the one side with nothing else to press.
+    /// On a touch screen the chevron's press reaches out over the column's margin to its edge, the one side with
+    /// nothing else to press.
     @ViewBuilder func chevronReach() -> some View {
         #if os(iOS)
         padding(.leading, Theme.Space.s).contentShape(.rect).padding(.leading, -Theme.Space.s)
@@ -212,8 +199,25 @@ private extension View {
     }
 }
 
-/// The row a range is changed or saved from, in place of a section's header or above a new range: its dot, what it
-/// is, the range, whatever else it asks, [취소][confirm]. Tinted, so the picked pages under it read as its own.
+/// The edit row's dot, under where the headers' chevrons stand: filled for pages held, open for pages a save will
+/// give, grey and open for pages that go to nothing.
+struct StripDot: View {
+    let kind: StripSection.Kind
+    @Environment(\.accent) private var accent
+
+    var body: some View {
+        switch kind {
+        case .held: CourseDot(color: accent.color)
+        case .new: Circle().strokeBorder(accent.color, lineWidth: 2).frame(width: Theme.Size.dot, height: Theme.Size.dot)
+        case .none: Circle().strokeBorder(Theme.Palette.textTertiary, lineWidth: 2).frame(width: Theme.Size.dot, height: Theme.Size.dot)
+        }
+    }
+}
+
+/// The row a range is changed or saved from, in place of a section's header or at a new range's end: its dot and what
+/// it is, the range on a line of its own (the column is too narrow for "11/4(수) 오늘 19–21쪽" on one), whatever
+/// else it asks, [취소][confirm]. Tinted and ringed in the course's colour: the tint alone read as one more section
+/// beside a section's own.
 struct StripEditRow<Title: View, Extra: View>: View {
     let kind: StripSection.Kind
     let range: String?
@@ -228,12 +232,15 @@ struct StripEditRow<Title: View, Extra: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: Theme.Space.s) {
-            HStack(spacing: Theme.Space.tight) {
-                StripDot(kind: kind)
-                title.lineLimit(1).truncationMode(.tail)
-                Spacer(minLength: Theme.Space.xs)
+            VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+                HStack(spacing: Theme.Space.tight) {
+                    StripDot(kind: kind)
+                    title.lineLimit(1).truncationMode(.tail)
+                    Spacer(minLength: 0)
+                }
                 if let range {
-                    Text(range).font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit().fixedSize().foregroundStyle(accent.ink)
+                    Text(range).font(Theme.Typeface.caption.weight(.semibold)).monospacedDigit().foregroundStyle(accent.ink)
+                        .padding(.leading, Theme.Size.dot + Theme.Space.tight)
                 }
             }
             extra
@@ -254,10 +261,10 @@ struct StripEditRow<Title: View, Extra: View>: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
+        // Its dot under the headers' chevrons.
         .padding(Theme.Space.s)
-        // Its dot under the headers' dots, past where their chevrons stand.
-        .padding(.leading, StripMetrics.lineCenter - Theme.Size.dot / 2 - Theme.Space.s * 2)
-        .background(accent.tint, in: .rect(cornerRadius: Theme.Radius.control))
+        .background(accent.tint, in: .rect(cornerRadius: Theme.Radius.strip))
+        .overlay(RoundedRectangle(cornerRadius: Theme.Radius.strip).strokeBorder(accent.color, lineWidth: 1))
         .padding(.bottom, Theme.Space.m)
         .transition(.opacity)
     }
@@ -269,7 +276,7 @@ struct StripPage: View {
     let controller: PDFController
     let page: Int
     let picked: Bool
-    let gutter: Bool
+    let box: CGSize
     /// A range is up: on a touch screen the next tap moves its end.
     let ranging: Bool
     let press: (_ page: Int, _ extend: Bool) -> Void
@@ -277,11 +284,8 @@ struct StripPage: View {
     let start: ((_ page: Int) -> Void)?
 
     var body: some View {
-        // With no gutter the page sits in the column's middle: a slide is narrower than the lecture column, and
-        // leading it left the right margin wide. Beside a gutter it keeps to the line.
-        PageThumbnail(thumbnails: controller.thumbnails, page: page, current: controller.page + 1 == page, picked: picked)
-            .padding(.leading, gutter ? StripMetrics.gutter : Theme.Space.xs)
-            .frame(maxWidth: .infinity, alignment: gutter ? .leading : .center)
+        PageThumbnail(thumbnails: controller.thumbnails, page: page, current: controller.page + 1 == page, picked: picked, box: box)
+            .frame(maxWidth: .infinity)
             .padding(.bottom, Theme.Space.s)
             .contentShape(.rect)
             #if os(macOS)

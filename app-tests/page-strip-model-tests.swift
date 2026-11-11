@@ -36,7 +36,7 @@ struct PageStripModelTests {
         workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: pages.lowerBound, lastPage: pages.upperBound))
     }
     /// What the column shows, top to bottom: `h` a header (`H` open), `e` the edit row, `d` the draft row, then the
-    /// page, `|` for a page beside its section's line and `*` for one picked, then ` /d` and its range for a draft row
+    /// page, `|` for a page on its section's tint and `*` for one picked, then ` /d` and its range for a draft row
     /// under the page.
     func column(_ model: PageStripModel) -> [String] {
         model.items.map { item in
@@ -48,7 +48,7 @@ struct PageStripModelTests {
             }
             let mark = switch item.mark {
             case .plain: ""
-            case .line: "|"
+            case .tinted: "|"
             case .picked: "*"
             }
             let trail: String = if case .draft(let pages)? = item.trail { " /d" + Session.pagesLabel(pages) } else { "" }
@@ -230,20 +230,6 @@ struct PageStripModelTests {
         #expect(model.choices.isEmpty && model.chosen == nil && !model.canSave)
     }
 
-    /// The line's gutter is kept only once a class has pages here: not on a lecture file with none, nor while its first
-    /// range is picked, so the pages don't shift under the pointer; nor on a file with no progress at all.
-    @Test func theGutterWaitsForAClassesPages() throws {
-        let model = model()
-        #expect(model.picks && !model.railed)
-        model.press(9)
-        model.extend(to: 12)
-        #expect(!model.railed)
-        model.commit()
-        #expect(model.railed)
-        let other = try #require(file.materials.first { $0.role != .lecture && !$0.isFolder })
-        #expect(!self.model(other.id).railed)
-    }
-
     @Test func todaysClassAloneIsOfferedWithoutAMenu() {
         link(earlier, 1...4)
         let model = model()
@@ -289,7 +275,7 @@ struct PageStripModelTests {
         #expect((defaults.dictionary(forKey: PageStripModel.key(slides.id)) as? [String: Bool])?[session.uuidString] == nil)
         #expect(model.choices.map(\.id) == [session])
         model.remove(model.sections[0])
-        #expect(links(earlier).isEmpty && model.sections.isEmpty && !model.railed)
+        #expect(links(earlier).isEmpty && model.sections.isEmpty)
         #expect(links(upcoming).isEmpty)
     }
 

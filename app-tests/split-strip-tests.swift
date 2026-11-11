@@ -21,7 +21,7 @@ struct SplitStripTests {
     }
 
     /// What the column shows, top to bottom, as in `PageStripModelTests`: `H` an open header with its dot (`●` held,
-    /// `○` new, `·` no unit), `h` a folded one, `e` the edit row; `|` a page beside the line, `*` a page picked.
+    /// `○` new, `·` no unit), `h` a folded one, `e` the edit row; `|` a page on its section's tint, `*` a page picked.
     func column(_ strip: SplitStrip, _ split: LectureSplit) -> [String] {
         strip.items(split, name: names(split)).map { item in
             func dot(_ s: StripSection) -> String { switch s.kind { case .held: "●"; case .new: "○"; case .none: "·" } }
@@ -33,17 +33,19 @@ struct SplitStripTests {
             }
             let mark = switch item.mark {
             case .plain: ""
-            case .line: "|"
+            case .tinted: "|"
             case .picked: "*"
             }
             return lead + (item.page.map { " \($0)\(mark)" } ?? "")
         }
     }
 
-    /// Every section is headed and open; the line runs down a unit's pages, a new unit's too, and not down pages for
-    /// no unit.
-    @Test func sectionsAreHeadedAndLinedByWhereTheyGo() {
+    /// Every section is headed and open; a unit's pages are on the tint, a new unit's too, and pages for no unit are
+    /// not. The tint rounds off under each section's last page.
+    @Test func sectionsAreHeadedAndTintedByWhereTheyGo() {
         let split = base
+        let items = SplitStrip().items(split, name: names(split))
+        #expect(items[2].mark == .tinted(last: false) && items[3].mark == .tinted(last: true) && items[11].mark == .plain)
         let column = column(SplitStrip(), split)
         #expect(column.count == 12)
         #expect(column[0] == "H●Intro 1|" && column[3] == " 4|")
@@ -57,6 +59,8 @@ struct SplitStripTests {
         strip.toggle(split.sections[1].id)
         let column = column(strip, split)
         #expect(column[4] == "h○Hall" && column[5] == "H·이름 없는 구역 9")
+        // A folded header keeps its piece of the tint, alone and rounded at both ends.
+        #expect(strip.items(split, name: names(split))[4].mark == .tinted(last: true))
         #expect(strip.itemID(showing: 6, in: split) == .folded(split.sections[1].id) && strip.itemID(showing: 2, in: split) == .page(2))
     }
 
