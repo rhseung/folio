@@ -76,6 +76,9 @@ struct PageStrip: View {
                 go(to: to)
             case .choose?: model.choosing = model.onlyToday == nil
             case .save?: model.commit()
+            case .remove(let page)?:
+                if let section = model.sections.first(where: { $0.pages.contains(page) }) { model.remove(section) }
+                go(to: page + 1)
             case nil: break
             }
         }

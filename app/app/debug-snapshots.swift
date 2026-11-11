@@ -37,8 +37,8 @@ final class SnapshotDriver {
     /// overview beside it, so both fold their section columns (#62).
     static let coursePanes = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_PANES"] == "courses"
     /// Only the page strip of a lecture with classes' pages (#147), or of the first lecture when no class has any: its
-    /// sections, a class's range changed, a range picked, the class menu and the range saved, as `strip-*.png`. Set to
-    /// `from-to` (`19-21`) for the range picked.
+    /// sections, a class's range changed, a range picked, the class menu, the range saved and then removed, as
+    /// `strip-*.png`. Set to `from-to` (`19-21`) for the range picked; `21-19` picks it upwards.
     static let strip = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP"]
     /// The page a section's range is changed from and the page its end goes to (`16-19`), for `strip-edit`.
     static let stripEdit = ProcessInfo.processInfo.environment["FOLIO_SNAPSHOT_STRIP_EDIT"]
@@ -109,6 +109,7 @@ final class SnapshotDriver {
         case range(Int, Int)
         case choose
         case save
+        case remove(Int)
     }
 
     /// `links` are opened by their address at the end, each drawn as its step: what a click on such a link shows.
@@ -287,7 +288,7 @@ final class SnapshotDriver {
         }
         let steps: [(String, StripStep)] = [
             ("strip-idle", .page(edit.0)), ("strip-edit", .edit(edit.0, edit.1)), ("strip-pick", .range(range.0, range.1)),
-            ("strip-menu", .choose), ("strip-saved", .save),
+            ("strip-menu", .choose), ("strip-saved", .save), ("strip-removed", .remove(min(range.0, range.1))),
         ]
         for (name, step) in steps {
             strip = step
