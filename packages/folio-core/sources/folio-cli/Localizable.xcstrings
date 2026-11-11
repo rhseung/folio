@@ -3307,7 +3307,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "표준 입출력으로 MCP를 주고받는다. 클라이언트가 실행하고 대화가 끝나면 함께 끝나므로 켜 둘 서버가 없다. 쓰기 액션 하나가 도구 하나이고(exam add → exam_add), 목록, 보기, 검색 같은 읽기 명령도 도구가 된다.\n\nClaude Code:      claude mcp add folio -- folio mcp\nClaude 데스크톱:  claude_desktop_config.json의 mcpServers에 {\"folio\": {\"command\": \"<folio 경로>\", \"args\": [\"mcp\"]}}"
+            "value": "표준 입출력으로 MCP를 주고받는다. 클라이언트가 실행하고 대화가 끝나면 함께 끝나므로 켜 둘 서버가 없다. 쓰기 액션 하나가 도구 하나이고(exam add → exam_add), 목록, 보기, 검색 같은 읽기 명령도 도구가 된다. action_search는 말로 명령을 찾아 입력 형식을 주고, action_run은 그 명령을 JSON 입력으로 실행한다. --propose는 과목 대화 도구만 직접 열고 나머지는 이 둘로 닿는다.\n\nClaude Code:      claude mcp add folio -- folio mcp\nClaude 데스크톱:  claude_desktop_config.json의 mcpServers에 {\"folio\": {\"command\": \"<folio 경로>\", \"args\": [\"mcp\"]}}"
           }
         }
       }
@@ -3340,7 +3340,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "쓰기 도구는 바로 바꾸지 않고 미리보기와 제안만 만든다. 사용자가 패널에서 승인해야 실행된다. 같은 변경을 다시 부르지 말고, 무엇을 제안했는지 답에 짧게 적는다. 노트의 일부를 고치거나 끝에 덧붙일 때는 note_edit를 쓰고, note_write는 노트 전체를 새로 쓸 때만 쓴다. 미리보기의 바뀌는 항목에 없는 값은 이미 요청한 대로라서 그대로 두는 것이고, 실패가 아니다."
+            "value": "쓰기 도구는 바로 바꾸지 않고 미리보기와 제안만 만든다. 사용자가 패널에서 승인해야 실행된다. 같은 변경을 다시 부르지 말고, 무엇을 제안했는지 답에 짧게 적는다. 노트의 일부를 고치거나 끝에 덧붙일 때는 note_edit를 쓰고, note_write는 노트 전체를 새로 쓸 때만 쓴다. 미리보기의 바뀌는 항목에 없는 값은 이미 요청한 대로라서 그대로 두는 것이고, 실패가 아니다. 도구 목록에 없는 일은 action_search로 찾아 action_run으로 제안한다."
           }
         }
       }
@@ -3352,6 +3352,116 @@
           "stringUnit": {
             "state": "translated",
             "value": "항목을 지우거나 옮기므로 사용자가 원한 것인지 확인한 뒤 부른다."
+          }
+        }
+      }
+    },
+    "mcp.run-action-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "실행할 명령. action_search 결과의 command(예: settings set, semester add)"
+          }
+        }
+      }
+    },
+    "mcp.run-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "action_search로 찾은 액션이나 읽기 명령 하나를 그 inputSchema에 맞춘 JSON 입력으로 실행한다. 쓰기는 같은 이름의 도구와 똑같이 처리된다."
+          }
+        }
+      }
+    },
+    "mcp.run-input-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "명령의 입력. action_search가 돌려준 inputSchema를 따른다"
+          }
+        }
+      }
+    },
+    "mcp.run-no-action": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "action에 실행할 명령을 적는다. 모르면 action_search로 먼저 찾는다."
+          }
+        }
+      }
+    },
+    "mcp.run-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "액션 실행"
+          }
+        }
+      }
+    },
+    "mcp.run-unknown": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "없는 명령입니다: %@. action_search로 먼저 찾는다."
+          }
+        }
+      }
+    },
+    "mcp.search-description": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하고 싶은 일을 말로 적으면 맞는 액션과 읽기 명령을 순위대로 찾아, 명령 이름, 설명, 입력 형식(inputSchema), 예시를 돌려준다. 도구 목록에 바로 없는 일(가져오기, 설정, 학기, 성적표, 백업 등)은 이것으로 찾아 action_run으로 실행한다. 결과에 tool이 있으면 그 도구를 바로 불러도 된다."
+          }
+        }
+      }
+    },
+    "mcp.search-no-query": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "query에 하고 싶은 일을 적는다."
+          }
+        }
+      }
+    },
+    "mcp.search-query-help": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "하고 싶은 일. 예: 하루 경계 바꾸기, 새 학기 추가, 학점 평균"
+          }
+        }
+      }
+    },
+    "mcp.search-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "액션 찾기"
           }
         }
       }

@@ -15,6 +15,8 @@ public enum StreamEvent: Sendable, Equatable {
     case text(String)
     /// A tool call, by its full name (`mcp__folio__note_show`).
     case tool(String)
+    /// A piece of that call's input JSON, which streams in after its name.
+    case toolInput(String)
 }
 
 extension ClaudeProvider {
