@@ -88,31 +88,32 @@ private struct ReleaseSection: View {
 /// Items in one card, each after its kind's chip, on the page and in the sheet alike.
 struct PatchNoteList: View {
     let items: [PatchNotes.Item]
+    /// Past this height the rows scroll inside the card, the edge with more past it faded; nil grows with the rows.
+    var maxHeight: CGFloat?
     /// Before a row's link opens: the sheet closes itself first.
     var opening: () -> Void = {}
+    @State private var rowsHeight: CGFloat = 0
 
     var body: some View {
         Card {
-            ForEach(Array(items.enumerated()), id: \.offset) { i, item in
-                CardRow(last: i == items.count - 1) { PatchNoteRow(item: item, opening: opening) }
+            if let maxHeight {
+                ScrollView {
+                    VStack(spacing: 0) { rows }
+                        .onGeometryChange(for: CGFloat.self) { $0.size.height } action: { rowsHeight = $0 }
+                }
+                .scrollBounceBehavior(.basedOnSize)
+                .overflowFade(.vertical)
+                // A ScrollView takes all the height it is offered; sized to its rows, a short list stays short.
+                .frame(height: min(rowsHeight, maxHeight))
+            } else {
+                rows
             }
         }
     }
-}
 
-/// `feat 3  fix 2`: each kind's chip and how many.
-struct KindCounts: View {
-    let counts: [PatchNotes.Count]
-
-    var body: some View {
-        HStack(spacing: Theme.Space.s) {
-            ForEach(counts, id: \.kind) { count in
-                HStack(spacing: Theme.Space.xxs) {
-                    Chip(count.kind.label, tone: count.kind.tone)
-                    Text(String(localized: .whatsNewCount(count.count))).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
-                }
-                .fixedSize()
-            }
+    var rows: some View {
+        ForEach(Array(items.enumerated()), id: \.offset) { i, item in
+            CardRow(last: i == items.count - 1) { PatchNoteRow(item: item, opening: opening) }
         }
     }
 }

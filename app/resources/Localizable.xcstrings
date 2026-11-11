@@ -21198,28 +21198,6 @@
         }
       }
     },
-    "whats-new.count": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "%lld개"
-          }
-        }
-      }
-    },
-    "whats-new.rest": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "그 밖에"
-          }
-        }
-      }
-    },
     "whats-new.current": {
       "extractionState": "manual",
       "localizations": {

@@ -45,7 +45,7 @@ struct WhatsNewModelTests {
         await n.check(busy: false)
         let ask = try #require(n.ask)
         #expect(ask.releases.map(\.version) == [V(0, 3, 0), V(0, 2, 1)])
-        #expect(ask.items.map(\.text) == ["노트 목차"])
+        #expect(ask.items.map(\.text) == ["노트 목차", "수식 말풍선 여백", "칸 닫기"])
         #expect(n.take() == ask)
         #expect(n.take() == nil)
         // Taken but not yet closed: the next minute's check doesn't bring it again.
