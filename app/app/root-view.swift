@@ -394,10 +394,7 @@ struct RootView: View {
                     let courses = workspace.sidebarCourses(in: semester)
                     let current = semester.id == workspace.currentSemester?.id
                     let open = !courses.isEmpty && current != toggledTerms.contains(semester.id)
-                    semesterRow(semester, open: open, menu: SemesterMenu(semesterId: semester.id, host: .list,
-                                                                         addCourse: current ? { addingCourse = true } : nil,
-                                                                         folded: courses.isEmpty ? nil : !open,
-                                                                         fold: { openBinding(semester, current: current).wrappedValue.toggle() }))
+                    semesterRow(semester, open: open, menu: semesterMenu(semester, current: current, hasCourses: !courses.isEmpty, open: open))
                         .rowTools(add: current ? String(localized: .rootAddCourse) : nil, action: { addingCourse = true }, open: courses.isEmpty ? nil : openBinding(semester, current: current)) { over in
                             if over { hoveredTerm = semester.id } else if hoveredTerm == semester.id { hoveredTerm = nil }
                         }
@@ -686,6 +683,14 @@ struct RootView: View {
         } else if case .course(let id) = selection {
             ManualTimerButton(courseID: id)
         }
+    }
+
+    // Built apart from the list: inline, the closures made the sidebar's expression too much for the iPad build to check.
+    func semesterMenu(_ semester: Semester, current: Bool, hasCourses: Bool, open: Bool) -> SemesterMenu {
+        var add: (@MainActor () -> Void)?
+        if current { add = { addingCourse = true } }
+        let fold: @MainActor () -> Void = { openBinding(semester, current: current).wrappedValue.toggle() }
+        return SemesterMenu(semesterId: semester.id, host: .list, addCourse: add, folded: hasCourses ? !open : nil, fold: fold)
     }
 
     func semesterRow(_ semester: Semester, open: Bool, menu: SemesterMenu) -> some View {

@@ -383,7 +383,7 @@ struct NotesModelTests {
         sheet.name = "a/b"
         #expect(sheet.target == "a-b.md")
         let revision = workspace.notesRevision
-        #expect(sheet.save())
+        #expect(sheet.apply())
         #expect(workspace.notesRevision > revision)
         let notes = NotesModel(workspace: workspace, course: course)
         #expect(notes.note(id)?.title == "a-b")
@@ -402,7 +402,7 @@ struct NotesModelTests {
         #expect(sheet.pdfName == nil)
         sheet.name = "귀류법"
         #expect(sheet.pdfName == "Study/귀류법.pdf" && sheet.pdfDetail == "Folio가 빌드한 Study/증명.pdf도 이름을 따라 바꿉니다")
-        #expect(sheet.save())
+        #expect(sheet.apply())
         #expect(FileManager.default.fileExists(atPath: course.store.fileURL("Study/귀류법.pdf").path))
     }
 
@@ -435,7 +435,7 @@ struct NotesModelTests {
         #expect(sheet.canSave && sheet.message == nil)
         sheet.folder = "정리"
         #expect(sheet.target == "정리/행렬식.md")
-        #expect(sheet.save())
+        #expect(sheet.apply())
         let note = try #require(try workspace.course(course.id)?.store.note(id: id))
         #expect(course.store.coursePath(of: note.url) == "Notes/정리/행렬식.md" && note.meta.math == math)
     }
@@ -448,7 +448,7 @@ struct NotesModelTests {
         let sheet = NoteEditModel(workspace: workspace, course: course, note: try #require(try course.store.note(id: id)))
         try #require(workspace.run(NoteLink(course: linearAlgebra, note: id, kind: .unit, units: [unit])))
         sheet.math = sheet.math == .latex ? .asciimath : .latex
-        #expect(sheet.save())
+        #expect(sheet.apply())
         let meta = try #require(workspace.course(course.id)?.file.notes.first { $0.id == id })
         #expect(meta.kind == .unit && meta.unitIds == [unit])
     }
@@ -487,7 +487,7 @@ struct NotesModelTests {
         list.reload()
         let sheet = NoteEditModel(workspace: workspace, course: course, note: try #require(try course.store.note(id: id)), moves: moves)
         sheet.name = "고윳값"
-        #expect(moves.batch == nil && sheet.save() && moves.batch != nil)
+        #expect(moves.batch == nil && sheet.apply() && moves.batch != nil)
 
         list.undoMove()
         let pending = try #require(list.pending)

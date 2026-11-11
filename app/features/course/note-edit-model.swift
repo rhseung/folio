@@ -71,7 +71,7 @@ final class NoteEditModel {
     var pdfDetail: String? { pdf.map { $0.blocked ? String(localized: .notesRenamePdfStays($0.to)) : String(localized: .notesRenamePdfFollows($0.from)) } }
 
     /// The syntax first: it is kept by the note's ID, which a move leaves as it is.
-    func save() -> Bool {
+    func apply() -> Bool {
         guard canSave, let target, let path = course.store.coursePath(of: note.url) else { return false }
         if changesMath, let id = note.meta.id {
             let now = meta

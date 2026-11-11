@@ -29,7 +29,7 @@ struct NoteEditSheet: View {
                 }
             }
         } onConfirm: {
-            if model.save() { dismiss() }
+            if model.apply() { dismiss() }
         }
     }
 }

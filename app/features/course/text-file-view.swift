@@ -195,7 +195,9 @@ struct TextFileView: View {
     /// iPadOS can't run Tectonic, so its menu has no build row either.
     var texBuild: (@MainActor () -> Void)? {
         #if os(macOS)
-        model.isTex ? { Task { await model.build() } } : nil
+        guard model.isTex else { return nil }
+        let build: @MainActor () -> Void = { Task { await model.build() } }
+        return build
         #else
         nil
         #endif
