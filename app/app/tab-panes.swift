@@ -377,8 +377,6 @@ extension PanePreset {
         if let name { return name }
         return switch id {
         case PanePreset.inClass.id: String(localized: .panesPresetInClass)
-        case PanePreset.concepts.id: String(localized: .panesPresetConcepts)
-        case PanePreset.problems.id: String(localized: .panesPresetProblems)
         case PanePreset.review.id: String(localized: .panesPresetReview)
         default: id
         }
@@ -395,8 +393,6 @@ extension PanePreset.Role {
         case .classNote: String(localized: .panesRoleClassNote)
         case .reviewNote: String(localized: .panesRoleReviewNote)
         case .quiz: String(localized: .panesRoleQuiz)
-        case .problems: String(localized: .panesRoleProblems)
-        case .canvas: String(localized: .panesRoleCanvas)
         }
     }
 }

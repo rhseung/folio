@@ -1,6 +1,6 @@
 import Foundation
 
-/// A named layout to switch to (#62, #64): what goes in each pane, and how wide. The four built-in ones are here; the
+/// A named layout to switch to (#62, #64): what goes in each pane, and how wide. The built-in ones are here; the
 /// ones the user saves ("지금 배치 저장…", 2026-11-11 사용자) live in settings.json (`Settings.panePresets`), since
 /// the user names and orders them, unlike the device's remembered layouts (`PaneMemory`). The app names the built-in
 /// ones from its string catalog by `id`.
@@ -12,11 +12,9 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
         /// The note written in class.
         case classNote
         case reviewNote
-        /// The course's quiz.
+        /// The course's quiz. No built-in layout has it while the quiz is unproven in use (2026-11-11 사용자), but a
+        /// saved tab with the quiz keeps it as the class's.
         case quiz
-        /// A problem sheet and the canvas to solve it on. Neither has an address from a session yet, so a preset
-        /// opened from a session leaves them out.
-        case problems, canvas
     }
 
     /// A pane: a role a class fills in, or the same address whatever the class.
@@ -34,9 +32,12 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
     public var name: String?
     public var slots: [Slot]
     public var shares: [Double]
+    /// The pane chosen first, a built-in layout's place to write. A saved layout starts on its first pane.
+    public var focus: Role?
 
-    public init(id: String, roles: [Role], shares: [Double]) {
+    public init(id: String, roles: [Role], shares: [Double], focus: Role? = nil) {
         self.init(id: id, name: nil, slots: roles.map(Slot.role), shares: shares)
+        self.focus = focus
     }
 
     public init(id: String = UUID().uuidString, name: String?, slots: [Slot], shares: [Double]) {
@@ -46,19 +47,19 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
         self.shares = shares
     }
 
-    public static let inClass = PanePreset(id: "in-class", roles: [.lecture, .classNote], shares: [0.55, 0.45])
-    public static let concepts = PanePreset(id: "concepts", roles: [.lecture, .quiz], shares: [0.6, 0.4])
-    public static let problems = PanePreset(id: "problems", roles: [.problems, .canvas], shares: [0.5, 0.5])
-    /// Opened for a class's review and a unit's review (#146).
-    public static let review = PanePreset(id: "review", roles: [.reviewNote, .quiz], shares: [0.6, 0.4])
-    public static let builtIn = [inClass, concepts, problems, review]
+    public static let inClass = PanePreset(id: "in-class", roles: [.lecture, .classNote], shares: [0.55, 0.45], focus: .classNote)
+    /// The review note is written from the lecture and what was jotted in class (2026-11-11 사용자), not the quiz.
+    public static let review = PanePreset(id: "review", roles: [.lecture, .classNote, .reviewNote], shares: [0.4, 0.3, 0.3], focus: .reviewNote)
+    /// "개념 다지기" (lecture and quiz) and "문제 풀이" (problem sheet and canvas) are left out until the canvas exists
+    /// and the quiz is in use (2026-11-11 사용자).
+    public static let builtIn = [inClass, review]
 
     public var roles: [Role] { slots.compactMap(\.role) }
     public var isBuiltIn: Bool { Self.builtIn.contains { $0.id == id } }
     /// A layout with a role has nothing to show in a tab that isn't a class's (2026-11-11 사용자): it is off there.
     public var needsClass: Bool { slots.contains { $0.role != nil } }
 
-    /// Whether a class's start can open it: it has the class's lecture or note to open. "문제 풀이" has neither.
+    /// Whether a class's start can open it: it has the class's lecture or note to open.
     public var opensClass: Bool { roles.contains(.lecture) || roles.contains(.classNote) }
 
     /// What each role is for a session: its lectures in order, its notes, the course's quiz.
@@ -72,8 +73,9 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
     /// The preset filled with `links` for each role. A role in one slot takes all of its links there, sharing the
     /// slot's width (a class's lectures when it starts, #391, 2026-11-09 사용자), unless `spreads` is off; a role in
     /// several slots gives each the next link, the last slot taking the rest. Every slot given a link keeps one pane
-    /// before a slot gets a second, so past `limit` a third lecture gives way, not the note. Focused on `focus`'s
-    /// first pane, else the first pane. Nil without a link.
+    /// before a slot gets a second, so past `limit` a third lecture gives way, not the note, and a slot gives way from
+    /// the end, `focus`'s last (an iPad's two panes of "복습" are the lecture and the review note). Focused on
+    /// `focus`'s first pane, else the first pane. Nil without a link.
     public func layout(_ links: [Role: [AppLink]], focus: Role? = nil, limit: Int, spreads: Bool = true) -> PaneLayout? {
         var taken: [Role: Int] = [:]
         let filled: [[AppLink]] = slots.enumerated().map { i, slot in
@@ -89,7 +91,10 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
             }
         }
         var counts = filled.map { $0.isEmpty ? 0 : 1 }
-        while counts.reduce(0, +) > max(1, limit), let last = counts.lastIndex(where: { $0 > 0 }) { counts[last] = 0 }
+        while counts.reduce(0, +) > max(1, limit),
+              let last = counts.indices.last(where: { counts[$0] > 0 && (focus == nil || slots[$0].role != focus) }) ?? counts.lastIndex(where: { $0 > 0 }) {
+            counts[last] = 0
+        }
         for i in filled.indices {
             while counts[i] > 0, counts[i] < filled[i].count, counts.reduce(0, +) < limit { counts[i] += 1 }
         }
@@ -122,7 +127,7 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
     public func layout(session: Session?, course: UUID?, limit: Int) -> PaneLayout? {
         let links = if let session, let course { Self.links(session: session, course: course) } else { [Role: [AppLink]]() }
         if needsClass, links.isEmpty { return nil }
-        return layout(links, limit: limit, spreads: false)
+        return layout(links, focus: focus, limit: limit, spreads: false)
     }
 
     /// Whether `layout` is this preset filled in for the session, so a tab can go by the preset's name. Pages and

@@ -4,7 +4,7 @@ import FolioDomain
 import SwiftUI
 
 /// Debug-only (`FOLIO_SNAPSHOT_LAYOUTS` with `FOLIO_SNAPSHOT_DIR`): the walk behind #62's pictures of "배치 ▸" and the
-/// toolbar's recorder. A class's lecture opens in "개념 다지기"; then the tab's own menu and its "배치 ▸" pop up as a
+/// toolbar's recorder. A class's lecture opens beside the quiz; then the tab's own menu and its "배치 ▸" pop up as a
 /// right click would show them, and 설정 › 일반, each drawn into `<step>.png` with the menus' own windows. No event
 /// reaches the screen: the menu is asked of the tab's view in-process.
 /// `FOLIO_SNAPSHOT_LAYOUTS=window` stops after the first step (the recorder's pictures, one launch per state).
@@ -21,14 +21,14 @@ enum LayoutSnapshots {
         window.setContentSize(NSSize(width: SnapshotDriver.width, height: SnapshotDriver.height))
         window.center()
         for _ in 0..<20 where workspace.currentCourses.isEmpty { try? await Task.sleep(for: .seconds(0.5)) }
-        // A class's lecture, then "개념 다지기" filled from that class: the menu then has a layout to tick.
+        // A class's lecture and the course's quiz, saved as a layout of the user's: the menu then has one to tick.
         let lectures = workspace.currentCourses.lazy.compactMap { course -> (UUID, SessionMaterial)? in
             course.file.sessions.lazy.compactMap(\.materials.first).first.map { (course.id, $0) }
         }
         if case let (course, lecture)? = lectures.first, let panes = tabs.front,
            let entry = workspace.entry(for: AppLink(.material, lecture.materialId, anchor: lecture.firstPage.map(AppLink.Anchor.page)), hint: course) {
             panes.focused.go(entry)
-            workspace.apply(.concepts, to: panes)
+            workspace.apply(PanePreset(name: nil, slots: [.role(.lecture), .role(.quiz)], shares: [0.6, 0.4]), to: panes)
         } else {
             NSLog("layouts: no class with a lecture")
         }
