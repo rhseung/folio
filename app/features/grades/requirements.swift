@@ -193,10 +193,8 @@ struct RequirementsView: View {
         .popover(isPresented: Binding(get: { model.showing == category.id }, set: { if !$0, model.showing == category.id { model.showing = nil } }),
                  arrowEdge: .bottom) { courseList(category, courses) }
         .contextMenu {
-            Button(.requirementsShowCourses) { model.showing = category.id }
-            Button(.requirementsEditEllipsis) { model.editing = category }
-            Divider()
-            Button(.requirementsRemoveEllipsis, role: .destructive) { model.removing = category }
+            ItemMenu(source: RequirementMenuSource(show: { model.showing = category.id }, edit: { model.editing = category },
+                                                   remove: { model.removing = category }))
         }
         .help(category.rule ?? String(localized: .requirementsShowCoursesHelp))
     }

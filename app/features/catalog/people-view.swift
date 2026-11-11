@@ -5,6 +5,7 @@ struct PeopleView: View {
     @State private var model: PeopleModel
     @Environment(\.place) private var place
     @Environment(\.openLink) private var openLink
+    @Environment(\.openURL) private var openURL
 
     init(workspace: Workspace) {
         _model = State(initialValue: PeopleModel(workspace: workspace))
@@ -75,9 +76,8 @@ struct PeopleView: View {
                             }
                             .buttonStyle(.pointing(.plain))
                             .contextMenu {
-                                if let url = model.workspace.mailURL(to: p.email) { Link(String(localized: .peopleMail), destination: url) }
-                                Divider()
-                                Button(.commonDeleteEllipsis, role: .destructive) { model.removing = p }
+                                ItemMenu(source: PersonMenuSource(person: p, host: .list, mail: model.workspace.mailURL(to: p.email),
+                                                                  remove: { model.removing = p }, openLink: openLink, openURL: openURL))
                             }
                         }
                     }

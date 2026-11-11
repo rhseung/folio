@@ -23,9 +23,7 @@ struct CodesView: View {
                                     CodeTile(code: code, courses: users[code.id] ?? [])
                                         .onTapGesture { model.editing = code.id }
                                         .contextMenu {
-                                            Button(.commonEdit) { model.editing = code.id }
-                                            Divider()
-                                            Button(.commonDelete, role: .destructive, action: remove).disabled(model.removal(code.id) != nil)
+                                            ItemMenu(source: CodeMenuSource(edit: { model.editing = code.id }, remove: remove, removable: model.removal(code.id) == nil))
                                         }
                                         .popover(isPresented: Binding(get: { model.editing == code.id },
                                                                       set: { if !$0 { model.closeEditor(code.id, catalog: &catalog) } }),

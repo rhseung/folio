@@ -452,19 +452,17 @@ public enum CodeMenuCommand: ItemCommand {
 }
 
 public enum RequirementMenuCommand: ItemCommand {
-    /// The course a category row stands for, when it stands for one.
-    case openCourse
+    /// The courses counted toward it, which a press on its figure shows too.
+    case showCourses
     case edit, remove
 
     public var group: MenuGroup {
         switch self {
-        case .openCourse: .open
+        case .showCourses: .open
         case .edit: .edit
         case .remove: .remove
         }
     }
 
-    public static func commands(hasCourse: Bool) -> [RequirementMenuCommand] {
-        (hasCourse ? [.openCourse] : []) + [.edit, .remove]
-    }
+    public static var commands: [RequirementMenuCommand] { [.showCourses, .edit, .remove] }
 }

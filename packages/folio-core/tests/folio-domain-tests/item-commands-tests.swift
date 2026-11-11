@@ -51,7 +51,7 @@ struct ItemCommandsTests {
         ordered(CardMenuCommand.commands(solvesWrong: true))
         ordered(ProblemSetMenuCommand.commands(hasSheet: true, hasSolution: true))
         ordered(ProblemMenuCommand.commands(hasSheet: true, hasUnits: true), removes: false)
-        ordered(RequirementMenuCommand.commands(hasCourse: true))
+        ordered(RequirementMenuCommand.commands)
         ordered(CodeMenuCommand.commands)
         ordered(ExamPlanItem.commands(done: true))
     }
