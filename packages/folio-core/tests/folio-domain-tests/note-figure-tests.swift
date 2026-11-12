@@ -78,6 +78,18 @@ struct NoteFigureTests {
             .external("https://cdn.example/d3.js"), .external("style.css"), .external("//cdn.example/a.png"),
             .external("https://fonts.example/f.css"), .external("https://x/b.png"),
         ])
+        // The frame is served only the widget's own file, so a file beside it is as far away as another site.
+        let relative = """
+        <script src="chart.js"></script><img src=plot.png><div style="background:url(grid.svg)"></div>
+        <style>@import "theme.css";</style><script>const i = new Image(); i.src = 'dot.png'</script>
+        """
+        #expect(Set(NoteWidget.problems(relative)) == [.external("chart.js"), .external("plot.png"), .external("grid.svg"),
+                                                       .external("theme.css"), .external("dot.png")])
+        let own = """
+        <img src="data:image/png;base64,iVBO"><img src='blob:x'><use href="#a"/><div data-src="later.png"></div>
+        <script>img.src = url; img.src = `${base}.png`; el.style.background = `url(${made})`</script>
+        """
+        #expect(NoteWidget.problems(own).isEmpty)
     }
 
     @Test func widgetFilesSitInTheCourseMetadata() {

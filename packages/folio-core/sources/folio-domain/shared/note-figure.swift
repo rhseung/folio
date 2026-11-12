@@ -168,16 +168,24 @@ public enum NoteWidget {
     /// it and show nothing where it was. Links are left alone; the frame doesn't open them either way.
     public static func problems(_ html: String) -> [Problem] {
         guard !html.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [.empty] }
-        var found: [Problem] = []
-        let away = /(?:https?:)?\/\/[^'"\s)>]+/
-        for m in html.matches(of: /\bsrc\s*=\s*['"]?((?:https?:)?\/\/[^'"\s>]+)/.ignoresCase()) { found.append(.external(String(m.1))) }
-        for m in html.matches(of: /<link\b[^>]*\bhref\s*=\s*['"]?([^'"\s>]+)/.ignoresCase()) { found.append(.external(String(m.1))) }
-        for m in html.matches(of: /url\(\s*['"]?((?:https?:)?\/\/[^'")\s]+)/.ignoresCase()) { found.append(.external(String(m.1))) }
-        for m in html.matches(of: /@import\s+(?:url\()?\s*['"]?([^'";)\s]+)/.ignoresCase()) where m.1.firstMatch(of: away) != nil {
-            found.append(.external(String(m.1)))
-        }
+        var found: [String] = []
+        // Quoted anywhere, so a script's `img.src = "plot.png"` counts too; unquoted only inside a tag, where a
+        // script's `img.src = url` (a variable) can't be.
+        found += html.matches(of: /[\s.]src\s*=\s*(?:"([^"]*)"|'([^']*)')/.ignoresCase()).map { String($0.1 ?? $0.2 ?? "") }
+        found += html.matches(of: /<[a-z][^>]*\ssrc\s*=\s*([^'"\s>]+)/.ignoresCase()).map { String($0.1) }
+        found += html.matches(of: /<link\b[^>]*\bhref\s*=\s*['"]?([^'"\s>]+)/.ignoresCase()).map { String($0.1) }
+        found += html.matches(of: /url\(\s*['"]?([^'")\s]*)/.ignoresCase()).map { String($0.1) }
+        found += html.matches(of: /@import\s+(?:url\()?\s*['"]?([^'";)\s]+)/.ignoresCase()).map { String($0.1) }
+        let problems = found.filter { !inside($0) }.map(Problem.external)
         var seen: Set<Problem> = []
-        return found.filter { seen.insert($0).inserted }
+        return problems.filter { seen.insert($0).inserted }
+    }
+
+    /// What the policy lets a page use: a part of itself, data written in, or something its script made. A value
+    /// built in a template string (`${…}`) is only known when the script runs.
+    static func inside(_ ref: String) -> Bool {
+        let r = ref.trimmingCharacters(in: .whitespaces).lowercased()
+        return r.isEmpty || r.hasPrefix("#") || r.hasPrefix("data:") || r.hasPrefix("blob:") || r.contains("${")
     }
 }
 
