@@ -185,7 +185,7 @@ struct ProposalWaitingTests {
     }
 
     func proposal(after: [Int]? = nil, applied: Bool? = nil) -> ActionProposal {
-        ActionProposal(command: "unit pages add", input: [:], applied: applied, after: after)
+        ActionProposal(command: "unit pages add", input: .object([:]), applied: applied, after: after)
     }
 
     @Test func standsAloneWithoutEarlierOnes() {
