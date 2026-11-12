@@ -17040,17 +17040,6 @@
         }
       }
     },
-    "today.deadlines.show": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "과제 보기"
-          }
-        }
-      }
-    },
     "today.note.create-help": {
       "extractionState": "manual",
       "localizations": {
@@ -17256,17 +17245,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "%lld일 밀림"
-          }
-        }
-      }
-    },
-    "today.reviews.show-units": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "단원 보기"
           }
         }
       }

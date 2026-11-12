@@ -1,91 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// Chips, the date, a line of counts, and the week beside them.
-struct TodayHeader: View {
-    let model: TodayModel
-    let summary: TodaySummary
-    let classes: [TodayModel.RibbonClass]
-    let reviews: TodayModel.Reviews
-
-    var body: some View {
-        // The counts include ended classes, so the line moves on as the day does.
-        let now = model.workspace.liveNow
-        ViewThatFits(in: .horizontal) {
-            HStack(alignment: .bottom, spacing: Theme.Space.xl) {
-                heading(now: now)
-                Spacer(minLength: 0)
-                week
-            }
-            VStack(alignment: .leading, spacing: Theme.Space.l) {
-                heading(now: now)
-                week
-            }
-        }
-        // The page's own gaps fit block to block; the date sits apart from the day below it, as in the mockup.
-        .padding(.top, Theme.Space.l)
-        .padding(.bottom, Theme.Space.m)
-    }
-
-    func heading(now: Date) -> some View {
-        VStack(alignment: .leading, spacing: Theme.Space.s) {
-            Text(model.heading(summary, now: now)).font(Theme.Typeface.pageTitle)
-            let pieces = model.summaryLine(classes: classes, summary: summary, reviews: reviews, now: now)
-            // One count a line where the line doesn't fit: cut short, it dropped the counts at its end.
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: Theme.Space.m) {
-                    ForEach(Array(pieces.enumerated()), id: \.offset) { i, piece in
-                        if i > 0 { CourseDot(color: Theme.Palette.lineStrong, size: Theme.Space.xs) }
-                        Text(Self.counts(piece.text, urgent: piece.urgent))
-                    }
-                }
-                VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                    ForEach(Array(pieces.enumerated()), id: \.offset) { _, piece in Text(Self.counts(piece.text, urgent: piece.urgent)) }
-                }
-            }
-            .font(Theme.Typeface.bodyLarge)
-            .foregroundStyle(Theme.Palette.textSecondary)
-            .lineLimit(1)
-        }
-        // Only its height: fixed in width too, the counts line could never fold and pushed a narrow pane out.
-        .fixedSize(horizontal: false, vertical: true)
-    }
-
-    /// The bold runs of a count line in full text color, or danger when the count needs doing today.
-    static func counts(_ text: AttributedString, urgent: Bool) -> AttributedString {
-        var text = text
-        for run in text.runs where run.inlinePresentationIntent?.contains(.stronglyEmphasized) == true {
-            text[run.range].foregroundColor = urgent ? Theme.Palette.danger : Theme.Palette.text
-        }
-        return text
-    }
-
-    var week: some View {
-        HStack(spacing: Theme.Space.xs) {
-            ForEach(model.week(around: summary.studyDay)) { day in
-                VStack(spacing: Theme.Space.xs) {
-                    Text(day.weekday).font(Theme.Typeface.label)
-                    Text("\(day.day.day)").font(Theme.Typeface.bodyStrong).monospacedDigit()
-                    HStack(spacing: Theme.Space.xxs) {
-                        ForEach(day.courses.prefix(4), id: \.self) { CourseDot(color: model.workspace.accent($0).color, size: Theme.Space.tight) }
-                    }
-                    .frame(height: Theme.Space.tight)
-                }
-                .foregroundStyle(day.isToday ? Theme.Palette.text : Theme.Palette.textTertiary)
-                .frame(width: 40)
-                .padding(.vertical, Theme.Space.s)
-                .background {
-                    if day.isToday {
-                        RoundedRectangle(cornerRadius: Theme.Radius.control).fill(Theme.Palette.card)
-                            .overlay(RoundedRectangle(cornerRadius: Theme.Radius.control).strokeBorder(Theme.Palette.line))
-                    }
-                }
-            }
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
 /// The study day's classes laid out on an hour axis, with the time now and today's deadlines on it.
 struct DayRibbonCard: View {
     let model: TodayModel
@@ -98,12 +13,12 @@ struct DayRibbonCard: View {
 
     static let label: CGFloat = 16
     static let track: CGFloat = 48
+    /// The width a time on the axis or a flag is laid out in, centred on its spot or held in from an edge.
+    static let labelWidth: CGFloat = 80
 
     var body: some View {
         let ribbon = model.ribbon(classes, on: summary.studyDay)
-        let due = summary.deadlines.filter(\.isToday).count
-        let note = due > 0 ? String(localized: .todayRibbonNoteDue(classes.count, due)) : String(localized: .todayRibbonNote(classes.count))
-        Block(String(localized: .todayClasses), note: classes.isEmpty ? nil : note) {
+        Block(String(localized: .todayClasses), note: model.ribbonNote(classes, summary: summary)) {
             Card(padding: Theme.Space.l) {
                 // Measured beside the canvas, not with a GeometryReader around it: a GeometryReader's closure is not
                 // run again when the time changes, so the now line read in it stood still.
@@ -118,6 +33,8 @@ struct DayRibbonCard: View {
     func canvas(_ ribbon: DayRibbon, width: CGFloat, now: Date) -> some View {
         let trackTop = Self.label + Theme.Space.xs
         let x = { (date: Date) in ribbon.position(of: date) * width }
+        let dues = model.ribbonDues(summary)
+        let labelWidth = Self.labelWidth
         return ZStack(alignment: .topLeading) {
             Theme.Palette.lineSoft.frame(width: width, height: 1).offset(y: trackTop + Self.track / 2)
             if classes.isEmpty {
@@ -130,11 +47,11 @@ struct DayRibbonCard: View {
                     .frame(width: max(Theme.Space.s, right - left - Theme.Space.xxs), height: Self.track)
                     .offset(x: left, y: trackTop)
             }
-            ForEach(dues(), id: \.date) { due in
+            ForEach(dues) { due in
                 // The time reads leftward from the flag, so a midnight deadline stays inside the card.
                 flag(due.date, items: due.items)
-                    .frame(width: 80, alignment: .trailing)
-                    .offset(x: x(due.date) - 80 + Theme.Space.s, y: 0)
+                    .frame(width: labelWidth, alignment: .trailing)
+                    .offset(x: x(due.date) - labelWidth + Theme.Space.s, y: 0)
             }
             if ribbon.contains(now) {
                 let at = x(now)
@@ -142,34 +59,23 @@ struct DayRibbonCard: View {
                     .clipShape(.capsule)
                     .offset(x: at - Theme.Space.xxs / 2, y: trackTop - Theme.Space.xs)
                 // A flag's time takes the label row near it; the line alone still says where now is.
-                if !dues().contains(where: { abs(x($0.date) - at) < 80 }) {
+                if !dues.contains(where: { abs(x($0.date) - at) < labelWidth }) {
                     Text(model.time(now)).font(Theme.Typeface.label).monospacedDigit().fixedSize()
-                        .frame(width: 80, alignment: .center)
-                        .offset(x: at - 40, y: 0)
+                        .frame(width: labelWidth, alignment: .center)
+                        .offset(x: at - labelWidth / 2, y: 0)
                 }
             }
             ForEach(ribbon.ticks, id: \.self) { hour in
                 let at = Double(hour - ribbon.startHour) / Double(ribbon.endHour - ribbon.startHour) * width
                 let first = hour == ribbon.ticks.first, last = hour == ribbon.ticks.last
-                Text(tick(hour, on: ribbon)).font(Theme.Typeface.label).foregroundStyle(Theme.Palette.textTertiary).fixedSize()
-                    .frame(width: 80, alignment: first ? .leading : last ? .trailing : .center)
-                    .offset(x: first ? at : last ? at - 80 : at - 40, y: trackTop + Self.track + Theme.Space.xs)
+                Text(model.ribbonTick(hour, on: ribbon)).font(Theme.Typeface.label).foregroundStyle(Theme.Palette.textTertiary).fixedSize()
+                    .frame(width: labelWidth, alignment: first ? .leading : last ? .trailing : .center)
+                    .offset(x: first ? at : last ? at - labelWidth : at - labelWidth / 2, y: trackTop + Self.track + Theme.Space.xs)
             }
         }
         // As wide as it is given, never as wide as it was drawn: `width` is measured from this frame, so a fixed width
         // held a width the card once had and kept a narrowed pane from shrinking it.
         .frame(minWidth: 0, maxWidth: .infinity, alignment: .topLeading)
-    }
-
-    /// `오전 9 · 12 · 오후 3 · 6 · 9 · 자정`: am/pm on the first tick and where it turns, as on a timetable. Noon reads
-    /// plainly as 12, so the turn is marked at the next tick.
-    func tick(_ hour: Int, on ribbon: DayRibbon) -> String {
-        if hour == 24 { return String(localized: .todayRibbonMidnight) }
-        let calendar = model.workspace.calendar
-        let before = ribbon.ticks.last { $0 < hour && $0 != 12 }
-        let marked = hour != 12 && before.map { ($0 >= 12) != (hour >= 12) } ?? true
-        let number = "\(hour % 12 == 0 ? 12 : hour % 12)"
-        return marked ? "\(hour < 12 ? calendar.amSymbol : calendar.pmSymbol) \(number)" : number
     }
 
     @ViewBuilder func block(_ item: TodayModel.RibbonClass, now: Date) -> some View {
@@ -239,12 +145,6 @@ struct DayRibbonCard: View {
         .padding(Theme.Space.l)
         .frame(width: 280, alignment: .leading)
         .background(Theme.Palette.card)
-    }
-
-    /// Today's deadlines by their time, those due together on one flag.
-    func dues() -> [(date: Date, items: [TodaySummary.DeadlineItem])] {
-        let today = summary.deadlines.filter(\.isToday)
-        return Dictionary(grouping: today) { $0.assignment.due ?? .distantFuture }.sorted { $0.key < $1.key }.map { ($0.key, $0.value) }
     }
 
     @ViewBuilder func flag(_ date: Date, items: [TodaySummary.DeadlineItem]) -> some View {

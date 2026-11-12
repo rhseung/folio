@@ -345,49 +345,6 @@ struct ExamEditor: View {
     }
 }
 
-struct ExamPlanTodayBlock: View {
-    @Environment(Workspace.self) private var workspace
-    let courses: [LoadedCourse]
-    @State private var done: Set<UUID> = []
-
-    var body: some View {
-        let today = workspace.today
-        let items = ExamPlan.items(on: today, courses: courses.map(\.file))
-        if !items.isEmpty {
-            Block(String(localized: .examsPlan), note: String(localized: .examsPlanDone(items.filter { done.contains($0.item.id) }.count, items.count))) {
-                Card {
-                    ForEach(Array(items.enumerated()), id: \.element.item.id) { i, entry in
-                        let accent = workspace.accent(entry.courseId)
-                        CardRow(last: i == items.count - 1) {
-                            CheckCircle(on: done.contains(entry.item.id)) { toggle(entry) }
-                            .help(Text(done.contains(entry.item.id) ? .examsPlanUndo : .examsPlanCheck))
-                            .courseAccent(accent)
-                            CourseMark(workspace, entry.courseId)
-                            VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-                                Text(entry.item.title).font(Theme.Typeface.bodyStrong).strikethrough(done.contains(entry.item.id))
-                                Text("\(workspace.course(entry.courseId)?.title ?? "") · \(entry.exam.title)")
-                                    .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
-                            }
-                            Spacer()
-                        }
-                        .contentShape(.rect)
-                        .contextMenu {
-                            PlanItemMenu(courseId: entry.courseId, examId: entry.exam.id, item: entry.item.id, done: done.contains(entry.item.id)) { toggle(entry) }
-                        }
-                    }
-                }
-            }
-            .task(id: courses.map(\.id)) { done = workspace.donePlanItems(in: courses.map(\.id)) }
-        }
-    }
-
-    func toggle(_ entry: ExamPlan.DayItem) {
-        let new = !done.contains(entry.item.id)
-        workspace.setPlanItem(entry.item.id, done: new, course: entry.courseId)
-        if new { done.insert(entry.item.id) } else { done.remove(entry.item.id) }
-    }
-}
-
 private struct ReviewDot: View {
     let state: ReviewState?
     let today: LocalDate
@@ -406,7 +363,7 @@ private struct ReviewDot: View {
         Group {
             if let color { Circle().fill(color) } else { Circle().strokeBorder(Theme.Palette.line, lineWidth: 1.5) }
         }
-        .frame(width: 8, height: 8)
+        .frame(width: Theme.Size.dot, height: Theme.Size.dot)
         .help(label)
         .accessibilityLabel(label)
     }
