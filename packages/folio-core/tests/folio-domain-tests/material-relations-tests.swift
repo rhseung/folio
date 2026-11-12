@@ -67,6 +67,35 @@ struct MaterialRelationsTests {
         #expect(file.routes(of: file.materials[3], to: .exam(exam)).isEmpty)
     }
 
+    @Test func aSplitLectureBelongsWithItsUnitsAndTheirSessions() {
+        var file = course()
+        let lecture = file.materials[0].id
+        file.split(lecture, into: [LectureCut(unit: chapter(file), firstPage: 1, lastPage: 4),
+                                   LectureCut(unit: section(file), firstPage: 5, lastPage: 12)], device: device, now: now)
+        #expect(file.materials[0].unitIds.isEmpty)
+        #expect(file.routes(of: file.materials[0], to: .unit(section(file))) == [.pages])
+        #expect(file.routes(of: file.materials[0], to: .unit(chapter(file))) == [.pages])
+        // The class sits in the section, so it reaches the file through the section and the chapter above it.
+        #expect(file.routes(of: file.materials[0], to: .session(file.sessions[0].id)) == [.unit(section(file)), .unit(chapter(file))])
+        #expect(file.units(of: file.materials[0]).map(\.routes) == [[.pages], [.pages]])
+
+        file.setMaterial(lecture, unit: section(file), linked: true)
+        #expect(file.routes(of: file.materials[0], to: .unit(section(file))) == [.direct, .pages])
+
+        file.split(lecture, into: [], device: device, now: now)
+        #expect(file.routes(of: file.materials[0], to: .unit(chapter(file))).isEmpty)
+        #expect(file.routes(of: file.materials[0], to: .unit(section(file))) == [.direct])
+        file.setMaterial(lecture, unit: section(file), linked: false)
+        #expect(file.routes(of: file.materials[0], to: .session(file.sessions[0].id)).isEmpty)
+    }
+
+    @Test func aUnitDoesNotGatherTheFilesItsParentSplits() {
+        var file = course()
+        file.split(file.materials[0].id, into: [LectureCut(unit: chapter(file), firstPage: 1, lastPage: 4)], device: device, now: now)
+        #expect(file.routes(of: file.materials[0], to: .unit(section(file))).isEmpty)
+        #expect(file.routes(of: file.materials[0], to: .session(file.sessions[0].id)) == [.unit(chapter(file))])
+    }
+
     @Test func aParentCycleEnds() {
         var file = course()
         file.units[0].parentId = file.units[1].id
