@@ -89,10 +89,10 @@ struct NoteMenuSource: ItemMenuSource {
     /// The other folders of Notes/, then a new one: shown with no folder yet too, since that is where the first comes from.
     private var moveLeaves: [MenuRow.Leaf] {
         guard let course else { return [] }
-        return NoteListModel.moveTargets(note, in: course.store).map { folder in
-            MenuRow.Leaf(id: folder, title: NoteListModel.folderLabel(folder), symbol: "folder") {
+        return course.store.noteMoveTargets(for: note).map { folder in
+            MenuRow.Leaf(id: folder, title: CourseStore.noteFolderLabel(folder), symbol: "folder") {
                 save?()
-                sheets.confirm(NoteListModel.askMove(note, into: folder, course: course, workspace: workspace) { [moves] ctx in moves?.keep(ctx) })
+                sheets.confirm(workspace.askMove(note, into: folder, course: course) { [moves] ctx in moves?.keep(ctx) })
             }
         } + [MenuRow.Leaf(id: "new", title: String(localized: .notesFolderNewEllipsis), symbol: "folder.badge.plus") {
             save?()

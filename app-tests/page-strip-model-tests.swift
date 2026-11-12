@@ -93,12 +93,12 @@ struct PageStripModelTests {
         link(earlier, 1...7)
         let other = try #require(file.materials.first { $0.role != .lecture && !$0.isFolder })
         let model = model(other.id)
-        #expect(!model.picks && model.sections.isEmpty)
+        #expect(!model.isLecture && model.sections.isEmpty)
         model.extend(to: 4)
         model.start(at: 2)
         #expect(model.selection == nil && model.items.map(\.page) == Array(1...24))
         // A file no course tracks has none either.
-        #expect(!PageStripModel(workspace: workspace, course: nil, material: nil, pageCount: 3, defaults: nil).picks)
+        #expect(!PageStripModel(workspace: workspace, course: nil, material: nil, pageCount: 3, defaults: nil).isLecture)
     }
 
     /// Pressed, then ⇧-pressed before it: the range runs either way round, and its row goes above its first page.

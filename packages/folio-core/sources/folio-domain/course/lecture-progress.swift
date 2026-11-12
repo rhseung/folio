@@ -208,6 +208,15 @@ extension CourseFile {
     public func pagesTaken(in material: UUID, besides session: UUID) -> [ClosedRange<Int>] {
         pagesTaught(in: material, besides: session).map(\.pages).sorted { $0.lowerBound < $1.lowerBound }
     }
+
+    /// The classes a new range of `material`'s pages can be saved as, the latest first: those held up to today that
+    /// have no pages of it yet. A class with pages there is changed from its own section of the page strip instead,
+    /// and a cancelled class taught nothing.
+    public func sessionsForNewRange(of material: UUID, now: Date, settings: Settings, calendar: Calendar) -> [Session] {
+        Session.held(among: sessions.filter { !$0.isCancelled }, now: now, settings: settings, calendar: calendar)
+            .reversed()
+            .filter { s in s.materials.first { $0.materialId == material }?.pages == nil }
+    }
 }
 
 extension CourseFile {

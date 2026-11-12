@@ -412,14 +412,14 @@ struct NotesModelTests {
         let id = try #require(workspace.run(NoteAdd(course: linearAlgebra, title: "행렬식"))?.made)
         try FileManager.default.createDirectory(at: course.store.url.appending(path: "Notes/정리"), withIntermediateDirectories: true)
         let note = try #require(try course.store.note(id: id))
-        #expect(NoteListModel.moveTargets(note, in: course.store) == ["정리"])
-        #expect(NoteListModel.folderLabel("정리") == "Notes/정리" && NoteListModel.folderLabel("") == "Notes")
+        #expect(course.store.noteMoveTargets(for: note) == ["정리"])
+        #expect(CourseStore.noteFolderLabel("정리") == "Notes/정리" && CourseStore.noteFolderLabel("") == "Notes")
         let moves = MoveUndo()
-        let pending = try #require(NoteListModel.askMove(note, into: "정리", course: course, workspace: workspace) { moves.keep($0) })
+        let pending = try #require(workspace.askMove(note, into: "정리", course: course) { moves.keep($0) })
         #expect(pending.question.contains("Notes/정리/행렬식.md"))
         pending.perform()
         let moved = try #require(try course.store.note(id: id))
-        #expect(course.store.coursePath(of: moved.url) == "Notes/정리/행렬식.md" && NoteListModel.moveTargets(moved, in: course.store) == [""])
+        #expect(course.store.coursePath(of: moved.url) == "Notes/정리/행렬식.md" && course.store.noteMoveTargets(for: moved) == [""])
         #expect(moves.batch != nil)
     }
 

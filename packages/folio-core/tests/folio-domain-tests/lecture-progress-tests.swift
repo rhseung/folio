@@ -151,6 +151,43 @@ struct LectureProgressTests {
         }
     }
 
+    // MARK: A new range on the page strip
+
+    var seoul: Calendar {
+        var c = Calendar(identifier: .gregorian)
+        c.timeZone = TimeZone(identifier: "Asia/Seoul")!
+        return c
+    }
+
+    /// The classes held so far, latest first, leaving out those with pages of the file and cancelled ones. `now` is
+    /// 10:00 in Seoul, so an hour after the second class the third, a week on, is not held yet.
+    @Test func aNewRangeIsOfferedToHeldClassesWithoutPages() {
+        var f = course()
+        let m = matchings(f)
+        let at = now + 7 * day + 3600
+        func offered(_ f: CourseFile, at: Date) -> [UUID] {
+            f.sessionsForNewRange(of: m, now: at, settings: Settings(), calendar: seoul).map(\.id)
+        }
+        #expect(offered(f, at: at) == [f.sessions[1].id, f.sessions[0].id])
+
+        f.linkMaterial(m, session: f.sessions[0].id, firstPage: 1, lastPage: 5)
+        // Linked without pages, or with pages of another file, a class has none of this one yet.
+        f.linkMaterial(m, session: f.sessions[1].id)
+        f.linkMaterial(flows(f), session: f.sessions[1].id, firstPage: 1, lastPage: 3)
+        #expect(offered(f, at: at) == [f.sessions[1].id])
+
+        f.sessions[1].isCancelled = true
+        #expect(offered(f, at: at).isEmpty)
+    }
+
+    /// Today's class counts before it starts: the study day decides, not the clock.
+    @Test func aNewRangeIsOfferedToTodaysClassBeforeItStarts() {
+        let f = course()
+        let morning = f.sessions[2].date - 3600
+        let offered = f.sessionsForNewRange(of: matchings(f), now: morning, settings: Settings(), calendar: seoul).map(\.id)
+        #expect(offered == [f.sessions[2].id, f.sessions[1].id, f.sessions[0].id])
+    }
+
     // MARK: The end-of-class prompt
 
     @Test func theNextClassPicksUpAfterTheLastOne() {

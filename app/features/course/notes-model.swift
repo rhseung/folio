@@ -47,45 +47,31 @@ final class NoteListModel {
     var emptyLine: String { filter.map { String(localized: .notesKindEmpty($0.label)) } ?? String(localized: .notesEmpty) }
 
     static func parts(_ notes: [NoteFile], file: CourseFile, calendar: Calendar) -> [Part] {
-        func byTitle(_ a: NoteFile, _ b: NoteFile) -> Bool { a.title.localizedStandardCompare(b.title) == .orderedAscending }
+        NoteGroup.grouped(notes, meta: \.meta, title: \.title, in: file).map { group, notes in
+            Part(title: group.title, rows: notes.map { Row(note: $0, detail: detail(of: $0, in: group, file: file, calendar: calendar)) })
+        }
+    }
+
+    private static func detail(of note: NoteFile, in group: NoteGroup, file: CourseFile, calendar: Calendar) -> String? {
         // A note moved in from an old folder has no ID until opened; it says so instead of a kind it doesn't have yet.
-        func detail(_ n: NoteFile, _ text: String?) -> String? { n.meta.id == nil ? String(localized: .notesNeedsId) : text }
+        guard note.meta.id != nil else { return String(localized: .notesNeedsId) }
 
-        // A review note covering several classes sits with the latest of them and names the range it covers.
-        let classNotes = notes.filter { $0.meta.kind == .rough || $0.meta.kind == .review }
-            .map { (note: $0, sessions: file.sessions(pointingAt: $0.meta.id)) }
-            .sorted { a, b in
-                switch (a.sessions.last, b.sessions.last) {
-                case let (x?, y?) where x.id != y.id: x.date > y.date
-                case (_?, nil): true
-                case (nil, _?): false
-                default: a.note.meta.kind == b.note.meta.kind ? byTitle(a.note, b.note) : a.note.meta.kind == .rough
-                }
-            }
-            .map { n, s in
-                let covered = s.count > 1 ? file.sessionSpan(of: n.meta.id, calendar: calendar) : s.first.map { $0.date.formatted(.dateTime.month().day().weekday()) }
-                return Row(note: n, detail: detail(n, covered.map { "\($0) · \(n.meta.kind.label)" } ?? "\(n.meta.kind.label) · " + String(localized: .notesNoSession)))
-            }
-
-        let exams = notes.filter { $0.meta.kind == .examSummary }
-            .map { n in (note: n, exam: file.exams.first { $0.id == n.meta.examId }) }
-            .sorted { a, b in
-                let (x, y) = (a.exam?.start ?? .distantFuture, b.exam?.start ?? .distantFuture)
-                return x != y ? x < y : byTitle(a.note, b.note)
-            }
-            .map { n, e in Row(note: n, detail: detail(n, e.map { $0.title } ?? String(localized: .notesNoExam))) }
-
-        let units = UnitTree.outline(file.units).map(\.unit)
-        let unitNotes = notes.filter { $0.meta.kind == .unit }.sorted(by: byTitle).map { n in
-            Row(note: n, detail: detail(n, units.filter { n.meta.unitIds.contains($0.id) }.map(\.title).joined(separator: ", ").nilIfEmpty ?? String(localized: .notesNoUnits)))
+        let meta = note.meta
+        switch group {
+        case .classes:
+            // A review note covering several classes names the range it covers.
+            let sessions = file.sessions(pointingAt: meta.id)
+            let covered = sessions.count > 1
+                ? file.sessionSpan(of: meta.id, calendar: calendar)
+                : sessions.first.map { $0.date.formatted(.dateTime.month().day().weekday()) }
+            return covered.map { "\($0) · \(meta.kind.label)" } ?? "\(meta.kind.label) · " + String(localized: .notesNoSession)
+        case .exams:
+            return file.exams.first { $0.id == meta.examId }?.title ?? String(localized: .notesNoExam)
+        case .units:
+            return file.units(of: meta).map(\.title).joined(separator: ", ").nilIfEmpty ?? String(localized: .notesNoUnits)
+        case .free:
+            return meta.tags.isEmpty ? nil : meta.tags.map { "#" + $0 }.joined(separator: " ")
         }
-
-        let free = notes.filter { $0.meta.kind == .free }.sorted(by: byTitle).map { n in
-            Row(note: n, detail: detail(n, n.meta.tags.isEmpty ? nil : n.meta.tags.map { "#" + $0 }.joined(separator: " ")))
-        }
-
-        return [Part(title: String(localized: .notesPartClass), rows: classNotes), Part(title: String(localized: .notesPartExam), rows: exams),
-                Part(title: String(localized: .notesPartUnit), rows: unitNotes), Part(title: String(localized: .notesPartFree), rows: free)].filter { !$0.rows.isEmpty }
     }
 
     func reload() {
@@ -93,48 +79,27 @@ final class NoteListModel {
         folders = course.store.noteFolders()
     }
 
-    /// The note's ID, giving one first to a note moved in from an old folder.
     func open(_ note: NoteFile) -> UUID? {
         if let id = note.meta.id { return id }
-        guard let path = course.store.coursePath(of: note.url), let id = workspace.run(NoteAdopt(course: course.id, note: path))?.made else { return nil }
+        guard let id = workspace.noteId(of: note, in: course) else { return nil }
+        // The row's note was read before it had an entry, and would still show it as needing one.
         reload()
         return id
     }
 
-    // MARK: Rename and move
-
-    /// Notes-relative, as `note mv` and the folder menu name places: "" for Notes/ itself.
-    static func notesPath(of url: URL, in store: CourseStore) -> String? {
-        let prefix = CourseFolder.notes.rawValue + "/"
-        return store.coursePath(of: url).flatMap { $0.hasPrefix(prefix) ? String($0.dropFirst(prefix.count)) : nil }
-    }
-
-    static func folder(of note: NoteFile, in store: CourseStore) -> String {
-        ((notesPath(of: note.url, in: store) ?? "") as NSString).deletingLastPathComponent
-    }
-
-    /// The other folders of Notes/ the note can go to.
-    static func moveTargets(_ note: NoteFile, in store: CourseStore) -> [String] {
-        let here = folder(of: note, in: store)
-        return store.noteFolders().filter { $0 != here }
-    }
-
-    static func folderLabel(_ folder: String) -> String {
-        folder.isEmpty ? CourseFolder.notes.rawValue : CourseFolder.notes.rawValue + "/" + folder
-    }
-
-    /// Asks with the name the note will have there, ` 2` included, since that is what the user approves.
-    static func askMove(_ note: NoteFile, into folder: String, course: LoadedCourse, workspace: Workspace,
-                        then done: @escaping @MainActor (ActionContext) -> Void) -> PendingAction? {
-        let store = course.store
-        let path = (folder.isEmpty ? "" : folder + "/") + note.url.lastPathComponent
-        guard let source = store.coursePath(of: note.url), let url = store.movedNoteURL(note, to: path, in: course.file),
-              let target = notesPath(of: url, in: store) else { return nil }
-        return workspace.ask(NoteMove(course: course.id, note: source, to: target), then: done)
-    }
-
     func undoMove() {
         pending = moves.undo(workspace, course: course.id) { [weak self] in self?.reload() }
+    }
+}
+
+extension NoteGroup {
+    var title: String {
+        switch self {
+        case .classes: String(localized: .notesPartClass)
+        case .exams: String(localized: .notesPartExam)
+        case .units: String(localized: .notesPartUnit)
+        case .free: String(localized: .notesPartFree)
+        }
     }
 }
 
@@ -152,13 +117,10 @@ final class NotesModel {
 
     func note(_ id: UUID?) -> NoteFile? { id.flatMap { try? course.store.note(id: $0) } }
 
-    /// The note a link by title opens. One moved in from an old folder gets its ID here, as when opened from the list:
-    /// the preview draws its link whole, so the link must open it.
+    /// A note moved in from an old folder gets its ID here too, as when opened from the list: the preview draws its link
+    /// whole, so the link must open it.
     func noteId(titled title: String) -> UUID? {
-        guard let note = ((try? course.store.notes()) ?? []).linked(title) else { return nil }
-        if let id = note.meta.id { return id }
-        guard let path = course.store.coursePath(of: note.url) else { return nil }
-        return workspace.run(NoteAdopt(course: course.id, note: path))?.made
+        ((try? course.store.notes()) ?? []).linked(title).flatMap { workspace.noteId(of: $0, in: course) }
     }
 }
 
@@ -285,10 +247,8 @@ final class NoteEditorModel {
         reloadMeta()
     }
 
-    /// From course.json as it is now: `note` is the entry as it was when the editor opened, which `note link` from the
-    /// Claude panel or the CLI may have changed since.
     func reloadMeta() {
-        let current = (store.note(at: store.notePath(of: note.url), in: course.file) ?? note).meta
+        let current = (course.stored(note) ?? note).meta
         // Every write to any note lands here; the bar and the preview redraw only when this note's links moved.
         if current != meta { meta = current }
         savedMath = meta.math
@@ -355,8 +315,7 @@ final class NoteEditorModel {
         }.sorted { $0.date > $1.date }
     }
     var linkExams: [Exam] { course.file.exams.sorted { ($0.start ?? .distantFuture) < ($1.start ?? .distantFuture) } }
-    /// Outline order: `order` counts among siblings only, so sorting by it alone interleaves chapters and their units.
-    var outline: [(unit: FolioDomain.Unit, depth: Int)] { UnitTree.outline(course.file.units) }
+    var outline: [(unit: FolioDomain.Unit, depth: Int)] { course.outline }
     var linkedSessions: [Session] { course.file.sessions(pointingAt: meta.id) }
 
     func sessionName(_ s: Session) -> String { course.file.title(of: s, calendar: workspace.calendar) }
@@ -372,8 +331,7 @@ final class NoteEditorModel {
         case .examSummary:
             linkExams.first { $0.id == meta.examId }.map { String(localized: .notesLinkExam($0.title)) } ?? String(localized: .notesLinkNoExam)
         case .unit:
-            String(localized: .notesLinkUnit(outline.map(\.unit).filter { meta.unitIds.contains($0.id) }.map(\.title).joined(separator: ", ").nilIfEmpty
-                                              ?? String(localized: .notesNoUnits)))
+            String(localized: .notesLinkUnit(course.file.units(of: meta).map(\.title).joined(separator: ", ").nilIfEmpty ?? String(localized: .notesNoUnits)))
         case .free: String(localized: .notesPartFree)
         }
     }
@@ -414,9 +372,9 @@ final class NoteEditorModel {
 
     private func saveLinks() {
         guard let id = meta.id else { return }
-        let ran = workspace.run(NoteLink(course: course.id, note: id, kind: meta.kind, session: meta.sessionId, exam: meta.examId, units: meta.unitIds, math: meta.math))
+        let ran = workspace.run(NoteLink(course: course.id, note: id, meta: meta))
         // A refused link leaves the file as it was; the label would otherwise show a kind the note doesn't have.
-        if ran == nil, let saved = store.note(at: store.notePath(of: note.url), in: course.file) { meta = saved.meta }
+        if ran == nil, let saved = course.stored(note) { meta = saved.meta }
     }
 
     // MARK: Assets
