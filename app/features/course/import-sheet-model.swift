@@ -305,6 +305,8 @@ final class ImportPlaceModel {
         guard case .nothing(let count) = sections[id] else { return }
         sections[id] = .proposed(LectureSplit(pageCount: count), source: nil)
         opened.insert(id)
+        // Claude's failure was about the proposal the user has now set aside.
+        claudeFailures[id] = nil
     }
 
     func later(_ id: Int) {
@@ -312,6 +314,7 @@ final class ImportPlaceModel {
         case .proposed?, .nothing?: sections[id] = .later(sections[id]!)
         default: break
         }
+        claudeFailures[id] = nil
     }
 
     func takeBack(_ id: Int) {

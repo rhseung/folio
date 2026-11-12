@@ -281,6 +281,9 @@ struct LectureSectionsModelTests {
         for _ in 0..<50 where !failing.asking.isEmpty { await Task.yield() }
         #expect(failing.claudeNote(failing.rows[0]) == "Claude가 나눌 곳을 찾지 못했습니다")
         #expect(failing.sectionsLine(failing.rows[0]) == "목차와 슬라이드 제목을 찾지 못했습니다")
+        // Cut by hand, the row has moved on from what Claude couldn't find.
+        failing.splitByHand(0)
+        #expect(failing.claudeNote(failing.rows[0]) == nil)
     }
 
     @Test func theProgressBarReadsTheUnitsItReaches() throws {
