@@ -327,6 +327,70 @@ struct ClaudeModelTests {
         #expect(!page.contains("folio://action/applyall/"))
     }
 
+    /// #90: a proposal the panel's server made on top of an earlier one of the answer waits until that one is applied.
+    @Test func aProposalOnAnEarlierOneWaitsForIt() throws {
+        let workspace = try fixtureWorkspace()
+        let model = ClaudeModel(workspace: workspace)
+        let course = try #require(workspace.course(graphTheory))
+        model.load(course)
+        let exam = UUID()
+        let add = ActionProposal(command: ExamAdd.command, input: try JSONValue(ExamAdd(id: exam, course: graphTheory, title: "퀴즈")))
+        let rename = ActionProposal(command: ExamSet.command, input: try JSONValue(ExamSet(course: graphTheory, exam: exam, title: .set("쪽지 시험"))), after: [0])
+        let answer = open([add, rename], in: model)
+        var page = ClaudeModel.html(try #require(model.chat), describe: model.describe)
+        #expect(page.contains("앞의 1번 제안"))
+        #expect(page.contains("folio://action/apply/\(answer.id)/0"))
+        #expect(!page.contains("folio://action/apply/\(answer.id)/1"))
+        #expect(ClaudeModel.offered(answer, superseded: [], describe: model.describe) == [0, 1])
+
+        model.apply(message: answer.id, index: 1, course: course, confirmed: false)
+        #expect(workspace.error?.contains("1번") == true)
+        #expect(workspace.course(graphTheory)?.file.exams.isEmpty == true)
+
+        model.apply(message: answer.id, index: 0, course: course, confirmed: false)
+        page = ClaudeModel.html(try #require(model.chat), describe: model.describe)
+        #expect(page.contains("folio://action/apply/\(answer.id)/1"))
+        model.apply(message: answer.id, index: 1, course: course, confirmed: false)
+        #expect(workspace.course(graphTheory)?.file.exams.map(\.title) == ["쪽지 시험"])
+    }
+
+    /// One it builds on that can't be applied any more blocks it too, and neither is offered to apply all.
+    @Test func aProposalOnARefusedOneIsBlocked() throws {
+        let workspace = try fixtureWorkspace()
+        let model = ClaudeModel(workspace: workspace)
+        let exam = UUID()
+        workspace.run(ExamAdd(id: exam, course: graphTheory, title: "퀴즈"))
+        let course = try #require(workspace.course(graphTheory))
+        model.load(course)
+        // The id is taken, so the first is refused for a reason of its own.
+        let add = ActionProposal(command: ExamAdd.command, input: try JSONValue(ExamAdd(id: exam, course: graphTheory, title: "또 퀴즈")))
+        let rename = ActionProposal(command: ExamSet.command, input: try JSONValue(ExamSet(course: graphTheory, exam: UUID(), title: .set("x"))), after: [0])
+        let answer = open([add, rename], in: model)
+        let page = ClaudeModel.html(try #require(model.chat), describe: model.describe)
+        #expect(page.contains("적용할 수 없어 함께 막혔습니다"))
+        #expect(ClaudeModel.offered(answer, superseded: [], describe: model.describe).isEmpty)
+    }
+
+    /// An edit of the note the answer makes first: a plain dry run can't see the note, the staged check can.
+    @Test func applyingAllRunsAnEditOfANoteMadeBeforeIt() throws {
+        let workspace = try fixtureWorkspace()
+        let model = ClaudeModel(workspace: workspace)
+        let course = try #require(workspace.course(graphTheory))
+        model.load(course)
+        let note = UUID()
+        let add = ActionProposal(command: NoteAdd.command, input: try JSONValue(NoteAdd(id: note, course: graphTheory, title: "증명 모음", body: "첫 줄\n")))
+        let edit = ActionProposal(command: NoteEdit.command,
+                                  input: try JSONValue(NoteEdit(course: graphTheory, note: "Notes/증명 모음.md", replacements: [], append: "덧붙인 줄")), after: [0])
+        let answer = open([add, edit], in: model)
+        #expect(workspace.refusal([try #require(workspace.action(add)), try #require(workspace.action(edit))]) != nil)
+        #expect(ClaudeModel.offered(answer, superseded: [], describe: model.describe) == [0, 1])
+        model.applyAll(message: answer.id, course: course, confirmed: false)
+        #expect(model.chat?.messages[1].proposals?.allSatisfy { $0.applied == true } == true, "\(workspace.error ?? "")")
+        let store = try #require(workspace.course(graphTheory)).store
+        let text = try store.read(try #require(try store.note(id: note)))
+        #expect(text.contains("첫 줄") && text.contains("덧붙인 줄"), "\(text)")
+    }
+
     /// The page is drawn twice a second while an answer is written; its proposals' dry runs wait for the folder to change.
     @Test func proposalLinesAreWorkedOutOncePerFolderChange() throws {
         let workspace = try fixtureWorkspace()

@@ -1,6 +1,7 @@
 import ArgumentParser
 import FolioActions
 import FolioDomain
+import FolioStorage
 import Foundation
 
 /// `folio mcp`: the same actions and read commands as MCP tools over standard input and output.
@@ -35,6 +36,8 @@ struct MCPServer {
 
     let gist: String?
     let propose: Bool
+    /// The proposals this answer has made, which later commands build on and read back (`--propose` only).
+    let stage: ProposalStage?
     let tools: [Tool]
     /// Every action and read command, listed or not: what `action_search` finds and `action_run` runs.
     let catalog: [Tool]
@@ -42,6 +45,7 @@ struct MCPServer {
     init(gist: String?, propose: Bool) {
         self.gist = gist
         self.propose = propose
+        stage = propose ? ProposalStage() : nil
         let all = Self.writeTools(propose: propose) + Self.readTools().map { Self.builds[$0.command] == nil ? $0 : Self.writing($0, propose: propose) }
         catalog = all
         tools = (propose ? all.filter { Self.inPanel($0.command) } : all) + Self.generalTools(propose: propose)
@@ -117,23 +121,78 @@ struct MCPServer {
         var options = gist.map { ["--gist", $0] } ?? []
         if tool.write, propose || arguments["dryRun"] == .bool(true) { options.append("--dry-run") }
         argv.insert(contentsOf: options, at: argv.firstIndex(of: "--") ?? argv.endIndex)
+        let command = Self.builds[tool.command] ?? tool.command
+        if propose, let stage { return proposing(tool, command, argv, stage) }
+        let run = Self.execute(argv)
+        return Self.result(run.code == 0 ? run.out : run.err + run.out, failed: run.code != 0)
+    }
+
+    /// Under `--propose` a write runs twice in the answer's staged copy: as a dry run that may refuse, then for real
+    /// there, so a refused one leaves nothing half-written for the next to build on. Once the copy exists every read
+    /// runs in it too, and sees what was proposed. `search` keeps to the folder: its index is the folder's.
+    func proposing(_ tool: Tool, _ command: String, _ argv: [String], _ stage: ProposalStage) -> JSONValue {
+        guard tool.write else {
+            let folder = command == "search" ? nil : stage.folder
+            let run = Self.execute(argv, staging: folder.map { Staging(folder: $0, writes: false) })
+            guard run.code == 0 else { return Self.result(run.err + run.out, failed: true) }
+            var text = Self.compact(run.out, marking: stage)
+            guard folder != nil, stage.staged > 0 else { return Self.result([text], failed: false, compacted: true) }
+            let pictures = Self.images(&text)
+            return ["content": .array([["type": "text", "text": .string(String(localized: .mcpStagedRead(stage.staged)))],
+                                       ["type": "text", "text": .string(text)]] + pictures), "isError": .bool(false)]
+        }
+        let real = try? CLI.gist(path: gist).url
+        let folder = real.flatMap(stage.copy(of:))
+        let stages = folder != nil && ActionProposal.stages(command)
+        var run = Self.execute(argv, staging: folder.map { Staging(folder: $0, writes: false) })
+        if run.code == 0, stages, let folder { run = Self.execute(argv, staging: Staging(folder: folder, writes: true)) }
+        guard run.code == 0, let input = run.built.first(where: { $0.0 == command })?.1 else {
+            return Self.result(run.code == 0 ? run.out : run.err + run.out, failed: run.code != 0)
+        }
+        // Run once more against the folder alone: failing there, it needs the earlier proposals applied first.
+        let after = stage.staged > 0 && Self.execute(argv).code != 0 ? stage.earlier(input) : []
+        stage.record(stages ? ProposalStage.made(from: run.out.joined(separator: "\n")) : ProposalStage.Made(items: [:], paths: []))
+        var content: [JSONValue] = [["type": "text", "text": .string(Self.compact(run.out.joined(separator: "\n")))]]
+        // In the result too: the app replaces the system prompt, so the server's instructions may never reach Claude.
+        content.insert(["type": "text", "text": .string(String(localized: .mcpInstructionsPropose))], at: 0)
+        // What the panel shows an approve button for: the action with every name already resolved to its UUID.
+        content.append(["type": "text", "text": .string(ActionProposal(command: command, input: input, after: after.isEmpty ? nil : after).text)])
+        return ["content": .array(content), "isError": .bool(false)]
+    }
+
+    struct Run {
+        var code: Int32
+        var out: [String]
+        var err: [String]
+        var built: [(String, JSONValue)]
+    }
+
+    static func execute(_ argv: [String], staging: Staging? = nil) -> Run {
         let out = Output()
         let built = Output()
-        let code = Built.$record.withValue({ command, input in built.add(command, input) }) {
-            Sink.$current.withValue(Sink(out: { out.add("out", .string($0)) }, err: { out.add("err", .string($0)) })) {
-                Folio.run(argv)
+        let code = CLI.$staging.withValue(staging) {
+            Built.$record.withValue({ command, input in built.add(command, input) }) {
+                Sink.$current.withValue(Sink(out: { out.add("out", .string($0)) }, err: { out.add("err", .string($0)) })) {
+                    // Held to the copy even for a dry run, which should write nothing anywhere.
+                    if let staging { return staging.folder.run { Folio.run(argv) } }
+                    return Folio.run(argv)
+                }
             }
         }
-        var shown = (code == 0 ? out.lines("out") : out.lines("err") + out.lines("out")).joined(separator: "\n")
-        let images = code == 0 ? Self.images(&shown) : []
-        var content: [JSONValue] = [["type": "text", "text": .string(Self.compact(shown))]] + images
-        // What the panel shows an approve button for: the action with every name already resolved to its UUID.
-        if code == 0, tool.write, propose, let input = built.items.first(where: { $0.0 == (Self.builds[tool.command] ?? tool.command) })?.1 {
-            // In the result too: the app replaces the system prompt, so the server's instructions may never reach Claude.
-            content.insert(["type": "text", "text": .string(String(localized: .mcpInstructionsPropose))], at: 0)
-            content.append(["type": "text", "text": .string(ActionProposal(command: Self.builds[tool.command] ?? tool.command, input: input).text)])
-        }
-        return ["content": .array(content), "isError": .bool(code != 0)]
+        return Run(code: code, out: out.lines("out"), err: out.lines("err"), built: built.items)
+    }
+
+    static func result(_ lines: [String], failed: Bool, compacted: Bool = false) -> JSONValue {
+        var text = lines.joined(separator: "\n")
+        let pictures = failed ? [] : images(&text)
+        return ["content": .array([["type": "text", "text": .string(compacted ? text : compact(text))]] + pictures), "isError": .bool(failed)]
+    }
+
+    static func compact(_ lines: [String], marking stage: ProposalStage) -> String {
+        let text = lines.joined(separator: "\n")
+        guard let first = text.first(where: { !$0.isWhitespace }), first == "{" || first == "[",
+              let value = try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8)) else { return text }
+        return string(pruned(stage.marked(value)))
     }
 
     // MARK: Any action

@@ -10,6 +10,8 @@ public enum StorageError: Error, Equatable {
     /// A text file in another encoding (a CP949 `.csv`). Read leniently and saved back, it would lose every byte that
     /// didn't decode, so it isn't read at all.
     case notUTF8(String)
+    /// A write inside a `StagedFolder` that would have reached the original folder.
+    case outsideStage(String)
 }
 
 /// A JSON file format. Bump `schemaVersion` and add a migration (from the old version, on raw JSON) whenever the shape changes.

@@ -365,7 +365,9 @@ struct MaterialLinksEditor: View {
                                     .padding(.leading, CGFloat(row.depth) * Theme.Space.l)
                                 Text(u.title).lineLimit(1)
                                 Spacer()
-                                if !linked && viaSessions.contains(u.id) {
+                                if !linked, let pages = model.splitPages(of: materialId, unit: u.id) {
+                                    Text(pages).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+                                } else if !linked && viaSessions.contains(u.id) {
                                     Text(.commonViaSessions).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                                 }
                             }

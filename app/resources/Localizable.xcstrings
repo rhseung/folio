@@ -6601,6 +6601,17 @@
         }
       }
     },
+    "materials.links.unit-pages": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$lld–%2$lld쪽"
+          }
+        }
+      }
+    },
     "materials.links.units": {
       "extractionState": "manual",
       "localizations": {
@@ -19819,6 +19830,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$lld번째 제안이 막혀 아무것도 적용하지 않았습니다: %2$@"
+          }
+        }
+      }
+    },
+    "claude.proposal.waiting": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "앞의 %@번 제안 위에 만든 제안이라, 그 제안을 먼저 적용해야 합니다"
+          }
+        }
+      }
+    },
+    "claude.proposal.waiting-blocked": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기대는 앞의 %@번 제안을 적용할 수 없어 함께 막혔습니다"
           }
         }
       }

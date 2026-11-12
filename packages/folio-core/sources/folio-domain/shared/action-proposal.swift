@@ -10,13 +10,28 @@ public struct ActionProposal: Codable, Hashable, Sendable {
     /// Why it failed the last time the user applied it. Kept in the chat so the next question tells Claude, which
     /// otherwise can only guess whether its change went through.
     public var failure: String?
+    /// The earlier proposals of the same answer it was made on top of, by their place in the answer: the panel's
+    /// server runs an answer's proposals one after another in a staged copy, and this one failed against the folder
+    /// alone. Until those are applied it can't be.
+    public var after: [Int]?
 
-    public init(command: String, input: JSONValue, applied: Bool? = nil, failure: String? = nil) {
+    public init(command: String, input: JSONValue, applied: Bool? = nil, failure: String? = nil, after: [Int]? = nil) {
         self.command = command
         self.input = input
         self.applied = applied
         self.failure = failure
+        self.after = after
     }
+
+    /// Whether a command's proposal also runs for real in a staged copy of the folder (`StagedFolder`), so later ones
+    /// build on it: the panel's server does this as it proposes, and the panel again when it checks a chain before
+    /// applying it. These groups write outside the GIST folder (a backup, cleanup's backup copy, an import's source)
+    /// or rewrite audio, which the copy's fence only covers for coordinated writes, so they stay dry runs there.
+    public static func stages(_ command: String) -> Bool {
+        command.split(separator: " ").first.map { !unstaged.contains(String($0)) } ?? false
+    }
+
+    static let unstaged: Set<String> = ["backup", "cleanup", "import", "recording"]
 
     /// Starts the tool-result text block that carries the proposal, apart from the preview text beside it.
     public static let marker = "folio-proposal:"
@@ -103,5 +118,28 @@ extension Chat {
             }
         }
         return superseded
+    }
+}
+
+extension ChatMessage {
+    /// Why the proposal at `index` waits on earlier ones of this answer: some it was made on top of are not applied
+    /// yet (`earlier`), or one of those can no longer be, which blocks it too (`blocked`). Nil when it stands alone.
+    public enum Waiting: Equatable, Sendable {
+        case earlier([Int])
+        case blocked([Int])
+    }
+
+    /// `refused` says whether a proposal can't be applied on its own now (superseded, or its dry run refuses). An
+    /// earlier one that is refused only because it waits on others is still waiting, not dead.
+    public func waiting(_ index: Int, refused: (Int) -> Bool) -> Waiting? {
+        guard let proposals, proposals.indices.contains(index) else { return nil }
+        let pending = Set(proposals[index].after ?? []).filter { $0 < index && $0 >= 0 && proposals[$0].applied != true }.sorted()
+        guard !pending.isEmpty else { return nil }
+        let dead = pending.filter { j in
+            guard refused(j) else { return false }
+            if case .earlier? = waiting(j, refused: refused) { return false }
+            return true
+        }
+        return dead.isEmpty ? .earlier(pending) : .blocked(dead)
     }
 }

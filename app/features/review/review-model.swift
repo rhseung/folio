@@ -71,7 +71,7 @@ final class ReviewModel {
     }
 
     /// The unit's PDFs as the units page lists them: its classes' files in class order, opening at the first class's
-    /// page range, then the files linked to the unit alone.
+    /// page range, then the files linked to the unit alone or split into it.
     static func lectures(of unit: FolioDomain.Unit, in file: CourseFile) -> [(material: FolioDomain.Material, page: Int?)] {
         let sessions = file.sessions
         let items = file.materials(of: .unit(unit.id)).filter { $0.material.isPDF && $0.material.status != .ignored }.map { item in
@@ -79,7 +79,9 @@ final class ReviewModel {
                 guard case .session(let id) = route else { return nil }
                 return sessions.first { $0.id == id }
             }.first
-            return (material: item.material, session: via, page: via?.materials.first { $0.materialId == item.material.id }?.firstPage)
+            // A split lecture opens at the unit's own pages, not at the deck's first page.
+            let page = via?.materials.first { $0.materialId == item.material.id }?.firstPage ?? file.pages(of: unit.id, in: item.material.id)?.lowerBound
+            return (material: item.material, session: via, page: page)
         }
         return items.sorted { a, b in
             switch (a.session, b.session) {
