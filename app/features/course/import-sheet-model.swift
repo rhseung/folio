@@ -328,21 +328,21 @@ final class ImportPlaceModel {
 
     // MARK: Claude (#450)
 
-    /// Why "Claude로 나누기" is off, shown beside it.
-    var claudeOff: String? { claude.off() }
+    /// Whether the automatic read goes to Claude once every page is read.
+    private var claudeOn: Bool { claude.off() == nil }
 
-    /// Once read: before then the automatic read may still ask Claude itself, and a row put off asks nothing.
-    func canAskClaude(_ id: Int) -> Bool {
-        guard !asking.contains(id), claudeOff == nil else { return false }
-        switch sections[id] {
-        case .proposed?, .nothing?: return true
-        default: return false
-        }
+    /// Only a row Claude gave no split: past that the user adjusts the split by hand (2026-11-12 사용자).
+    func canRetryClaude(_ id: Int) -> Bool {
+        guard !asking.contains(id), claudeFailures[id] != nil, case .nothing? = sections[id] else { return false }
+        return true
     }
 
-    /// Claude's reading in place of what was proposed, whatever found it. The sheet's own button still writes it.
-    func askClaude(_ id: Int) {
-        guard canAskClaude(id), isLecture(rows[id]) else { return }
+    /// While it asks again too, with its spinner.
+    func showsRetry(_ id: Int) -> Bool { asking.contains(id) || canRetryClaude(id) }
+
+    /// Claude's reading again. The sheet's own button still writes it.
+    func retryClaude(_ id: Int) {
+        guard canRetryClaude(id), isLecture(rows[id]) else { return }
         let url = rows[id].url, units = course.file.units
         asking.insert(id)
         claudeFailures[id] = nil
@@ -351,26 +351,8 @@ final class ImportPlaceModel {
             guard let self, !Task.isCancelled else { return }
             self.asking.remove(id)
             self.asks[id] = nil
-            switch self.sections[id] {
-            case .proposed?, .nothing?: self.take(found, for: id)
-            // Put off meanwhile: the user's choice stands.
-            default: break
-            }
-        }
-    }
-
-    /// Under a lecture row: why Claude's last reading came to nothing, or why it can't be asked while its button shows.
-    func claudeNote(_ row: Row) -> String? {
-        guard isLecture(row) else { return nil }
-        if let failure = claudeFailures[row.id] {
-            // With nothing proposed, the summary line says it.
-            if case .nothing? = sections[row.id] { return nil }
-            return failure
-        }
-        switch sections[row.id] {
-        case .nothing?: return claudeOff
-        case .proposed? where opened.contains(row.id): return claudeOff
-        default: return nil
+            // Split by hand or put off meanwhile: the user's choice stands.
+            if case .nothing? = self.sections[id] { self.take(found, for: id) }
         }
     }
 
@@ -388,7 +370,7 @@ final class ImportPlaceModel {
         if asking.contains(row.id), isLecture(row) { return String(localized: .lectureClaudeReading) }
         switch sections(of: row) {
         // Every page read and still reading: Claude has them now.
-        case .reading(let done, let total) where total > 0 && done == total && claudeOff == nil:
+        case .reading(let done, let total) where total > 0 && done == total && claudeOn:
             return String(localized: .lectureClaudeReading)
         case .reading(let done, let total):
             return total == 0 ? String(localized: .materialsImportSectionsReading) : String(localized: .materialsImportSectionsReadingPages(done, total))

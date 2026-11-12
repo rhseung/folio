@@ -171,8 +171,8 @@ struct LectureSectionsModelTests {
         return split
     }
 
-    func standIn(_ answer: ClaudeFinding, off: String? = nil, asked: (@MainActor () -> Void)? = nil) -> LectureClaude {
-        LectureClaude(off: { off }, ask: { _, _ in
+    func standIn(_ answer: ClaudeFinding, asked: (@MainActor () -> Void)? = nil) -> LectureClaude {
+        LectureClaude(off: { nil }, ask: { _, _ in
             asked?()
             return answer
         })
@@ -209,81 +209,83 @@ struct LectureSectionsModelTests {
         #expect(content.contains(.text("Page 9:")))
     }
 
-    /// The button asks Claude over a split the course already holds; its answer is on screen, not in the file, until
-    /// "저장".
-    @Test func claudesSplitReplacesTheOneShownAndWritesNothing() async throws {
-        workspace.run(MaterialSplit(course: graphTheory, material: slides.id, sections: [LectureCut(unit: matching, firstPage: 3, lastPage: 8)]))
+    /// Claude's failure is the one time the split screen offers Claude again; its answer is on screen, not in the
+    /// file, until "저장".
+    @Test func theSplitScreenOffersClaudeAgainOnlyAfterItFailed() async throws {
         let before = file
         let course = try #require(workspace.course(graphTheory))
         let model = FileViewModel(workspace: workspace, course: course, subject: .material(slides.id))
-        let claudes = claudes
-        model.lectureClaude = standIn(.found(claudes))
+        let failure = "Claude가 나누지 못했습니다. 요청이 실패했습니다"
+        model.lectureClaude = standIn(.failed("요청이 실패했습니다"))
+        model.findSplit = { _, _ in .failed(failure, pageCount: 10) }
         let document = PDFDocument()
         for i in 0..<10 { document.insert(PDFPage(), at: i) }
         await model.startSplit(PDFController(document: document, page: 0))
-        #expect(model.canAskClaude && model.claudeSplitOff == nil)
-        await model.splitWithClaude()
-        #expect(model.splitting == claudes && model.splitNote == nil && !model.askingClaude)
-        #expect(file == before)
+        #expect(model.canRetryClaude && model.splitNote == failure && model.splitting?.sections.map(\.pages) == [1...10])
+        await model.retryClaude()
+        // Failing again keeps what is on screen and the way back to Claude.
+        #expect(model.canRetryClaude && model.splitNote == failure && model.splitting?.sections.map(\.pages) == [1...10])
 
-        model.lectureClaude = standIn(.failed("요청이 실패했습니다"))
-        model.splitting?.split(at: 8)
-        let edited = model.splitting
-        await model.splitWithClaude()
-        // A failure keeps what was on screen and says why.
-        #expect(model.splitting == edited && model.splitNote == "Claude가 나누지 못했습니다. 요청이 실패했습니다")
+        let claudes = claudes
+        model.lectureClaude = standIn(.found(claudes))
+        await model.retryClaude()
+        #expect(model.splitting == claudes && model.splitNote == nil && !model.canRetryClaude && !model.askingClaude)
+        #expect(file == before)
         model.saveSplit()
         #expect(file.units.first { $0.title == "IP" } != nil)
     }
 
-    @Test func withoutClaudeTheButtonIsOffAndSaysWhy() async throws {
+    /// A split Claude made and a row with nothing found but no failure offer no Claude: the user adjusts it by hand.
+    @Test func withoutAFailureThereIsNoClaudeToAskAgain() async throws {
         let course = try #require(workspace.course(graphTheory))
         let model = FileViewModel(workspace: workspace, course: course, subject: .material(slides.id))
+        let claudes = claudes
         var asked = false
-        model.lectureClaude = standIn(.found(claudes), off: "연결 안 됨") { asked = true }
+        model.lectureClaude = standIn(.found(claudes)) { asked = true }
+        model.findSplit = { _, _ in .found(claudes, .claude) }
         let document = PDFDocument()
         for i in 0..<10 { document.insert(PDFPage(), at: i) }
         await model.startSplit(PDFController(document: document, page: 0))
-        #expect(!model.canAskClaude && model.claudeSplitOff == "연결 안 됨")
-        await model.splitWithClaude()
-        #expect(!asked && model.splitting?.sections.map(\.pages) == [1...10])
+        #expect(model.splitting == claudes && !model.canRetryClaude)
+        await model.retryClaude()
+        #expect(!asked)
 
         let sheet = ImportPlaceModel(workspace: workspace, course: course, files: [try incoming("08_Cuts.pdf")], places: [],
-                                     find: { _, _, _ in .nothing(pageCount: 10) }, claude: standIn(.found(claudes), off: "연결 안 됨") { asked = true })
+                                     find: { _, _, _ in .nothing(pageCount: 10) }, claude: standIn(.found(claudes)) { asked = true })
         await settle(sheet)
-        #expect(!sheet.canAskClaude(0) && sheet.claudeNote(sheet.rows[0]) == "연결 안 됨")
-        sheet.askClaude(0)
+        #expect(!sheet.showsRetry(0))
+        sheet.retryClaude(0)
         #expect(!asked && sheet.asking.isEmpty)
     }
 
-    /// In the add sheet, Claude's reading takes the place of what the titles proposed, and only the sheet's own button
-    /// brings the file in with it.
-    @Test func theAddSheetTakesClaudesSplitInPlaceOfTheTitles() async throws {
+    /// In the add sheet, a row Claude gave no split can ask again, and only the sheet's own button brings the file in
+    /// with Claude's answer.
+    @Test func theAddSheetAsksClaudeAgainAfterItFailed() async throws {
         let course = try #require(workspace.course(graphTheory))
         let claudes = claudes
+        let failure = "Claude가 나누지 못했습니다. 요청이 실패했습니다"
         let model = ImportPlaceModel(workspace: workspace, course: course, files: [try incoming("09_Network layer.pdf")], places: [],
-                                     find: { _, units, _ in .found(proposal(units), .titles) }, claude: standIn(.found(claudes)))
+                                     find: { _, _, _ in .failed(failure, pageCount: 10) }, claude: standIn(.found(claudes)))
         await settle(model)
-        #expect(model.sectionsLine(model.rows[0]) == "단원 2구역 · 슬라이드 제목에서" && model.canAskClaude(0))
+        #expect(model.sectionsLine(model.rows[0]) == failure && model.showsRetry(0))
         let before = file
-        model.askClaude(0)
-        #expect(model.sectionsLine(model.rows[0]) == "Claude가 쪽마다 읽는 중…" && !model.canAskClaude(0))
+        model.retryClaude(0)
+        #expect(model.sectionsLine(model.rows[0]) == "Claude가 쪽마다 읽는 중…" && model.showsRetry(0) && !model.canRetryClaude(0))
         for _ in 0..<50 where !model.asking.isEmpty { await Task.yield() }
-        #expect(model.edit(0) == claudes && model.sectionsLine(model.rows[0]) == "단원 2구역 · Claude 제안")
+        #expect(model.edit(0) == claudes && model.sectionsLine(model.rows[0]) == "단원 2구역 · Claude 제안" && !model.showsRetry(0))
         #expect(file == before)
         model.confirm()
         #expect(file.units.contains { $0.title == "IP" })
 
         let failing = ImportPlaceModel(workspace: workspace, course: course, files: [try incoming("10_Routing.pdf")], places: [],
-                                       find: { _, _, _ in .nothing(pageCount: 10) }, claude: standIn(.nothing))
+                                       find: { _, _, _ in .failed(failure, pageCount: 10) }, claude: standIn(.nothing))
         await settle(failing)
-        failing.askClaude(0)
+        failing.retryClaude(0)
         for _ in 0..<50 where !failing.asking.isEmpty { await Task.yield() }
-        #expect(failing.sectionsLine(failing.rows[0]) == "Claude가 나눌 곳을 찾지 못했습니다")
-        #expect(failing.claudeNote(failing.rows[0]) == nil)
+        #expect(failing.sectionsLine(failing.rows[0]) == "Claude가 나눌 곳을 찾지 못했습니다" && failing.showsRetry(0))
         // Cut by hand, the row has moved on from what Claude couldn't find.
         failing.splitByHand(0)
-        #expect(failing.claudeNote(failing.rows[0]) == nil)
+        #expect(!failing.showsRetry(0))
     }
 
     /// With Claude set up, adding a lecture asks Claude straight away, even where the slide titles would split it: their
@@ -311,7 +313,7 @@ struct LectureSectionsModelTests {
         let sheet = ImportPlaceModel(workspace: workspace, course: course, files: [try incoming("11_Flows.pdf")], places: [],
                                      find: { _, _, _ in .failed(why, pageCount: 10) }, claude: standIn(.nothing))
         await settle(sheet)
-        #expect(sheet.sectionsLine(sheet.rows[0]) == why && sheet.claudeNote(sheet.rows[0]) == nil && sheet.canAskClaude(0))
+        #expect(sheet.sectionsLine(sheet.rows[0]) == why && sheet.showsRetry(0))
     }
 
     @Test func theProgressBarReadsTheUnitsItReaches() throws {

@@ -5859,7 +5859,7 @@
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claude가 쪽마다 제목과 본문을 읽고 다시 나눕니다. 저장하기 전에는 아무것도 쓰지 않습니다"
+            "value": "Claude가 쪽마다 제목과 본문을 다시 읽고 나눕니다. 저장하기 전에는 아무것도 쓰지 않습니다"
           }
         }
       }
@@ -5897,13 +5897,13 @@
         }
       }
     },
-    "lecture-claude.split": {
+    "lecture-claude.retry": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claude로 나누기"
+            "value": "Claude로 다시 나누기"
           }
         }
       }

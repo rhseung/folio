@@ -90,8 +90,16 @@ final class FileViewModel {
     /// The outline and titles being read as the screen opens: Claude waits until they are.
     private(set) var readingSplit = false
     private(set) var askingClaude = false
+    /// Claude was asked and gave no split: the one time the screen offers Claude again. Otherwise the user adjusts what
+    /// is there by hand (2026-11-12 사용자).
+    private(set) var claudeFailed = false
     /// Tests give a stand-in.
     @ObservationIgnored lazy var lectureClaude: LectureClaude? = course.map { LectureClaude.of(workspace, course: $0) }
+    /// The first reading of a file not split yet. Tests give a stand-in.
+    @ObservationIgnored lazy var findSplit: @MainActor (URL, [FolioDomain.Unit]) async -> LectureFinding = { [workspace, course] url, units in
+        let claude = course.flatMap { workspace.claudeReady ? workspace.claude(for: $0) : nil }
+        return await LectureReader.find(url, units: units, claude: claude)
+    }
     /// Bumped by each read and each ask, so an answer that comes after a newer one is dropped.
     @ObservationIgnored private var splitRead = 0
 
@@ -108,18 +116,19 @@ final class FileViewModel {
         let file = course.file
         splitRead += 1
         askingClaude = false
+        claudeFailed = false
         if file.isSplit(m.id) {
             splitting = LectureSplit(file: file, material: m.id, pageCount: controller.pageCount)
             splitNote = nil
             return
         }
         splitting = LectureSplit(pageCount: controller.pageCount)
-        let claude = workspace.claudeReady ? workspace.claude(for: course) : nil
-        splitNote = String(localized: claude == nil ? .fileViewSplitReading : .lectureClaudeReading)
+        let claude = lectureClaude.map { $0.off() == nil } ?? false
+        splitNote = String(localized: claude ? .lectureClaudeReading : .fileViewSplitReading)
         readingSplit = true
-        askingClaude = claude != nil
+        askingClaude = claude
         let read = splitRead
-        let found = await LectureReader.find(url, units: file.units, claude: claude)
+        let found = await findSplit(url, file.units)
         guard read == splitRead else { return }
         readingSplit = false
         askingClaude = false
@@ -134,18 +143,15 @@ final class FileViewModel {
             splitNote = String(localized: .fileViewSplitNothing)
         case .failed(let why, _):
             splitNote = why
+            claudeFailed = true
         }
     }
 
-    /// Why "Claude로 나누기" is off, shown under it: a disabled button alone says nothing on a touch screen.
-    var claudeSplitOff: String? { lectureClaude?.off() }
+    var canRetryClaude: Bool { claudeFailed && splitting != nil && !readingSplit && !askingClaude }
 
-    var canAskClaude: Bool { splitting != nil && !readingSplit && !askingClaude && claudeSplitOff == nil }
-
-    /// Claude's reading in place of whatever is on screen, the course's saved split included. It is still only a
-    /// proposal: nothing is written until "저장".
-    func splitWithClaude() async {
-        guard canAskClaude, let claude = lectureClaude else { return }
+    /// Claude's reading again, after it gave none. It is still only a proposal: nothing is written until "저장".
+    func retryClaude() async {
+        guard canRetryClaude, let claude = lectureClaude else { return }
         splitRead += 1
         let read = splitRead
         askingClaude = true
@@ -153,7 +159,10 @@ final class FileViewModel {
         let found = await claude.ask(url, course?.file.units ?? [])
         guard read == splitRead, splitting != nil else { return }
         askingClaude = false
-        if case .found(let split) = found { splitting = split }
+        if case .found(let split) = found {
+            splitting = split
+            claudeFailed = false
+        }
         splitNote = found.message
     }
 
@@ -170,6 +179,7 @@ final class FileViewModel {
         splitRead += 1
         readingSplit = false
         askingClaude = false
+        claudeFailed = false
     }
 
     /// A note is the app's own document: it has no other app to go to.

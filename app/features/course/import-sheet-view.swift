@@ -237,11 +237,10 @@ private struct ImportSections: View {
                 Spacer()
                 switch state {
                 case .nothing?:
-                    claude
+                    if model.showsRetry(row.id) { claude }
                     Button(String(localized: .materialsImportSectionsSplit)) { model.splitByHand(row.id) }.buttonStyle(.ghost)
                     Button(String(localized: .materialsImportSectionsPutOff)) { model.later(row.id) }.buttonStyle(.ghost)
                 case .proposed? where open:
-                    claude
                     Button(String(localized: .materialsImportSectionsPutOff)) { model.later(row.id) }.buttonStyle(.ghost)
                 case .later?:
                     Button(String(localized: .materialsImportSectionsTakeBack)) { model.takeBack(row.id) }.buttonStyle(.ghost)
@@ -250,9 +249,6 @@ private struct ImportSections: View {
                 }
             }
             .font(Theme.Typeface.caption)
-            if let note = model.claudeNote(row) {
-                Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).fixedSize(horizontal: false, vertical: true)
-            }
             if open, let split = model.edit(row.id) {
                 SectionEditor(split: Binding(get: { model.edit(row.id) ?? split }, set: { model.setSplit($0, of: row.id) }),
                               units: model.course.file.units)
@@ -263,9 +259,9 @@ private struct ImportSections: View {
         .animation(.snappy(duration: 0.2), value: open)
     }
 
-    /// Why it is off goes on the line under the row's buttons, with Claude's failures.
+    /// Why Claude gave no split is the summary line before it.
     private var claude: some View {
-        ClaudeSplitButton(off: nil, asking: model.asking.contains(row.id), enabled: model.canAskClaude(row.id)) { model.askClaude(row.id) }
+        ClaudeSplitButton(asking: model.asking.contains(row.id)) { model.retryClaude(row.id) }
     }
 }
 
