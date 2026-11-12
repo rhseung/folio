@@ -25,8 +25,8 @@ struct TabPanesTests {
         #expect(panes.trails.count == 3 && Set(panes.ids).count == 3)
     }
 
-    // No cap on the panes (2026-11-12 사용자): a fourth pane opens like the second, and a narrow row folds the panes
-    // pressed longest ago into strips rather than a pane giving way.
+    // No cap on the panes (2026-11-12 사용자): a fourth pane opens like the second, and a narrow row folds the rest
+    // into bundles at its ends rather than a pane giving way.
     @Test func besideAlwaysOpensAPaneAndTheWidthFoldsTheRest() {
         let panes = TabPanes(Navigator())
         panes.openBeside(grades)
@@ -37,15 +37,16 @@ struct TabPanesTests {
         // A target a pane already shows goes to that pane.
         panes.openBeside(Navigator.Entry(link: .place(.today)))
         #expect(panes.focus == 0 && panes.count == 4)
-        // Room for two open beside two strips: the two pressed longest ago fold.
+        // Room for two open beside a bundle: the run gives up its end pressed longer ago, twice, to the right bundle.
         panes.measure(900)
-        #expect(panes.open == 2 && panes.folded == [1, 2])
+        #expect(panes.fold.run == 0...1 && panes.fold.right == [2, 3])
         panes.measure(2000)
-        #expect(panes.open == 4 && panes.folded.isEmpty)
-        // A pane opened in a narrow row folds another at once, from the width the row last had.
+        #expect(panes.fold.run == 0...3 && panes.folded.isEmpty)
+        // A pane opened in a narrow row takes the run at once, from the width the row last had, and the pane it opened
+        // beside goes to the left bundle.
         panes.measure(500)
         panes.openBeside(settings)
-        #expect(panes.open == 1 && panes.folded == [0, 2, 3, 4])
+        #expect(panes.focus == 1 && panes.fold.run == 1...1 && panes.fold.left == [0] && panes.folded == [0, 2, 3, 4])
     }
 
     @Test func closingHandsTheFocusToThePanePressedLast() {
@@ -114,9 +115,10 @@ struct TabPanesTests {
         // A row with room for every pane open still keeps it a strip.
         panes.measure(2000)
         #expect(panes.folded == [2])
-        // Narrower, the room folds another, never the focus.
+        // Narrower, the pane pressed longer ago goes to the left bundle, never the focus; the one folded by hand
+        // stays a strip in its place.
         panes.measure(500)
-        #expect(panes.folded == [0, 2])
+        #expect(panes.folded == [0, 2] && panes.fold.left == [0] && panes.fold.strips == [2])
         // The last open pane can't fold.
         panes.measure(2000)
         panes.collapse(0)

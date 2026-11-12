@@ -2,10 +2,11 @@ import FolioAI
 import FolioDomain
 import SwiftUI
 
-/// A tab's panes side by side (#62). Where the row is too narrow for every pane at `Size.paneMin`, the panes pressed
-/// longest ago fold into strips in their place (`PaneLayout.folded`); pressing a strip opens it and folds another.
-/// A pane folded by hand (칸 접기) stays a strip at any width until it is pressed. A folded pane's screen stays alive
-/// under its strip at the width it last had, so it opens as it was left.
+/// A tab's panes side by side (#62). Where the row is too narrow for every pane at `Size.paneMin`, a run of them stays
+/// in place and the rest fold into a bundle at either end, one strip each however many it holds (`PaneLayout.fold`,
+/// 2026-11-12 사용자); choosing a pane from a bundle slides the run to it. A pane folded by hand (칸 접기) is a hatched
+/// strip in its place until it is pressed. A folded pane's screen stays alive at the width it last had, so it opens as
+/// it was left.
 struct PaneRow: View {
     let workspace: Workspace
     let panes: TabPanes
@@ -47,17 +48,19 @@ struct PaneRow: View {
     var folded: Set<Int> { panes.folded }
 
     var body: some View {
-        let folded = folded
+        let fold = panes.fold
+        let folded = fold.folded
+        let gaps = fold.gaps(1)
         // The panes go in built, so a drag redraws the stack alone: were the shares read here, every frame of it would
         // run this body again, and each pane's screen with it for the closures it is handed anew (`openLink`).
-        LivePaneStack(panes: panes, drag: drag, folded: folded) {
+        LivePaneStack(panes: panes, drag: drag, fold: fold) {
             // The pane's place found again from its ID: SwiftUI can run a closed pane's view once more with the place
             // it had, past the end of the panes (as it did the tab bar's segments, 2026-11-08).
             ForEach(panes.ids, id: \.self) { id in
                 if let i = panes.ids.firstIndex(of: id) {
-                    pane(i, id: id, folded: folded.contains(i))
+                    pane(i, id: id, look: fold.count == panes.count ? fold.look(i) : .open)
                     if i + 1 < panes.count {
-                        divider(after: i, folded: folded)
+                        divider(after: i, folded: folded, shown: gaps.indices.contains(i) && gaps[i] > 0)
                     }
                 }
             }
@@ -85,7 +88,8 @@ struct PaneRow: View {
         .animation(reduceMotion ? nil : .smooth(duration: 0.34), value: panes.ids)
     }
 
-    @ViewBuilder func pane(_ i: Int, id: UUID, folded: Bool) -> some View {
+    @ViewBuilder func pane(_ i: Int, id: UUID, look: PaneLayout.Fold.Look) -> some View {
+        let folded = look != .open
         let navigator = panes.navigators[i]
         // Folded, the screen keeps the width it had open, so it isn't laid out again at the strip's.
         let kept = folded ? sizes.open[id] ?? Theme.Size.paneMin : nil
@@ -108,28 +112,52 @@ struct PaneRow: View {
                 .allowsHitTesting(!folded)
                 .disabled(folded)
                 .accessibilityHidden(folded)
-            if folded {
-                PaneStrip(mark: workspace.paneMark(of: navigator.current, trail: panes.trails[i]), page: navigator.current.link.anchor?.pageNumber) {
-                    panes.press(i)
-                }
-                .contextMenu { PaneMenu(panes: panes, index: i, newTab: newTab) }
+            switch look {
+            case .open, .hidden:
+                EmptyView()
+            case .strip:
+                strip(i, byHand: true)
+            case .bundle(let held) where held.count == 1:
+                strip(i, byHand: false)
+            case .bundle(let held):
+                PaneBundle(panes: panes, held: held.map { j in
+                    PaneBundle.Held(index: j, mark: workspace.paneMark(of: panes.navigators[j].current, trail: panes.trails[j]))
+                }, trailing: held.first.map { $0 > panes.focus } ?? false, newTab: newTab)
                 .transition(.opacity)
             }
         }
         // The focused pane's course color, else the app's.
         .panePanel(ring: panes.count > 1 && i == panes.focus
                    ? navigator.current.course.map { workspace.accent($0).color } ?? Theme.Palette.chromeSelected : nil)
+        // In a bundle, drawn by its strip: the screen stays alive, unseen, for when it is chosen.
+        .opacity(look == .hidden ? 0 : 1)
+        .accessibilityHidden(look == .hidden)
         #if os(macOS)
         .background { PanePress(active: front && !folded) { panes.press(i) } }
         #else
-        .simultaneousGesture(TapGesture().onEnded { panes.press(i) })
+        // Only on an open pane: a bundle's strip lists its panes, and a tap pressing the pane it stands in for would
+        // move the run under the list.
+        .simultaneousGesture(TapGesture().onEnded { panes.press(i) }, including: folded ? .subviews : .all)
         #endif
     }
 
+    /// Pane `i`'s own strip, which opens it: folded by hand in its place, or a bundle of it alone.
+    func strip(_ i: Int, byHand: Bool) -> some View {
+        let navigator = panes.navigators[i]
+        return PaneStrip(mark: workspace.paneMark(of: navigator.current, trail: panes.trails[i]), page: navigator.current.link.anchor?.pageNumber,
+                         byHand: byHand) {
+            panes.press(i)
+        }
+        .contextMenu { PaneMenu(panes: panes, index: i, newTab: newTab) }
+        .transition(.opacity)
+    }
+
     /// Dragged, it moves the boundary between the two panes beside it; not beside a strip, which has no width to give.
-    func divider(after d: Int, folded: Set<Int>) -> some View {
+    /// `shown`: false beside a pane in a bundle, where the row draws no gap, and nothing there takes a click.
+    func divider(after d: Int, folded: Set<Int>, shown: Bool) -> some View {
         let enabled = !folded.contains(d) && !folded.contains(d + 1)
         return PaneDivider(enabled: enabled, front: front, even: panes.even)
+            .allowsHitTesting(shown)
             #if os(macOS) && (DEBUG || RESIZE_PROBE)
             .background { if front && d == 0 { ResizeMarker(name: "divider") } }
             #endif
@@ -165,7 +193,7 @@ struct PaneRow: View {
     /// it is dropped, so the drag lays out the stack and not the whole row with every screen's closures made anew.
     func dragged(_ d: Int, by translation: CGFloat, folded: Set<Int>) {
         if drag.from == nil {
-            let widths = panes.layout.widths(room: sizes.row, folded: folded, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: Self.gap)
+            let widths = panes.layout.widths(room: sizes.row, fold: panes.fold, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: Self.gap)
             guard widths.indices.contains(d + 1) else { return }
             drag.from = PaneDrag.Start(divider: d, layout: panes.layout, left: widths[d], pair: widths[d] + widths[d + 1])
         }
@@ -225,7 +253,7 @@ struct PaneRow: View {
 private struct LivePaneStack<Content: View>: View {
     let panes: TabPanes
     let drag: PaneDrag
-    let folded: Set<Int>
+    let fold: PaneLayout.Fold
     @ViewBuilder let content: Content
 
     var body: some View {
@@ -234,22 +262,28 @@ private struct LivePaneStack<Content: View>: View {
         let glide = live == nil ? panes.glide.flatMap { $0.from.panes.count == panes.count ? $0 : nil } : nil
         // Always in the timeline, paused but for a glide: put in only for one, the panes would be built anew.
         TimelineView(.animation(paused: glide == nil)) { context in
-            PaneStack(layout: live ?? panes.layout, shares: live?.shares ?? panes.shares, folded: folded,
-                      from: glide.map { ($0.from, $0.folded) }, progress: glide?.progress(at: context.date) ?? 1) { content }
+            PaneStack(layout: live ?? panes.layout, shares: live?.shares ?? panes.shares, fold: fold,
+                      from: glide.map { ($0.from, $0.fold) }, progress: glide?.progress(at: context.date) ?? 1) { content }
         }
     }
 }
 
-/// The panes and the dividers between them, in turn, at the widths `PaneLayout.widths` gives the room. Worked out here,
-/// in the same pass as the window's own size, rather than from a width measured into state a frame later.
+/// The panes and the dividers between them, in turn, at the widths `PaneLayout.widths` gives the room and the gaps the
+/// fold leaves (none beside a pane in a bundle). Worked out here, in the same pass as the window's own size, rather
+/// than from a width measured into state a frame later.
 private struct PaneStack: Layout {
     let layout: PaneLayout
     /// Only so a new share lays the row out again; `layout` has them.
     let shares: [Double]
-    let folded: Set<Int>
+    let fold: PaneLayout.Fold
     /// A glide's start, and how far it has come from it to `layout`.
-    var from: (layout: PaneLayout, folded: Set<Int>)?
+    var from: (layout: PaneLayout, fold: PaneLayout.Fold)?
     var progress = 1.0
+
+    static func sizes(_ layout: PaneLayout, _ fold: PaneLayout.Fold, room: CGFloat) -> (widths: [Double], gaps: [Double]) {
+        let drawn = fold.count == layout.panes.count ? fold : layout.unfolded
+        return (layout.widths(room: room, fold: drawn, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap), drawn.gaps(PaneRow.gap))
+    }
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
         proposal.replacingUnspecifiedDimensions()
@@ -262,14 +296,16 @@ private struct PaneStack: Layout {
     func explicitAlignment(of guide: VerticalAlignment, in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGFloat? { nil }
 
     func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var widths = layout.widths(room: bounds.width, folded: folded, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap)
+        var (widths, gaps) = Self.sizes(layout, fold, room: bounds.width)
         if let from, progress < 1 {
-            let start = from.layout.widths(room: bounds.width, folded: from.folded, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap)
-            widths = zip(start, widths).map { $0 + ($1 - $0) * progress }
+            let start = Self.sizes(from.layout, from.fold, room: bounds.width)
+            widths = zip(start.widths, widths).map { $0 + ($1 - $0) * progress }
+            gaps = zip(start.gaps, gaps).map { $0 + ($1 - $0) * progress }
         }
         var x = bounds.minX
         for (k, view) in subviews.enumerated() {
-            let width = k % 2 == 0 ? (widths.indices.contains(k / 2) ? widths[k / 2] : 0) : PaneRow.gap
+            let i = k / 2
+            let width = k % 2 == 0 ? (widths.indices.contains(i) ? widths[i] : 0) : (gaps.indices.contains(i) ? gaps[i] : PaneRow.gap)
             view.place(at: CGPoint(x: x, y: bounds.minY), proposal: ProposedViewSize(width: width, height: bounds.height))
             x += width
         }
@@ -293,10 +329,9 @@ private struct PaneScreenWidth: ViewModifier {
 
     // Read here rather than in the row, so a glide starting and ending redraws this frame alone.
     var opening: CGFloat? {
-        guard let glide = panes.glide, glide.folded.contains(index) else { return nil }
-        let folded = panes.folded
-        guard !folded.contains(index) else { return nil }
-        let widths = panes.layout.widths(room: sizes.row, folded: folded, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap)
+        guard let glide = panes.glide, glide.fold.folded.contains(index) else { return nil }
+        guard !panes.folded.contains(index) else { return nil }
+        let widths = panes.layout.widths(room: sizes.row, fold: panes.fold, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap)
         return widths.indices.contains(index) ? widths[index] : nil
     }
 }
@@ -340,6 +375,8 @@ private struct PaneDivider: View {
 private struct PaneStrip: View {
     let mark: Crumb
     let page: Int?
+    /// Folded by hand ("칸 접기"): hatched, so it reads as put aside rather than out of room.
+    var byHand = false
     let expand: () -> Void
     @State private var hovering = false
 
@@ -356,6 +393,7 @@ private struct PaneStrip: View {
             .padding(.top, Theme.Space.l)
             .padding(.bottom, Theme.Space.m)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background { if byHand { PaneHatch() } }
             .background(Theme.Palette.text.opacity(hovering ? Theme.Opacity.hover : 0))
             .overlay(alignment: .top) {
                 // Thicker than a rule: the panel's round corners take most of the strip's width at its top.
@@ -374,6 +412,99 @@ private struct PaneStrip: View {
         guard let page else { return title }
         return title + Text(" · ").foregroundStyle(Theme.Palette.textTertiary)
             + Text(.panesPage(page)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
+    }
+}
+
+/// Diagonal rules across a strip folded by hand.
+private struct PaneHatch: View {
+    var body: some View {
+        Canvas { context, size in
+            var path = Path()
+            let step = Theme.Space.s
+            var x = -size.height
+            while x < size.width {
+                path.move(to: CGPoint(x: x, y: size.height))
+                path.addLine(to: CGPoint(x: x + size.height, y: 0))
+                x += step
+            }
+            context.stroke(path, with: .color(Theme.Palette.lineSoft), lineWidth: 1)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
+/// The strip of a bundle of two or more panes, at the row's end (#62, 2026-11-12 사용자): their icons stacked, up to
+/// three, and how many it holds. Pressing it lists them, and choosing one slides the run to it; each row's menu is
+/// the pane's own strip menu, as is the strip's menu for each pane.
+private struct PaneBundle: View {
+    struct Held: Identifiable {
+        let index: Int
+        let mark: Crumb
+        var id: Int { index }
+    }
+
+    let panes: TabPanes
+    let held: [Held]
+    /// At the row's trailing end, so the list opens toward the panes.
+    let trailing: Bool
+    var newTab: ((Navigator, ColumnPrefs) -> Void)?
+    @State private var listing = false
+    @State private var hovering = false
+
+    var body: some View {
+        Button { listing = true } label: {
+            VStack(spacing: Theme.Space.s) {
+                // Overlapping, as a stack of cards: each icon a step down the last.
+                VStack(spacing: -Theme.Space.s) {
+                    ForEach(held.prefix(3)) { PlaceIcon(place: $0.mark) }
+                }
+                Sideways {
+                    Text(.panesBundleCount(held.count)).font(Theme.Typeface.bodyStrong).foregroundStyle(Theme.Palette.text)
+                        .lineLimit(1).rotationEffect(.degrees(90))
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.up.chevron.down").font(Theme.Glyph.small).foregroundStyle(Theme.Palette.textTertiary)
+            }
+            .padding(.top, Theme.Space.l)
+            .padding(.bottom, Theme.Space.m)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Theme.Palette.text.opacity(hovering || listing ? Theme.Opacity.hover : 0))
+            .contentShape(.rect)
+        }
+        .buttonStyle(.pointing(.plain))
+        .onHover { hovering = $0 }
+        .help(Text(.panesBundleList(held.count)))
+        .accessibilityLabel(Text(.panesBundleList(held.count)))
+        .contextMenu {
+            ForEach(held) { item in
+                Menu(item.mark.title) { PaneMenu(panes: panes, index: item.index, newTab: newTab) }
+            }
+        }
+        .popover(isPresented: $listing, arrowEdge: trailing ? .leading : .trailing) {
+            VStack(alignment: .leading, spacing: Theme.Space.xxs) {
+                ForEach(held) { item in
+                    Button {
+                        listing = false
+                        panes.press(item.index)
+                    } label: {
+                        HStack(spacing: Theme.Space.s) {
+                            PlaceIcon(place: item.mark)
+                            Text(item.mark.title).font(Theme.Typeface.body).foregroundStyle(Theme.Palette.text).lineLimit(1)
+                            Spacer(minLength: 0)
+                        }
+                        .padding(.horizontal, Theme.Space.s)
+                        .frame(minHeight: Theme.Size.rowHeight)
+                        .contentShape(.rect)
+                    }
+                    .buttonStyle(.pointing(.plain))
+                    .accessibilityLabel(Text(.panesExpand(item.mark.title)))
+                    .contextMenu { PaneMenu(panes: panes, index: item.index, newTab: newTab) }
+                }
+            }
+            .padding(Theme.Space.xs)
+            .frame(minWidth: Theme.Size.paneMin / 2, alignment: .leading)
+            .presentationCompactAdaptation(.popover)
+        }
     }
 }
 

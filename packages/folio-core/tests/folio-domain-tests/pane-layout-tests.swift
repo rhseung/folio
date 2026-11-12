@@ -30,31 +30,66 @@ struct PaneLayoutTests {
         #expect(f.widths.allSatisfy { approx($0, 400) })
     }
 
-    @Test func theOldestPressFoldsFirstAndTheFocusNever() {
+    @Test func theRunGivesUpItsOlderEndAndNeverTheFocus() {
         var l = Self.three()
-        #expect(Self.fit(l, 956).folded == [0])
-        #expect(Self.fit(l, 956).widths[0] == 40)
+        // The lecture, pressed before the quiz, goes to the left bundle: a bundle of one, drawn as its own strip.
+        let two = Self.fit(l, 956)
+        #expect(two.fold.run == 1...2 && two.fold.left == [0] && two.fold.right.isEmpty)
+        #expect(two.fold.look(0) == .bundle([0]) && two.widths[0] == 40)
         #expect(Self.fit(l, 500).folded == [0, 2])
         // Far too narrow: the focused pane still stays open, with what there is.
         let tiny = Self.fit(l, 200)
         #expect(tiny.folded == [0, 2])
         #expect(approx(tiny.widths[1], 200 - 80 - 16))
-        // Pressing the lecture's strip opens it and folds the quiz, now the oldest press.
+        // Pressing the lecture's strip slides the run to it, and the quiz, now the end pressed longer ago, goes right.
         l.press(0)
-        #expect(Self.fit(l, 956).folded == [2])
+        #expect(Self.fit(l, 956).fold.run == 0...1 && Self.fit(l, 956).folded == [2])
         #expect(l.focus == 0)
     }
 
-    @Test func theOpenCountHangsOnTheWidthAlone() {
-        // What a window resizing between two counts needs to know: 1096 holds three, 1095 two, 455 one.
-        #expect(PaneLayout.openCount(3, room: 1096, minWidth: 360, strip: 40, gap: 8) == 3)
-        #expect(PaneLayout.openCount(3, room: 1095, minWidth: 360, strip: 40, gap: 8) == 2)
-        #expect(PaneLayout.openCount(3, room: 455, minWidth: 360, strip: 40, gap: 8) == 1)
-        #expect(PaneLayout.openCount(1, room: 10, minWidth: 360, strip: 40, gap: 8) == 1)
-        // The same folds as `fit`, with the widths for them.
+    @Test func theRunHangsOnTheWidthAndThePressesAlone() {
+        // Three open need 1096; two beside a bundle 776; one beside two bundles 456.
         let l = Self.three()
-        #expect(l.folded(open: 2) == Self.fit(l, 956).folded)
-        #expect(l.widths(room: 956, folded: [0], minWidth: 360, strip: 40, gap: 8) == Self.fit(l, 956).widths)
+        let runs = [1096.0, 1095, 776, 775, 456, 10].map { l.fold(room: $0, minWidth: 360, strip: 40, gap: 8).run }
+        #expect(runs == [0...2, 1...2, 1...2, 1...1, 1...1, 1...1])
+        // The same fold as `fit`, with the widths for it.
+        let fold = l.fold(room: 956, minWidth: 360, strip: 40, gap: 8)
+        #expect(l.widths(room: 956, fold: fold, minWidth: 360, strip: 40, gap: 8) == Self.fit(l, 956).widths)
+        #expect(fold.gaps(8) == [8, 8])
+        // A fold for another count of panes reads as every pane in place.
+        #expect(l.widths(room: 1216, fold: PaneLayout(lecture).unfolded, minWidth: 360, strip: 40, gap: 8) == Self.fit(l, 1216).widths)
+    }
+
+    static let six = [lecture, note, quiz, other, AppLink(.exam, UUID()), AppLink.place(.today)]
+
+    // The mockup's six panes in 700pt (#62): only the quiz in focus is open, two panes left of it in one bundle and
+    // three right of it in the other, each bundle a strip.
+    @Test func theRestFoldsIntoABundleAtEitherEnd() throws {
+        var l = try #require(PaneLayout(links: Self.six))
+        l.press(2)
+        let f = Self.fit(l, 700)
+        #expect(f.fold.run == 2...2 && f.fold.left == [0, 1] && f.fold.right == [3, 4, 5])
+        #expect(f.fold.look(1) == .bundle([0, 1]) && f.fold.look(3) == .bundle([3, 4, 5]))
+        #expect(f.fold.look(0) == .hidden && f.fold.look(5) == .hidden && f.fold.look(2) == .open)
+        #expect(f.widths == [0, 40, 700 - 80 - 16, 40, 0, 0])
+        #expect(f.gaps == [0, 8, 8, 0, 0])
+        // Choosing the first of the right bundle slides the run one pane over: the quiz joins the left bundle.
+        l.press(3)
+        let moved = Self.fit(l, 700)
+        #expect(moved.fold.run == 3...3 && moved.fold.left == [0, 1, 2] && moved.fold.right == [4, 5])
+        // Wider, the run keeps the pane pressed just before beside the focus.
+        #expect(Self.fit(l, 900).fold.run == 2...3)
+    }
+
+    // No room beside the focus (2026-11-12 사용자): the new pane opens and takes the focus, and the pane it opened
+    // beside, now the end pressed longer ago, goes to the bundle on its side.
+    @Test func besideWithNoRoomFoldsTheOtherEnd() throws {
+        var l = try #require(PaneLayout(links: Self.six))
+        l.press(2)
+        l.openBeside(AppLink(.assignment, UUID()))
+        let f = Self.fit(l, 700)
+        #expect(l.focus == 3 && f.fold.run == 3...3)
+        #expect(f.fold.left == [0, 1, 2] && f.fold.right == [4, 5, 6])
     }
 
     @Test func aPaneFollowsItsOwnHistory() {
@@ -97,8 +132,8 @@ struct PaneLayoutTests {
         l.openBeside(other)
         #expect(l.links == [lecture, note, other, quiz] && l.focus == 2)
         #expect(approx(l.shares.reduce(0, +), 1))
-        // 856pt holds two open beside two strips: the lecture and the quiz, pressed longest ago, fold.
-        #expect(Self.fit(l, 856).folded == [0, 3])
+        // 856pt holds two open beside two bundles: the lecture and the quiz, pressed longest ago, fold to either end.
+        #expect(Self.fit(l, 856).fold.run == 1...2 && Self.fit(l, 856).folded == [0, 3])
     }
 
     @Test func closingGivesTheWidthToTheNeighbor() {
@@ -149,12 +184,13 @@ struct PaneLayoutTests {
         // The focused note folds by hand: the focus goes to the quiz, pressed before it.
         l.collapse(1)
         #expect(l.collapsed == [1] && l.focus == 2)
-        // However wide the window: the rest open, the note a strip, the others sharing what it leaves.
+        // However wide the window: the rest open, the note a strip in its place, the others sharing what it leaves.
         let wide = Self.fit(l, 2000)
-        #expect(wide.folded == [1] && wide.widths[1] == 40)
+        #expect(wide.folded == [1] && wide.fold.look(1) == .strip && wide.widths[1] == 40)
         #expect(approx(wide.widths[0], wide.widths[2]))
-        // Narrower, the room folds the oldest press as well; never the focus.
-        #expect(Self.fit(l, 500).folded == [0, 1])
+        // Narrower, the lecture goes to the left bundle, and the note, left at the run's end beside it, goes in too.
+        let narrow = Self.fit(l, 500)
+        #expect(narrow.folded == [0, 1] && narrow.fold.look(1) == .bundle([0, 1]))
         // The last open pane can't fold.
         l.collapse(0)
         #expect(!l.canCollapse(2))
@@ -164,6 +200,17 @@ struct PaneLayoutTests {
         l.press(1)
         #expect(l.collapsed == [0] && l.focus == 1)
         #expect(Self.fit(l, 2000).folded == [0])
+    }
+
+    // The mockup's hand fold (#62): in place at 1200pt, in the right bundle with the quiz at 560pt.
+    @Test func aPaneFoldedByHandJoinsTheBundleBesideIt() {
+        var l = Self.three()
+        l.press(0)
+        l.collapse(1)
+        #expect(Self.fit(l, 1200).fold.run == 0...2 && Self.fit(l, 1200).fold.strips == [1])
+        let narrow = Self.fit(l, 560)
+        #expect(narrow.fold.run == 0...0 && narrow.fold.right == [1, 2] && narrow.fold.look(1) == .bundle([1, 2]))
+        #expect(narrow.widths == [560 - 40 - 8, 40, 0] && narrow.gaps == [8, 0])
     }
 
     @Test func closingTheLastOpenPaneOpensTheFocus() {
@@ -247,7 +294,7 @@ struct PaneLayoutTests {
         #expect(one.links == [quiz, other, lecture] && one.focus == 1)
         #expect(approx(one.shares[0], 0.5) && approx(one.shares[1], 1.0 / 6) && approx(one.shares[2], 1.0 / 3))
         // The joined panes count as pressed after the ones here, so the lecture folds first.
-        #expect(one.folded(open: 2) == [2])
+        #expect(Self.fit(one, 776).folded == [2])
     }
 
     @Test func aTabJoinsHoweverManyPanesThereAre() {
@@ -571,31 +618,44 @@ struct PaneLayoutPropertyTests {
             let l = Self.run(steps)
             let (min, strip, gap) = (360.0, 40.0, 8.0)
             let f = l.fit(room: room, minWidth: min, strip: strip, gap: gap)
-            let n = Double(l.panes.count)
-            #expect(!f.folded.contains(l.focus))
-            #expect(f.folded.count < l.panes.count)
-            if f.folded.count < l.panes.count - 1 {
-                #expect(l.panes.indices.filter { !f.folded.contains($0) }.allSatisfy { f.widths[$0] >= min - 1e-9 })
+            #expect(f.fold.open.contains(l.focus))
+            #expect(l.collapsed.isDisjoint(with: f.fold.open))
+            #expect(f.fold.left + Array(f.fold.run) + f.fold.right == Array(l.panes.indices))
+            if f.fold.open.count > 1 {
+                #expect(f.fold.open.allSatisfy { f.widths[$0] >= min - 1e-9 })
             }
-            if room >= min + (n - 1) * (strip + gap) {
-                #expect(abs(f.widths.reduce(0, +) + (n - 1) * gap - room) < 1e-6)
+            // Two bundles at most: one open pane and two strips is all any row needs.
+            if room >= min + 2 * (strip + gap) {
+                #expect(abs(f.widths.reduce(0, +) + f.gaps.reduce(0, +) - room) < 1e-6)
             }
-            // A wider window never folds more.
-            #expect(l.fit(room: room + more, minWidth: min, strip: strip, gap: gap).folded.count <= f.folded.count)
+            // A wider window keeps the run and adds to it.
+            let wide = l.fold(room: room + more, minWidth: min, strip: strip, gap: gap)
+            #expect(wide.run.lowerBound <= f.fold.run.lowerBound && wide.run.upperBound >= f.fold.run.upperBound)
         }
     }
 
-    @Test func pressingAStripUnfoldsIt() async {
-        await propertyCheck(input: Self.steps, Gen.double(in: 400...1200), Gen.int(in: 0...2)) { steps, room, k in
+    @Test func choosingABundledPaneSlidesTheRunToIt() async {
+        await propertyCheck(input: Self.steps, Gen.double(in: 400...1200), Gen.int(in: 0...5)) { steps, room, k in
             var l = Self.run(steps)
-            let before = l.fit(room: room, minWidth: 360, strip: 40, gap: 8).folded
-            guard let strip = before.sorted().dropFirst(k % max(1, before.count)).first else { return }
-            let byHand = l.collapsed.contains(strip)
-            l.press(strip)
-            let after = l.fit(room: room, minWidth: 360, strip: 40, gap: 8).folded
-            #expect(!after.contains(strip))
-            // A strip the room folded trades places with another; one folded by hand may find room of its own.
-            #expect(byHand ? after.count <= before.count : after.count == before.count)
+            let before = l.fold(room: room, minWidth: 360, strip: 40, gap: 8)
+            let bundled = before.left + before.right
+            guard !bundled.isEmpty else { return }
+            let i = bundled[k % bundled.count]
+            l.press(i)
+            let after = l.fold(room: room, minWidth: 360, strip: 40, gap: 8)
+            #expect(after.open.contains(i))
+            // It comes in at the run's end on its side: the run slides no further than it must.
+            #expect(before.left.contains(i) ? after.run.lowerBound == i : after.run.upperBound == i)
+        }
+    }
+
+    @Test func pressingAnOpenPaneLeavesTheRunWhereItIs() async {
+        await propertyCheck(input: Self.steps, Gen.double(in: 400...1600), Gen.int(in: 0...5)) { steps, room, k in
+            var l = Self.run(steps)
+            let before = l.fold(room: room, minWidth: 360, strip: 40, gap: 8)
+            let i = before.open[k % before.open.count]
+            l.press(i)
+            #expect(l.fold(room: room, minWidth: 360, strip: 40, gap: 8) == before)
         }
     }
 }

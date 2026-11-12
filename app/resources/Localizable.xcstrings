@@ -20472,6 +20472,28 @@
         }
       }
     },
+    "panes.bundle-count": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "칸 %lld개"
+          }
+        }
+      }
+    },
+    "panes.bundle-list": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "접은 칸 %lld개 보기"
+          }
+        }
+      }
+    },
     "panes.page": {
       "extractionState": "manual",
       "localizations": {

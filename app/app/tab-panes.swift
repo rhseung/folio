@@ -24,18 +24,20 @@ final class TabPanes {
     private(set) var collapsed: Set<Int> = []
     /// How each pane shows its note, which only what remembers the layout reads.
     private(set) var noteModes: [NoteViewMode?] = [nil]
-    /// The row's width, which the row sets every frame of a resize; read only through `open`.
+    /// The row's width, which the row sets every frame of a resize; read only through `fold`.
     @ObservationIgnored private var width: Double?
-    /// How many panes the row has room to keep open (`PaneLayout.openCount`), from its width alone (2026-11-12 사용자).
-    /// Set only where the width crosses a count, or the count changes, so a live resize sets it a few times, not
+    /// Which panes the row keeps in place and which it bundles at its ends (`PaneLayout.fold`), from its width and
+    /// the presses alone (2026-11-12 사용자). Set only when that changes, so a live resize sets it a few times, not
     /// every frame.
-    private(set) var open = 1
+    private(set) var fold: PaneLayout.Fold
     /// The panes' widths moving (`PaneGlide`), which the panes' stack and the screens' widths alone read.
     private(set) var glide: PaneGlide?
 
     /// `columns`: a pane moved out to a tab of its own keeps them; a new tab starts from the last choice.
     init(_ navigator: Navigator, columns: ColumnPrefs? = nil, memory: ColumnMemory = .shared) {
-        layout = PaneLayout(navigator.current.link)
+        let layout = PaneLayout(navigator.current.link)
+        self.layout = layout
+        fold = layout.unfolded
         ids = [UUID()]
         navigators = [navigator]
         trails = [CrumbTrail()]
@@ -50,6 +52,7 @@ final class TabPanes {
         guard var layout = PaneLayout(links: histories.map(\.current.link), shares: shares) else { return nil }
         layout.press(min(max(focus, 0), histories.count - 1))
         self.layout = layout
+        fold = layout.unfolded
         ids = histories.map { _ in UUID() }
         navigators = histories.map(Navigator.init(history:))
         trails = histories.map { _ in CrumbTrail() }
@@ -63,6 +66,7 @@ final class TabPanes {
     init?(layout: PaneLayout, entries: [Navigator.Entry], memory: ColumnMemory = .shared) {
         guard entries.count == layout.panes.count else { return nil }
         self.layout = layout
+        fold = layout.unfolded
         ids = entries.map { _ in UUID() }
         navigators = entries.map { Navigator($0) }
         trails = entries.map { _ in CrumbTrail() }
@@ -149,23 +153,19 @@ final class TabPanes {
         publish()
     }
 
-    /// The panes drawn as strips: folded by hand, or for want of room.
-    var folded: Set<Int> {
-        // The layout isn't watched: what it is published as is, so a reader redraws when a press or a fold moves it.
-        _ = (focus, collapsed)
-        return count > 1 ? layout.folded(open: open) : []
-    }
+    /// The panes not drawn open: folded by hand, or in a bundle for want of room.
+    var folded: Set<Int> { fold.folded }
 
     /// The row's width, as it is laid out.
     func measure(_ width: Double) {
         self.width = width
-        recount()
+        refold()
     }
 
-    // Before the row is first measured every pane counts as open, as a tab moved to a new window was drawn.
-    private func recount() {
-        let open = width.map { PaneLayout.openCount(count, room: $0, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap) } ?? count
-        if self.open != open { self.open = open }
+    // Before the row is first measured every pane is in place, as a tab moved to a new window was drawn.
+    private func refold() {
+        let new = width.map { layout.fold(room: $0, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap) } ?? layout.unfolded
+        if fold != new { fold = new }
     }
 
     func canCollapse(_ i: Int) -> Bool { layout.canCollapse(i) }
@@ -271,15 +271,17 @@ final class TabPanes {
     /// have none.
     private func moving(_ change: () -> Void) {
         let from = layout
-        let folded = folded
+        let before = fold
         change()
         #if os(macOS)
         let reduced = NSWorkspace.shared.accessibilityDisplayShouldReduceMotion
         #else
         let reduced = UIAccessibility.isReduceMotionEnabled
         #endif
-        if !reduced, from.panes.count == layout.panes.count, from.shares != layout.shares || folded != self.folded {
-            let glide = PaneGlide(from: from, folded: folded)
+        // The fold first: it is what the glide moves to.
+        refold()
+        if !reduced, from.panes.count == layout.panes.count, from.shares != layout.shares || before != fold {
+            let glide = PaneGlide(from: from, fold: before)
             self.glide = glide
             Task { [weak self] in
                 try? await Task.sleep(for: .seconds(PaneGlide.duration))
@@ -295,7 +297,7 @@ final class TabPanes {
     }
 
     private func publish() {
-        recount()
+        refold()
         if focus != layout.focus { focus = layout.focus }
         if shares != layout.shares { shares = layout.shares }
         if collapsed != layout.collapsed { collapsed = layout.collapsed }
@@ -315,13 +317,13 @@ struct PaneGlide: Equatable {
     static let spring = Spring.smooth(duration: 0.34)
 
     let from: PaneLayout
-    let folded: Set<Int>
+    let fold: PaneLayout.Fold
     let start = Date()
     private let id = UUID()
 
-    init(from: PaneLayout, folded: Set<Int>) {
+    init(from: PaneLayout, fold: PaneLayout.Fold) {
         self.from = from
-        self.folded = folded
+        self.fold = fold
     }
 
     /// How far along at `date`, 0 to 1, on the curve 0.34s `.smooth` takes; whole once the spring has settled.
