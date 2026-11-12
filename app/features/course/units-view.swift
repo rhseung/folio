@@ -278,7 +278,7 @@ struct UnitDetail: View {
                                 .font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary)
                             }
                             Spacer(minLength: Theme.Space.m)
-                            if !item.direct {
+                            if !item.own {
                                 Chip(String(localized: .commonViaSessions)).help(Text(.unitsViaSessionsHelp))
                             }
                             if missing { Chip(String(localized: .unitsFileMissing), tone: .danger) }

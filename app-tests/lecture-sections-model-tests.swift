@@ -169,10 +169,23 @@ struct LectureSectionsModelTests {
         #expect(model.zones(slides.id).map(\.title) == ["", "매칭"])
         #expect(!model.changed)
 
+        // Splitting alone, without a link to the unit, puts the file on the unit's page as its own (#454).
         let units = UnitsModel(workspace: workspace, courseId: graphTheory)
-        workspace.run(MaterialLinkUnit(course: graphTheory, material: slides.id, unit: matching, linked: true))
         let unit = try #require(file.units.first { $0.id == matching })
-        #expect(units.materials(unit, in: file).first { $0.material.id == slides.id }?.pages == 3...8)
+        let row = try #require(units.materials(unit, in: file).first { $0.material.id == slides.id })
+        #expect(row.pages == 3...8)
+        #expect(row.own)
+        #expect(ReviewModel.lectures(of: unit, in: file).first { $0.material.id == slides.id }?.page == 3)
+    }
+
+    @Test func theMaterialsPageShowsASplitUnitAsTheFilesOwnNotAsThroughAClass() throws {
+        workspace.run(MaterialSplit(course: graphTheory, material: slides.id, sections: [LectureCut(unit: matching, firstPage: 3, lastPage: 8)]))
+        let model = MaterialsModel(workspace: workspace, course: try #require(workspace.course(graphTheory)))
+        #expect(model.unitIds(of: slides.id).isEmpty)
+        #expect(!model.unitsViaSessions(of: slides.id).contains(matching))
+        #expect(model.splitPages(of: slides.id, unit: matching) == "3–8쪽")
+        #expect(model.linkLine(slides).contains(String(localized: .materialsLinkUnits("매칭"))))
+        #expect(!model.linkLine(slides).contains(String(localized: .materialsLinkUnitsViaSessions("매칭"))))
     }
 }
 
