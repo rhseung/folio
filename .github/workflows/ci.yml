@@ -43,8 +43,9 @@ jobs:
           # The API lists at most 3000 files; a longer list may be missing the one that matters.
           [ -n "$files" ] && [ "$(wc -l <<< "$files")" -lt 3000 ] || run_all
           printf '%s\n' "$files"
-          # Prose, the web bundle's sources (the app ships the built copy in app/resources/web) and PR pictures.
-          none='^docs/|^[^/]+\.md$|^\.github/.+\.md$|^web/|^pr-renders/'
+          # Prose, the web bundle's sources (the app ships the built copy in app/resources/web), PR pictures, and what
+          # goes into the Tectonic library: the app builds take the published one that tectonic/pin.json names.
+          none='^docs/|^[^/]+\.md$|^\.github/.+\.md$|^web/|^pr-renders/|^tectonic/(bridge|patches)/|^scripts/tectonic-build\.sh$|^\.github/workflows/tectonic\.yml$'
           # Scripts these checks never run. Any other script counts: `mise run generate` runs scripts/version.sh before every
           # build, and a script it starts to run later is covered without a change here.
           checks='^scripts/(check-design|check-local-folders|note-screens|release-notes|install-release)\.sh$'
@@ -97,6 +98,17 @@ jobs:
           restore-keys: |
             swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved') }}-
             swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
+      # Tectonic as a library, which `mise run tectonic` fetches by tectonic/pin.json, and the TeX packages and format
+      # its builds fetch into Caches. The second is saved once per pin: a package it lacks is fetched in the run.
+      - uses: actions/cache@v6
+        with:
+          path: packages/folio-core/vendor
+          key: tectonic-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tectonic/pin.json') }}
+      - uses: actions/cache@v6
+        with:
+          path: ~/Library/Caches/Tectonic
+          key: tectonic-tex-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tectonic/pin.json') }}
+          restore-keys: tectonic-tex-${{ runner.os }}-${{ runner.arch }}-
       - uses: jdx/mise-action@v5
       - id: run
         run: mise run test
@@ -200,15 +212,19 @@ jobs:
         run: |
           rm -rf .build/DerivedData/Build/Products/*/*.app .build/DerivedData/Build/Products/*/*.xctest .build/DerivedData/Build/Products/*/*.bundle
           defaults write com.apple.dt.SWBBuildService IgnoreFileSystemDeviceInodeChanges -bool YES
-      # The iPad's TeX engine as `mise run tex-engine` unpacks it from a 220 MB download checked by its pinned hash; it
-      # changes only with the pin or that step, whose stamp (pin) lets it skip the download.
-      - if: env.RUN == 'true' && (matrix.task == 'build-ipad' || matrix.task == 'test-ipad')
+      # Tectonic as a library, which `mise run tectonic` fetches by tectonic/pin.json, and the TeX packages and format
+      # its builds fetch into Caches. The second is saved once per pin: a package it lacks is fetched in the run.
+      - if: env.RUN == 'true'
         uses: actions/cache@v6
         with:
-          path: |
-            .build/tex-engine/TexEngine
-            .build/tex-engine/pin
-          key: tex-engine-${{ hashFiles('app/resources/tex-engine.json', 'scripts/tex-engine.sh') }}
+          path: packages/folio-core/vendor
+          key: tectonic-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tectonic/pin.json') }}
+      - if: env.RUN == 'true'
+        uses: actions/cache@v6
+        with:
+          path: ~/Library/Caches/Tectonic
+          key: tectonic-tex-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tectonic/pin.json') }}
+          restore-keys: tectonic-tex-${{ runner.os }}-${{ runner.arch }}-
       - if: env.RUN == 'true'
         uses: jdx/mise-action@v5
       - if: env.RUN == 'true'

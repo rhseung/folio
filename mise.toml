@@ -11,13 +11,13 @@ xcodegen = "2.46.0"
 
 [tasks.generate]
 description = "Generate Folio.xcodeproj from project.yml, with the version and build number"
-# The iPad app bundles the TeX engine's folder, which only the iPad builds fill (tex-engine); an empty one keeps a Mac
-# build from failing on a resource that isn't there.
-run = ["scripts/version.sh xcconfig", "mkdir -p .build/tex-engine/TexEngine", "xcodegen generate"]
+depends = ["tectonic"]
+run = ["scripts/version.sh xcconfig", "xcodegen generate"]
 
-[tasks.tex-engine]
-description = "Fetch the iPad's TeX engine pinned in app/resources/tex-engine.json into .build/tex-engine, checked by sha256"
-run = "scripts/tex-engine.sh"
+# Every build of packages/folio-core links Tectonic, so every task that builds it depends on this one.
+[tasks.tectonic]
+description = "Fetch Tectonic as a static library (FolioTectonic.xcframework) pinned in tectonic/pin.json, checked by sha256"
+run = "scripts/tectonic.sh"
 
 [tasks.version-bump]
 description = "Raise the version in FolioVersion: mise run version-bump -- major|minor|patch"
@@ -33,6 +33,7 @@ run = "scripts/version.sh tag"
 
 [tasks.test]
 description = "Run package tests, the design token check and the Application Support check"
+depends = ["tectonic"]
 # fixtures and expectations are in Korean time, and Apple's date detector reads phrases like 내일 7시 in the
 # machine's zone, not the test calendar's; a UTC machine (CI) would fail them.
 env = { TZ = "Asia/Seoul" }
@@ -59,18 +60,22 @@ run = "scripts/check-local-folders.sh"
 
 [tasks.gen-cli]
 description = "Write the CLI commands of the actions declared with @Action (sources/folio-cli/generated)"
+depends = ["tectonic"]
 run = "swift run -q --package-path packages/folio-core folio-gen"
 
 [tasks.fixture]
 description = "Write a fake GIST folder to run the app or the CLI on: mise run fixture -- <folder> [standard|legacy|busyDay|manyExams|quietDay|empty]"
+depends = ["tectonic"]
 run = "swift run -q --package-path packages/folio-core folio-fixture"
 
 [tasks.cli]
 description = "Run the folio CLI"
+depends = ["tectonic"]
 run = "swift run --package-path packages/folio-core folio"
 
 [tasks.install-cli]
 description = "Build folio in release mode into ~/.local/lib/folio, linked from ~/.local/bin, with its zsh completion"
+depends = ["tectonic"]
 run = [
   "swift build -c release --package-path packages/folio-core --product folio",
   # The string catalogs ship as resource bundles that must sit beside the binary, so both go in their own folder.
@@ -123,7 +128,7 @@ exit "$status"
 
 [tasks.test-ipad]
 description = "Run the iPad tests (Hangul in the edit view) on the first available iPad simulator"
-depends = ["generate", "tex-engine"]
+depends = ["generate"]
 run = """
 id=$(xcrun simctl list devices available | grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}')
 [ -n "$id" ] || { echo "no available iPad simulator" >&2; exit 1; }
@@ -179,7 +184,7 @@ run = "scripts/install-release.sh"
 
 [tasks.build-ipad]
 description = "Build the app for the iPad simulator (FOLIO_CONFIGURATION=Release for a Release build)"
-depends = ["generate", "tex-engine"]
+depends = ["generate"]
 # A generic destination builds every simulator architecture outside Debug; Intel's adds a second full compile of the
 # same code and nothing an iPad runs.
 run = "xcodebuild -scheme Folio -configuration \"${FOLIO_CONFIGURATION:-Debug}\" -destination 'generic/platform=iOS Simulator' ARCHS=arm64 build -quiet -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation $FOLIO_XCODEBUILD_FLAGS"

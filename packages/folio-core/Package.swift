@@ -31,7 +31,19 @@ let package = Package(
     ],
     targets: [
         .target(name: "FolioDomain", dependencies: [.product(name: "Algorithms", package: "swift-algorithms")], path: "sources/folio-domain", resources: [.process("Localizable.xcstrings")]),
-        .target(name: "FolioStorage", dependencies: ["FolioDomain", .product(name: "FolioMarkdown", package: "folio-markdown")], path: "sources/folio-storage"),
+        // Tectonic, the TeX engine, as a static library for the iPad and the Mac (#41). Built in CI from tectonic/ and
+        // fetched by `mise run tectonic`, checked by tectonic/pin.json; a binary target's path must be in the package.
+        .binaryTarget(name: "FolioTectonic", path: "vendor/FolioTectonic.xcframework"),
+        .target(name: "FolioStorage", dependencies: ["FolioDomain", "FolioTectonic", .product(name: "FolioMarkdown", package: "folio-markdown")],
+                path: "sources/folio-storage",
+                // What Tectonic links against beside itself: ICU and zlib from the SDK, CoreText for fonts, and the
+                // network stack its package downloads use.
+                linkerSettings: [
+                    .linkedLibrary("c++"), .linkedLibrary("z"), .linkedLibrary("icucore"),
+                    .linkedFramework("CoreFoundation"), .linkedFramework("CoreGraphics"), .linkedFramework("CoreText"),
+                    .linkedFramework("Foundation"), .linkedFramework("Security"), .linkedFramework("SystemConfiguration"),
+                    .linkedFramework("AppKit", .when(platforms: [.macOS])),
+                ]),
         .macro(name: "FolioMacros", dependencies: [
             .product(name: "SwiftSyntaxMacros", package: "swift-syntax"),
             .product(name: "SwiftCompilerPlugin", package: "swift-syntax"),
