@@ -54,9 +54,6 @@ public struct LecturePage: Sendable, Equatable {
     public static let fewWords = 12
     /// Under this, a page that repeats an earlier one's words is too short to tell apart from a chance match.
     static let repeatWords = 8
-    /// PDFKit's stand-in for an image or a drawing in a page's text. Counted as a word it made a diagram of labels
-    /// read as two hundred words of text, and it filled the excerpt in place of the words.
-    static let figure: Character = "\u{FFFC}"
     /// Pictures per question, at about 250 tokens each at `thumbnail`.
     public static let maxImages = 24
     /// The long side of a page's picture, in pixels: enough to read a slide's heading and see what its figure is.
@@ -68,20 +65,11 @@ public struct LecturePage: Sendable, Equatable {
         return max(min(excerpt, budget / pages), 60)
     }
 
-    /// The words of a page's text, its figures left out.
-    public static func words(_ text: String) -> Int {
-        text.split(whereSeparator: { $0.isWhitespace || $0 == figure }).count
-    }
-
-    public static func figures(_ text: String) -> Int {
-        text.reduce(0) { $1 == figure ? $0 + 1 : $0 }
-    }
-
     /// The start of a page's text with its title and figures taken out and its whitespace run together, cut at a word.
     public static func excerpt(_ text: String, title: String?, limit: Int) -> String {
         var rest = text
         if let title, let range = rest.range(of: title) { rest.removeSubrange(range) }
-        let words = rest.split(whereSeparator: { $0.isWhitespace || $0 == figure })
+        let words = rest.split(whereSeparator: { $0.isWhitespace || $0 == PageText.figure })
         var out = ""
         for word in words {
             if out.count + word.count + 1 > limit {
@@ -101,11 +89,11 @@ public struct LecturePage: Sendable, Equatable {
         var seen: Set<String> = [], first: [Int] = [], then: [Int] = []
         for (i, text) in texts.enumerated() {
             let title = titles.indices.contains(i) ? titles[i] : nil
-            let words = max(Self.words(text) - (title.map(Self.words) ?? 0), 0)
-            let repeated = Self.words(text) >= repeatWords && !seen.insert(shape(text)).inserted
+            let words = max(PageText.words(text) - (title.map(PageText.words) ?? 0), 0)
+            let repeated = PageText.words(text) >= repeatWords && !seen.insert(shape(text)).inserted
             if words < fewWords || repeated {
                 first.append(i)
-            } else if figures(text) >= words {
+            } else if PageText.figures(text) >= words {
                 then.append(i)
             }
         }
@@ -115,7 +103,7 @@ public struct LecturePage: Sendable, Equatable {
 
     /// A page's words without its numbers, which differ in a repeated slide's footer ("4-3", "4-67").
     static func shape(_ text: String) -> String {
-        text.lowercased().split(whereSeparator: { $0.isWhitespace || $0 == figure || $0.isNumber }).joined(separator: " ")
+        text.lowercased().split(whereSeparator: { $0.isWhitespace || $0 == PageText.figure || $0.isNumber }).joined(separator: " ")
     }
 
     static func spread(_ pages: [Int], _ count: Int) -> [Int] {

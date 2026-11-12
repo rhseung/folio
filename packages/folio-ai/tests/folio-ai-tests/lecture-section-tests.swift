@@ -64,7 +64,7 @@ struct LectureSectionTests {
     @Test func figuresAreNotWordsAndAPageOfThemIsPictured() {
         let figures = String(repeating: "\u{FFFC}\n", count: 60)
         let diagram = figures + "1\n2\n0111\nvalues in arriving packet header\nGeneralized forwarding: match plus action\nReview: each router contains a forwarding table\n" + figures
-        #expect(LecturePage.words(diagram) == 20 && LecturePage.figures(diagram) == 120)
+        #expect(PageText.words(diagram) == 20 && PageText.figures(diagram) == 120)
         #expect(LecturePage.excerpt(diagram, title: "Generalized forwarding: match plus action", limit: 40) == "1 2 0111 values in arriving packet…")
         let prose = String(repeating: "word ", count: 40)
         #expect(LecturePage.pictured(texts: [prose, diagram], titles: [nil, "Generalized forwarding: match plus action"]) == [1])

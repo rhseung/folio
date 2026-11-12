@@ -1,12 +1,8 @@
 import FolioAI
 import FolioDomain
+import FolioStorage
 import Foundation
 import PDFKit
-#if os(macOS)
-import AppKit
-#else
-import UIKit
-#endif
 
 /// Where a lecture's proposed sections came from, in the order they are tried (#321).
 enum LectureSource: Equatable, Sendable {
@@ -113,23 +109,25 @@ enum LectureReader {
         }
     }
 
-    /// Opens the file inside its security scope: the add sheet's files come from outside the sandbox. `everyPage`
-    /// reads the pages even when the outline splits the file, for Claude.
+    /// Opens the file inside its security scope: the add sheet's files come from outside the sandbox, and
+    /// `PDFPages.open` reads through the file coordinator, which needs the scope too. `everyPage` reads the pages
+    /// even when the outline splits the file, for Claude.
     nonisolated static func read(_ url: URL, everyPage: Bool, progress: @Sendable (Int, Int) -> Void) -> Read? {
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard let pdf = PDFDocument(url: url), pdf.pageCount > 0 else { return nil }
-        var outline: [LectureReading.Bookmark] = []
-        if let root = pdf.outlineRoot { walk(root, depth: -1, in: pdf, into: &outline) }
+        guard let pdf = PDFPages.open(url) else { return nil }
+        let outline = PDFPages.outline(pdf)
         let count = pdf.pageCount
         if !everyPage, LectureReading.sections(outline: outline, pageCount: count) != nil {
             return Read(pageCount: count, outline: outline, pages: [], texts: [])
         }
         var pages: [LectureReading.Page] = [], texts: [String] = []
         for i in 0..<count {
-            let read = pdf.page(at: i).map(Self.read) ?? (page: LectureReading.Page(title: nil, words: 0), text: "")
-            pages.append(read.page)
-            texts.append(read.text)
+            // The whole text, figures and all: `LecturePage.pictured` counts them, and the cleaned text has none.
+            let raw = pdf.page(at: i)?.attributedString ?? NSAttributedString()
+            let text = PDFPages.text(of: raw, number: i + 1)
+            pages.append(LectureReading.Page(title: text.title, words: text.words))
+            texts.append(raw.string)
             progress(i + 1, count)
         }
         return Read(pageCount: count, outline: outline, pages: pages, texts: texts)
@@ -140,66 +138,11 @@ enum LectureReader {
         guard !pages.isEmpty else { return [:] }
         let scoped = url.startAccessingSecurityScopedResource()
         defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-        guard let pdf = PDFDocument(url: url) else { return [:] }
+        guard let pdf = PDFPages.open(url) else { return [:] }
         var out: [Int: Data] = [:]
         for i in pages {
-            guard let page = pdf.page(at: i) else { continue }
-            let box = page.bounds(for: .mediaBox).size
-            let turned = page.rotation % 180 != 0
-            let (w, h) = turned ? (box.height, box.width) : (box.width, box.height)
-            guard w > 0, h > 0 else { continue }
-            let scale = LecturePage.thumbnail / max(w, h)
-            let image = page.thumbnail(of: CGSize(width: (w * scale).rounded(), height: (h * scale).rounded()), for: .mediaBox)
-            if let data = jpeg(image) { out[i] = data }
+            if let page = pdf.page(at: i), let data = PDFPages.jpeg(page, edge: Int(LecturePage.thumbnail)) { out[i] = data }
         }
         return out
-    }
-
-    private nonisolated static func jpeg(_ image: PlatformImage) -> Data? {
-        #if os(macOS)
-        guard let tiff = image.tiffRepresentation, let bitmap = NSBitmapImageRep(data: tiff) else { return nil }
-        return bitmap.representation(using: .jpeg, properties: [.compressionFactor: 0.7])
-        #else
-        return image.jpegData(compressionQuality: 0.7)
-        #endif
-    }
-
-    private nonisolated static func walk(_ item: PDFOutline, depth: Int, in pdf: PDFDocument, into out: inout [LectureReading.Bookmark]) {
-        if depth >= 0, let label = item.label, let page = item.destination?.page {
-            out.append(LectureReading.Bookmark(title: label, page: pdf.index(for: page) + 1, depth: depth))
-        }
-        for i in 0..<item.numberOfChildren {
-            if let child = item.child(at: i) { walk(child, depth: depth + 1, in: pdf, into: &out) }
-        }
-    }
-
-    /// A slide's title is the line set in the largest type among its first few lines. Reading the largest type on the
-    /// whole page would take a big formula or a diagram's label instead.
-    nonisolated static func page(_ page: PDFPage) -> LectureReading.Page { read(page).page }
-
-    private nonisolated static let blank = CharacterSet.whitespaces.union(CharacterSet(charactersIn: "\u{FFFC}"))
-
-    private nonisolated static func read(_ page: PDFPage) -> (page: LectureReading.Page, text: String) {
-        let text = page.attributedString ?? NSAttributedString()
-        let string = text.string as NSString
-        // Figures left out: a diagram's labels came with one stand-in character per drawing, each counted a word.
-        let words = LecturePage.words(text.string)
-        var best: (size: CGFloat, title: String)?
-        var lines = 0
-        string.enumerateSubstrings(in: NSRange(location: 0, length: string.length), options: .byLines) { line, range, _, stop in
-            // A line of figures only isn't a line of the slide: a diagram's stand-ins came first on a page and used
-            // up the four lines before its title.
-            guard let line = line?.trimmingCharacters(in: Self.blank), !line.isEmpty else { return }
-            var size: CGFloat = 0
-            text.enumerateAttribute(.font, in: range) { font, _, _ in
-                if let font = font as? PlatformFont { size = max(size, font.pointSize) }
-            }
-            if size > (best?.size ?? 0) { best = (size, line) }
-            lines += 1
-            if lines >= 4 { stop.pointee = true }
-        }
-        // `Page.words` counts what the slide has besides its title: a long title on a divider is still a divider.
-        let titleWords = best.map { LecturePage.words($0.title) } ?? 0
-        return (LectureReading.Page(title: best.map(\.title), words: max(words - titleWords, 0)), text.string)
     }
 }

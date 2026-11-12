@@ -41,7 +41,12 @@ public enum PDFPages {
 
     /// `number` is 1-based.
     public static func text(of page: PDFPage, number: Int) -> PDFPageText {
-        let raw = page.attributedString ?? NSAttributedString()
+        text(of: page.attributedString ?? NSAttributedString(), number: number)
+    }
+
+    /// For a caller that keeps the page's whole text too: the lecture splitter counts figures in it, which the
+    /// cleaned text has dropped, and reading a page's text again costs as much as the first time.
+    public static func text(of raw: NSAttributedString, number: Int) -> PDFPageText {
         let title = title(of: raw)
         let words = max(PageText.words(raw.string) - (title.map(PageText.words) ?? 0), 0)
         return PDFPageText(page: number, title: title, text: PageText.cleaned(raw.string), words: words, figures: PageText.figures(raw.string))
