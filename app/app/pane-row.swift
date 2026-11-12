@@ -505,6 +505,9 @@ private struct PaneBundle: View {
             .frame(minWidth: Theme.Size.paneMin / 2, alignment: .leading)
             .presentationCompactAdaptation(.popover)
         }
+        #if DEBUG
+        .onChange(of: PaneBundleHook.shared.listing) { _, open in if trailing { listing = open } }
+        #endif
     }
 }
 

@@ -300,6 +300,9 @@ struct RootView: View {
                                   frontPanes: { tabs.front })
         }
         #endif
+        #if DEBUG
+        .task { await PaneBundleProbe.run(tabs: tabs, workspace: workspace) }
+        #endif
         #if DEBUG && os(macOS)
         .task {
             await TabMemoryProbe.run(tabs: tabs, workspace: workspace)
