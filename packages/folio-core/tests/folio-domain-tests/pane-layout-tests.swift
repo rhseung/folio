@@ -423,8 +423,11 @@ struct PanePresetTests {
     @Test func aRoleInTwoSlotsTakesALinkEach() throws {
         let preset = PanePreset(name: "렉처 둘", slots: [.role(.lecture), .role(.classNote), .role(.lecture)], shares: [0.4, 0.2, 0.4])
         let lectures = [AppLink(.material, UUID()), AppLink(.material, UUID()), AppLink(.material, UUID())]
+        // The last lecture slot takes the rest: nothing is left out for want of room (2026-11-12 사용자).
         let l = try #require(preset.layout([.lecture: lectures, .classNote: [note]]))
-        #expect(l.links == [lectures[0], note, lectures[1]])
+        #expect(l.links == [lectures[0], note, lectures[1], lectures[2]])
+        let one = try #require(preset.layout([.lecture: lectures, .classNote: [note]], spreads: false))
+        #expect(one.links == [lectures[0], note, lectures[1]])
         let spread = try #require(preset.layout([.lecture: lectures]))
         #expect(spread.links == [lectures[0], lectures[1], lectures[2]])
     }
