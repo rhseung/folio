@@ -177,3 +177,46 @@ struct SupersededProposalTests {
         #expect(add.target(["course", "missing"]) == .object(["course": .string("c"), "missing": .null]))
     }
 }
+
+/// #90: a proposal made on top of earlier ones of its answer waits until they are applied.
+struct ProposalWaitingTests {
+    func message(_ proposals: [ActionProposal]) -> ChatMessage {
+        ChatMessage(role: .assistant, text: "", at: Date(timeIntervalSince1970: 0), proposals: proposals)
+    }
+
+    func proposal(after: [Int]? = nil, applied: Bool? = nil) -> ActionProposal {
+        ActionProposal(command: "unit pages add", input: [:], applied: applied, after: after)
+    }
+
+    @Test func standsAloneWithoutEarlierOnes() {
+        let m = message([proposal(), proposal()])
+        #expect(m.waiting(1) { _ in false } == nil)
+        #expect(m.waiting(5) { _ in false } == nil)
+    }
+
+    @Test func waitsUntilTheEarlierOnesAreApplied() {
+        #expect(message([proposal(), proposal(), proposal(after: [0, 1])]).waiting(2) { _ in false } == .earlier([0, 1]))
+        #expect(message([proposal(applied: true), proposal(), proposal(after: [0, 1])]).waiting(2) { _ in false } == .earlier([1]))
+        #expect(message([proposal(applied: true), proposal(after: [0])]).waiting(1) { _ in true } == nil)
+        // Only earlier places count: a later or its own one can't be built on.
+        #expect(message([proposal(after: [0, 1])]).waiting(0) { _ in false } == nil)
+    }
+
+    @Test func anEarlierOneThatCantBeAppliedBlocksIt() {
+        #expect(message([proposal(), proposal(after: [0])]).waiting(1) { $0 == 0 } == .blocked([0]))
+    }
+
+    /// The middle one is refused only because it waits on the first, which is fine: the last still just waits.
+    @Test func aChainWaitsThroughOneThatIsItselfWaiting() {
+        let chain = message([proposal(), proposal(after: [0]), proposal(after: [1])])
+        #expect(chain.waiting(2) { $0 == 1 } == .earlier([1]))
+        // With the first refused, the whole chain is blocked.
+        #expect(chain.waiting(2) { $0 <= 1 } == .blocked([1]))
+    }
+
+    @Test func theEarlierPlacesSurviveTheChatFile() throws {
+        let p = proposal(after: [0, 2])
+        #expect(ActionProposal(text: p.text)?.after == [0, 2])
+        #expect(ActionProposal(text: proposal().text)?.after == nil)
+    }
+}

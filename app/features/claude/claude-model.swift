@@ -339,10 +339,34 @@ final class ClaudeModel {
         }
     }
 
-    /// The proposals "apply all" runs: those still offered, in the answer's order. The page counts the same ones.
+    /// The proposals "apply all" runs: those still offered, in the answer's order. The page counts the same ones. One
+    /// made on top of earlier proposals goes along when all of those do, since they are checked and run in order.
     static func offered(_ message: ChatMessage, superseded: Set<ProposalRef>, describe: (ActionProposal) -> ProposalLine) -> [Int] {
-        (message.proposals ?? []).enumerated().compactMap { i, p in
-            p.applied != true && !superseded.contains(ProposalRef(message: message.id, index: i)) && describe(p).refusal == nil ? i : nil
+        var offered: [Int] = []
+        for (i, p) in (message.proposals ?? []).enumerated() where p.applied != true && !superseded.contains(ProposalRef(message: message.id, index: i)) {
+            switch waiting(message, i, superseded: superseded, describe: describe) {
+            case nil: if describe(p).refusal == nil { offered.append(i) }
+            case .earlier(let before)?: if before.allSatisfy(offered.contains) { offered.append(i) }
+            case .blocked?: break
+            }
+        }
+        return offered
+    }
+
+    /// Whether the proposal at `index` waits on earlier proposals of its answer that aren't applied (`after`).
+    static func waiting(_ message: ChatMessage, _ index: Int, superseded: Set<ProposalRef>,
+                        describe: (ActionProposal) -> ProposalLine) -> ChatMessage.Waiting? {
+        let proposals = message.proposals ?? []
+        return message.waiting(index) { j in
+            superseded.contains(ProposalRef(message: message.id, index: j)) || describe(proposals[j]).refusal != nil
+        }
+    }
+
+    /// The line's reason for one that waits; `1, 2` names the earlier proposals as the panel numbers them.
+    static func reason(_ waiting: ChatMessage.Waiting) -> String {
+        switch waiting {
+        case .earlier(let before): String(localized: .claudeProposalWaiting(before.map { String($0 + 1) }.joined(separator: ", ")))
+        case .blocked(let before): String(localized: .claudeProposalWaitingBlocked(before.map { String($0 + 1) }.joined(separator: ", ")))
         }
     }
 
@@ -358,6 +382,10 @@ final class ClaudeModel {
               let proposals = doc.model.messages[m].proposals, proposals.indices.contains(index),
               case let proposal = proposals[index], proposal.applied != true,
               let action = workspace.action(proposal) else { return }
+        if let waiting = Self.waiting(doc.model.messages[m], index, superseded: superseded(doc.model), describe: describe) {
+            workspace.error = Self.reason(waiting)
+            return
+        }
         if !confirmed, let question = workspace.confirmation(action) {
             confirming = PendingProposal(message: message, index: index, question: question)
             return
@@ -376,7 +404,14 @@ final class ClaudeModel {
             doc.model.messages[m].proposals.flatMap { workspace.action($0[i]) }.map { (index: i, action: $0) }
         }
         guard !picked.isEmpty else { return }
-        if let refused = workspace.refusal(picked.map(\.action)) {
+        // A plain dry run carries course.json from one to the next but writes no file, so a proposal made on top of a
+        // note the answer makes first is checked again in a staged copy, where the note is there.
+        let actions = picked.map(\.action)
+        var refusal = workspace.refusal(actions)
+        if refusal != nil, picked.contains(where: { doc.model.messages[m].proposals?[$0.index].after?.isEmpty == false }) {
+            refusal = workspace.stagedRefusal(actions)
+        }
+        if let refused = refusal {
             workspace.error = String(localized: .claudeProposalBlocked(picked[refused.index].index + 1, refused.reason))
             return
         }
@@ -487,8 +522,13 @@ final class ClaudeModel {
                 // leak in through FolioIndex), whose `joined()` then prints `SQL(elements: …)` into the chat.
                 let offered = Self.offered(m, superseded: superseded, describe: describe).count
                 let proposals = (m.proposals ?? []).enumerated().map { i, p -> String in
-                    let line = describe(p)
+                    var line = describe(p)
                     let replaced = p.applied != true && superseded.contains(ProposalRef(message: m.id, index: i))
+                    // Its own dry run fails against the folder until the ones it builds on are applied; that, not the
+                    // missing item, is the reason to show.
+                    if p.applied != true, !replaced, let waiting = Self.waiting(m, i, superseded: superseded, describe: describe) {
+                        line.refusal = Self.reason(waiting)
+                    }
                     let button = p.applied == true ? #"<span class="done">\#(String(localized: .claudeProposalApplied))</span>"#
                         : replaced ? #"<span class="off">\#(String(localized: .claudeProposalSuperseded))</span>"#
                         : line.refusal.map { _ in #"<span class="off">\#(String(localized: .claudeProposalUnavailable))</span>"# }

@@ -252,6 +252,25 @@ final class Workspace {
         return nil
     }
 
+    /// `refusal(_:)` for changes made on top of each other, such as a note's edit after the note is made: they run for
+    /// real, one after another, in a staged copy of the folder that the original never sees, so each finds the files
+    /// the ones before it write. Cloning every file costs more than a dry run, so this is only for a list that one
+    /// refuses.
+    func stagedRefusal(_ actions: [any Action]) -> (index: Int, reason: String)? {
+        guard let gist else { return actions.isEmpty ? nil : (0, String(localized: .workspaceNoGist)) }
+        let copy: StagedFolder
+        do { copy = try StagedFolder(copying: gist.url) } catch { return (0, "\(error)") }
+        defer { copy.remove() }
+        let (device, now, calendar) = (device, now, calendar)
+        return copy.run { () -> (index: Int, reason: String)? in
+            let ctx = ActionContext(gist: GISTStore(url: copy.url), device: device, now: now, calendar: calendar)
+            for (i, action) in actions.enumerated() {
+                do { try action.run(ctx) } catch { return (i, "\(error)") }
+            }
+            return nil
+        }
+    }
+
     func can(_ action: some Action) -> Bool { refusal(action) == nil }
 
     /// The question to ask before running the action, as the CLI asks it; nil when it runs without asking.
