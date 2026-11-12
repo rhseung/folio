@@ -23,6 +23,16 @@ public struct ActionProposal: Codable, Hashable, Sendable {
         self.after = after
     }
 
+    /// Whether a command's proposal also runs for real in a staged copy of the folder (`StagedFolder`), so later ones
+    /// build on it: the panel's server does this as it proposes, and the panel again when it checks a chain before
+    /// applying it. These groups write outside the GIST folder (a backup, cleanup's backup copy, an import's source)
+    /// or rewrite audio, which the copy's fence only covers for coordinated writes, so they stay dry runs there.
+    public static func stages(_ command: String) -> Bool {
+        command.split(separator: " ").first.map { !unstaged.contains(String($0)) } ?? false
+    }
+
+    static let unstaged: Set<String> = ["backup", "cleanup", "import", "recording"]
+
     /// Starts the tool-result text block that carries the proposal, apart from the preview text beside it.
     public static let marker = "folio-proposal:"
 

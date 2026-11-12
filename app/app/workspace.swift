@@ -263,9 +263,14 @@ final class Workspace {
         defer { copy.remove() }
         let (device, now, calendar) = (device, now, calendar)
         return copy.run { () -> (index: Int, reason: String)? in
-            let ctx = ActionContext(gist: GISTStore(url: copy.url), device: device, now: now, calendar: calendar)
+            let gist = GISTStore(url: copy.url)
+            let ctx = ActionContext(gist: gist, device: device, now: now, calendar: calendar)
             for (i, action) in actions.enumerated() {
-                do { try action.run(ctx) } catch { return (i, "\(error)") }
+                // A backup or an import writes outside the folder, past the copy's fence: only a dry run, on a context
+                // of its own that reads what the ones before it wrote into the copy.
+                let staged = ActionProposal.stages(type(of: action).command)
+                do { try action.run(staged ? ctx : ActionContext(gist: gist, device: device, now: now, calendar: calendar, dryRun: true)) }
+                catch { return (i, "\(error)") }
             }
             return nil
         }

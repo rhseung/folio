@@ -142,7 +142,7 @@ struct MCPServer {
         }
         let real = try? CLI.gist(path: gist).url
         let folder = real.flatMap(stage.copy(of:))
-        let stages = folder != nil && Self.stages(command)
+        let stages = folder != nil && ActionProposal.stages(command)
         var run = Self.execute(argv, staging: folder.map { Staging(folder: $0, writes: false) })
         if run.code == 0, stages, let folder { run = Self.execute(argv, staging: Staging(folder: folder, writes: true)) }
         guard run.code == 0, let input = run.built.first(where: { $0.0 == command })?.1 else {
@@ -157,15 +157,6 @@ struct MCPServer {
         // What the panel shows an approve button for: the action with every name already resolved to its UUID.
         content.append(["type": "text", "text": .string(ActionProposal(command: command, input: input, after: after.isEmpty ? nil : after).text)])
         return ["content": .array(content), "isError": .bool(false)]
-    }
-
-    /// Commands a proposal also runs for real in the staged copy, so later ones build on it. The others write outside
-    /// the GIST folder (a backup, cleanup's backup copy, an import's source) or rewrite audio, which the copy's fence
-    /// (`StagedFolder`) only covers for coordinated writes: they stay dry runs there and later proposals don't see them.
-    static let unstaged: Set<String> = ["backup", "cleanup", "import", "recording"]
-
-    static func stages(_ command: String) -> Bool {
-        command.split(separator: " ").first.map { !unstaged.contains(String($0)) } ?? false
     }
 
     struct Run {

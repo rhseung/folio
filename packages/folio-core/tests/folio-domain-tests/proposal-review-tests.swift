@@ -214,6 +214,12 @@ struct ProposalWaitingTests {
         #expect(chain.waiting(2) { $0 <= 1 } == .blocked([1]))
     }
 
+    /// What writes outside the folder never runs for real in the staged copy, on the server or in the panel's check.
+    @Test func onlyCommandsThatWriteInsideTheFolderStage() {
+        for command in ["unit add", "note edit", "exam set", "assignment add"] { #expect(ActionProposal.stages(command), "\(command)") }
+        for command in ["backup create", "cleanup apply", "import notion", "recording trim", ""] { #expect(!ActionProposal.stages(command), "\(command)") }
+    }
+
     @Test func theEarlierPlacesSurviveTheChatFile() throws {
         let p = proposal(after: [0, 2])
         #expect(ActionProposal(text: p.text)?.after == [0, 2])
