@@ -32,8 +32,8 @@ final class Pictures: @unchecked Sendable {
         }
         let folder = URL(filePath: absolute(out), directoryHint: .isDirectory)
         // The GIST folder changes only through actions; pictures made for reading don't belong in it.
-        let root = gist.resolvingSymlinksInPath().path + "/"
-        guard !(folder.resolvingSymlinksInPath().path + "/").hasPrefix(root) else {
+        let root = resolved(gist).path + "/"
+        guard !(resolved(folder).path + "/").hasPrefix(root) else {
             throw CLIError(exit: .usage, message: String(localized: .picturesOutInGist(out)))
         }
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -42,5 +42,17 @@ final class Pictures: @unchecked Sendable {
             try p.data.write(to: file, options: .atomic)
             return file.path
         }
+    }
+
+    /// `resolvingSymlinksInPath` drops `/private` (of `/private/tmp`, `/private/var`) only from a path that exists, so
+    /// a new `--out` folder inside the GIST folder would not compare as inside it. Resolve the nearest folder that
+    /// exists and put the rest back.
+    private static func resolved(_ url: URL) -> URL {
+        var base = url.standardizedFileURL, rest: [String] = []
+        while !FileManager.default.fileExists(atPath: base.path), base.pathComponents.count > 1 {
+            rest.insert(base.lastPathComponent, at: 0)
+            base.deleteLastPathComponent()
+        }
+        return rest.reduce(base.resolvingSymlinksInPath()) { $0.appending(path: $1) }
     }
 }
