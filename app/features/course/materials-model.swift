@@ -124,8 +124,9 @@ final class MaterialsModel {
         let file = course.file
         let sessions = file.sessionLinks(of: m.id).map { s, link in file.day(of: s, calendar: workspace.calendar) + link.pageLabel }
         let units = file.units(of: m)
-        let direct = units.filter { $0.routes.contains(.direct) }.map(\.unit.title)
-        let via = units.filter { !$0.routes.contains(.direct) }.map(\.unit.title)
+        let own = { (routes: [MaterialRoute]) in routes.contains(.direct) || routes.contains(.pages) }
+        let direct = units.filter { own($0.routes) }.map(\.unit.title)
+        let via = units.filter { !own($0.routes) }.map(\.unit.title)
         return (sessions
                 + (direct.isEmpty ? [] : [String(localized: .materialsLinkUnits(direct.joined(separator: ", ")))])
                 + (via.isEmpty ? [] : [String(localized: .materialsLinkUnitsViaSessions(via.joined(separator: ", ")))])).joined(separator: " · ")
@@ -241,7 +242,13 @@ final class MaterialsModel {
     /// Units the file reaches only through one of their classes: shown as such, not as a link to undo.
     func unitsViaSessions(of material: UUID) -> Set<UUID> {
         guard let m = materials.first(where: { $0.id == material }) else { return [] }
-        return Set(course.file.units(of: m).filter { !$0.routes.contains(.direct) }.map(\.unit.id))
+        return Set(course.file.units(of: m).filter { !$0.routes.contains(.direct) && !$0.routes.contains(.pages) }.map(\.unit.id))
+    }
+
+    /// A unit's pages of the split file, shown beside its unlinked row: the split puts the file there, not a link to
+    /// undo here.
+    func splitPages(of material: UUID, unit: UUID) -> String? {
+        course.file.pages(of: unit, in: material).map { String(localized: .materialsLinksUnitPages($0.lowerBound, $0.upperBound)) }
     }
 
     var exams: [Exam] { course.file.exams.sorted { ($0.start ?? .distantFuture, $0.title) < ($1.start ?? .distantFuture, $1.title) } }

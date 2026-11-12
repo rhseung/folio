@@ -41,14 +41,14 @@ struct MaterialLinksModelTests {
         workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: 3, lastPage: 8))
         let model = UnitsModel(workspace: workspace, courseId: graphTheory)
         let row = try #require(model.materials(try theUnit(), in: file).first)
-        #expect(row.material.id == slides.id && !row.direct)
+        #expect(row.material.id == slides.id && !row.own)
         #expect(row.detail.hasSuffix(" p.3–8"))
         #expect(try material(slides.path).unitIds.isEmpty)
 
         #expect(model.materialMenu(try theUnit(), in: file).first { $0.id == slides.id }?.on == false)
         model.toggle(material: slides.id, in: try theUnit(), file: file)
         #expect(try material(slides.path).unitIds == [unit])
-        #expect(model.materials(try theUnit(), in: file).first?.direct == true)
+        #expect(model.materials(try theUnit(), in: file).first?.own == true)
         #expect(model.materialMenu(try theUnit(), in: file).first { $0.id == slides.id }?.on == true)
     }
 
