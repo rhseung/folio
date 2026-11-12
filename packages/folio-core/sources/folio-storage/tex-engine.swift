@@ -1,10 +1,12 @@
 import CryptoKit
 import FolioDomain
+import FolioTectonic
 import Foundation
 
-#if os(macOS)
 /// Builds a `.tex` with Tectonic, chosen over a TeX Live install because it fetches only the packages a document
-/// uses (#41). Nothing is written next to the source: the PDF lands in `outDir` and the caller places it.
+/// uses (#41). It is linked into the app as a library (FolioTectonic, tectonic/), the same on the iPad, which lets no
+/// app start another program, and on the Mac. Nothing is written next to the source: the PDF lands in `outDir` and the
+/// caller places it.
 public struct TexEngine: Sendable {
     public struct Build: Sendable, Equatable {
         public var pdf: URL?
@@ -12,42 +14,42 @@ public struct TexEngine: Sendable {
         public var errors: [TexIssue] { issues.filter { $0.severity == .error } }
     }
 
-    public let executable: URL
+    /// The fetched packages and formats. Caches, so the system may empty it and the next build fetches them again; on
+    /// the Mac it is the folder a Homebrew Tectonic uses, so the two share what they fetched.
+    public let cache: URL
 
-    public init(executable: URL) {
-        self.executable = executable
+    public init(cache: URL) {
+        self.cache = cache
     }
 
-    /// An app started from Finder doesn't get the shell's PATH, so Homebrew's folders are tried by name.
-    public static func locate(environment: [String: String] = ProcessInfo.processInfo.environment) -> TexEngine? {
-        let fm = FileManager.default
-        var candidates: [String] = []
-        if let given = environment["FOLIO_TECTONIC"] { candidates.append(given) }
-        candidates += ["/opt/homebrew/bin/tectonic", "/usr/local/bin/tectonic"]
-        candidates += (environment["PATH"] ?? "").split(separator: ":").map { "\($0)/tectonic" }
-        return candidates.first { fm.isExecutableFile(atPath: $0) }.map { TexEngine(executable: URL(filePath: $0)) }
-    }
+    public static let shared = TexEngine(cache: URL.cachesDirectory.appending(path: "Tectonic"))
 
-    /// Blocks until Tectonic exits, which can take minutes the first time a package is fetched; the app calls it
-    /// off the main thread.
+    /// Blocks until Tectonic is done, which can take minutes the first time a package is fetched; the app calls it
+    /// off the main thread. Builds run one at a time.
     public func compile(_ source: URL, into outDir: URL, at now: Date, calendar: Calendar) throws -> Build {
         let epoch = TexBuildTime.sourceDateEpoch(at: now, calendar: calendar)
         try FileManager.default.createDirectory(at: outDir, withIntermediateDirectories: true)
         let pdf = outDir.appending(path: source.deletingPathExtension().lastPathComponent + ".pdf")
         // Online, Tectonic checks its package bundle on every build, which took a homework from half a second to
-        // nine. Packages it already fetched are enough for most rebuilds; only a missing one needs the network.
-        var run = try run(source, outDir: outDir, pdf: pdf, epoch: epoch, cachedOnly: true)
+        // nine. Packages it already fetched are enough for most rebuilds; only a missing one needs the network. An empty
+        // cache (a new install, or one the system cleared) has no bundle index to work offline from at all.
+        let cached = hasCache
+        var run = try run(source, outDir: outDir, pdf: pdf, epoch: epoch, cachedOnly: cached)
         var issues = TexLog.issues(run.output)
-        if !run.made || Self.hasErrors(issues), Self.missesAFile(run.output) {
+        if cached, !run.made || Self.hasErrors(issues), Self.missesAFile(run.output) {
             run = try self.run(source, outDir: outDir, pdf: pdf, epoch: epoch, cachedOnly: false)
             issues = TexLog.issues(run.output)
         }
         if !run.made, !Self.hasErrors(issues) {
-            issues.insert(TexIssue(.error, message: run.output.split(whereSeparator: \.isNewline).last.map(String.init) ?? "tectonic"), at: 0)
+            issues.insert(TexIssue(.error, message: run.output.split(whereSeparator: \.isNewline).last.map(String.init) ?? "Tectonic"), at: 0)
         }
         // Past an error Tectonic still writes a PDF, but with the broken parts left out; placed beside the source it
         // would replace a good one, possibly the copy to hand in.
         return Build(pdf: run.made && !Self.hasErrors(issues) ? pdf : nil, issues: issues)
+    }
+
+    private var hasCache: Bool {
+        ["bundles", "formats"].allSatisfy { !((try? FileManager.default.contentsOfDirectory(atPath: cache.appending(path: $0).path)) ?? []).isEmpty }
     }
 
     private static func hasErrors(_ issues: [TexIssue]) -> Bool { issues.contains { $0.severity == .error } }
@@ -58,8 +60,7 @@ public struct TexEngine: Sendable {
         outputFolder(for: source).appending(path: source.deletingPathExtension().lastPathComponent + ".synctex.gz")
     }
 
-    /// A package or `\input` file Tectonic hasn't fetched yet, which an online build may find. With nothing cached at
-    /// all, as on the first build, the format file is missing too and the message is different.
+    /// A package or `\input` file Tectonic hasn't fetched yet, which an online build may find.
     static func missesAFile(_ output: String) -> Bool {
         output.contains("not found") || output.contains("failed to open input file")
     }
@@ -68,25 +69,17 @@ public struct TexEngine: Sendable {
         try? FileManager.default.removeItem(at: pdf)
         // A build that dies before writing its own would otherwise leave the last one, made for other text.
         try? FileManager.default.removeItem(at: pdf.deletingPathExtension().appendingPathExtension("synctex.gz"))
-        let process = Process()
-        process.executableURL = executable
+        try FileManager.default.createDirectory(at: cache, withIntermediateDirectories: true)
         // A build time fixed to the day (`TexBuildTime`) keeps the PDF's bytes the same for an unchanged source, so
-        // there is nothing new for iCloud to sync or for `course.json` to rehash. It is set through the environment rather than `-Z deterministic-mode`,
-        // which gives the same PDF but blanks the file names in the SyncTeX data, leaving no way to tell which file a
-        // clicked line is in. Errors don't stop the build, so one build lists all of them.
-        process.arguments = ["-X", "compile", "-Z", "continue-on-errors", "--synctex"] + (cachedOnly ? ["--only-cached"] : [])
-            + ["--outdir", outDir.path, source.lastPathComponent]
-        process.environment = ProcessInfo.processInfo.environment.merging(["SOURCE_DATE_EPOCH": String(epoch)]) { _, fixed in fixed }
-        // `\input` and `\includegraphics` paths are relative to the document's folder.
-        process.currentDirectoryURL = source.deletingLastPathComponent()
-        let output = Pipe()
-        process.standardOutput = output
-        process.standardError = output
-        try process.run()
-        // Read before waiting: a full pipe would otherwise stall Tectonic and this call with it.
-        let text = String(decoding: output.fileHandleForReading.readDataToEndOfFile(), as: UTF8.self)
-        process.waitUntilExit()
-        return (text, process.terminationStatus == 0 && FileManager.default.fileExists(atPath: pdf.path))
+        // there is nothing new for iCloud to sync or for `course.json` to rehash. It is the build date rather than
+        // deterministic mode, which gives the same PDF but blanks the file names in the SyncTeX data, leaving no way to
+        // tell which file a clicked line is in. Errors don't stop the build, so one build lists all of them. `\input`
+        // and `\includegraphics` paths are relative to the document's folder.
+        var log: UnsafeMutablePointer<CChar>?
+        let code = folio_tectonic_compile(source.path, outDir.path, cache.path, cachedOnly ? 1 : 0, Int64(epoch), &log)
+        let text = log.map { String(cString: $0) } ?? ""
+        folio_tectonic_free_string(log)
+        return (text, code == 0 && FileManager.default.fileExists(atPath: pdf.path))
     }
 
     /// The SyncTeX data for `shown`, the PDF on screen. It belongs to the last build in the output folder, so it is
@@ -101,10 +94,9 @@ public struct TexEngine: Sendable {
 
     public static func outputFolder(for source: URL) -> URL { TexOutput.folder(for: source) }
 }
-#endif
 
-/// Where a build of a `.tex` leaves its PDF, on the Mac (Tectonic) and the iPad (the web engine) alike. The build
-/// actions take a PDF only from here, so a file passed in can't put itself over a course PDF.
+/// Where a build of a `.tex` leaves its PDF. The build actions take a PDF only from here, so a file passed in can't put
+/// itself over a course PDF.
 public enum TexOutput {
     /// One folder per source, reused by every build of it, so builds don't pile up in the temporary folder.
     public static func folder(for source: URL) -> URL {

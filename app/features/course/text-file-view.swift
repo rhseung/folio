@@ -39,10 +39,6 @@ struct TextFileView: View {
     var body: some View {
         VStack(spacing: 0) {
             bar
-            // The iPad's engine ships with the app, so there is nothing to install.
-            #if os(macOS)
-            if model.isTex, model.engineMissing { installHint }
-            #endif
             // One row whose columns come and go, so switching keeps the editor's caret and the PDF's page.
             HStack(spacing: 0) {
                 if !model.isTex || shown != .read { source }
@@ -137,32 +133,21 @@ struct TextFileView: View {
                 Label(String(localized: .textFileNoPdf), systemImage: "doc.richtext")
             } description: {
                 #if os(macOS)
-                Text(model.engineMissing ? .textFileNoPdfEngine : model.errors.isEmpty ? .textFileNoPdfBuild : .textFileNoPdfErrors)
+                Text(model.errors.isEmpty ? .textFileNoPdfBuild : .textFileNoPdfErrors)
                 #else
-                // An iPad build made without the engine (`mise run tex-engine`) can still show the Mac's PDF.
-                Text(model.engineMissing ? .textFileNoPdfMac : model.errors.isEmpty ? .textFileNoPdfBuildPad : .textFileNoPdfErrors)
+                // An iPad without a keyboard has no ⌘B; the button below builds.
+                Text(model.errors.isEmpty ? .textFileNoPdfBuildPad : .textFileNoPdfErrors)
                 #endif
             } actions: {
-                if !model.engineMissing || isMac {
-                    Button(.textFileBuild) { Task { await model.build() } }
-                        .buttonStyle(.prominent)
-                        .disabled(!model.canBuild)
-                }
+                Button(.textFileBuild) { Task { await model.build() } }
+                    .buttonStyle(.prominent)
+                    .disabled(!model.canBuild)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
     }
 
     var shown: NotePanes.Mode { panes.shown(wide: wide) }
-
-    /// The Mac keeps its build button without Tectonic, beside the hint to install it; the iPad has nothing to install.
-    private var isMac: Bool {
-        #if os(macOS)
-        true
-        #else
-        false
-        #endif
-    }
 
     /// A link to a page of this `.tex` is a page of its PDF, so the PDF comes into view if the source alone was.
     func showPDF() {
@@ -172,9 +157,11 @@ struct TextFileView: View {
     var bar: some View {
         PageBar {
             if model.isTex { NotePanesPicker(panes: $panes, wide: wide) }
-            if model.isTex, !model.engineMissing || isMac {
+            if model.isTex {
                 Button(.textFileBuild, systemImage: "hammer") { Task { await model.build() } }
+                    #if os(macOS)
                     .help(Text(.textFileBuildHelp))
+                    #endif
                     .keyboardShortcut("b")
                     .disabled(!model.canBuild)
                 if model.building {
@@ -200,26 +187,10 @@ struct TextFileView: View {
         }
     }
 
-    /// iPadOS can't run Tectonic, so its menu has no build row either.
     var texBuild: (@MainActor () -> Void)? {
-        #if os(macOS)
         guard model.isTex else { return nil }
         let build: @MainActor () -> Void = { Task { await model.build() } }
         return build
-        #else
-        nil
-        #endif
-    }
-
-    var installHint: some View {
-        HStack(spacing: Theme.Space.s) {
-            Image(systemName: "exclamationmark.triangle").foregroundStyle(Theme.Palette.warning)
-            Text(.textFileInstallHint).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).textSelection(.enabled)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, Theme.Space.l)
-        .padding(.vertical, Theme.Space.s)
-        .overlay(alignment: .bottom) { Theme.Palette.lineSoft.frame(height: 1) }
     }
 
     /// Errors first; a click on one in this file puts the caret on its line.
@@ -228,15 +199,6 @@ struct TextFileView: View {
             Theme.Palette.lineSoft.frame(height: 1)
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    ForEach(model.noticeLines, id: \.self) { line in
-                        HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {
-                            Image(systemName: "info.circle").foregroundStyle(Theme.Palette.textSecondary)
-                            Text(line).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary)
-                            Spacer(minLength: 0)
-                        }
-                        .padding(.horizontal, Theme.Space.l)
-                        .padding(.vertical, Theme.Space.xs)
-                    }
                     ForEach(Array(model.shownIssues.enumerated()), id: \.offset) { _, issue in
                         Button { model.jump(to: issue) } label: {
                             HStack(alignment: .firstTextBaseline, spacing: Theme.Space.s) {

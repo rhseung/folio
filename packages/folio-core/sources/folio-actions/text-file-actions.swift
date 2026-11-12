@@ -83,7 +83,7 @@ public struct MaterialNew {
 
 /// Puts the PDF next to the `.tex` under the same name, where tracking already reads it as the source's output. A PDF
 /// there that this action didn't write is someone's file: replacing it takes `overwrite`, and it goes to the Trash.
-/// No examples: the equivalence test runs each one for real, and CI has no Tectonic.
+/// No examples: the equivalence test runs each one for real, and a first build fetches TeX packages for minutes.
 @Action("material build", "LaTeX 자료(.tex)를 Tectonic으로 PDF로 만들어 옆에 같은 이름으로 둔다", done: "'{material}'을(를) PDF로 만들었습니다",
         phrases: ["tex 컴파일", "latex 빌드", "PDF 만들기"])
 public struct MaterialBuild {
@@ -91,7 +91,7 @@ public struct MaterialBuild {
     @Arg var course: Course.ID
     /// .tex 자료
     @Arg var material: Material.ID
-    /// 앱이 이 자료를 빌드해 둔 PDF(Mac은 Tectonic, iPad는 웹 엔진). 빌드 출력 폴더 밖의 파일은 받지 않는다. 빼면 직접 빌드한다
+    /// 앱이 이 자료를 Tectonic으로 빌드해 둔 PDF. 빌드 출력 폴더 밖의 파일은 받지 않는다. 빼면 직접 빌드한다
     @Hidden var pdf: String?
     /// 같은 이름의 PDF가 Folio가 만든 것이 아니어도 바꾼다
     var overwrite = false
@@ -136,16 +136,11 @@ public struct MaterialBuild {
     }
 
     static func compile(_ source: URL, _ ctx: ActionContext) throws -> URL {
-        #if os(macOS)
-        guard let engine = TexEngine.locate() else { throw ActionError.rule(String(localized: .errorTexNotInstalled)) }
-        let build = try engine.compile(source, into: TexEngine.outputFolder(for: source), at: ctx.now, calendar: ctx.calendar)
+        let build = try TexEngine.shared.compile(source, into: TexEngine.outputFolder(for: source), at: ctx.now, calendar: ctx.calendar)
         guard let pdf = build.pdf else {
             throw ActionError.rule(String(localized: .errorTexFailed(build.errors.map(\.description).joined(separator: "\n"))))
         }
         return pdf
-        #else
-        throw ActionError.rule(String(localized: .errorTexMacOnly))
-        #endif
     }
 }
 
@@ -159,7 +154,7 @@ public struct NoteBuild {
     @Arg var course: Course.ID
     /// .tex 노트
     @Arg var note: Note.Path
-    /// 앱이 이 노트를 빌드해 둔 PDF(Mac은 Tectonic, iPad는 웹 엔진). 빌드 출력 폴더 밖의 파일은 받지 않는다. 빼면 직접 빌드한다
+    /// 앱이 이 노트를 Tectonic으로 빌드해 둔 PDF. 빌드 출력 폴더 밖의 파일은 받지 않는다. 빼면 직접 빌드한다
     @Hidden var pdf: String?
     /// 그 자리의 PDF가 이 노트를 빌드한 것이 아니어도 바꾼다
     var overwrite = false

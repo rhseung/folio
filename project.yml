@@ -37,11 +37,6 @@ targets:
       - path: app/resources/AppIcon.icon
         type: file
         buildPhase: resources
-      # The iPad's TeX engine (#41), fetched by `mise run tex-engine`; the Mac builds with Tectonic and leaves it out.
-      - path: .build/tex-engine/TexEngine
-        type: folder
-        buildPhase: resources
-        destinationFilters: [iOS]
     dependencies:
       - package: FolioCore
         product: FolioDomain

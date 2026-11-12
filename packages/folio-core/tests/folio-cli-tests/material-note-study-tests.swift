@@ -217,7 +217,7 @@ struct MaterialNoteStudyTests {
         #expect(h.cli(["material", "show", "EC4207/Seating.pdf"], gist: gist).out.contains("pdf"))
     }
 
-    @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
+    @Test
     func buildTex() throws {
         let write = ["material", "write", "EC4207/Problems.tex", "--file",
                      try scratch("Problems.tex", "\\documentclass{article}\n\\begin{document}\nHi\n\\end{document}\n")]
@@ -363,7 +363,7 @@ struct MaterialNoteStudyTests {
         }
     }
 
-    @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
+    @Test
     func noteBuild() throws {
         let tex = "\\documentclass{article}\n\\begin{document}\nHi\n\\end{document}\n"
         let id = UUID()

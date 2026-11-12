@@ -18910,13 +18910,13 @@
         }
       }
     },
-    "text-file.no-pdf-engine": {
+    "text-file.no-pdf-build-pad": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "빌드하려면 Tectonic이 필요합니다. 위 안내대로 설치합니다."
+            "value": "빌드하면 여기에 PDF가 보입니다."
           }
         }
       }
@@ -18928,17 +18928,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "빌드에 실패했습니다. 오류를 고친 뒤 다시 빌드합니다."
-          }
-        }
-      }
-    },
-    "text-file.no-pdf-mac": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Mac에서 빌드한 PDF가 여기에 보입니다."
           }
         }
       }
@@ -18983,17 +18972,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "오류 %lld개"
-          }
-        }
-      }
-    },
-    "text-file.install-hint": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tectonic이 없어 PDF를 만들 수 없습니다. 터미널에서 brew install tectonic으로 설치하세요"
           }
         }
       }
@@ -19049,50 +19027,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "같은 이름의 PDF가 이미 있는데 Folio가 만든 것이 아닙니다. 받은 파일일 수 있습니다. 바꾸면 원래 파일은 휴지통으로 옮깁니다."
-          }
-        }
-      }
-    },
-    "text-file.engine-unavailable": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "TeX 엔진 없음"
-          }
-        }
-      }
-    },
-    "text-file.no-pdf-build-pad": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "빌드하면 여기에 PDF가 보입니다."
-          }
-        }
-      }
-    },
-    "text-file.notice-other-engine": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "iPad 빌드는 %@: Mac(XeLaTeX)과 줄바꿈과 글꼴이 다를 수 있음"
-          }
-        }
-      }
-    },
-    "text-file.notice-needs-xetex": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "fontspec 문서: iPad 빌드 불가, Mac에서 빌드"
           }
         }
       }

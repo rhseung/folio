@@ -26,14 +26,11 @@ final class TextFileModel {
     var reveal: Int?
     private(set) var building = false
     private(set) var issues: [TexIssue] = []
-    /// After a failed iPad build, what its other engine may explain.
-    private(set) var notices: [TexWebNotice] = []
     /// Bumped after a build so the preview reopens the PDF, which keeps its name.
     private(set) var pdfRevision = 0
     /// A build that would replace a PDF Folio didn't make, held until the user says to.
     private var held: URL?
     var asksToReplace = false
-    let engineMissing: Bool
 
     convenience init(workspace: Workspace, course: LoadedCourse, material: UUID) {
         self.init(workspace: workspace, course: course, source: .material(material))
@@ -43,11 +40,6 @@ final class TextFileModel {
         self.workspace = workspace
         initial = course
         self.source = source
-        #if os(macOS)
-        engineMissing = TexEngine.locate() == nil
-        #else
-        engineMissing = !WebTex.available
-        #endif
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
@@ -89,16 +81,7 @@ final class TextFileModel {
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
-    var canBuild: Bool { isTex && !engineMissing && !building }
-
-    var noticeLines: [String] {
-        notices.map {
-            switch $0 {
-            case let .otherEngine(engine): String(localized: .textFileNoticeOtherEngine(engine.name))
-            case .needsXeTeX: String(localized: .textFileNoticeNeedsXetex)
-            }
-        }
-    }
+    var canBuild: Bool { isTex && !building }
 
     var fileURL: URL { course.store.fileURL(path) }
     var errors: [TexIssue] { issues.filter { $0.severity == .error } }
@@ -156,8 +139,8 @@ final class TextFileModel {
 
     func saveIfDirty() { if dirty { saveNow(force: false) } }
 
-    /// Saves first, so the PDF shows what's on screen. The engine (Tectonic on the Mac, the web engine on the iPad) runs
-    /// off the main thread; the action then only places the PDF it made.
+    /// Saves first, so the PDF shows what's on screen. Tectonic runs off the main thread; the action then only places
+    /// the PDF it made.
     func build() async {
         guard canBuild else { return }
         saveIfDirty()
@@ -165,23 +148,16 @@ final class TextFileModel {
         building = true
         defer { building = false }
         let file = course.store.fileURL(path)
-        let pdf: URL?
+        let (now, calendar) = (workspace.now, workspace.calendar)
+        let result: TexEngine.Build
         do {
-            #if os(macOS)
-            guard let engine = TexEngine.locate() else { return }
-            let (now, calendar) = (workspace.now, workspace.calendar)
-            let result = try await Task.detached { try engine.compile(file, into: TexEngine.outputFolder(for: file), at: now, calendar: calendar) }.value
-            #else
-            let result = try await WebTex.shared.compile(file)
-            notices = TexWebNotice.notices(engine: WebTex.engine, issues: result.issues)
-            #endif
-            issues = result.issues
-            pdf = result.pdf
+            result = try await Task.detached { try TexEngine.shared.compile(file, into: TexEngine.outputFolder(for: file), at: now, calendar: calendar) }.value
         } catch {
             issues = [TexIssue(.error, message: error.localizedDescription)]
             return
         }
-        guard let pdf else { return }
+        issues = result.issues
+        guard let pdf = result.pdf else { return }
         place(pdf, overwrite: false)
     }
 
