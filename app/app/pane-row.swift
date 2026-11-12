@@ -451,6 +451,16 @@ private struct PaneBundle: View {
     @State private var listing = false
     @State private var hovering = false
 
+    /// The list opens toward the panes. A Mac reads the edge as the bundle's side the popover stands on; an iPad as
+    /// the side its arrow points (UIKit's arrow direction), so the same edge put the list off the screen's edge there.
+    private var listEdge: Edge {
+        #if os(macOS)
+        trailing ? .leading : .trailing
+        #else
+        trailing ? .trailing : .leading
+        #endif
+    }
+
     var body: some View {
         Button { listing = true } label: {
             VStack(spacing: Theme.Space.s) {
@@ -480,7 +490,7 @@ private struct PaneBundle: View {
                 Menu(item.mark.title) { PaneMenu(panes: panes, index: item.index, newTab: newTab) }
             }
         }
-        .popover(isPresented: $listing, arrowEdge: trailing ? .leading : .trailing) {
+        .popover(isPresented: $listing, arrowEdge: listEdge) {
             VStack(alignment: .leading, spacing: Theme.Space.xxs) {
                 ForEach(held) { item in
                     Button {
