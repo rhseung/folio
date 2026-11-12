@@ -150,6 +150,27 @@ struct ClaudeModelTests {
         #expect(workspace.course(graphTheory)?.file.exams.isEmpty == true)
     }
 
+    /// A figure is approved on what it looks like, so its card shows it in both appearances, each with its dark rule
+    /// turned to that appearance, before anything is written.
+    @Test func aProposedFigureShowsInLightAndDark() throws {
+        let workspace = try fixtureWorkspace()
+        let model = ClaudeModel(workspace: workspace)
+        let course = try #require(workspace.course(graphTheory))
+        model.load(course)
+        let svg = #"<svg xmlns="http://www.w3.org/2000/svg"><style>.a{fill:#222}@media (prefers-color-scheme: dark){.a{fill:#E6E2DB}}</style><rect class="a"/></svg>"#
+        let add = ActionProposal(command: NoteFigureAdd.command, input: try JSONValue(NoteFigureAdd(course: graphTheory, name: "graph", svg: svg)))
+        let line = model.describe(add)
+        #expect(line.refusal == nil)
+        #expect(line.change == .figure(svg))
+        let html = ClaudeModel.figureHTML(svg)
+        let images = html.matches(of: /data:image\/svg\+xml;base64,([A-Za-z0-9+\/=]+)/).compactMap { Data(base64Encoded: String($0.1)) }
+        #expect(images.map { String(decoding: $0, as: UTF8.self) } == [NoteFigure.forced(svg, dark: false), NoteFigure.forced(svg, dark: true)])
+        #expect(html.contains("<details class=\"change\" open>"))
+        #expect(!FileManager.default.fileExists(atPath: course.store.fileURL(NoteFigure.path("graph.svg")).path))
+        let bad = ActionProposal(command: NoteFigureAdd.command, input: try JSONValue(NoteFigureAdd(course: graphTheory, name: "g", svg: "<svg/>")))
+        #expect(model.describe(bad).refusal != nil)
+    }
+
     /// A proposal that fails when applied keeps why, in the chat file and in its line, instead of only a passing banner.
     @Test func aFailedProposalKeepsItsReason() throws {
         let workspace = try fixtureWorkspace()
