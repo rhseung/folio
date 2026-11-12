@@ -1,6 +1,6 @@
 {
   "tectonic": "0.17.0",
-  "inputs": "1ca31f3e5f57",
-  "url": "https://github.com/rhseung/folio/releases/download/tectonic-0.17.0-1ca31f3e5f57/FolioTectonic.xcframework.zip",
-  "sha256": "541b8d64a604261baaaa7cbae230b70788b6394ac09203654c3961e361586712"
+  "inputs": "ad833413f989",
+  "url": "https://github.com/rhseung/folio/releases/download/tectonic-0.17.0-ad833413f989/FolioTectonic.xcframework.zip",
+  "sha256": "3ab629206d8728a3aa9a017cf96dfdff549128d81c98b85c3b487738bfad4e6f"
 }
