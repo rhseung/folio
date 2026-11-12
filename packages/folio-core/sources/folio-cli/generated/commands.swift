@@ -17,6 +17,8 @@ enum GeneratedCommands {
     static let `import`: [any ParsableCommand.Type] = [ImportNotion.self, ImportNotes.self, ImportCalendar.self, ImportExams.self, ImportUnits.self, ImportRequirements.self, ImportHandbook.self]
     static let material: [any ParsableCommand.Type] = [MaterialLinkUnit.self, MaterialLinkExam.self, MaterialStatusSet.self, MaterialKindSet.self, MaterialUntrack.self, MaterialTrack.self, MaterialMove.self, MaterialTrash.self, MaterialNew.self, MaterialBuild.self]
     static let note: [any ParsableCommand.Type] = [NoteAdd.self, NoteAdopt.self, NoteLink.self, NoteLinkSessions.self, NoteUnlinkSession.self, NoteRemove.self, NoteMigrate.self, NoteRetitleSessions.self, NoteMove.self, NoteBuild.self]
+    static let noteFigure: [any ParsableCommand.Type] = [NoteFigureAdd.self, NoteFigureWrite.self]
+    static let noteWidget: [any ParsableCommand.Type] = [NoteWidgetAdd.self, NoteWidgetWrite.self]
     static let problemSet: [any ParsableCommand.Type] = [ProblemSetRemove.self, ProblemLinkUnit.self]
     static let quiz: [any ParsableCommand.Type] = [QuizCardSave.self, QuizCardRemove.self]
     static let recording: [any ParsableCommand.Type] = [RecordingTrim.self, RecordingRetitleLegacy.self]
@@ -1828,6 +1830,97 @@ enum GeneratedCommands {
                 note: try r.path("NotePath", noteName, in: c),
                 pdf: nil,
                 overwrite: overwrite
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct NoteFigureAdd: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "add", abstract: "노트 그림(SVG)을 Notes/assets에 새로 쓰기. 같은 이름이 있으면 쓰지 않는다. 노트에는 ![설명](assets/<이름>.svg)로 넣는다", discussion: """
+            XML이 올바른지, 스크립트와 바깥 참조가 없는지, 다크 모드 규칙(prefers-color-scheme: dark)이 있는지 본다. 노트 형식은 folio note format.
+
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
+        @Argument(help: "Notes/assets 안의 파일 이름. 확장자를 빼면 .svg를 붙인다") var name: String
+        @Option(help: ArgumentHelp("SVG 원문", valueName: "figure.svg"), completion: .file()) var svg: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let c = try r.course(course)
+            let action = FolioActions.NoteFigureAdd(
+                course: c.id,
+                name: name,
+                svg: try readText(svg)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct NoteFigureWrite: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "write", abstract: "노트 그림(SVG) 전체를 바꾸기. note figure show의 해시를 --expect로 넘겨 그사이 바뀌지 않았는지 확인한다", discussion: """
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String
+        @Argument(help: "Notes/assets 안의 그림 이름") var name: String
+        @Option(help: ArgumentHelp("새 SVG 원문", valueName: "figure.svg"), completion: .file()) var svg: String
+        @Option(help: "note figure show가 알려 준 해시. 그림이 그사이 바뀌었으면 쓰지 않는다") var expect: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let c = try r.course(course)
+            let action = FolioActions.NoteFigureWrite(
+                course: c.id,
+                name: name,
+                svg: try readText(svg),
+                expect: expect
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct NoteWidgetAdd: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "add", abstract: "노트 위젯 HTML을 .folio/widgets에 새로 쓰기. 노트에는 cb-widget 블록 {\"id\": \"<ID>\", \"height\": 320}으로 넣는다", discussion: """
+            바깥 파일과 주소를 불러오는 부분이 있으면 쓰지 않는다. 위젯 환경은 folio note format.
+
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("과목", valueName: "course"), completion: Complete.ref("Course")) var course: String = ""
+        @Option(name: .customLong("id"), help: .hidden) var id: UUID?
+        @Option(help: ArgumentHelp("위젯 HTML 페이지", valueName: "widget.html"), completion: .file()) var html: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let c = try r.course(course)
+            let action = FolioActions.NoteWidgetAdd(
+                course: c.id,
+                id: id ?? UUID(),
+                html: try readText(html)
+            )
+            try perform(spec: action, g, ctx: ctx)
+        }
+    }
+
+    struct NoteWidgetWrite: ParsableCommand {
+        static let configuration = CommandConfiguration(commandName: "write", abstract: "노트 위젯 HTML 전체를 바꾸기. note widget show의 해시를 --expect로 넘겨 그사이 바뀌지 않았는지 확인한다", discussion: """
+            """)
+        @OptionGroup var g: GlobalOptions
+        @Argument(help: ArgumentHelp("<과목>/<위젯 ID>", valueName: "widget"), completion: Complete.ref("NoteWidget")) var widget: String = ""
+        @Option(help: ArgumentHelp("새 위젯 HTML", valueName: "widget.html"), completion: .file()) var html: String
+        @Option(help: "note widget show가 알려 준 해시. 위젯이 그사이 바뀌었으면 쓰지 않는다") var expect: String
+
+        func run() throws {
+            let ctx = try CLI.context(g)
+            let r = Resolver(ctx)
+            let (c, widgetName) = try r.split(widget)
+            let action = FolioActions.NoteWidgetWrite(
+                course: c.id,
+                widget: try r.id("NoteWidget", widgetName, in: c),
+                html: try readText(html),
+                expect: expect
             )
             try perform(spec: action, g, ctx: ctx)
         }

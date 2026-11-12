@@ -237,6 +237,7 @@ private struct ImportSections: View {
                 Spacer()
                 switch state {
                 case .nothing?:
+                    if model.showsRetry(row.id) { claude }
                     Button(String(localized: .materialsImportSectionsSplit)) { model.splitByHand(row.id) }.buttonStyle(.ghost)
                     Button(String(localized: .materialsImportSectionsPutOff)) { model.later(row.id) }.buttonStyle(.ghost)
                 case .proposed? where open:
@@ -256,6 +257,11 @@ private struct ImportSections: View {
         }
         .padding(EdgeInsets(top: 0, leading: Self.indent, bottom: Theme.Space.m, trailing: Theme.Space.m))
         .animation(.snappy(duration: 0.2), value: open)
+    }
+
+    /// Why Claude gave no split is the summary line before it.
+    private var claude: some View {
+        ClaudeSplitButton(asking: model.asking.contains(row.id)) { model.retryClaude(row.id) }
     }
 }
 

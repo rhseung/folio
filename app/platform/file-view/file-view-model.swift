@@ -87,6 +87,18 @@ final class FileViewModel {
     /// The split being edited, while the split screen is up.
     var splitting: LectureSplit?
     private(set) var splitNote: String?
+    /// The outline and titles being read as the screen opens: Claude waits until they are.
+    private(set) var readingSplit = false
+    private(set) var askingClaude = false
+    /// Claude was asked and gave no split: the one time the screen offers Claude again. Otherwise the user adjusts what
+    /// is there by hand (2026-11-12 사용자).
+    private(set) var claudeFailed = false
+    /// Tests give a stand-in.
+    @ObservationIgnored lazy var lectureClaude: LectureClaude? = course.map { LectureClaude.of(workspace, course: $0) }
+    /// Tests give a stand-in for the first reading of a file not split yet.
+    @ObservationIgnored var findSplit: (@MainActor (URL, [FolioDomain.Unit]) async -> LectureFinding)?
+    /// Bumped by each read and each ask, so an answer that comes after a newer one is dropped.
+    @ObservationIgnored private var splitRead = 0
 
     /// A course's lecture PDF can be split into its units.
     var canSplit: Bool {
@@ -99,15 +111,29 @@ final class FileViewModel {
     func startSplit(_ controller: PDFController) async {
         guard let m = material, let course, canSplit else { return }
         let file = course.file
+        splitRead += 1
+        askingClaude = false
+        claudeFailed = false
         if file.isSplit(m.id) {
             splitting = LectureSplit(file: file, material: m.id, pageCount: controller.pageCount)
             splitNote = nil
             return
         }
         splitting = LectureSplit(pageCount: controller.pageCount)
-        splitNote = String(localized: .fileViewSplitReading)
-        let claude = workspace.claudeReady ? workspace.claude(for: course) : nil
-        let found = await LectureReader.find(url, units: file.units, claude: claude)
+        let claude = lectureClaude.map { $0.off() == nil } ?? false
+        splitNote = String(localized: claude ? .lectureClaudeReading : .fileViewSplitReading)
+        readingSplit = true
+        askingClaude = claude
+        let read = splitRead
+        let found: LectureFinding
+        if let findSplit {
+            found = await findSplit(url, file.units)
+        } else {
+            found = await LectureReader.find(url, units: file.units, claude: workspace.claudeReady ? workspace.claude(for: course) : nil)
+        }
+        guard read == splitRead else { return }
+        readingSplit = false
+        askingClaude = false
         // Left alone while it was read: a cut made meanwhile is the user's and stays.
         guard let current = splitting, current.sections.count == 1, current.sections[0].unit == nil else { return }
         switch found {
@@ -117,15 +143,46 @@ final class FileViewModel {
             splitNote = nil
         case .nothing, .unreadable:
             splitNote = String(localized: .fileViewSplitNothing)
+        case .failed(let why, _):
+            splitNote = why
+            claudeFailed = true
         }
+    }
+
+    var canRetryClaude: Bool { claudeFailed && splitting != nil && !readingSplit && !askingClaude }
+
+    /// Claude's reading again, after it gave none. It is still only a proposal: nothing is written until "저장".
+    func retryClaude() async {
+        guard canRetryClaude, let claude = lectureClaude else { return }
+        splitRead += 1
+        let read = splitRead
+        askingClaude = true
+        splitNote = String(localized: .lectureClaudeReading)
+        let found = await claude.ask(url, course?.file.units ?? [])
+        guard read == splitRead, splitting != nil else { return }
+        askingClaude = false
+        if case .found(let split) = found {
+            splitting = split
+            claudeFailed = false
+        }
+        splitNote = found.message
     }
 
     func saveSplit() {
         guard let m = material, let course, let split = splitting else { return }
-        if workspace.run(MaterialSplit(course: course.id, material: m.id, sections: split.cuts)) != nil { splitting = nil }
+        if workspace.run(MaterialSplit(course: course.id, material: m.id, sections: split.cuts)) != nil { closeSplit() }
     }
 
-    func cancelSplit() { splitting = nil }
+    func cancelSplit() { closeSplit() }
+
+    private func closeSplit() {
+        splitting = nil
+        splitNote = nil
+        splitRead += 1
+        readingSplit = false
+        askingClaude = false
+        claudeFailed = false
+    }
 
     /// A note is the app's own document: it has no other app to go to.
     var opensElsewhere: Bool {

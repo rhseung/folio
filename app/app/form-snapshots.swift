@@ -178,8 +178,10 @@ enum FormSnapshots {
         let accent = workspace.accent(course.id)
         var forms: [(String, AnyView)] = []
 
+        // A stand-in Claude, so the picture doesn't hang on what this Mac has set up.
+        let claude = LectureClaude(off: { nil }, ask: { _, _ in .nothing })
         let model = ImportPlaceModel(workspace: workspace, course: course, files: [URL(filePath: "/tmp/06_Matchings in general graphs.pdf")],
-                                     places: places) { _, _, _ in .unreadable }
+                                     places: places, find: { _, _, _ in .unreadable }, claude: claude)
         if var proposal = LectureSplit([.init(title: "Matchings", firstPage: 1, lastPage: 1), .init(title: "Hall's theorem", firstPage: 7, lastPage: 7),
                                         .init(title: "Tutte's theorem", firstPage: 15, lastPage: 15), .init(title: "", firstPage: 23, lastPage: 23)],
                                        pageCount: 26) {
@@ -194,7 +196,18 @@ enum FormSnapshots {
         if let document = PDFDocument(data: SampleLecture.data()) {
             let split = LectureSplit(file: file, material: slides.id, pageCount: document.pageCount)
             forms.append(("lecture-split", AnyView(LectureSplitPane(controller: PDFController(document: document, page: 8), split: .constant(split),
-                                                                     units: file.units, note: nil, save: {}, cancel: {})
+                                                                     units: file.units, note: nil, claude: nil,
+                                                                     save: {}, cancel: {})
+                    .frame(width: 1180, height: 720).background(Theme.Palette.card).courseAccent(accent))))
+            forms.append(("lecture-split-claude-failed", AnyView(LectureSplitPane(controller: PDFController(document: document, page: 8), split: .constant(split),
+                                                                     units: file.units, note: String(localized: .lectureClaudeFailed("요청 시간이 지났습니다")),
+                                                                     claude: ClaudeSplitButton(asking: false) {},
+                                                                     save: {}, cancel: {})
+                    .frame(width: 1180, height: 720).background(Theme.Palette.card).courseAccent(accent))))
+            forms.append(("lecture-split-claude-reading", AnyView(LectureSplitPane(controller: PDFController(document: document, page: 8), split: .constant(split),
+                                                                     units: file.units, note: String(localized: .lectureClaudeReading),
+                                                                     claude: ClaudeSplitButton(asking: true) {},
+                                                                     save: {}, cancel: {})
                     .frame(width: 1180, height: 720).background(Theme.Palette.card).courseAccent(accent))))
         }
         if let session = file.sessions.first(where: { file.splitProgress(of: $0) != nil }) {

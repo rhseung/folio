@@ -17,6 +17,9 @@ extension Workspace {
 
     var claudeReady: Bool {
         _ = claudeRevision
+        // A test host or a preview never reaches this Mac's own Claude: adding a lecture now asks it straight away, and
+        // a test would then wait on, pay for and depend on a real answer. Tests give a fake provider instead.
+        guard !LocalFolders.isIsolated() else { return false }
         #if os(macOS)
         if usesSubscription { return CLIProvider.find() != nil }
         #endif

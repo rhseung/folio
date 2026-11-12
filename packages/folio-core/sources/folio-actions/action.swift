@@ -70,11 +70,14 @@ public struct Change: Codable, Sendable, Equatable {
 }
 
 extension Change {
-    /// A note file, or a note's entry in course.json, where its kind and links live.
+    /// A note file, a note's entry in course.json, where its kind and links live, or a widget a note runs: an open
+    /// note shows a rewritten widget only when it is drawn again.
     public var touchesNotes: Bool {
         func inNotes(_ path: String?) -> Bool { path?.split(separator: "/").contains { $0 == CourseFolder.notes.rawValue } == true }
         let courseFile = path.split(separator: "/").last == Substring(StandardLayout.courseFile)
-        return inNotes(path) || inNotes(to) || courseFile && item?.hasPrefix(Self.notesItem) == true
+        let parts = path.split(separator: "/").map(String.init)
+        let widget = zip(parts, parts.dropFirst()).contains { $0 == (StandardLayout.metadataFolder, StandardLayout.widgetsFolder) }
+        return inNotes(path) || inNotes(to) || widget || courseFile && item?.hasPrefix(Self.notesItem) == true
     }
 
     /// A unit's card file under `.folio/quizzes`, or a card's attempt in the log, which decides its open wrong answers.

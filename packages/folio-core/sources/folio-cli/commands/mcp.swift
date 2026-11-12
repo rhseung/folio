@@ -136,10 +136,11 @@ struct MCPServer {
             let folder = command == "search" ? nil : stage.folder
             let run = Self.execute(argv, staging: folder.map { Staging(folder: $0, writes: false) })
             guard run.code == 0 else { return Self.result(run.err + run.out, failed: true) }
-            let text = Self.compact(run.out, marking: stage)
+            var text = Self.compact(run.out, marking: stage)
             guard folder != nil, stage.staged > 0 else { return Self.result([text], failed: false, compacted: true, pictures: run.pictures) }
+            let pictures = Self.images(&text)
             return ["content": .array([["type": "text", "text": .string(String(localized: .mcpStagedRead(stage.staged)))],
-                                       ["type": "text", "text": .string(text)]] + Self.images(run.pictures)), "isError": .bool(false)]
+                                       ["type": "text", "text": .string(text)]] + pictures + Self.labeled(run.pictures)), "isError": .bool(false)]
         }
         let real = try? CLI.gist(path: gist).url
         let folder = real.flatMap(stage.copy(of:))
@@ -184,13 +185,15 @@ struct MCPServer {
         return Run(code: code, out: out.lines("out"), err: out.lines("err"), built: built.items, pictures: code == 0 ? pictures.items : [])
     }
 
-    static func result(_ lines: [String], failed: Bool, compacted: Bool = false, pictures: [Pictures.Picture] = []) -> JSONValue {
-        let text = lines.joined(separator: "\n")
-        return ["content": .array([["type": "text", "text": .string(compacted ? text : compact(text))]] + images(pictures)), "isError": .bool(failed)]
+    static func result(_ lines: [String], failed: Bool, compacted: Bool = false, pictures read: [Pictures.Picture] = []) -> JSONValue {
+        var text = lines.joined(separator: "\n")
+        let pictures = failed ? [] : images(&text)
+        return ["content": .array([["type": "text", "text": .string(compacted ? text : compact(text))]] + pictures + labeled(read)), "isError": .bool(failed)]
     }
 
-    /// Each picture after a line naming it: image blocks carry no name, and the text lists them by these labels.
-    static func images(_ pictures: [Pictures.Picture]) -> [JSONValue] {
+    /// Each picture a read command handed over (`Pictures`), after a line naming it: image blocks carry no name, and
+    /// the text lists them by these labels.
+    static func labeled(_ pictures: [Pictures.Picture]) -> [JSONValue] {
         pictures.flatMap { p -> [JSONValue] in
             [["type": "text", "text": .string(p.label)], ["type": "image", "data": .string(p.data.base64EncodedString()), "mimeType": .string(p.mimeType)]]
         }
@@ -281,6 +284,24 @@ struct MCPServer {
         guard case .object = input else { return Self.failure(String(localized: .runNotObject)) }
         if arguments["dryRun"] == .bool(true) { input["dryRun"] = .bool(true) }
         return call(tool, input)
+    }
+
+    /// The pictures a render command carries as base64 (`RenderResult`), as image content Claude looks at, taken out
+    /// of the text, where they would be read as tens of thousands of characters.
+    static func images(_ text: inout String) -> [JSONValue] {
+        guard text.contains("\"png\""), let value = try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8)),
+              case .array(let items)? = value["images"] else { return [] }
+        var found: [JSONValue] = []
+        var rest = value
+        rest["images"] = .array(items.map { item in
+            guard case .string(let png)? = item["png"] else { return item }
+            found.append(["type": "image", "data": .string(png), "mimeType": "image/png"])
+            var described = item
+            described["png"] = nil
+            return described
+        })
+        text = string(rest)
+        return found
     }
 
     static func failure(_ text: String) -> JSONValue {

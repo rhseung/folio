@@ -1,5 +1,10 @@
 import ArgumentParser
+import FolioDomain
 import Foundation
+
+/// The note format a level down, under the skill's own title. The same text `folio note format` prints.
+private let noteGuide = NoteWritingGuide.text.split(separator: "\n", omittingEmptySubsequences: false)
+    .map { $0.hasPrefix("#") ? "#" + $0 : $0 }.joined(separator: "\n")
 
 /// The binary holds the only
 /// copy so an agent outside the repository can install it; the repository's `.claude/skills/folio/SKILL.md` is a test-
@@ -91,6 +96,8 @@ folio review record EC4207/매칭 good --start "2026-10-28 20:00" --end "2026-10
 # 건너뛰기는 review skip. 단원을 열어 본 시간이 있을 때만 --start와 --end를 준다
 folio review skip EC4207/매칭 --dry-run
 ```
+
+\#(noteGuide)
 
 ## 졸업 요건과 학사편람
 
