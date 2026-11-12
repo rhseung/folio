@@ -37,8 +37,8 @@ struct AssetTray: View {
                     .padding(Theme.Space.xs)
             }
         }
-        .animation(.snappy(duration: 0.2), value: targeted)
-        .animation(.snappy(duration: 0.25), value: files)
+        .animation(Theme.Motion.quick, value: targeted)
+        .animation(Theme.Motion.standard, value: files)
         .dropDestination(for: URL.self) { urls, _ in
             model.addAssets(urls)
             return true
@@ -74,7 +74,7 @@ private struct AssetTile: View {
         }
         .scaleEffect(hovering ? 1.06 : 1)
         .shadow(color: .black.opacity(hovering ? 0.18 : 0), radius: 6, y: 3)
-        .animation(.snappy(duration: 0.18), value: hovering)
+        .animation(Theme.Motion.quick, value: hovering)
         .onHover { hovering = $0 }
         .pointingHand()
         .contentShape(.rect)

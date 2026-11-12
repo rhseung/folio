@@ -460,7 +460,7 @@ struct FolderIcon: View {
             FolderPart(kind: .corners, t: t).stroke(style: line).opacity(open ? 1 : 0)
         }
         .frame(width: Theme.Size.tile, height: Theme.Size.tile)
-        .animation(.snappy(duration: 0.25), value: open)
+        .animation(Theme.Motion.standard, value: open)
         .accessibilityHidden(true)
     }
 }

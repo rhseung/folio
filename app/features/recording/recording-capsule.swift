@@ -52,8 +52,8 @@ struct RecordingCapsule<Idle: View>: View {
                     .transition(.opacity)
             }
         }
-        .animation(.smooth(duration: 0.34), value: expanded)
-        .animation(.smooth(duration: 0.34), value: model.paused)
+        .animation(Theme.Motion.pane, value: expanded)
+        .animation(Theme.Motion.pane, value: model.paused)
     }
 
     // From the capsule's leading edge to the dot's middle: the time's padding, half the dot.

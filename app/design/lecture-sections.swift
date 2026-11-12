@@ -242,7 +242,7 @@ struct SectionBar: View {
         #if os(macOS)
         .pointerStyle(hoverBoundary != nil || dragging != nil ? .columnResize : nil)
         #endif
-        .animation(.snappy(duration: 0.2), value: split.sections.map(\.pages))
+        .animation(Theme.Motion.quick, value: split.sections.map(\.pages))
     }
 
     private func draw(_ context: GraphicsContext, width w: CGFloat) {

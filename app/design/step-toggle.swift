@@ -42,7 +42,7 @@ struct StepToggle<Value: Hashable>: View {
             .contentShape(.capsule)
         }
         .buttonStyle(.pointing(.plain))
-        .animation(.snappy(duration: 0.2), value: selection)
+        .animation(Theme.Motion.quick, value: selection)
         .sensoryFeedback(.levelChange, trigger: selection)
         .contextMenu {
             ForEach(options.indices, id: \.self) { i in

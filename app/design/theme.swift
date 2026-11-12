@@ -229,6 +229,16 @@ enum Theme {
         static let windowShare = 0.9
     }
 
+    enum Motion {
+        static let quick = Animation.snappy(duration: 0.2)
+        static let standard = Animation.snappy(duration: 0.25)
+        static let settle = Animation.snappy(duration: 0.35)
+        /// `PaneGlide` steps the panes' widths along this same curve while `PaneRow` animates the rest, so the two
+        /// can't take their timing from different places: a pane's edge would land before its neighbour stops.
+        static let paneSpring = Spring.smooth(duration: 0.34)
+        static let pane = Animation.smooth(duration: 0.34)
+    }
+
     enum Typeface {
         static let pageTitle = Font.system(size: 28, weight: .bold)
         static let columnTitle = Font.system(size: 19, weight: .bold)

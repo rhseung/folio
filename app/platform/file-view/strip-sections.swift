@@ -148,7 +148,7 @@ struct StripHeader: View {
 
     var body: some View {
         HStack(spacing: Theme.Space.xs) {
-            Button { withAnimation(.snappy(duration: 0.2)) { toggle() } } label: {
+            Button { withAnimation(Theme.Motion.quick) { toggle() } } label: {
                 Image(systemName: open ? "chevron.down" : "chevron.right")
                     .font(Theme.Glyph.small)
                     .foregroundStyle(section.kind.tinted ? accent.ink : Theme.Palette.textTertiary)
@@ -245,11 +245,11 @@ struct StripEditRow<Title: View, Extra: View>: View {
             }
             extra
             HStack(spacing: Theme.Space.tight) {
-                Button { withAnimation(.snappy(duration: 0.2)) { cancel() } } label: {
+                Button { withAnimation(Theme.Motion.quick) { cancel() } } label: {
                     Text(.commonCancel).frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.ghost)
-                Button { withAnimation(.snappy(duration: 0.2)) { commit() } } label: {
+                Button { withAnimation(Theme.Motion.quick) { commit() } } label: {
                     Text(confirm).frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.prominent)

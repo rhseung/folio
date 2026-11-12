@@ -58,7 +58,7 @@ struct WindowClaude: View {
             }
             .padding(Theme.Space.l)
             .courseAccent(accent)
-            .animation(.snappy(duration: 0.25), value: shown)
+            .animation(Theme.Motion.standard, value: shown)
         }
     }
 

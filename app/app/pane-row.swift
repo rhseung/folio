@@ -83,9 +83,9 @@ struct PaneRow: View {
         }
         // Pressing a strip opens it as another folds, together; a new or closed pane slides the others over. A pane
         // folding because the window narrowed comes at once: it comes mid-resize, where a moving pane trails the edge.
-        .animation(reduceMotion ? nil : .smooth(duration: 0.34), value: panes.focus)
-        .animation(reduceMotion ? nil : .smooth(duration: 0.34), value: panes.collapsed)
-        .animation(reduceMotion ? nil : .smooth(duration: 0.34), value: panes.ids)
+        .animation(reduceMotion ? nil : Theme.Motion.pane, value: panes.focus)
+        .animation(reduceMotion ? nil : Theme.Motion.pane, value: panes.collapsed)
+        .animation(reduceMotion ? nil : Theme.Motion.pane, value: panes.ids)
     }
 
     @ViewBuilder func pane(_ i: Int, id: UUID, look: PaneLayout.Fold.Look) -> some View {

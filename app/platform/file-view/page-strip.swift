@@ -51,11 +51,11 @@ struct PageStrip: View {
                     guard let id = model.draftItemID else { return }
                     // After the row has moved: scrolled to at once, the column still had it at the range's other end.
                     try? await Task.sleep(for: .seconds(0.25))
-                    withAnimation(.snappy(duration: 0.2)) { proxy.scrollTo(id) }
+                    withAnimation(Theme.Motion.quick) { proxy.scrollTo(id) }
                 }
             }
         }
-        .animation(.snappy(duration: 0.2), value: model.items)
+        .animation(Theme.Motion.quick, value: model.items)
         .frame(width: picks ? Self.lectureColumn : Self.column)
         #if os(iOS)
         .sensoryFeedback(.selection, trigger: model.selection)
@@ -131,7 +131,7 @@ private struct PageStripItem: View {
                     Button(.commonEdit, systemImage: "pencil") { model.edit(section) }
                     Divider()
                     Button(.fileViewProgressRemove, systemImage: "link.badge.minus", role: .destructive) {
-                        withAnimation(.snappy(duration: 0.2)) { model.remove(section) }
+                        withAnimation(Theme.Motion.quick) { model.remove(section) }
                     }
                     .disabled(!model.canRemove(section))
                 }
@@ -152,7 +152,7 @@ private struct PickBar: View {
     var body: some View {
         let on = model.pickingShown
         VStack(alignment: .leading, spacing: Theme.Space.xxs) {
-            Button { withAnimation(.snappy(duration: 0.2)) { model.togglePicking() } } label: {
+            Button { withAnimation(Theme.Motion.quick) { model.togglePicking() } } label: {
                 Label(String(localized: .fileViewProgressPick), systemImage: "rectangle.stack.badge.plus")
                     .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     .padding(.horizontal, Theme.Space.s)
@@ -206,7 +206,7 @@ private struct SaveRow: View {
 
     /// In the row, not only the header's menu: a touch screen has nothing that shows a long press opens one.
     private var removeButton: some View {
-        Button(role: .destructive) { withAnimation(.snappy(duration: 0.2)) { model.remove() } } label: {
+        Button(role: .destructive) { withAnimation(Theme.Motion.quick) { model.remove() } } label: {
             Label(String(localized: .fileViewProgressRemove), systemImage: "link.badge.minus")
                 #if os(iOS)
                 .frame(minHeight: Theme.Size.touchTarget)

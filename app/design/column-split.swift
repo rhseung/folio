@@ -271,7 +271,7 @@ struct ColumnSplit<Column: View, Content: View>: View {
                 .padding(.leading, Theme.Space.s + CGFloat(outerButtons) * (Theme.Size.toolbarButton + Theme.Space.s))
                 .padding(.top, Theme.Space.s)
         }
-        .animation(.snappy(duration: 0.25), value: open)
+        .animation(Theme.Motion.standard, value: open)
     }
 
     /// Dims the page and takes the click that closes the column, which a click on the page would otherwise act on.
@@ -334,7 +334,7 @@ struct ColumnSplit<Column: View, Content: View>: View {
     /// otherwise shows it as `ColumnFit.show` says.
     func toggle() {
         let fit = fit
-        withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) {
+        withAnimation(reduceMotion ? nil : Theme.Motion.standard) {
             if fit.docked {
                 prefs.set(kind, collapsed: true)
             } else if open {
@@ -352,7 +352,7 @@ struct ColumnSplit<Column: View, Content: View>: View {
 
     func close() {
         guard open else { return }
-        withAnimation(reduceMotion ? nil : .snappy(duration: 0.25)) { opened = false }
+        withAnimation(reduceMotion ? nil : Theme.Motion.standard) { opened = false }
     }
 
     /// What the menu bar's command shows, which changes with the column.

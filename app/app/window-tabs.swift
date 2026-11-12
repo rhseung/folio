@@ -272,7 +272,7 @@ private struct MergeMark: View {
         }
         .allowsHitTesting(false)
         .accessibilityHidden(true)
-        .animation(.snappy(duration: 0.2), value: drop)
+        .animation(Theme.Motion.quick, value: drop)
     }
 }
 #endif
@@ -501,7 +501,7 @@ struct TabBar: View {
             report()
             frames = frames.filter { open.contains($0.key) }
         }
-        .animation(.snappy(duration: 0.25), value: tabs.ids)
+        .animation(Theme.Motion.standard, value: tabs.ids)
         // A new fit (names to icons, into the menu) comes at once, not animated: it comes mid-resize, and animated the
         // strip slid in from the width it had, the first tab off the panel's edge by as much for a quarter second.
         // Never wider than the row leaves it: wider, the strip runs under the search field and the buttons.
@@ -830,7 +830,7 @@ struct TabBar: View {
                 let drop = tabs.drop(for: id, at: across(value.location))
                 tabs.drop = nil
                 if let drop { tabs.merge(id, into: tabs.selected, at: drop.edge) }
-                withAnimation(.snappy(duration: 0.2)) {
+                withAnimation(Theme.Motion.quick) {
                     dragged = nil
                     dragOffset = 0
                 }

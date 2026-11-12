@@ -42,7 +42,7 @@ struct GradeSteps: View {
         }
         // Its own size: in a narrow row the off-scale buttons were squeezed before the row's label gave way.
         .fixedSize()
-        .animation(.snappy(duration: 0.22), value: selection)
+        .animation(Theme.Motion.quick, value: selection)
         .sensoryFeedback(.levelChange, trigger: selection)
         .accessibilityElement()
         .accessibilityLabel(Text(.designGrade))

@@ -240,7 +240,7 @@ struct RootView: View {
                         }
                     }
                 }
-                .animation(.snappy(duration: 0.3), value: workspace.recorder.isActive)
+                .animation(Theme.Motion.standard, value: workspace.recorder.isActive)
                 // Outside the search overlay, so a result's menu can edit and delete as any other place can.
                 .itemSheets(workspace, openLink: openLink)
                 #if os(macOS)
@@ -498,7 +498,7 @@ struct RootView: View {
         // Thinner in light: the regular material whitened the frame into milk over a light wallpaper. Not ultra-thin:
         // with the wallpaper showing through that clearly, the sidebar's text lost its contrast.
         .containerBackground(colorScheme == .light ? .thinMaterial : .regularMaterial, for: .window)
-        .animation(.snappy(duration: 0.25), value: sidebarOpen)
+        .animation(Theme.Motion.standard, value: sidebarOpen)
         #else
         NavigationSplitView {
             sidebar.navigationSplitViewColumnWidth(min: 220, ideal: 250)
@@ -743,7 +743,7 @@ struct RootView: View {
         Binding {
             current != toggledTerms.contains(semester.id)
         } set: { _ in
-            withAnimation(.snappy(duration: 0.2)) {
+            withAnimation(Theme.Motion.quick) {
                 // Closed under the pointer, the folder shuts at once rather than when the pointer leaves. Inside the
                 // animation: cleared outside it, the unanimated change rode the same update and the courses popped in
                 // with no slide. Only the first click after the pointer arrives clears it, so later ones still slid.

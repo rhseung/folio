@@ -213,7 +213,7 @@ struct EmptyLine: View {
 
 extension View {
     func rolling(_ value: String) -> some View {
-        contentTransition(.numericText()).animation(.snappy(duration: 0.35), value: value)
+        contentTransition(.numericText()).animation(Theme.Motion.settle, value: value)
     }
 }
 

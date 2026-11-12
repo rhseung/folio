@@ -314,7 +314,7 @@ final class TabPanes {
 /// panel's edge sliding over it.
 struct PaneGlide: Equatable {
     static let duration = 0.5
-    static let spring = Spring.smooth(duration: 0.34)
+    static let spring = Theme.Motion.paneSpring
 
     let from: PaneLayout
     let fold: PaneLayout.Fold
@@ -326,7 +326,7 @@ struct PaneGlide: Equatable {
         self.fold = fold
     }
 
-    /// How far along at `date`, 0 to 1, on the curve 0.34s `.smooth` takes; whole once the spring has settled.
+    /// How far along at `date`, 0 to 1, on `Theme.Motion.paneSpring`; whole once the spring has settled.
     func progress(at date: Date) -> Double {
         let t = date.timeIntervalSince(start)
         return t >= Self.duration ? 1 : min(1, max(0, Self.spring.value(target: 1.0, time: t)))

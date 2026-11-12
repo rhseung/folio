@@ -163,7 +163,7 @@ struct MaterialsView: View {
     }
 
     func toggle(_ folder: PathTree<FolioDomain.Material>) {
-        withAnimation(.snappy(duration: 0.2)) { model.toggle(folder) }
+        withAnimation(Theme.Motion.quick) { model.toggle(folder) }
     }
 
     @ViewBuilder func folderMenu(_ folder: PathTree<FolioDomain.Material>) -> some View {

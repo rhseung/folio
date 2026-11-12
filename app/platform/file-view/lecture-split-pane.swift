@@ -114,10 +114,10 @@ private struct SplitThumbnails: View {
             }
             .overflowFade(.vertical)
             .onChange(of: controller.page) { _, page in
-                withAnimation(.snappy(duration: 0.2)) { proxy.scrollTo(strip.itemID(showing: page + 1, in: split)) }
+                withAnimation(Theme.Motion.quick) { proxy.scrollTo(strip.itemID(showing: page + 1, in: split)) }
             }
         }
-        .animation(.snappy(duration: 0.2), value: strip.items(split, name: name))
+        .animation(Theme.Motion.quick, value: strip.items(split, name: name))
         #if os(iOS)
         .sensoryFeedback(.selection, trigger: split.sections.map(\.pages))
         #endif

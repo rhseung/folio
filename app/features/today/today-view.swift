@@ -258,7 +258,7 @@ struct TodayView: View {
                 GeometryReader { proxy in Capsule().fill(Theme.Palette.success).frame(width: proxy.size.width * fraction) }
             }
             .frame(height: Theme.Space.xs)
-            .animation(.snappy(duration: 0.35), value: fraction)
+            .animation(Theme.Motion.settle, value: fraction)
     }
 
     /// A group's name with the rule under it, as in the deadline list. 12pt from the rule to the first row sits

@@ -68,7 +68,7 @@ struct RecordingPage: View {
                         .onLineCommand("c", model.canCopy ? { writePasteboard(model.copiedText) } : nil)
                         .onChange(of: current) { _, i in
                             guard let i, model.query.isEmpty, player.playing else { return }
-                            withAnimation(.snappy(duration: 0.35)) { proxy.scrollTo(i, anchor: .center) }
+                            withAnimation(Theme.Motion.settle) { proxy.scrollTo(i, anchor: .center) }
                         }
                         // Opened at a moment, the transcript starts at the line being said then.
                         .task(id: model.seekedTo) {
@@ -169,7 +169,7 @@ struct RecordingPage: View {
                 }
             }
             Block(title: String(localized: .recordingContextTitle), note: model.contextSummary) {
-                Button { withAnimation(.snappy(duration: 0.25)) { showingContext.toggle() } } label: {
+                Button { withAnimation(Theme.Motion.standard) { showingContext.toggle() } } label: {
                     Image(systemName: showingContext ? "chevron.up" : "chevron.down")
                 }
                 .buttonStyle(.ghost)
@@ -315,7 +315,7 @@ struct RecordingPage: View {
         // The pick wins over the playing tint: otherwise picking the playing line would show no change. The playing
         // line still keeps its accent time.
         .background(selected ? Theme.Palette.fill : playing ? accent.tint : .clear, in: .rect(cornerRadius: Theme.Radius.control))
-        .animation(.snappy(duration: 0.25), value: playing)
+        .animation(Theme.Motion.standard, value: playing)
     }
 }
 
