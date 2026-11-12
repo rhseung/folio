@@ -39,10 +39,6 @@ struct TextFileView: View {
     var body: some View {
         VStack(spacing: 0) {
             bar
-            // iPadOS can't run Tectonic, so it gets no build button and no advice to install it.
-            #if os(macOS)
-            if model.isTex, model.engineMissing { installHint }
-            #endif
             // One row whose columns come and go, so switching keeps the editor's caret and the PDF's page.
             HStack(spacing: 0) {
                 if !model.isTex || shown != .read { source }
@@ -137,16 +133,15 @@ struct TextFileView: View {
                 Label(String(localized: .textFileNoPdf), systemImage: "doc.richtext")
             } description: {
                 #if os(macOS)
-                Text(model.engineMissing ? .textFileNoPdfEngine : model.errors.isEmpty ? .textFileNoPdfBuild : .textFileNoPdfErrors)
+                Text(model.errors.isEmpty ? .textFileNoPdfBuild : .textFileNoPdfErrors)
                 #else
-                Text(.textFileNoPdfMac)
+                // An iPad without a keyboard has no ⌘B; the button below builds.
+                Text(model.errors.isEmpty ? .textFileNoPdfBuildPad : .textFileNoPdfErrors)
                 #endif
             } actions: {
-                #if os(macOS)
                 Button(.textFileBuild) { Task { await model.build() } }
                     .buttonStyle(.prominent)
                     .disabled(!model.canBuild)
-                #endif
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
@@ -162,10 +157,11 @@ struct TextFileView: View {
     var bar: some View {
         PageBar {
             if model.isTex { NotePanesPicker(panes: $panes, wide: wide) }
-            #if os(macOS)
             if model.isTex {
                 Button(.textFileBuild, systemImage: "hammer") { Task { await model.build() } }
+                    #if os(macOS)
                     .help(Text(.textFileBuildHelp))
+                    #endif
                     .keyboardShortcut("b")
                     .disabled(!model.canBuild)
                 if model.building {
@@ -174,7 +170,6 @@ struct TextFileView: View {
                     Text(.textFileErrorCount(model.errors.count)).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.danger)
                 }
             }
-            #endif
         } trailing: {
             if let links { NoteLinkMenu(model: links) }
             #if os(macOS)
@@ -192,26 +187,10 @@ struct TextFileView: View {
         }
     }
 
-    /// iPadOS can't run Tectonic, so its menu has no build row either.
     var texBuild: (@MainActor () -> Void)? {
-        #if os(macOS)
         guard model.isTex else { return nil }
         let build: @MainActor () -> Void = { Task { await model.build() } }
         return build
-        #else
-        nil
-        #endif
-    }
-
-    var installHint: some View {
-        HStack(spacing: Theme.Space.s) {
-            Image(systemName: "exclamationmark.triangle").foregroundStyle(Theme.Palette.warning)
-            Text(.textFileInstallHint).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textSecondary).textSelection(.enabled)
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, Theme.Space.l)
-        .padding(.vertical, Theme.Space.s)
-        .overlay(alignment: .bottom) { Theme.Palette.lineSoft.frame(height: 1) }
     }
 
     /// Errors first; a click on one in this file puts the caret on its line.

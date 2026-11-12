@@ -294,38 +294,21 @@ struct AppLinkCoverageTests {
             }
         }
 
-        /// The links `sources` (each a `\href`) put in the PDF they build, each as a click on it opens. Built with
-        /// Tectonic where it is installed, as the app builds; elsewhere (CI) the PDF is written with the address as
-        /// hyperref writes it, so the click's way through PDFKit and `PDFLinks` is still the app's.
+        /// The links `sources` (each a `\href`) put in the PDF they build with Tectonic, as the app builds, each as a click
+        /// on it opens.
         func texPDF(_ sources: [String]) throws -> [AppLink?] {
             let folder = URL.temporaryDirectory.appending(path: UUID().uuidString, directoryHint: .isDirectory)
             // folio:not-an-action a test's temporary folder
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             var urls: [URL] = []
-            if let engine = TexEngine.locate() {
-                let tex = folder.appending(path: "links.tex")
-                let body = sources.map { "\\noindent \($0)\\par" }.joined(separator: "\n")
-                try "\\documentclass{article}\n\\usepackage{hyperref}\n\\begin{document}\n\(body)\n\\end{document}\n".write(to: tex, atomically: true, encoding: .utf8)
-                let build = try engine.compile(tex, into: folder, at: .now, calendar: .current)
-                let pdf = try #require(build.pdf.flatMap(PDFDocument.init(url:)), "\(build.issues)")
-                for i in 0..<pdf.pageCount {
-                    let links = (pdf.page(at: i)?.annotations ?? []).filter { $0.type == "Link" }.sorted { $0.bounds.maxY > $1.bounds.maxY }
-                    urls += links.compactMap { $0.url ?? ($0.action as? PDFActionURL)?.url }
-                }
-            } else {
-                let made = PDFDocument()
-                for (i, source) in sources.enumerated() {
-                    let page = PDFPage()
-                    let address = try #require(source.firstMatch(of: /\\href\{([^}]*)\}/)).1
-                    let annotation = PDFAnnotation(bounds: CGRect(x: 10, y: 10, width: 40, height: 12), forType: .link, withProperties: nil)
-                    annotation.url = URL(string: String(address))
-                    page.addAnnotation(annotation)
-                    made.insert(page, at: i)
-                }
-                let read = try #require(made.dataRepresentation().flatMap(PDFDocument.init(data:)))
-                for i in 0..<read.pageCount {
-                    urls += (read.page(at: i)?.annotations ?? []).compactMap { $0.url ?? ($0.action as? PDFActionURL)?.url }
-                }
+            let tex = folder.appending(path: "links.tex")
+            let body = sources.map { "\\noindent \($0)\\par" }.joined(separator: "\n")
+            try "\\documentclass{article}\n\\usepackage{hyperref}\n\\begin{document}\n\(body)\n\\end{document}\n".write(to: tex, atomically: true, encoding: .utf8)
+            let build = try TexEngine.shared.compile(tex, into: folder, at: .now, calendar: .current)
+            let pdf = try #require(build.pdf.flatMap(PDFDocument.init(url:)), "\(build.issues)")
+            for i in 0..<pdf.pageCount {
+                let links = (pdf.page(at: i)?.annotations ?? []).filter { $0.type == "Link" }.sorted { $0.bounds.maxY > $1.bounds.maxY }
+                urls += links.compactMap { $0.url ?? ($0.action as? PDFActionURL)?.url }
             }
             try #require(urls.count == sources.count, "\(urls)")
             let view = PDFView()

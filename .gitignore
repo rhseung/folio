@@ -12,3 +12,6 @@ xcuserdata/
 
 # Request bodies the review bot writes when it runs locally
 .claude-review/
+
+# Tectonic as a static library, fetched by `mise run tectonic` (tectonic/pin.json)
+packages/folio-core/vendor/

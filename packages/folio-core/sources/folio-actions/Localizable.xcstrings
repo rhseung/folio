@@ -859,28 +859,6 @@
         }
       }
     },
-    "error.tex.mac-only": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "LaTeX 빌드는 Mac에서만 합니다"
-          }
-        }
-      }
-    },
-    "error.tex.not-installed": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tectonic이 설치되어 있지 않습니다. 터미널에서 brew install tectonic으로 설치하세요"
-          }
-        }
-      }
-    },
     "error.transcript.move-no-semester": {
       "extractionState": "manual",
       "localizations": {

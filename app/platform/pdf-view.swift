@@ -202,6 +202,19 @@ struct DarkPaper {
 final class SteadyPDFView: PDFView {
     private var held: PDFDestination?
     private var letGo: DispatchWorkItem?
+    // UIKit sets the frame from inside `init(frame:)`, before PDFView has made what `document` reads, and reading it
+    // there crashed the iPad on every PDF.
+    private var made = false
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        made = true
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        made = true
+    }
 
     /// Taken once, before the first of a run of width changes (a divider dragged frame by frame), and let go only once
     /// the width has stayed put for a beat. Taken again at each frame, the spot came from pages PDFKit had already
@@ -209,7 +222,7 @@ final class SteadyPDFView: PDFView {
     /// counts, however small: panes gliding into place nudge the width by a fraction of a point for a second, and
     /// those added up too.
     private func hold(newWidth: CGFloat) {
-        guard document != nil, newWidth > 0, newWidth != bounds.width else { return }
+        guard made, document != nil, newWidth > 0, newWidth != bounds.width else { return }
         if held == nil {
             guard bounds.width > 0, let spot = currentDestination, spot.page != nil else { return }
             held = spot

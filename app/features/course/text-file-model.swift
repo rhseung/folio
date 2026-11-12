@@ -31,7 +31,6 @@ final class TextFileModel {
     /// A build that would replace a PDF Folio didn't make, held until the user says to.
     private var held: URL?
     var asksToReplace = false
-    let engineMissing: Bool
 
     convenience init(workspace: Workspace, course: LoadedCourse, material: UUID) {
         self.init(workspace: workspace, course: course, source: .material(material))
@@ -41,11 +40,6 @@ final class TextFileModel {
         self.workspace = workspace
         initial = course
         self.source = source
-        #if os(macOS)
-        engineMissing = TexEngine.locate() == nil
-        #else
-        engineMissing = true
-        #endif
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
@@ -87,12 +81,7 @@ final class TextFileModel {
         return FileManager.default.fileExists(atPath: url.path) ? url : nil
     }
 
-    #if os(macOS)
-    var canBuild: Bool { isTex && !engineMissing && !building }
-    #else
-    // Tectonic runs as a separate program, which iPadOS doesn't allow.
-    var canBuild: Bool { false }
-    #endif
+    var canBuild: Bool { isTex && !building }
 
     var fileURL: URL { course.store.fileURL(path) }
     var errors: [TexIssue] { issues.filter { $0.severity == .error } }
@@ -153,8 +142,7 @@ final class TextFileModel {
     /// Saves first, so the PDF shows what's on screen. Tectonic runs off the main thread; the action then only places
     /// the PDF it made.
     func build() async {
-        #if os(macOS)
-        guard canBuild, let engine = TexEngine.locate() else { return }
+        guard canBuild else { return }
         saveIfDirty()
         guard !dirty else { return }
         building = true
@@ -163,7 +151,7 @@ final class TextFileModel {
         let (now, calendar) = (workspace.now, workspace.calendar)
         let result: TexEngine.Build
         do {
-            result = try await Task.detached { try engine.compile(file, into: TexEngine.outputFolder(for: file), at: now, calendar: calendar) }.value
+            result = try await Task.detached { try TexEngine.shared.compile(file, into: TexEngine.outputFolder(for: file), at: now, calendar: calendar) }.value
         } catch {
             issues = [TexIssue(.error, message: error.localizedDescription)]
             return
@@ -171,7 +159,6 @@ final class TextFileModel {
         issues = result.issues
         guard let pdf = result.pdf else { return }
         place(pdf, overwrite: false)
-        #endif
     }
 
     #if os(macOS)

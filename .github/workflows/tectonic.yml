@@ -1,0 +1,84 @@
+name: Tectonic
+
+# Builds FolioTectonic.xcframework (scripts/tectonic-build.sh) whenever what goes into it changes, on any branch, and
+# publishes it as a prerelease named after those inputs, this file among them for the tool versions it pins. The app's
+# builds fetch it by tectonic/pin.json, which this job prints for the branch to commit; the pin itself is not an input,
+# so committing it starts no build. A prerelease stays out of the app's patch notes (`PatchNotes.releases`) and out of
+# the v* tags the release notes count from.
+on:
+  push:
+    paths:
+      - tectonic/bridge/**
+      - tectonic/patches/**
+      - scripts/tectonic-build.sh
+      - .github/workflows/tectonic.yml
+  workflow_dispatch:
+
+concurrency:
+  group: tectonic-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+env:
+  XCODE: /Applications/Xcode_27.1.app
+  GH_TOKEN: ${{ github.token }}
+  RUST: 1.98.1
+  TARGETS: aarch64-apple-ios aarch64-apple-ios-sim aarch64-apple-darwin
+
+jobs:
+  build:
+    runs-on: xcode-27
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v7
+      - run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
+      - id: release
+        run: |
+          inputs=$(scripts/tectonic-build.sh --inputs)
+          tag="tectonic-$(jq -r .tectonic tectonic/pin.json)-$inputs"
+          echo "inputs=$inputs" >> "$GITHUB_OUTPUT"
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          if gh release view "$tag" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then echo "exists=true" >> "$GITHUB_OUTPUT"; fi
+      - if: steps.release.outputs.exists != 'true'
+        name: Install Rust and its Apple targets
+        run: |
+          if ! command -v rustup >/dev/null; then
+            curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --no-modify-path --profile minimal --default-toolchain none
+            echo "$HOME/.cargo/bin" >> "$GITHUB_PATH"
+            export PATH="$HOME/.cargo/bin:$PATH"
+          fi
+          rustup toolchain install "$RUST" --profile minimal --target "${TARGETS// /,}"
+          echo "RUSTUP_TOOLCHAIN=$RUST" >> "$GITHUB_ENV"
+      # CMake and Ninja build the C dependencies; pkg-config is how Tectonic's build scripts find them.
+      - if: steps.release.outputs.exists != 'true'
+        name: Install CMake, Ninja and pkg-config
+        run: |
+          python3 -m venv "$RUNNER_TEMP/tools"
+          "$RUNNER_TEMP/tools/bin/pip" install -q cmake==4.4.4 ninja==1.13.2 pkgconf==3.0.7.post0
+          echo "$RUNNER_TEMP/tools/bin" >> "$GITHUB_PATH"
+      - if: steps.release.outputs.exists != 'true'
+        run: scripts/tectonic-build.sh "$RUNNER_TEMP/tectonic" "$RUNNER_TEMP/FolioTectonic.xcframework.zip"
+      - if: steps.release.outputs.exists != 'true'
+        name: Publish the prerelease
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+        run: |
+          gh release create "$TAG" "$RUNNER_TEMP/FolioTectonic.xcframework.zip" --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" --prerelease --latest=false --title "$TAG" \
+            --notes "FolioTectonic.xcframework built from $GITHUB_SHA by scripts/tectonic-build.sh. The app fetches it by tectonic/pin.json."
+      - name: Print the pin
+        env:
+          TAG: ${{ steps.release.outputs.tag }}
+          INPUTS: ${{ steps.release.outputs.inputs }}
+        run: |
+          dir="$RUNNER_TEMP/pin"
+          mkdir -p "$dir"
+          gh release download "$TAG" --repo "$GITHUB_REPOSITORY" --pattern FolioTectonic.xcframework.zip --dir "$dir" --clobber
+          sha=$(shasum -a 256 "$dir/FolioTectonic.xcframework.zip" | cut -d' ' -f1)
+          url="https://github.com/$GITHUB_REPOSITORY/releases/download/$TAG/FolioTectonic.xcframework.zip"
+          jq -n --arg tectonic "$(jq -r .tectonic tectonic/pin.json)" --arg inputs "$INPUTS" --arg url "$url" --arg sha "$sha" \
+            '{tectonic: $tectonic, inputs: $inputs, url: $url, sha256: $sha}' > "$dir/pin.json"
+          cat "$dir/pin.json"
+          { echo '### tectonic/pin.json'; echo '```json'; cat "$dir/pin.json"; echo '```'; } >> "$GITHUB_STEP_SUMMARY"

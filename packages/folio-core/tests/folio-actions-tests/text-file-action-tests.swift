@@ -151,7 +151,7 @@ struct TextFileActionTests {
         }
     }
 
-    @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
+    @Test
     func buildRunsTectonic() throws {
         try store.writeText("Assignments/HW03/hw.tex", text: "\\documentclass{article}\n\\begin{document}\nHello\n\\end{document}\n")
         try run(MaterialTrack(course: Self.course))
@@ -160,7 +160,7 @@ struct TextFileActionTests {
         #expect(pdf.starts(with: Data("%PDF".utf8)))
     }
 
-    @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
+    @Test
     func aBrokenDocumentNamesItsLine() throws {
         try store.writeText("Assignments/HW03/hw.tex", text: "\\documentclass{article}\n\\begin{document}\n\\foo\n\\end{document}\n")
         try run(MaterialTrack(course: Self.course))
@@ -172,7 +172,7 @@ struct TextFileActionTests {
     }
 
     /// One build lists every mistake, and the PDF Tectonic still writes past them is not placed.
-    @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
+    @Test
     func aBrokenDocumentNamesEveryError() throws {
         try store.writeText("Assignments/HW03/hw.tex", text: "\\documentclass{article}\n\\begin{document}\n\\foo\n\nA \\qux.\n\n\\baz\n\\end{document}\n")
         try run(MaterialTrack(course: Self.course))
@@ -185,7 +185,7 @@ struct TextFileActionTests {
 
     /// The PDF carries the day it was built: the same day gives the same bytes, the next day a new `\today`, and the PDF
     /// built the day before is still known as Folio's, so replacing it doesn't ask.
-    @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
+    @Test
     func aBuildIsStampedWithItsDay() throws {
         var seoul = Calendar(identifier: .gregorian)
         seoul.timeZone = try #require(TimeZone(identifier: "Asia/Seoul"))
@@ -206,7 +206,7 @@ struct TextFileActionTests {
     }
 
     /// The SyncTeX data stays in the build folder, and a click on the placed PDF finds the line that wrote there.
-    @Test(.enabled(if: TexEngine.locate() != nil, "Tectonic is not installed"))
+    @Test
     func aBuildKeepsSyncTeXOutOfTheCourseFolder() throws {
         try store.writeText("Assignments/HW03/hw.tex", text: "\\documentclass{article}\n\\begin{document}\nHello world.\n\\end{document}\n")
         try run(MaterialTrack(course: Self.course))

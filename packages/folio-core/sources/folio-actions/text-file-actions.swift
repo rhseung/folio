@@ -83,7 +83,7 @@ public struct MaterialNew {
 
 /// Puts the PDF next to the `.tex` under the same name, where tracking already reads it as the source's output. A PDF
 /// there that this action didn't write is someone's file: replacing it takes `overwrite`, and it goes to the Trash.
-/// No examples: the equivalence test runs each one for real, and CI has no Tectonic.
+/// No examples: the equivalence test runs each one for real, and a first build fetches TeX packages for minutes.
 @Action("material build", "LaTeX 자료(.tex)를 Tectonic으로 PDF로 만들어 옆에 같은 이름으로 둔다", done: "'{material}'을(를) PDF로 만들었습니다",
         phrases: ["tex 컴파일", "latex 빌드", "PDF 만들기"])
 public struct MaterialBuild {
@@ -129,27 +129,18 @@ public struct MaterialBuild {
     /// The file takes a tracked PDF's place and its hash is marked as built, so the next build replaces it without
     /// asking. Any other file passed in could put itself over a course PDF that way.
     static func output(_ path: String, of source: URL) throws -> URL {
-        #if os(macOS)
-        let folder = TexEngine.outputFolder(for: source).resolvingSymlinksInPath().path + "/"
+        let folder = TexOutput.folder(for: source).resolvingSymlinksInPath().path + "/"
         let url = URL(filePath: path).resolvingSymlinksInPath()
         guard url.path.hasPrefix(folder) else { throw ActionError.rule(String(localized: .errorBuildOutputElsewhere(path))) }
         return url
-        #else
-        throw ActionError.rule(String(localized: .errorTexMacOnly))
-        #endif
     }
 
     static func compile(_ source: URL, _ ctx: ActionContext) throws -> URL {
-        #if os(macOS)
-        guard let engine = TexEngine.locate() else { throw ActionError.rule(String(localized: .errorTexNotInstalled)) }
-        let build = try engine.compile(source, into: TexEngine.outputFolder(for: source), at: ctx.now, calendar: ctx.calendar)
+        let build = try TexEngine.shared.compile(source, into: TexEngine.outputFolder(for: source), at: ctx.now, calendar: ctx.calendar)
         guard let pdf = build.pdf else {
             throw ActionError.rule(String(localized: .errorTexFailed(build.errors.map(\.description).joined(separator: "\n"))))
         }
         return pdf
-        #else
-        throw ActionError.rule(String(localized: .errorTexMacOnly))
-        #endif
     }
 }
 

@@ -16,7 +16,7 @@
 - Swift 6 언어 모드를 쓰고 strict concurrency 검사를 켠다.
 - UI는 SwiftUI로 만든다. AppKit과 UIKit은 SwiftUI로 할 수 없는 부분에만 쓴다. 예를 들어 PencilKit 캔버스와 PDFKit 뷰가 여기에 해당한다.
 - 직접 구현보다 잘 관리되는 라이브러리를 먼저 쓴다. 표준 라이브러리와 Apple 프레임워크로 되지 않는 일이면, 직접 짜기 전에 널리 쓰이고 유지되는 Swift 패키지가 있는지 찾는다. 라이브러리가 데이터 원칙을 어기는 경우(예: 노트 frontmatter의 원문을 보존하지 못하는 YAML 파서)에만 직접 구현하고, 그 이유를 코드 주석에 남긴다.
-- 외부 의존성은 Swift Package Manager로만 추가한다. 새 의존성은 넣은 뒤 사용자에게 무엇을 왜 넣었는지 알리고, 커밋 메시지에도 남긴다. 예외는 수식 변환과 코드 하이라이팅, 노트 미리보기와 Claude 패널에 쓰는 웹 번들(`web/`)로, npm 패키지를 정확한 버전으로 고정하고 `mise run build-web`으로 `app/resources/web/`에 묶는다. 묶은 결과는 커밋해서 앱 빌드에 node가 필요 없게 한다.
+- 외부 의존성은 Swift Package Manager로만 추가한다. 새 의존성은 넣은 뒤 사용자에게 무엇을 왜 넣었는지 알리고, 커밋 메시지에도 남긴다. 예외는 수식 변환과 코드 하이라이팅, 노트 미리보기와 Claude 패널에 쓰는 웹 번들(`web/`)로, npm 패키지를 정확한 버전으로 고정하고 `mise run build-web`으로 `app/resources/web/`에 묶는다. 묶은 결과는 커밋해서 앱 빌드에 node가 필요 없게 한다. 또 하나의 예외는 `.tex`를 빌드하는 TeX 엔진 Tectonic이다. iPadOS는 앱이 다른 프로그램을 띄우지 못하게 하므로, Mac과 iPad 모두 Tectonic을 정적 라이브러리(`FolioTectonic.xcframework`)로 앱 안에 넣는다. 라이브러리는 커밋하지 않는다. `tectonic.yml` 워크플로가 `tectonic/`(브리지 crate와 Tectonic 패치)와 `scripts/tectonic-build.sh`에서 빌드해 프리릴리스 자산으로 올리고, `mise run tectonic`이 `tectonic/pin.json`의 sha256으로 확인해 받는다. Tectonic 자체를 고친 부분(iOS에서 CoreText로 글꼴 찾기)은 `tectonic/patches/`의 패치로 두고 빌드할 때 적용한다. TeX 패키지와 서식은 데이터라 앱이 Tectonic의 번들 서버에서 받아 Caches에 둔다.
 
 ## 프로젝트 구조
 
@@ -34,6 +34,7 @@ folio/
   app/                # 멀티플랫폼 앱 타깃(macOS, iPadOS)
   app-tests/          # 화면 모델 테스트와 노트 보기 회귀 검사(`mise run test-app`), iPad 테스트는 ipad/(`mise run test-ipad`)
   web/                # 노트 미리보기와 Claude 패널의 페이지(KaTeX 수식, 코드 하이라이팅, mermaid 그림, 노트 CSS, 미리보기의 그림 크게 보기), 편집 보기가 JavaScriptCore로 부르는 코드 하이라이팅. 편집 보기의 수식 말풍선과 자동 완성 미리보기도 미리보기와 같은 KaTeX와 노트 CSS로, 숨은 페이지에서 그린다(`NoteMath`). 번들은 app/resources/web
+  tectonic/           # TeX 엔진 Tectonic을 앱에 넣는 정적 라이브러리의 원본: 브리지 crate(bridge/), Tectonic 패치(patches/), 앱이 받는 판(pin.json)
 ```
 
 - `FolioCore`는 SwiftUI를 import하지 않는다.
@@ -257,6 +258,7 @@ Me/GIST/
 - 노트 보기 기준 이미지 다시 만들기: `test-app`은 없거나 달라진 이미지를 새 이미지와 차이 이미지(`-diff.png`)로 `FOLIO_NOTE_SCREENS`(기본 `.build/note-screens`)에 남기고, CI는 실패할 때 이것을 `note-screens` 아티팩트로 올린다. 차이 이미지로 의도한 변화인지 확인한 뒤 `mise run note-screens -- <CI 실행 ID>`로 기준 이미지에 들인다. 로컬에서 그린 이미지는 기준으로 쓰지 않는다. 테스트가 PR에 붙일 그림으로 펼친 판(`NoteRender.sheet`, 예: 수식 말풍선 모음)은 `FOLIO_NOTE_SCREENS/sheets`에 남고, CI는 테스트가 통과해도 `note-sheets` 아티팩트로 올린다
 - iPad 테스트: `mise run test-ipad`. 첫 번째 iPad 시뮬레이터에서 `FolioPad` 스킴으로 앱을 호스트 삼아 `app-tests/ipad/`를 돌린다. 이 파일들은 `#if os(iOS)`로 감싸서 Mac의 `FolioTests`에서는 비어 있다
 - 화면 밖 렌더: `mise run render`. `FolioFixtures`의 상황마다 모든 페이지(오늘, 학기, 과목의 각 탭과 다시 듣기, 성적, 졸업 요건, 사람, 코드, 설정의 각 탭)와 시트(입력 폼, 검색)를 라이트·다크 PNG로 `FOLIO_RENDER_DIR`(기본 `.build/renders`)의 `<상황>/`에 쓴다. 폭과 높이는 `FOLIO_RENDER_SIZES=1180,720,1440x900`(높이를 빼면 페이지 끝까지), 고르기는 `FOLIO_RENDER_SCREENS=today,course-`(이름 앞부분)와 `FOLIO_RENDER_SCENARIOS=busyDay`. 창이 뜨지 않고 실제 GIST 폴더와 시계를 쓰지 않는다. 리퀴드 글라스, 노트 보기와 `WKWebView`, 뷰 안에서 여는 시트, 창 틀은 그리지 못하니 `FOLIO_SNAPSHOT_DIR` 창 스냅숏(`docs/DESIGN.md` 마지막 절)으로 본다
+- TeX 엔진: `mise run tectonic`. `packages/folio-core`를 빌드하는 모든 작업(`generate`, `test`, `cli`, `gen-cli`, `fixture`, `install-cli`)이 먼저 돌린다. `tectonic/pin.json`이 가리키는 `FolioTectonic.xcframework`를 받아 sha256을 확인하고 `packages/folio-core/vendor`에 푼다. `tectonic/bridge`, `tectonic/patches`, `scripts/tectonic-build.sh`, 도구 판을 정하는 `tectonic.yml`을 바꾸면 `tectonic.yml`이 그 내용의 해시로 이름 지은 프리릴리스(`tectonic-<판>-<해시>`)를 만들고 새 `pin.json`을 작업 요약에 적으므로, 그것을 커밋한다. 핀이 지금 입력과 다르면 `mise run tectonic`이 경고한다. 빌드는 Mac의 `tectonic -X compile -Z continue-on-errors --synctex`와 같고, 받은 패키지만으로 먼저 빌드해 보고 없는 파일이 있을 때만 온라인으로 다시 빌드한다. 캐시는 `Caches/Tectonic`이라 Mac에서는 Homebrew Tectonic과 같은 폴더를 쓴다
 - 가짜 GIST 폴더: `mise run fixture -- <폴더> [standard|legacy|<상황>]`. 상황(`busyDay` 등)은 `Scenario`로 회차와 마감이 채워진 폴더다. 다른 `.pdf`는 열리지 않는 자리표시자지만, `busyDay`와 `manyExams`의 그래프 이론 렉처(`05_Matchings.pdf`)는 단원으로 나눈 24쪽 PDF(`SampleLecture`)다. 이미 있는 폴더에는 쓰지 않는다
 - 웹 번들: `mise run build-web`. `web/src/`를 고친 뒤 실행한다. 노트 미리보기와 Claude 패널의 색은 `theme.swift`의 값을, 크기와 간격은 `app/design/note-look.swift`의 값을 `NoteStyle`이 CSS 변수로 넘기므로 CSS에 색과 크기를 적지 않는다
 - 노트 보기 렌더: `TEST_RUNNER_FOLIO_NOTE_RENDER=<폴더>`를 주고 `NoteSourceTests`를 돌리면 `app-tests/fixtures/all-markdown.md`(모든 문법을 쓴 노트)를 편집 보기로 그린 PNG가 그 폴더에 남는다. 미리보기 그림은 `NoteScreenTests`가 `FOLIO_NOTE_SCREENS`에 남긴다

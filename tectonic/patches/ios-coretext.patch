@@ -1,0 +1,374 @@
+diff --git a/crates/bridge_harfbuzz/Cargo.toml b/crates/bridge_harfbuzz/Cargo.toml
+index 1589ca0..ce4b71a 100644
+--- a/crates/bridge_harfbuzz/Cargo.toml
++++ b/crates/bridge_harfbuzz/Cargo.toml
+@@ -31,7 +31,7 @@ cc = "^1.0.66"
+ tectonic_dep_support = { path = "../dep_support", version = ">=0.1.0,<1" }
+ tectonic_cfg_support = { path = "../cfg_support", version = ">=0.1.5,<1" }
+ 
+-[target.'cfg(target_os = "macos")'.dependencies]
++[target.'cfg(target_vendor = "apple")'.dependencies]
+ tectonic_mac_core = { path = "../mac_core", version = ">=0.1.0,<1" }
+ 
+ [features]
+diff --git a/crates/bridge_harfbuzz/src/lib.rs b/crates/bridge_harfbuzz/src/lib.rs
+index 1e39867..2cad553 100644
+--- a/crates/bridge_harfbuzz/src/lib.rs
++++ b/crates/bridge_harfbuzz/src/lib.rs
+@@ -37,7 +37,7 @@ mod linkage {
+     #[allow(unused_imports)]
+     use tectonic_bridge_freetype2 as clippyrenamehack1;
+     #[allow(unused_imports)]
+-    #[cfg(target_os = "macos")]
++    #[cfg(target_vendor = "apple")]
+     use tectonic_mac_core as clippyrenamehack2;
+ }
+ 
+diff --git a/crates/engine_xetex/build.rs b/crates/engine_xetex/build.rs
+index ae6565e..d83bed2 100644
+--- a/crates/engine_xetex/build.rs
++++ b/crates/engine_xetex/build.rs
+@@ -108,7 +108,7 @@ fn main() {
+ 
+     // Platform-specific adjustments:
+ 
+-    let is_mac_os = target_cfg!(target_os = "macos");
++    let is_mac_os = target_cfg!(target_vendor = "apple");
+ 
+     if is_mac_os {
+         c_cfg.define("XETEX_MAC", Some("1"));
+diff --git a/crates/engine_xetex/xetex/xetex-macos.c b/crates/engine_xetex/xetex/xetex-macos.c
+index b518005..62291e1 100644
+--- a/crates/engine_xetex/xetex/xetex-macos.c
++++ b/crates/engine_xetex/xetex/xetex-macos.c
+@@ -41,7 +41,16 @@ authorization from the copyright holders.
+ #include "teckit-c-Engine.h"
+ #include "xetex-ext.h"
+ 
++#include <TargetConditionals.h>
++#if TARGET_OS_IPHONE
++#include <CoreFoundation/CoreFoundation.h>
++#include <CoreGraphics/CoreGraphics.h>
++#include <CoreText/CoreText.h>
++/* Carbon's FixMath.h, absent on iOS. */
++#define fract1 ((int32_t)0x40000000)
++#else
+ #include <ApplicationServices/ApplicationServices.h>
++#endif
+ 
+ 
+ static inline double
+@@ -623,7 +632,11 @@ loadAATfont(CTFontDescriptorRef descriptor, int32_t scaled_size, const char* cp1
+         CGFloat green = ((rgbValue & 0x00FF0000) >> 16) / 255.0;
+         CGFloat blue  = ((rgbValue & 0x0000FF00) >> 8 ) / 255.0;
+         CGFloat alpha = ((rgbValue & 0x000000FF)) / 255.0;
++#if TARGET_OS_IPHONE
++        CGColorRef color = CGColorCreateSRGB(red, green, blue, alpha);
++#else
+         CGColorRef color = CGColorCreateGenericRGB(red, green, blue, alpha);
++#endif
+         CFDictionaryAddValue(stringAttributes, kCTForegroundColorAttributeName, color);
+         CGColorRelease(color);
+     }
+diff --git a/crates/engine_xetex/xetex/xetex-xetexd.h b/crates/engine_xetex/xetex/xetex-xetexd.h
+index 49746c9..b310d6c 100644
+--- a/crates/engine_xetex/xetex/xetex-xetexd.h
++++ b/crates/engine_xetex/xetex/xetex-xetexd.h
+@@ -24,8 +24,15 @@ BEGIN_EXTERN_C
+ /* include this here to avoid conflict between clang's emmintrin.h and
+  * texmfmem.h. Should be removed once a fixed clang is widely available
+  * http://llvm.org/bugs/show_bug.cgi?id=14964 */
++#include <TargetConditionals.h>
++#if TARGET_OS_IPHONE
++#include <CoreFoundation/CoreFoundation.h>
++#include <CoreGraphics/CoreGraphics.h>
++#include <CoreText/CoreText.h>
++#else
+ #include <ApplicationServices/ApplicationServices.h>
+ #endif
++#endif
+ 
+ #define odd(x) ((x) & 1)
+ 
+diff --git a/crates/mac_core/build.rs b/crates/mac_core/build.rs
+index 4280ae3..a5b61dd 100644
+--- a/crates/mac_core/build.rs
++++ b/crates/mac_core/build.rs
+@@ -3,13 +3,15 @@
+ use tectonic_cfg_support::target_cfg;
+ 
+ fn main() {
+-    let is_mac_os = target_cfg!(target_os = "macos");
++    let is_mac_os = target_cfg!(target_vendor = "apple");
+ 
+     if is_mac_os {
+         println!("cargo:rustc-link-lib=framework=Foundation");
+         println!("cargo:rustc-link-lib=framework=CoreFoundation");
+         println!("cargo:rustc-link-lib=framework=CoreGraphics");
+         println!("cargo:rustc-link-lib=framework=CoreText");
+-        println!("cargo:rustc-link-lib=framework=AppKit");
++        if target_cfg!(target_os = "macos") {
++            println!("cargo:rustc-link-lib=framework=AppKit");
++        }
+     }
+ }
+diff --git a/crates/mac_core/src/lib.rs b/crates/mac_core/src/lib.rs
+index 7821f68..e38ef3c 100644
+--- a/crates/mac_core/src/lib.rs
++++ b/crates/mac_core/src/lib.rs
+@@ -3,7 +3,7 @@
+ //! This currently includes only Foundation and CoreText, as those are the libraries needed by
+ //! Tectonic.
+ 
+-#![cfg(target_os = "macos")]
++#![cfg(target_vendor = "apple")]
+ 
+ use std::mem::ManuallyDrop;
+ use std::ptr::NonNull;
+diff --git a/crates/xetex_layout/Cargo.toml b/crates/xetex_layout/Cargo.toml
+index 7e33444..ff825f3 100644
+--- a/crates/xetex_layout/Cargo.toml
++++ b/crates/xetex_layout/Cargo.toml
+@@ -34,10 +34,10 @@ enrede = { version = "0.2", features = ["alloc"] }
+ cc = "^1.0.66"
+ tectonic_cfg_support = { path = "../cfg_support", version = ">=0.1.3,<1" }
+ 
+-[target.'cfg(not(target_os = "macos"))'.dependencies]
++[target.'cfg(not(target_vendor = "apple"))'.dependencies]
+ tectonic_bridge_fontconfig = { path = "../bridge_fontconfig", version = ">=0.1.0,<1" }
+ 
+-[target.'cfg(target_os = "macos")'.dependencies]
++[target.'cfg(target_vendor = "apple")'.dependencies]
+ tectonic_mac_core = { path = "../mac_core", version = ">=0.1.3,<1" }
+ 
+ [features]
+diff --git a/crates/xetex_layout/layout/tectonic_xetex_layout.h b/crates/xetex_layout/layout/tectonic_xetex_layout.h
+index c60df97..34563c0 100644
+--- a/crates/xetex_layout/layout/tectonic_xetex_layout.h
++++ b/crates/xetex_layout/layout/tectonic_xetex_layout.h
+@@ -8,7 +8,14 @@
+ #include "harfbuzz/hb.h"
+ #include "harfbuzz/hb-ft.h"
+ #ifdef XETEX_MAC
++#include <TargetConditionals.h>
++#if TARGET_OS_IPHONE
++#include <CoreFoundation/CoreFoundation.h>
++#include <CoreGraphics/CoreGraphics.h>
++#include <CoreText/CoreText.h>
++#else
+ #include <ApplicationServices/ApplicationServices.h>
++#endif
+ #else
+ #include <fontconfig/fontconfig.h>
+ #endif
+diff --git a/crates/xetex_layout/src/c_api.rs b/crates/xetex_layout/src/c_api.rs
+index 1e15ed4..afd5a29 100644
+--- a/crates/xetex_layout/src/c_api.rs
++++ b/crates/xetex_layout/src/c_api.rs
+@@ -2,7 +2,7 @@ use crate::engine::LayoutEngine;
+ use crate::font::Font;
+ use std::collections::BTreeMap;
+ use std::sync::Mutex;
+-#[cfg(not(target_os = "macos"))]
++#[cfg(not(target_vendor = "apple"))]
+ use tectonic_bridge_fontconfig as fc;
+ 
+ mod engine;
+@@ -26,10 +26,10 @@ pub struct GlyphBBox {
+     pub y_max: f32,
+ }
+ 
+-#[cfg(not(target_os = "macos"))]
++#[cfg(not(target_vendor = "apple"))]
+ pub type Fixed = i32;
+ /// cbindgen:ignore
+-#[cfg(target_os = "macos")]
++#[cfg(target_vendor = "apple")]
+ pub type Fixed = u32;
+ pub type OTTag = u32;
+ pub type GlyphID = u16;
+@@ -37,15 +37,15 @@ pub type GlyphID = u16;
+ pub type XeTeXFont = *mut Font;
+ /// cbindgen:ignore
+ pub type XeTeXLayoutEngine = *mut LayoutEngine;
+-#[cfg(not(target_os = "macos"))]
++#[cfg(not(target_vendor = "apple"))]
+ pub(crate) type RawPlatformFontRef = *mut fc::sys::FcPattern;
+-#[cfg(target_os = "macos")]
++#[cfg(target_vendor = "apple")]
+ pub(crate) type RawPlatformFontRef = tectonic_mac_core::sys::CTFontDescriptorRef;
+ /// cbindgen:ignore
+-#[cfg(not(target_os = "macos"))]
++#[cfg(not(target_vendor = "apple"))]
+ pub(crate) type PlatformFontRef = fc::Pattern;
+ /// cbindgen:ignore
+-#[cfg(target_os = "macos")]
++#[cfg(target_vendor = "apple")]
+ pub(crate) type PlatformFontRef = tectonic_mac_core::CTFontDescriptor;
+ 
+ /// key is combined value representing `(font_id, glyph)`
+diff --git a/crates/xetex_layout/src/c_api/font.rs b/crates/xetex_layout/src/c_api/font.rs
+index ae4fb65..7a5dd3b 100644
+--- a/crates/xetex_layout/src/c_api/font.rs
++++ b/crates/xetex_layout/src/c_api/font.rs
+@@ -5,7 +5,7 @@ use std::ffi::{CStr, CString};
+ use std::ptr;
+ use tectonic_bridge_freetype2 as ft;
+ use tectonic_bridge_harfbuzz as hb;
+-#[cfg(target_os = "macos")]
++#[cfg(target_vendor = "apple")]
+ use tectonic_mac_core::{sys::CTFontRef, CTFont, CoreType};
+ 
+ #[no_mangle]
+@@ -213,7 +213,7 @@ pub unsafe extern "C" fn countFeatures(
+     rval as libc::c_uint
+ }
+ 
+-#[cfg(target_os = "macos")]
++#[cfg(target_vendor = "apple")]
+ #[no_mangle]
+ pub unsafe extern "C" fn getFileNameFromCTFont(
+     ct_font: CTFontRef,
+diff --git a/crates/xetex_layout/src/c_api/manager.rs b/crates/xetex_layout/src/c_api/manager.rs
+index b66a408..0633cf0 100644
+--- a/crates/xetex_layout/src/c_api/manager.rs
++++ b/crates/xetex_layout/src/c_api/manager.rs
+@@ -36,14 +36,14 @@ pub unsafe extern "C" fn findFontByName(
+         Some(slice::from_raw_parts_mut(var.cast(), len))
+     };
+ 
+-    #[cfg(target_os = "macos")]
++    #[cfg(target_vendor = "apple")]
+     return FontManager::with_font_manager(|mgr| {
+         use tectonic_mac_core::CoreType;
+         mgr.find_font(name, var, size)
+             .map(tectonic_mac_core::CTFontDescriptor::into_type_ref)
+             .unwrap_or(ptr::null_mut())
+     });
+-    #[cfg(not(target_os = "macos"))]
++    #[cfg(not(target_vendor = "apple"))]
+     FontManager::with_font_manager(|mgr| {
+         mgr.find_font(name, var, size)
+             .map(|pat| pat.as_ref().as_ptr())
+diff --git a/crates/xetex_layout/src/font.rs b/crates/xetex_layout/src/font.rs
+index 253cefa..a4f0fea 100644
+--- a/crates/xetex_layout/src/font.rs
++++ b/crates/xetex_layout/src/font.rs
+@@ -7,11 +7,11 @@ use std::path::Path;
+ use std::str::FromStr;
+ use std::sync::{Arc, Mutex, OnceLock};
+ use tectonic_bridge_core::{CoreBridgeState, FileFormat};
+-#[cfg(not(target_os = "macos"))]
++#[cfg(not(target_vendor = "apple"))]
+ use tectonic_bridge_fontconfig as fc;
+ use tectonic_bridge_freetype2 as ft;
+ use tectonic_bridge_harfbuzz as hb;
+-#[cfg(target_os = "macos")]
++#[cfg(target_vendor = "apple")]
+ use tectonic_mac_core::{
+     CFArray, CFDictionary, CFType, CFUrl, CTFont, CTFontDescriptor, FontAttribute, FontNameKey,
+ };
+@@ -147,7 +147,7 @@ pub(crate) fn get_larger_script_list_table_ot(font: &Font) -> hb::ot::Table<'_>
+ 
+ enum FontKind {
+     FtFont,
+-    #[cfg(target_os = "macos")]
++    #[cfg(target_vendor = "apple")]
+     Mac(CTFontDescriptor, Option<CTFont>),
+ }
+ 
+@@ -175,7 +175,7 @@ pub struct Font {
+ }
+ 
+ impl Font {
+-    #[cfg(not(target_os = "macos"))]
++    #[cfg(not(target_vendor = "apple"))]
+     pub(crate) fn new(font: PlatformFontRef, point_size: f32) -> Result<Font, ()> {
+         let path = font
+             .as_ref()
+@@ -187,7 +187,7 @@ impl Font {
+         Font::new_path_index(path, index as usize, point_size)
+     }
+ 
+-    #[cfg(target_os = "macos")]
++    #[cfg(target_vendor = "apple")]
+     pub(crate) fn new(descriptor: PlatformFontRef, point_size: f32) -> Result<Font, ()> {
+         let mut out = Font {
+             units_per_em: 0,
+@@ -347,7 +347,7 @@ impl Font {
+         Ok(())
+     }
+ 
+-    #[cfg(target_os = "macos")]
++    #[cfg(target_vendor = "apple")]
+     fn initialize_mac(&mut self) -> Result<(), ()> {
+         let FontKind::Mac(descriptor, font_ref) = &mut self.kind else {
+             return Err(());
+@@ -556,7 +556,7 @@ impl Font {
+     }
+ }
+ 
+-#[cfg(target_os = "macos")]
++#[cfg(target_vendor = "apple")]
+ pub(crate) fn get_file_name_from_ct_font(ct_font: &CTFont, index: &mut u32) -> Option<CString> {
+     let url = ct_font
+         .attr(FontAttribute::URL)
+diff --git a/crates/xetex_layout/src/manager.rs b/crates/xetex_layout/src/manager.rs
+index 5f89dfe..a4de1d1 100644
+--- a/crates/xetex_layout/src/manager.rs
++++ b/crates/xetex_layout/src/manager.rs
+@@ -10,9 +10,9 @@ use std::convert::TryFrom;
+ use std::ffi::{CStr, CString};
+ use tectonic_bridge_freetype2 as ft;
+ 
+-#[cfg(not(target_os = "macos"))]
++#[cfg(not(target_vendor = "apple"))]
+ mod fc;
+-#[cfg(target_os = "macos")]
++#[cfg(target_vendor = "apple")]
+ mod mac;
+ 
+ thread_local! {
+@@ -313,11 +313,11 @@ impl FontManager {
+     fn init_font_manager() {
+         let backend: Box<dyn FontManagerBackend>;
+ 
+-        #[cfg(target_os = "macos")]
++        #[cfg(target_vendor = "apple")]
+         {
+             backend = Box::new(mac::MacBackend::new());
+         }
+-        #[cfg(not(target_os = "macos"))]
++        #[cfg(not(target_vendor = "apple"))]
+         {
+             backend = Box::new(fc::FcBackend::new());
+         }
+@@ -778,7 +778,7 @@ impl FontManager {
+         }
+     }
+ 
+-    #[cfg_attr(target_os = "macos", allow(unused))]
++    #[cfg_attr(target_vendor = "apple", allow(unused))]
+     fn prepend_to_list<T: Into<CString> + AsRef<CStr>>(list: &mut Vec<CString>, str: T) {
+         *list = list.drain(..).filter(|s| **s != *str.as_ref()).collect();
+         list.insert(0, str.into());
+diff --git a/crates/xetex_layout/src/utils.rs b/crates/xetex_layout/src/utils.rs
+index ee7efc8..a503b36 100644
+--- a/crates/xetex_layout/src/utils.rs
++++ b/crates/xetex_layout/src/utils.rs
+@@ -10,13 +10,13 @@ pub fn d_to_fix(d: f64) -> Fixed {
+ }
+ 
+ pub fn raw_to_rs(font: RawPlatformFontRef) -> Option<PlatformFontRef> {
+-    #[cfg(target_os = "macos")]
++    #[cfg(target_vendor = "apple")]
+     let out = {
+         use tectonic_mac_core::CoreType;
+         // SAFETY: Pointer must be from us, and is thus a borrowed ref
+         NonNull::new(font.cast_mut()).map(|ptr| unsafe { PlatformFontRef::new_borrowed(ptr) })
+     };
+-    #[cfg(not(target_os = "macos"))]
++    #[cfg(not(target_vendor = "apple"))]
+     // SAFETY: Pointer must be from us, and is thus a borrowed ref
+     let out = { unsafe { NonNull::new(font).map(|p| PlatformFontRef::from_raw_borrowed(p)) } };
+     out
