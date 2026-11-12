@@ -95,11 +95,8 @@ final class FileViewModel {
     private(set) var claudeFailed = false
     /// Tests give a stand-in.
     @ObservationIgnored lazy var lectureClaude: LectureClaude? = course.map { LectureClaude.of(workspace, course: $0) }
-    /// The first reading of a file not split yet. Tests give a stand-in.
-    @ObservationIgnored lazy var findSplit: @MainActor (URL, [FolioDomain.Unit]) async -> LectureFinding = { [workspace, course] url, units in
-        let claude = course.flatMap { workspace.claudeReady ? workspace.claude(for: $0) : nil }
-        return await LectureReader.find(url, units: units, claude: claude)
-    }
+    /// Tests give a stand-in for the first reading of a file not split yet.
+    @ObservationIgnored var findSplit: (@MainActor (URL, [FolioDomain.Unit]) async -> LectureFinding)?
     /// Bumped by each read and each ask, so an answer that comes after a newer one is dropped.
     @ObservationIgnored private var splitRead = 0
 
@@ -128,7 +125,12 @@ final class FileViewModel {
         readingSplit = true
         askingClaude = claude
         let read = splitRead
-        let found = await findSplit(url, file.units)
+        let found: LectureFinding
+        if let findSplit {
+            found = await findSplit(url, file.units)
+        } else {
+            found = await LectureReader.find(url, units: file.units, claude: workspace.claudeReady ? workspace.claude(for: course) : nil)
+        }
         guard read == splitRead else { return }
         readingSplit = false
         askingClaude = false
