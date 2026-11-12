@@ -18,7 +18,7 @@ import WebKit
     private(set) var frames: [String: WKFrameInfo] = [:]
 
     init(scripts: WKUserContentController) {
-        scripts.addUserScript(WKUserScript(source: Self.noPeers, injectionTime: .atDocumentStart, forMainFrameOnly: false))
+        scripts.addUserScript(WKUserScript(source: NoteWidget.noPeersScript, injectionTime: .atDocumentStart, forMainFrameOnly: false))
         scripts.addUserScript(WKUserScript(source: Self.themeScript, injectionTime: .atDocumentStart, forMainFrameOnly: false))
         // In a world of its own, so the widget's code can neither see nor fake the reports.
         scripts.addUserScript(WKUserScript(source: Self.sizeScript, injectionTime: .atDocumentEnd, forMainFrameOnly: false, in: Self.world))
@@ -123,8 +123,6 @@ import WebKit
             + ":where(body){margin:0;font:14px/1.5 -apple-system,system-ui,sans-serif;color:var(--text);background:transparent}"
     }
 
-    /// The page's security policy doesn't cover peer connections, which could otherwise carry data out.
-    private static let noPeers = "for (const k of ['RTCPeerConnection', 'webkitRTCPeerConnection', 'RTCDataChannel']) { try { delete window[k]; window[k] = undefined } catch {} }"
 }
 
 /// Follows what a widget's page says about its height. A page sized by its frame (`100vh`, `50vh`,
@@ -174,10 +172,6 @@ struct WidgetSizer {
 /// else.
 @MainActor final class WidgetFiles: NSObject, WKURLSchemeHandler {
     static let scheme = "folio-widget"
-    static let policy = [
-        "default-src 'none'", "script-src 'unsafe-inline' 'unsafe-eval'", "style-src 'unsafe-inline'",
-        "img-src data: blob:", "font-src data:", "media-src data: blob:", "form-action 'none'", "base-uri 'none'",
-    ].joined(separator: "; ")
 
     /// The note's folder, which names the course whose widgets are served.
     var folder: URL?
@@ -201,8 +195,8 @@ struct WidgetSizer {
             // Read as `LocalFileScheme` reads pictures, off the main thread.
             let read = if let file { await LocalFileScheme.read(file) } else { Data?.none }
             guard running.remove(key) != nil else { return }
-            let data = Self.withPolicy(read ?? Self.notice(file))
-            let headers = ["Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": Self.policy]
+            let data = NoteWidget.withPolicy(read ?? Self.notice(file))
+            let headers = ["Content-Type": "text/html; charset=utf-8", "Content-Security-Policy": NoteWidget.policy]
             task.didReceive(HTTPURLResponse(url: url, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: headers)!)
             task.didReceive(data)
             task.didFinish()
@@ -211,15 +205,6 @@ struct WidgetSizer {
 
     func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) { running.remove(ObjectIdentifier(task as AnyObject)) }
 
-    /// The policy also as the page's first element: WebKit doesn't apply a policy header to a frame's page, only to a
-    /// window's. After a doctype, which a tag ahead of it would turn off.
-    static func withPolicy(_ page: Data) -> Data {
-        let meta = Data("<meta http-equiv=\"Content-Security-Policy\" content=\"\(policy)\">".utf8)
-        let head = String(decoding: page.prefix(256), as: UTF8.self)
-        guard let doctype = head.firstMatch(of: /^\s*<!doctype[^>]*>/.ignoresCase()) else { return meta + page }
-        let end = head[..<doctype.range.upperBound].utf8.count
-        return page.prefix(end) + meta + page.dropFirst(end)
-    }
 
     static func notice(_ file: URL?) -> Data {
         let text = switch file {

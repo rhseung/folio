@@ -124,7 +124,7 @@ enum CommandSource {
     }
 
     /// Kinds that live inside a course file.
-    static let scoped: Set<String> = ["Session", "Exam", "Unit", "Assignment", "GradeComponent", "ScoreEntry", "Material", "ProblemSet", "Note", "NotePath"]
+    static let scoped: Set<String> = ["Session", "Exam", "Unit", "Assignment", "GradeComponent", "ScoreEntry", "Material", "ProblemSet", "Note", "NotePath", "NoteWidget"]
 
     /// Kinds named only inside another item: a plan item in its exam, a card in its unit's deck.
     static let parents: [String: String] = ["ExamPlanItem": "Exam", "QuizCard": "Unit"]

@@ -124,8 +124,9 @@ struct MCPServer {
                 Folio.run(argv)
             }
         }
-        let text = Self.compact((code == 0 ? out.lines("out") : out.lines("err") + out.lines("out")).joined(separator: "\n"))
-        var content: [JSONValue] = [["type": "text", "text": .string(text)]]
+        var shown = (code == 0 ? out.lines("out") : out.lines("err") + out.lines("out")).joined(separator: "\n")
+        let images = code == 0 ? Self.images(&shown) : []
+        var content: [JSONValue] = [["type": "text", "text": .string(Self.compact(shown))]] + images
         // What the panel shows an approve button for: the action with every name already resolved to its UUID.
         if code == 0, tool.write, propose, let input = built.items.first(where: { $0.0 == (Self.builds[tool.command] ?? tool.command) })?.1 {
             // In the result too: the app replaces the system prompt, so the server's instructions may never reach Claude.
@@ -213,6 +214,24 @@ struct MCPServer {
         guard case .object = input else { return Self.failure(String(localized: .runNotObject)) }
         if arguments["dryRun"] == .bool(true) { input["dryRun"] = .bool(true) }
         return call(tool, input)
+    }
+
+    /// The pictures a render command carries as base64 (`RenderResult`), as image content Claude looks at, taken out
+    /// of the text, where they would be read as tens of thousands of characters.
+    static func images(_ text: inout String) -> [JSONValue] {
+        guard text.contains("\"png\""), let value = try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8)),
+              case .array(let items)? = value["images"] else { return [] }
+        var found: [JSONValue] = []
+        var rest = value
+        rest["images"] = .array(items.map { item in
+            guard case .string(let png)? = item["png"] else { return item }
+            found.append(["type": "image", "data": .string(png), "mimeType": "image/png"])
+            var described = item
+            described["png"] = nil
+            return described
+        })
+        text = string(rest)
+        return found
     }
 
     static func failure(_ text: String) -> JSONValue {

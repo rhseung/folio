@@ -48,7 +48,8 @@ struct MCPTests {
         let all = try toolNames(MCPServer(gist: nil, propose: false), gist)
         #expect(panel.isSubset(of: all))
         for tool in ["note_edit", "note_write", "note_show", "session_list", "exam_scope_taught", "attendance_set", "review_record",
-                     "problem-set_record", "search", "today", "course_show", "course_list"] {
+                     "problem-set_record", "search", "today", "course_show", "course_list", "note_figure_add", "note_figure_write",
+                     "note_figure_render", "note_widget_add", "note_widget_write", "note_widget_render", "note_format"] {
             #expect(panel.contains(tool), "\(tool) is not in the panel")
         }
         for tool in ["import_notion", "backup_create", "cleanup_apply", "settings_set", "catalog_show", "transcript_show", "requirement_check",

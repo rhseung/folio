@@ -1573,6 +1573,83 @@
           }
         }
       }
+    },
+    "error.figure.taken": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@이(가) 이미 있습니다. 다른 이름으로 만들거나, 고치려면 note figure show로 해시를 읽고 note figure write를 씁니다"
+          }
+        }
+      }
+    },
+    "error.figure.name": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그림 이름으로 쓸 수 없습니다: %@. Notes/assets 바로 안의 SVG 파일 이름(예: graph.svg)을 씁니다"
+          }
+        }
+      }
+    },
+    "error.figure.missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그림이 없습니다: %@"
+          }
+        }
+      }
+    },
+    "error.figure.changed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@이(가) 읽은 뒤에 바뀌었습니다. 다시 읽고 고칩니다"
+          }
+        }
+      }
+    },
+    "error.widget.taken": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위젯 %@이(가) 이미 있습니다"
+          }
+        }
+      }
+    },
+    "error.widget.missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위젯이 없습니다: %@"
+          }
+        }
+      }
+    },
+    "error.widget.changed": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위젯 %@이(가) 읽은 뒤에 바뀌었습니다. 다시 읽고 고칩니다"
+          }
+        }
+      }
     }
   },
   "version": "1.0"
