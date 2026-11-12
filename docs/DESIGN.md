@@ -4,7 +4,7 @@
 
 Folio가 아닌 앱에서 같은 느낌을 만들 때도 이 문서를 쓴다. "느낌", "그리드와 치수", "폼", "시스템 컨트롤 대신 쓰는 것"은 Folio의 데이터와 무관한 규칙이고, 마지막의 "다른 앱으로 옮기기"에 무엇을 가져가고 무엇을 두고 갈지 적었다.
 
-시안: https://claude.ai/artifact/Rk6BXvbGaSAbtjbVJA8JYK (시안 C: 밝은 종이 질감, 사이드바·과목 열·본문의 3단, 리퀴드 글라스. Mac 창은 시안 D: 반투명 창 틀 안의 둥근 본문 패널)
+디자인 시스템: https://claude.ai/artifact/NQsFWSkuyHUDETivg5K5bA (이 문서와 `theme.swift`의 값을 옮긴 토큰, 플랫폼마다의 창 구조). 시안은 이 디자인 시스템을 설치한 캔버스 하나에 영역별 페이지로 그린다: https://claude.ai/artifact/FT5gk3v1afr7pEsBFd6MLy. 구현된 시안은 캔버스에서 지운다.
 
 ## 원칙
 
