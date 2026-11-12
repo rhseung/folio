@@ -64,8 +64,8 @@ rm -rf "$work/bridge" && cp -R "$root/tectonic/bridge" "$work/bridge"
 # Tectonic's own lock pins every crate it was released with; only the bridge itself is new to it.
 cp "$work/tectonic/Cargo.lock" "$work/bridge/Cargo.lock"
 
-slice() { # name sdk cmake-system rust-target min-flag
-  local name=$1 sdk=$2 system=$3 target=$4 min=$5
+slice() { # name sdk cmake-system rust-target min-flag deployment-variable
+  local name=$1 sdk=$2 system=$3 target=$4 min=$5 deployment=$6
   local sysroot prefix build
   sysroot="$(xcrun --sdk "$sdk" --show-sdk-path)"
   prefix="$work/prefix/$name"
@@ -110,10 +110,13 @@ EOF
   cmake --build "$build/freetype" && cmake --install "$build/freetype"
 
   # Only the target's C flags carry the platform: global CFLAGS would also reach build scripts compiled for this Mac,
-  # and psm's host assembly then fails with an iOS minimum version.
+  # and psm's host assembly then fails with an iOS minimum version. Only the slice's own deployment variable is set:
+  # clang reads it when a compile names no platform, and with both set aws-lc-sys's compiler check on the macOS slice
+  # was built for iOS.
   local var=${target//-/_}
-  env CARGO_TARGET_DIR="$work/cargo-target" PKG_CONFIG_ALLOW_CROSS=1 PKG_CONFIG_LIBDIR="$prefix/lib/pkgconfig" \
-    TECTONIC_PKGCONFIG_FORCE_SEMI_STATIC=1 IPHONEOS_DEPLOYMENT_TARGET=$DEPLOYMENT MACOSX_DEPLOYMENT_TARGET=$DEPLOYMENT \
+  env -u IPHONEOS_DEPLOYMENT_TARGET -u MACOSX_DEPLOYMENT_TARGET "$deployment=$DEPLOYMENT" \
+    CARGO_TARGET_DIR="$work/cargo-target" PKG_CONFIG_ALLOW_CROSS=1 PKG_CONFIG_LIBDIR="$prefix/lib/pkgconfig" \
+    TECTONIC_PKGCONFIG_FORCE_SEMI_STATIC=1 \
     "CFLAGS_$var=-DU_DISABLE_RENAMING=1 $min" "CXXFLAGS_$var=-DU_DISABLE_RENAMING=1 $min" \
     cargo build --manifest-path "$work/bridge/Cargo.toml" --target "$target" --release
   # One archive per slice, so the app links a single library.
@@ -122,9 +125,9 @@ EOF
     "$prefix/lib/libfreetype.a" "$prefix/lib/libgraphite2.a" "$prefix/lib/libpng16.a"
 }
 
-slice ios iphoneos iOS aarch64-apple-ios "-miphoneos-version-min=$DEPLOYMENT"
-slice ios-simulator iphonesimulator iOS aarch64-apple-ios-sim "-mios-simulator-version-min=$DEPLOYMENT"
-slice macos macosx Darwin aarch64-apple-darwin "-mmacosx-version-min=$DEPLOYMENT"
+slice ios iphoneos iOS aarch64-apple-ios "-miphoneos-version-min=$DEPLOYMENT" IPHONEOS_DEPLOYMENT_TARGET
+slice ios-simulator iphonesimulator iOS aarch64-apple-ios-sim "-mios-simulator-version-min=$DEPLOYMENT" IPHONEOS_DEPLOYMENT_TARGET
+slice macos macosx Darwin aarch64-apple-darwin "-mmacosx-version-min=$DEPLOYMENT" MACOSX_DEPLOYMENT_TARGET
 
 out="$work/FolioTectonic.xcframework"
 rm -rf "$out" "$zip"
