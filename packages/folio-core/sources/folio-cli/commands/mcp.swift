@@ -67,7 +67,8 @@ struct MCPServer {
         "note", "session", "unit", "exam", "assignment", "material", "quiz", "score", "component", "attendance", "review",
         "problem-set", "search", "today",
     ]
-    static let panelCommands: Set<String> = ["course show", "course list"]
+    /// `recording` stays out as a group: its other commands rename and trash audio, which a course talk never needs.
+    static let panelCommands: Set<String> = ["course show", "course list", "recording transcript"]
 
     static func inPanel(_ command: String) -> Bool {
         panelCommands.contains(command) || command.split(separator: " ").first.map { panelGroups.contains(String($0)) } == true
@@ -119,13 +120,22 @@ struct MCPServer {
         argv.insert(contentsOf: options, at: argv.firstIndex(of: "--") ?? argv.endIndex)
         let out = Output()
         let built = Output()
-        let code = Built.$record.withValue({ command, input in built.add(command, input) }) {
-            Sink.$current.withValue(Sink(out: { out.add("out", .string($0)) }, err: { out.add("err", .string($0)) })) {
-                Folio.run(argv)
+        let pictures = Pictures()
+        let code = Pictures.$current.withValue(pictures) {
+            Built.$record.withValue({ command, input in built.add(command, input) }) {
+                Sink.$current.withValue(Sink(out: { out.add("out", .string($0)) }, err: { out.add("err", .string($0)) })) {
+                    Folio.run(argv)
+                }
             }
         }
         let text = Self.compact((code == 0 ? out.lines("out") : out.lines("err") + out.lines("out")).joined(separator: "\n"))
         var content: [JSONValue] = [["type": "text", "text": .string(text)]]
+        // Each picture after a line naming it: image blocks carry no name, and the text lists them by these labels.
+        if code == 0 {
+            content += pictures.items.flatMap { p -> [JSONValue] in
+                [["type": "text", "text": .string(p.label)], ["type": "image", "data": .string(p.data.base64EncodedString()), "mimeType": .string(p.mimeType)]]
+            }
+        }
         // What the panel shows an approve button for: the action with every name already resolved to its UUID.
         if code == 0, tool.write, propose, let input = built.items.first(where: { $0.0 == (Self.builds[tool.command] ?? tool.command) })?.1 {
             // In the result too: the app replaces the system prompt, so the server's instructions may never reach Claude.

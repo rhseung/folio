@@ -6875,6 +6875,391 @@
           }
         }
       }
+    },
+    "material.read.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "PDF 자료 읽기: 쪽마다 제목과 글, 요청하면 쪽 그림. 먼저 --titles로 쪽 제목과 목차를 훑고, 글만으로 모자란 쪽만 --images로 본다"
+          }
+        }
+      }
+    },
+    "material.read.discussion": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 번에 글은 %1$lld쪽(%2$lld자), 제목은 %3$lld쪽, 그림은 %4$lld쪽까지 준다. 넘으면 잘라서 다음에 읽을 --pages를 알려 준다. 그림 자리 문자는 글에서 뺀다. words가 적은 쪽(그림, 수식, 스캔)은 글보다 그림이 말해 준다.\n\n예시:\n  folio material read EC4207/06_Hall.pdf --titles       쪽 제목과 목차로 훑기\n  folio material read EC4207/06_Hall.pdf --pages 9-12   9–12쪽의 글\n  folio material read EC4207/06_Hall.pdf --pages 9 --images --out ./pages   9쪽 그림을 파일로"
+          }
+        }
+      }
+    },
+    "material.read.header": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@  %2$lld쪽 중 %3$lld–%4$lld쪽"
+          }
+        }
+      }
+    },
+    "material.read.help.images": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쪽 그림도 준다. 한 번에 %lld쪽까지"
+          }
+        }
+      }
+    },
+    "material.read.help.pages": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "읽을 쪽: 9, 9-12, 9-(끝까지). 빼면 처음부터"
+          }
+        }
+      }
+    },
+    "material.read.help.titles": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "글 대신 쪽마다 제목과 낱말 수만, PDF 목차와 함께"
+          }
+        }
+      }
+    },
+    "material.read.no-text": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(글 없음)"
+          }
+        }
+      }
+    },
+    "material.read.not-pdf": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@는 PDF가 아닙니다. 글 파일은 folio material show로 읽습니다"
+          }
+        }
+      }
+    },
+    "material.read.outline": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "목차"
+          }
+        }
+      }
+    },
+    "material.read.outside": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@는 %2$lld쪽까지입니다"
+          }
+        }
+      }
+    },
+    "material.read.pages-format": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "쪽은 9, 9-12, 9- 꼴로 적습니다: %@"
+          }
+        }
+      }
+    },
+    "material.read.unreadable": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@를 읽지 못했습니다. iCloud에서 아직 받지 않았거나 PDF로 열리지 않습니다"
+          }
+        }
+      }
+    },
+    "material.read.words": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld단어"
+          }
+        }
+      }
+    },
+    "note.images.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트의 그림과 손필기 사진 읽기: 노트가 넣은 그림, 또는 Notes/assets의 파일"
+          }
+        }
+      }
+    },
+    "note.images.discussion": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그림은 긴 쪽 %1$lldpx JPEG로 줄여서 한 번에 %2$lld장까지 준다. 넘으면 다음에 읽을 --from을 알려 준다. 과목만 주면 Notes/assets의 그림 목록을 보인다.\n\n예시:\n  folio note images \"EC4207/매칭 정리\"     노트가 넣은 그림\n  folio note images EC4207                Notes/assets의 그림 목록\n  folio note images EC4207 --file assets/board.jpg --out ./figures"
+          }
+        }
+      }
+    },
+    "note.images.help.file": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 그림 파일만(노트 옆, Notes/assets, Notes, 과목 폴더 순으로 찾는다). 여러 번 줄 수 있다"
+          }
+        }
+      }
+    },
+    "note.images.help.from": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트의 그림 중 몇 번째부터(1부터). 한 번에 %lld장"
+          }
+        }
+      }
+    },
+    "note.images.help.note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "<과목>/<노트>, 또는 과목만(Notes/assets 목록)"
+          }
+        }
+      }
+    },
+    "note.images.missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "(과목에 없음)"
+          }
+        }
+      }
+    },
+    "note.images.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그림이 없습니다"
+          }
+        }
+      }
+    },
+    "note.images.not-found": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@ 그림을 과목에서 찾지 못했습니다"
+          }
+        }
+      }
+    },
+    "note.images.not-image": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@는 그림 파일이 아닙니다"
+          }
+        }
+      }
+    },
+    "pictures.help.out": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그림을 파일로 쓸 폴더(터미널). MCP에서는 그림을 바로 준다"
+          }
+        }
+      }
+    },
+    "pictures.need-out": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그림은 --out <폴더>를 주면 파일로 씁니다"
+          }
+        }
+      }
+    },
+    "pictures.out-in-gist": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "--out %@는 GIST 폴더 안입니다. 그림은 GIST 폴더 밖에 씁니다"
+          }
+        }
+      }
+    },
+    "reading.next": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다음: %@"
+          }
+        }
+      }
+    },
+    "recording.transcript.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음 받아쓰기 읽기: 회차나 녹음 파일로 가리키고 시간 구간으로 자른다"
+          }
+        }
+      }
+    },
+    "recording.transcript.bad-time": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "시각은 12:30, 1:02:03, 750 꼴로 적습니다: %@"
+          }
+        }
+      }
+    },
+    "recording.transcript.discussion": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "한 번에 %lld자(강의 20분쯤)까지 준다. 넘으면 잘라서 다음에 읽을 --from을 알려 준다. 줄마다 시각(12:30)이 붙어서 folio link recording … --time으로 그 자리를 가리킬 수 있다.\n\n예시:\n  folio recording transcript EC4207/10-26                       그 수업의 받아쓰기 처음부터\n  folio recording transcript EC4207/10-26 --from 10:00 --to 20:00"
+          }
+        }
+      }
+    },
+    "recording.transcript.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 구간에는 받아쓴 말이 없습니다"
+          }
+        }
+      }
+    },
+    "recording.transcript.header": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@  %2$@ 중 %3$@"
+          }
+        }
+      }
+    },
+    "recording.transcript.help.from": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 시각부터(12:30, 1:02:03, 초)"
+          }
+        }
+      }
+    },
+    "recording.transcript.help.recording": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "녹음: <과목>/<회차> 또는 <과목>/<파일 이름>"
+          }
+        }
+      }
+    },
+    "recording.transcript.help.to": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 시각까지"
+          }
+        }
+      }
+    },
+    "recording.transcript.none": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@에는 받아쓰기가 없습니다"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

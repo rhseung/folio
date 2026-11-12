@@ -30,7 +30,7 @@ func readText(_ source: String) throws -> String {
 struct NoteCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "note", abstract: String(localized: .noteAbstract),
-        subcommands: [List.self, Show.self, Write.self, Edit.self] + GeneratedCommands.note)
+        subcommands: [List.self, Show.self, Images.self, Write.self, Edit.self] + GeneratedCommands.note)
 
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .noteListAbstract), discussion: String(localized: .noteListDiscussion))

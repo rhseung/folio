@@ -44,21 +44,14 @@ extension CourseStore {
 
     /// Files outside the course or that don't decode are left out.
     public func contextImages(of note: NoteFile, body: String, limit: Int = 20) -> [(name: String, data: Data)] {
-        let root = url.standardizedFileURL.path + "/"
-        return NoteImages.references(in: body).compactMap { ref -> (String, Data)? in
-            let candidates: [URL] = switch ref {
-            case .path(let p): [note.url.deletingLastPathComponent().appending(path: p)]
-            case .name(let n): [noteAssetsURL.appending(path: n), notesURL.appending(path: n), note.url.deletingLastPathComponent().appending(path: n)]
-            }
-            guard let file = candidates.map(\.standardizedFileURL).first(where: { $0.path.hasPrefix(root) && FileManager.default.fileExists(atPath: $0.path) }),
-                  let data = try? CoordinatedFile.read(file), let jpeg = Self.contextJPEG(data) else { return nil }
+        NoteImages.references(in: body).compactMap { ref -> (String, Data)? in
+            guard let file = imageURL(ref, of: note), let data = try? CoordinatedFile.read(file), let jpeg = Self.contextJPEG(data) else { return nil }
             return (file.lastPathComponent, jpeg)
         }
         .prefix(limit).map { $0 }
     }
 
-    /// 1568px on the long edge: Claude scales anything larger down to about that, so sending more only costs upload.
-    static func contextJPEG(_ data: Data, maxEdge: Int = 1568) -> Data? {
+    static func contextJPEG(_ data: Data, maxEdge: Int = ReadingLimit.imageEdge) -> Data? {
         guard let source = CGImageSourceCreateWithData(data as CFData, nil),
               let image = CGImageSourceCreateThumbnailAtIndex(source, 0, [
                   kCGImageSourceCreateThumbnailFromImageAlways: true,

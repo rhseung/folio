@@ -93,6 +93,6 @@ struct AttendanceCommand: ParsableCommand {
 
 struct RecordingCommand: ParsableCommand {
     static let configuration = CommandConfiguration(commandName: "recording", abstract: String(localized: .recordingAbstract),
-                                                    subcommands: GeneratedCommands.recording)
+                                                    subcommands: [Transcript.self] + GeneratedCommands.recording)
 
 }

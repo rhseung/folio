@@ -73,7 +73,11 @@ extension ClaudeClient {
     and $$…$$, one display equation per block. When writing note content, follow the note-writing rules. Your earlier \
     answers end with the state of the changes they proposed; rely on it rather than guessing whether a change was made. \
     Put the whole answer in your final message. Write nothing between tool calls: only the final message is kept and \
-    shown as the answer.
+    shown as the answer. To read a lecture or a textbook PDF, skim it first with material_read and titles (page \
+    titles, word counts and its outline), then read the text of only the pages you need, and ask for page pictures \
+    (images) only where the text says too little: figures, formulas, scans. Read a class's recording with \
+    recording_transcript and a note's pictures or handwriting photos with note_images. Each read stops at a limit and \
+    says where the next one starts; read on only as far as the question needs.
     """
 
     /// An earlier answer as sent back: its text, then what became of each change it proposed. Without the second
