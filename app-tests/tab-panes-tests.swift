@@ -13,7 +13,7 @@ struct TabPanesTests {
     let settings = Navigator.Entry(link: .place(.settings))
 
     @Test func besideOpensARightNeighborAndFocusesIt() {
-        let panes = TabPanes(Navigator(), limit: 3)
+        let panes = TabPanes(Navigator())
         panes.openBeside(grades)
         #expect(panes.count == 2 && panes.focus == 1)
         #expect(panes.navigators.map(\.current) == [Navigator.Entry(link: .place(.today)), grades])
@@ -25,21 +25,32 @@ struct TabPanesTests {
         #expect(panes.trails.count == 3 && Set(panes.ids).count == 3)
     }
 
-    @Test func atTheLimitThePaneUsedLongestAgoGoesOn() {
-        let panes = TabPanes(Navigator(), limit: 2)
+    // No cap on the panes (2026-11-12 사용자): a fourth pane opens like the second, and a narrow row folds the rest
+    // into bundles at its ends rather than a pane giving way.
+    @Test func besideAlwaysOpensAPaneAndTheWidthFoldsTheRest() {
+        let panes = TabPanes(Navigator())
         panes.openBeside(grades)
-        panes.press(0)
         panes.openBeside(people)
-        // The grades pane was pressed longest ago: it goes on to people, with grades a step back.
-        #expect(panes.count == 2 && panes.focus == 1)
-        #expect(panes.focused.current == people && panes.focused.backList == [grades])
+        panes.openBeside(codes)
+        #expect(panes.count == 4 && panes.focus == 3)
+        #expect(panes.navigators.map(\.current) == [Navigator.Entry(link: .place(.today)), grades, people, codes])
         // A target a pane already shows goes to that pane.
         panes.openBeside(Navigator.Entry(link: .place(.today)))
-        #expect(panes.focus == 0 && panes.count == 2)
+        #expect(panes.focus == 0 && panes.count == 4)
+        // Room for two open beside a bundle: the run gives up its end pressed longer ago, twice, to the right bundle.
+        panes.measure(900)
+        #expect(panes.fold.run == 0...1 && panes.fold.right == [2, 3])
+        panes.measure(2000)
+        #expect(panes.fold.run == 0...3 && panes.folded.isEmpty)
+        // A pane opened in a narrow row takes the run at once, from the width the row last had, and the pane it opened
+        // beside goes to the left bundle.
+        panes.measure(500)
+        panes.openBeside(settings)
+        #expect(panes.focus == 1 && panes.fold.run == 1...1 && panes.fold.left == [0] && panes.folded == [0, 2, 3, 4])
     }
 
     @Test func closingHandsTheFocusToThePanePressedLast() {
-        let panes = TabPanes(Navigator(), limit: 3)
+        let panes = TabPanes(Navigator())
         panes.openBeside(grades)
         panes.openBeside(people)
         panes.press(0)
@@ -50,7 +61,7 @@ struct TabPanesTests {
     }
 
     @Test func swappingKeepsEachPaneItsHistoryAndFocus() {
-        let panes = TabPanes(Navigator(), limit: 3)
+        let panes = TabPanes(Navigator())
         panes.openBeside(grades)
         let focused = panes.focused
         let trail = panes.focusedTrail
@@ -61,7 +72,7 @@ struct TabPanesTests {
     @Test func draggingADividerDoesNotRedrawTheTabs() {
         // The toolbar's tabs draw from the focus and the panes; a share changing every frame of a drag must not touch
         // them, or the toolbar rebuilds its menu form each frame (#310).
-        let panes = TabPanes(Navigator(), limit: 3)
+        let panes = TabPanes(Navigator())
         panes.openBeside(grades)
         final class Changes: @unchecked Sendable { var count = 0 }
         let changes = Changes()
@@ -78,7 +89,7 @@ struct TabPanesTests {
     }
 
     @Test func evenSharesTheWidthWithoutRedrawingTheTabs() {
-        let panes = TabPanes(Navigator(), limit: 3)
+        let panes = TabPanes(Navigator())
         panes.openBeside(grades)
         panes.openBeside(people)
         panes.resize(divider: 0, to: 0.2)
@@ -94,21 +105,22 @@ struct TabPanesTests {
     }
 
     @Test func aPaneFoldedByHandStaysAStripAtAnyWidth() {
-        let panes = TabPanes(Navigator(), limit: 3)
+        let panes = TabPanes(Navigator())
         panes.openBeside(grades)
         panes.openBeside(people)
         #expect(panes.folded.isEmpty)
         // The focused pane folds by hand: the focus goes to the pane pressed before it.
         panes.collapse(2)
         #expect(panes.collapsed == [2] && panes.folded == [2] && panes.focus == 1)
-        // A row with room for one more open pane still keeps it a strip.
-        panes.room = [2, 3]
+        // A row with room for every pane open still keeps it a strip.
+        panes.measure(2000)
         #expect(panes.folded == [2])
-        // Narrower, the room folds another, never the focus.
-        panes.room = [1, 1]
-        #expect(panes.folded == [0, 2])
+        // Narrower, the pane pressed longer ago goes to the left bundle, never the focus; the one folded by hand
+        // stays a strip in its place.
+        panes.measure(500)
+        #expect(panes.folded == [0, 2] && panes.fold.left == [0] && panes.fold.strips == [2])
         // The last open pane can't fold.
-        panes.room = [2, 3]
+        panes.measure(2000)
         panes.collapse(0)
         #expect(!panes.canCollapse(1))
         // Pressing a strip opens it.
@@ -144,7 +156,7 @@ struct TabPanesTests {
         request.shares = moved.shares
         request.focus = moved.focus
         let back = try JSONDecoder().decode(WindowRequest.self, from: JSONEncoder().encode(request))
-        let window = try #require(TabPanes(histories: back.panes ?? [], shares: back.shares, focus: back.focus ?? 0, limit: 3))
+        let window = try #require(TabPanes(histories: back.panes ?? [], shares: back.shares, focus: back.focus ?? 0))
         #expect(window.navigators.map(\.current) == [people, codes])
         #expect(window.focus == 0 && window.focused.backList == [grades])
         #expect(abs(window.shares[0] - 0.7) < 1e-9)
@@ -169,31 +181,33 @@ struct TabPanesTests {
     }
 
     @Test func aTabJoinsAtTheEdgeItWasDroppedOn() throws {
-        let tabs = WindowTabs(TabPanes(Navigator(grades), limit: 3))
+        let tabs = WindowTabs(TabPanes(Navigator(grades)))
         let target = tabs.selected
-        tabs.open(TabPanes(Navigator(people), limit: 3))
+        tabs.open(TabPanes(Navigator(people)))
         let source = tabs.selected
         tabs.select(target)
         tabs.merge(source, into: target, at: .leading)
         #expect(tabs.front?.navigators.map(\.current) == [people, grades])
     }
 
-    @Test func aTabThatWouldNotFitIsLeftOpen() throws {
-        let tabs = WindowTabs(TabPanes(Navigator(grades), limit: 2))
+    @Test func aTabJoinsHoweverManyPanesEitherHas() throws {
+        let tabs = WindowTabs(TabPanes(Navigator(grades)))
         let target = tabs.selected
         tabs.front?.openBeside(people)
-        tabs.open(TabPanes(Navigator(codes), limit: 2))
+        tabs.front?.openBeside(settings)
+        tabs.open(TabPanes(Navigator(codes)))
         let source = tabs.selected
-        #expect(!tabs.canMerge(source, into: target) && !tabs.canMerge(target, into: target))
+        tabs.panes(source)?.openBeside(Navigator.Entry(link: .place(.today)))
+        #expect(tabs.canMerge(source, into: target) && !tabs.canMerge(target, into: target))
         tabs.merge(source, into: target)
-        #expect(tabs.ids == [target, source] && tabs.panes(target)?.count == 2)
+        #expect(tabs.ids == [target] && tabs.panes(target)?.count == 5)
     }
 
-    /// A drag lets go onto the panes' edge, within reach of it and below their top, for a tab that fits.
+    /// A drag lets go onto the panes' edge, within reach of it and below their top.
     @Test func aDragJoinsOnlyNearThePanesEdge() throws {
-        let tabs = WindowTabs(TabPanes(Navigator(grades), limit: 3))
+        let tabs = WindowTabs(TabPanes(Navigator(grades)))
         let target = tabs.selected
-        tabs.open(TabPanes(Navigator(people), limit: 3))
+        tabs.open(TabPanes(Navigator(people)))
         let source = tabs.selected
         tabs.select(target)
         tabs.contentFrame = CGRect(x: 200, y: 48, width: 1000, height: 700)
@@ -212,9 +226,9 @@ struct TabPanesTests {
 
     @Test func aClassLayoutComesBackAroundTheOnePane() throws {
         let note = Navigator.Entry(link: AppLink(.note, UUID()))
-        let panes = TabPanes(Navigator(), limit: 3)
+        let panes = TabPanes(Navigator())
         let navigator = panes.focused, id = panes.ids[0]
-        var saved = try #require(PaneLayout(links: [grades.link, note.link, people.link], shares: [0.5, 0.3, 0.2], limit: 3))
+        var saved = try #require(PaneLayout(links: [grades.link, note.link, people.link], shares: [0.5, 0.3, 0.2]))
         saved.show(.read, in: 1)
         saved.press(1)
         #expect(panes.restore(saved, entries: [grades, note, people]))
@@ -232,21 +246,21 @@ struct TabPanesTests {
 
     @Test func aPaneWhoseItemIsGoneIsLeftOut() throws {
         let note = Navigator.Entry(link: AppLink(.note, UUID()))
-        var saved = try #require(PaneLayout(links: [grades.link, note.link, people.link], limit: 3))
+        var saved = try #require(PaneLayout(links: [grades.link, note.link, people.link]))
         saved.press(1)
-        let panes = TabPanes(Navigator(), limit: 3)
+        let panes = TabPanes(Navigator())
         #expect(panes.restore(saved, entries: [nil, note, people]))
         #expect(panes.navigators.map(\.current) == [note, people] && panes.focus == 0)
         #expect(abs(panes.shares.reduce(0, +) - 1) < 1e-9)
         // Left with the note alone, the tab stays as it was.
-        let alone = TabPanes(Navigator(), limit: 3)
+        let alone = TabPanes(Navigator())
         #expect(!alone.restore(saved, entries: [nil, note, nil]))
         #expect(alone.count == 1 && alone.focused.current == Navigator.Entry(link: .place(.today)))
     }
 
     @Test func aPaneKeepsHowItShowsItsNote() throws {
         let note = AppLink(.note, UUID()), other = AppLink(.note, UUID())
-        let panes = TabPanes(Navigator(Navigator.Entry(link: note)), limit: 3)
+        let panes = TabPanes(Navigator(Navigator.Entry(link: note)))
         panes.openBeside(grades)
         let id = panes.ids[0]
         let noteID = try #require(note.id), otherID = try #require(other.id)
@@ -264,21 +278,20 @@ struct TabPanesTests {
 
     @Test func aRememberedLayoutOpensWithItsModesAndFolds() throws {
         let note = Navigator.Entry(link: AppLink(.note, UUID()))
-        var layout = try #require(PaneLayout(links: [grades.link, note.link, people.link], limit: 3))
+        var layout = try #require(PaneLayout(links: [grades.link, note.link, people.link]))
         layout.show(.read, in: 1)
         layout.press(1)
         layout.collapse(0)
-        let panes = try #require(TabPanes(layout: layout, entries: [grades, note, people], limit: 3))
+        let panes = try #require(TabPanes(layout: layout, entries: [grades, note, people]))
         #expect(panes.focus == 1 && panes.collapsed == [0] && panes.noteModes == [nil, .read, nil])
         #expect(panes.navigators.map(\.current) == [grades, note, people])
-        #expect(TabPanes(layout: layout, entries: [grades, note], limit: 3) == nil)
-        #expect(TabPanes(layout: layout, entries: [grades, note, people], limit: 2) == nil)
+        #expect(TabPanes(layout: layout, entries: [grades, note]) == nil)
     }
 
     @Test func theDeviceKeepsAClassLayoutAcrossLaunches() throws {
         let defaults = try #require(UserDefaults(suiteName: "folio-tests-\(UUID().uuidString)"))
         let session = UUID()
-        let layout = try #require(PaneLayout(links: [grades.link, AppLink(.note, UUID())], limit: 3))
+        let layout = try #require(PaneLayout(links: [grades.link, AppLink(.note, UUID())]))
         PaneMemoryStore(defaults: defaults).remember(layout, session: session)
         #expect(PaneMemoryStore(defaults: defaults).memory.layout(session: session) == layout)
     }
@@ -287,7 +300,7 @@ struct TabPanesTests {
         let fixture = ["FOLIO_GIST": "/tmp/folio-tests-\(UUID().uuidString)"]
         let other = ["FOLIO_GIST": "/tmp/folio-tests-\(UUID().uuidString)"]
         let session = UUID()
-        let layout = try #require(PaneLayout(links: [grades.link, AppLink(.note, UUID())], limit: 3))
+        let layout = try #require(PaneLayout(links: [grades.link, AppLink(.note, UUID())]))
         let before = UserDefaults.standard.data(forKey: PaneMemoryStore.key)
         PaneMemoryStore.forThisRun(environment: fixture).remember(layout, session: session)
         #expect(PaneMemoryStore.forThisRun(environment: fixture).memory.layout(session: session) == layout)

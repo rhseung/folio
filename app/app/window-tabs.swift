@@ -129,10 +129,9 @@ final class WindowTabs {
         tabs = tabs.filter { $0.key == id }
     }
 
-    /// Whether tab `id`'s panes fit beside `target`'s ("옆 칸으로 합치기").
+    /// Whether tab `id` can join `target` ("옆 칸으로 합치기"): any other tab, however many panes either has.
     func canMerge(_ id: UUID, into target: UUID) -> Bool {
-        guard id != target, let source = tabs[id], let into = tabs[target] else { return false }
-        return into.canMerge(source)
+        id != target && tabs[id] != nil && tabs[target] != nil
     }
 
     /// "옆 칸으로 합치기" (2026-11-09 사용자): tab `id`'s panes join `target`'s, with their histories, at `edge` (nil:
@@ -152,8 +151,7 @@ final class WindowTabs {
     }
 
     /// Where tab `id`, dragged to `point` across the window, would join the tab in front: within `mergeZone` of the
-    /// panes' leading or trailing edge, below their top. Nil for the tab in front itself and for a tab that wouldn't
-    /// fit.
+    /// panes' leading or trailing edge, below their top. Nil for the tab in front itself.
     func drop(for id: UUID, at point: CGPoint) -> MergeDrop? {
         let frame = contentFrame
         guard id != selected, canMerge(id, into: selected), let source = tabs[id], let front = front, frame.width > 0,
@@ -771,18 +769,17 @@ struct TabBar: View {
         }
     }
 
-    /// "옆 칸으로 합치기 ▸": every other tab, whose panes join this one's right of its focused pane; a tab whose panes
-    /// wouldn't fit beside these is off. The menu's way to what dragging a tab onto the panes' edge does.
+    /// "옆 칸으로 합치기 ▸": every other tab, whose panes join this one's right of its focused pane. The menu's way to
+    /// what dragging a tab onto the panes' edge does.
     func mergeMenu(into id: UUID) -> some View {
         let others = tabs.ids.filter { $0 != id }
         return Menu(String(localized: .tabsMerge)) {
             ForEach(others, id: \.self) { other in
                 let item = menuItem(other)
                 Button(item.name, systemImage: item.symbol) { tabs.merge(other, into: id) }
-                    .disabled(!tabs.canMerge(other, into: id))
             }
         }
-        .disabled(!others.contains { tabs.canMerge($0, into: id) })
+        .disabled(others.isEmpty)
     }
 
     /// What every tab would take at each width it can have, drawn once out of sight: a tab drawn as an icon can't tell

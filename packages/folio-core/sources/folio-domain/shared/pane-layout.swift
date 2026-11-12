@@ -6,19 +6,10 @@ public enum NoteViewMode: String, Codable, Sendable, CaseIterable {
 }
 
 /// The panes of one tab, left to right (#62). Each pane draws one address (#43) and takes its share of the width.
-/// A pane never leaves the layout because the window is narrow: `fit` folds it into a strip instead.
+/// There is no cap on how many (2026-11-12 사용자): a pane never leaves the layout, or goes to a tab of its own,
+/// because the window is narrow; `fold` puts it in a bundle at the row's end instead. A tab split by the width would
+/// not join again when the width came back, so resizing a window or turning an iPad would change the layout.
 public struct PaneLayout: Hashable, Sendable {
-    public enum Device: Sendable {
-        case mac, pad
-
-        public var maxPanes: Int {
-            switch self {
-            case .mac: 3
-            case .pad: 2
-            }
-        }
-    }
-
     public struct Pane: Hashable, Sendable {
         public var link: AppLink
         public fileprivate(set) var share: Double
@@ -40,7 +31,7 @@ public struct PaneLayout: Hashable, Sendable {
         }
     }
 
-    /// The smallest share a drag leaves a pane, so a divider can't swallow a pane whole; folding is `fit`'s job.
+    /// The smallest share a drag leaves a pane, so a divider can't swallow a pane whole; folding is `fold`'s job.
     public static let minShare = 0.1
 
     public private(set) var panes: [Pane]
@@ -54,10 +45,9 @@ public struct PaneLayout: Hashable, Sendable {
         clock = 0
     }
 
-    /// The first `limit` links, focused on the first. Shares that don't fit the links (missing, or not all positive)
-    /// fall back to even ones. Nil without a link.
-    public init?(links: [AppLink], shares: [Double]? = nil, limit: Int) {
-        let links = Array(links.prefix(max(1, limit)))
+    /// The links, focused on the first. Shares that don't fit the links (missing, or not all positive) fall back to
+    /// even ones. Nil without a link.
+    public init?(links: [AppLink], shares: [Double]? = nil) {
         guard !links.isEmpty else { return nil }
         var shares = shares.map { Array($0.prefix(links.count)) } ?? []
         if shares.count != links.count || shares.contains(where: { !($0 > 0) || !$0.isFinite }) {
@@ -108,6 +98,15 @@ public struct PaneLayout: Hashable, Sendable {
         let pool = open.isEmpty ? Array(panes.indices) : open
         focus = pool.max { panes[$0].pressed < panes[$1].pressed } ?? 0
         panes[focus].collapsed = false
+        countFocusNewest()
+    }
+
+    // The focus counts as the newest press, as it is after a press: a pane folded by hand may have been pressed
+    // since the one the focus falls back to, and `fold` keeps the run where it is only while the focus is the newest.
+    private mutating func countFocusNewest() {
+        guard panes.indices.contains(where: { $0 != focus && panes[$0].pressed >= panes[focus].pressed }) else { return }
+        clock += 1
+        panes[focus].pressed = clock
     }
 
     /// The focused pane goes to `link`, as a click in it does. A new address keeps no note mode from the old one.
@@ -124,41 +123,26 @@ public struct PaneLayout: Hashable, Sendable {
         if panes.indices.contains(i) { panes[i].noteMode = mode }
     }
 
-    /// "옆 칸에 열기". A pane already showing the target takes it. Below `limit` a new pane opens right of the focused
-    /// one and takes half its width; at `limit` the pane pressed longest ago shows it instead, since the panes in use
-    /// are the ones to keep. Either way the pane showing it is pressed.
-    public mutating func openBeside(_ link: AppLink, limit: Int) {
+    /// "옆 칸에 열기". A pane already showing the target takes it; else a new pane opens right of the focused one and
+    /// takes half its width. Either way the pane showing it is pressed.
+    public mutating func openBeside(_ link: AppLink) {
         if let i = panes.firstIndex(where: { $0.link.withoutAnchor == link.withoutAnchor }) {
             panes[i].link = link
             return press(i)
         }
-        if panes.count < limit {
-            let half = panes[focus].share / 2
-            panes[focus].share = half
-            panes.insert(Pane(link: link, share: half, pressed: clock), at: focus + 1)
-            return press(focus + 1)
-        }
-        guard let oldest = panes.indices.filter({ $0 != focus }).min(by: { panes[$0].pressed < panes[$1].pressed }) else {
-            return open(link)
-        }
-        panes[oldest].link = link
-        panes[oldest].noteMode = nil
-        press(oldest)
+        let half = panes[focus].share / 2
+        panes[focus].share = half
+        panes.insert(Pane(link: link, share: half, pressed: clock), at: focus + 1)
+        press(focus + 1)
     }
-
-    /// Whether another tab's panes fit beside these ("옆 칸으로 합치기"): all of them or none, since a tab's panes
-    /// are one layout and a pane left behind would be closed without being asked.
-    public func canMerge(_ other: PaneLayout, limit: Int) -> Bool { panes.count + other.panes.count <= limit }
 
     /// "옆 칸으로 합치기" (2026-11-09 사용자): another tab's panes join these before pane `index` (0 the leading edge,
     /// `panes.count` the trailing one), keeping their order, note modes and folds. Together they take the share of
     /// the row their count is of all the panes, between themselves as they had it, so a tab of one joining a tab
     /// of one halves the row. The focus goes to the pane that was focused in the other tab, which is what was being
-    /// looked at there; its panes count as pressed after these, in the order they were. False, and nothing joined,
-    /// past `limit`.
-    @discardableResult
-    public mutating func merge(_ other: PaneLayout, at index: Int, limit: Int) -> Bool {
-        guard canMerge(other, limit: limit) else { return false }
+    /// looked at there; its panes count as pressed after these, in the order they were. All of them join, since a
+    /// tab's panes are one layout and a pane left behind would be closed without being asked.
+    public mutating func merge(_ other: PaneLayout, at index: Int) {
         let at = min(max(index, 0), panes.count)
         let joining = Double(other.panes.count) / Double(panes.count + other.panes.count)
         for i in panes.indices { panes[i].share *= 1 - joining }
@@ -170,7 +154,6 @@ public struct PaneLayout: Hashable, Sendable {
         clock += added.count
         panes.insert(contentsOf: added, at: at)
         press(at + other.focus)
-        return true
     }
 
     /// False, and nothing closed, for the last pane. The width goes to the pane on the left (on the right for the
@@ -207,14 +190,6 @@ public struct PaneLayout: Hashable, Sendable {
         for i in panes.indices { panes[i].share = 1 / Double(panes.count) }
     }
 
-    /// What a layout from another device, or from before the limit changed, keeps here: the panes pressed most
-    /// recently, in their order, their shares made whole again.
-    public func limited(to limit: Int) -> PaneLayout {
-        guard panes.count > max(1, limit) else { return self }
-        let kept = Set(panes.indices.sorted { panes[$0].pressed > panes[$1].pressed }.prefix(max(1, limit)))
-        return keeping(kept.contains) ?? self
-    }
-
     /// Only the panes `keep` takes, in their order, their shares made whole again: a remembered layout without the
     /// panes whose item is gone. The focus stays where it was if that pane is kept, else goes to the pane pressed
     /// most recently. Nil when none is kept.
@@ -243,46 +218,109 @@ public struct PaneLayout: Hashable, Sendable {
 
     // MARK: Fit
 
-    /// Which panes fold to strips and how wide each is drawn.
+    /// How the row draws the panes in a width (2026-11-12 사용자): a run of them in place, the focus among them, each
+    /// open or, folded by hand, a strip; and the rest folded into a bundle at either end, every pane left of the run in
+    /// the left one and every pane right of it in the right. A bundle is one strip however many it holds, so any number
+    /// of panes fits one open pane and two strips, and the panes keep their order on the row.
+    public struct Fold: Hashable, Sendable {
+        public enum Look: Hashable, Sendable {
+            case open
+            /// Folded by hand, in its place in the run.
+            case strip
+            /// The strip of a bundle, holding these panes in order: drawn in the place of the one nearest the run, so a
+            /// bundle of one is that pane's own strip, and a pane leaving the run steps into it.
+            case bundle([Int])
+            /// In a bundle, drawn by its strip.
+            case hidden
+        }
+
+        public let count: Int
+        public let run: ClosedRange<Int>
+        /// The run's panes folded by hand.
+        public let strips: Set<Int>
+
+        /// Every pane in place, as a row not yet measured is drawn.
+        init(_ layout: PaneLayout) {
+            self.init(count: layout.panes.count, run: 0...(layout.panes.count - 1), collapsed: layout.collapsed)
+        }
+
+        init(count: Int, run: ClosedRange<Int>, collapsed: Set<Int>) {
+            self.count = count
+            self.run = run
+            strips = collapsed.filter { run.contains($0) }
+        }
+
+        public var left: [Int] { Array(0..<run.lowerBound) }
+        public var right: [Int] { Array((run.upperBound + 1)..<count) }
+        public var open: [Int] { run.filter { !strips.contains($0) } }
+        /// Every pane not drawn open.
+        public var folded: Set<Int> { Set(0..<count).subtracting(open) }
+
+        public func look(_ i: Int) -> Look {
+            if run.contains(i) { return strips.contains(i) ? .strip : .open }
+            if i == run.lowerBound - 1 { return .bundle(left) }
+            if i == run.upperBound + 1 { return .bundle(right) }
+            return .hidden
+        }
+
+        /// The gap after each pane but the last: `gap` between two drawn side by side, none beside a pane in a bundle.
+        public func gaps(_ gap: Double) -> [Double] {
+            let first = max(run.lowerBound - 1, 0), last = min(run.upperBound + 1, count - 1)
+            return (0..<max(count - 1, 0)).map { $0 >= first && $0 < last ? gap : 0 }
+        }
+    }
+
+    /// Which panes fold, with each pane's width and the gaps after them.
     public struct Fit: Equatable, Sendable {
-        public var folded: Set<Int>
+        public var fold: Fold
         public var widths: [Double]
+        public var gaps: [Double]
+        public var folded: Set<Int> { fold.folded }
     }
 
-    /// Keeps open as many panes as fit at `minWidth` beside the others' strips and folds the rest, the panes pressed
-    /// longest ago first and never the focused one. Pressing a strip (`press`) unfolds it and folds another in its
-    /// place. Open panes split what the strips and gaps leave by their shares, none below `minWidth`; a lone open
-    /// pane takes what there is, even less.
     public func fit(room: Double, minWidth: Double, strip: Double, gap: Double) -> Fit {
-        let folded = folded(open: Self.openCount(panes.count, room: room, minWidth: minWidth, strip: strip, gap: gap))
-        return Fit(folded: folded, widths: widths(room: room, folded: folded, minWidth: minWidth, strip: strip, gap: gap))
+        let folding = self.fold(room: room, minWidth: minWidth, strip: strip, gap: gap)
+        return Fit(fold: folding, widths: widths(room: room, fold: folding, minWidth: minWidth, strip: strip, gap: gap), gaps: folding.gaps(gap))
     }
 
-    /// How many of `count` panes stay open in `room`: as many as fit at `minWidth` beside the others' strips, and
-    /// always one. It hangs on the width and the count alone, so a window resized between two counts asks for nothing
-    /// else.
-    public static func openCount(_ count: Int, room: Double, minWidth: Double, strip: Double, gap: Double) -> Int {
-        var open = count
-        while open > 1, Double(open) * minWidth + Double(count - open) * strip + Double(count - 1) * gap > room { open -= 1 }
-        return open
-    }
-
-    /// The panes folded when `open` of them could stay open: the ones folded by hand, then as many more as the room
-    /// asks, pressed longest ago first, never the focused one. A pane folded by hand stays folded in any room.
-    public func folded(open: Int) -> Set<Int> {
-        let collapsed = collapsed
-        let byAge = panes.indices.filter { $0 != focus && !collapsed.contains($0) }.sorted { panes[$0].pressed < panes[$1].pressed }
-        return collapsed.union(byAge.prefix(max(0, panes.count - collapsed.count - max(1, open))))
-    }
-
-    /// Each pane's width in `room`, the gaps between them taken out: `strip` for the folded ones, and the rest by
-    /// their shares, none below `minWidth`; a lone open pane takes what there is, even less.
-    public func widths(room: Double, folded: Set<Int>, minWidth: Double, strip: Double, gap: Double = 0) -> [Double] {
+    /// Every pane stays in place while they fit, open ones at `minWidth` and the rest at `strip`, with `gap` between.
+    /// Else the run, from the whole row, gives up whichever of its end panes was pressed longer ago, never the focus,
+    /// to the bundle on that side, until it fits or the focus is left alone (2026-11-12 사용자). A pane folded by hand
+    /// at an end beside a bundle goes in with it: in place it costs a strip the bundle saves.
+    ///
+    /// The run hangs on the width and the presses alone, not on what was drawn before, so a window narrowed and widened
+    /// again is laid out as it was. Pressing a pane in a bundle still moves the run no further than it must: the press
+    /// makes it the newest, so the peeling that left it out now stops with it at the run's end.
+    public func fold(room: Double, minWidth: Double, strip: Double, gap: Double) -> Fold {
         let n = panes.count
-        var widths = panes.indices.map { folded.contains($0) ? strip : 0 }
-        var left = max(0, room - Double(folded.count) * strip - Double(n - 1) * gap)
+        var lo = 0, hi = n - 1
+        func cost() -> Double {
+            let drawn = hi - lo + 1 + (lo > 0 ? 1 : 0) + (hi < n - 1 ? 1 : 0)
+            let open = (lo...hi).filter { !panes[$0].collapsed }.count
+            return Double(open) * minWidth + Double(drawn - open) * strip + Double(drawn - 1) * gap
+        }
+        while lo < hi, cost() > room {
+            if hi == focus || (lo != focus && panes[lo].pressed < panes[hi].pressed) { lo += 1 } else { hi -= 1 }
+            while lo > 0, lo < focus, panes[lo].collapsed { lo += 1 }
+            while hi < n - 1, hi > focus, panes[hi].collapsed { hi -= 1 }
+        }
+        return Fold(count: n, run: lo...hi, collapsed: collapsed)
+    }
+
+    /// Each pane's width in `room` as `fold` draws them, the gaps taken out: a strip and a bundle `strip`, a pane in a
+    /// bundle nothing, and the open panes what is left by their shares, none below `minWidth`; a lone open pane takes
+    /// what there is, even less. A fold made for another count of panes is read as every pane in place.
+    public func widths(room: Double, fold: Fold, minWidth: Double, strip: Double, gap: Double = 0) -> [Double] {
+        let drawn = fold.count == panes.count ? fold : Fold(self)
+        var widths = panes.indices.map { i -> Double in
+            switch drawn.look(i) {
+            case .strip, .bundle: strip
+            case .open, .hidden: 0
+            }
+        }
+        var left = max(0, room - widths.reduce(0, +) - drawn.gaps(gap).reduce(0, +))
         // Shares first; a pane they'd leave under `minWidth` is held there and the rest share again.
-        var sharing = panes.indices.filter { !folded.contains($0) }
+        var sharing = drawn.open
         while !sharing.isEmpty {
             let total = sharing.map { panes[$0].share }.reduce(0, +)
             let under = sharing.filter { left * panes[$0].share / total < minWidth }
@@ -298,6 +336,9 @@ public struct PaneLayout: Hashable, Sendable {
         }
         return widths
     }
+
+    /// Every pane in place.
+    public var unfolded: Fold { Fold(self) }
 }
 
 extension PaneLayout: Codable {
@@ -328,7 +369,7 @@ extension PaneLayout: Codable {
         self.panes = panes
         focus = min(max(try c.decode(Int.self, forKey: .focus), 0), panes.count - 1)
         clock = panes.map(\.pressed).max() ?? 0
-        if self.panes[focus].collapsed { refocus() }
+        if self.panes[focus].collapsed { refocus() } else { countFocusNewest() }
     }
 
     public func encode(to encoder: Encoder) throws {
@@ -366,8 +407,8 @@ extension CourseFile {
 }
 
 /// What one device remembers of how things were last shown: each session's layout and each note's view mode. Kept
-/// on the device, not in the GIST folder: it fits the device's screen (a Mac holds three panes, an iPad two), changes
-/// with every drag and click, and losing it costs only the default layout.
+/// on the device, not in the GIST folder: its widths fit the device's screen, it changes with every drag and click,
+/// and losing it costs only the default layout.
 public struct PaneMemory: Codable, Hashable, Sendable {
     /// Per kind. The ones used longest ago go first, so the memory doesn't grow with every note ever opened.
     public static let capacity = 300
@@ -392,20 +433,20 @@ public struct PaneMemory: Codable, Hashable, Sendable {
 
     /// What opening `link` turns a tab of one pane into: the session's layout as it was last left, with `link` in its
     /// pane and that pane focused (2026-11-11). Only a layout that has `link` in it, since one without it is not the
-    /// one being opened, and of more than one pane, which is what the tab is already. Past `limit` (a Mac's layout on
-    /// an iPad) the panes pressed longest ago are left out, never the note's.
-    public func restoring(_ link: AppLink, session: UUID, limit: Int) -> PaneLayout? {
+    /// one being opened, and of more than one pane, which is what the tab is already. Every pane comes back, a layout
+    /// left on a wider screen too: the row folds what it has no room for.
+    public func restoring(_ link: AppLink, session: UUID) -> PaneLayout? {
         guard var saved = layout(session: session),
               let i = saved.panes.firstIndex(where: { $0.link.withoutAnchor == link.withoutAnchor }) else { return nil }
         saved.open(link, in: i)
         saved.press(i)
-        return saved.limited(to: limit).nilIfAlone
+        return saved.nilIfAlone
     }
 
     /// The session's layout for a class that starts again (its pages opened side by side, #391), in place of the
     /// preset; nil without one of more than one pane.
-    public func layout(session: UUID, limit: Int) -> PaneLayout? {
-        layout(session: session)?.limited(to: limit).nilIfAlone
+    public func starting(session: UUID) -> PaneLayout? {
+        layout(session: session)?.nilIfAlone
     }
 
     /// The mode a note (or a text file) was last left in: in the session's layout when opened there, else wherever it
