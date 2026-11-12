@@ -9,11 +9,14 @@ public struct LectureSectionDrafts: StructuredResult, Equatable {
         public var firstPage: Int
         /// A unit of the course, by its exact title; nil for a section that is a unit of its own.
         public var unit: String?
+        /// Pages no unit takes: a title page, an appendix, extra slides. Optional so an answer without it still reads.
+        public var skip: Bool?
 
-        public init(title: String, firstPage: Int, unit: String? = nil) {
+        public init(title: String, firstPage: Int, unit: String? = nil, skip: Bool? = nil) {
             self.title = title
             self.firstPage = firstPage
             self.unit = unit
+            self.skip = skip
         }
     }
 
@@ -23,11 +26,13 @@ public struct LectureSectionDrafts: StructuredResult, Equatable {
         "title": Schema.string,
         "firstPage": Schema.integer,
         "unit": Schema.nullable(Schema.string),
+        "skip": Schema.boolean,
     ]))])
 }
 
 /// One page as Claude reads it to split a lecture (#450): its title, the start of the rest of its text, and a small
-/// picture when the page has almost no text (a figure, a formula, a scanned slide) so it isn't read as blank.
+/// picture when its text doesn't say what it shows: almost no words (a figure, a formula, a scanned slide), mostly
+/// figures, or the same words as an earlier page (a roadmap shown again with the next part highlighted).
 public struct LecturePage: Sendable, Equatable {
     public var title: String?
     public var body: String
@@ -47,6 +52,11 @@ public struct LecturePage: Sendable, Equatable {
     public static let budget = 36_000
     /// Under this, a page's own words don't say what it shows.
     public static let fewWords = 12
+    /// Under this, a page that repeats an earlier one's words is too short to tell apart from a chance match.
+    static let repeatWords = 8
+    /// PDFKit's stand-in for an image or a drawing in a page's text. Counted as a word it made a diagram of labels
+    /// read as two hundred words of text, and it filled the excerpt in place of the words.
+    static let figure: Character = "\u{FFFC}"
     /// Pictures per question, at about 250 tokens each at `thumbnail`.
     public static let maxImages = 24
     /// The long side of a page's picture, in pixels: enough to read a slide's heading and see what its figure is.
@@ -58,11 +68,20 @@ public struct LecturePage: Sendable, Equatable {
         return max(min(excerpt, budget / pages), 60)
     }
 
-    /// The start of a page's text with its title taken out and its whitespace run together, cut at a word.
+    /// The words of a page's text, its figures left out.
+    public static func words(_ text: String) -> Int {
+        text.split(whereSeparator: { $0.isWhitespace || $0 == figure }).count
+    }
+
+    public static func figures(_ text: String) -> Int {
+        text.reduce(0) { $1 == figure ? $0 + 1 : $0 }
+    }
+
+    /// The start of a page's text with its title and figures taken out and its whitespace run together, cut at a word.
     public static func excerpt(_ text: String, title: String?, limit: Int) -> String {
         var rest = text
         if let title, let range = rest.range(of: title) { rest.removeSubrange(range) }
-        let words = rest.split(whereSeparator: \.isWhitespace)
+        let words = rest.split(whereSeparator: { $0.isWhitespace || $0 == figure })
         var out = ""
         for word in words {
             if out.count + word.count + 1 > limit {
@@ -74,12 +93,35 @@ public struct LecturePage: Sendable, Equatable {
         return out
     }
 
-    /// Which pages (0-based) get a picture: those whose words are fewer than `fewWords`, spread evenly over the deck
-    /// when there are more than `maxImages`, so a long run of figures at the end doesn't take them all.
-    public static func pictured(words: [Int]) -> [Int] {
-        let few = words.indices.filter { words[$0] < fewWords }
-        guard few.count > maxImages else { return few }
-        return (0..<maxImages).map { few[$0 * few.count / maxImages] }
+    /// Which pages (0-based) of these texts get a picture, at most `maxImages`. Pages with few words and repeated
+    /// pages come first: there the text says least, and a repeated roadmap's highlight is what marks a boundary. Pages
+    /// that are mostly figures fill what is left. Each kind is spread over the deck when there are too many, so a
+    /// long run of figures at the end doesn't take them all.
+    public static func pictured(texts: [String], titles: [String?]) -> [Int] {
+        var seen: Set<String> = [], first: [Int] = [], then: [Int] = []
+        for (i, text) in texts.enumerated() {
+            let title = titles.indices.contains(i) ? titles[i] : nil
+            let words = max(Self.words(text) - (title.map(Self.words) ?? 0), 0)
+            let repeated = Self.words(text) >= repeatWords && !seen.insert(shape(text)).inserted
+            if words < fewWords || repeated {
+                first.append(i)
+            } else if figures(text) >= words {
+                then.append(i)
+            }
+        }
+        let firstKept = spread(first, maxImages)
+        return (firstKept + spread(then, maxImages - firstKept.count)).sorted()
+    }
+
+    /// A page's words without its numbers, which differ in a repeated slide's footer ("4-3", "4-67").
+    static func shape(_ text: String) -> String {
+        text.lowercased().split(whereSeparator: { $0.isWhitespace || $0 == figure || $0.isNumber }).joined(separator: " ")
+    }
+
+    static func spread(_ pages: [Int], _ count: Int) -> [Int] {
+        guard count > 0 else { return [] }
+        guard pages.count > count else { return pages }
+        return (0..<count).map { pages[$0 * pages.count / count] }
     }
 }
 
@@ -91,13 +133,18 @@ extension ClaudeClient {
     public func lectureSections(file: String, pages: [LecturePage], units: [FolioDomain.Unit]) async throws -> LectureSplit? {
         let system: [ContentBlock] = [.text("""
         You split a university lecture's slides into the course's units. For each page you get its title (empty when \
-        it has none) and the start of the rest of its text; a page with little text also comes as a small picture after \
-        the text, labelled with its page number. You also get the course's unit outline. Read what the pages are about, \
-        not just their titles: a section starts where the lecture moves on to another topic of the size of a unit or \
-        a chapter's section, often at a divider or outline slide, not at every slide. A lecture usually has two to \
-        eight. Give the sections in page order, each with the page it starts on and a short title in the slides' own \
-        words. Set "unit" to the exact title of the course unit the section belongs to, or null when no unit fits. \
-        Never invent a unit title.
+        it has none) and the start of the rest of its text. Some pages also come as a small picture after the text, \
+        labelled with its page number: pages with little text, pages that are mostly figures, and pages whose text \
+        repeats an earlier page's. You also get the course's unit outline. Read what the pages are about, not just \
+        their titles: a section starts where the lecture moves on to another topic of the size of a unit or a \
+        chapter's section, often at a divider or outline slide, not at every slide. A lecture usually has two to \
+        eight. A deck often shows its roadmap again before each part with that part highlighted; look at the picture \
+        to see which item is highlighted, and start a section there only when the highlight moves to another \
+        top-level item, not to a sub-item of the part already under way. When the course has units, split at the \
+        level of its most specific units. Give the sections in page order, each with the page it starts on and a \
+        short title in the slides' own words. Set "unit" to the exact title of the most specific course unit the \
+        section belongs to, or null when no unit fits. Never invent a unit title. Set "skip" to true for pages that \
+        belong to no unit, such as a title page, an appendix or extra slides at the end, and false otherwise.
         """)]
         let messages = [Message(role: .user, content: Self.lectureQuestion(file: file, pages: pages, units: units))]
         let drafts = try await run(.lectureSections, LectureSectionDrafts.self, system: system, messages: messages)
@@ -131,19 +178,27 @@ extension ClaudeClient {
         return blocks
     }
 
-    /// Drafts as a split: a unit Claude named is taken only when it is one of the course's (by exact title), and every
-    /// other section becomes a new unit of its title.
+    /// Drafts as a split: a unit Claude named is taken only when it is one of the course's (by exact title), a section
+    /// Claude skips goes to no unit, and every other section becomes a new unit of its title. Neighbors under the same
+    /// unit, or both under none, are one section: a cut between them would only be a second range of the same unit.
     static func split(_ drafts: LectureSectionDrafts, pageCount: Int, units: [FolioDomain.Unit]) -> LectureSplit? {
-        let found = drafts.sections.map { (section: LectureSplit.Section(title: LectureReading.clean($0.title), firstPage: $0.firstPage, lastPage: $0.firstPage), unit: $0.unit) }
+        let found = drafts.sections.map { (section: LectureSplit.Section(title: LectureReading.clean($0.title), firstPage: $0.firstPage, lastPage: $0.firstPage), draft: $0) }
         guard var split = LectureSplit(found.map(\.section), pageCount: pageCount) else { return nil }
         // By id: tidying moves first pages and drops sections past the file.
-        let named = Dictionary(keepingFirst: found.map { ($0.section.id, $0.unit) })
+        let drafted = Dictionary(keepingFirst: found.map { ($0.section.id, $0.draft) })
         for (i, section) in split.sections.enumerated() {
-            if let title = named[section.id] ?? nil, let unit = units.first(where: { $0.title == title }) {
+            let draft = drafted[section.id]
+            if let title = draft?.unit, let unit = units.first(where: { $0.title == title }) {
                 split.setUnit(unit.id, of: i, match: .claude)
+            } else if draft?.skip == true {
+                split.setUnit(nil, of: i)
             } else {
                 split.makeNew(i)
             }
+        }
+        for i in split.sections.indices.dropFirst().reversed() {
+            let (a, b) = (split.sections[i - 1], split.sections[i])
+            if a.unit == b.unit, !a.isNew, !b.isNew { split.merge(after: i - 1) }
         }
         return split
     }

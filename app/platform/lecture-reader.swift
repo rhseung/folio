@@ -94,7 +94,7 @@ enum LectureReader {
     }
 
     private static func ask(_ claude: ClaudeClient, read: Read, url: URL, units: [FolioDomain.Unit]) async -> ClaudeFinding {
-        let pictured = LecturePage.pictured(words: read.pages.map(\.words))
+        let pictured = LecturePage.pictured(texts: read.texts, titles: read.pages.map(\.title))
         // A deck with no titles and nothing to picture gives Claude nothing to read.
         guard read.pages.contains(where: { $0.title != nil }) || !pictured.isEmpty else { return .nothing }
         let pictures = await Task.detached(operation: { Self.pictures(url, pages: pictured) }).value
@@ -170,14 +170,19 @@ enum LectureReader {
     /// whole page would take a big formula or a diagram's label instead.
     nonisolated static func page(_ page: PDFPage) -> LectureReading.Page { read(page).page }
 
+    private nonisolated static let blank = CharacterSet.whitespaces.union(CharacterSet(charactersIn: "\u{FFFC}"))
+
     private nonisolated static func read(_ page: PDFPage) -> (page: LectureReading.Page, text: String) {
         let text = page.attributedString ?? NSAttributedString()
         let string = text.string as NSString
-        let words = text.string.split(whereSeparator: \.isWhitespace).count
+        // Figures left out: a diagram's labels came with one stand-in character per drawing, each counted a word.
+        let words = LecturePage.words(text.string)
         var best: (size: CGFloat, title: String)?
         var lines = 0
         string.enumerateSubstrings(in: NSRange(location: 0, length: string.length), options: .byLines) { line, range, _, stop in
-            guard let line = line?.trimmingCharacters(in: .whitespaces), !line.isEmpty else { return }
+            // A line of figures only isn't a line of the slide: a diagram's stand-ins came first on a page and used
+            // up the four lines before its title.
+            guard let line = line?.trimmingCharacters(in: Self.blank), !line.isEmpty else { return }
             var size: CGFloat = 0
             text.enumerateAttribute(.font, in: range) { font, _, _ in
                 if let font = font as? PlatformFont { size = max(size, font.pointSize) }
@@ -187,7 +192,7 @@ enum LectureReader {
             if lines >= 4 { stop.pointee = true }
         }
         // `Page.words` counts what the slide has besides its title: a long title on a divider is still a divider.
-        let titleWords = best?.title.split(whereSeparator: \.isWhitespace).count ?? 0
+        let titleWords = best.map { LecturePage.words($0.title) } ?? 0
         return (LectureReading.Page(title: best.map(\.title), words: max(words - titleWords, 0)), text.string)
     }
 }

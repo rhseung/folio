@@ -52,9 +52,52 @@ struct LectureSectionTests {
         #expect(cut == "one two…")
         #expect(LecturePage.excerpt(String(repeating: "x", count: 50), title: nil, limit: 10) == String(repeating: "x", count: 10) + "…")
 
-        #expect(LecturePage.pictured(words: [0, 40, 3, 50]) == [0, 2])
-        let bare = LecturePage.pictured(words: Array(repeating: 0, count: 100))
+        let long = String(repeating: "word ", count: 40)
+        #expect(LecturePage.pictured(texts: ["", long, "three short words", long + "more"], titles: [nil, nil, nil, nil]) == [0, 2])
+        let bare = LecturePage.pictured(texts: Array(repeating: "", count: 100), titles: Array(repeating: nil, count: 100))
         #expect(bare.count == LecturePage.maxImages && bare.first == 0 && bare.last! > 90)
         #expect(Set(bare).count == bare.count)
+    }
+
+    /// PDFKit puts U+FFFC where a page has an image or a drawing. Counted as words, a diagram with a few labels read as
+    /// a page full of text (Chapter 4's slide 84: 210 "words"), and it filled the excerpt.
+    @Test func figuresAreNotWordsAndAPageOfThemIsPictured() {
+        let figures = String(repeating: "\u{FFFC}\n", count: 60)
+        let diagram = figures + "1\n2\n0111\nvalues in arriving packet header\nGeneralized forwarding: match plus action\nReview: each router contains a forwarding table\n" + figures
+        #expect(LecturePage.words(diagram) == 20 && LecturePage.figures(diagram) == 120)
+        #expect(LecturePage.excerpt(diagram, title: "Generalized forwarding: match plus action", limit: 40) == "1 2 0111 values in arriving packet…")
+        let prose = String(repeating: "word ", count: 40)
+        #expect(LecturePage.pictured(texts: [prose, diagram], titles: [nil, "Generalized forwarding: match plus action"]) == [1])
+    }
+
+    /// A deck shows its roadmap again before each part, the same words with the part highlighted: only the picture
+    /// tells the parts apart, so a page that repeats an earlier one goes as a picture.
+    @Test func aRepeatedRoadmapIsPictured() {
+        let roadmap = "Network layer: data plane roadmap\nNetwork layer: overview\nWhat's inside a router\nIP: the Internet Protocol\nnetwork address translation\nIPv6\nMiddleboxes\nNetwork Layer: 4-"
+        // Each slide its own topic: slides that differ only in their numbers would count as repeats too.
+        let prose = ["forwarding", "prefixes", "switching", "buffers", "scheduling", "neutrality", "datagrams", "addressing", "subnets",
+                     "dhcp", "translation", "tunneling"].map { "This slide explains \($0) with an example and a short exercise for the class" }
+        let texts = [roadmap + "3"] + prose[0..<6] + [roadmap + "41"] + prose[6...] + [roadmap + "67"]
+        let titles = texts.map { _ in String?.none }
+        #expect(LecturePage.pictured(texts: texts, titles: titles) == [7, 14])
+    }
+
+    /// Neighbors under one unit are one section; a section Claude skips goes to no unit.
+    @Test func sectionsUnderOneUnitJoinAndSkippedOnesTakeNone() async throws {
+        let device = UUID(), now = Date()
+        let layer = FolioDomain.Unit(device: device, at: now, title: "Network Layer", order: 1)
+        let ip = FolioDomain.Unit(device: device, at: now, title: "IP", order: 1, parentId: layer.id)
+        let router = FolioDomain.Unit(device: device, at: now, title: "Router", order: 2, parentId: layer.id)
+        let reply = #"{"sections":[{"title":"Router","firstPage":13,"unit":"Router","skip":false},{"title":"IP","firstPage":41,"unit":"IP","skip":false},{"title":"NAT","firstPage":67,"unit":"IP","skip":false},{"title":"Overview","firstPage":1,"unit":null,"skip":false},{"title":"Additional slides","firstPage":105,"unit":null,"skip":true}]}"#
+        let fake = FakeProvider(responses: [FakeProvider.reply(reply)])
+        let pages = (1...107).map { LecturePage(title: "p\($0)") }
+        let split = try #require(try await ClaudeClient(provider: fake).lectureSections(file: "Chapter_4.pdf", pages: pages, units: [layer, ip, router]))
+        #expect(split.sections.map(\.pages) == [1...12, 13...40, 41...104, 105...107])
+        #expect(split.sections[0].isNew && split.sections[1].unit == router.id && split.sections[2].unit == ip.id)
+        #expect(split.sections[3].unit == nil && !split.sections[3].isNew)
+
+        let request = try #require(await fake.requests.first)
+        guard case .text(let text, _)? = request.messages.first?.content.first else { Issue.record("text"); return }
+        #expect(text.contains("- Network Layer\n  - IP\n  - Router"))
     }
 }
