@@ -333,7 +333,7 @@ Me/GIST/
 ## UI
 
 - 화면을 만들거나 고치기 전에 `docs/DESIGN.md`를 읽는다. 원칙, 토큰과 구성 요소를 언제 쓰는지, 패턴, 새 토큰을 만드는 규칙이 있다.
-- 디자인은 시안 C(밝은 종이 질감, 사이드바·과목 열·본문의 3단)에 리퀴드 글라스를 더한 방향이다. Mac 창은 시안 D처럼 반투명 창 재질 위에 사이드바와 툴바가 평평하게 놓이고 본문이 둥근 패널로 들어간다. 시안 캔버스: https://claude.ai/artifact/Rk6BXvbGaSAbtjbVJA8JYK
+- 디자인은 시안 C(밝은 종이 질감, 사이드바·과목 열·본문의 3단)에 리퀴드 글라스를 더한 방향이다. Mac 창은 시안 D처럼 반투명 창 재질 위에 사이드바와 툴바가 평평하게 놓이고 본문이 둥근 패널로 들어간다. 디자인 시스템: https://claude.ai/artifact/NQsFWSkuyHUDETivg5K5bA. 시안 캔버스 "Folio 시안": https://claude.ai/artifact/FT5gk3v1afr7pEsBFd6MLy. 새 시안은 이 캔버스의 영역 페이지에 디자인 시스템으로 그리고, 따로 Artifact를 만들지 않는다.
 - 색, 간격, 모서리, 글꼴은 `app/design/theme.swift`에서만 정의하고 모든 화면이 그 토큰만 쓴다. 라이트와 다크 값을 함께 둔다. 공용 구성 요소는 `app/design/`에 역할별 파일(`Layout`, `Containers`, `Indicators`, `Inputs`, `Interaction`)로 있다. `mise run check-design`이 화면 코드의 글꼴 크기, 색, 모서리 숫자를 잡는다.
 - 리퀴드 글라스는 창 틀(사이드바, 툴바)과 떠 있는 요소(빠른 추가, 팝오버, Claude 패널)에만 쓴다. 본문은 종이 색으로 둔다. 창 구조와 유리 위 구성 요소의 규칙은 `docs/DESIGN.md`의 "창 구조" 절에 있다.
 - 과목 강조색은 `course.json`의 `color`(프리셋 이름)를 `CourseAccent`로 읽고, 비어 있으면 학기 안 순서로 프리셋을 고른다(무채색 `graphite`는 고르지 않는다). 예전에 고른 `#RRGGBB`는 파일을 바꾸지 않고 가장 가까운 프리셋으로 읽는다. 색은 프리셋 견본에서만 고른다. 과목 화면은 `\.accent` 환경값으로 색을 주입받는다. 프리셋 이름과 고르는 순서는 `FolioDomain`의 `CourseColor`가 정하고 앱과 CLI가 함께 쓴다. 색 값은 `theme.swift`에 둔다.
