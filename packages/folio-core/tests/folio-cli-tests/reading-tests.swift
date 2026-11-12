@@ -177,14 +177,16 @@ struct ReadingTests {
     func content(_ server: MCPServer, _ gist: URL, _ name: String, _ arguments: JSONValue) throws -> (isError: Bool, blocks: [JSONValue]) {
         let line = MCPServer.string(["jsonrpc": "2.0", "id": .number(1), "method": "tools/call", "params": ["name": .string(name), "arguments": arguments]])
         let reply = CLI.$overrides.withValue(Overrides(gist: gist, device: h.device, now: h.now, gradesUnlocked: true)) { server.handle(line) }
-        let result = try #require(try json(String(decoding: try #require(reply), as: UTF8.self))["result"])
+        let text = try #require(reply)
+        let result = try #require(try json(String(decoding: text, as: UTF8.self))["result"])
         return (result["isError"] == .bool(true), array(result["content"]))
     }
 
     func images(_ blocks: [JSONValue]) throws -> [Data] {
         try blocks.filter { $0["type"] == .string("image") }.map { b in
             #expect(b["mimeType"] == .string("image/jpeg"))
-            return try #require(Data(base64Encoded: try #require(string(b["data"]))))
+            let data = try #require(string(b["data"]))
+            return try #require(Data(base64Encoded: data))
         }
     }
 

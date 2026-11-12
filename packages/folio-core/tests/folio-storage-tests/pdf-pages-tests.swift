@@ -29,7 +29,8 @@ struct PDFPagesTests {
 
     @Test func aPagePictureIsAJPEGAtTheReadingEdge() throws {
         let pdf = try #require(PDFPages.open(try deck()))
-        let jpeg = try #require(PDFPages.jpeg(try #require(pdf.page(at: 3))))
+        let page = try #require(pdf.page(at: 3))
+        let jpeg = try #require(PDFPages.jpeg(page))
         let source = try #require(CGImageSourceCreateWithData(jpeg as CFData, nil))
         let props = try #require(CGImageSourceCopyPropertiesAtIndex(source, 0, nil) as? [CFString: Any])
         #expect(CGImageSourceGetType(source) as String? == UTType.jpeg.identifier)
