@@ -11,6 +11,8 @@ struct LectureSplitPane: View {
     @Binding var split: LectureSplit
     let units: [FolioDomain.Unit]
     let note: String?
+    /// "Claude로 다시 나누기" (#450), only once Claude has given no split.
+    var claude: ClaudeSplitButton?
     let save: () -> Void
     let cancel: () -> Void
     @State private var strip = SplitStrip()
@@ -56,6 +58,7 @@ struct LectureSplitPane: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Space.m) {
                     SectionEditor(split: $split, units: units, page: controller.page + 1, selected: selected) { controller.go(to: $0 - 1) }
+                    if let claude { claude }
                     if let note {
                         Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).fixedSize(horizontal: false, vertical: true)
                     }
@@ -217,5 +220,30 @@ private struct Gap: View {
         .onTapGesture(perform: action)
         .pointingHand()
         .help(Text(boundary ? .fileViewSplitJoinHelp : .fileViewSplitCutHelp))
+    }
+}
+
+/// "Claude로 다시 나누기" on the split screen and in the add sheet (#450), shown only after Claude gave no split: past
+/// that the user adjusts the split by hand, and asking Claude the same question again would only repeat its answer.
+/// Its split replaces what is shown, still unsaved. While it reads, a spinner takes the sparkle's place.
+struct ClaudeSplitButton: View {
+    let asking: Bool
+    let retry: () -> Void
+    @Environment(\.accent) private var accent
+
+    var body: some View {
+        Button(action: retry) {
+            HStack(spacing: Theme.Space.tight) {
+                if asking {
+                    ProgressView().controlSize(.mini)
+                } else {
+                    Image(systemName: "sparkle").foregroundStyle(accent.color)
+                }
+                Text(.lectureClaudeRetry)
+            }
+        }
+        .buttonStyle(.ghost)
+        .disabled(asking)
+        .help(Text(.lectureClaudeHelp))
     }
 }

@@ -17,7 +17,10 @@ public struct TaskConfig: Codable, Sendable, Equatable {
 
     public static func defaults(for task: ClaudeTask) -> TaskConfig {
         switch task {
-        case .classifyFile, .extractAssignment, .lectureSections: TaskConfig(model: small, effort: .low, maxTokens: 4_000)
+        case .classifyFile, .extractAssignment: TaskConfig(model: small, effort: .low, maxTokens: 4_000)
+        // Reads every page's text (#450), about 20k tokens for a 107-page deck. On low the small model put a few
+        // boundaries a slide off; on medium it drew the same ones as the large model at a thirtieth of the cost.
+        case .lectureSections: TaskConfig(model: small, effort: .medium, maxTokens: 8_000)
         case .grading: TaskConfig(model: large, effort: .high, maxTokens: 16_000)
         case .chat, .reviewNoteDraft, .examSummaryDraft, .quizCards, .extractGradingPolicy, .examPlan, .widget:
             TaskConfig(model: large, effort: .medium, maxTokens: 16_000)

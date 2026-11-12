@@ -492,7 +492,7 @@ final class ClaudeModel {
         markdown.split(separator: "\n").first { $0.hasPrefix("# ") }.map { $0.dropFirst(2).trimmingCharacters(in: .whitespaces) }
     }
 
-    static func message(for error: any Error) -> String {
+    nonisolated static func message(for error: any Error) -> String {
         switch error as? ClaudeError {
         case .missingAPIKey: String(localized: .claudeErrorMissingKey)
         case .http(let status, let body):
