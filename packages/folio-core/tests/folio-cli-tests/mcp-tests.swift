@@ -225,8 +225,11 @@ struct MCPTests {
 
     /// #90: one answer's proposals stack in a staged copy, so a write that needs an earlier proposal passes.
     @Test func aUnitsPagesBuildOnTheUnitProposedBeforeThem() throws {
-        let (a, b) = (try Harness.fixtureCopy(), try Harness.fixtureCopy())
-        for gist in [a, b] { #expect(h.cli(LectureSectionCommandTests.track, gist: gist).code == 0) }
+        let a = try Harness.fixtureCopy()
+        #expect(h.cli(LectureSectionCommandTests.track, gist: a).code == 0)
+        // Tracked once and copied: tracking twice would give the lecture two different ids.
+        let b = FileManager.default.temporaryDirectory.appending(path: "folio-\(UUID().uuidString)")
+        try FileManager.default.copyItem(at: a, to: b)
         let before = try Harness.files(a)
         let server = MCPServer(gist: nil, propose: true)
         let unit = try call(server, a, "unit_add", ["course": "EC4207", "title": "König"])
