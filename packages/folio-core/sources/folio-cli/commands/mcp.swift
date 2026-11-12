@@ -135,10 +135,11 @@ struct MCPServer {
             let folder = command == "search" ? nil : stage.folder
             let run = Self.execute(argv, staging: folder.map { Staging(folder: $0, writes: false) })
             guard run.code == 0 else { return Self.result(run.err + run.out, failed: true) }
-            let text = Self.compact(run.out, marking: stage)
+            var text = Self.compact(run.out, marking: stage)
             guard folder != nil, stage.staged > 0 else { return Self.result([text], failed: false, compacted: true) }
+            let pictures = Self.images(&text)
             return ["content": .array([["type": "text", "text": .string(String(localized: .mcpStagedRead(stage.staged)))],
-                                       ["type": "text", "text": .string(text)]]), "isError": .bool(false)]
+                                       ["type": "text", "text": .string(text)]] + pictures), "isError": .bool(false)]
         }
         let real = try? CLI.gist(path: gist).url
         let folder = real.flatMap(stage.copy(of:))
@@ -182,8 +183,9 @@ struct MCPServer {
     }
 
     static func result(_ lines: [String], failed: Bool, compacted: Bool = false) -> JSONValue {
-        let text = lines.joined(separator: "\n")
-        return ["content": .array([["type": "text", "text": .string(compacted ? text : compact(text))]]), "isError": .bool(failed)]
+        var text = lines.joined(separator: "\n")
+        let pictures = failed ? [] : images(&text)
+        return ["content": .array([["type": "text", "text": .string(compacted ? text : compact(text))]] + pictures), "isError": .bool(failed)]
     }
 
     static func compact(_ lines: [String], marking stage: ProposalStage) -> String {
@@ -271,6 +273,24 @@ struct MCPServer {
         guard case .object = input else { return Self.failure(String(localized: .runNotObject)) }
         if arguments["dryRun"] == .bool(true) { input["dryRun"] = .bool(true) }
         return call(tool, input)
+    }
+
+    /// The pictures a render command carries as base64 (`RenderResult`), as image content Claude looks at, taken out
+    /// of the text, where they would be read as tens of thousands of characters.
+    static func images(_ text: inout String) -> [JSONValue] {
+        guard text.contains("\"png\""), let value = try? JSONDecoder().decode(JSONValue.self, from: Data(text.utf8)),
+              case .array(let items)? = value["images"] else { return [] }
+        var found: [JSONValue] = []
+        var rest = value
+        rest["images"] = .array(items.map { item in
+            guard case .string(let png)? = item["png"] else { return item }
+            found.append(["type": "image", "data": .string(png), "mimeType": "image/png"])
+            var described = item
+            described["png"] = nil
+            return described
+        })
+        text = string(rest)
+        return found
     }
 
     static func failure(_ text: String) -> JSONValue {

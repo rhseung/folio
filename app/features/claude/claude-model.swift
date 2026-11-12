@@ -334,6 +334,8 @@ final class ClaudeModel {
         case NoteEdit.command:
             let replacements = proposal.input["replacements"].flatMap { try? JSONDecoder().decode([NoteEdit.Replacement].self, from: JSONEncoder().encode($0)) } ?? []
             return .edit(replacements, append: string("append").flatMap { $0.isEmpty ? nil : $0 })
+        case NoteFigureAdd.command, NoteFigureWrite.command:
+            return string("svg").map(ProposalLine.Change.figure)
         default:
             return nil
         }
@@ -573,6 +575,8 @@ final class ClaudeModel {
     .diff .skip, .diff .label { color: var(--text-3); font-family: -apple-system, sans-serif; }
     .diff .gap { height: 8px; }
     .apply-all { margin-top: 8px; font-size: 13px; text-align: right; }
+    .figure { margin-top: 8px; padding: 8px; border-radius: 8px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line-soft); }
+    .figure img { display: block; max-width: 100%; max-height: 240px; margin: 0 auto; }
     """
 
     /// What a note proposal changes, folded shut so the answer stays readable; opened, the user approves what they
@@ -582,6 +586,8 @@ final class ClaudeModel {
         var rows: [String] = []
         var added = 0, removed = 0
         switch change {
+        case .figure(let svg):
+            return figureHTML(svg)
         case .rewrite(let lines):
             guard !lines.isEmpty else {
                 return #"<div class="why">\#(String(localized: .claudeProposalNoChanges))</div>"#
@@ -613,6 +619,13 @@ final class ClaudeModel {
         return #"<details class="change"><summary>\#(String(localized: .claudeProposalChanges(added, removed)))</summary><div class="diff">\#(rows.joined())</div></details>"#
     }
 
+    /// The picture as the note would show it, on the note's card. An SVG in an `<img>` follows the page's appearance,
+    /// so its dark rule shows when the panel is dark; it runs no script and loads nothing there.
+    static func figureHTML(_ svg: String) -> String {
+        let data = Data(svg.utf8).base64EncodedString()
+        return #"<details class="change" open><summary>\#(String(localized: .claudeProposalFigure))</summary><div class="figure"><img src="data:image/svg+xml;base64,\#(data)" alt=""></div></details>"#
+    }
+
     static func escape(_ text: String) -> String {
         text.replacingOccurrences(of: "&", with: "&amp;").replacingOccurrences(of: "<", with: "&lt;")
             .replacingOccurrences(of: ">", with: "&gt;").replacingOccurrences(of: "\"", with: "&quot;")
@@ -630,6 +643,8 @@ struct ProposalLine: Equatable {
         /// The whole note written again, against the note on disk.
         case rewrite([TextDiff.Line])
         case edit([NoteEdit.Replacement], append: String?)
+        /// A note figure written new or again: the SVG it would be.
+        case figure(String)
     }
 }
 

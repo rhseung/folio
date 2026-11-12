@@ -14,6 +14,7 @@ public enum Actions {
         MaterialTrack.self, MaterialImport.self, MaterialMove.self, MaterialTrash.self, MaterialWrite.self, MaterialNew.self, MaterialBuild.self, CleanupApply.self, CleanupUndo.self,
         RecordingTrim.self, RecordingRetitleLegacy.self,
         NoteAdd.self, NoteWrite.self, NoteEdit.self, NoteAdopt.self, NoteLink.self, NoteLinkSessions.self, NoteUnlinkSession.self, NoteRemove.self, NoteMigrate.self, NoteRetitleSessions.self, NoteMove.self, NoteBuild.self,
+        NoteFigureAdd.self, NoteFigureWrite.self, NoteWidgetAdd.self, NoteWidgetWrite.self,
         QuizCardSave.self, QuizCardRemove.self, QuizRecord.self,
         ProblemSetSave.self, ProblemSetRemove.self, ProblemLinkUnit.self, ProblemRecord.self,
         ReviewRecord.self, ReviewSkip.self,
@@ -35,6 +36,8 @@ public enum Actions {
         // links; a link left out is cleared rather than kept, so treating it as kept only ever supersedes less.
         targets[NoteWrite.command] = ProposalTarget(arguments: arguments(NoteWrite.self), effect: .replaces(covers: [NoteEdit.command]))
         targets[MaterialWrite.command] = ProposalTarget(arguments: arguments(MaterialWrite.self), effect: .replaces(covers: []))
+        targets[NoteFigureWrite.command] = ProposalTarget(arguments: arguments(NoteFigureWrite.self), effect: .replaces(covers: []))
+        targets[NoteWidgetWrite.command] = ProposalTarget(arguments: arguments(NoteWidgetWrite.self), effect: .replaces(covers: []))
         targets[NoteLink.command] = ProposalTarget(arguments: arguments(NoteLink.self), effect: .sets)
         return targets
     }()

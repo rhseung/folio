@@ -33,6 +33,7 @@ extension Resolver {
         case "Category": try category(ref).id
         case "ExamPlanItem": try planItem(ref, exam: parent, in: scoped()).id
         case "QuizCard": try card(ref, unit: parent, in: scoped()).id
+        case "NoteWidget": try widget(ref, in: scoped())
         case "MoveBatch":
             // A batch has no name: `cleanup apply` and the moves print its id.
             if let id = UUID(uuidString: ref) { id } else { throw CLIError(exit: .usage, message: String(localized: .resolveNotBatch(ref))) }
@@ -56,6 +57,15 @@ extension Resolver {
         guard unit == nil || !units.isEmpty else { throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound("단원", unit!.uuidString))) }
         let cards = try units.flatMap { try c.store.loadQuiz(unit: $0.id).model.cards }
         return try pick(ref, cards, what: "카드", names: { [$0.prompt] }, ref: { $0.id.uuidString })
+    }
+
+    /// A widget has no name; notes point at it by the id in its `cb-widget` block.
+    func widget(_ ref: String, in c: CourseRef) throws -> UUID {
+        guard let id = UUID(uuidString: ref) else { throw CLIError(exit: .usage, message: String(localized: .resolveNotWidget(ref))) }
+        guard FileManager.default.fileExists(atPath: c.store.fileURL(NoteWidget.path(id)).path) else {
+            throw CLIError(exit: .notFound, message: String(localized: .resolveNotFound("위젯", id.uuidString)))
+        }
+        return id
     }
 
     func noteID(_ ref: String, in c: CourseRef) throws -> UUID {

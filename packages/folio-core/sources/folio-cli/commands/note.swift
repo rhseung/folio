@@ -14,9 +14,7 @@ extension Resolver {
 }
 
 /// What `note show --json` reports and `note write --expect` checks: the note as it was read.
-func contentHash(_ text: String) -> String {
-    SHA256.hash(data: Data(text.utf8)).map { String(format: "%02x", $0) }.joined()
-}
+func contentHash(_ text: String) -> String { ContentHash.of(text) }
 
 func readText(_ source: String) throws -> String {
     if source == "-" { return String(decoding: FileHandle.standardInput.readDataToEndOfFile(), as: UTF8.self) }
@@ -30,7 +28,7 @@ func readText(_ source: String) throws -> String {
 struct NoteCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "note", abstract: String(localized: .noteAbstract),
-        subcommands: [List.self, Show.self, Write.self, Edit.self] + GeneratedCommands.note)
+        subcommands: [List.self, Show.self, Write.self, Edit.self] + GeneratedCommands.note + [Figure.self, Widget.self, Format.self])
 
     struct List: ParsableCommand {
         static let configuration = CommandConfiguration(abstract: String(localized: .noteListAbstract), discussion: String(localized: .noteListDiscussion))

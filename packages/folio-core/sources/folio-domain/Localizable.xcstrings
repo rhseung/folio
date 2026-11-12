@@ -1562,6 +1562,83 @@
           }
         }
       }
+    },
+    "figure.problem.not-xml": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SVG가 올바른 XML이 아닙니다(%1$lld번째 줄): %2$@"
+          }
+        }
+      }
+    },
+    "figure.problem.not-svg": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "맨 바깥 요소가 <svg>가 아닙니다: <%@>"
+          }
+        }
+      }
+    },
+    "figure.problem.script": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 그림에서는 스크립트가 돌지 않습니다: %@"
+          }
+        }
+      }
+    },
+    "figure.problem.external": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 그림은 바깥 파일이나 주소를 불러오지 않습니다: %@. 그림 안에 그리거나 data: 주소로 넣습니다"
+          }
+        }
+      }
+    },
+    "figure.problem.no-dark": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다크 모드 규칙(@media (prefers-color-scheme: dark))이 없습니다. 노트 그림은 페이지 색을 읽지 못해 다크 모드에서 선과 글자가 사라집니다"
+          }
+        }
+      }
+    },
+    "widget.problem.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위젯 HTML이 비었습니다"
+          }
+        }
+      }
+    },
+    "widget.problem.external": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위젯은 바깥 파일이나 주소를 불러오지 못합니다: %@. 코드와 스타일을 페이지 안에 씁니다"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

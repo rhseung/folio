@@ -133,7 +133,7 @@ public enum StandardLayout {
         else { return nil }
         var course = noteFolder.standardizedFileURL
         for _ in notes..<parts.count { course.deleteLastPathComponent() }
-        return course.appending(path: metadataFolder).appending(path: widgetsFolder).appending(path: id.uuidString + ".html")
+        return course.appending(path: NoteWidget.path(id))
     }
 
     /// `_Credited/<source>`. Nil when the source can't be a folder name.
