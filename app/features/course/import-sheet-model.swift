@@ -39,6 +39,11 @@ final class ImportPlaceModel {
     private(set) var opened: Set<Int> = []
     private let find: Find
     @ObservationIgnored private var reads: [Int: Task<Void, Never>] = [:]
+    /// Rows Claude is reading for "Claude로 나누기" (#450), and why the last ask of a row came to nothing.
+    private(set) var asking: Set<Int> = []
+    private(set) var claudeFailures: [Int: String] = [:]
+    @ObservationIgnored private let claude: LectureClaude
+    @ObservationIgnored private var asks: [Int: Task<Void, Never>] = [:]
 
     struct Row: Identifiable {
         let id: Int
@@ -57,12 +62,13 @@ final class ImportPlaceModel {
         var perItem: Bool { places[0].contains("/") }
     }
 
-    init(workspace: Workspace, course: LoadedCourse, files: [URL], places: [String], find: Find? = nil) {
+    init(workspace: Workspace, course: LoadedCourse, files: [URL], places: [String], find: Find? = nil, claude: LectureClaude? = nil) {
         self.workspace = workspace
         self.course = course
         self.places = places
-        let claude = workspace.claudeReady ? workspace.claude(for: course) : nil
-        self.find = find ?? { url, units, progress in await LectureReader.find(url, units: units, claude: claude, progress: progress) }
+        let client = workspace.claudeReady ? workspace.claude(for: course) : nil
+        self.find = find ?? { url, units, progress in await LectureReader.find(url, units: units, claude: client, progress: progress) }
+        self.claude = claude ?? LectureClaude.of(workspace, course: course)
         let sessions = course.file.sessions
         rows = files.enumerated().map { i, url in
             let guess = MaterialIntake.guess(Self.incoming(url), places: places, sessions: sessions, exams: course.file.exams, now: workspace.now,
@@ -76,6 +82,7 @@ final class ImportPlaceModel {
 
     isolated deinit {
         for task in reads.values { task.cancel() }
+        for task in asks.values { task.cancel() }
     }
 
     /// The page count and shape `guess` reads. Files from outside the sandbox open only inside their scope.
@@ -313,8 +320,62 @@ final class ImportPlaceModel {
         opened.insert(id)
     }
 
+    // MARK: Claude (#450)
+
+    /// Why "Claude로 나누기" is off, shown beside it.
+    var claudeOff: String? { claude.off() }
+
+    /// Once read: before then the automatic read may still ask Claude itself, and a row put off asks nothing.
+    func canAskClaude(_ id: Int) -> Bool {
+        guard !asking.contains(id), claudeOff == nil else { return false }
+        switch sections[id] {
+        case .proposed?, .nothing?: return true
+        default: return false
+        }
+    }
+
+    /// Claude's reading in place of what was proposed, whatever found it. The sheet's own button still writes it.
+    func askClaude(_ id: Int) {
+        guard canAskClaude(id), isLecture(rows[id]) else { return }
+        let url = rows[id].url, units = course.file.units
+        asking.insert(id)
+        claudeFailures[id] = nil
+        asks[id] = Task { [weak self, claude] in
+            let found = await claude.ask(url, units)
+            guard let self, !Task.isCancelled else { return }
+            self.asking.remove(id)
+            self.asks[id] = nil
+            switch self.sections[id] {
+            case .proposed?, .nothing?: self.take(found, for: id)
+            // Put off meanwhile: the user's choice stands.
+            default: break
+            }
+        }
+    }
+
+    /// Under a lecture row: why Claude's last reading came to nothing, or why it can't be asked while its button shows.
+    func claudeNote(_ row: Row) -> String? {
+        guard isLecture(row) else { return nil }
+        if let failure = claudeFailures[row.id] { return failure }
+        switch sections[row.id] {
+        case .nothing?: return claudeOff
+        case .proposed? where opened.contains(row.id): return claudeOff
+        default: return nil
+        }
+    }
+
+    private func take(_ found: ClaudeFinding, for id: Int) {
+        if case .found(let split) = found {
+            sections[id] = .proposed(split, source: .claude)
+            opened.insert(id)
+        } else {
+            claudeFailures[id] = found.message
+        }
+    }
+
     /// The summary line under a lecture row.
     func sectionsLine(_ row: Row) -> String? {
+        if asking.contains(row.id), isLecture(row) { return String(localized: .lectureClaudeReading) }
         switch sections(of: row) {
         case .reading(let done, let total):
             return total == 0 ? String(localized: .materialsImportSectionsReading) : String(localized: .materialsImportSectionsReadingPages(done, total))
@@ -351,6 +412,7 @@ final class ImportPlaceModel {
 
     func confirm() {
         for task in reads.values { task.cancel() }
+        for task in asks.values { task.cancel() }
         workspace.importFiles(rows.map { ($0.url, $0.folder, isLecture($0) ? $0.session : nil, cuts($0)) }, course: course.id)
     }
 }

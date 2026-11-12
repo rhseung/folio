@@ -11,6 +11,8 @@ struct LectureSplitPane: View {
     @Binding var split: LectureSplit
     let units: [FolioDomain.Unit]
     let note: String?
+    /// "Claude로 나누기" (#450); none where no course's Claude can be asked.
+    var claude: ClaudeSplitButton?
     let save: () -> Void
     let cancel: () -> Void
     @State private var strip = SplitStrip()
@@ -56,6 +58,7 @@ struct LectureSplitPane: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Theme.Space.m) {
                     SectionEditor(split: $split, units: units, page: controller.page + 1, selected: selected) { controller.go(to: $0 - 1) }
+                    if let claude { claude }
                     if let note {
                         Text(note).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).fixedSize(horizontal: false, vertical: true)
                     }
@@ -217,5 +220,37 @@ private struct Gap: View {
         .onTapGesture(perform: action)
         .pointingHand()
         .help(Text(boundary ? .fileViewSplitJoinHelp : .fileViewSplitCutHelp))
+    }
+}
+
+/// "Claude로 나누기" on the split screen and in the add sheet (#450): Claude reads the pages again and its split
+/// replaces what is shown, still unsaved. While it reads, a spinner takes the sparkle's place; when Claude isn't set
+/// up the button is off and why says so under it, as a disabled button alone tells a touch screen nothing.
+struct ClaudeSplitButton: View {
+    let off: String?
+    let asking: Bool
+    let enabled: Bool
+    let ask: () -> Void
+    @Environment(\.accent) private var accent
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Theme.Space.xs) {
+            Button(action: ask) {
+                HStack(spacing: Theme.Space.tight) {
+                    if asking {
+                        ProgressView().controlSize(.mini)
+                    } else {
+                        Image(systemName: "sparkle").foregroundStyle(enabled ? accent.color : Theme.Palette.textTertiary)
+                    }
+                    Text(.lectureClaudeSplit)
+                }
+            }
+            .buttonStyle(.ghost)
+            .disabled(!enabled)
+            .help(Text(.lectureClaudeHelp))
+            if let off {
+                Text(off).font(Theme.Typeface.caption).foregroundStyle(Theme.Palette.textTertiary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }
