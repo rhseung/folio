@@ -3,7 +3,7 @@ import SwiftUI
 @main
 struct FolioApp: App {
     @State private var workspace = Workspace()
-    @State private var paneMemory = Self.hostingTests ? nil : PaneMemoryStore(defaults: .standard)
+    @State private var paneMemory = Self.hostingTests ? nil : PaneMemoryStore.forThisRun()
     /// Under tests the app is only their host: no window of its own and no focus taken from what the user is doing.
     private static let hostingTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
     static let mainWindow = "main"
@@ -123,9 +123,11 @@ private struct OutlineCommands: Commands {
 /// as its menu does (2026-11-08 사용자). No keys yet: keys come with the table of them (#116).
 private struct PaneCommands: Commands {
     @FocusedValue(\.frontPanes) private var panes
+    @FocusedValue(\.layoutChoices) private var layouts
 
     var body: some Commands {
         CommandGroup(after: .sidebar) {
+            if let layouts { LayoutMenu(choices: layouts) }
             Button(.panesEven) { panes?.even() }
                 .disabled((panes?.count ?? 0) < 2)
             Button(.panesCollapse) { if let panes { panes.collapse(panes.focus) } }

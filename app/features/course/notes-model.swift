@@ -15,10 +15,8 @@ final class NoteListModel {
     private(set) var folders: [String] = []
     var filter: NoteKind?
     var adding = false
-    var renaming: NoteFile?
-    var newFolder: NoteFile?
     var pending: PendingAction?
-    /// The notes section's, shared with the open note: its rename sheet moves a note too.
+    /// The notes section's, shared with the open note: its sheet and menus move a note too.
     let moves: MoveUndo
 
     init(workspace: Workspace, course: LoadedCourse, moves: MoveUndo = MoveUndo()) {
@@ -116,38 +114,27 @@ final class NoteListModel {
     }
 
     /// The other folders of Notes/ the note can go to.
-    func moveTargets(_ note: NoteFile) -> [String] {
-        let here = Self.folder(of: note, in: course.store)
-        return folders.filter { $0 != here }
+    static func moveTargets(_ note: NoteFile, in store: CourseStore) -> [String] {
+        let here = folder(of: note, in: store)
+        return store.noteFolders().filter { $0 != here }
     }
 
-    func folderLabel(_ folder: String) -> String {
+    static func folderLabel(_ folder: String) -> String {
         folder.isEmpty ? CourseFolder.notes.rawValue : CourseFolder.notes.rawValue + "/" + folder
     }
 
     /// Asks with the name the note will have there, ` 2` included, since that is what the user approves.
-    func move(_ note: NoteFile, into folder: String) {
+    static func askMove(_ note: NoteFile, into folder: String, course: LoadedCourse, workspace: Workspace,
+                        then done: @escaping @MainActor (ActionContext) -> Void) -> PendingAction? {
         let store = course.store
         let path = (folder.isEmpty ? "" : folder + "/") + note.url.lastPathComponent
         guard let source = store.coursePath(of: note.url), let url = store.movedNoteURL(note, to: path, in: course.file),
-              let target = Self.notesPath(of: url, in: store) else { return }
-        pending = workspace.ask(NoteMove(course: course.id, note: source, to: target)) { [weak self] ctx in
-            self?.moves.keep(ctx)
-            self?.reload()
-        }
+              let target = notesPath(of: url, in: store) else { return nil }
+        return workspace.ask(NoteMove(course: course.id, note: source, to: target), then: done)
     }
 
     func undoMove() {
         pending = moves.undo(workspace, course: course.id) { [weak self] in self?.reload() }
-    }
-
-    /// Sessions let go of the note first: a note left behind by a failed trash is harmless, a link to nothing is not.
-    func delete(_ note: NoteFile, then done: @escaping @MainActor () -> Void = {}) {
-        guard let path = course.store.coursePath(of: note.url) else { return }
-        pending = workspace.ask(NoteRemove(course: course.id, note: path), button: .notesTrash) { [weak self] _ in
-            self?.reload()
-            done()
-        }
     }
 }
 

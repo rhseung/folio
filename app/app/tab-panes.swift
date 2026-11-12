@@ -22,6 +22,8 @@ final class TabPanes {
     private(set) var shares: [Double] = [1]
     /// The panes folded by hand (`collapse`).
     private(set) var collapsed: Set<Int> = []
+    /// How each pane shows its note, which only what remembers the layout reads.
+    private(set) var noteModes: [NoteViewMode?] = [nil]
     /// How many panes the row has room to keep open with two panes and with three (`PaneLayout.openCount`). The row
     /// sets it only where its width crosses a count, so a live resize sets it a few times, not every frame.
     var room = [2, 3]
@@ -65,7 +67,97 @@ final class TabPanes {
         publish()
     }
 
+    /// A tab laid out as `layout` was left, note modes and folds included (a class's layout, #62), each pane a history
+    /// of its own at `entries`, which go with the layout's panes. Nil when they don't.
+    init?(layout: PaneLayout, entries: [Navigator.Entry], limit: Int = TabPanes.limit, memory: ColumnMemory = .shared) {
+        guard entries.count == layout.panes.count, layout.panes.count <= max(1, limit) else { return nil }
+        self.layout = layout
+        ids = entries.map { _ in UUID() }
+        navigators = entries.map { Navigator($0) }
+        trails = entries.map { _ in CrumbTrail() }
+        columns = entries.map { _ in memory.newPane() }
+        self.memory = memory
+        self.limit = limit
+        publish()
+    }
+
     var count: Int { ids.count }
+
+    /// The layout with the links each pane's history has gone on to, as it is remembered.
+    var current: PaneLayout {
+        follow()
+        return layout
+    }
+
+    /// A tab of one pane opening a class's note becomes the class's layout as it was last left (#62,
+    /// `PaneMemory.restoring`). The pane goes on to the note with its history, screen and columns, in the layout's
+    /// focused pane; the others open beside it, each from `entries`, where a nil is an item gone and its pane is left
+    /// out. False, and nothing changed, for a tab of more panes or a layout left with one.
+    @discardableResult
+    func restore(_ saved: PaneLayout, entries: [Navigator.Entry?]) -> Bool {
+        guard count == 1, entries.count == saved.panes.count, let entry = entries[saved.focus],
+              let kept = saved.keeping({ entries[$0] != nil }), kept.panes.count > 1, kept.panes.count <= limit else { return false }
+        let found = entries.compactMap { $0 }
+        let at = kept.focus
+        let navigator = navigators[0], id = ids[0], trail = trails[0], column = columns[0]
+        navigator.go(entry)
+        navigators = found.indices.map { $0 == at ? navigator : Navigator(found[$0]) }
+        ids = found.indices.map { $0 == at ? id : UUID() }
+        trails = found.indices.map { $0 == at ? trail : CrumbTrail() }
+        columns = found.indices.map { $0 == at ? column : memory.newPane() }
+        layout = kept
+        publish()
+        return true
+    }
+
+    /// A layout chosen from "배치 ▸" (#62, 2026-11-11 사용자): the tab becomes it, each pane from `entries` (a nil is
+    /// an item gone, its pane left out). A pane already showing one of the addresses keeps its history, screen and
+    /// columns there, and the pane in focus stays in focus if it is kept. False, and nothing changed, when no pane is
+    /// left or there are more than the tab holds.
+    @discardableResult
+    func lay(_ new: PaneLayout, entries: [Navigator.Entry?]) -> Bool {
+        guard entries.count == new.panes.count, var kept = new.keeping({ entries[$0] != nil }), kept.panes.count <= limit else { return false }
+        follow()
+        let focused = navigators[focus]
+        var free = Array(navigators.indices)
+        var next: (navigators: [Navigator], ids: [UUID], trails: [CrumbTrail], columns: [ColumnPrefs]) = ([], [], [], [])
+        for entry in entries.compactMap({ $0 }) {
+            if let j = free.first(where: { navigators[$0].current.link.withoutAnchor == entry.link.withoutAnchor }) {
+                free.removeAll { $0 == j }
+                next.navigators.append(navigators[j])
+                next.ids.append(ids[j])
+                next.trails.append(trails[j])
+                next.columns.append(columns[j])
+            } else {
+                next.navigators.append(Navigator(entry))
+                next.ids.append(UUID())
+                next.trails.append(CrumbTrail())
+                next.columns.append(memory.newPane())
+            }
+        }
+        if let i = next.navigators.firstIndex(where: { $0 === focused }) { kept.press(i) }
+        (navigators, ids, trails, columns) = next
+        layout = kept
+        publish()
+        return true
+    }
+
+    /// How pane `pane` last showed the note or text file `item`, while it still shows it.
+    func noteMode(of item: UUID, pane: UUID) -> NoteViewMode? {
+        guard let i = ids.firstIndex(of: pane) else { return nil }
+        follow()
+        return layout.panes[i].link.id == item ? layout.panes[i].noteMode : nil
+    }
+
+    /// Pane `pane` shows the note or text file `item` as `mode`, which its layout keeps (`PaneLayout.Pane.noteMode`), so
+    /// a class's layout brings the note back the way it was left.
+    func show(_ mode: NoteViewMode, of item: UUID, pane: UUID) {
+        guard let i = ids.firstIndex(of: pane) else { return }
+        follow()
+        guard layout.panes[i].link.id == item, layout.panes[i].noteMode != mode else { return }
+        layout.show(mode, in: i)
+        publish()
+    }
 
     /// The panes drawn as strips: folded by hand, or for want of room.
     var folded: Set<Int> {
@@ -206,6 +298,8 @@ final class TabPanes {
         if focus != layout.focus { focus = layout.focus }
         if shares != layout.shares { shares = layout.shares }
         if collapsed != layout.collapsed { collapsed = layout.collapsed }
+        let modes = layout.panes.map(\.noteMode)
+        if noteModes != modes { noteModes = modes }
     }
 }
 
@@ -237,23 +331,68 @@ struct PaneGlide: Equatable {
 }
 
 extension Workspace {
-    /// The built-in preset a tab's panes are laid out as, by its name (`PanePreset.matching` against the sessions of
-    /// the course they show); nil for a layout of the user's own.
-    func presetName(of panes: TabPanes) -> String? {
-        guard panes.count > 1, let course = panes.navigators.lazy.compactMap(\.current.course).first, let file = self.course(course)?.file,
-              let layout = PaneLayout(links: panes.navigators.map(\.current.link), limit: panes.limit) else { return nil }
-        return file.sessions.lazy.compactMap { PanePreset.matching(layout, session: $0, course: course, limit: panes.limit) }.first?.name
+    /// The class a tab's panes are about, to fill a layout's roles from (`PaneLayout.lesson`).
+    func lesson(of panes: TabPanes) -> (course: UUID, session: Session)? {
+        panes.current.lesson(in: courses.map(\.file), now: liveNow)
+    }
+
+    /// The layout, built-in or the user's, a tab's panes are laid out as (`PanePreset.matching`); nil for a tab of
+    /// one pane, and for an arrangement of the user's own that isn't saved.
+    func preset(of panes: TabPanes) -> PanePreset? {
+        guard panes.count > 1 else { return nil }
+        let course = lesson(of: panes)?.course ?? panes.navigators.lazy.compactMap(\.current.course).first
+        return PanePreset.matching(panes.current, among: settings.presets, in: course.flatMap { self.course($0) }?.file, limit: panes.limit)
+    }
+
+    func presetName(of panes: TabPanes) -> String? { preset(of: panes)?.title }
+
+    /// What `preset` turns the tab into: its roles filled from the tab's class, its addresses as they are. Nil when
+    /// it has nothing to show there (a layout with a role, in a tab of no class).
+    func layout(_ preset: PanePreset, for panes: TabPanes) -> PaneLayout? {
+        let lesson = lesson(of: panes)
+        return preset.layout(session: lesson?.session, course: lesson?.course, limit: panes.limit)
+    }
+
+    func apply(_ preset: PanePreset, to panes: TabPanes) {
+        guard let layout = layout(preset, for: panes) else { return }
+        let hint = lesson(of: panes)?.course ?? panes.focused.current.course
+        panes.lay(layout, entries: layout.panes.map { entry(for: $0.link, hint: hint) })
+    }
+
+    /// "지금 배치 저장…": the tab's panes kept under `name` after the user's other layouts.
+    func saveLayout(of panes: TabPanes, name: String) {
+        let lesson = lesson(of: panes)
+        var new = settings
+        new.panePresets.append(.saving(panes.current, name: name, session: lesson?.session, course: lesson?.course))
+        saveSettings(new)
+    }
+
+    var newPresetName: String {
+        PanePreset.freeName(String(localized: .panesPresetsNewName), taken: settings.presets.map(\.title))
     }
 }
 
 extension PanePreset {
-    var name: String {
-        switch id {
+    var title: String {
+        if let name { return name }
+        return switch id {
         case PanePreset.inClass.id: String(localized: .panesPresetInClass)
-        case PanePreset.concepts.id: String(localized: .panesPresetConcepts)
-        case PanePreset.problems.id: String(localized: .panesPresetProblems)
         case PanePreset.review.id: String(localized: .panesPresetReview)
         default: id
+        }
+    }
+
+    /// A split-pane glyph for as many panes as it has.
+    var symbol: String { slots.count >= 3 ? "rectangle.split.3x1" : "rectangle.split.2x1" }
+}
+
+extension PanePreset.Role {
+    var label: String {
+        switch self {
+        case .lecture: String(localized: .panesRoleLecture)
+        case .classNote: String(localized: .panesRoleClassNote)
+        case .reviewNote: String(localized: .panesRoleReviewNote)
+        case .quiz: String(localized: .panesRoleQuiz)
         }
     }
 }

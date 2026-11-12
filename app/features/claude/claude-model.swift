@@ -33,6 +33,8 @@ final class ClaudeModel {
     var partial: String?
     /// The tool the answer called last, until it writes again.
     var tool: String?
+    /// Its input so far, which says what `action_run` runs.
+    var toolInput = ""
     var stopped = false
     /// The chat that answer belongs to: switching chats mid-answer must not show it under another conversation.
     var answering: UUID?
@@ -60,7 +62,7 @@ final class ClaudeModel {
     var hasKey: Bool { client != nil || workspace.claudeReady }
 
     var progress: String {
-        tool.map(Self.toolLabel) ?? String(localized: partial == nil ? .claudeWaiting : .claudeWriting)
+        tool.map { Self.toolLabel($0, input: toolInput) } ?? String(localized: partial == nil ? .claudeWaiting : .claudeWriting)
     }
 
     var statusIsError: Bool { failed != nil && !stopped }
@@ -194,9 +196,10 @@ final class ClaudeModel {
                     let now = stream.now
                     if partial != now.text { partial = now.text }
                     if tool != now.tool { tool = now.tool }
+                    if toolInput != now.toolInput { toolInput = now.toolInput }
                 }
             }
-            defer { ticker.cancel(); partial = nil; tool = nil }
+            defer { ticker.cancel(); partial = nil; tool = nil; toolInput = "" }
             do {
                 let reply = try await client.reply(to: asked, context: context, targets: Actions.targets) { stream.take($0) }
                 doc.model.messages.append(ChatMessage(role: .assistant, text: reply.text, at: .now, proposals: reply.proposals))
@@ -428,11 +431,19 @@ final class ClaudeModel {
 
     /// `mcp__folio__note_show` reads as `note show`. A write only makes a proposal in the panel's server, which the line
     /// says, so the user doesn't wait for a change that won't happen until they apply it.
-    static func toolLabel(_ name: String) -> String {
+    static func toolLabel(_ name: String, input: String = "") -> String {
         let prefix = "mcp__folio__"
-        let tool = name.hasPrefix(prefix) ? String(name.dropFirst(prefix.count)) : name
+        var tool = name.hasPrefix(prefix) ? String(name.dropFirst(prefix.count)) : name
+        // The server's two tools for actions the panel doesn't list (`MCPServer.generalTools` in folio-cli).
+        if tool == "action_search" { return String(localized: .claudeToolSearching) }
+        if tool == "action_run" {
+            // The input streams in after the name, so the command shows once its `action` has arrived whole.
+            guard let match = input.firstMatch(of: /"action"\s*:\s*"([^"\\]+)"/) else { return String(localized: .claudeToolChoosing) }
+            tool = String(match.1).replacing(/^folio\s+/, with: "")
+        }
         // The MCP server's naming (`MCPServer.name` in folio-cli, which the app doesn't link).
-        if let write = Actions.all.first(where: { $0.command.replacing(" --", with: "_").replacing(" ", with: "_") == tool }) {
+        let named = tool.replacing(" --", with: "_").replacing(" ", with: "_")
+        if let write = Actions.all.first(where: { $0.command.replacing(" --", with: "_").replacing(" ", with: "_") == named }) {
             return String(localized: .claudeToolProposing(write.command))
         }
         return String(localized: .claudeToolReading(tool.replacing("_", with: " ")))
@@ -587,6 +598,7 @@ final class AnswerStream: Sendable {
     struct State: Sendable, Equatable {
         var text: String?
         var tool: String?
+        var toolInput = ""
     }
 
     private let state = Mutex(State())
@@ -599,7 +611,8 @@ final class AnswerStream: Sendable {
             // A new message starts over: the text before it led up to a tool call, and only the last message is kept.
             case .turn: s.text = nil
             case .text(let piece): s.text = (s.text ?? "") + piece; s.tool = nil
-            case .tool(let name): s.tool = name
+            case .tool(let name): s.tool = name; s.toolInput = ""
+            case .toolInput(let piece): s.toolInput += piece
             }
         }
     }

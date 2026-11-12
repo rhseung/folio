@@ -80,6 +80,13 @@ struct ClaudeModelTests {
         #expect(ClaudeModel.toolLabel("mcp__folio__note_show") == "읽는 중: note show")
         #expect(ClaudeModel.toolLabel("mcp__folio__note_add") == "제안 만드는 중: note add")
         #expect(ClaudeModel.toolLabel("mcp__folio__exam_scope_taught") == "제안 만드는 중: exam scope --taught")
+        #expect(ClaudeModel.toolLabel("mcp__folio__action_search") == "액션 찾는 중")
+        // `action_run` names its command once that much of the input has streamed in.
+        #expect(ClaudeModel.toolLabel("mcp__folio__action_run") == "실행할 액션 고르는 중")
+        #expect(ClaudeModel.toolLabel("mcp__folio__action_run", input: #"{"action": "semest"#) == "실행할 액션 고르는 중")
+        #expect(ClaudeModel.toolLabel("mcp__folio__action_run", input: #"{"action": "semester add", "inp"#) == "제안 만드는 중: semester add")
+        #expect(ClaudeModel.toolLabel("mcp__folio__action_run", input: #"{"action":"exam_scope_taught"}"#) == "제안 만드는 중: exam scope --taught")
+        #expect(ClaudeModel.toolLabel("mcp__folio__action_run", input: #"{"action":"folio settings show"}"#) == "읽는 중: settings show")
     }
 
     func until(_ condition: () -> Bool) async throws {

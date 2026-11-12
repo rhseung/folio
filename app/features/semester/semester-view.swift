@@ -119,14 +119,7 @@ struct SemesterView: View {
         .contentShape(.rect)
     }
 
-    @ViewBuilder func courseMenu(_ course: LoadedCourse) -> some View {
-        Button(.commonOpen, systemImage: "arrow.right.circle") { openCourse(course.id) }
-        LinkMenu(link: .course(course.id), course: course.id, trailing: true)
-        Divider()
-        #if os(macOS)
-        Button(.commonShowInFinder, systemImage: "folder") { NSWorkspace.shared.activateFileViewerSelecting([course.store.url]) }
-        #endif
-    }
+    func courseMenu(_ course: LoadedCourse) -> some View { CourseMenu(courseId: course.id) }
 
     func open(_ course: Course) { openCourse(course.id) }
 
@@ -205,7 +198,7 @@ struct SemesterView: View {
                     // Past exams stay for reference but step back behind the coming ones.
                     .opacity(start > now ? 1 : 0.6)
                     .opens { showExams(item.course.id) }
-                    .contextMenu { Button(.commonShowExams, systemImage: "calendar.badge.exclamationmark") { showExams(item.course.id) } }
+                    .contextMenu { ExamMenu(courseId: item.course.id, examId: item.exam.id) }
                 }
             }
         }

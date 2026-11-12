@@ -86,8 +86,11 @@ extension Workspace {
                                                      title: "\(loaded.title) · \(loaded.file.title(of: session, calendar: calendar))"))
         if due.contains(.open) {
             let pages = classStartPages(for: session, in: loaded.id)
-            if setting.openIn == .splitTab, let split = PanePreset.inClass.layout([.lecture: pages.lectures, .classNote: pages.note.map { [$0] } ?? []],
-                                                                                    focus: .classNote, limit: TabPanes.limit) {
+            // The class's own lectures and note where the settings open them, its review note and the quiz as they are.
+            var links = PanePreset.links(session: session, course: loaded.id)
+            links[.lecture] = pages.lectures
+            links[.classNote] = pages.note.map { [$0] } ?? []
+            if setting.openIn == .splitTab, let split = settings.classStartPreset.startLayout(links, limit: TabPanes.limit) {
                 step.ask.split = split
             } else {
                 step.ask.opens = classStartOpenings(pages, session: session)
@@ -152,13 +155,8 @@ extension Workspace {
     }
 
     func session(shownBy entry: Navigator.Entry) -> UUID? {
-        guard let id = entry.link.id, let file = entry.course.flatMap(course)?.file else { return nil }
-        switch entry.link.kind {
-        case .session: return id
-        case .note: return file.sessions.first { $0.roughNoteId == id || $0.reviewNoteId == id }?.id
-        case .recording: return file.recordings.first { $0.id == id }?.sessionId
-        default: return nil
-        }
+        guard let file = entry.course.flatMap(course)?.file else { return nil }
+        return entry.link.kind == .session ? entry.link.id : file.session(holding: entry.link)
     }
 
     /// From the prompt, too, once the student said yes. The microphone's refusal is the recorder's error, shown as
@@ -194,6 +192,7 @@ struct ClassStartPrompt: ViewModifier {
     let showing: @MainActor () -> Navigator.Entry
     let bringForward: @MainActor () -> Void
     @State private var asking: ClassStartAsk?
+    @Environment(\.paneMemory) private var paneMemory
     #if os(macOS)
     @Environment(\.appearsActive) private var active
     #endif
@@ -222,7 +221,10 @@ struct ClassStartPrompt: ViewModifier {
         workspace.classStartAsk = nil
         let shown = showing()
         for opening in workspace.classStartOpenings(ask, showing: shown) { open(opening) }
-        if let split = workspace.classStartSplit(ask, showing: shown) { openSplit(split, ask.course) }
+        // The class laid out as it was last left on this device, if it was, in place of the preset (#62).
+        if let split = workspace.classStartSplit(ask, showing: shown) {
+            openSplit(paneMemory?.memory.layout(session: ask.session, limit: TabPanes.limit) ?? split, ask.course)
+        }
         if ask.front { bringForward() }
         if ask.asksRecording { asking = ask }
     }

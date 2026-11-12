@@ -204,17 +204,26 @@ struct SearchPalette: View {
         .contextMenu { menu(hit) }
     }
 
-    /// The result's own item menu, as anywhere else it shows (#403). Kinds without one yet open and share. Whatever the
-    /// menu opens, the palette steps aside for it.
+    /// The result's own item menu, as anywhere else it shows (#403). A card, read from its unit's quiz file, opens and
+    /// shares. Whatever the menu opens, the palette steps aside for it.
     @ViewBuilder func menu(_ hit: SearchHit) -> some View {
         let item = hit.item
         Group {
-            if item.kind == .session {
+            switch item.kind {
+            case .session:
                 SessionMenu(courseId: item.courseId, sessionId: item.id) {
                     close()
                     openLink(AppLink(.note, $0), course: item.courseId)
                 }
-            } else {
+            case .note:
+                if let course = model.workspace.course(item.courseId), let note = course.store.note(id: item.id, in: course.file) {
+                    NoteMenu(courseId: item.courseId, note: note)
+                }
+            case .material: MaterialMenu(courseId: item.courseId, materialId: item.id)
+            case .assignment: AssignmentMenu(courseId: item.courseId, assignmentId: item.id)
+            case .exam: ExamMenu(courseId: item.courseId, examId: item.id)
+            case .unit: UnitMenu(courseId: item.courseId, unitId: item.id)
+            case .quiz:
                 Button(.commonOpen, systemImage: "arrow.right.circle") { open(hit) }
                 Divider()
                 ShareMenu(link: AppLink(item), course: item.courseId)

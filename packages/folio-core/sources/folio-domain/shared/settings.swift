@@ -23,6 +23,9 @@ public struct Settings: Codable, Sendable, Equatable {
     /// An AsciiMath note's formula snippets, or nil for `MathSnippet.asciiMathDefaults`, kept as `mathSnippets` is.
     public var asciiMathSnippets: [MathSnippet]?
     public var classStart: ClassStartSettings
+    /// The layouts the user saved and named, in their order (#62, "지금 배치 저장…"). The built-in ones come before
+    /// them and aren't kept here.
+    public var panePresets: [PanePreset]
 
     public static let defaultNoteRules = """
     - 정의는 전제, 조건, 결론 순서로 쓴다.
@@ -33,7 +36,8 @@ public struct Settings: Codable, Sendable, Equatable {
     public init(dayBoundaryMinutes: Int = 240, review: ReviewSettings = .init(), noteRules: String = Settings.defaultNoteRules,
                 notifications: NotificationSettings = .init(), backup: BackupSettings = .init(), noteTemplates: [String: [String]] = [:],
                 newNoteMath: MathSyntax = .asciimath, sidebar: SidebarOrder = .init(), classMinutes: Int = 75,
-                mathSnippets: [MathSnippet]? = nil, asciiMathSnippets: [MathSnippet]? = nil, classStart: ClassStartSettings = .init()) {
+                mathSnippets: [MathSnippet]? = nil, asciiMathSnippets: [MathSnippet]? = nil, classStart: ClassStartSettings = .init(),
+                panePresets: [PanePreset] = []) {
         self.dayBoundaryMinutes = dayBoundaryMinutes
         self.review = review
         self.noteRules = noteRules
@@ -46,6 +50,7 @@ public struct Settings: Codable, Sendable, Equatable {
         self.mathSnippets = mathSnippets
         self.asciiMathSnippets = asciiMathSnippets
         self.classStart = classStart
+        self.panePresets = panePresets
     }
 
     public init(from decoder: any Decoder) throws {
@@ -63,6 +68,16 @@ public struct Settings: Codable, Sendable, Equatable {
         mathSnippets = try c.decodeIfPresent([MathSnippet].self, forKey: .mathSnippets)
         asciiMathSnippets = try c.decodeIfPresent([MathSnippet].self, forKey: .asciiMathSnippets)
         classStart = try c.value(.classStart, or: d.classStart)
+        panePresets = try c.value(.panePresets, or: d.panePresets)
+    }
+
+    /// Every layout to choose from: the built-in ones, then the user's.
+    public var presets: [PanePreset] { PanePreset.builtIn + panePresets }
+
+    /// The layout a class's start opens its pages in, side by side (`ClassStartSettings.OpenIn.splitTab`): the one
+    /// chosen, or "수업 중" when none is or the chosen one was deleted.
+    public var classStartPreset: PanePreset {
+        classStart.preset.flatMap { id in presets.first { $0.id == id } } ?? .inClass
     }
 
     public var snippets: [MathSnippet] { mathSnippets ?? MathSnippet.defaults }

@@ -98,6 +98,27 @@ struct SessionSheetModelTests {
         #expect(saved.materials == [SessionMaterial(materialId: slides.id, firstPage: 3, lastPage: 12), SessionMaterial(materialId: problems.id)])
     }
 
+    /// A row of a file the class links, checked when the sheet opened and unchecked, takes the link off with its
+    /// pages. A row checked again before saving keeps it.
+    @Test func uncheckingALinkedRowRemovesItsProgress() throws {
+        let problems = try #require(file.materials.first { $0.path.hasSuffix("Problems.pdf") })
+        workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: 3, lastPage: 9))
+        workspace.run(MaterialLinkSession(course: graphTheory, material: problems.id, session: session))
+        let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: session, recorded: true)
+        #expect(model.unlinked.isEmpty)
+        model.toggle(slides.id)
+        #expect(model.unlinked == [slides.id] && model.refusal == nil)
+        #expect(model.submit())
+        #expect(saved.materials == [SessionMaterial(materialId: problems.id)])
+        #expect(file.materials.first { $0.id == slides.id }?.sessionIds.contains(session) == false)
+        // Checked again before saving, the row keeps its link.
+        workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: 3, lastPage: 9))
+        let again = SessionSheetModel(workspace: workspace, course: graphTheory, session: session, recorded: true)
+        again.toggle(slides.id)
+        again.toggle(slides.id)
+        #expect(again.unlinked.isEmpty)
+    }
+
     /// Saving the class's own attendance again leaves its entry as it was.
     @Test func unchangedAttendanceIsNotWrittenAgain() throws {
         workspace.run(AttendanceSet(course: graphTheory, session: session, state: .late))
@@ -254,7 +275,7 @@ struct SessionSheetModelTests {
         let current = try #require(workspace.run(SessionAdd(course: graphTheory, date: .now.addingTimeInterval(-5 * 60)))?.made)
         let model = SessionSheetModel(workspace: workspace, course: graphTheory, session: current)
         #expect(model.sections.first == .progress)
-        #expect(model.rows == [.init(id: slides.id, included: false, first: 7, last: nil)])
+        #expect(model.rows == [.init(id: slides.id, included: false, started: false, first: 7, last: nil)])
         #expect(!model.disabled && model.note == nil)
         model.pick(unit)
         #expect(model.submit())

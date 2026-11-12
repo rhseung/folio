@@ -201,6 +201,18 @@ struct ClassWrapUpTests {
         #expect(session.changedRanges([same, SessionMaterial(materialId: b)]).isEmpty)
     }
 
+    /// Unchecking a row drops the class's link only when the row started checked: a file linked whole starts
+    /// unchecked to be kept as it is, and a suggested file the class doesn't link has no link to drop.
+    @Test func anUncheckedRowDropsOnlyALinkThatStartedChecked() {
+        let (a, b, c) = (UUID(), UUID(), UUID())
+        var session = course().sessions[0]
+        session.materials = [SessionMaterial(materialId: a, firstPage: 3, lastPage: 9), SessionMaterial(materialId: b)]
+        #expect(session.droppedLinks(started: [a, c], kept: []) == [a])
+        #expect(session.droppedLinks(started: [a, c], kept: [a, c]).isEmpty)
+        #expect(session.droppedLinks(started: [a, b, c], kept: [c]) == [a, b])
+        #expect(session.droppedLinks(started: [c], kept: []).isEmpty)
+    }
+
     /// A file linked whole stays so unless asked: checked without an end it would hold the save.
     @Test func aWholeFileLinkStartsUncheckedUnlessSuggestedWhole() {
         let (a, b) = (UUID(), UUID())

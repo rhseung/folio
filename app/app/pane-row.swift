@@ -63,6 +63,7 @@ struct PaneRow: View {
             }
         }
         .coordinateSpace(.named(Self.space))
+        .background { SessionLayoutSaver(workspace: workspace, panes: panes) }
         .onChange(of: dragging) { _, now in if !now { dropped() } }
         // Over the panes, not in each: one Claude for the tab, which sees them all (#62).
         .overlay(alignment: .bottomTrailing) {
@@ -95,6 +96,7 @@ struct PaneRow: View {
                 .environment(\.paneFocused, i == panes.focus)
                 .environment(\.columnPrefs, panes.columns[i])
                 .environment(\.paneInsert, inserts[id])
+                .environment(\.paneNotes, PaneNotes(panes: panes, pane: id))
                 .environment(\.askClaude, askClaude)
                 .modifier(PaneScreenWidth(panes: panes, index: i, kept: kept, sizes: sizes))
                 .frame(minWidth: 0, maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)

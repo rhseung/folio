@@ -140,7 +140,7 @@ private struct SplitThumbnails: View {
 
     @ViewBuilder private func page(_ item: StripItem) -> some View {
         if let page = item.page {
-            StripPage(controller: controller, page: page, picked: item.mark == .picked, gutter: true, ranging: strip.editing != nil,
+            StripPage(controller: controller, page: page, picked: item.mark == .picked, box: PageStrip.box(lecture: true), ranging: strip.editing != nil,
                       press: { page, extend in
                           if extend { strip.extend(to: page, in: &split) } else { strip.press(page) }
                       },
@@ -171,7 +171,6 @@ private struct SplitThumbnails: View {
         return Gap(boundary: boundary) {
             if boundary { split.merge(after: i) } else { split.split(at: page + 1) }
         }
-        .padding(.leading, StripMetrics.gutter)
     }
 }
 

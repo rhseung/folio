@@ -212,12 +212,33 @@ public struct PaneLayout: Hashable, Sendable {
     public func limited(to limit: Int) -> PaneLayout {
         guard panes.count > max(1, limit) else { return self }
         let kept = Set(panes.indices.sorted { panes[$0].pressed > panes[$1].pressed }.prefix(max(1, limit)))
+        return keeping(kept.contains) ?? self
+    }
+
+    /// Only the panes `keep` takes, in their order, their shares made whole again: a remembered layout without the
+    /// panes whose item is gone. The focus stays where it was if that pane is kept, else goes to the pane pressed
+    /// most recently. Nil when none is kept.
+    public func keeping(_ keep: (Int) -> Bool) -> PaneLayout? {
+        let kept = panes.indices.filter(keep)
+        guard !kept.isEmpty else { return nil }
         var copy = self
-        copy.panes = panes.indices.filter(kept.contains).map { panes[$0] }
+        copy.panes = kept.map { panes[$0] }
         let total = copy.panes.map(\.share).reduce(0, +)
         for i in copy.panes.indices { copy.panes[i].share /= total }
-        copy.refocus()
+        if let focused = kept.firstIndex(of: focus) {
+            copy.focus = focused
+            copy.panes[focused].collapsed = false
+        } else {
+            copy.refocus()
+        }
         return copy
+    }
+
+    /// The class this layout is laid out for (#62): the one session its notes and recordings belong to, in any of
+    /// `files`. Nil when they belong to none, or to more than one, so a tab showing two classes' notes is neither's.
+    public func session(in files: [CourseFile]) -> UUID? {
+        let sessions = Set(panes.compactMap { pane in files.lazy.compactMap { $0.session(holding: pane.link) }.first })
+        return sessions.count == 1 ? sessions.first : nil
     }
 
     // MARK: Fit
@@ -325,88 +346,21 @@ extension PaneLayout: Codable {
     }
 }
 
-/// A named layout to switch to (#62, #64): which kinds of thing go in which pane, and how wide. The app names the
-/// built-in ones from its string catalog by `id`.
-public struct PanePreset: Hashable, Sendable, Codable, Identifiable {
-    public enum Role: String, Codable, Sendable, CaseIterable {
-        /// The session's lecture file, at its first page.
-        case lecture
-        /// The note written in class.
-        case classNote
-        case reviewNote
-        /// The course's quiz.
-        case quiz
-        /// A problem sheet and the canvas to solve it on. Neither has an address from a session yet, so a preset
-        /// opened from a session leaves them out.
-        case problems, canvas
-    }
+private extension PaneLayout {
+    var nilIfAlone: PaneLayout? { panes.count > 1 ? self : nil }
+}
 
-    public var id: String
-    public var roles: [Role]
-    public var shares: [Double]
-
-    public init(id: String, roles: [Role], shares: [Double]) {
-        self.id = id
-        self.roles = roles
-        self.shares = shares
-    }
-
-    public static let inClass = PanePreset(id: "in-class", roles: [.lecture, .classNote], shares: [0.55, 0.45])
-    public static let concepts = PanePreset(id: "concepts", roles: [.lecture, .quiz], shares: [0.6, 0.4])
-    public static let problems = PanePreset(id: "problems", roles: [.problems, .canvas], shares: [0.5, 0.5])
-    /// Opened for a class's review and a unit's review (#146).
-    public static let review = PanePreset(id: "review", roles: [.reviewNote, .quiz], shares: [0.6, 0.4])
-    public static let builtIn = [inClass, concepts, problems, review]
-
-    public func link(for role: Role, session: Session, course: UUID) -> AppLink? {
-        switch role {
-        case .lecture:
-            session.materials.first.map { AppLink(.material, $0.materialId, anchor: $0.firstPage.map(AppLink.Anchor.page)) }
-        case .classNote: session.roughNoteId.map { AppLink(.note, $0) }
-        case .reviewNote: session.reviewNoteId.map { AppLink(.note, $0) }
-        case .quiz: .course(course, page: .quiz)
-        case .problems, .canvas: nil
-        }
-    }
-
-    /// The preset filled with `links` for each role, several to a role sharing its width: the class's lectures and
-    /// its rough note when a class starts (#391, 2026-11-09 사용자). Every role given a link keeps one pane before a
-    /// role gets a second, so past `limit` a third lecture gives way, not the note. Focused on `focus`'s first pane,
-    /// else the first pane. Nil without a link.
-    public func layout(_ links: [Role: [AppLink]], focus: Role? = nil, limit: Int) -> PaneLayout? {
-        let filled = roles.map { links[$0] ?? [] }
-        var counts = filled.map { $0.isEmpty ? 0 : 1 }
-        while counts.reduce(0, +) > max(1, limit), let last = counts.lastIndex(where: { $0 > 0 }) { counts[last] = 0 }
-        for i in filled.indices {
-            while counts[i] > 0, counts[i] < filled[i].count, counts.reduce(0, +) < limit { counts[i] += 1 }
-        }
-        var chosen: [AppLink] = []
-        var widths: [Double] = []
-        var focused: Int?
-        for (i, (role, share)) in zip(roles, shares).enumerated() where counts[i] > 0 {
-            if role == focus, focused == nil { focused = chosen.count }
-            for link in filled[i].prefix(counts[i]) {
-                chosen.append(link)
-                widths.append(share / Double(counts[i]))
-            }
-        }
-        guard var layout = PaneLayout(links: chosen, shares: widths, limit: limit) else { return nil }
-        if let focused { layout.press(focused) }
-        return layout
-    }
-
-    /// The preset filled in for a session, without the roles it has nothing for. Nil when it has none.
-    public func layout(session: Session, course: UUID, limit: Int) -> PaneLayout? {
-        let filled = zip(roles, shares).compactMap { role, share in link(for: role, session: session, course: course).map { ($0, share) } }
-        return PaneLayout(links: filled.map(\.0), shares: filled.map(\.1), limit: limit)
-    }
-
-    /// The preset the layout is, filled in for the session, so a tab can go by the preset's name. Pages and blocks
-    /// don't count, nor widths: a lecture read further on is still the same layout.
-    public static func matching(_ layout: PaneLayout, session: Session, course: UUID, limit: Int) -> PanePreset? {
-        builtIn.first { preset in
-            guard let filled = preset.layout(session: session, course: course, limit: limit) else { return false }
-            return filled.links.map(\.withoutAnchor) == layout.links.map(\.withoutAnchor)
+extension CourseFile {
+    /// The class `link` belongs to, for a layout to be remembered by: a class's rough or review note, or its
+    /// recording. Not the class's own link, which opens the course's list of classes.
+    public func session(holding link: AppLink) -> UUID? {
+        guard let id = link.id else { return nil }
+        switch link.kind {
+        case .note: return sessions.first { $0.roughNoteId == id || $0.reviewNoteId == id }?.id
+        case .recording: return recordings.first { $0.id == id }?.sessionId
+        case .today, .grades, .requirements, .people, .codes, .settings, .whatsNew, .semester, .course, .session, .unit,
+             .material, .assignment, .exam, .card, .problemSet, .person:
+            return nil
         }
     }
 }
@@ -436,10 +390,29 @@ public struct PaneMemory: Codable, Hashable, Sendable {
         Self.trim(&layouts)
     }
 
-    /// The mode a note was last left in: in the session's layout when opened there, else wherever it was opened.
+    /// What opening `link` turns a tab of one pane into: the session's layout as it was last left, with `link` in its
+    /// pane and that pane focused (2026-11-11). Only a layout that has `link` in it, since one without it is not the
+    /// one being opened, and of more than one pane, which is what the tab is already. Past `limit` (a Mac's layout on
+    /// an iPad) the panes pressed longest ago are left out, never the note's.
+    public func restoring(_ link: AppLink, session: UUID, limit: Int) -> PaneLayout? {
+        guard var saved = layout(session: session),
+              let i = saved.panes.firstIndex(where: { $0.link.withoutAnchor == link.withoutAnchor }) else { return nil }
+        saved.open(link, in: i)
+        saved.press(i)
+        return saved.limited(to: limit).nilIfAlone
+    }
+
+    /// The session's layout for a class that starts again (its pages opened side by side, #391), in place of the
+    /// preset; nil without one of more than one pane.
+    public func layout(session: UUID, limit: Int) -> PaneLayout? {
+        layout(session: session)?.limited(to: limit).nilIfAlone
+    }
+
+    /// The mode a note (or a text file) was last left in: in the session's layout when opened there, else wherever it
+    /// was opened.
     public func noteMode(note: UUID, session: UUID? = nil) -> NoteViewMode? {
         if let session, let layout = layout(session: session),
-           let pane = layout.panes.first(where: { $0.link.kind == .note && $0.link.id == note }), let mode = pane.noteMode {
+           let pane = layout.panes.first(where: { $0.link.id == note }), let mode = pane.noteMode {
             return mode
         }
         return noteModes[note.uuidString]?.value

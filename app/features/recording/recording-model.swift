@@ -173,6 +173,8 @@ final class RecordingPlayerModel {
     func endRange() { ranging = false }
 
     var canCopy: Bool { !selected.isEmpty }
+    /// The menu's 받아쓰기 복사: every line, whatever is picked.
+    var transcriptText: String { transcript?.text ?? "" }
     var copyLabel: String {
         selected.isEmpty ? String(localized: .recordingCopy) : String(localized: .recordingCopyLines(selected.count))
     }

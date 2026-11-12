@@ -135,6 +135,48 @@ final class SettingsModel {
         return String(localized: .settingsClassStartSomeOff(off.map(\.label).joined(separator: " · ")))
     }
 
+    // MARK: Pane layouts
+
+    /// The layouts a class's start can open its pages in: those with its lecture or note.
+    var classStartPresets: [PanePreset] { settings.presets.filter(\.opensClass) }
+
+    var classStartPreset: String {
+        get { settings.classStartPreset.id }
+        set { settings.classStart.preset = newValue == PanePreset.inClass.id ? nil : newValue }
+    }
+
+    /// `노트 · 05_Matchings.pdf`: what each pane holds, a role by its kind and an address by what it opens.
+    func summary(of preset: PanePreset) -> String {
+        preset.slots.map { slot in
+            switch slot {
+            case .role(let role): role.label
+            case .link(let link): workspace.name(of: link) ?? link.string
+            }
+        }
+        .joined(separator: " · ")
+    }
+
+    func rename(_ id: String, to name: String) {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty, let i = settings.panePresets.firstIndex(where: { $0.id == id }) else { return }
+        settings.panePresets[i].name = name
+    }
+
+    func canMove(_ id: String, by offset: Int) -> Bool {
+        settings.panePresets.firstIndex { $0.id == id }.map { settings.panePresets.indices.contains($0 + offset) } ?? false
+    }
+
+    func move(_ id: String, by offset: Int) {
+        guard canMove(id, by: offset), let i = settings.panePresets.firstIndex(where: { $0.id == id }) else { return }
+        settings.panePresets.swapAt(i, i + offset)
+    }
+
+    /// A class whose start opened the deleted layout goes back to "수업 중".
+    func delete(_ id: String) {
+        settings.panePresets.removeAll { $0.id == id }
+        if settings.classStart.preset == id { settings.classStart.preset = nil }
+    }
+
     // MARK: Review
 
     /// `11/10 → 11/11 · 11/14 · 11/21`: the days a unit studied today comes back.

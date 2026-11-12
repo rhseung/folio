@@ -8,14 +8,14 @@ import Testing
 struct MCPTests {
     let h = Harness()
 
-    func send(_ server: MCPServer, _ gist: URL, _ method: String, _ params: JSONValue = [:]) throws -> JSONValue {
+    func send(_ server: MCPServer, _ gist: URL, _ method: String, _ params: JSONValue = [:], unlocked: Bool = true) throws -> JSONValue {
         let line = MCPServer.string(["jsonrpc": "2.0", "id": .number(1), "method": .string(method), "params": params])
-        let reply = CLI.$overrides.withValue(Overrides(gist: gist, device: h.device, now: h.now)) { server.handle(line) }
+        let reply = CLI.$overrides.withValue(Overrides(gist: gist, device: h.device, now: h.now, gradesUnlocked: unlocked)) { server.handle(line) }
         return try JSONDecoder().decode(JSONValue.self, from: try #require(reply))
     }
 
-    func call(_ server: MCPServer, _ gist: URL, _ name: String, _ arguments: JSONValue) throws -> (Bool, [String]) {
-        let result = try #require(try send(server, gist, "tools/call", ["name": .string(name), "arguments": arguments])["result"])
+    func call(_ server: MCPServer, _ gist: URL, _ name: String, _ arguments: JSONValue, unlocked: Bool = true) throws -> (Bool, [String]) {
+        let result = try #require(try send(server, gist, "tools/call", ["name": .string(name), "arguments": arguments], unlocked: unlocked)["result"])
         guard case .array(let blocks)? = result["content"] else { return (true, []) }
         let texts = blocks.compactMap { b -> String? in if case .string(let s)? = b["text"] { s } else { nil } }
         return (result["isError"] == .bool(true), texts)
@@ -130,6 +130,90 @@ struct MCPTests {
         try h.direct(try type.decode(JSONEncoder().encode(proposal.input)), gist: b)
         let r = h.cli(["exam", "show", "EC4207/제안 퀴즈", "--json"], gist: b)
         #expect(r.code == 0, "\(r.err)")
+    }
+
+    @Test func bothServersOpenTheGeneralTools() throws {
+        let gist = try Harness.fixtureCopy()
+        for propose in [true, false] {
+            let names = try toolNames(MCPServer(gist: nil, propose: propose), gist)
+            #expect(names.contains("action_search") && names.contains("action_run"), "propose: \(propose)")
+        }
+    }
+
+    func found(_ server: MCPServer, _ gist: URL, _ query: String) throws -> [JSONValue] {
+        let (failed, texts) = try call(server, gist, "action_search", ["query": .string(query)])
+        #expect(!failed, "\(texts)")
+        let text = try #require(texts.first)
+        #expect(!text.contains("\n") && !text.contains("null"), "\(text)")
+        guard case .array(let matches) = try JSONDecoder().decode(JSONValue.self, from: Data(text.utf8)) else { return [] }
+        return matches
+    }
+
+    @Test func searchFindsActionsOutsideThePanelWithTheirSchema() throws {
+        let gist = try Harness.fixtureCopy()
+        let panel = MCPServer(gist: nil, propose: true)
+        let semester = try #require(try found(panel, gist, "새 학기 만들기").first { $0["command"] == "semester add" })
+        #expect(semester["inputSchema"]?["properties"]?["year"] != nil)
+        #expect(semester["write"] == .bool(true))
+        // Not listed in the panel, so it goes through action_run.
+        #expect(semester["tool"] == nil)
+        let exam = try #require(try found(panel, gist, "시험 추가").first { $0["command"] == "exam add" })
+        #expect(exam["tool"] == "exam_add")
+        // Only what action_run can run: `unlock` is a command but never a tool.
+        let unlock = try found(MCPServer(gist: nil, propose: false), gist, "성적 보이게 해줘")
+        #expect(!unlock.contains { $0["command"] == "unlock" })
+        #expect(try call(panel, gist, "action_search", ["query": ""]).0)
+        // A limit past Int's range is clamped rather than ending the server.
+        let (huge, texts) = try call(panel, gist, "action_search", ["query": "시험 추가", "limit": .number(1e300)])
+        #expect(!huge, "\(texts)")
+    }
+
+    @Test func runningAnyActionInThePanelOnlyProposes() throws {
+        let (a, b) = (try Harness.fixtureCopy(), try Harness.fixtureCopy())
+        let before = try Harness.files(a)
+        let input: JSONValue = ["year": .number(2027), "term": "spring", "start": "2027-03-02"]
+        let (failed, texts) = try call(MCPServer(gist: nil, propose: true), a, "action_run", ["action": "semester add", "input": input, "dryRun": .bool(false)])
+        #expect(!failed, "\(texts)")
+        #expect(try Harness.files(a) == before)
+        let proposal = try #require(texts.compactMap(ActionProposal.init(text:)).first)
+        #expect(proposal.command == "semester add")
+        let type = try #require(Actions.all.first { $0.command == proposal.command })
+        try h.direct(try type.decode(JSONEncoder().encode(proposal.input)), gist: b)
+        #expect(h.cli(["semester", "show", "2027-1", "--json"], gist: b).code == 0)
+    }
+
+    @Test func runningInTheTerminalWritesOrDryRuns() throws {
+        let (a, b) = (try Harness.fixtureCopy(), try Harness.fixtureCopy())
+        let server = MCPServer(gist: nil, propose: false)
+        let before = try Harness.files(a)
+        let args: JSONValue = ["action": "settings_set", "input": ["field": "dayBoundaryMinutes", "value": .number(300)]]
+        var dry = args
+        dry["dryRun"] = .bool(true)
+        let (dryFailed, dryTexts) = try call(server, a, "action_run", dry)
+        #expect(!dryFailed, "\(dryTexts)")
+        #expect(try Harness.files(a) == before)
+        #expect(dryTexts.compactMap(ActionProposal.init(text:)).isEmpty)
+        let (failed, texts) = try call(server, a, "action_run", args)
+        #expect(!failed, "\(texts)")
+        #expect(h.cli(["settings", "set", "dayBoundaryMinutes", "300"], gist: b).code == 0)
+        let (fa, fb) = (try Harness.files(a), try Harness.files(b))
+        #expect(fa != before)
+        for (path, data) in fa { #expect(Harness.canonical(fb[path]) == Harness.canonical(data), "\(path)") }
+    }
+
+    @Test func runningReadsCommandsAndKeepsTheGradesLock() throws {
+        let gist = try Harness.fixtureCopy()
+        let panel = MCPServer(gist: nil, propose: true)
+        let (failed, texts) = try call(panel, gist, "action_run", ["action": "folio settings show"])
+        #expect(!failed, "\(texts)")
+        #expect(texts.first?.contains("dayBoundaryMinutes") == true, "\(texts)")
+        #expect(try call(panel, gist, "action_run", ["action": "gpa"]).0 == false)
+        // The owner didn't unlock: the command's own Touch ID check refuses, as in the terminal.
+        let locked = try call(panel, gist, "action_run", ["action": "gpa"], unlocked: false)
+        #expect(locked.0, "\(locked.1)")
+        #expect(try call(panel, gist, "action_run", ["action": "unlock"]).0)
+        #expect(try call(panel, gist, "action_run", ["action": "settings set", "input": "not an object"]).0)
+        #expect(try call(panel, gist, "action_run", [:]).0)
     }
 
     @Test func protocolEdges() throws {

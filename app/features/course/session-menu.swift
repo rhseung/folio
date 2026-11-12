@@ -20,11 +20,11 @@ struct SessionMenuSource: ItemMenuSource {
     private var file: CourseFile? { workspace.course(courseId)?.file }
     private var link: AppLink { AppLink(.session, session.id) }
 
-    var commands: [SessionCommand] {
+    var commands: [SessionMenuCommand] {
         file?.commands(for: session, at: now, host: host, classMinutes: workspace.settings.classMinutes, calendar: workspace.calendar) ?? []
     }
 
-    func row(_ command: SessionCommand) -> MenuRow {
+    func row(_ command: SessionMenuCommand) -> MenuRow {
         let row = { (title: String, symbol: String, kind: MenuRow.Kind) in
             MenuRow(id: command, group: command.group, title: title, symbol: symbol, kind: kind)
         }

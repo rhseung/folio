@@ -19,13 +19,11 @@ struct CodesView: View {
                         Block(CodesModel.programTitle(program), note: String(localized: .codesCount(shown.count))) {
                             LazyVGrid(columns: [GridItem(.adaptive(minimum: 170), spacing: Theme.Space.m)], spacing: Theme.Space.m) {
                                 ForEach(shown) { code in
-                                    let remove = { model.remove(code.id, from: &catalog) }
+                                    let remove: @MainActor () -> Void = { model.remove(code.id, from: &catalog) }
                                     CodeTile(code: code, courses: users[code.id] ?? [])
                                         .onTapGesture { model.editing = code.id }
                                         .contextMenu {
-                                            Button(.commonEdit) { model.editing = code.id }
-                                            Divider()
-                                            Button(.commonDelete, role: .destructive, action: remove).disabled(model.removal(code.id) != nil)
+                                            ItemMenu(source: CodeMenuSource(edit: { model.editing = code.id }, remove: remove, removable: model.removal(code.id) == nil))
                                         }
                                         .popover(isPresented: Binding(get: { model.editing == code.id },
                                                                       set: { if !$0 { model.closeEditor(code.id, catalog: &catalog) } }),
@@ -98,7 +96,7 @@ struct CodeEditor: View {
     @Binding var code: CourseCode
     let programs: [String]
     let courses: [UUID]
-    let remove: () -> Void
+    let remove: @MainActor () -> Void
 
     var body: some View {
         let records = model.courses(using: courses)

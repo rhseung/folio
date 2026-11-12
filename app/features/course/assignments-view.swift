@@ -27,13 +27,7 @@ struct AssignmentsView: View {
                                 .linkTarget(a.id)
                                 .opens { model.editing = a }
                                 .accessibilityAction(named: Text(.commonEdit)) { model.editing = a }
-                                .contextMenu {
-                                    Button(.commonEditEllipsis) { model.editing = a }
-                                    Menu(String(localized: .assignmentsStatus)) { statusItems(a) }
-                                    LinkMenu(link: AppLink(.assignment, a.id), course: model.course.id, trailing: true)
-                                    Divider()
-                                    Button(.commonDeleteEllipsis, role: .destructive) { model.remove(a) }
-                                }
+                                .contextMenu { AssignmentMenu(courseId: model.course.id, assignmentId: a.id, host: .own) }
                                 .fileDrop { model.drop($0, on: a) }
                         }
                     }
@@ -55,7 +49,7 @@ struct AssignmentsView: View {
     }
 
     @ViewBuilder func statusItems(_ a: Assignment) -> some View {
-        ForEach([AssignmentStatus.todo, .doing, .submitted, .graded], id: \.self) { s in
+        ForEach(AssignmentStatus.menuOrder, id: \.self) { s in
             Button { model.setStatus(a, s) } label: { Label(s.label, systemImage: s == a.status ? "checkmark" : s.symbol) }
         }
     }

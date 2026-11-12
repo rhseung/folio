@@ -100,6 +100,25 @@ struct MaterialNoteStudyTests {
         #expect(try h.file(GISTStore(url: gist)).attendance.filter { $0.sessionId == s.id }.map(\.id) == [entry.id])
     }
 
+    /// `--unlink` takes a file off the class, its pages with it, in the same save as the ranges given.
+    @Test func sessionWrapUpUnlinks() throws {
+        let linked = ["material", "link", "EC4207/05_Matchings.pdf", "10-28", "--pages", "3-12"]
+        let setup = [Self.track, SessionCommandTests.add, linked]
+        try h.expectSame(["session", "wrap-up", "EC4207/10-28", "Problems.pdf:7", "--unlink", "05_Matchings.pdf"], setup: setup) { gist in
+            SessionWrapUp(course: course, session: SessionCommandTests.id,
+                          ranges: [SessionMaterial(materialId: try material(gist, "Study/Problems.pdf"), firstPage: 7, lastPage: 7)],
+                          unlinked: [try material(gist, "05_Matchings.pdf")])
+        }
+        let gist = try Harness.fixtureCopy()
+        for line in setup { _ = h.cli(line, gist: gist) }
+        #expect(h.cli(["session", "wrap-up", "EC4207/10-28", "--unlink", "05_Matchings.pdf"], gist: gist).code == 0)
+        let store = GISTStore(url: gist)
+        let slides = try material(store, "05_Matchings.pdf")
+        let f = try h.file(store)
+        #expect(f.sessions.first { $0.id == SessionCommandTests.id }?.materials.isEmpty == true)
+        #expect(f.materials.first { $0.id == slides }?.sessionIds.contains(SessionCommandTests.id) == false)
+    }
+
     /// A class under way (09:30, the harness's clock at 10:00) is wrapped up by a save only from the prompt of a
     /// recording just stopped, which isn't in course.json yet: its audio is still being compressed.
     @Test func wrapUpDuringTheClassCountsOnlyAfterARecording() throws {

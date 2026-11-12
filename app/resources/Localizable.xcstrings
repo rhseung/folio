@@ -1288,6 +1288,28 @@
         }
       }
     },
+    "claude.tool.searching": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "액션 찾는 중"
+          }
+        }
+      }
+    },
+    "claude.tool.choosing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "실행할 액션 고르는 중"
+          }
+        }
+      }
+    },
     "claude.tool.proposing": {
       "extractionState": "manual",
       "localizations": {
@@ -6920,6 +6942,61 @@
         }
       }
     },
+    "menu.add-card": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "카드 추가"
+          }
+        }
+      }
+    },
+    "menu.add-files-ellipsis": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "파일 추가…"
+          }
+        }
+      }
+    },
+    "menu.counts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "반영"
+          }
+        }
+      }
+    },
+    "menu.done": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "완료"
+          }
+        }
+      }
+    },
+    "menu.more": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 보기"
+          }
+        }
+      }
+    },
     "notes.assets": {
       "extractionState": "manual",
       "localizations": {
@@ -7158,6 +7235,28 @@
           "stringUnit": {
             "state": "translated",
             "value": "위젯"
+          }
+        }
+      }
+    },
+    "notes.edit": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "노트 편집"
+          }
+        }
+      }
+    },
+    "notes.edit-folder": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "폴더"
           }
         }
       }
@@ -7811,17 +7910,6 @@
         }
       }
     },
-    "notes.delete-ellipsis": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트 삭제…"
-          }
-        }
-      }
-    },
     "notes.embed-loop": {
       "extractionState": "manual",
       "localizations": {
@@ -8460,17 +8548,6 @@
         }
       }
     },
-    "notes.open": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "열기"
-          }
-        }
-      }
-    },
     "notes.outline.hide": {
       "extractionState": "manual",
       "localizations": {
@@ -8544,39 +8621,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "단원 노트"
-          }
-        }
-      }
-    },
-    "notes.rename": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "노트 이름 바꾸기"
-          }
-        }
-      }
-    },
-    "notes.rename-confirm": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "바꾸기"
-          }
-        }
-      }
-    },
-    "notes.rename-ellipsis": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "이름 바꾸기…"
           }
         }
       }
@@ -10392,6 +10436,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "문제 %lld개"
+          }
+        }
+      }
+    },
+    "quiz.problems.record": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "풀이 기록"
           }
         }
       }
@@ -20516,28 +20571,6 @@
         }
       }
     },
-    "panes.preset.concepts": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "개념 다지기"
-          }
-        }
-      }
-    },
-    "panes.preset.problems": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "문제 풀이"
-          }
-        }
-      }
-    },
     "panes.preset.review": {
       "extractionState": "manual",
       "localizations": {
@@ -20875,6 +20908,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "수업 진도 선택"
+          }
+        }
+      }
+    },
+    "file-view.progress.remove": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "진도 지우기"
           }
         }
       }
@@ -21381,6 +21425,259 @@
           "stringUnit": {
             "state": "translated",
             "value": "Folio %1$@ · %2$@ 이후 업데이트 %3$lld번"
+          }
+        }
+      }
+    },
+    "panes.role.lecture": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "렉처"
+          }
+        }
+      }
+    },
+    "panes.role.class-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 노트"
+          }
+        }
+      }
+    },
+    "panes.role.review-note": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "복습 노트"
+          }
+        }
+      }
+    },
+    "panes.role.quiz": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "퀴즈"
+          }
+        }
+      }
+    },
+    "panes.presets.menu": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "배치"
+          }
+        }
+      }
+    },
+    "panes.presets.built-in": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본 배치"
+          }
+        }
+      }
+    },
+    "panes.presets.mine": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 배치"
+          }
+        }
+      }
+    },
+    "panes.presets.save": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지금 배치 저장…"
+          }
+        }
+      }
+    },
+    "panes.presets.manage": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "배치 관리…"
+          }
+        }
+      }
+    },
+    "panes.presets.new-name": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 배치"
+          }
+        }
+      }
+    },
+    "panes.presets.save-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "배치 저장"
+          }
+        }
+      }
+    },
+    "panes.presets.name-field": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "배치 이름"
+          }
+        }
+      }
+    },
+    "panes.presets.save-message": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "회차의 노트와 렉처는 다른 회차에서 고르면 그 회차 것으로 열려요."
+          }
+        }
+      }
+    },
+    "panes.presets.rename-title": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "배치 이름 바꾸기"
+          }
+        }
+      }
+    },
+    "settings.pane-layouts": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "칸 배치"
+          }
+        }
+      }
+    },
+    "settings.class-start-layout": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "수업 시작에 여는 배치"
+          }
+        }
+      }
+    },
+    "settings.pane-layouts.built-in": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기본"
+          }
+        }
+      }
+    },
+    "settings.pane-layouts.rename": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이름 바꾸기…"
+          }
+        }
+      }
+    },
+    "settings.pane-layouts.move-up": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "위로 옮기기"
+          }
+        }
+      }
+    },
+    "settings.pane-layouts.move-down": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아래로 옮기기"
+          }
+        }
+      }
+    },
+    "settings.pane-layouts.delete": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "지우기"
+          }
+        }
+      }
+    },
+    "settings.pane-layouts.more": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "배치 메뉴"
+          }
+        }
+      }
+    },
+    "settings.pane-layouts.empty": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "내 배치는 탭 메뉴의 \"배치 ▸ 지금 배치 저장…\"으로 더해요."
           }
         }
       }

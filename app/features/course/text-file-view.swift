@@ -59,7 +59,7 @@ struct TextFileView: View {
             renaming = true
         } })
         .sheet(isPresented: $renaming) {
-            if let links { NoteRenameSheet(workspace: links.workspace, course: links.course, note: links.note, moves: moves) }
+            if let links { NoteEditSheet(workspace: links.workspace, course: links.course, note: links.note, moves: moves) }
         }
         .onAppear(perform: model.load)
         .rememberingPanes($panes, id: model.isTex ? model.paneId : nil)
@@ -189,7 +189,26 @@ struct TextFileView: View {
             Button(.materialsOpenWithDefault, systemImage: "arrow.up.forward.app") { NSWorkspace.shared.open(model.fileURL) }
                 .help(Text(.materialsOpenWithDefault))
             #endif
+            if case .material(let id) = model.source {
+                PageMenuButton(inBar: true) { MaterialMenu(courseId: model.course.id, materialId: id, host: .own) }
+            } else if let links {
+                PageMenuButton(inBar: true) {
+                    NoteMenu(courseId: links.course.id, note: links.note, host: .own, moves: moves, build: texBuild, canBuild: model.canBuild,
+                             save: model.saveIfDirty)
+                }
+            }
         }
+    }
+
+    /// iPadOS can't run Tectonic, so its menu has no build row either.
+    var texBuild: (@MainActor () -> Void)? {
+        #if os(macOS)
+        guard model.isTex else { return nil }
+        let build: @MainActor () -> Void = { Task { await model.build() } }
+        return build
+        #else
+        nil
+        #endif
     }
 
     var installHint: some View {

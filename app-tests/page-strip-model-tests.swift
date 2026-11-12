@@ -36,7 +36,8 @@ struct PageStripModelTests {
         workspace.run(MaterialLinkSession(course: graphTheory, material: slides.id, session: session, firstPage: pages.lowerBound, lastPage: pages.upperBound))
     }
     /// What the column shows, top to bottom: `h` a header (`H` open), `e` the edit row, `d` the draft row, then the
-    /// page, `|` for a page beside its section's line and `*` for one picked.
+    /// page, `|` for a page on its section's tint and `*` for one picked, then ` /d` and its range for a draft row
+    /// under the page.
     func column(_ model: PageStripModel) -> [String] {
         model.items.map { item in
             let lead: String = switch item.lead {
@@ -47,10 +48,11 @@ struct PageStripModelTests {
             }
             let mark = switch item.mark {
             case .plain: ""
-            case .line: "|"
+            case .tinted: "|"
             case .picked: "*"
             }
-            return lead + (item.page.map { " \($0)\(mark)" } ?? "")
+            let trail: String = if case .draft(let pages)? = item.trail { " /d" + Session.pagesLabel(pages) } else { "" }
+            return lead + (item.page.map { " \($0)\(mark)" } ?? "") + trail
         }
     }
 
@@ -118,6 +120,42 @@ struct PageStripModelTests {
         let fresh = self.model()
         fresh.extend(to: 6)
         #expect(fresh.selection == 6...6)
+    }
+
+    /// The draft row stands at the end the range was picked out to: under it picked downward, over it picked upward
+    /// or with one page alone, and the column scrolls to the item that holds it.
+    @Test func theDraftRowFollowsThePickedEnd() {
+        let model = model()
+        model.press(4)
+        model.extend(to: 9)
+        #expect(model.selection == 4...9 && model.draftBelow && model.draftItemID == .page(9))
+        let down = column(model)
+        #expect(down[3] == " 4*" && down[8] == " 9* /d4–9쪽" && down[9] == " 10")
+        // ⇧ back above the anchor turns it round: the row goes over the range, by its first page.
+        model.extend(to: 2)
+        #expect(model.selection == 2...4 && !model.draftBelow && model.draftItemID == .page(2))
+        let up = column(model)
+        #expect(up[1] == "d2–4쪽 2*" && up[3] == " 4*")
+        // One page alone keeps the row over it.
+        model.extend(to: 4)
+        #expect(model.selection == 4...4 && !model.draftBelow && column(model)[3] == "d4쪽 4*")
+        // iPad: a long press then a tap further down does the same.
+        model.start(at: 12)
+        #expect(!model.draftBelow && model.draftItemID == .page(12))
+        model.extend(to: 15)
+        #expect(model.draftBelow && column(model)[14] == " 15* /d12–15쪽")
+        model.clear()
+        #expect(model.draftItemID == nil)
+    }
+
+    /// A class's range being changed keeps its row in the header's place, whichever way it is widened.
+    @Test func theEditRowStaysInTheHeadersPlace() {
+        link(session, 9...12)
+        let model = model()
+        model.edit(model.sections[0])
+        model.extend(to: 14)
+        #expect(!model.draftBelow && model.draftItemID == nil)
+        #expect(column(model)[8] == "e9–14쪽 9*" && !column(model).contains { $0.contains("/d") })
     }
 
     /// A range stops at another class's pages, and a press on one of them starts nothing.
@@ -192,20 +230,6 @@ struct PageStripModelTests {
         #expect(model.choices.isEmpty && model.chosen == nil && !model.canSave)
     }
 
-    /// The line's gutter is kept only once a class has pages here: not on a lecture file with none, nor while its first
-    /// range is picked, so the pages don't shift under the pointer; nor on a file with no progress at all.
-    @Test func theGutterWaitsForAClassesPages() throws {
-        let model = model()
-        #expect(model.picks && !model.railed)
-        model.press(9)
-        model.extend(to: 12)
-        #expect(!model.railed)
-        model.commit()
-        #expect(model.railed)
-        let other = try #require(file.materials.first { $0.role != .lecture && !$0.isFolder })
-        #expect(!self.model(other.id).railed)
-    }
-
     @Test func todaysClassAloneIsOfferedWithoutAMenu() {
         link(earlier, 1...4)
         let model = model()
@@ -232,6 +256,44 @@ struct PageStripModelTests {
         // On iPad a long press on a section's page does the same.
         model.start(at: 2)
         #expect(model.editing == earlier && model.selection == 1...4)
+    }
+
+    /// The edit row, and the header's menu without editing first, take the file off the class as the wrap-up's
+    /// unticked row does. The class is offered for a new range again, and its fold is forgotten.
+    @Test func aSectionsProgressIsRemoved() throws {
+        link(earlier, 1...4)
+        link(session, 9...12)
+        let defaults = try #require(UserDefaults(suiteName: "PageStripModelTests.\(UUID())"))
+        let model = model(defaults: defaults)
+        #expect(!model.canRemove)
+        model.toggle(model.sections[1])
+        model.edit(model.sections[1])
+        #expect(model.canRemove)
+        model.remove()
+        #expect(links(session).isEmpty && model.editing == nil && model.selection == nil && !model.canRemove)
+        #expect(model.sections.map(\.id) == [earlier] && column(model)[8] == " 9")
+        #expect((defaults.dictionary(forKey: PageStripModel.key(slides.id)) as? [String: Bool])?[session.uuidString] == nil)
+        #expect(model.choices.map(\.id) == [session])
+        model.remove(model.sections[0])
+        #expect(links(earlier).isEmpty && model.sections.isEmpty)
+        #expect(links(upcoming).isEmpty)
+    }
+
+    /// From one header's menu, another section being changed or a new range being picked stays as it was.
+    @Test func removingFromAMenuKeepsOtherWork() {
+        link(earlier, 1...4)
+        link(session, 9...12)
+        let model = model()
+        model.edit(model.sections[1])
+        model.extend(to: 10)
+        #expect(model.canRemove(model.sections[0]))
+        model.remove(model.sections[0])
+        #expect(links(earlier).isEmpty && model.editing == session && model.selection == 9...10)
+        model.clear()
+        model.press(15)
+        model.extend(to: 17)
+        model.remove(model.sections[0])
+        #expect(links(session).isEmpty && model.selection == 15...17)
     }
 
     /// The rule behind the stop: a save that would share a page is refused, naming the other class's pages.

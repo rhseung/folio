@@ -203,7 +203,7 @@ struct CLIProviderTests {
             #"{"type":"result","result":"과목은 1개입니다."}"#,
         ]
         #expect(lines.compactMap { CLIProvider.event(Data($0.utf8)) } == [
-            .turn, .text("Look at the note."), .tool("mcp__folio__course_list"), .turn, .text("과목은 "), .text("1개입니다."),
+            .turn, .text("Look at the note."), .tool("mcp__folio__course_list"), .toolInput("{}"), .turn, .text("과목은 "), .text("1개입니다."),
         ])
     }
 

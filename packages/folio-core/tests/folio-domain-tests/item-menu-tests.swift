@@ -24,7 +24,7 @@ struct ItemMenuTests {
         return file
     }
 
-    func commands(_ f: CourseFile, at now: Date, host: MenuHost = .own) -> [SessionCommand] {
+    func commands(_ f: CourseFile, at now: Date, host: MenuHost = .own) -> [SessionMenuCommand] {
         f.commands(for: f.sessions[0], at: now, host: host, classMinutes: 75, calendar: calendar)
     }
 
@@ -37,7 +37,7 @@ struct ItemMenuTests {
     @Test func groupsKeepTheirOrderAndRemoveIsLast() {
         #expect(MenuGroup.allCases == [.open, .start, .state, .edit, .arrange, .share, .remove])
         #expect(MenuGroup.allCases.map(\.band) == [0, 0, 0, 1, 1, 1, 2])
-        let shuffled: [SessionCommand] = [.remove, .share, .edit, .review(.needed), .record, .join, .open, .unlink(unit: UUID())]
+        let shuffled: [SessionMenuCommand] = [.remove, .share, .edit, .review(.needed), .record, .join, .open, .unlink(unit: UUID())]
         #expect(shuffled.inMenuOrder().map(\.group) == [.open, .open, .start, .state, .edit, .arrange, .share, .remove])
     }
 

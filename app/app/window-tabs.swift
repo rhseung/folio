@@ -401,6 +401,10 @@ struct TabBar: View {
     /// Where the row has room for the tabs, worked out there as the window resizes.
     let toolbar: ToolbarRow
     let moveToWindow: (UUID) -> Void
+    /// "지금 배치 저장…": asks for the name the tab's panes are saved under.
+    var nameLayout: (TabPanes) -> Void = { _ in }
+    /// "배치 관리…": the settings where the user's layouts are named, ordered and deleted.
+    var manageLayouts: () -> Void = {}
     @State private var sizes = TabSizes()
     @State private var frames: [UUID: CGRect] = [:]
     @State private var dragged: (id: UUID, start: CGFloat)?
@@ -470,6 +474,9 @@ struct TabBar: View {
                 .background { if id == row.first { ResizeMarker(name: "firstTab") } }
                 #endif
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { frames[id] = $0 }
+                #if DEBUG && os(macOS)
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { if id == tabs.selected { LayoutSnapshots.selectedTab = $0 } }
+                #endif
                 .offset(x: dragged?.id == id ? dragOffset : 0)
                 .zIndex(dragged?.id == id ? 1 : 0)
                 .simultaneousGesture(drag(id, row: row))
@@ -547,6 +554,10 @@ struct TabBar: View {
                         if let i = panes.ids.firstIndex(of: segment.id) {
                             PaneMenu(panes: panes, index: i) { [tabs] navigator, columns in tabs.open(navigator, columns: columns, fromLink: true) }
                         }
+                        // A segment's menu stands in for the tab's, so a tab of panes, the one a layout is saved from,
+                        // has "배치 ▸" too.
+                        Divider()
+                        LayoutMenu(choices: workspace.layoutChoices(for: panes, save: { nameLayout(panes) }, manage: manageLayouts))
                     }
             }
             if tabs.count > 1 { closeButton(tabs.selected).padding(.leading, Theme.Space.xxs) }
@@ -753,6 +764,10 @@ struct TabBar: View {
             Divider()
             mergeMenu(into: id)
             Button(.tabsMoveToWindow) { moveToWindow(id) }.disabled(tabs.count < 2)
+            if let panes = tabs.panes(id) {
+                Divider()
+                LayoutMenu(choices: workspace.layoutChoices(for: panes, save: { nameLayout(panes) }, manage: manageLayouts))
+            }
         }
     }
 

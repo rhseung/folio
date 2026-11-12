@@ -287,6 +287,7 @@ struct CourseOverview: View {
                 Chip(file.course.gradingMode.label)
                 Spacer()
                 Button(.courseEdit, systemImage: "slider.horizontal.3") { editing = true }.buttonStyle(.ghost)
+                PageMenuButton { CourseMenu(courseId: course.id, host: .own) }
             }
             .sheet(isPresented: $editing) { EditCourseSheet(workspace: model.workspace, course: course) }
             #if DEBUG && os(macOS)
@@ -382,7 +383,7 @@ struct CourseOverview: View {
                             }
                         }
                     }
-                    .contextMenu { Button(.courseShowAssignments, systemImage: "checklist") { model.section = .assignments } }
+                    .contextMenu { AssignmentMenu(courseId: course.id, assignmentId: a.id) }
                 }
                 if open.count > shown.count {
                     CardRow(last: true) { EmptyLine(String(localized: .commonMoreCount(open.count - shown.count))) }
@@ -411,12 +412,7 @@ struct CourseOverview: View {
                             }
                         }
                     }
-                    .contextMenu {
-                        Button(.courseShowUnits, systemImage: "list.bullet") { model.section = .units }
-                        if entry != nil {
-                            Button(.courseSkipReviewToday, systemImage: "forward") { model.skipReview(unit) }
-                        }
-                    }
+                    .contextMenu { UnitMenu(courseId: course.id, unitId: unit.id) }
                 }
             }
             .opens { model.section = .units }

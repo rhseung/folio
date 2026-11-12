@@ -205,6 +205,95 @@ struct TabPanesTests {
     }
 
     @Test func eachPresetHasAName() {
-        for preset in PanePreset.builtIn { #expect(preset.name != preset.id) }
+        for preset in PanePreset.builtIn { #expect(preset.title != preset.id) }
+    }
+
+    // MARK: A class's layout (#62)
+
+    @Test func aClassLayoutComesBackAroundTheOnePane() throws {
+        let note = Navigator.Entry(link: AppLink(.note, UUID()))
+        let panes = TabPanes(Navigator(), limit: 3)
+        let navigator = panes.focused, id = panes.ids[0]
+        var saved = try #require(PaneLayout(links: [grades.link, note.link, people.link], shares: [0.5, 0.3, 0.2], limit: 3))
+        saved.show(.read, in: 1)
+        saved.press(1)
+        #expect(panes.restore(saved, entries: [grades, note, people]))
+        // The pane that opened the note keeps its history, its place among the screens and its columns.
+        #expect(panes.count == 3 && panes.focus == 1)
+        #expect(panes.focused === navigator && panes.ids[1] == id)
+        #expect(navigator.current == note && navigator.backList == [Navigator.Entry(link: .place(.today))])
+        #expect(panes.navigators.map(\.current) == [grades, note, people])
+        let noteID = try #require(note.link.id)
+        #expect(panes.noteModes == [nil, .read, nil] && panes.noteMode(of: noteID, pane: id) == .read)
+        // A tab of more panes is the student's own arrangement: nothing changes.
+        #expect(!panes.restore(saved, entries: [grades, note, people]))
+        #expect(panes.count == 3)
+    }
+
+    @Test func aPaneWhoseItemIsGoneIsLeftOut() throws {
+        let note = Navigator.Entry(link: AppLink(.note, UUID()))
+        var saved = try #require(PaneLayout(links: [grades.link, note.link, people.link], limit: 3))
+        saved.press(1)
+        let panes = TabPanes(Navigator(), limit: 3)
+        #expect(panes.restore(saved, entries: [nil, note, people]))
+        #expect(panes.navigators.map(\.current) == [note, people] && panes.focus == 0)
+        #expect(abs(panes.shares.reduce(0, +) - 1) < 1e-9)
+        // Left with the note alone, the tab stays as it was.
+        let alone = TabPanes(Navigator(), limit: 3)
+        #expect(!alone.restore(saved, entries: [nil, note, nil]))
+        #expect(alone.count == 1 && alone.focused.current == Navigator.Entry(link: .place(.today)))
+    }
+
+    @Test func aPaneKeepsHowItShowsItsNote() throws {
+        let note = AppLink(.note, UUID()), other = AppLink(.note, UUID())
+        let panes = TabPanes(Navigator(Navigator.Entry(link: note)), limit: 3)
+        panes.openBeside(grades)
+        let id = panes.ids[0]
+        let noteID = try #require(note.id), otherID = try #require(other.id)
+        panes.show(.write, of: noteID, pane: id)
+        #expect(panes.current.panes[0].noteMode == .write && panes.noteModes == [.write, nil])
+        #expect(panes.noteMode(of: noteID, pane: id) == .write)
+        // The pane gone on to another note starts that one from nothing.
+        panes.navigators[0].go(Navigator.Entry(link: other))
+        #expect(panes.noteMode(of: otherID, pane: id) == nil)
+        #expect(panes.noteMode(of: noteID, pane: id) == nil)
+        // A note the pane no longer shows can't set how the pane shows things.
+        panes.show(.read, of: noteID, pane: id)
+        #expect(panes.current.panes[0].noteMode == nil)
+    }
+
+    @Test func aRememberedLayoutOpensWithItsModesAndFolds() throws {
+        let note = Navigator.Entry(link: AppLink(.note, UUID()))
+        var layout = try #require(PaneLayout(links: [grades.link, note.link, people.link], limit: 3))
+        layout.show(.read, in: 1)
+        layout.press(1)
+        layout.collapse(0)
+        let panes = try #require(TabPanes(layout: layout, entries: [grades, note, people], limit: 3))
+        #expect(panes.focus == 1 && panes.collapsed == [0] && panes.noteModes == [nil, .read, nil])
+        #expect(panes.navigators.map(\.current) == [grades, note, people])
+        #expect(TabPanes(layout: layout, entries: [grades, note], limit: 3) == nil)
+        #expect(TabPanes(layout: layout, entries: [grades, note, people], limit: 2) == nil)
+    }
+
+    @Test func theDeviceKeepsAClassLayoutAcrossLaunches() throws {
+        let defaults = try #require(UserDefaults(suiteName: "folio-tests-\(UUID().uuidString)"))
+        let session = UUID()
+        let layout = try #require(PaneLayout(links: [grades.link, AppLink(.note, UUID())], limit: 3))
+        PaneMemoryStore(defaults: defaults).remember(layout, session: session)
+        #expect(PaneMemoryStore(defaults: defaults).memory.layout(session: session) == layout)
+    }
+
+    @Test func aFixtureRunKeepsItsLayoutsApartFromTheUsers() throws {
+        let fixture = ["FOLIO_GIST": "/tmp/folio-tests-\(UUID().uuidString)"]
+        let other = ["FOLIO_GIST": "/tmp/folio-tests-\(UUID().uuidString)"]
+        let session = UUID()
+        let layout = try #require(PaneLayout(links: [grades.link, AppLink(.note, UUID())], limit: 3))
+        let before = UserDefaults.standard.data(forKey: PaneMemoryStore.key)
+        PaneMemoryStore.forThisRun(environment: fixture).remember(layout, session: session)
+        #expect(PaneMemoryStore.forThisRun(environment: fixture).memory.layout(session: session) == layout)
+        #expect(PaneMemoryStore.forThisRun(environment: other).memory.layout(session: session) == nil)
+        #expect(UserDefaults.standard.data(forKey: PaneMemoryStore.key) == before)
+        let fixtures = try #require(UserDefaults(suiteName: "folio-fixtures"))
+        for key in fixtures.dictionaryRepresentation().keys where key.hasPrefix(PaneMemoryStore.key + ".") { fixtures.removeObject(forKey: key) }
     }
 }

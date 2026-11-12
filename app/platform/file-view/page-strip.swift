@@ -4,7 +4,7 @@ import SwiftUI
 /// A PDF's pages small, down the side of its file view. Pressing one goes to it. On a course's lecture file the pages
 /// fall into sections, one per class that went through them, each under a one-line header that folds it; a range
 /// picked on the plain pages (⇧-click on a Mac, a long press then taps on iPad) is saved as a class's progress from a
-/// row above it, and a header pressed changes that class's range the same way (#147). The iPad also has a button over
+/// row at the end it was picked out to, and a header pressed changes that class's range the same way (#147). The iPad also has a button over
 /// the pages that starts picking, since nothing shows that a long press does.
 ///
 /// Drawn here rather than with PDFKit's `PDFThumbnailView`, which picks no more than one page on iPad and takes nothing
@@ -20,9 +20,14 @@ struct PageStrip: View {
     }
 
     static let column: CGFloat = 128
-    /// A lecture file's column: wide enough for the saving row's "11/4(수) 오늘 19–21쪽" on one line, and for the
-    /// gutter its sections' line runs down, under the headers' dots.
-    static let lectureColumn: CGFloat = 208
+    /// A lecture file's column: its sections' tint reaches the column's margins and holds the pages `Space.s` in on
+    /// each side, the current page's wash just filling it.
+    static let lectureColumn = Theme.Size.pageThumbnail.width + Theme.Space.s * 4
+
+    /// The box a page is fitted into: a lecture's, or what a plain column holds inside its margins.
+    static func box(lecture: Bool) -> CGSize {
+        lecture ? Theme.Size.pageThumbnail : CGSize(width: column - Theme.Space.s * 2, height: Theme.Size.pageThumbnail.height)
+    }
 
     var body: some View {
         let picks = model.picks
@@ -34,7 +39,7 @@ struct PageStrip: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
                         ForEach(model.items) { item in
-                            PageStripItem(item: item, model: model, controller: controller, gutter: model.railed)
+                            PageStripItem(item: item, model: model, controller: controller)
                                 .id(item.id)
                         }
                     }
@@ -42,6 +47,12 @@ struct PageStrip: View {
                 }
                 .overflowFade(.vertical)
                 .onChange(of: controller.page, initial: true) { _, page in proxy.scrollTo(model.itemID(showing: page + 1)) }
+                .task(id: model.draftItemID) {
+                    guard let id = model.draftItemID else { return }
+                    // After the row has moved: scrolled to at once, the column still had it at the range's other end.
+                    try? await Task.sleep(for: .seconds(0.25))
+                    withAnimation(.snappy(duration: 0.2)) { proxy.scrollTo(id) }
+                }
             }
         }
         .animation(.snappy(duration: 0.2), value: model.items)
@@ -70,6 +81,9 @@ struct PageStrip: View {
                 go(to: to)
             case .choose?: model.choosing = model.onlyToday == nil
             case .save?: model.commit()
+            case .remove(let page)?:
+                if let section = model.sections.first(where: { $0.pages.contains(page) }) { model.remove(section) }
+                go(to: page + 1)
             case nil: break
             }
         }
@@ -95,23 +109,35 @@ private struct PageStripItem: View {
     let item: StripItem
     @Bindable var model: PageStripModel
     let controller: PDFController
-    let gutter: Bool
 
     var body: some View {
         StripItemFrame(item: item) {
-            switch item.lead {
-            case .header(let section, let open)?:
-                StripHeader(section: section, open: open, lit: model.fresh == section.id, help: Text(.fileViewProgressPickHelp),
-                            toggle: { model.toggle(section) }, edit: { model.edit(section) })
-            case .edit(let section)?: SaveRow(model: model, editing: section)
-            case .draft?: SaveRow(model: model, editing: nil)
-            case nil: EmptyView()
-            }
+            lead(item.lead)
             if let page = item.page {
-                StripPage(controller: controller, page: page, picked: item.mark == .picked, gutter: gutter, ranging: model.pickingShown,
+                StripPage(controller: controller, page: page, picked: item.mark == .picked, box: PageStrip.box(lecture: model.picks), ranging: model.pickingShown,
                           press: { page, extend in extend ? model.extend(to: page) : model.press(page) },
                           start: { model.start(at: $0) })
             }
+            lead(item.trail)
+        }
+    }
+
+    @ViewBuilder private func lead(_ lead: StripItem.Lead?) -> some View {
+        switch lead {
+        case .header(let section, let open)?:
+            StripHeader(section: section, open: open, lit: model.fresh == section.id, help: Text(.fileViewProgressPickHelp),
+                        toggle: { model.toggle(section) }, edit: { model.edit(section) })
+                .contextMenu {
+                    Button(.commonEdit, systemImage: "pencil") { model.edit(section) }
+                    Divider()
+                    Button(.fileViewProgressRemove, systemImage: "link.badge.minus", role: .destructive) {
+                        withAnimation(.snappy(duration: 0.2)) { model.remove(section) }
+                    }
+                    .disabled(!model.canRemove(section))
+                }
+        case .edit(let section)?: SaveRow(model: model, editing: section)
+        case .draft?: SaveRow(model: model, editing: nil)
+        case nil: EmptyView()
         }
     }
 }
@@ -150,7 +176,7 @@ private struct PickBar: View {
 }
 #endif
 
-/// The row a range is saved from: above a new range, which class it was; in place of a section's header, its range
+/// The row a range is saved from: at a new range's picked end, which class it was; in place of a section's header, its range
 /// changed. Saving is `material link`, the same action as the wrap-up's.
 private struct SaveRow: View {
     @Bindable var model: PageStripModel
@@ -174,7 +200,22 @@ private struct SaveRow: View {
             .fixedSize()
         } extra: {
             if editing == nil, today == nil { classMenu }
+            if editing != nil { removeButton }
         }
+    }
+
+    /// In the row, not only the header's menu: a touch screen has nothing that shows a long press opens one.
+    private var removeButton: some View {
+        Button(role: .destructive) { withAnimation(.snappy(duration: 0.2)) { model.remove() } } label: {
+            Label(String(localized: .fileViewProgressRemove), systemImage: "link.badge.minus")
+                #if os(iOS)
+                .frame(minHeight: Theme.Size.touchTarget)
+                .contentShape(.rect)
+                #endif
+        }
+        .buttonStyle(.ghost)
+        .controlSize(.small)
+        .disabled(!model.canRemove)
     }
 
     /// Opens to the trailing side, over the page rather than the thumbnails the range was picked on.
@@ -254,6 +295,7 @@ struct PageThumbnail: View {
     let page: Int
     let current: Bool
     var picked = false
+    let box: CGSize
     @State private var image: CGImage?
     @Environment(\.accent) private var accent
 
@@ -261,27 +303,38 @@ struct PageThumbnail: View {
         VStack(spacing: Theme.Space.xxs) {
             Group {
                 if let image {
-                    Image(decorative: image, scale: 1).resizable().scaledToFit()
+                    Image(decorative: image, scale: 1).resizable()
                 } else {
                     Theme.Palette.fill
                 }
             }
-            .frame(height: 84)
+            .frame(width: size.width, height: size.height)
             .clipShape(.rect(cornerRadius: Theme.Radius.small))
             .overlay(RoundedRectangle(cornerRadius: Theme.Radius.small).strokeBorder(picked ? accent.color : Theme.Palette.lineSoft, lineWidth: picked ? 2 : 1))
+            // Every page in a slot as tall as the box, so a column of wide slides doesn't shift as their images come in.
+            .frame(height: box.height)
             Text("\(page)").font(picked || current ? Theme.Typeface.label : Theme.Typeface.label.weight(.regular)).monospacedDigit()
                 .foregroundStyle(picked ? accent.ink : current ? Theme.Palette.text : Theme.Palette.textTertiary)
         }
         .padding(.vertical, Theme.Space.s)
         .background {
             // Sideways the wash reaches into the column's margins rather than padding the page in, so a strip of fixed
-            // width keeps its pages as wide as they were. Its corner is the page's plus the reach, to run alongside it.
+            // width keeps its pages as wide as they were. Its corner is the page's plus the reach, to run alongside it, and
+            // a class's tint's, to sit in it as one shape.
             if current {
-                RoundedRectangle(cornerRadius: Theme.Radius.small + Theme.Space.s)
+                RoundedRectangle(cornerRadius: Theme.Radius.strip)
                     .fill(Theme.Palette.currentPage)
                     .padding(.horizontal, -Theme.Space.s)
             }
         }
         .task(id: page) { image = await thumbnails.image(page) }
+    }
+
+    /// The page fitted into the box, so its ring and corners hug it: a wide slide comes out shorter, a portrait page
+    /// narrower. Until it is drawn, the whole box.
+    private var size: CGSize {
+        guard let image, image.width > 0, image.height > 0 else { return box }
+        let scale = min(box.width / CGFloat(image.width), box.height / CGFloat(image.height))
+        return CGSize(width: (CGFloat(image.width) * scale).rounded(), height: (CGFloat(image.height) * scale).rounded())
     }
 }

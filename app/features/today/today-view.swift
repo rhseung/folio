@@ -141,7 +141,7 @@ struct TodayView: View {
         .padding(.vertical, Theme.Space.m)
         .contentShape(.rect)
         .opens { go(item.courseId, .exams) }
-        .contextMenu { Button(.commonShowExams, systemImage: "calendar.badge.exclamationmark") { go(item.courseId, .exams) } }
+        .contextMenu { ExamMenu(courseId: item.courseId, examId: item.exam.id) }
     }
 
     func deadlinesBlock(_ summary: TodaySummary) -> some View {
@@ -201,10 +201,7 @@ struct TodayView: View {
             .contentShape(.rect)
         }
         .buttonStyle(.pointing(.plain))
-        .contextMenu {
-            Button(.commonEditEllipsis) { model.edit(item) }
-            Button(.todayDeadlinesShow, systemImage: "checklist") { go(item.courseId, .assignments) }
-        }
+        .contextMenu { AssignmentMenu(courseId: item.courseId, assignmentId: item.assignment.id) }
     }
 
     // MARK: Reviews
@@ -432,9 +429,8 @@ struct TodayView: View {
         }
     }
 
-    @ViewBuilder func reviewMenu(_ entry: Workspace.ReviewEntry) -> some View {
-        Button(.todayReviewsShowUnits, systemImage: "list.bullet") { go(entry.courseId, .units) }
-        Button(.todayReviewsSkip, systemImage: "forward") { model.skip([entry]) }
+    func reviewMenu(_ entry: Workspace.ReviewEntry) -> some View {
+        UnitMenu(courseId: entry.courseId, unitId: entry.item.unitId)
     }
 
     func go(_ course: UUID, _ section: CourseSection) {
