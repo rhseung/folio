@@ -216,6 +216,82 @@ struct MCPTests {
         #expect(try call(panel, gist, "action_run", [:]).0)
     }
 
+    func proposals(_ texts: [String]) -> [ActionProposal] { texts.compactMap(ActionProposal.init(text:)) }
+
+    func apply(_ proposal: ActionProposal, to gist: URL) throws {
+        let type = try #require(Actions.all.first { $0.command == proposal.command })
+        try h.direct(try type.decode(JSONEncoder().encode(proposal.input)), gist: gist)
+    }
+
+    /// #90: one answer's proposals stack in a staged copy, so a write that needs an earlier proposal passes.
+    @Test func aUnitsPagesBuildOnTheUnitProposedBeforeThem() throws {
+        let a = try Harness.fixtureCopy()
+        #expect(h.cli(LectureSectionCommandTests.track, gist: a).code == 0)
+        // Tracked once and copied: tracking twice would give the lecture two different ids.
+        let b = FileManager.default.temporaryDirectory.appending(path: "folio-\(UUID().uuidString)")
+        try FileManager.default.copyItem(at: a, to: b)
+        let before = try Harness.files(a)
+        let server = MCPServer(gist: nil, propose: true)
+        let unit = try call(server, a, "unit_add", ["course": "EC4207", "title": "König"])
+        #expect(!unit.0, "\(unit.1)")
+        let pages = try call(server, a, "unit_pages_add", ["course": "EC4207", "unit": "König", "material": "05_Matchings.pdf",
+                                                           "first": .number(5), "last": .number(8)])
+        #expect(!pages.0, "\(pages.1)")
+        let (first, second) = (try #require(proposals(unit.1).first), try #require(proposals(pages.1).first))
+        #expect(first.after == nil)
+        #expect(second.after == [0])
+        // Read back in the same answer, marked as not yet approved.
+        let shown = try call(server, a, "unit_show", ["unit": "EC4207/König"])
+        #expect(!shown.0, "\(shown.1)")
+        #expect(shown.1.joined().contains("\"proposed\":\"added\""), "\(shown.1)")
+        #expect(shown.1.joined().contains("firstPage"), "\(shown.1)")
+        #expect(try Harness.files(a) == before)
+        // Applied in order, they make what the answer read.
+        try apply(first, to: b)
+        try apply(second, to: b)
+        #expect(h.cli(["unit", "show", "EC4207/König"], gist: b).out.contains("05_Matchings.pdf p.5-8"))
+        // The next question's server starts from the folder, without the proposals left unapproved.
+        let next = MCPServer(gist: nil, propose: true)
+        #expect(try call(next, a, "unit_pages_add", ["course": "EC4207", "unit": "König", "material": "05_Matchings.pdf",
+                                                    "first": .number(5), "last": .number(8)]).0)
+        #expect(try call(next, a, "unit_show", ["unit": "EC4207/König"]).0)
+    }
+
+    @Test func aNoteEditBuildsOnTheNoteProposedBeforeIt() throws {
+        let (a, b) = (try Harness.fixtureCopy(), try Harness.fixtureCopy())
+        let before = try Harness.files(a)
+        let server = MCPServer(gist: nil, propose: true)
+        // An independent proposal first: the edit builds on the note only, not on this.
+        let exam = try call(server, a, "exam_add", ["course": "EC4207", "title": "제안 퀴즈"])
+        #expect(!exam.0, "\(exam.1)")
+        let note = try call(server, a, "note_add", ["course": "EC4207", "title": "증명 모음", "body": "# 증명 모음\n\n첫 줄\n"])
+        #expect(!note.0, "\(note.1)")
+        let edit = try call(server, a, "note_edit", ["course": "EC4207", "note": "증명 모음",
+                                                     "replacements": .array([["old": "첫 줄", "new": "고친 줄"]]), "append": "덧붙인 줄"])
+        #expect(!edit.0, "\(edit.1)")
+        let made = try proposals(exam.1) + proposals(note.1) + proposals(edit.1)
+        #expect(made.count == 3)
+        #expect(made[1].after == nil)
+        #expect(made[2].after == [1])
+        let shown = try call(server, a, "note_show", ["note": "EC4207/증명 모음"])
+        #expect(!shown.0, "\(shown.1)")
+        #expect(shown.1.joined().contains("고친 줄") && shown.1.joined().contains("덧붙인 줄"), "\(shown.1)")
+        #expect(try Harness.files(a) == before)
+        for p in made { try apply(p, to: b) }
+        let r = h.cli(["note", "show", "EC4207/증명 모음"], gist: b)
+        #expect(r.out.contains("고친 줄") && r.out.contains("덧붙인 줄"), "\(r.out)")
+        #expect(try call(MCPServer(gist: nil, propose: true), a, "note_edit", ["course": "EC4207", "note": "증명 모음", "append": "또"]).0)
+    }
+
+    @Test func aRefusedProposalLeavesNothingToBuildOn() throws {
+        let a = try Harness.fixtureCopy()
+        let server = MCPServer(gist: nil, propose: true)
+        // Refused: no such note. Its dry run stops it before the copy is written.
+        #expect(try call(server, a, "note_edit", ["course": "EC4207", "note": "없는 노트", "append": "x"]).0)
+        let listed = try call(server, a, "note_list", ["course": "EC4207"])
+        #expect(!listed.0 && !listed.1.joined().contains("proposed"), "\(listed.1)")
+    }
+
     @Test func protocolEdges() throws {
         let gist = try Harness.fixtureCopy()
         let server = MCPServer(gist: nil, propose: false)

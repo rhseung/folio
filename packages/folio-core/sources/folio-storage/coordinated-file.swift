@@ -13,6 +13,7 @@ enum CoordinatedFile {
 
     /// Writes to a temporary file and swaps it in, so a crash never leaves a half-written file.
     static func write(_ data: Data, to url: URL) throws {
+        try StagedFolder.guardWrite(url, detach: true)
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         var error: NSError?
         var result: Result<Void, any Error>?
@@ -25,6 +26,7 @@ enum CoordinatedFile {
     /// Never overwrites: fails if `url` exists. Written beside it first and moved in, so it is never half-written;
     /// `write` replaces, so checking first would leave a moment for another device's file to be overwritten.
     static func create(_ data: Data, at url: URL) throws {
+        try StagedFolder.guardWrite(url)
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         var error: NSError?
         var result: Result<Void, any Error>?
@@ -43,6 +45,7 @@ enum CoordinatedFile {
 
     /// Appends without rewriting existing bytes; used only for append-only logs.
     static func append(_ data: Data, to url: URL) throws {
+        try StagedFolder.guardWrite(url, detach: true, keep: true)
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
         var error: NSError?
         var result: Result<Void, any Error>?
@@ -54,6 +57,9 @@ enum CoordinatedFile {
 
     /// Never overwrites: fails if `target` exists.
     static func move(_ source: URL, to target: URL) throws {
+        // A link moves as a link, so only where it lands is checked.
+        try StagedFolder.guardWrite(source)
+        try StagedFolder.guardWrite(target)
         let coordinator = NSFileCoordinator()
         var error: NSError?
         var result: Result<Void, any Error>?
@@ -68,6 +74,7 @@ enum CoordinatedFile {
 
     /// Never overwrites: fails if `target` exists.
     static func copy(_ source: URL, to target: URL) throws {
+        try StagedFolder.guardWrite(target)
         var error: NSError?
         var result: Result<Void, any Error>?
         NSFileCoordinator().coordinate(readingItemAt: source, options: [], writingItemAt: target, options: .forReplacing, error: &error) { from, to in
@@ -78,6 +85,7 @@ enum CoordinatedFile {
 
     /// A missing file is not an error.
     static func remove(_ url: URL) throws {
+        try StagedFolder.guardWrite(url)
         guard FileManager.default.fileExists(atPath: url.path) else { return }
         var error: NSError?
         var result: Result<Void, any Error>?
@@ -88,6 +96,8 @@ enum CoordinatedFile {
     }
 
     static func trash(_ url: URL) throws {
+        // The Trash is outside the staged copy, and its file would outlive it.
+        if StagedFolder.fence != nil { return try remove(url) }
         var error: NSError?
         var result: Result<Void, any Error>?
         NSFileCoordinator().coordinate(writingItemAt: url, options: .forDeleting, error: &error) { url in

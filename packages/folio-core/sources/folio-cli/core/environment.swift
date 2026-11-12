@@ -29,8 +29,17 @@ struct Overrides: Sendable {
     var gradesUnlocked = true
 }
 
+/// One answer's `folio mcp --propose` runs its commands in a staged copy of the GIST folder (`ProposalStage`), which
+/// holds the proposals made so far. With `writes`, a command's dry run writes for real into the copy, so the next one
+/// builds on it; without, it only reads there.
+struct Staging: Sendable {
+    var folder: StagedFolder
+    var writes: Bool
+}
+
 enum CLI {
     @TaskLocal static var overrides: Overrides?
+    @TaskLocal static var staging: Staging?
 
     /// The app keeps its folder as a bookmark in its own defaults (`Workspace.bookmarkKey`).
     static let appDefaults = "com.rhseung.folio"
@@ -43,6 +52,7 @@ enum CLI {
     }
 
     static func gist(path given: String?) throws -> GISTStore {
+        if let s = staging { return GISTStore(url: s.folder.url) }
         if let o = overrides { return GISTStore(url: o.gist) }
         if let path = given ?? ProcessInfo.processInfo.environment["FOLIO_GIST"] {
             return GISTStore(url: URL(filePath: (path as NSString).expandingTildeInPath, directoryHint: .isDirectory))
@@ -68,6 +78,6 @@ enum CLI {
 
     static func context(_ options: GlobalOptions) throws -> ActionContext {
         Picker.enable(options)
-        return ActionContext(gist: try gist(options), device: device, now: now, dryRun: options.dryRun)
+        return ActionContext(gist: try gist(options), device: device, now: now, dryRun: options.dryRun && staging?.writes != true)
     }
 }
