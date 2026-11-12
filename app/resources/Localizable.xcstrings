@@ -20879,13 +20879,13 @@
         }
       }
     },
-    "file-view.progress.pick-help": {
+    "file-view.progress.edit-help": {
       "extractionState": "manual",
       "localizations": {
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "눌러서 이 쪽으로 가고, ⇧-클릭하면 앞서 누른 쪽부터 여기까지 고릅니다"
+            "value": "눌러서 이 수업의 진도를 고치고, ⇧-클릭으로 끝 쪽을 옮깁니다"
           }
         }
       }

@@ -7,10 +7,10 @@ import SwiftUI
 /// sets, exams, units and search), the review's sources, and a semester's `_Admin` files.
 struct FileView: View {
     @State private var model: FileViewModel
-    /// A page a link asked for, 0-based; taken once the PDF has it.
+    /// 0-based; taken once the PDF has it.
     @Binding private var requestedPage: Int?
-    /// The 0-based page the PDF is on, for the window's link (`folio://material/<ID>#page=N`), so back, forward and a
-    /// tab moved to its own window come back to it.
+    /// 0-based, for the window's link (`folio://material/<ID>#page=N`), so back, forward and a tab moved to its own
+    /// window come back to it.
     @Binding private var shownPage: Int?
     @State private var thumbnails = true
     @State private var query = ""
@@ -72,9 +72,8 @@ struct FileView: View {
             if page != nil, let pdf, let page = takeRequestedPage() { pdf.go(to: page) }
         }
         .onDisappear { model.closed(at: pdf?.page) }
-        // The progress sheet asked for this file's split screen before opening it.
-        .onChange(of: pdf == nil, initial: true) { _, _ in takeSplitAsk() }
-        .onChange(of: model.workspace.splitAsk) { _, _ in takeSplitAsk() }
+        .onChange(of: pdf == nil, initial: true) { _, _ in model.takeSplitAsk(pdf) }
+        .onChange(of: model.splitAsk) { _, _ in model.takeSplitAsk(pdf) }
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.askPage) { _, ask in
             if ask, let c = pdf, let item = model.pageContext(c.page, in: c) { askClaude?(item) }
@@ -92,7 +91,7 @@ struct FileView: View {
             PDFContent(model: model, controller: controller, thumbnails: thumbnails)
         case .markdown(let text):
             NotePreview(text: text, baseURL: model.url.deletingLastPathComponent(), math: model.math, embeds: model.embeds,
-                        revision: model.workspace.notesRevision)
+                        revision: model.notesRevision)
         case .source(let text):
             SourceFileEditor(text: .constant(text), language: model.format.highlightLanguage, reveal: .constant(nil), editable: false)
         case .image(let url):
@@ -213,12 +212,6 @@ struct FileView: View {
         .toolbarField()
     }
 
-    func takeSplitAsk() {
-        guard let ask = model.workspace.splitAsk, ask == model.material?.id, let c = pdf else { return }
-        model.workspace.splitAsk = nil
-        Task { await model.startSplit(c) }
-    }
-
     func takeRequestedPage() -> Int? {
         defer { requestedPage = nil }
         return requestedPage
@@ -241,10 +234,10 @@ struct PDFContent: View {
                              units: course.file.units, note: model.splitNote,
                              claude: model.claudeFailed ? ClaudeSplitButton(asking: model.askingClaude) { Task { await model.retryClaude() } } : nil,
                              save: model.saveSplit, cancel: model.cancelSplit)
-                .courseAccent(model.workspace.accent(course.id))
+                .courseAccent(model.accent(course))
         } else if let course = model.course {
             PDFPane(controller: controller, thumbnails: thumbnails, workspace: model.workspace, course: course.id, material: model.material?.id)
-                .courseAccent(model.workspace.accent(course.id))
+                .courseAccent(model.accent(course))
         } else {
             PDFPane(controller: controller, thumbnails: thumbnails, workspace: model.workspace)
         }

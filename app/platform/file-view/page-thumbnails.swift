@@ -13,8 +13,9 @@ import UIKit
 /// and the main actor, and PDFKit doesn't say one document may be read from two threads at once.
 @MainActor
 final class PageThumbnails {
-    /// Pixels on the longer sides of the box a thumbnail is drawn into: twice the largest box a row shows (the split
-    /// screen's), so it stays sharp on a Retina display.
+    /// The box a thumbnail is drawn into, in pixels: at least twice the largest box a row shows (a lecture's,
+    /// `Theme.Size.pageThumbnail`, 152×84), so it stays sharp on a Retina display. Grow it with that box: past half of
+    /// this, the pages come out soft.
     nonisolated static let pixels = CGSize(width: 320, height: 176)
     /// Pages kept at most. A row costs about 200KB; a textbook of 500 pages kept whole would hold 100MB.
     private static let kept = 160
@@ -27,7 +28,7 @@ final class PageThumbnails {
         renderer = PageRenderer(url: url)
     }
 
-    /// `page` is 1-based, as the strip counts.
+    /// 1-based, as the strip counts.
     func image(_ page: Int) async -> CGImage? {
         if let image = images[page] { return image }
         // Asked twice while drawing (a row scrolled away and back), it is drawn once.

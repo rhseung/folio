@@ -57,15 +57,14 @@ struct MaterialsView: View {
         .onChange(of: SnapshotDriver.shared.openFile, initial: true) { old, ext in
             // Nothing asked for yet: the file a link opened stays open.
             guard ext != nil || old != nil else { return }
-            // Fixtures ship without tracked files; register them so there is a file to show.
-            if ext != nil, model.materials.isEmpty { model.workspace.run(MaterialTrack(course: model.course.id)) }
+            if ext != nil { model.trackFixtureFiles() }
             model.viewing = ext.flatMap { ext in
                 model.materials.first { !$0.isFolder && ($0.path as NSString).pathExtension.lowercased() == ext && $0.status == .classified }?.id
             }
             SnapshotDriver.shared.materialsOpenFile = model.viewing != nil
         }
         .onChange(of: SnapshotDriver.shared.linkFile) { _, on in
-            if on, model.materials.isEmpty { model.workspace.run(MaterialTrack(course: model.course.id)) }
+            if on { model.trackFixtureFiles() }
             model.linking = on ? (model.materials.first { $0.role == .lecture && $0.isPDF } ?? model.materials.first)?.id : nil
         }
         #endif

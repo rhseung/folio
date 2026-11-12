@@ -143,6 +143,13 @@ final class MaterialsModel {
         pending = moves.undo(workspace, course: course.id) { [weak self] in Task { await self?.load() } }
     }
 
+    #if DEBUG
+    /// Fixtures ship without tracked files, so the snapshot driver registers them to have a file to show.
+    func trackFixtureFiles() {
+        if materials.isEmpty { workspace.run(MaterialTrack(course: course.id)) }
+    }
+    #endif
+
     func acceptsNewFile(_ folder: PathTree<FolioDomain.Material>) -> Bool {
         let file = course.file
         return NewMaterialFile.accepts(folder: folder.path,
@@ -234,6 +241,7 @@ final class MaterialsModel {
     func sessions(linking material: UUID) -> [Session] {
         course.file.linkableSessions { $0.materials.contains { $0.materialId == material } }
     }
+
     /// Outline order: `order` counts among siblings only, so sorting by it alone interleaves chapters and their units.
     var units: [(unit: FolioDomain.Unit, depth: Int)] { UnitTree.outline(course.file.units) }
 
