@@ -279,11 +279,39 @@ struct LectureSectionsModelTests {
         await settle(failing)
         failing.askClaude(0)
         for _ in 0..<50 where !failing.asking.isEmpty { await Task.yield() }
-        #expect(failing.claudeNote(failing.rows[0]) == "Claude가 나눌 곳을 찾지 못했습니다")
-        #expect(failing.sectionsLine(failing.rows[0]) == "목차와 슬라이드 제목을 찾지 못했습니다")
+        #expect(failing.sectionsLine(failing.rows[0]) == "Claude가 나눌 곳을 찾지 못했습니다")
+        #expect(failing.claudeNote(failing.rows[0]) == nil)
         // Cut by hand, the row has moved on from what Claude couldn't find.
         failing.splitByHand(0)
         #expect(failing.claudeNote(failing.rows[0]) == nil)
+    }
+
+    /// With Claude set up, adding a lecture asks Claude straight away, even where the slide titles would split it: their
+    /// guess is not what the user wants first. A failure is not covered over by the titles' guess.
+    @Test func withClaudeTheReaderAsksClaudeFirst() async throws {
+        let url = FileManager.default.temporaryDirectory.appending(path: "folio-deck-\(UUID().uuidString).pdf")
+        try SampleLecture.write(to: url)
+        let reply = #"{"sections":[{"title":"Matchings","firstPage":1,"unit":"매칭"},{"title":"Hall","firstPage":9,"unit":null}]}"#
+        let fake = FakeProvider(responses: [FakeProvider.reply(reply)])
+        let found = await LectureReader.find(url, units: file.units, claude: ClaudeClient(provider: fake))
+        guard case .found(let split, .claude) = found else {
+            Issue.record("\(found)")
+            return
+        }
+        #expect(split.sections.map(\.pages) == [1...8, 9...24] && split.sections[0].unit == matching)
+
+        let failed = await LectureReader.find(url, units: file.units, claude: ClaudeClient(provider: FakeProvider(responses: [])))
+        guard case .failed(let why, 24) = failed else {
+            Issue.record("\(failed)")
+            return
+        }
+        #expect(why.hasPrefix("Claude가 나누지 못했습니다"))
+
+        let course = try #require(workspace.course(graphTheory))
+        let sheet = ImportPlaceModel(workspace: workspace, course: course, files: [try incoming("11_Flows.pdf")], places: [],
+                                     find: { _, _, _ in .failed(why, pageCount: 10) }, claude: standIn(.nothing))
+        await settle(sheet)
+        #expect(sheet.sectionsLine(sheet.rows[0]) == why && sheet.claudeNote(sheet.rows[0]) == nil && sheet.canAskClaude(0))
     }
 
     @Test func theProgressBarReadsTheUnitsItReaches() throws {

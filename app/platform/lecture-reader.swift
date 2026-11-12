@@ -20,6 +20,8 @@ enum LectureFinding: Equatable, Sendable {
     case nothing(pageCount: Int)
     /// Not a PDF Folio can read.
     case unreadable
+    /// Claude was asked and gave no split: the line saying why. The user splits by hand or asks again.
+    case failed(String, pageCount: Int)
 }
 
 /// What "Claude로 나누기" came back with (#450).
@@ -56,10 +58,11 @@ struct LectureClaude {
     }
 }
 
-/// Reads a lecture PDF for its sections: the outline first, then each page's title, and only then Claude, which
-/// gets each page's title, the start of its text and, for a page with little text, its picture (#450). Matching to
-/// units by name happens here too, so every caller proposes the same thing. Nothing is written: the result is a
-/// proposal the add sheet or the split screen shows.
+/// Reads a lecture PDF for its sections. With Claude set up, Claude alone reads them: it gets each page's title, the
+/// start of its text and, for a page with little text, its picture (#450). The outline and the slide titles are only
+/// for a Mac without Claude, as they guess where a deck's own words would tell Claude better (2026-11-12 사용자).
+/// Matching to units by name happens here too, so every caller proposes the same thing. Nothing is written: the
+/// result is a proposal the add sheet or the split screen shows.
 enum LectureReader {
     struct Read: Sendable {
         var pageCount: Int
@@ -74,15 +77,19 @@ enum LectureReader {
     static func find(_ url: URL, units: [FolioDomain.Unit], claude: ClaudeClient?,
                      progress: @escaping @MainActor (Int, Int) -> Void = { _, _ in }) async -> LectureFinding {
         let report: @Sendable (Int, Int) -> Void = { done, total in Task { @MainActor in progress(done, total) } }
-        guard let read = await Task.detached(operation: { read(url, everyPage: false, progress: report) }).value else { return .unreadable }
+        let everyPage = claude != nil
+        guard let read = await Task.detached(operation: { read(url, everyPage: everyPage, progress: report) }).value else { return .unreadable }
+        if let claude {
+            // A failed or empty answer is not passed on to the titles: their guess would then look like Claude's.
+            let finding = await ask(claude, read: read, url: url, units: units)
+            if case .found(let split) = finding { return .found(split, .claude) }
+            return .failed(finding.message ?? "", pageCount: read.pageCount)
+        }
         if let found = LectureReading.sections(outline: read.outline, pageCount: read.pageCount), let split = LectureSplit(found, pageCount: read.pageCount) {
             return .found(SectionMatch.match(split, units: units), .outline)
         }
         if let found = LectureReading.sections(pages: read.pages, units: units.map(\.title)), let split = LectureSplit(found, pageCount: read.pageCount) {
             return .found(SectionMatch.match(split, units: units), .titles)
-        }
-        if let claude, case .found(let split) = await ask(claude, read: read, url: url, units: units) {
-            return .found(split, .claude)
         }
         return .nothing(pageCount: read.pageCount)
     }

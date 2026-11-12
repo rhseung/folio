@@ -277,6 +277,9 @@ final class ImportPlaceModel {
             switch found {
             case .found(let split, let source): self.sections[id] = .proposed(split, source: source)
             case .nothing(let count): self.sections[id] = .nothing(pageCount: count)
+            case .failed(let why, let count):
+                self.sections[id] = .nothing(pageCount: count)
+                self.claudeFailures[id] = why
             case .unreadable: self.sections[id] = nil
             }
             self.reads[id] = nil
@@ -359,7 +362,11 @@ final class ImportPlaceModel {
     /// Under a lecture row: why Claude's last reading came to nothing, or why it can't be asked while its button shows.
     func claudeNote(_ row: Row) -> String? {
         guard isLecture(row) else { return nil }
-        if let failure = claudeFailures[row.id] { return failure }
+        if let failure = claudeFailures[row.id] {
+            // With nothing proposed, the summary line says it.
+            if case .nothing? = sections[row.id] { return nil }
+            return failure
+        }
         switch sections[row.id] {
         case .nothing?: return claudeOff
         case .proposed? where opened.contains(row.id): return claudeOff
@@ -380,6 +387,9 @@ final class ImportPlaceModel {
     func sectionsLine(_ row: Row) -> String? {
         if asking.contains(row.id), isLecture(row) { return String(localized: .lectureClaudeReading) }
         switch sections(of: row) {
+        // Every page read and still reading: Claude has them now.
+        case .reading(let done, let total) where total > 0 && done == total && claudeOff == nil:
+            return String(localized: .lectureClaudeReading)
         case .reading(let done, let total):
             return total == 0 ? String(localized: .materialsImportSectionsReading) : String(localized: .materialsImportSectionsReadingPages(done, total))
         case .proposed(let split, let source):
@@ -391,7 +401,8 @@ final class ImportPlaceModel {
             case .claude: String(localized: .materialsImportSectionsFromClaude)
             }
             return "\(count) · \(from)"
-        case .nothing: return String(localized: .materialsImportSectionsNone)
+        // Claude's reason, not the outline's and titles': they weren't read when Claude was.
+        case .nothing: return claudeFailures[row.id] ?? String(localized: .materialsImportSectionsNone)
         case .later: return String(localized: .materialsImportSectionsLater)
         case nil: return nil
         }

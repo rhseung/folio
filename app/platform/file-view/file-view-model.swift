@@ -114,13 +114,15 @@ final class FileViewModel {
             return
         }
         splitting = LectureSplit(pageCount: controller.pageCount)
-        splitNote = String(localized: .fileViewSplitReading)
-        readingSplit = true
-        let read = splitRead
         let claude = workspace.claudeReady ? workspace.claude(for: course) : nil
+        splitNote = String(localized: claude == nil ? .fileViewSplitReading : .lectureClaudeReading)
+        readingSplit = true
+        askingClaude = claude != nil
+        let read = splitRead
         let found = await LectureReader.find(url, units: file.units, claude: claude)
         guard read == splitRead else { return }
         readingSplit = false
+        askingClaude = false
         // Left alone while it was read: a cut made meanwhile is the user's and stays.
         guard let current = splitting, current.sections.count == 1, current.sections[0].unit == nil else { return }
         switch found {
@@ -130,6 +132,8 @@ final class FileViewModel {
             splitNote = nil
         case .nothing, .unreadable:
             splitNote = String(localized: .fileViewSplitNothing)
+        case .failed(let why, _):
+            splitNote = why
         }
     }
 
