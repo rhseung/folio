@@ -1,9 +1,10 @@
 name: Tectonic
 
 # Builds FolioTectonic.xcframework (scripts/tectonic-build.sh) whenever what goes into it changes, on any branch, and
-# publishes it as a prerelease named after those inputs, this file among them for the tool versions it pins. The app's builds fetch it by tectonic/pin.json, which this job
-# prints for the branch to commit; the pin itself is not an input, so committing it starts no build. A prerelease stays
-# out of the app's patch notes (`PatchNotes.releases`) and out of the v* tags the release notes count from.
+# publishes it as a prerelease named after those inputs, this file among them for the tool versions it pins. The app's
+# builds fetch it by tectonic/pin.json, which this job prints for the branch to commit; the pin itself is not an input,
+# so committing it starts no build. A prerelease stays out of the app's patch notes (`PatchNotes.releases`) and out of
+# the v* tags the release notes count from.
 on:
   push:
     paths:
