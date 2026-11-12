@@ -71,7 +71,8 @@ struct MCPServer {
         "note", "session", "unit", "exam", "assignment", "material", "quiz", "score", "component", "attendance", "review",
         "problem-set", "search", "today",
     ]
-    static let panelCommands: Set<String> = ["course show", "course list"]
+    /// `recording` stays out as a group: its other commands rename and trash audio, which a course talk never needs.
+    static let panelCommands: Set<String> = ["course show", "course list", "recording transcript"]
 
     static func inPanel(_ command: String) -> Bool {
         panelCommands.contains(command) || command.split(separator: " ").first.map { panelGroups.contains(String($0)) } == true
@@ -124,7 +125,7 @@ struct MCPServer {
         let command = Self.builds[tool.command] ?? tool.command
         if propose, let stage { return proposing(tool, command, argv, stage) }
         let run = Self.execute(argv)
-        return Self.result(run.code == 0 ? run.out : run.err + run.out, failed: run.code != 0)
+        return Self.result(run.code == 0 ? run.out : run.err + run.out, failed: run.code != 0, pictures: run.pictures)
     }
 
     /// Under `--propose` a write runs twice in the answer's staged copy: as a dry run that may refuse, then for real
@@ -136,10 +137,10 @@ struct MCPServer {
             let run = Self.execute(argv, staging: folder.map { Staging(folder: $0, writes: false) })
             guard run.code == 0 else { return Self.result(run.err + run.out, failed: true) }
             var text = Self.compact(run.out, marking: stage)
-            guard folder != nil, stage.staged > 0 else { return Self.result([text], failed: false, compacted: true) }
+            guard folder != nil, stage.staged > 0 else { return Self.result([text], failed: false, compacted: true, pictures: run.pictures) }
             let pictures = Self.images(&text)
             return ["content": .array([["type": "text", "text": .string(String(localized: .mcpStagedRead(stage.staged)))],
-                                       ["type": "text", "text": .string(text)]] + pictures), "isError": .bool(false)]
+                                       ["type": "text", "text": .string(text)]] + pictures + Self.labeled(run.pictures)), "isError": .bool(false)]
         }
         let real = try? CLI.gist(path: gist).url
         let folder = real.flatMap(stage.copy(of:))
@@ -165,12 +166,14 @@ struct MCPServer {
         var out: [String]
         var err: [String]
         var built: [(String, JSONValue)]
+        var pictures: [Pictures.Picture] = []
     }
 
     static func execute(_ argv: [String], staging: Staging? = nil) -> Run {
         let out = Output()
         let built = Output()
-        let code = CLI.$staging.withValue(staging) {
+        let pictures = Pictures()
+        let code = Pictures.$current.withValue(pictures) { CLI.$staging.withValue(staging) {
             Built.$record.withValue({ command, input in built.add(command, input) }) {
                 Sink.$current.withValue(Sink(out: { out.add("out", .string($0)) }, err: { out.add("err", .string($0)) })) {
                     // Held to the copy even for a dry run, which should write nothing anywhere.
@@ -178,14 +181,22 @@ struct MCPServer {
                     return Folio.run(argv)
                 }
             }
-        }
-        return Run(code: code, out: out.lines("out"), err: out.lines("err"), built: built.items)
+        } }
+        return Run(code: code, out: out.lines("out"), err: out.lines("err"), built: built.items, pictures: code == 0 ? pictures.items : [])
     }
 
-    static func result(_ lines: [String], failed: Bool, compacted: Bool = false) -> JSONValue {
+    static func result(_ lines: [String], failed: Bool, compacted: Bool = false, pictures read: [Pictures.Picture] = []) -> JSONValue {
         var text = lines.joined(separator: "\n")
         let pictures = failed ? [] : images(&text)
-        return ["content": .array([["type": "text", "text": .string(compacted ? text : compact(text))]] + pictures), "isError": .bool(failed)]
+        return ["content": .array([["type": "text", "text": .string(compacted ? text : compact(text))]] + pictures + labeled(read)), "isError": .bool(failed)]
+    }
+
+    /// Each picture a read command handed over (`Pictures`), after a line naming it: image blocks carry no name, and
+    /// the text lists them by these labels.
+    static func labeled(_ pictures: [Pictures.Picture]) -> [JSONValue] {
+        pictures.flatMap { p -> [JSONValue] in
+            [["type": "text", "text": .string(p.label)], ["type": "image", "data": .string(p.data.base64EncodedString()), "mimeType": .string(p.mimeType)]]
+        }
     }
 
     static func compact(_ lines: [String], marking stage: ProposalStage) -> String {

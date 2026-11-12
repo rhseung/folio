@@ -2,6 +2,7 @@
 import ArgumentParser
 import FolioActions
 import FolioDomain
+import FolioFixtures
 import FolioStorage
 import Foundation
 import Testing
@@ -52,6 +53,8 @@ struct HelpExampleTests {
         let folder = gist.appending(path: "2026-3/EC4207 그래프 이론")
         try "외부에서 쓴 노트\n".write(to: folder.appending(path: "Notes/외부.md"), atomically: true, encoding: .utf8)
         try FileManager.default.copyItem(at: folder.appending(path: "Lectures/05_Matchings.pdf"), to: folder.appending(path: "Lectures/05_Matchings v2.pdf"))
+        // A deck PDFKit can open, for `material read`: the fixture's own PDFs are placeholders.
+        try SampleLecture.write(to: folder.appending(path: "Lectures/06_Hall.pdf"))
         // Backups go beside the copy, never to the default ~/Backups; one archive from yesterday for `backup restore`.
         let backups = gist.deletingLastPathComponent().appending(path: "backups")
         var settings = try GISTStore(url: gist).loadSettings().model
@@ -68,9 +71,11 @@ struct HelpExampleTests {
         let ctx = ActionContext(gist: GISTStore(url: gist), device: h.device, now: h.now)
         let file = try ctx.file(Harness.graphTheory)
         let session = try #require(file.sessions(matching: "10-26", calendar: ctx.calendar).first)
-        try ctx.edit(Harness.graphTheory) {
-            $0.recordings.append(Recording(device: h.device, at: h.now, sessionId: session.id, file: "Recordings/10-26(월).m4a", duration: 4500))
-        }
+        let recording = Recording(device: h.device, at: h.now, sessionId: session.id, file: "Recordings/10-26(월).m4a", duration: 4500)
+        try ctx.edit(Harness.graphTheory) { $0.recordings.append(recording) }
+        let store = try ctx.store(Harness.graphTheory)
+        try FileManager.default.createDirectory(at: store.recordingsURL, withIntermediateDirectories: true)
+        try store.saveTranscript(LectureTranscript(locale: "ko-KR", lines: [.init(start: 610, end: 620, text: "홀의 정리를 증명한다")]), of: recording)
     }
 
     static func examples(_ type: ParsableCommand.Type = Folio.self) -> [String] {
