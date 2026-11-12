@@ -165,7 +165,6 @@ import SwiftUI
         Self.marked[name]?.allObjects.first { $0.window === window && !$0.isHiddenOrHasHiddenAncestor }.map { $0.convert(NSPoint.zero, to: nil).x }
     }
 
-    /// Where the marked view in this window ends across it.
     private func end(of name: String) -> CGFloat? {
         Self.marked[name]?.allObjects.first { $0.window === window && !$0.isHiddenOrHasHiddenAncestor }.map { $0.convert(NSPoint(x: $0.bounds.maxX, y: 0), to: nil).x }
     }

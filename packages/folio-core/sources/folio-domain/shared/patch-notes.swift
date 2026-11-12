@@ -127,6 +127,7 @@ public enum PatchNotes {
         rest = rest.dropFirst(kind.prefix.count).drop { $0 == " " }
         guard rest.first == ":" else { return nil }
         var text = rest.dropFirst().trimmingCharacters(in: .whitespaces)
+
         var link: AppLink?
         if text.hasSuffix(")"), let open = text.range(of: "(\(AppLink.scheme)://", options: .backwards) {
             let address = String(text[text.index(after: open.lowerBound)..<text.index(before: text.endIndex)])
@@ -135,6 +136,7 @@ public enum PatchNotes {
                 text = text[..<open.lowerBound].trimmingCharacters(in: .whitespaces)
             }
         }
+
         guard !text.isEmpty else { return nil }
         return Item(kind: kind, text: text, link: link)
     }
@@ -158,6 +160,7 @@ public enum PatchNotes {
                 case tagName = "tag_name", body, draft, prerelease, publishedAt = "published_at"
             }
         }
+
         let raws = try JSONDecoder().decode([Raw].self, from: data)
         return raws.compactMap { raw -> Release? in
             guard raw.draft != true, raw.prerelease != true, let version = Version(raw.tagName) else { return nil }
@@ -182,7 +185,6 @@ public enum PatchNotes {
         case nothing
         /// The first launch, or an update without a new feature: remembered as seen, nothing shown.
         case markSeen
-        /// Ask GitHub for the releases.
         case fetch
         /// Not now: GitHub failed (next launch), the release isn't published yet, or a class or a recording is under way.
         case wait
@@ -195,12 +197,14 @@ public enum PatchNotes {
         // A first install has nothing to compare against: all of it is new.
         guard let seen else { return .markSeen }
         guard seen < current else { return .nothing }
+
         let releases: [Release]
         switch feed {
         case .notLoaded: return .fetch
         case .failed: return .wait
         case .loaded(let all): releases = all
         }
+
         let unseen = between(releases, after: seen, upTo: current)
         // Until the running version's release is published (a draft is skipped), its notes aren't known yet.
         guard unseen.first?.version == current else { return .wait }
@@ -209,7 +213,6 @@ public enum PatchNotes {
         return summary(unseen, since: seen).map(Step.show) ?? .markSeen
     }
 
-    /// The releases after `seen` up to `current`, newest first.
     public static func between(_ releases: [Release], after seen: Version, upTo current: Version) -> [Release] {
         releases.filter { seen < $0.version && $0.version <= current }.sorted { $0.version > $1.version }
     }

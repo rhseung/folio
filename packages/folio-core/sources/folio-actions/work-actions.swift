@@ -89,7 +89,6 @@ public struct ExamSet {
     }
 }
 
-/// Removes the exam record and references to it; its folder and files stay.
 @Action("exam rm", "시험 기록 지우기. 시험 폴더와 파일은 남는다. 범위 단원과 점수의 연결도 풀린다", effect: .removes,
         confirm: "시험 '{exam}'의 기록을 지웁니다. 폴더와 파일은 남습니다.", done: "시험 '{exam}'을(를) 지웠습니다",
         examples: ["folio exam rm EC4207/Quiz1 --dry-run"], phrases: ["시험 삭제"])
@@ -152,7 +151,7 @@ public struct ExamPlanRemove {
     }
 }
 
-/// Checks a plan item off or back on; the latest line across every device's log wins.
+/// The latest line across every device's log wins.
 @Action("exam plan-check", "공부 계획 항목 끝내기, --undo면 되돌리기", effect: .logs, done: "공부 계획 항목 '{item}'을(를) 표시했습니다",
         cli: .manual(reason: "항목을 <과목>/<시험> 안에서 찾지만 액션은 시험을 받지 않고, --undo면 완료 문구가 달라진다"))
 public struct ExamPlanCheck {
@@ -168,7 +167,6 @@ public struct ExamPlanCheck {
     }
 }
 
-/// The exam's summary note, created from the template the first time.
 @Action("exam summary", "시험 종합 정리 노트. 없으면 템플릿으로 만든다", effect: .creates, done: "시험 '{exam}'의 종합 정리 노트",
         examples: ["folio exam summary EC4207/중간고사"], phrases: ["시험 정리 노트", "요약 노트", "족보 정리"])
 public struct ExamSummary {
@@ -184,6 +182,7 @@ public struct ExamSummary {
             ctx.made(existing)
             return
         }
+
         let settings = try ctx.settings()
         let title = "\(exam.title) 종합 정리"
         let body = NoteTemplate.body(for: .examSummary, title: title, sections: settings.noteSections(for: .examSummary))
@@ -200,7 +199,6 @@ func repeatEnd(_ ctx: ActionContext, course: UUID) throws -> Date? {
         .flatMap { ctx.calendar.date(byAdding: .day, value: 1, to: $0) }?.addingTimeInterval(-1)
 }
 
-/// A new assignment plus its standard folder when the title names one (`HW 3` → `Assignments/HW3`).
 @Action("assignment add", "과제 추가. 제목이 HW3처럼 표준 이름이면 Assignments 폴더도 만든다", effect: .creates, done: "과제 '{title}'을(를) 추가했습니다",
         examples: [#"folio assignment add EC4207 "HW 3" --due "2026-11-04 23:59""#, #"folio assignment add EC4207 "Weekly Quiz" --due 2026-11-02 --repeats weekly --dry-run"#,
                    #"folio assignment add EC4207 "Lab 보고서" --due 2026-11-02 --repeats "격주 월수""#],
@@ -223,6 +221,7 @@ public struct AssignmentAdd {
             a.repeats = repeats
             f.assignments.append(a)
         }
+
         if AssignmentKind.parse(title: title) != nil {
             let path = AssignmentFiles.path(of: Assignment(device: ctx.device, at: ctx.now, title: title))
             let store = try ctx.store(course)
@@ -234,7 +233,6 @@ public struct AssignmentAdd {
     }
 }
 
-/// Everything the assignment sheet edits, with its scores: one per component it counts toward.
 @Action("assignment set", "과제의 제목, 마감, 상태, 성적 항목, 메모 바꾸기. 준 것만 바뀐다", discussion: """
         성적 항목이나 묶음을 바꾸면 이전 항목에 매긴 점수는 지워진다. 점수를 주면 상태는 graded가 된다.
         값을 지우려면 none을 준다.
@@ -286,6 +284,7 @@ public struct AssignmentSave {
         }
         if title.value?.isEmpty == true { throw ActionError.rule(String(localized: .errorAssignmentTitleEmpty)) }
         guard ((scores.value ?? []) + (score.value ?? [])).allSatisfy({ $0.max > 0 }) else { throw ActionError.rule(String(localized: .errorAssignmentMaxScore)) }
+
         let end = try repeatEnd(ctx, course: course)
         try ctx.edit(course) { f in
             let i = try index(assignment, in: f.assignments, .valueAssignment)
@@ -295,12 +294,14 @@ public struct AssignmentSave {
             due.apply(&a.due)
             repeats.apply(&a.repeats)
             memo.apply(&a.memo)
+
             // A component and a group are two ways to say where the assignment counts, so giving one drops the other.
             if case .set(let id) = componentId { (a.componentId, a.componentGroup) = (id, nil) }
             if case .set(let g) = componentGroup { (a.componentId, a.componentGroup) = (g == nil ? a.componentId : nil, g) }
             if let g = a.componentGroup, g != old.componentGroup, !f.components.contains(where: { $0.group == g }) {
                 throw ActionError.notFound(String(localized: .errorAssignmentGroupNotFound(g)))
             }
+
             func covered(_ group: String?, _ id: UUID?) -> [UUID] {
                 group.map { g in f.components.filter { $0.group == g }.map(\.id) } ?? id.map { [$0] } ?? []
             }
@@ -320,6 +321,7 @@ public struct AssignmentSave {
                     return (id, s.score, s.max)
                 }
             }
+
             var given = own.filter { target.contains($0.componentId) }.map { (component: $0.componentId, score: $0.score, max: $0.max) }
             if let list = scores.value { given = try resolved(list) }
             // One component's score given on the command line must not take the others' with it.
@@ -358,7 +360,6 @@ public struct AssignmentSave {
     }
 }
 
-/// Handing in a repeating assignment makes the next one.
 @Action("assignment status", "과제 상태 바꾸기. 매주 과제를 내면 다음 과제가 생긴다", done: "과제 '{assignment}'의 상태를 {status}(으)로 바꿨습니다",
         examples: ["folio assignment status EC4207/HW3 submitted"], phrases: ["제출", "냈어", "다 했어", "하는 중", "채점됨"])
 public struct AssignmentStatusSet {
@@ -379,7 +380,6 @@ public struct AssignmentStatusSet {
     }
 }
 
-/// The assignment and its scores; its folder and files stay.
 @Action("assignment rm", "과제와 그 점수 지우기. 과제 폴더와 파일은 남는다", effect: .removes,
         confirm: "과제 '{assignment}'과(와) 그 점수를 지웁니다. 폴더와 파일은 남습니다.", done: "과제 '{assignment}'을(를) 지웠습니다",
         examples: ["folio assignment rm EC4207/HW3 --dry-run"], phrases: ["과제 삭제", "과제 지우기"])
@@ -622,7 +622,6 @@ public struct ComponentMove {
     }
 }
 
-/// Attendance caps, minimum attendance, late rule, top-grade share and the syllabus's own words.
 @Action("component policy", "성적 규칙 바꾸기. 준 것만 바꾼다", discussion: "값을 지우려면 none을 준다. --cap과 --cutoff는 주면 기존 목록을 바꾸고, none이면 비운다.",
         done: "성적 규칙을 바꿨습니다", examples: ["folio component policy EC4207 --min-attendance-ratio 0.75 --lates-per-absence 3",
                    #"folio component policy EC4207 --notes "Quiz 최저 점수 1회 제외""#,

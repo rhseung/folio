@@ -27,6 +27,7 @@ struct CourseModelTests {
         #expect(model.place == unit)
         model.section = .grades
         #expect(model.place == .course(graphTheory, page: .grades))
+
         let note = UUID()
         model.section = .notes
         model.openNote = note
@@ -36,6 +37,7 @@ struct CourseModelTests {
         #expect(model.noteAnchor == .heading("요약"))
         model.openNote = UUID()
         #expect(model.noteAnchor == nil)
+
         model.section = .materials
         let file = AppLink(.material, UUID())
         model.moved(file)
@@ -95,6 +97,7 @@ struct CourseModelTests {
         let model = MaterialsModel(workspace: workspace, course: course)
         #expect(model.follow(AppLink(.material, pdf.id, anchor: .page(3)))?.id == pdf.id)
         #expect(model.requestedPage == 2)
+
         // The file view takes the page once its PDF has it.
         model.requestedPage = nil
         model.open(pdf)
@@ -104,6 +107,7 @@ struct CourseModelTests {
         #expect(model.requestedPage == nil)
         _ = model.follow(AppLink(.material, pdf.id, anchor: .page(7)))
         #expect(model.requestedPage == 6)
+
         // Another file starts with no page until its viewer has one.
         model.viewing = UUID()
         #expect(model.shownPage == nil)

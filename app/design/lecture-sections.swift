@@ -11,8 +11,7 @@ extension PageRangeField.Section {
     }
 }
 
-/// The section bar's small form, where a progress line used to join unit titles with ` · `: a lecture file's zones
-/// as grey tiles and one range on them in the course color. Nothing on it is pressed; the line it sits on is.
+/// Nothing on it is pressed; the line it sits on is.
 struct SectionStrip: View {
     let sections: [PageRangeField.Section]
     /// The file's page count, or the last page a section reaches.
@@ -47,8 +46,6 @@ struct SectionStrip: View {
     static let height: CGFloat = 6
 }
 
-/// A class's or a unit's pages of a split lecture as the strip and what the range reads as (`König–Hall`), where a
-/// line used to join unit titles with ` · `.
 struct SectionProgress: View {
     let file: CourseFile
     let material: UUID
@@ -67,9 +64,9 @@ struct SectionProgress: View {
     }
 }
 
-/// A lecture's sections as a bar of zones over its pages and a row per zone beneath it (#321): the add sheet's proposal
-/// and the file view's split screen both edit a `LectureSplit` through this. Every change goes through the split's own
-/// edits (`moveBoundary`, `split(at:)`, `merge`), so the sections always cover the file in order.
+/// The add sheet's proposal and the file view's split screen both edit a `LectureSplit` through this (#321). Every
+/// change goes through the split's own edits (`moveBoundary`, `split(at:)`, `merge`), so the sections always cover the
+/// file in order.
 struct SectionEditor: View {
     @Binding var split: LectureSplit
     let units: [FolioDomain.Unit]
@@ -113,8 +110,6 @@ struct SectionEditor: View {
     }
 }
 
-/// The zones as tiles across the file. A boundary's grip shows under the pointer and drags a page at a time; a double
-/// click cuts a zone at that page; ←→ move the picked zone's end.
 struct SectionBar: View {
     @Binding var split: LectureSplit
     @Binding var selected: Int?
@@ -352,8 +347,6 @@ struct SectionBar: View {
     }
 }
 
-/// One zone as a row: its name (typed for a new unit), its pages, and the unit it goes to.
-///
 /// A row holds its zone's id, not its place: a merge, or the screen closing, shrinks the split while the row is drawn
 /// once more, and a row reading its old place ran past the end (#179). Each edit finds the place as it runs.
 private struct SectionRow: View {

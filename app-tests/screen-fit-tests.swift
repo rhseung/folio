@@ -27,6 +27,7 @@ struct ScreenFitTests {
             try ActionContext(gist: try #require(workspace.gist), device: workspace.device).edit(course.id) { $0.recordings.append(recording) }
             workspace.reload()
         }
+
         let file = try #require(workspace.course(course.id)?.file)
         func first(_ kind: AppLink.Kind, _ ids: [UUID]) throws -> AppLink { AppLink(kind, try #require(ids.first, "no \(kind) to link")) }
         for kind in AppLink.Kind.allCases {
@@ -114,6 +115,7 @@ extension ScreenFitTests {
                 #expect(drawn.labels.contains(open ? label.hide : label.show), "\(entry.link) at 390, open \(open): \(drawn.labels)")
             }
         }
+
         SnapshotDriver.shared.columnOpen = false
         for (entry, label) in screens {
             let docked = try await draw(entry, workspace, width: 1440)

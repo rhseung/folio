@@ -1,8 +1,7 @@
 import FolioDomain
 import SwiftUI
 
-/// The row a range is saved from: at a new range's picked end, which class it was; in place of a section's header,
-/// its range changed. Saving is `material link`, the same action as the wrap-up's.
+/// Saving is `material link`, the same action as the wrap-up's.
 struct ProgressSaveRow: View {
     @Bindable var model: PageStripModel
     let editing: StripSection?

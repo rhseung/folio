@@ -145,6 +145,7 @@ final class TextFileModel {
         guard canBuild else { return }
         saveIfDirty()
         guard !dirty else { return }
+
         building = true
         defer { building = false }
         let file = course.store.fileURL(path)
@@ -156,6 +157,7 @@ final class TextFileModel {
             issues = [TexIssue(.error, message: error.localizedDescription)]
             return
         }
+
         issues = result.issues
         guard let pdf = result.pdf else { return }
         place(pdf, overwrite: false)

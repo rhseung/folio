@@ -130,6 +130,7 @@ public struct SyncTeX: Sendable, Equatable {
         let row = around.min { $0.area < $1.area }
             ?? rows.min { $0.distance(x: x, y: y) < $1.distance(x: x, y: y) }
         guard let row else { return nil }
+
         let mark = row.marks.last { $0.x <= x } ?? row.marks.first
         let tag = mark?.tag ?? row.tag
         let line = mark?.line ?? row.line

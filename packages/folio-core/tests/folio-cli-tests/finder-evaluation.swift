@@ -64,6 +64,7 @@ struct FinderEvaluation {
     @Test func compareMethods() async throws {
         let shipped: Method = { Finder.find($0, limit: 10).map { $0.command.replacing("folio ", with: "") } }
         var methods: [(String, Method)] = [("BM25+이럴 때 (folio help)", shipped)]
+
         // A model call per request takes a minute and a half in all, too slow for every test run.
         if ProcessInfo.processInfo.environment["FOLIO_EVAL_MODEL"] != nil, SystemLanguageModel.default.isAvailable { methods.append(("+기기 안 모델 재정렬", Rerank(Finder.entries(), first: shipped).search)) }
         for (title, cases) in [("기존 케이스", Self.cases), ("1차 새 케이스", Self.heldOut), ("2차 새 케이스 (다듬기에 안 씀)", Self.fresh)] {

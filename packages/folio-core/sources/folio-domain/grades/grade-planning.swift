@@ -1,6 +1,5 @@
 import Foundation
 
-/// The semester what-if and graduation requirements.
 public struct CategoryCredits: Sendable, Equatable {
     /// Graded courses whose grade counts toward credits.
     public var earned: Double = 0
@@ -73,6 +72,7 @@ extension GPACalculator {
                 }
             }
         }
+
         for s in shared(courses: courses, catalog: catalog) {
             for id in ancestry(s.categoryId, catalog: catalog) {
                 result[id]?.earned -= s.excessEarned
@@ -99,7 +99,6 @@ extension GPACalculator {
         return course.categoryIds.reduce(into: Set<UUID>()) { $0.formUnion(ancestry($1, catalog: catalog)) }
     }
 
-    /// The category and its ancestors.
     static func ancestry(_ id: UUID, catalog: Catalog) -> Set<UUID> {
         var ids = Set<UUID>()
         var next: UUID? = id
@@ -160,6 +159,7 @@ extension GPACalculator {
         let earned = semesters.compactMap(\.creditedHours).reduce(0, +) + courses
             .filter { regular.contains($0.semesterId ?? UUID()) && catalog.grade($0.finalGrade)?.earnsCredits == true }
             .map(\.credits).reduce(0, +)
+
         let credits = categoryCredits(courses: courses, catalog: catalog)
         let excess = catalog.categories.filter { $0.parentId == nil }.reduce(0.0) { sum, c in
             guard let max = c.maxCredits else { return sum }

@@ -20,7 +20,6 @@ extension ReviewReason {
     }
 }
 
-/// People, the grading rules as written, the memo and the folder, at the bottom of the overview.
 struct InfoBlocks: View {
     @Environment(\.accent) private var accent
     @Environment(\.openLink) private var openLink
@@ -300,7 +299,7 @@ struct CourseColorSwatches: View {
     }
 }
 
-/// The weekly class times, one row each. The next lecture is suggested from these.
+/// The next lecture is suggested from these.
 struct ClassTimesBlock: View {
     @Binding var schedule: [ClassTime]
 

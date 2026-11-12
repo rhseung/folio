@@ -72,7 +72,7 @@ struct CourseMenu: View {
     }
 }
 
-/// A term's menu, on its sidebar row and the semester list. Its page is its editor, so there is no 편집….
+/// A term's page is its editor, so its menu has no 편집….
 @MainActor
 struct SemesterMenuSource: ItemMenuSource {
     let semesterId: UUID

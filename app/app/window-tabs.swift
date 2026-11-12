@@ -71,7 +71,6 @@ final class WindowTabs {
     /// The focused pane's breadcrumb steps, which its screen sets while alive. With one trail for the window, a screen
     /// kept behind would keep its steps in the front tab's trail.
     func trail(_ id: UUID) -> CrumbTrail? { tabs[id]?.focusedTrail }
-    /// The tab a pane's history is in.
     func panes(holding navigator: Navigator) -> TabPanes? { tabs.values.first { $0.index(of: navigator) != nil } }
 
     /// `fromLink`: beside the tab in front rather than last.
@@ -538,8 +537,7 @@ struct TabBar: View {
         }
     }
 
-    /// The tab in front with several panes: a segment for each, the focused one the breadcrumb in full ink, the others
-    /// a gray icon and a dimmed short name (icons alone at `compact`); the close button at the end closes the tab.
+    /// The close button at the end closes the tab; each segment's own × closes its pane.
     func joined(_ panes: TabPanes, crumbRoom: CGFloat, compact: Bool) -> some View {
         HStack(spacing: 0) {
             ForEach(Segment.all(panes, workspace: workspace, playing: tabs.playingPanes)) { segment in
@@ -673,9 +671,8 @@ struct TabBar: View {
         }
     }
 
-    /// A tab of one pane behind the front one: its icon, and its name unless it has none or the row is short. Playing
-    /// a recording, it leaves room at its end for the speaker, set as the front tab sets its close button, or shows the
-    /// speaker in place of its icon when the row is short.
+    /// Playing a recording, it leaves room at its end for the speaker, set as the front tab sets its close button, or
+    /// shows the speaker in place of its icon when the row is short.
     @ViewBuilder func label(_ entry: Navigator.Entry, title: String?, playing: Bool = false) -> some View {
         let place = workspace.placeCrumb(of: entry)
         Group {
@@ -859,9 +856,7 @@ enum TabForm: CaseIterable {
     }
 }
 
-/// One pane's segment of the tab in front. The focused one is raised in paper and holds the breadcrumb; the others
-/// are an icon and a short name and focus their pane when pressed. Under the pointer, a small × closes the pane; its
-/// place is kept when hidden, so the tab doesn't change width as the pointer passes.
+/// The × that closes the pane keeps its place when hidden, so the tab doesn't change width as the pointer passes.
 private struct TabSegment: View {
     let mark: Crumb
     /// The breadcrumb, on the focused segment only.
@@ -938,7 +933,6 @@ private struct TabSegment: View {
     }
 }
 
-/// The thin rule between two segments of a tab.
 private struct SegmentRule: View {
     var body: some View {
         Theme.Palette.text.opacity(Theme.Opacity.edge)
@@ -951,7 +945,6 @@ private struct SegmentRule: View {
 /// fit. Only `placement` is watched: what it is worked out from changes with every frame of a live resize, and as the
 /// root view's state it redrew the sidebar, every kept tab's screen and the tabs on each one.
 @MainActor @Observable final class ToolbarRow {
-    /// The tabs at each width they can take, as `TabBar` measured them.
     struct Measures: Equatable {
         var front = TabFit.Front(trail: 0, chrome: 0)
         var others: [TabFit.Other] = []
@@ -988,7 +981,6 @@ private struct SegmentRule: View {
 
     init() { settle() }
 
-    /// Where the back and forward buttons end across the window.
     var historyEnd: CGFloat { leadingX + Theme.Size.toolbarButton + RootView.historyGap + HistoryButtons.width }
 
     /// From the back and forward buttons over to the panel's edge; with the sidebar folded the edge is under the

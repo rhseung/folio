@@ -32,15 +32,18 @@ struct PaneLayoutTests {
 
     @Test func theRunGivesUpItsOlderEndAndNeverTheFocus() {
         var l = Self.three()
+
         // The lecture, pressed before the quiz, goes to the left bundle: a bundle of one, drawn as its own strip.
         let two = Self.fit(l, 956)
         #expect(two.fold.run == 1...2 && two.fold.left == [0] && two.fold.right.isEmpty)
         #expect(two.fold.look(0) == .bundle([0]) && two.widths[0] == 40)
         #expect(Self.fit(l, 500).folded == [0, 2])
+
         // Far too narrow: the focused pane still stays open, with what there is.
         let tiny = Self.fit(l, 200)
         #expect(tiny.folded == [0, 2])
         #expect(approx(tiny.widths[1], 200 - 80 - 16))
+
         // Pressing the lecture's strip slides the run to it, and the quiz, now the end pressed longer ago, goes right.
         l.press(0)
         #expect(Self.fit(l, 956).fold.run == 0...1 && Self.fit(l, 956).folded == [2])
@@ -52,10 +55,12 @@ struct PaneLayoutTests {
         let l = Self.three()
         let runs = [1096.0, 1095, 776, 775, 456, 10].map { l.fold(room: $0, minWidth: 360, strip: 40, gap: 8).run }
         #expect(runs == [0...2, 1...2, 1...2, 1...1, 1...1, 1...1])
+
         // The same fold as `fit`, with the widths for it.
         let fold = l.fold(room: 956, minWidth: 360, strip: 40, gap: 8)
         #expect(l.widths(room: 956, fold: fold, minWidth: 360, strip: 40, gap: 8) == Self.fit(l, 956).widths)
         #expect(fold.gaps(8) == [8, 8])
+
         // A fold for another count of panes reads as every pane in place.
         #expect(l.widths(room: 1216, fold: PaneLayout(lecture).unfolded, minWidth: 360, strip: 40, gap: 8) == Self.fit(l, 1216).widths)
     }
@@ -68,15 +73,18 @@ struct PaneLayoutTests {
         var l = try #require(PaneLayout(links: Self.six))
         l.press(2)
         let f = Self.fit(l, 700)
+
         #expect(f.fold.run == 2...2 && f.fold.left == [0, 1] && f.fold.right == [3, 4, 5])
         #expect(f.fold.look(1) == .bundle([0, 1]) && f.fold.look(3) == .bundle([3, 4, 5]))
         #expect(f.fold.look(0) == .hidden && f.fold.look(5) == .hidden && f.fold.look(2) == .open)
         #expect(f.widths == [0, 40, 700 - 80 - 16, 40, 0, 0])
         #expect(f.gaps == [0, 8, 8, 0, 0])
+
         // Choosing the first of the right bundle slides the run one pane over: the quiz joins the left bundle.
         l.press(3)
         let moved = Self.fit(l, 700)
         #expect(moved.fold.run == 3...3 && moved.fold.left == [0, 1, 2] && moved.fold.right == [4, 5])
+
         // Wider, the run keeps the pane pressed just before beside the focus.
         #expect(Self.fit(l, 900).fold.run == 2...3)
     }
@@ -120,6 +128,7 @@ struct PaneLayoutTests {
         l.openBeside(quiz)
         #expect(l.links == [lecture, note, quiz] && l.focus == 2)
         #expect(l.shares == [0.5, 0.25, 0.25])
+
         // A pane already showing the target takes it, at the new page.
         l.openBeside(note.with(.heading("Hall")))
         #expect(l.links == [lecture, note.with(.heading("Hall")), quiz] && l.focus == 1)
@@ -141,6 +150,7 @@ struct PaneLayoutTests {
         l.press(2)
         l.press(1)
         let middle = l.close(1)
+
         #expect(middle)
         #expect(l.links == [lecture, quiz] && approx(l.shares[0], 0.75) && l.focus == 1)
         let first = l.close(0)
@@ -167,10 +177,13 @@ struct PaneLayoutTests {
         l.resize(divider: 0, to: 0.2)
         l.resize(divider: 1, to: 0.9)
         l.even()
+
         #expect(l.shares.allSatisfy { approx($0, 1.0 / 3) })
+
         // Only the widths: the focus and which pane folds first stay.
         #expect(l.focus == 1 && l.links == [lecture, note, quiz])
         #expect(Self.fit(l, 776).folded == [0])
+
         var two = PaneLayout(links: [lecture, note], shares: [0.9, 0.1])!
         two.even()
         #expect(two.shares == [0.5, 0.5])
@@ -181,21 +194,26 @@ struct PaneLayoutTests {
 
     @Test func aPaneFoldedByHandStaysFoldedUntilPressed() {
         var l = Self.three()
+
         // The focused note folds by hand: the focus goes to the quiz, pressed before it.
         l.collapse(1)
         #expect(l.collapsed == [1] && l.focus == 2)
+
         // However wide the window: the rest open, the note a strip in its place, the others sharing what it leaves.
         let wide = Self.fit(l, 2000)
         #expect(wide.folded == [1] && wide.fold.look(1) == .strip && wide.widths[1] == 40)
         #expect(approx(wide.widths[0], wide.widths[2]))
+
         // Narrower, the lecture goes to the left bundle, and the note, left at the run's end beside it, goes in too.
         let narrow = Self.fit(l, 500)
         #expect(narrow.folded == [0, 1] && narrow.fold.look(1) == .bundle([0, 1]))
+
         // The last open pane can't fold.
         l.collapse(0)
         #expect(!l.canCollapse(2))
         l.collapse(2)
         #expect(l.collapsed == [0, 1] && l.focus == 2)
+
         // Pressing its strip opens it.
         l.press(1)
         #expect(l.collapsed == [0] && l.focus == 1)
@@ -317,6 +335,7 @@ struct PaneLayoutTests {
         l.resize(divider: 0, to: 0.3)
         let data = try JSONEncoder().encode(l)
         let back = try JSONDecoder().decode(PaneLayout.self, from: data)
+
         #expect(back.links == l.links && back.focus == l.focus)
         #expect(zip(back.shares, l.shares).allSatisfy { approx($0, $1) })
         #expect(Self.fit(back, 956) == Self.fit(l, 956))
@@ -378,10 +397,12 @@ struct PanePresetTests {
         let l = try #require(PanePreset.inClass.layout([.lecture: Array(lectures.prefix(2)), .classNote: [note]], focus: .classNote))
         #expect(l.links == [lectures[0], lectures[1], note] && l.focus == 2)
         #expect(approx(l.shares[0], 0.275) && approx(l.shares[1], 0.275) && approx(l.shares[2], 0.45))
+
         // Every lecture comes, however many: none gives way for the device.
         let all = try #require(PanePreset.inClass.layout([.lecture: lectures, .classNote: [note]], focus: .classNote))
         #expect(all.links == lectures + [note] && all.focus == 3)
         #expect(approx(all.shares[0], 0.55 / 3) && approx(all.shares[3], 0.45))
+
         // Without the note, the lectures alone, focused on the first.
         let alone = try #require(PanePreset.inClass.layout([.lecture: [lectures[0]], .classNote: []], focus: .classNote))
         #expect(alone.links == [lectures[0]] && alone.shares == [1] && alone.focus == 0)
@@ -400,13 +421,16 @@ struct PanePresetTests {
         let at = try #require(PaneLayout(links: [AppLink(.note, s.reviewNoteId!), AppLink(.material, s.materials[0].materialId, anchor: .page(9)), textbook],
                                          shares: [2, 1, 1]))
         let saved = PanePreset.saving(at, name: "정리", session: s, course: Self.course)
+
         #expect(saved.slots == [.role(.reviewNote), .role(.lecture), .link(textbook)])
         #expect(saved.name == "정리" && !saved.isBuiltIn && saved.needsClass && approx(saved.shares[0], 0.5))
+
         // Chosen in another class's tab, it takes that class's note and lecture, and the textbook as it was.
         let next = Self.session(page: nil, review: UUID())
         let filled = try #require(saved.layout(session: next, course: Self.course))
         #expect(filled.links == [AppLink(.note, next.reviewNoteId!), AppLink(.material, next.materials[0].materialId), textbook])
         #expect(saved.matches(filled, session: next, course: Self.course))
+
         // Off where there is no class to fill it from.
         #expect(saved.layout(session: nil, course: nil) == nil)
     }
@@ -437,8 +461,10 @@ struct PanePresetTests {
         var settings = Settings(panePresets: [saved])
         settings.classStart.preset = saved.id
         let back = try JSONDecoder().decode(Settings.self, from: JSONEncoder().encode(settings))
+
         #expect(back.panePresets == [saved] && back.classStartPreset == saved)
         #expect(back.presets.map(\.id) == PanePreset.builtIn.map(\.id) + [saved.id])
+
         // A deleted layout, or none chosen, starts a class in "수업 중".
         settings.panePresets = []
         #expect(settings.classStartPreset == .inClass && Settings().classStartPreset == .inClass)
@@ -456,6 +482,7 @@ struct PanePresetTests {
         let course = UUID(), lecture = AppLink(.material, UUID()), note = AppLink(.note, UUID())
         let quiz = AppLink.course(course, page: .quiz)
         let concepts = PanePreset(name: "개념", slots: [.role(.lecture), .role(.quiz)], shares: [0.6, 0.4])
+
         // A lecture and the quiz with no lecture: the quiz alone is no class's tab.
         #expect(concepts.startLayout([.quiz: [quiz], .classNote: [note]]) == nil)
         let mine = PanePreset(name: "성적과 노트", slots: [.link(.place(.grades)), .role(.classNote)], shares: [0.3, 0.7])

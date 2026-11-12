@@ -19,7 +19,6 @@ final class ClaudeModel {
     var chatID: UUID?
     var notes: [NoteFile] = []
     var openNoteItem: ContextItem?
-    /// The notes the tab's other panes show (#62).
     var alsoOpenItems: [ContextItem] = []
     /// The tab's panes, which the window's one panel serves (`ContextBuilder.panes`).
     var panes: ContextItem?
@@ -174,6 +173,7 @@ final class ClaudeModel {
         let context = built(course)
         var doc = chats.first { $0.model.id == chatID } ?? StoredDocument(new: Chat(device: workspace.device, at: .now, title: String(question.prefix(40))))
         doc.model.messages.append(ChatMessage(role: .user, text: question, at: .now, context: context.included.map(\.title)))
+
         // The question is kept in memory only until the answer arrives, so a failed request leaves no half-written chat.
         replace(doc)
         chatID = doc.model.id
@@ -184,6 +184,7 @@ final class ClaudeModel {
         stopped = false
         partial = nil
         tool = nil
+
         let client = client?(course) ?? workspace.claude(for: course, folioTools: true)
         let asked = doc.model
         let stream = AnswerStream()
@@ -200,6 +201,7 @@ final class ClaudeModel {
                 }
             }
             defer { ticker.cancel(); partial = nil; tool = nil; toolInput = "" }
+
             do {
                 let reply = try await client.reply(to: asked, context: context, targets: Actions.targets) { stream.take($0) }
                 doc.model.messages.append(ChatMessage(role: .assistant, text: reply.text, at: .now, proposals: reply.proposals))
@@ -214,6 +216,7 @@ final class ClaudeModel {
                 stopped = Task.isCancelled
                 status = stopped ? String(localized: .claudeStatusStopped) : Self.message(for: error)
             }
+
             if doc.model.messages.isEmpty {
                 chats.removeAll { $0.model.id == doc.model.id }
                 // Otherwise the picker points at a chat that no longer exists and shows a blank label.
@@ -243,6 +246,7 @@ final class ClaudeModel {
         let parts = url.pathComponents
         guard parts.count >= 3, let id = UUID(uuidString: parts[2]),
               let message = chat?.messages.first(where: { $0.id == id }) else { return }
+
         switch parts[1] {
         case "apply":
             guard parts.count == 4, let index = Int(parts[3]) else { break }
@@ -304,6 +308,7 @@ final class ClaudeModel {
             linesRevision = workspace.dataRevision
         }
         if let line = lines[proposal] { return line }
+
         described += 1
         let line: ProposalLine
         if let action = workspace.action(proposal) {
@@ -384,6 +389,7 @@ final class ClaudeModel {
               let proposals = doc.model.messages[m].proposals, proposals.indices.contains(index),
               case let proposal = proposals[index], proposal.applied != true,
               let action = workspace.action(proposal) else { return }
+
         if let waiting = Self.waiting(doc.model.messages[m], index, superseded: superseded(doc.model), describe: describe) {
             workspace.error = Self.reason(waiting)
             return
@@ -392,6 +398,7 @@ final class ClaudeModel {
             confirming = PendingProposal(message: message, index: index, question: question)
             return
         }
+
         if run(action, at: index, of: m, in: &doc) { status = String(localized: .claudeStatusApplied(workspace.summary(action))) }
         save(doc, course: course)
     }
@@ -406,6 +413,7 @@ final class ClaudeModel {
             doc.model.messages[m].proposals.flatMap { workspace.action($0[i]) }.map { (index: i, action: $0) }
         }
         guard !picked.isEmpty else { return }
+
         // A plain dry run carries course.json from one to the next but writes no file, so a proposal made on top of a
         // note the answer makes first is checked again in a staged copy, where the note is there.
         let actions = picked.map(\.action)
@@ -417,6 +425,7 @@ final class ClaudeModel {
             workspace.error = String(localized: .claudeProposalBlocked(picked[refused.index].index + 1, refused.reason))
             return
         }
+
         var questions: [String] = []
         for p in picked {
             let action = p.action
@@ -426,6 +435,7 @@ final class ClaudeModel {
             confirming = PendingProposal(message: message, index: nil, question: questions.joined(separator: "\n"))
             return
         }
+
         var applied = 0
         for p in picked {
             guard run(p.action, at: p.index, of: m, in: &doc) else { break }
@@ -541,6 +551,7 @@ final class ClaudeModel {
                     let change = replaced ? "" : line.change.map(changeHTML) ?? ""
                     return #"<div class="proposal"><div class="row"><span>\#(escape(line.text))\#(reason)</span>\#(button)</div>\#(change)</div>"#
                 }.joined()
+
                 // Only with two or more: for one, its own link is the same button.
                 let applyAll = offered < 2 ? ""
                     : #"<div class="apply-all"><a href="folio://action/applyall/\#(m.id)">\#(String(localized: .claudeProposalApplyAll(offered)))</a></div>"#
@@ -585,6 +596,7 @@ final class ClaudeModel {
         func row(_ kind: String, _ sign: String, _ text: String) -> String { #"<div class="l \#(kind)">\#(sign) \#(escape(text))</div>"# }
         var rows: [String] = []
         var added = 0, removed = 0
+
         switch change {
         case .figure(let svg):
             return figureHTML(svg)
@@ -616,6 +628,7 @@ final class ClaudeModel {
                 added += lines.count
             }
         }
+
         return #"<details class="change"><summary>\#(String(localized: .claudeProposalChanges(added, removed)))</summary><div class="diff">\#(rows.joined())</div></details>"#
     }
 

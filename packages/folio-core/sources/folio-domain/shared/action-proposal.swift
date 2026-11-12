@@ -56,7 +56,6 @@ public struct ActionProposal: Codable, Hashable, Sendable {
     }
 }
 
-/// One proposal in a chat: the answer it came with and its place among that answer's proposals.
 public struct ProposalRef: Hashable, Sendable {
     public var message: UUID
     public var index: Int

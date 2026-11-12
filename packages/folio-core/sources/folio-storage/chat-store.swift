@@ -31,7 +31,7 @@ extension CourseStore {
         return format == .pdf || isContextText(format)
     }
 
-    /// Reading downloads an iCloud placeholder, which is what the spec wants for files handed to Claude.
+    /// Reading downloads an iCloud placeholder, as files handed to Claude need.
     public func contextText(ofMaterial path: String) throws -> String? {
         let url = url.appending(path: path)
         let format = MaterialFormat(path: path)

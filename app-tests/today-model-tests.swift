@@ -46,6 +46,7 @@ struct TodayModelTests {
         workspace.run(ReviewRecord(course: graphTheory, unit: unit, result: .good, start: .now.addingTimeInterval(-60), end: .now))
         workspace.run(ReviewRecord(course: graphTheory, unit: unit, result: .easy, start: .now.addingTimeInterval(-60), end: .now))
         _ = workspace.skipReviews([(graphTheory, other)])
+
         let progress = model.reviewProgress(now: .now)
         #expect(progress.doneToday == 1)
         #expect(progress.streak == 1)
@@ -122,7 +123,6 @@ struct TodayModelTests {
         #expect(Set(groups.map(\.courseId)).count == groups.count)
         #expect(groups.flatMap(\.entries).count == queue.count)
         for group in groups { for pair in group.entries { #expect(queue[pair.index].item.unitId == pair.entry.item.unitId) } }
-        // Courses come in the order of their first unit.
         let firsts = groups.compactMap { $0.entries.first?.index }
         #expect(firsts == firsts.sorted())
     }
@@ -183,6 +183,7 @@ struct QuickAddModelTests {
         let parsed = try #require(model.parsed)
         #expect(model.canAdd(parsed))
         #expect(parsed.courseId.flatMap(model.courseTitle) == "그래프 이론")
+
         model.locale = Locale(identifier: "ko_KR@hours=h23")
         #expect(model.due(parsed)?.hasSuffix("(금) 23:59") == true)
         model.locale = Locale(identifier: "ko_KR@hours=h12")
@@ -192,7 +193,6 @@ struct QuickAddModelTests {
         #expect(workspace.course(graphTheory)?.file.assignments.contains { $0.title == "HW5" } == true)
     }
 
-    /// Opened on a course's page, the line goes to that course until it names another.
     @Test func theShownCourseIsInUntilTheLineNamesAnother() throws {
         let workspace = try fixtureWorkspace()
         let model = QuickAddModel(workspace: workspace, defaultCourse: graphTheory)
@@ -204,7 +204,6 @@ struct QuickAddModelTests {
         #expect(model.parsed?.courseId == other.id)
     }
 
-    /// The chips keep one order as values come and go, and a pick on one is written into the line.
     @Test func chipsKeepTheirOrderAndPicksGoIntoTheLine() throws {
         let workspace = try fixtureWorkspace()
         let model = QuickAddModel(workspace: workspace)
@@ -213,15 +212,18 @@ struct QuickAddModelTests {
         model.text = "보고서 HW5 매주 금"
         let due = try #require(model.parsed?.due)
         #expect(model.chips == [.course(nil), .due(due), .repeats(.weekly), .folder("HW05")])
+
         model.pickCourse(graphTheory)
         #expect(model.text == "보고서 HW5 매주 금 그래프 이론" && model.parsed?.courseId == graphTheory)
         model.renumber(kind: .lab, number: 3)
         #expect(model.text == "보고서 Lab3 매주 금 그래프 이론" && model.chips.last == .folder("Lab03"))
+
         // A chip keeps its identity as its value changes, so an open deadline popover stays open while a date is picked.
         let kinds = model.chips.map(\.kind)
         model.pickDue(model.newDue)
         #expect(model.chips.map(\.kind) == kinds)
         #expect(model.parsed?.due == model.newDue && model.parsed?.repeats == .weekly)
+
         // Another rule is written in the line's words and shown by its own name.
         model.pickRepeats(.biweekly)
         #expect(model.text.contains("격주") && model.chips[2] == .repeats(.biweekly))
@@ -243,6 +245,7 @@ struct QuickAddModelTests {
         model.pickCourse(other.id)
         #expect(model.text == "\(other.title) HW7 금")
         #expect(model.parsed?.courseId == other.id && model.parsed?.title == "HW7")
+
         // Typing on reads the course from the line, as there is nothing else to hold it.
         model.text = "그래프 HW7 금"
         #expect(model.parsed?.courseId == graphTheory)
@@ -258,11 +261,13 @@ struct QuickAddModelTests {
         model.text = "HW7"
         #expect(!model.isDimmed(.course(nil)) && model.isDimmed(.due(nil)))
         #expect(model.chips == [.course(nil), .due(nil), .repeats(nil), .folder("HW07")])
+
         model.text = ""
         model.pickRepeats(.weekly)
         #expect(model.text == "매주" && model.chips[2] == .repeats(.weekly))
         model.renumber(kind: .homework, number: 2)
         #expect(model.text == "매주 HW2")
+
         // The assignments screen shows only what was read.
         let plain = QuickAddModel(workspace: workspace, fixedCourse: graphTheory)
         #expect(plain.chips.isEmpty)

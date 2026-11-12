@@ -46,7 +46,9 @@ struct TranscriptionHintsTests {
         file.units = [chapter, section]
         file.toggle(session: file.sessions[0].id, unit: section.id)
         file.linkMaterial(file.materials[0].id, session: file.sessions[0].id, firstPage: 2, lastPage: 4)
+
         #expect(file.lectureSlides(for: file.sessions[0]).source == .session)
+
         // A parent unit's slides count: the chapter covers the class.
         file.setMaterial(file.materials[1].id, unit: chapter.id, linked: true)
         let slides = file.lectureSlides(for: file.sessions[0])
@@ -133,6 +135,7 @@ struct TranscriptionHintsTests {
         var file = course(["Lectures/05_Parsing.pdf", "Lectures/06_LR.pdf"])
         let used = file.transcriptionContext(for: file.sessions[0]).reading("lookahead lookahead")
         #expect(used.source == .week && used.terms == ["lookahead"])
+
         // Terms are not compared: knowing them means reading the slides again.
         #expect(!used.differs(from: file.transcriptionContext(for: file.sessions[0])))
         file.sessions[0].materials = [SessionMaterial(materialId: file.materials[1].id, firstPage: 2, lastPage: 5)]
@@ -140,6 +143,7 @@ struct TranscriptionHintsTests {
         let linked = file.transcriptionContext(for: file.sessions[0])
         file.sessions[0].materials[0].lastPage = 6
         #expect(linked.differs(from: file.transcriptionContext(for: file.sessions[0])))
+
         file.sessions[0].materials[0].lastPage = 5
         var unit = Unit(device: device, at: now, title: "LR", order: 0)
         unit.sessionIds = [file.sessions[0].id]
@@ -160,6 +164,7 @@ struct TranscriptionHintsTests {
         let context = file.transcriptionContext(for: file.sessions[0]).reading("LALR LALR")
         let transcript = LectureTranscript(locale: "ko-KR", lines: [.init(start: 0, end: 1, text: "파싱")], context: context)
         let data = try JSONEncoder().encode(transcript)
+
         #expect(try JSONDecoder().decode(LectureTranscript.self, from: data) == transcript)
         let newer = Data(#"{"schemaVersion":1,"locale":"ko-KR","lines":[],"context":{"source":"camera","slides":[],"topics":["LR"],"terms":[]}}"#.utf8)
         let read = try JSONDecoder().decode(LectureTranscript.self, from: newer)

@@ -19,7 +19,7 @@ actor WhisperTranscriber {
     private var running = 0
     private var download: Task<URL, any Error>?
 
-    /// Downloads the model if this device doesn't have it. A second caller waits for the same download.
+    /// A second caller waits for the same download.
     func prepare(report: @escaping @Sendable (Double) -> Void) async throws -> URL {
         if await WhisperModel.shared.ready {
             if FileManager.default.fileExists(atPath: Self.modelFolder.path) { return Self.modelFolder }
@@ -84,6 +84,7 @@ actor WhisperTranscriber {
         let duration = (try? AVAudioFile(forReading: url)).map { max(Double($0.length) / $0.processingFormat.sampleRate, 1) } ?? 1
         report(.transcribing(0))
         let language = try await language(of: url, duration: duration, in: kit)
+
         // Windows are decoded in parallel and report out of order, so progress is the furthest point heard yet.
         let furthest = Furthest()
         kit.segmentDiscoveryCallback = { segments in
@@ -91,6 +92,7 @@ actor WhisperTranscriber {
             report(.transcribing(min(furthest.push(Double(end)) / duration, 1)))
         }
         defer { kit.segmentDiscoveryCallback = nil }
+
         let options = DecodingOptions(
             // Fixed for the whole lecture: left to each 30-second window, a stretch of English terms flips it to English.
             task: .transcribe, language: language,
@@ -104,6 +106,7 @@ actor WhisperTranscriber {
                                                decodeOptions: options)
         // With silence chunking a cancelled run returns what it had instead of throwing.
         try Task.checkCancellation()
+
         let lines = results.flatMap(\.segments)
             .sorted { $0.start < $1.start }
             .compactMap { s -> LectureTranscript.Line? in

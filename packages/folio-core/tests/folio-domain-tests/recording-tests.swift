@@ -56,8 +56,10 @@ struct RecordingTests {
         var fall = Semester(device: UUID(), at: .now, year: 2026, term: .fall)
         fall.start = day(9, 1)
         spring.end = day(6, 19)
+
         #expect(!spring.isOver(on: day(6, 19), among: [spring, fall]))
         #expect(spring.isOver(on: day(6, 20), among: [spring, fall]))
+
         // No end date: over only once a later semester has begun.
         spring.end = nil
         #expect(!spring.isOver(on: day(8, 31), among: [spring, fall]))

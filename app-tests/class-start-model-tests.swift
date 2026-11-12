@@ -65,6 +65,7 @@ struct ClassStartModelTests {
             file.linkMaterial(lecture.id, session: planned.id)
         }
         workspace.show(ctx)
+
         let step = try #require(workspace.classStartStep(at: at(21, 5), recorderBusy: false))
         let note = try #require(session(at: at(21))?.roughNoteId)
         let split = try #require(step.ask.split)

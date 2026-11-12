@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// A number changed by dragging sideways across it, one step every few points with a tick under the finger.
-/// A click turns it into a text field for typing an exact value.
 struct ScrubField: View {
     @Binding var value: Double
     let range: ClosedRange<Double>

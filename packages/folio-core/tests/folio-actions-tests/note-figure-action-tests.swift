@@ -76,6 +76,7 @@ struct NoteFigureActionTests {
         let ctx = try run(NoteWidgetAdd(course: Self.course, id: Self.widget, html: "<p>x</p>"))
         #expect(ctx.made == Self.widget)
         #expect(try store.readText(NoteWidget.path(Self.widget)) == "<p>x</p>")
+
         // An open note draws its widgets again only when its notes change.
         #expect(ctx.changes.allSatisfy { $0.touchesNotes })
         #expect(throws: ActionError.self) { try run(NoteWidgetAdd(course: Self.course, id: Self.widget, html: "<p>y</p>")) }

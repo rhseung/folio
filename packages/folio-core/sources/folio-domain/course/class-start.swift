@@ -21,7 +21,6 @@ public struct ClassStartSettings: Codable, Sendable, Equatable {
         case off, open
     }
 
-    /// Where a page opens: the pane in front, the pane beside it, a new tab, a new window.
     public enum Place: String, Codable, Sendable, CaseIterable {
         case here, beside, tab, window
     }
@@ -33,7 +32,6 @@ public struct ClassStartSettings: Codable, Sendable, Equatable {
         case splitTab, currentTab
     }
 
-    /// Whether the app comes to the front with the class, or stays behind and posts a notification.
     public enum Screen: String, Codable, Sendable, CaseIterable {
         case front, notify
     }
@@ -178,6 +176,7 @@ public enum ClassStart {
             guard !s.isCancelled, let end = s.end(schedule: file.course.schedule, calendar: calendar) else { return nil }
             return StartingClass(courseId: id, sessionId: s.id, start: s.date, end: end)
         }
+
         // From the day before, so a class that began before midnight is still found after it.
         let planned = SessionPlanner.planned(schedule: file.course.schedule, sessions: file.sessions, from: course.term?.start, to: course.term?.end,
                                              examWeeks: course.term?.examWeeks ?? [], days: days,

@@ -121,6 +121,7 @@ extension CourseFile {
             if session.roughNoteId != nil { commands.append(.openNote(.rough)) }
             if held { commands.append(.record) }
         }
+
         commands.append(.edit)
         if case .unit(let unit) = host, session.unitIds.contains(unit) { commands.append(.unlink(unit: unit)) }
         commands += [.share, .remove]

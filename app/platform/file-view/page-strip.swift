@@ -1,11 +1,8 @@
 import FolioDomain
 import SwiftUI
 
-/// A PDF's pages small, down the side of its file view. Pressing one goes to it. On a course's lecture file the pages
-/// fall into sections, one per class that went through them, each under a one-line header that folds it; a range
-/// picked on the plain pages (⇧-click on a Mac, a long press then taps on iPad) is saved as a class's progress from a
-/// row at the end it was picked out to, and a header pressed changes that class's range the same way (#147). The iPad
-/// also has a button over the pages that starts picking, since nothing shows that a long press does.
+/// A range is picked with ⇧-click on a Mac and a long press then taps on iPad (#147). The iPad also has a button over
+/// the pages that starts picking, since nothing shows that a long press does.
 ///
 /// Drawn here rather than with PDFKit's `PDFThumbnailView`, which picks no more than one page on iPad and takes nothing
 /// laid over or beside its pages.
@@ -104,7 +101,6 @@ struct PageStrip: View {
     #endif
 }
 
-/// One page of the column, with the header, edit row or draft row heading it, or a folded section's header alone.
 private struct PageStripItem: View {
     let item: StripItem
     @Bindable var model: PageStripModel

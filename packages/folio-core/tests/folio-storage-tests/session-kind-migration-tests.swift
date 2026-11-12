@@ -37,6 +37,7 @@ struct SessionKindMigrationTests {
             session(5, week: 4, day: 22, kind: "lab", topic: "VSEPR", index: 1),
             session(6, week: 4, day: 24, kind: "makeup", topic: "보충"),
         ])
+
         // Lab04 already exists as a unit, so its sessions join it instead of making another.
         raw["units"] = .array([.object([
             "id": .string("0E000000-0000-4000-8000-000000000004"), "createdAt": .string("2026-09-01T00:00:00.000Z"),
@@ -50,6 +51,7 @@ struct SessionKindMigrationTests {
         let file = try StoredDocument<CourseFile>.read(from: url).model
         let s = file.sessions
         #expect(s.map(\.isCancelled) == [true, false, false, false, false, false, false, false, false])
+
         // Sessions have no topic now, but what a recitation's name said is still kept in the file for its user.
         try StoredDocument<CourseFile>.read(from: url).write(to: url)
         let raw = try JSONFormat.decoder.decode(JSONValue.self, from: Data(contentsOf: url))
@@ -60,6 +62,7 @@ struct SessionKindMigrationTests {
         let tlc = try #require(file.units.first { $0.labNumber == 4 })
         #expect(file.units.filter { $0.labNumber == 4 }.count == 1)
         #expect(tlc.sessionIds == [s[5].id, s[6].id] && s[5].unitIds == [tlc.id])
+
         // A lab without a number gets no unit guessed for it.
         #expect(file.units.count == 1 && s[7].unitIds.isEmpty)
         #expect(file.labWeeks == [4: 3])
@@ -69,6 +72,7 @@ struct SessionKindMigrationTests {
     @Test func weeksAreNumberedByDate() throws {
         let file = try StoredDocument<CourseFile>.read(from: url).model
         let s = file.sessions
+
         // The stored 1, 3, 2 is dropped: classes go by their dates, in their weeks.
         #expect(s[2...4].map(\.week) == [5, 5, 5] && s[2...4].map(\.date) == s[2...4].map(\.date).sorted())
         #expect(s[0].week == 2 && s[1].week == 2)

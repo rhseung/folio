@@ -4,7 +4,6 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-/// `folio mcp`: the same actions and read commands as MCP tools over standard input and output.
 /// The client starts it per session, so there is no server to keep running.
 struct MCPCommand: ParsableCommand {
     static let configuration = CommandConfiguration(
@@ -118,10 +117,12 @@ struct MCPServer {
         case Self.runTool: return runAny(arguments)
         default: break
         }
+
         var argv = tool.argv(arguments)
         var options = gist.map { ["--gist", $0] } ?? []
         if tool.write, propose || arguments["dryRun"] == .bool(true) { options.append("--dry-run") }
         argv.insert(contentsOf: options, at: argv.firstIndex(of: "--") ?? argv.endIndex)
+
         let command = Self.builds[tool.command] ?? tool.command
         if propose, let stage { return proposing(tool, command, argv, stage) }
         let run = Self.execute(argv)
@@ -142,6 +143,7 @@ struct MCPServer {
             return ["content": .array([["type": "text", "text": .string(String(localized: .mcpStagedRead(stage.staged)))],
                                        ["type": "text", "text": .string(text)]] + pictures + Self.labeled(run.pictures)), "isError": .bool(false)]
         }
+
         let real = try? CLI.gist(path: gist).url
         let folder = real.flatMap(stage.copy(of:))
         let stages = folder != nil && ActionProposal.stages(command)
@@ -150,6 +152,7 @@ struct MCPServer {
         guard run.code == 0, let input = run.built.first(where: { $0.0 == command })?.1 else {
             return Self.result(run.code == 0 ? run.out : run.err + run.out, failed: run.code != 0)
         }
+
         // Run once more against the folder alone: failing there, it needs the earlier proposals applied first.
         let after = stage.staged > 0 && Self.execute(argv).code != 0 ? stage.earlier(input) : []
         stage.record(stages ? ProposalStage.made(from: run.out.joined(separator: "\n")) : ProposalStage.Made(items: [:], paths: []))
@@ -338,7 +341,6 @@ struct MCPServer {
         }
     }
 
-    /// Names of `$defs` entries the schema reaches, following entries that refer to others.
     static func referenced(_ schema: JSONValue, _ defs: [String: JSONValue]) -> Set<String> {
         var found: Set<String> = []
         func walk(_ v: JSONValue) {
@@ -357,7 +359,7 @@ struct MCPServer {
         return found
     }
 
-    /// Commands that only read, and are about the GIST data rather than the tool itself.
+    /// Kept out of the read tools: these are about the tool itself (or reach the user's screen), not the GIST data.
     static let notTools: Set<String> = ["actions", "run", "skill", "completion", "mcp", "unlock", "lock", "cleanup plan", "help", "open"]
     static let globalOptions: Set<String> = ["gist", "json", "dry-run", "yes", "no-pick", "help", "version"]
 
@@ -392,6 +394,7 @@ struct MCPServer {
         } catch {
             dump = Folio.fullMessage(for: error)
         }
+
         guard let help = try? JSONDecoder().decode(Help.self, from: Data(dump.utf8)) else { return [] }
         let writes = Set(Actions.all.map { $0.command })
         func leaves(_ c: Help.Command, _ path: [String]) -> [([String], Help.Command)] {
@@ -420,6 +423,7 @@ struct MCPServer {
             properties[key(a)] = p
             if !a.isOptional { required.append(.string(key(a))) }
         }
+
         let summary = c.abstract ?? command
         let spec: JSONValue = [
             "name": .string(name(command)),

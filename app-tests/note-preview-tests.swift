@@ -337,7 +337,6 @@ struct NotePreviewTests {
         #expect(opened == [AppLink(.exam, exam)])
     }
 
-    /// A page handed to another note keeps nothing of the last one.
     /// A link into the app opens through the window's one opener, whether a wiki link or a markdown link.
     @Test func aClickOnALinkIntoTheAppOpensIt() async throws {
         let material = UUID()

@@ -27,6 +27,7 @@ struct UnitImportTests {
             UnitSpec(title: "Matchings"),
         ]
         let r = UnitImporter.merge(specs, into: file, calendar: calendar, device: device, now: now)
+
         #expect(r.added == ["Spanning trees", "Matchings"])
         #expect(r.unknownSessions == ["2주차-1"])
         let spanning = r.file.units.first { $0.title == "Spanning trees" }!

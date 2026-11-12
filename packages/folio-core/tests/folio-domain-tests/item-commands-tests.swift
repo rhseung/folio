@@ -88,6 +88,7 @@ struct ItemCommandsTests {
         #expect(first.contains(.moveDown) && !first.contains(.moveUp))
         let last = f.commands(for: f.units[1], host: .list, dueToday: false)
         #expect(last.contains(.moveUp) && !last.contains(.moveDown))
+
         // An only child has nowhere to go.
         let child = f.commands(for: f.units[2], host: .list, dueToday: false)
         #expect(!child.contains(.moveUp) && !child.contains(.moveDown))

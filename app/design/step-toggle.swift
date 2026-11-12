@@ -1,8 +1,5 @@
 import SwiftUI
 
-/// A few states stepped through by pressing, like an effort switch: each press moves to the next and wraps around,
-/// a right click jumps to any. Ordered states (progress) show rising bars filled up to the current one; unordered
-/// ones (attendance) light only the current dot.
 struct StepToggle<Value: Hashable>: View {
     struct Option {
         let value: Value

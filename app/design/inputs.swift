@@ -1,7 +1,7 @@
 import FolioDomain
 import SwiftUI
 
-/// A choice shown as a rounded chip with ⌃⌄, opening a menu. Replaces the stock pop-up button.
+/// Replaces the stock pop-up button.
 struct ChoiceMenu<Value: Hashable>: View {
     struct Option: Hashable {
         let value: Value
@@ -34,7 +34,6 @@ struct ChoiceMenu<Value: Hashable>: View {
     }
 }
 
-/// The ⌃⌄ chip that ChoiceMenu and the search pickers open from.
 struct ChipLabel: View {
     let text: String
     init(_ text: String) { self.text = text }
@@ -62,7 +61,6 @@ struct PickOption<ID: Hashable>: Identifiable {
     var disabled = false
 }
 
-/// A chip that opens a popover with a search field over the options; ↑↓ move, return picks, esc closes.
 /// For lists that grow with the user's data (codes, people, units, files). Fixed short enums stay on ChoiceMenu.
 struct SearchPicker<ID: Hashable, Label: View>: View {
     let options: [PickOption<ID>]
@@ -219,7 +217,6 @@ struct SearchPicker<ID: Hashable, Label: View>: View {
     }
 }
 
-/// One value from a data-driven list.
 struct SearchSelect<Value: Hashable>: View {
     @Binding var selection: Value
     let options: [PickOption<Value>]
@@ -232,7 +229,6 @@ struct SearchSelect<Value: Hashable>: View {
     }
 }
 
-/// Several values from a data-driven list, kept in the order they were picked.
 struct SearchMultiSelect<Value: Hashable>: View {
     @Binding var selection: [Value]
     let options: [PickOption<Value>]
@@ -259,7 +255,6 @@ struct SearchMultiSelect<Value: Hashable>: View {
     }
 }
 
-/// The app's segmented control: a gray track with the chosen option on a card-colored capsule.
 struct Segmented<Value: Hashable>: View {
     @Binding var selection: Value
     let options: [(Value, String)]
@@ -376,8 +371,7 @@ struct PictureChoice<Value: Hashable, Picture: View>: View {
     static var picture: CGSize { CGSize(width: 44, height: 28) }
 }
 
-/// Minute of the day as a chip. Drag sideways on the hours or the minutes to scrub them, or click one to set it on a clock
-/// face; nothing is typed, so every value it can hold is a real time.
+/// Nothing is typed, so every value it can hold is a real time.
 struct TimeMenu: View {
     @Binding var minute: Int
     var hours: ClosedRange<Int> = 0...23
@@ -455,7 +449,6 @@ private struct TimePart: View {
     }
 }
 
-/// A clock face: click or drag around it to set the hour, which then turns to the minutes; setting those closes it.
 /// The 24-hour clock puts 12–23 on an inner ring, so either clock is one turn of the hand.
 private struct TimeDial: View {
     enum Mode: Hashable, Identifiable {
@@ -521,7 +514,6 @@ private struct TimeDial: View {
         .buttonStyle(.pointing(.plain))
     }
 
-    /// The marks around the face: where each sits, the value it sets, and what it reads.
     private var marks: [(angle: Double, radius: CGFloat, value: Int, label: String)] {
         switch mode {
         case .minute:
@@ -636,7 +628,6 @@ private struct TimeDial: View {
     }
 }
 
-/// A date (and time) chip that opens a calendar.
 struct DateChip: View {
     @Binding var date: Date
     var showsTime = true
@@ -657,7 +648,6 @@ struct DateChip: View {
     }
 }
 
-/// The calendar and, with `showsTime`, the time menu and its presets: what a date chip opens.
 struct DatePanel: View {
     @Environment(Workspace.self) private var workspace
     @Binding var date: Date
@@ -709,7 +699,7 @@ struct DatePanel: View {
     }
 }
 
-/// A month grid that picks a day. Always six rows so the popover keeps its size between months.
+/// Always six rows so the popover keeps its size between months.
 struct MonthCalendar: View {
     @Environment(Workspace.self) private var workspace
     @Environment(\.accent) private var accent
@@ -764,7 +754,6 @@ struct MonthCalendar: View {
 }
 
 extension View {
-    /// The rounded gray capsule every inline control sits in.
     func chip() -> some View {
         padding(Theme.Inset.control)
             .surface(Theme.Palette.fill, in: .capsule)
@@ -800,7 +789,6 @@ struct ChipTabs<Value: Hashable>: View {
     }
 }
 
-/// A filter field on the gray capsule.
 struct SearchField: View {
     let prompt: String
     @Binding var text: String

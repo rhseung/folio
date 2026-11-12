@@ -39,6 +39,7 @@ public enum LayoutCheck {
                 }
             }
         }
+
         for item in gist.children {
             if item.name == StandardLayout.metadataFolder { continue }
             if item.name == StandardLayout.creditedFolder, !item.isFile {

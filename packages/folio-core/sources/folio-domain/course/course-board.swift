@@ -43,7 +43,6 @@ public enum NoteGroup: CaseIterable, Sendable {
         }
     }
 
-    /// The groups that hold any of `notes`, in page order, each sorted.
     public static func grouped<Note>(_ notes: [Note], meta: (Note) -> NoteMeta, title: (Note) -> String,
                                      in file: CourseFile) -> [(group: NoteGroup, notes: [Note])] {
         allCases.compactMap { group in

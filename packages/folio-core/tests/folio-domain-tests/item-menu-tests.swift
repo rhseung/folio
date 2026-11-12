@@ -72,8 +72,10 @@ struct ItemMenuTests {
 
     @Test func afterTheClassItsNotesReviewAndRecordings() {
         var f = course()
+
         // The end is the moment it flips: 11:45.
         #expect(commands(f, at: at(2, 11, 45)) == [.makeReviewNote, .review(.needed), .edit, .share, .remove])
+
         f.sessions[0].roughNoteId = UUID()
         f.sessions[0].reviewNoteId = UUID()
         f.sessions[0].reviewNoteUnfinished = true
@@ -144,6 +146,7 @@ struct ItemMenuTests {
         #expect(!wraps(f, at(2, 10, 30)))
         #expect(!wraps(f, at(2, 11, 44)))
         #expect(wraps(f, at(2, 11, 45)))
+
         // A recording just stopped, not in the course yet: its prompt passes it.
         #expect(f.savingWrapsUp(f.sessions[0], recorded: true, at: at(2, 11), classMinutes: 75, calendar: calendar))
         f.recordings = [recording(f, 0)]

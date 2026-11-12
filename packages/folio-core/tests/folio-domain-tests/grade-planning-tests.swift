@@ -84,9 +84,11 @@ struct GradePlanningTests {
             course(3, "W", ["전공필수"]),  // withdrawn: in the semester total, not in requirements
         ]
         let credits = GPACalculator.categoryCredits(courses: courses, catalog: catalog)
+
         #expect(credits[category("전공필수")] == CategoryCredits(earned: 6, inProgress: 3, passed: 2, taking: 1))
         #expect(credits[category("전공")] == CategoryCredits(earned: 9, inProgress: 3, passed: 3, taking: 1))
         #expect(credits[category("기초과학")] == CategoryCredits(earned: 1, inProgress: 0, passed: 1, taking: 0))
+
         // The course lists follow the same rule: the failed course is in neither, the double-listed one appears once.
         let listed = GPACalculator.categoryCourses(courses: courses, catalog: catalog)
         #expect(listed[category("전공필수")]?.map(\.id) == [courses[0], courses[2], courses[5]].map(\.id))
@@ -110,6 +112,7 @@ struct GradePlanningTests {
         withdrawn.finalGrade = grade("W")
         courses.append(withdrawn)
         let p = GPACalculator.graduation(semesters: [credited, term], courses: courses, catalog: catalog)
+
         // 45 major credits earned, 3 over the cap; the child's own cap would be ignored.
         #expect(p.earned == 54 && p.counted == 51 && p.inProgress == 3)
     }
@@ -133,6 +136,7 @@ struct GradePlanningTests {
         return c
     }
     let courses = [course(ecRequired, a), course(ecMajor, b), course(aiMajor, a), course(aiMajor, nil)]
+
     #expect(GPACalculator.program(ec, courses: courses, catalog: catalog).gpa == 3.75)
     #expect(GPACalculator.program(ai, courses: courses, catalog: catalog).gpa == 4.5)
     #expect(GPACalculator.programRemaining(ec, courses: courses, catalog: catalog) == 30)  // the child's minimum is inside the parent's
@@ -150,6 +154,7 @@ struct LetterGradeModeTests {
         let catalog = Catalog(letterGrades: [grade("B0", 3), grade("S", nil), grade("A+", 4.5), grade("W", nil)])
         #expect(catalog.grades(for: .passFail).map(\.symbol) == ["S", "W"])
         #expect(catalog.grades(for: .relative).map(\.symbol) == ["A+", "B0", "S", "W"])
+
         var marked = catalog
         marked.letterGrades[1].modes = [.passFail]
         #expect(marked.grades(for: .absolute).map(\.symbol) == ["A+", "B0", "W"])
@@ -181,6 +186,7 @@ struct LetterGradeModeTests {
         course([double]), course([double, common]),  // not shared with another program
     ]
     let credits = GPACalculator.categoryCredits(courses: courses, catalog: catalog)
+
     // 13 shared against 9: graded 10 lose 1, in-progress 3 lose the other 3.
     #expect(credits[double.id] == CategoryCredits(earned: 15, inProgress: 0, passed: 5, taking: 1))
     #expect(credits[major.id] == CategoryCredits(earned: 10, inProgress: 3, passed: 3, taking: 1))
@@ -190,6 +196,7 @@ struct LetterGradeModeTests {
     // Within the cap nothing changes; a minor's cap of 0 takes every shared credit off it.
     let within = GPACalculator.categoryCredits(courses: Array(courses[0..<2]), catalog: catalog)
     #expect(within[double.id]?.earned == 6 && within[major.id]?.earned == 6)
+
     var minor = double
     minor.maxSharedCredits = 0
     let asMinor = GPACalculator.categoryCredits(courses: Array(courses[0..<2]), catalog: Catalog(codes: [ec, ai], categories: [major, required, minor], letterGrades: [a]))

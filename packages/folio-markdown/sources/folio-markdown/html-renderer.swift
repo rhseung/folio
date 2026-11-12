@@ -18,7 +18,6 @@ public struct HTMLRenderer {
         blocks(ParsedNote(answer), embeds: nil, lines: false, mathFences: false).map(\.html).joined()
     }
 
-    /// A top-level block of a note and the body lines it was written on.
     public struct Block: Equatable, Sendable {
         public var html: String
         public var lines: ClosedRange<Int>?
@@ -38,6 +37,7 @@ public struct HTMLRenderer {
         r.trail = embeds?.key.map { [$0] } ?? []
         let book = FootnoteBook(note.document)
         r.footnotes = book
+
         var out = r.rendered(Array(note.document.children)).map { Block(html: $0.html, lines: note.lines(of: $0.node)) }
         let section = r.footnoteSection()
         guard !section.isEmpty else { return out }
@@ -72,7 +72,6 @@ public struct HTMLRenderer {
         return mathFences || language.split(whereSeparator: \.isWhitespace).first == "math" ? syntax : nil
     }
 
-    /// A renderer for part of this note's page (a table cell, an embed) that draws embeds and references as it does.
     func inner() -> HTMLRenderer {
         var r = HTMLRenderer()
         r.embeds = embeds
@@ -156,6 +155,7 @@ public struct HTMLRenderer {
             let item = nested ? "<span>\(title)</span>" : "<a href=\"#\(Self.escape(NoteOutline.id(of: h)))\">\(title)</a>"
             return (levels.firstIndex(of: h.level) ?? 0, item)
         }
+
         // Each item holds the deeper ones after it, up to the next one no deeper.
         func list(_ items: ArraySlice<(Int, String)>) -> String {
             guard !items.isEmpty else { return "" }
@@ -241,7 +241,6 @@ public struct HTMLRenderer {
 
     func calloutHeader(_ quote: BlockQuote) -> CalloutHeader? { quote.calloutHeader }
 
-    /// Inline markdown text close to the source, with protected math turned back into `$...$`.
     static func sourceText(_ node: Markup) -> String {
         switch node {
         case let t as Markdown.Text: t.string
@@ -353,7 +352,6 @@ public struct HTMLRenderer {
 
     // MARK: Helpers
 
-    /// Turns `[[...]]` in rendered inline HTML into links, outside `<code>` and math spans.
     func linkWikiLinks(_ html: String) -> String {
         guard html.contains("[[") else { return html }
         let protected = /(<code>.*?<\/code>|<span class="math">.*?<\/span>)/
@@ -366,8 +364,7 @@ public struct HTMLRenderer {
         return out + replaceWikiLinks(String(html[cursor...]))
     }
 
-    /// Turns `[^label]` in rendered inline HTML into the footnote's number, outside `<code>` and math spans. A label
-    /// nothing defines stays as written, as in GFM.
+    /// A label nothing defines stays as written, as in GFM.
     func linkFootnotes(_ html: String) -> String {
         guard let footnotes, html.contains("[^") else { return html }
         let protected = /(<code>.*?<\/code>|<span class="math">.*?<\/span>)/
@@ -391,8 +388,7 @@ public struct HTMLRenderer {
 
     static func footnoteRef(_ n: Int, _ use: Int) -> String { use == 1 ? "fnref-\(n)" : "fnref-\(n)-\(use)" }
 
-    /// The footnotes referenced so far, in their numbers' order, each with links back to where it was referenced.
-    /// Drawing one can number another, which then comes after it.
+    /// Drawing one footnote can number another, which then comes after it, so the list is read while it grows.
     mutating func footnoteSection() -> String {
         guard let footnotes else { return "" }
         var items = ""
@@ -434,7 +430,6 @@ public struct HTMLRenderer {
         }
     }
 
-    /// What a link to an app object other than a note shows without a name of its own, as the app names it.
     func objectName(_ link: WikiLink) -> String? {
         guard let embeds, link.isAppLink, !link.namesNote else { return nil }
         return embeds.name(link.href)
@@ -510,6 +505,7 @@ public struct HTMLRenderer {
         let name = Self.escape(link.alias ?? ((found.title ?? link.target) + part))
         let head = "<a class=\"embed-title\(found.missing ? " missing" : "")\" href=\"\(Self.escape(link.href))\">\(name)</a>"
         let empty = { (why: String) in "<div class=\"embed embed-empty\">\(head)<p class=\"embed-note\">\(Self.escape(why))</p></div>\n" }
+
         guard let embeds else { return "<p>\(head)</p>\n" }
         guard trail.count <= NoteEmbeds.depth else { return empty(embeds.labels.tooDeep) }
         guard let found = embeds.find(link), let section = ParsedNote(found.text).section(heading: link.fragment, block: link.blockID) else {
@@ -517,6 +513,7 @@ public struct HTMLRenderer {
         }
         let key = link.key(in: found.key)
         guard !trail.contains(key) else { return empty(embeds.labels.loop) }
+
         var child = inner()
         child.trail = trail + [key]
         child.nested = true
@@ -537,7 +534,6 @@ public struct HTMLRenderer {
         return "<template class=\"ref-preview\"\(Self.mathAttribute(card.math))>\(card.html)</template>"
     }
 
-    /// What a block reference's card shows: the block's HTML and the math syntax of the note it is in.
     public struct ReferenceCard: Equatable, Sendable {
         public var html: String
         public var math: String?
@@ -552,13 +548,14 @@ public struct HTMLRenderer {
         return r.card(link)
     }
 
-    /// The block a reference names, or why it can't be shown. Its own references get no card.
+    /// Its own references get no card.
     func card(_ link: WikiLink) -> ReferenceCard? {
         guard let embeds, let block = link.blockID, link.namesNote else { return nil }
         guard trail.count <= NoteEmbeds.depth, let found = embeds.find(link),
               let section = ParsedNote(found.text).section(heading: nil, block: block) else {
             return ReferenceCard(html: "<p class=\"embed-note\">\(Self.escape(embeds.labels.missing))</p>", math: nil)
         }
+
         var child = inner()
         child.trail = trail + [link.key(in: found.key)]
         child.nested = true
@@ -581,7 +578,6 @@ public struct HTMLRenderer {
         nested ? "" : id.map { " id=\"^\(Self.escape($0))\"" } ?? ""
     }
 
-    /// A heading's `id`, which a link to the heading scrolls to.
     public static func slug(_ text: String) -> String {
         text.lowercased().split(whereSeparator: { $0.isWhitespace }).joined(separator: "-")
     }

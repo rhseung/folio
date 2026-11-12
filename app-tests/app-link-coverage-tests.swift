@@ -49,7 +49,6 @@ struct AppLinkCoverageTests {
         case notApplicable(String)
     }
 
-    /// The table of forms and surfaces.
     static func cell(_ form: Form, _ surface: Surface) -> Cell {
         switch (form, surface) {
         case (.objectWiki, .preview), (.objectWiki, .editor), (.addressWiki, .preview), (.addressWiki, .editor),
@@ -139,9 +138,11 @@ struct AppLinkCoverageTests {
                 out.append(Sample(link: base.with(value), screen: screen))
             }
         }
+
         for page in AppLink.CoursePage.allCases where page != .overview {
             out.append(Sample(link: .course(course, page: page), screen: .course(course)))
         }
+
         for tab in AppLink.SettingsPage.allCases {
             out.append(Sample(link: .settings(tab), screen: .settings))
         }
@@ -233,7 +234,6 @@ struct AppLinkCoverageTests {
 
     // MARK: Opening
 
-    /// What a surface shows for the link in `written` and what its click opens.
     struct Shown {
         var name: String?
         var opened: AppLink?
@@ -306,11 +306,13 @@ struct AppLinkCoverageTests {
             try "\\documentclass{article}\n\\usepackage{hyperref}\n\\begin{document}\n\(body)\n\\end{document}\n".write(to: tex, atomically: true, encoding: .utf8)
             let build = try TexEngine.shared.compile(tex, into: folder, at: .now, calendar: .current)
             let pdf = try #require(build.pdf.flatMap(PDFDocument.init(url:)), "\(build.issues)")
+
             for i in 0..<pdf.pageCount {
                 let links = (pdf.page(at: i)?.annotations ?? []).filter { $0.type == "Link" }.sorted { $0.bounds.maxY > $1.bounds.maxY }
                 urls += links.compactMap { $0.url ?? ($0.action as? PDFActionURL)?.url }
             }
             try #require(urls.count == sources.count, "\(urls)")
+
             let view = PDFView()
             PDFLinks.attach(to: view, opener: opener)
             let links = try #require(view.delegate as? PDFLinks)
@@ -359,8 +361,8 @@ struct AppLinkCoverageTests {
     @Test func everyKindOpensFromEveryFormAndSurface() throws {
         let workspace = try fixtureWorkspace()
         let samples = try Self.samples(workspace)
-        // Every kind is sampled, and a page and settings tab each.
         #expect(Set(samples.map(\.link.kind)) == Set(AppLink.Kind.allCases))
+
         let views = try Views(workspace)
         var broken: [String] = []
         var unwritable: Set<String> = []
@@ -398,6 +400,7 @@ struct AppLinkCoverageTests {
                 }
             }
         }
+
         #expect(broken.isEmpty, "\(broken.joined(separator: "\n"))")
         // Only the kind-and-ID form has links it can't hold (places, course pages and settings tabs), and it says why.
         #expect(!unwritable.isEmpty && unwritable.allSatisfy { $0.hasPrefix("\(Form.objectWiki) ") }, "\(unwritable)")

@@ -137,10 +137,12 @@ public enum NotionNotesImporter {
                 }
                 named[key] = file.sessions[index].id
             }
+
             if !existingNotes.contains(row.id) {
                 result.notes.append(NotionNotePlan(id: row.id, title: row.title, meta: NoteMeta(id: row.id, kind: kind, sessionId: sessionId), sourceFile: source))
             }
         }
+
         file.sessions.sort(by: Session.inOrder)
 
         mergeScores(dump.scores, into: &file, result: &result, device: device, now: now)
@@ -175,6 +177,7 @@ public enum NotionNotesImporter {
             while let p = parent[chain.last!], !chain.contains(p) { chain.append(p) }
             return chain
         }
+
         // A row already stored as a component (an earlier import may have stored sub-items) keeps its scores;
         // its parent is then not added on top, which would count the same weight twice.
         let covered = Set(rows.filter { existing($0) != nil }.flatMap { ancestors($0.id).dropFirst() })
@@ -184,6 +187,7 @@ public enum NotionNotesImporter {
         for row in rows {
             if let id = existing(row) { componentFor[row.id] = id }
         }
+
         for row in rows where parent[row.id] == nil && componentFor[row.id] == nil && !covered.contains(row.id) {
             let order = (file.components.map(\.order).max() ?? -1) + 1
             file.components.append(GradeComponent(id: row.id, device: device, at: now, name: row.name.trimmingCharacters(in: .whitespaces),

@@ -168,8 +168,6 @@ struct WidgetSizer {
     }
 }
 
-/// Serves each widget's one file as its frame's page, with a policy that lets it run its own inline code and nothing
-/// else.
 @MainActor final class WidgetFiles: NSObject, WKURLSchemeHandler {
     static let scheme = "folio-widget"
 
@@ -204,7 +202,6 @@ struct WidgetSizer {
     }
 
     func webView(_ webView: WKWebView, stop task: any WKURLSchemeTask) { running.remove(ObjectIdentifier(task as AnyObject)) }
-
 
     static func notice(_ file: URL?) -> Data {
         let text = switch file {

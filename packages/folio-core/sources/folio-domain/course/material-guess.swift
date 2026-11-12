@@ -157,6 +157,7 @@ extension MaterialIntake {
         let isToday = { (s: Session) in settings.studyDay(of: s.date, calendar: calendar) == today }
         let held = sessions.filter { !$0.isCancelled }.sorted(by: Session.inOrder)
         let latest = { (among: [Session]) in Session.latest(among: among, now: now, settings: settings, calendar: calendar) }
+
         if let week {
             // A week with no class (an old deck, a week not set up yet) gets none: today's class would take its week
             // in front of a name that says another.

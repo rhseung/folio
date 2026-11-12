@@ -245,6 +245,7 @@ struct QuickAddCorpusTests {
         #expect(reader.line("선대 HW7 금", setting: .due(date("2026-11-14 23:59"))) == "선대 HW7 11/14 23:59")
         #expect(reader.line("선대 HW7 금 보고서 23:59", setting: .due(date("2026-11-14 18:00"))) == "선대 HW7 11/14 18:00 보고서")
         #expect(reader.line("선대 HW7", setting: .due(date("2026-11-14 23:59"))) == "선대 HW7 11/14 23:59")
+
         // A day `10/1` would read as next year's is written with its year.
         #expect(reader.line("선대 HW7", setting: .due(date("2026-10-01 09:00"))) == "선대 HW7 2026/10/1 09:00")
         #expect(reader.line("선대 HW7 금 23:59 보고서", setting: .due(nil)) == "선대 HW7 보고서")
@@ -255,25 +256,31 @@ struct QuickAddCorpusTests {
         #expect(reader.line("로봇 매주 금요일 퀴즈", setting: .repeats(nil)) == "로봇 금요일 퀴즈")
         #expect(reader.line("로봇 매주 금요일 퀴즈", setting: .repeats(.biweekly)) == "로봇 격주 금요일 퀴즈")
         #expect(reader.line("로봇 퀴즈 3일마다", setting: .repeats(.monthly)) == "로봇 퀴즈 매달")
+
         // Weekdays name the day, so the deadline's day gives way to them and keeps its time.
         #expect(reader.line("선대 HW 금 18:00", setting: .repeats(AssignmentRepeat(.week, weekdays: [1, 3]))) == "선대 HW 매주 월수 18:00")
+
         // Taken out, they leave the deadline's own weekday.
         #expect(reader.line("선대 HW 매주 월수", setting: .repeats(nil)) == "선대 HW 월")
         #expect(reader.line("선대 HW 매주 월수", setting: .repeats(.weekly)) == "선대 HW 매주 월")
+
         // A lone `오후` stays the deadline's after the weekdays shrink to one, as it was beside them.
         #expect(reader.line("격주 월수 오후", setting: .repeats(nil)) == "월 오후")
         #expect(reader.line("오후 3일마다 18:00", setting: .repeats(nil)) == "오후 10/22 18:00")
         #expect(reader.line("오후 3일마다 18:00", setting: .repeats(.daily)) == "오후 매일 18:00")
+
         // Weekdays go in place of the old rule when taking it out would join `오후` to the time or leave `까지` as a title
         // word (aWrittenValueReadsBack, seed t1DEwiqJR8EPn2nhhlxfHUxNZp0n4Dzp9XES9Gco2i4= before #426).
         #expect(reader.line("오후 3일마다 18:00", setting: .repeats(AssignmentRepeat(.week, weekdays: [1, 3]))) == "오후 매주 월수 18:00")
         #expect(reader.line("보고서 한 달마다 까지", setting: .repeats(AssignmentRepeat(.week, weekdays: [1, 3]))) == "보고서 매주 월수 까지")
         #expect(reader.line("선대 HW 매주 월수", setting: .due(date("2026-11-14 23:59"))) == "선대 HW 매주 월수 11/14 23:59")
+
         // Words read as one rule or one set of weekdays are rewritten whole.
         #expect(reader.line("선대 HW 격주 화, 목", setting: .repeats(nil)) == "선대 HW 목")
         #expect(reader.line("선대 복습 한 달마다", setting: .repeats(.weekly)) == "선대 복습 매주")
         #expect(reader.line("선대 HW 2주에 한 번 금", setting: .due(date("2026-11-14 23:59"))) == "선대 HW 격주 11/14 23:59")
         #expect(reader.line("선대 보고서 매주", setting: .kind(.homework, 2)) == "선대 보고서 매주 HW2")
+
         // A one-word title another course's title starts with reads as that course only typed whole.
         let physics = Course(device: device, at: .now, title: "일반물리학실험", codes: [], number: "1101")
         let wide = QuickAdd.Reader(courses: [physics] + courses, codes: codes, now: now, calendar: calendar)
@@ -294,6 +301,7 @@ struct QuickAddCorpusTests {
     @Test func aWrittenValueReadsBack() async {
         let line = zip(Gen.int(in: 0...(Self.courseWords.count - 1)), Gen.int(in: 0...(Self.titleWords.count - 1)).array(of: 0...3),
                        zip(Gen.int(in: -1...(Self.dueWords.count - 1)), Gen.int(in: 0...3)))
+
         // A course, a deadline from yesterday to over a year ahead (or none), the repeat, a kind and number.
         let value = zip(Gen.int(in: 0...3), Gen.int(in: 0...(courses.count - 1)), Gen.int(in: -1...(500 * 24 * 4)))
         await propertyCheck(input: line, value) { line, value in
@@ -307,8 +315,10 @@ struct QuickAddCorpusTests {
             case 2: set = .repeats(Self.rules[abs(value.2) % Self.rules.count])
             default: set = .kind(AssignmentKind.allCases[value.1 % AssignmentKind.allCases.count], value.1 + 1)
             }
+
             let before = reader.read(text)
             let after = reader.read(reader.line(text, setting: set))
+
             switch set {
             case let .course(id):
                 #expect(after.courseId == id, "\(text) → \(set)")

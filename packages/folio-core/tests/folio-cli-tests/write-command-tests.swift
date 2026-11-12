@@ -40,6 +40,7 @@ struct WriteCommandTests {
         try h.expectSame(["settings", "set", "review.intervals", "[1, 2, 4]"]) { _ in
             SettingsSet(field: "review.intervals", value: .array([1.0, 2, 4].map { .number($0) }))
         }
+
         // The whole file, as the app's settings screen sends it, writes the same.
         try h.expectSame(["settings", "set", "review.intervals", "[1, 2, 4]"]) { gist in
             var s = try ActionContext(gist: gist, device: h.device).settings()
@@ -101,6 +102,7 @@ struct WriteCommandTests {
         }
         let gist = try Harness.fixtureCopy()
         for line in [lab, report, U.addHW] { _ = h.cli(line, gist: gist) }
+
         // One component's score leaves the other's: an agent setting 재료 must not wipe 고찰.
         for line in [["assignment", "set", "EC4207/HW 3", "--group", "실험", "--score", "재료:8/10", "--score", "고찰:7/10"],
                      ["assignment", "set", "EC4207/HW 3", "--score", "재료:9/10"]] {
@@ -111,6 +113,7 @@ struct WriteCommandTests {
                 .filter { $0.assignmentId == U.hw }.map { ($0.componentId, $0.score) })
         }
         #expect(try scores() == [G.component: 9, G.quiz: 7])
+
         // The JSON input's whole list replaces them all.
         #expect(h.cli(["run", "assignment", "set", "--input", #"{"course":"EC4207","assignment":"HW 3","scores":[{"component":"\#(G.quiz)","score":6,"max":10}]}"#],
                       gist: gist).code == 0)
@@ -206,6 +209,7 @@ struct WriteCommandTests {
             let r = h.cli(args, gist: gist)
             #expect(r.code == 2, "\(args): \(r.err)")
         }
+
         // A bare item still points at the missing course rather than guessing one.
         #expect(h.cli(["exam", "show", "중간고사"], gist: gist).code == 2)
     }

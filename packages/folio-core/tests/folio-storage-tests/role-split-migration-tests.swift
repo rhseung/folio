@@ -17,6 +17,7 @@ struct RoleSplitMigrationTests {
         guard case .array(let materials)? = raw["materials"] else { Issue.record("no materials"); return }
         #expect(materials.map { $0["role"] } == [.string("inherited"), .string("exam"), .string("lecture"), nil])
         #expect(materials.allSatisfy { $0["examIds"] == .array([]) && $0["futureMaterialField"] == .string("keep me") })
+
         // The kind is left for the cleanup plan, where marking a file as a past exam is shown before it happens.
         #expect(materials.allSatisfy { $0["kind"] == nil && $0["path"] == .string("Exams/Past/x.pdf") })
     }

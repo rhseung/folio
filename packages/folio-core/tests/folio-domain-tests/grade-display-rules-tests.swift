@@ -36,9 +36,11 @@ struct GradeDisplayRulesTests {
         let orphan = Category(device: device, at: now, name: "고아", group: "기초", parentId: UUID())
         let deep = Category(device: device, at: now, name: "세부", parentId: required.id)
         let rows = Category.tree([deep, orphan, required, major])
+
         #expect(rows.map(\.category.name) == ["고아", "전공", "전공필수", "세부"])
         #expect(rows.map(\.depth) == [0, 0, 1, 2])
         #expect(rows.map(\.group) == ["기초", "전공", "전공", "전공"])
+
         // Groups come only from categories without a parent field, not from ones whose parent is missing.
         #expect(Category.groups([deep, orphan, required, major]) == ["전공"])
     }

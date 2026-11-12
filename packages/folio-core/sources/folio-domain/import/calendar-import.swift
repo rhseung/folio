@@ -93,6 +93,7 @@ public enum CalendarImporter {
             if let lab = m.lab { file.linkLab(lab, session: s.id, experiment: m.topic, device: device, at: now) }
             added.append(file.sessions.last!)
         }
+
         var cancelled: [Session] = []
         let days = Set(meetings.map { calendar.startOfDay(for: $0.start) })
         if let from = days.min(), let to = days.max() {
@@ -104,6 +105,7 @@ public enum CalendarImporter {
                 cancelled.append(file.sessions[i])
             }
         }
+
         file.sessions.sort(by: Session.inOrder)
         var schedule: [ClassTime] = []
         if file.course.schedule.isEmpty {

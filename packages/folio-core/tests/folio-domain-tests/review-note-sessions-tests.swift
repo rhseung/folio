@@ -76,7 +76,9 @@ struct ReviewNoteSessionsTests {
         let s = sessions(3), note = UUID()
         let now = start.addingTimeInterval(10 * 86_400)
         var f = file(s, notes: [(note, .review)])
+
         #expect(s.allSatisfy { f.needsReviewNote($0, at: now) })
+
         f.linkNote(note, to: s[0].id, as: .review)
         f.sessions[0].reviewNoteUnfinished = true
         f.linkNote(note, to: s[1].id, as: .review)
@@ -84,6 +86,7 @@ struct ReviewNoteSessionsTests {
         #expect(f.sessions.map { f.needsReviewNote($0, at: now) } == [true, true, true])
         f.setReviewNoteUnfinished(note, false)
         #expect(f.sessions.map { f.needsReviewNote($0, at: now) } == [false, false, true])
+
         // Linked again, a class keeps its own mark rather than the note's.
         f.linkNote(note, to: s[1].id, as: .review)
         #expect(!f.sessions[1].reviewNoteUnfinished)
@@ -104,6 +107,7 @@ struct ReviewNoteSessionsTests {
         func needs() -> [Bool] {
             UnitReviewInput.all(for: f, reviews: [], settings: Settings(), calendar: calendar, now: now).map(\.needsReviewNote)
         }
+
         #expect(needs() == [true, true])
         f.linkNote(note, to: s[0].id, as: .review)
         f.linkNote(note, to: s[1].id, as: .review)
@@ -127,6 +131,7 @@ struct ReviewNoteSessionsTests {
             for i in chosen.sorted(by: { order[$0] > order[$1] }) { f.linkNote(note, to: s[i].id, as: .review) }
             #expect(f.sessions(pointingAt: note).map(\.id) == chosen.map { s[$0].id })
             #expect(violations(f).isDisjoint(with: ["NoteEntry.session", "Session.noteKind"]))
+
             if let first = chosen.first, let last = chosen.last {
                 let span = f.sessionSpan(of: note, calendar: calendar)
                 let day = { (i: Int) in f.day(of: s[i], calendar: calendar) }
@@ -136,6 +141,7 @@ struct ReviewNoteSessionsTests {
                 f.unlinkNote(note, from: s[dropped].id)
                 #expect(f.sessions(pointingAt: note).map(\.id) == chosen.filter { $0 != dropped }.map { s[$0].id })
             }
+
             let free = s.indices.filter { picks[$0] == 0 }
             for i in free { f.linkNote(other, to: s[i].id, as: .review) }
             f.forgetNote(note)

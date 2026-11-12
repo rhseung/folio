@@ -56,6 +56,7 @@ public enum NoteFigure {
             let reason = parser.parserError.map { ($0 as NSError).localizedDescription } ?? ""
             return [.notXML(line: parser.lineNumber, reason: reason)]
         }
+
         var found: [Problem] = []
         func add(_ p: Problem) { if !found.contains(p) { found.append(p) } }
         if let root = reader.root, local(root) != "svg" { add(.notSVG(root: root)) }

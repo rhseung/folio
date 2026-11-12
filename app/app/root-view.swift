@@ -20,7 +20,6 @@ struct RootView: View {
     @State private var hoveredTerm: UUID?
     /// The fixed list's own height, measured: the rows' height follows the system's sidebar size setting.
     @State private var navHeight: CGFloat?
-    /// Whether the terms run on past the top and the bottom of their space, where the list fades out.
     @State private var searching = false
     @AppStorage("sidebarOpen") private var sidebarOpen = true
     @State private var showingRecording = false
@@ -509,8 +508,7 @@ struct RootView: View {
     }
 
     #if os(macOS)
-    /// Actions that work from any page, so they live in the window's top row rather than on one screen: the sidebar
-    /// button, back and forward as in Finder and Safari, the tabs, then the search field and the buttons at the end.
+    /// Actions that work from any page, so they live in the window's top row rather than on one screen.
     var titleRow: some View {
         let lead = TitleRowEdges.lead(fullScreen: fullScreen)
         return TitleRow(lead: lead) {
@@ -615,18 +613,15 @@ struct RootView: View {
         .menuStyle(.button)
     }
 
-    /// The front tab's trail: its screen, then the course's section and what it opened, only while a course is shown
-    /// (they clear as it goes).
+    /// A course's steps only while a course is shown: they clear as it goes.
     var crumbs: [Crumb] {
         let steps = if case .course = selection { tabs.trail(tabs.selected)?.crumbs ?? [] } else { [Crumb]() }
         return [workspace.placeCrumb(of: navigator.current)] + steps
     }
 
-    /// The content panel's leading edge across the window: beside the sidebar or, folded, the window's edge.
     var panelEdge: CGFloat { sidebarOpen ? Theme.Size.sidebar : Theme.Size.panelInset }
 
     #if os(iOS)
-    /// Where the bare trail starts: `Space.l` in from the panel's edge.
     var panelStart: CGFloat { panelEdge + Theme.Space.l }
 
     var tabLead: CGFloat { max(Theme.Space.s, panelStart - Self.crumbStart) }
@@ -806,7 +801,6 @@ struct RootView: View {
         }
     }
 
-    /// The front tab's screen, with the recent tabs' screens kept alive behind it (`TabScreens`, `TabKeep`).
     var detail: some View { TabScreens(tabs: tabs, workspace: workspace, openLink: openLink(from:)) }
 
     /// Nil opens the tab last picked.
@@ -821,7 +815,6 @@ struct RootView: View {
 }
 
 extension Semester {
-    /// `2026 가을학기`, `인정학기`.
     var title: String {
         switch term {
         case .credited: source.map { String(localized: .semesterTitleCreditedSource($0)) } ?? String(localized: .semesterTitleCredited)
@@ -846,10 +839,9 @@ private struct SidebarLabelStyle: LabelStyle {
     }
 }
 
-/// The tools on a term row or the list's name: an add button at the end, shown while the pointer is over it (adding is
-/// rare, and an always-there row weighed as much as the items; touch has no hover, so the iPad always shows it), and
-/// the term's folder as the button that opens it to its courses. They lie over the row, not in it: the row is a button, and a button
-/// inside its label never gets the click.
+/// The add button shows only while the pointer is over the row: adding is rare, and an always-there button weighed as
+/// much as the items (touch has no hover, so the iPad always shows it). The tools lie over the row, not in it: the row
+/// is a button, and a button inside its label never gets the click.
 private struct RowTools: ViewModifier {
     let add: String?
     let action: () -> Void

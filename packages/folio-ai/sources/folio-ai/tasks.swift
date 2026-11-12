@@ -5,7 +5,7 @@ public enum ClaudeTask: String, Codable, Sendable, CaseIterable {
     case chat, reviewNoteDraft, examSummaryDraft, quizCards, grading, classifyFile, extractAssignment, extractGradingPolicy, examPlan, widget, lectureSections
 }
 
-/// Per the spec: light jobs (file classification) on the small model, grading and proof review on the large one.
+/// Light jobs (file classification) on the small model, grading and proof review on the large one.
 /// Defaults are defined here only; settings may override per task.
 public struct TaskConfig: Codable, Sendable, Equatable {
     public var model: String

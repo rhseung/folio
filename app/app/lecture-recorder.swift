@@ -5,8 +5,8 @@ import Speech
 import UIKit
 #endif
 
-/// Records a lecture and transcribes it on the device as it goes. One microphone tap feeds
-/// both the audio file and the transcriber, so transcript times line up with the file even across pauses.
+/// One microphone tap feeds both the audio file and the transcriber, so transcript times line up with the file even
+/// across pauses.
 @MainActor @Observable
 final class LectureRecorder {
     /// `stopping` lasts the seconds the transcriber takes to finish; a second stop then appended the last words twice.
@@ -75,12 +75,14 @@ final class LectureRecorder {
         pages = []
         context = nil
         elapsed = 0
+
         do {
             guard await AVAudioApplication.requestRecordPermission() else { throw RecorderError.microphoneDenied }
             #if os(iOS)
             try AVAudioSession.sharedInstance().setCategory(.playAndRecord, mode: .spokenAudio, options: [.defaultToSpeaker, .allowBluetoothHFP])
             try AVAudioSession.sharedInstance().setActive(true)
             #endif
+
             var transcription: (SpeechTranscriber, AVAudioFormat, Locale)?
             switch await Self.transcriber(for: locale) {
             case .ready(let t, let format, let supported): transcription = (t, format, supported)
@@ -95,6 +97,7 @@ final class LectureRecorder {
                 self.analyzer = analyzer
                 analyzerInput = continuation
             }
+
             // The microphone's format is read only now, after the waits above: the device can change during them,
             // and a tap in a format read before that raises an Objective-C exception, which ends the app.
             guard let (engine, input) = Self.tappableEngine(),
@@ -409,8 +412,7 @@ enum RecorderError: LocalizedError {
 }
 
 extension LectureRecorder {
-    /// Compresses a finished CAF to AAC for the course folder and returns its length. Slow for a long lecture, so it
-    /// runs off the main actor.
+    /// Slow for a long lecture, so it runs off the main actor.
     nonisolated static func compress(_ source: URL, to target: URL) throws -> TimeInterval {
         let input = try AVAudioFile(forReading: source)
         let format = input.processingFormat

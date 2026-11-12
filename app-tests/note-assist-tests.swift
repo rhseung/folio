@@ -225,6 +225,7 @@ struct NoteAssistTests {
         let area = NSRect(x: 0, y: 0, width: view.bounds.width, height: 400)
         let text = try #require(view.bitmapImageRepForCachingDisplay(in: area))
         view.cacheDisplay(in: area, to: text)
+
         // The rows without their scroll view, which ImageRenderer leaves empty.
         let rows = CompletionMenuView(menu: view.completion) { _ in }.rows
             .frame(width: CompletionMenuView.width, height: CompletionMenuView.height(rows: view.completion.items.count), alignment: .top)
@@ -235,6 +236,7 @@ struct NoteAssistTests {
             .environment(\.colorScheme, dark ? .dark : .light))
         renderer.scale = 2
         let menu = try #require(renderer.nsImage)
+
         let frame = view.convert(host.frame, from: scroll)
         let back = dark ? NSColor(white: 0.12, alpha: 1) : NSColor.white
         let out = NSImage(size: area.size, flipped: false) { _ in
@@ -272,18 +274,22 @@ struct NoteAssistTests {
             window.appearance = NSAppearance(named: dark ? .darkAqua : .aqua)
             Self.type(view, "$\\la")
             try Self.writeWithMenu(view, "assist-tex-\(dark ? "dark" : "light")", dark: dark)
+
             let (slash, other) = Self.editor("# 행렬\n\n", syntax: .latex)
             other.appearance = window.appearance
             Self.type(slash, "/")
             try Self.writeWithMenu(slash, "assist-slash-\(dark ? "dark" : "light")", dark: dark)
+
             let (ascii, third) = Self.editor("# 행렬\n\n고윳값은 ", syntax: .asciimath)
             third.appearance = window.appearance
             Self.type(ascii, "$la")
             try Self.writeWithMenu(ascii, "assist-asciimath-\(dark ? "dark" : "light")", dark: dark)
+
             let (hint, fifth) = Self.editor("# 행렬\n\n", syntax: .latex)
             fifth.appearance = window.appearance
             hint.updateHint()
             try Self.writeText(hint, "assist-hint-\(dark ? "dark" : "light")", dark: dark)
+
             let (link, fourth) = Self.editor("# 행렬\n\n고윳값은 ", links: StubLinks())
             fourth.appearance = window.appearance
             Self.type(link, "[[")

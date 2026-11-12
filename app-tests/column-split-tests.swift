@@ -91,10 +91,12 @@ struct PaneColumnTests {
         memory.remember(.people, collapsed: false)
         panes.swap(0, 1)
         #expect(panes.columns[0] === hidden)
+
         // Joining another tab, each pane brings its own.
         let other = TabPanes(Navigator(people), memory: memory)
         #expect(panes.close(1) && panes.merge(other, at: 0))
         #expect(panes.columns[1] === hidden && !panes.columns[0].isCollapsed(.people))
+
         // Out to a window of its own: what it had hidden goes with it, a pane without any starts from the last choice.
         let window = try #require(TabPanes(histories: panes.navigators.map(\.history), shares: panes.shares, focus: 0,
                                            columns: [[], hidden.names], memory: memory))

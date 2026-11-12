@@ -1,7 +1,6 @@
 import Foundation
 
-/// How a repeating assignment comes back: every `every` days, weeks or months. A weekly rule may name the weekdays it
-/// falls on (`매주 월수`); with none it falls on its deadline's weekday.
+/// A weekly rule may name the weekdays it falls on (`매주 월수`); with none it falls on its deadline's weekday.
 public struct AssignmentRepeat: Hashable, Sendable {
     public enum Unit: String, Codable, Sendable, CaseIterable {
         case day, week, month
@@ -9,7 +8,7 @@ public struct AssignmentRepeat: Hashable, Sendable {
 
     public var every: Int
     public var unit: Unit
-    /// ISO weekdays (1 = Monday), sorted and distinct; only a weekly rule has them.
+    /// ISO weekdays, 1 = Monday.
     public var weekdays: [Int]
 
     public init(every: Int = 1, _ unit: Unit, weekdays: [Int] = []) {
@@ -150,7 +149,6 @@ public struct AssignmentRepeat: Hashable, Sendable {
         return weekdayWord((words.dropLast().map(listItem) + [last]).joined(separator: ","))
     }
 
-    /// A word of a weekday list without the `,` or `과`, `와` that joins it to the next (`월요일,` → `월요일`).
     static func listItem(_ word: String) -> String {
         if let c = word.last, ",·/、".contains(c) { return String(word.dropLast()) }
         if word.count > 1, word.hasSuffix("과") || word.hasSuffix("와") { return String(word.dropLast()) }

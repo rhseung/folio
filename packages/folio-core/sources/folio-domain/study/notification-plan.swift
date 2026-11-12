@@ -30,6 +30,7 @@ public enum NotificationPlan {
             let day = calendar.date(byAdding: .day, value: dayOffset, to: calendar.startOfDay(for: date))!
             return calendar.date(byAdding: .minute, value: minute, to: day)!
         }
+
         var out: [PlannedNotification] = []
         for file in courses {
             let course = file.course.id
@@ -42,6 +43,7 @@ public enum NotificationPlan {
                     }
                 }
             }
+
             for exam in file.exams {
                 guard let start = exam.start else { continue }
                 if settings.examDayBefore {
@@ -53,12 +55,14 @@ public enum NotificationPlan {
                     out.append(.init(id: "exam-morning-\(exam.id)", date: morning, kind: .examMorning, courseId: course, subject: exam.title, at: start))
                 }
             }
+
             let absences = GradeCalculator.absences(in: file.heldAttendance(at: now), policy: file.policy)
             if settings.attendance, GradeCalculator.absencesUntilNextCap(absences: absences, policy: file.policy) == 1 {
                 out.append(.init(id: "attendance-\(course)-\(absences)", date: now, kind: .attendanceOneAway(absences: absences),
                                  courseId: course, subject: file.course.title, at: nil))
             }
         }
+
         if settings.dailyReview {
             for day in 0...reviewDays {
                 let date = at(settings.dailyReviewMinute, dayOffset: day, from: now)
@@ -70,6 +74,7 @@ public enum NotificationPlan {
                 }
             }
         }
+
         return out.filter { $0.date >= now }.sorted { $0.date < $1.date }
     }
 }

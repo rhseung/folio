@@ -151,7 +151,6 @@ public enum SourceEditing {
     // MARK: Pairs
 
     private static let pairs: [UInt16: UInt16] = [0x28: 0x29, 0x5B: 0x5D, 0x7B: 0x7D]
-    /// What a selection is wrapped in by typing its opener: brackets anywhere, emphasis, code and math marks in text.
     private static let wraps: [UInt16: UInt16] = [0x5B: 0x5D, 0x28: 0x29]
     private static let textWraps: [UInt16: UInt16] = wraps.merging([0x2A: 0x2A, 0x60: 0x60, 0x24: 0x24]) { a, _ in a }
 
@@ -253,11 +252,11 @@ public enum SourceEditing {
 
     // MARK: Numbering
 
-    /// `edit` and the renumbering of the numbered lists it lands in, as one edit.
     static func renumbered(_ text: NSString, _ edit: Edit) -> Edit {
         let after = edit.applied(to: text) as NSString
         let changes = renumber(after, around: NSRange(location: edit.range.location, length: edit.text.utf16.count))
         guard !changes.isEmpty else { return edit }
+
         let final = NSMutableString(string: after)
         var caret = edit.caret
         for (range, digits) in changes.reversed() {
@@ -320,7 +319,6 @@ public enum SourceEditing {
         return out
     }
 
-    /// One edit taking `old` to `new`: the span between what they share at the start and at the end.
     static func diff(_ old: NSString, _ new: NSString, caret: Int) -> Edit {
         var a = 0, b = 0
         let n = min(old.length, new.length)

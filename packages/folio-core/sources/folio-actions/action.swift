@@ -2,8 +2,8 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-/// One change to the user's data. The app's screens and the `folio` CLI build the same value and run it the same way,
-/// so the files they leave behind are the same.
+/// The app's screens and the `folio` CLI build the same value and run it the same way, so the files they leave behind
+/// are the same.
 /// Declared with `@Action`, which writes `spec` and checks the declaration.
 public protocol Action: Codable, Sendable {
     static var spec: ActionSpec { get }
@@ -15,7 +15,7 @@ extension Action {
     public static var command: String { spec.command }
 }
 
-/// Why an action refused to run. Each case is its own CLI exit code.
+/// Each case is its own CLI exit code.
 public enum ActionError: Error, Equatable, CustomStringConvertible {
     case notFound(String)
     /// The data rules forbid it, e.g. deleting a session that a note still points at.
@@ -269,8 +269,7 @@ public final class ActionContext {
         try store(course).notes(in: file(course))
     }
 
-    /// Creates a note in the course's Notes folder with its entry in course.json, and returns its id (known before
-    /// writing, so a dry run has it too).
+    /// The id is known before writing, so a dry run returns it too.
     @discardableResult
     public func createNote(_ course: UUID, title: String, meta: NoteMeta, format: NoteFormat = .markdown, body: String) throws -> UUID {
         let store = try store(course)
@@ -404,12 +403,14 @@ func diff<M: Encodable>(_ before: M, _ after: M, path: String) -> [Change] {
         guard let data = try? JSONEncoder().encode(m), case .object(let o)? = try? JSONDecoder().decode(JSONValue.self, from: data) else { return [:] }
         return o
     }
+
     func stripped(_ v: JSONValue?) -> JSONValue? {
         guard case .object(var o)? = v else { return v }
         o["updatedAt"] = nil
         o["updatedBy"] = nil
         return .object(o)
     }
+
     func byID(_ v: JSONValue?) -> [String: JSONValue]? {
         guard case .array(let items)? = v else { return nil }
         var result: [String: JSONValue] = [:]
@@ -419,11 +420,13 @@ func diff<M: Encodable>(_ before: M, _ after: M, path: String) -> [Change] {
         }
         return result
     }
+
     /// Top-level fields of two versions of one object; anything else is one field named `name`.
     func fields(_ name: String, _ old: JSONValue?, _ new: JSONValue?) -> [Change.Field] {
         guard case .object(let o)? = stripped(old), case .object(let n)? = stripped(new) else { return [Change.Field(name: name, before: old, after: new)] }
         return Set(o.keys).union(n.keys).sorted().filter { o[$0] != n[$0] }.map { Change.Field(name: $0, before: o[$0], after: n[$0]) }
     }
+
     let (a, b) = (json(before), json(after))
     var changes: [Change] = []
     for key in Set(a.keys).union(b.keys).sorted() where stripped(a[key]) != stripped(b[key]) {

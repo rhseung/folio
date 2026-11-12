@@ -122,7 +122,6 @@ struct ExamsView: View {
         .frame(width: Self.dateColumn, alignment: .leading)
     }
 
-    /// The scope's top units numbered, each marked with how its review stands.
     @ViewBuilder func scope(_ exam: Exam, states: [UUID: ReviewState]) -> some View {
         let scope = model.scope(exam, states: states)
         let today = model.today

@@ -17,8 +17,8 @@ struct TabPanesTests {
         panes.openBeside(grades)
         #expect(panes.count == 2 && panes.focus == 1)
         #expect(panes.navigators.map(\.current) == [Navigator.Entry(link: .place(.today)), grades])
-        // The new pane starts its own history.
         #expect(!panes.focused.history.canGoBack)
+
         // From the first pane, the next one opens right of it, between the two.
         panes.openBeside(people, from: panes.navigators[0])
         #expect(panes.navigators.map(\.current) == [Navigator.Entry(link: .place(.today)), people, grades])
@@ -34,14 +34,17 @@ struct TabPanesTests {
         panes.openBeside(codes)
         #expect(panes.count == 4 && panes.focus == 3)
         #expect(panes.navigators.map(\.current) == [Navigator.Entry(link: .place(.today)), grades, people, codes])
+
         // A target a pane already shows goes to that pane.
         panes.openBeside(Navigator.Entry(link: .place(.today)))
         #expect(panes.focus == 0 && panes.count == 4)
+
         // Room for two open beside a bundle: the run gives up its end pressed longer ago, twice, to the right bundle.
         panes.measure(900)
         #expect(panes.fold.run == 0...1 && panes.fold.right == [2, 3])
         panes.measure(2000)
         #expect(panes.fold.run == 0...3 && panes.folded.isEmpty)
+
         // A pane opened in a narrow row takes the run at once, from the width the row last had, and the pane it opened
         // beside goes to the left bundle.
         panes.measure(500)
@@ -109,21 +112,24 @@ struct TabPanesTests {
         panes.openBeside(grades)
         panes.openBeside(people)
         #expect(panes.folded.isEmpty)
+
         // The focused pane folds by hand: the focus goes to the pane pressed before it.
         panes.collapse(2)
         #expect(panes.collapsed == [2] && panes.folded == [2] && panes.focus == 1)
+
         // A row with room for every pane open still keeps it a strip.
         panes.measure(2000)
         #expect(panes.folded == [2])
+
         // Narrower, the pane pressed longer ago goes to the left bundle, never the focus; the one folded by hand
         // stays a strip in its place.
         panes.measure(500)
         #expect(panes.folded == [0, 2] && panes.fold.left == [0] && panes.fold.strips == [2])
-        // The last open pane can't fold.
+
         panes.measure(2000)
         panes.collapse(0)
         #expect(!panes.canCollapse(1))
-        // Pressing a strip opens it.
+
         panes.press(2)
         #expect(panes.collapsed == [0] && panes.focus == 2)
     }
@@ -136,6 +142,7 @@ struct TabPanesTests {
         #expect(tabs.trail(tabs.selected) === panes.trails[1])
         panes.press(0)
         #expect(tabs.current.screen == .today)
+
         // A pane's screen finds its tab even behind another.
         let pane = panes.navigators[1]
         tabs.open()
@@ -239,6 +246,7 @@ struct TabPanesTests {
         #expect(panes.navigators.map(\.current) == [grades, note, people])
         let noteID = try #require(note.link.id)
         #expect(panes.noteModes == [nil, .read, nil] && panes.noteMode(of: noteID, pane: id) == .read)
+
         // A tab of more panes is the student's own arrangement: nothing changes.
         #expect(!panes.restore(saved, entries: [grades, note, people]))
         #expect(panes.count == 3)
@@ -252,6 +260,7 @@ struct TabPanesTests {
         #expect(panes.restore(saved, entries: [nil, note, people]))
         #expect(panes.navigators.map(\.current) == [note, people] && panes.focus == 0)
         #expect(abs(panes.shares.reduce(0, +) - 1) < 1e-9)
+
         // Left with the note alone, the tab stays as it was.
         let alone = TabPanes(Navigator())
         #expect(!alone.restore(saved, entries: [nil, note, nil]))
@@ -267,10 +276,12 @@ struct TabPanesTests {
         panes.show(.write, of: noteID, pane: id)
         #expect(panes.current.panes[0].noteMode == .write && panes.noteModes == [.write, nil])
         #expect(panes.noteMode(of: noteID, pane: id) == .write)
+
         // The pane gone on to another note starts that one from nothing.
         panes.navigators[0].go(Navigator.Entry(link: other))
         #expect(panes.noteMode(of: otherID, pane: id) == nil)
         #expect(panes.noteMode(of: noteID, pane: id) == nil)
+
         // A note the pane no longer shows can't set how the pane shows things.
         panes.show(.read, of: noteID, pane: id)
         #expect(panes.current.panes[0].noteMode == nil)

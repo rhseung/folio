@@ -31,7 +31,6 @@ struct ClassStartAsk: Identifiable, Equatable {
     var opensPages: Bool { !opens.isEmpty || split != nil }
 }
 
-/// What one minute's check found for the class starting: the window's part, and whether to record at once.
 struct ClassStartStep: Equatable {
     var ask: ClassStartAsk
     var records = false
@@ -76,6 +75,7 @@ extension Workspace {
         let done = classStartDone[c.key] ?? []
         let due = ClassStart.due(c, settings: setting, now: now).subtracting(done)
         guard !due.isEmpty else { return nil }
+
         // Marked before anything runs: a step that fails is reported once, not again every minute. Not the recording
         // while another runs (the class before, kept on until its stop time): it starts the minute that one ends.
         classStartDone[c.key] = done.union(recorderBusy ? due.subtracting([.recording]) : due)
@@ -84,6 +84,7 @@ extension Workspace {
         var step = ClassStartStep(ask: ClassStartAsk(course: loaded.id, session: id, front: setting.screen == .front,
                                                      stopAt: ClassStart.recordingStop(c, settings: setting),
                                                      title: "\(loaded.title) · \(loaded.file.title(of: session, calendar: calendar))"))
+
         if due.contains(.open) {
             let pages = classStartPages(for: session, in: loaded.id)
             // The class's own lectures and note where the settings open them, its review note and the quiz as they are.
@@ -96,6 +97,7 @@ extension Workspace {
                 step.ask.opens = classStartOpenings(pages, session: session)
             }
         }
+
         // A recording under way is never cut short, and a class recorded already (then stopped, or on another
         // device) isn't recorded again because the app opened during it.
         if due.contains(.recording), !recorderBusy, !loaded.file.recordings.contains(where: { $0.sessionId == id }) {

@@ -41,7 +41,7 @@ extension Workspace {
         }
     }
 
-    /// The action a chat proposal stands for. Its input already holds UUIDs, so no name lookup is needed.
+    /// A proposal's input already holds UUIDs, so no name lookup is needed.
     func action(_ proposal: ActionProposal) -> (any Action)? {
         guard let type = Actions.all.first(where: { $0.command == proposal.command }) else { return nil }
         return try? Self.decode(type, proposal.input)

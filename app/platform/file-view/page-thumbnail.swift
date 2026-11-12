@@ -1,8 +1,7 @@
 import SwiftUI
 
-/// One page small, with its number under it; on a soft rounded wash while the PDF is on it, as Preview marks it, and
-/// ringed in the course's colour while it is in a range being picked. The wash is grey, not the course's tint, so a
-/// current page that is also picked still reads as both, and neither looks like the save row above a range.
+/// The current page's wash is grey, not the course's tint, so a current page that is also picked still reads as both,
+/// and neither looks like the save row above a range.
 struct PageThumbnail: View {
     let thumbnails: PageThumbnails
     let page: Int

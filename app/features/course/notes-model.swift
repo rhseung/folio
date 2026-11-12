@@ -164,6 +164,7 @@ final class NoteEmbedSource {
             elsewhere = nil
             texts = [:]
         }
+
         let labels = NoteEmbeds.Labels(missing: String(localized: .notesEmbedMissing), loop: String(localized: .notesEmbedLoop),
                                        tooDeep: String(localized: .notesEmbedTooDeep))
         return NoteEmbeds(key: own?.standardizedFileURL.path, labels: labels, title: { [self] id in noteFile(id: id)?.title },

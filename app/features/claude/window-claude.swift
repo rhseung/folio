@@ -88,7 +88,6 @@ struct WindowClaude: View {
     struct Target: Equatable {
         var course: UUID
         var note: UUID?
-        /// The pane whose note an answer is inserted into.
         var notePane: UUID?
         var alsoOpen: [UUID]
         var unit: UUID?

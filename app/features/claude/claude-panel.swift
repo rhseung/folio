@@ -16,7 +16,6 @@ struct ClaudePanel: View {
     @Environment(\.showSettings) private var showSettings
     let course: LoadedCourse
     let openNote: UUID?
-    /// The notes the tab's other panes show.
     var alsoOpen: [UUID] = []
     /// The tab's panes, when it has several (`ContextBuilder.panes`).
     var panes: ContextItem?

@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// The date, a line of counts, and the week beside them.
 struct TodayHeader: View {
     let model: TodayModel
     let summary: TodaySummary

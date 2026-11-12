@@ -202,6 +202,7 @@ public struct AppLink: Hashable, Sendable {
         if parts.count > 1, parts.last == "" { parts.removeLast() }
         guard let first = parts.first, let kind = Kind(rawValue: first.lowercased()) else { return nil }
         let fragment = hash.map { String(rest[rest.index(after: $0)...]) } ?? ""
+
         if kind.isPlace {
             if kind == .settings, parts.count == 2 {
                 guard let tab = SettingsPage(rawValue: parts[1].lowercased()) else { return nil }
@@ -212,6 +213,7 @@ public struct AppLink: Hashable, Sendable {
             self.init(kind: kind, id: nil, page: nil, anchor: nil)
             return
         }
+
         guard parts.count >= 2, let id = UUID(uuidString: parts[1]) else { return nil }
         var page: CoursePage?
         if parts.count == 3, kind == .course {
@@ -304,7 +306,6 @@ extension AppLink: CustomStringConvertible {
 }
 
 extension AppLink {
-    /// Where a search result opens.
     public init(_ item: SearchItem) {
         let kind: Kind = switch item.kind {
         case .note: .note

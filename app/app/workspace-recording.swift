@@ -120,6 +120,7 @@ extension Workspace {
             }
             local.remove(id)
             await retellFinished(recording, in: course)
+
             // The pages seen aren't linked to the session here: the progress prompt is the one writer of its range,
             // and a prompt dismissed unsaved must leave it empty so opening it again starts after the last class.
             // Captions missing (the language model was still downloading, or a crash) are made from the audio now;

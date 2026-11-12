@@ -157,12 +157,14 @@ public struct CLIProvider: ClaudeProvider {
         let temp = FileManager.default.temporaryDirectory.appending(path: "folio-claude-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: temp, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: temp) }
+
         // The course context can run to hundreds of kilobytes, past the argument size limit, so it goes in a file.
         var systemFile: URL?
         if let system = Self.systemText(request) {
             systemFile = temp.appending(path: "system.txt")
             try system.write(to: systemFile!, atomically: true, encoding: .utf8)
         }
+
         let args = try Self.arguments(for: request, systemFile: systemFile, folio: folio) + (onEvent == nil ? [] : ["--include-partial-messages"])
         let (executable, cwd, errorFile) = (executable, workingDirectory, temp.appending(path: "stderr.txt"))
         let running = Running()
@@ -177,6 +179,7 @@ public struct CLIProvider: ClaudeProvider {
         } onCancel: {
             running.cancel()
         }
+
         try Task.checkCancellation()
         do {
             return try Self.response(from: output, request: request)
@@ -192,12 +195,14 @@ public struct CLIProvider: ClaudeProvider {
         process.executableURL = executable
         process.arguments = args
         if let cwd { process.currentDirectoryURL = cwd }
+
         let stdin = Pipe(), stdout = Pipe()
         FileManager.default.createFile(atPath: stderr.path, contents: nil)
         process.standardInput = stdin
         process.standardOutput = stdout
         // A file, not a pipe: an unread stderr pipe that fills up would stall the process.
         process.standardError = try FileHandle(forWritingTo: stderr)
+
         try running.start(process)
         let writer = stdin.fileHandleForWriting
         // A process stopped before it read all its input would otherwise kill the app with SIGPIPE on the write below.
@@ -207,6 +212,7 @@ public struct CLIProvider: ClaudeProvider {
             try? writer.write(contentsOf: input)
             try? writer.close()
         }
+
         // Read as it comes, not to the end, so the answer's text deltas reach the panel while it is being written.
         let reader = stdout.fileHandleForReading
         var output = Data(), pending = Data()
@@ -218,6 +224,7 @@ public struct CLIProvider: ClaudeProvider {
                 pending = Data(pending[pending.index(after: newline)...])
             }
         }
+
         process.waitUntilExit()
         return (output, process.terminationStatus)
     }

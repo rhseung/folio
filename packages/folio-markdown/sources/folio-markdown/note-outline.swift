@@ -35,6 +35,7 @@ public struct NoteOutline: Equatable, Sendable {
         var starts = [0]
         starts.reserveCapacity(lines.count)
         for row in lines.dropLast() { starts.append(starts[starts.count - 1] + row.utf16.count + 1) }
+
         entries = Self.headings(in: note.document).compactMap { h in
             guard let body = note.lines(of: h), body.lowerBound + offset <= lines.count else { return nil }
             let line = body.lowerBound + offset
@@ -90,7 +91,6 @@ public struct NoteOutline: Equatable, Sendable {
         return entries[..<i].lastIndex { $0.level <= Self.depth }
     }
 
-    /// Whether the heading has deeper ones folded under it.
     public func folds(_ i: Int) -> Bool {
         entries.indices.dropFirst(i + 1).first.map { owner(of: $0) == i } ?? false
     }

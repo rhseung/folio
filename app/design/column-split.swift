@@ -152,7 +152,6 @@ extension View {
     /// `inset` being how far down it already starts. Nothing changes where no button sits over it.
     func clearOfColumnButtons(inset: CGFloat) -> some View { modifier(ClearOfColumnButtons(inset: inset)) }
 
-    /// A list column's own ground: the window's beside the page, none on the glass of the column open over it.
     func columnBackground() -> some View { modifier(ColumnBackground()) }
 }
 
@@ -200,7 +199,6 @@ struct ColumnSplit<Column: View, Content: View>: View {
 
     /// What a page needs beside the column; less, and the column folds.
     static var pageRoom: CGFloat { 440 }
-    /// The row the buttons sit in at the top: a toolbar-high button and `Space.s` above and below it.
     static var buttonRow: CGFloat { Theme.Size.toolbarButton + Theme.Space.s * 2 }
     /// How much of the pane the open column leaves uncovered at its trailing side, to click back to the page.
     static var pageEdge: CGFloat { buttonRow }
@@ -284,7 +282,6 @@ struct ColumnSplit<Column: View, Content: View>: View {
             .transition(.opacity)
     }
 
-    /// The column as it is docked, on glass over the page: its usual width, short of the pane's trailing edge.
     var panel: some View {
         let panelWidth = max(min(width, paneWidth - Theme.Space.s - Self.pageEdge), 0)
         let closing: @MainActor () -> Void = close

@@ -89,6 +89,7 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
                 return last && spreads ? Array(all[k...]) : [all[k]]
             }
         }
+
         var chosen: [AppLink] = []
         var widths: [Double] = []
         var focused: Int?
@@ -99,6 +100,7 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
                 widths.append(share / Double(links.count))
             }
         }
+
         guard var layout = PaneLayout(links: chosen, shares: widths) else { return nil }
         if let focused { layout.press(focused) }
         return layout
@@ -221,6 +223,7 @@ extension PaneLayout {
         if let id = session(in: files) {
             for file in files { if let s = file.sessions.first(where: { $0.id == id }) { return (file.course.id, s) } }
         }
+
         let order = [focus] + panes.indices.filter { $0 != focus }
         for i in order {
             let link = panes[i].link

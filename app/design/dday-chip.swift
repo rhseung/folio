@@ -1,6 +1,5 @@
 import SwiftUI
 
-/// Days left to an exam, warming from gray two weeks out through amber to red on the day.
 struct DdayChip: View {
     let days: Int
 

@@ -62,7 +62,6 @@ final class SessionSheetModel {
     /// The class's rough note is made on saving, after the units are, so the note is named after them.
     var makesNote = false
 
-    // When and how the class meets.
     var start: Date
     /// Minutes from the start day's midnight: a class ends on the day it starts. The view sets it through `setEnd`.
     var endMinute: Int
@@ -205,6 +204,7 @@ final class SessionSheetModel {
         guard let file, let session else { return }
         let range = file.suggestedRange(of: id, for: session, seen: viewed.first { $0.materialId == id }, pageCount: nil)
         rows.append(Row(id: id, first: range.firstPage, last: range.lastPage))
+
         guard let m = file.materials.first(where: { $0.id == id }) else { return }
         Task {
             if let n = await workspace.pageCount(of: m, course: courseId) {
@@ -336,7 +336,6 @@ final class SessionSheetModel {
 
     private var schedule: [ClassTime] { file?.course.schedule ?? [] }
 
-    /// The timetable slot a class starting at `date` falls in, if any.
     private func slot(at date: Date) -> ClassTime? {
         Session(device: workspace.device, at: date, week: 1, date: date).slot(in: schedule, calendar: calendar)
     }

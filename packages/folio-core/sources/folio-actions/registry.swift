@@ -31,6 +31,7 @@ public enum Actions {
             guard type.spec.effect == .changes, !values.isEmpty, values.allSatisfy(\.patch) else { return nil }
             return (type.command, ProposalTarget(arguments: arguments(type), effect: .sets))
         }, uniquingKeysWith: { a, _ in a })
+
         // The specs can't tell these from `note edit`, which appends: their fields are plain values, not `Patch`.
         // A rewrite leaves nothing of an earlier rewrite or edit of the same file. `note link` writes its kind and
         // links; a link left out is cleared rather than kept, so treating it as kept only ever supersedes less.

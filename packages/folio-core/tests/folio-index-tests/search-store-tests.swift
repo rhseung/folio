@@ -34,6 +34,7 @@ struct SearchStoreTests {
         let hits = try index.search("non-adjacent")
         #expect(hits.first?.item.kind == .note)
         #expect(hits.first?.snippet?.contains("non-adjacent") == true)
+
         // Two-letter Hangul is below the trigram length, so this goes through the scan path.
         #expect(try index.search("매칭").contains { $0.item.title == "09-08(화) 매칭" })
         #expect(try index.search("no such words here").isEmpty)

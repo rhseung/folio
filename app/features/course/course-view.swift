@@ -462,7 +462,6 @@ struct WeightBar: View {
     }
 }
 
-
 @MainActor
 extension LoadedCourse {
     func codeLine(_ workspace: Workspace) -> String {

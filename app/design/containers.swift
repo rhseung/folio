@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// White rounded card that holds rows separated by inset hairlines.
 struct Card<Content: View>: View {
     var padding: CGFloat = 0
     /// For rows with a wash of their own (an open `DisclosureRow` last in the card), which would square off its corners.
@@ -77,7 +76,6 @@ extension NoticeCard where Rows == EmptyView {
     }
 }
 
-/// One row inside a `Card`. The hairline under it starts at the text, as in system settings.
 struct CardRow<Content: View>: View {
     var last = false
     @ViewBuilder var content: Content
@@ -92,8 +90,6 @@ struct CardRow<Content: View>: View {
     }
 }
 
-/// Settings-style row: label (and optional detail) on the left, the control on the right, or under the label where
-/// the two don't fit on one line.
 struct FormRow<Control: View>: View {
     let label: String
     var detail: String?
@@ -218,8 +214,6 @@ struct Fold<Content: View>: View {
     }
 }
 
-/// Several lines of text in a form: a section of its own, the label and help as its heading and a card holding only the editor,
-/// which grows with the text and then scrolls.
 /// Never put it inside another card: a tall editor among single-line rows breaks their rhythm.
 struct FormTextArea: View {
     let label: String
@@ -239,7 +233,6 @@ struct FormTextArea: View {
     }
 }
 
-/// Wide text input inside a card row.
 struct InlineField: View {
     let prompt: String
     @Binding var text: String
@@ -257,7 +250,6 @@ struct InlineField: View {
     }
 }
 
-/// A sheet with a title, one card of form rows and a confirm button.
 struct SheetForm<Rows: View>: View {
     @Environment(\.dismiss) private var dismiss
     let title: String
@@ -270,7 +262,6 @@ struct SheetForm<Rows: View>: View {
     /// A destructive button at the footer's leading end, in every sheet that deletes; the sheet asks to confirm.
     var deleteTitle: String?
     var onDelete: (() -> Void)?
-    /// The course's icon before the title, for a sheet about one of its classes.
     var mark: CourseMark?
     /// For a sheet that comes back later (a class's wrap-up), "나중에" rather than "취소".
     var cancel: String?
@@ -350,8 +341,7 @@ extension EnvironmentValues {
     @Entry var textAreaRoom: CGFloat?
 }
 
-/// A block with nothing in it, said in one card: a glyph, what is empty, and what fills it. Shorter than the block it
-/// stands for, so an empty column beside a full one doesn't hold open a tall hole.
+/// Shorter than the block it stands for, so an empty column beside a full one doesn't hold open a tall hole.
 struct EmptyCard: View {
     let symbol: String
     var tone: Tone = .plain

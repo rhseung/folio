@@ -30,6 +30,7 @@ struct SessionSheetInfoTests {
         // The form says what the save rules say, not a copy of them.
         model.link = "884 7010 8867"
         #expect(model.disabled && model.note?.contains("참가 링크") == true)
+
         model.link = ""
         model.setEnd(17 * 60)
         #expect(model.disabled && model.note?.contains("끝 시각") == true)

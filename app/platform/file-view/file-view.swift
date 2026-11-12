@@ -2,9 +2,8 @@ import FolioDomain
 import FolioStorage
 import SwiftUI
 
-/// A file shown in the pane, by the renderer its format picks (`MaterialFormat.renderer`, #179). Every place that shows
-/// a file goes through this: the materials page (and with it every `folio://material` link from assignments, problem
-/// sets, exams, units and search), the review's sources, and a semester's `_Admin` files.
+/// Every place that shows a file goes through this (#179): the materials page (and with it every `folio://material`
+/// link from assignments, problem sets, exams, units and search), the review's sources, and a semester's `_Admin` files.
 struct FileView: View {
     @State private var model: FileViewModel
     /// 0-based; taken once the PDF has it.
@@ -194,8 +193,7 @@ struct FileView: View {
         }
     }
 
-    /// A see-through capsule like the window's search field. It measures its full width when the bar picks a row, and
-    /// gives way down to `minWidth` only in the folded one.
+    /// Measures its full width when the bar picks a row, and gives way down to `minWidth` only in the folded one.
     func search(_ c: PDFController) -> some View {
         HStack(spacing: Theme.Space.xs) {
             Image(systemName: "magnifyingglass").foregroundStyle(Theme.Palette.textTertiary)
@@ -218,7 +216,6 @@ struct FileView: View {
     }
 }
 
-/// A PDF, or the split screen over it while a split is edited (#321).
 struct PDFContent: View {
     let model: FileViewModel
     let controller: PDFController

@@ -120,6 +120,7 @@ struct NotionNotesImportTests {
         let rough = note("7주차-1", nil, "2026-10-14")
         let dump = NotionCourseDump(coursePageId: UUID(), title: "그래프 이론", notes: [rough], scores: [], images: [])
         let r = NotionNotesImporter.merge(dump, into: file, existingNotes: [ours], calendar: calendar, device: device, now: now)
+
         #expect(r.file.sessions[0].roughNoteId == ours)
         #expect(r.notes.first { $0.id == rough.id }?.meta.sessionId == nil)
         #expect(r.warnings.count == 1)
@@ -158,6 +159,7 @@ struct NotionNotesImportTests {
         file.components = [GradeComponent(device: device, at: now, name: "quiz", weight: 10, aggregation: .dropLowest(1))]
         let dump = NotionCourseDump(coursePageId: UUID(), title: "", notes: [], scores: [quiz, q1, q2, mid], images: [])
         let r = NotionNotesImporter.merge(dump, into: file, existingNotes: [], calendar: calendar, device: device, now: now)
+
         #expect(r.componentsAdded == 1)
         #expect(r.file.components[0].aggregation == .dropLowest(1))
         #expect(r.file.scores.map(\.title) == ["Quiz 1", "Midterm"])

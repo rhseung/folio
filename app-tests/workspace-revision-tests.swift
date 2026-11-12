@@ -14,6 +14,7 @@ struct WorkspaceRevisionTests {
         let revision = workspace.notesRevision
         #expect(workspace.note(.rough, of: session, in: graphTheory) != nil)
         #expect(workspace.notesRevision > revision)
+
         // Opening the same note again writes nothing.
         let after = workspace.notesRevision
         _ = workspace.note(.rough, of: session, in: graphTheory)
@@ -28,6 +29,7 @@ struct WorkspaceRevisionTests {
         let card = QuizCard(device: workspace.device, at: .now, unitId: unit, type: .free, category: .definition, prompt: "p", answer: "a")
         workspace.run(QuizCardSave(course: graphTheory, cards: [card]))
         #expect(workspace.quizRevision == quiz + 1 && workspace.notesRevision == notes)
+
         workspace.run(QuizRecord(course: graphTheory, attempt: QuizAttemptEvent(cardId: card.id, verdict: .wrong, grader: .self)))
         #expect(workspace.quizRevision == quiz + 2)
     }

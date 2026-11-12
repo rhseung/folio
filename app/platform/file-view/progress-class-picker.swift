@@ -1,7 +1,6 @@
 import FolioDomain
 import SwiftUI
 
-/// Which class a new range was: the classes held so far with no pages of this file yet, today's picked first.
 struct ProgressClassPicker: View {
     @Bindable var model: PageStripModel
     @Environment(\.accent) private var accent

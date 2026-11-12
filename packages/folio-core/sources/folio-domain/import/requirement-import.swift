@@ -80,6 +80,7 @@ public enum RequirementImporter {
             }
             seen.insert(c.id)
         }
+
         // Parents last: a row may name a parent that appears after it.
         for row in rows {
             guard let i = categories.firstIndex(where: { $0.name == row.name }) else { continue }
@@ -89,6 +90,7 @@ public enum RequirementImporter {
             categories[i].touch(by: device, at: now)
             if !added.contains(row.name), !changed.contains(row.name) { changed.append(row.name) }
         }
+
         let untouched = categories.filter { !seen.contains($0.id) }.map(\.name)
         return Result(categories: categories, added: added, changed: changed, untouched: untouched)
     }

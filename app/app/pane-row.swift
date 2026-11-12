@@ -36,7 +36,7 @@ struct PaneRow: View {
     #endif
     static let space = "panes"
 
-    /// Opens the tab's Claude with an item added to it; nil while no pane is in a course, where it has none.
+    /// Nil while no pane is in a course, where the tab has no Claude.
     var askClaude: (@MainActor (ContextItem) -> Void)? {
         guard panes.navigators.contains(where: { $0.current.course != nil }) else { return nil }
         return { item in
@@ -126,7 +126,6 @@ struct PaneRow: View {
                 .transition(.opacity)
             }
         }
-        // The focused pane's course color, else the app's.
         .panePanel(ring: panes.count > 1 && i == panes.focus
                    ? navigator.current.course.map { workspace.accent($0).color } ?? Theme.Palette.chromeSelected : nil)
         // In a bundle, drawn by its strip: the screen stays alive, unseen, for when it is chosen.
@@ -141,7 +140,6 @@ struct PaneRow: View {
         #endif
     }
 
-    /// Pane `i`'s own strip, which opens it: folded by hand in its place, or a bundle of it alone.
     func strip(_ i: Int, byHand: Bool) -> some View {
         let navigator = panes.navigators[i]
         return PaneStrip(mark: workspace.paneMark(of: navigator.current, trail: panes.trails[i]), page: navigator.current.link.anchor?.pageNumber,
@@ -172,8 +170,9 @@ struct PaneRow: View {
                     }
                 }
             }
-            // Past a click's wobble, so a double click that moves a point or two is still a double click, and by how far it went rather than where it is, so the divider doesn't jump to
-            // the pointer from where it was caught in its margin.
+            // Past a click's wobble, so a double click that moves a point or two is still a double click, and by how
+            // far it went rather than where it is, so the divider doesn't jump to the pointer from where it was caught in
+            // its margin.
             .gesture(DragGesture(minimumDistance: Self.wobble, coordinateSpace: .named(Self.space))
                 .updating($dragging) { _, dragging, _ in dragging = true }
                 .onChanged { drag in if enabled { dragged(d, by: drag.translation.width, folded: folded) } }
@@ -203,7 +202,7 @@ struct PaneRow: View {
         if live != drag.live { drag.live = live }
     }
 
-    /// The tab takes the widths the drag left. Nothing, when no drag is under way: a drag ends here twice.
+    /// A drag ends here twice, so the second call finds none under way and does nothing.
     func dropped() {
         if let from = drag.from, let live = drag.live, live.panes.count == panes.count {
             let d = from.divider
@@ -214,8 +213,6 @@ struct PaneRow: View {
     }
 }
 
-/// A divider's drag under way: the layout it started from and the one it has made so far, which the panes are drawn
-/// at until it is dropped.
 @MainActor @Observable final class PaneDrag {
     struct Start {
         var divider: Int
@@ -249,7 +246,7 @@ struct PaneRow: View {
     var row: CGFloat = 0
 }
 
-/// The stack, drawn at a drag's widths while one is under way, else at the tab's. Its own view, so only it watches them.
+/// Its own view, so only it watches a drag's widths.
 private struct LivePaneStack<Content: View>: View {
     let panes: TabPanes
     let drag: PaneDrag
@@ -268,9 +265,8 @@ private struct LivePaneStack<Content: View>: View {
     }
 }
 
-/// The panes and the dividers between them, in turn, at the widths `PaneLayout.widths` gives the room and the gaps the
-/// fold leaves (none beside a pane in a bundle). Worked out here, in the same pass as the window's own size, rather
-/// than from a width measured into state a frame later.
+/// The widths are worked out here, in the same pass as the window's own size, rather than from a width measured into
+/// state a frame later.
 private struct PaneStack: Layout {
     let layout: PaneLayout
     /// Only so a new share lays the row out again; `layout` has them.
@@ -336,7 +332,7 @@ private struct PaneScreenWidth: ViewModifier {
     }
 }
 
-/// One pane's screen. Its own view, so a move in one pane redraws only that pane.
+/// Its own view, so a move in one pane redraws only that pane.
 private struct PaneScreen: View {
     let workspace: Workspace
     let navigator: Navigator
@@ -370,8 +366,7 @@ private struct PaneDivider: View {
     }
 }
 
-/// A folded pane (A1 in #62): a paper strip in the pane's place with its course's color along the top, what it shows
-/// as an icon and its name down the strip, with the page it is at. Pressing it opens the pane.
+/// A folded pane, design A1 in #62.
 private struct PaneStrip: View {
     let mark: Crumb
     let page: Int?
@@ -415,7 +410,6 @@ private struct PaneStrip: View {
     }
 }
 
-/// Diagonal rules across a strip folded by hand.
 private struct PaneHatch: View {
     var body: some View {
         Canvas { context, size in
@@ -433,9 +427,8 @@ private struct PaneHatch: View {
     }
 }
 
-/// The strip of a bundle of two or more panes, at the row's end (#62, 2026-11-12 사용자): their icons stacked, up to
-/// three, and how many it holds. Pressing it lists them, and choosing one slides the run to it; each row's menu is
-/// the pane's own strip menu, as is the strip's menu for each pane.
+/// A bundle of two or more panes at the row's end (#62, 2026-11-12 사용자). Each listed row's menu is the pane's own
+/// strip menu, as is the strip's menu for each pane.
 private struct PaneBundle: View {
     struct Held: Identifiable {
         let index: Int
@@ -536,7 +529,6 @@ private struct Sideways: Layout {
     }
 }
 
-/// What a pane offers from its strip and its segment of the tab: closing it, and trading places with a neighbor.
 struct PaneMenu: View {
     let panes: TabPanes
     let index: Int
@@ -568,7 +560,6 @@ struct PaneMenu: View {
     }
 }
 
-/// The icon a place or a pane goes by: a course's mark in its color, else the line icon.
 struct PlaceIcon: View {
     let place: Crumb
     /// In place of the course's color, for a mark that steps back (a tab segment out of focus).

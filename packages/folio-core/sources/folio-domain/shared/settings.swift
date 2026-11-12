@@ -71,7 +71,6 @@ public struct Settings: Codable, Sendable, Equatable {
         panePresets = try c.value(.panePresets, or: d.panePresets)
     }
 
-    /// Every layout to choose from: the built-in ones, then the user's.
     public var presets: [PanePreset] { PanePreset.builtIn + panePresets }
 
     /// The layout a class's start opens its pages in, side by side (`ClassStartSettings.OpenIn.splitTab`): the one

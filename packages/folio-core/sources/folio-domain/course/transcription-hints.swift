@@ -76,7 +76,6 @@ public struct TranscriptionContext: Codable, Sendable, Equatable {
         terms = try c.decodeIfPresent([String].self, forKey: .terms) ?? []
     }
 
-    /// With the terms read from the slides' text.
     public func reading(_ slides: String) -> TranscriptionContext {
         var read = self
         read.terms = LectureTerms.terms(in: slides)
@@ -121,12 +120,14 @@ extension CourseFile {
         }
         let viewed = (recording?.viewedPages() ?? []).compactMap(pages)
         if !viewed.isEmpty { return (.recording, viewed) }
+
         let linked = session.materials.compactMap(pages)
         let rest = materials(of: .session(session.id))
             .filter { item in item.material.isPDF && !linked.contains { $0.materialId == item.material.id } }
         let unitOnly = rest.filter { !$0.routes.contains(.direct) }
         let whole = rest.map(\.material).sorted { $0.path < $1.path }.map { LecturePages(path: $0.path, materialId: $0.id) }
         if !linked.isEmpty || !whole.isEmpty { return (unitOnly.isEmpty ? .session : .tagged, linked + whole) }
+
         let week = materials
             .filter { $0.isPDF && $0.path.hasPrefix(CourseFolder.lectures.rawValue + "/") && StandardLayout.lectureWeek(($0.path as NSString).lastPathComponent) == session.week }
             .sorted { $0.path < $1.path }
@@ -169,6 +170,7 @@ public enum LectureTerms {
             entry.forms[term, default: 0] += 1
             counts[key] = entry
         }
+
         for (i, word) in words.enumerated() where isTerm(word.text) {
             add(word.text, at: i)
             // Two words in a row, with only a space between them on the slide.
@@ -177,6 +179,7 @@ public enum LectureTerms {
                 add("\(word.text) \(words[i + 1].text)", at: i)
             }
         }
+
         let kept = counts.filter { key, entry in
             // A pair once is just two words that met; a pair is a term when it comes back.
             key.contains(" ") ? entry.count >= 2 : true

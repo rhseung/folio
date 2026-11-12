@@ -69,6 +69,7 @@ struct StripItem: Identifiable, Equatable {
         func run(_ pages: ClosedRange<Int>, lead: Lead, mark: (Int) -> Mark) -> [StripItem] {
             pages.map { StripItem(lead: $0 == pages.lowerBound ? lead : nil, page: $0, mark: mark($0)) }
         }
+
         var items: [StripItem] = []
         var page = 1
         while page <= pageCount {

@@ -1,7 +1,5 @@
 import SwiftUI
 
-/// The edit row's dot, under where the headers' chevrons stand: filled for pages held, open for pages a save will
-/// give, grey and open for pages that go to nothing.
 struct StripDot: View {
     let kind: StripSection.Kind
     @Environment(\.accent) private var accent
@@ -15,10 +13,8 @@ struct StripDot: View {
     }
 }
 
-/// The row a range is changed or saved from, in place of a section's header or at a new range's end: its dot and what
-/// it is, the range on a line of its own (the column is too narrow for "11/4(수) 오늘 19–21쪽" on one), whatever
-/// else it asks, [취소][confirm]. Tinted and ringed in the course's colour: the tint alone read as one more section
-/// beside a section's own.
+/// The range takes a line of its own: the column is too narrow for "11/4(수) 오늘 19–21쪽" on one. Tinted and ringed
+/// in the course's colour: the tint alone read as one more section beside a section's own.
 struct StripEditRow<Title: View, Extra: View>: View {
     let kind: StripSection.Kind
     let range: String?

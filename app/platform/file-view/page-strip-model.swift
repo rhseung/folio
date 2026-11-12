@@ -3,9 +3,8 @@ import FolioDomain
 import Foundation
 import Observation
 
-/// The page strip beside a lecture PDF (#147): the file's pages cut into sections, one per class that went through
-/// them, each foldable under a one-line header; and a range picked on the thumbnails, saved as one class's progress
-/// or as a class's pages changed. Saving is `material link`, the same action as the link popover and the wrap-up.
+/// The page strip beside a lecture PDF (#147). Saving is `material link`, the same action as the link popover and the
+/// wrap-up.
 @MainActor @Observable
 final class PageStripModel {
     /// A class's section: its id is the class's, its title the day (`10/28(수)`).

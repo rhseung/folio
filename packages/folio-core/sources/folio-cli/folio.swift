@@ -71,6 +71,7 @@ struct Folio: ParsableCommand {
                 return Exit.success.rawValue
             }
         }
+
         // `folio help 과제 마감 바꾸기`: words that aren't a command name are a request to find one.
         let words = arguments.dropFirst().filter { !$0.hasPrefix("-") }
         if arguments.first == "help", let first = words.first, !first.hasPrefix("-"), Topic(first) == nil,
@@ -85,6 +86,7 @@ struct Folio: ParsableCommand {
                 return Exit.unexpected.rawValue
             }
         }
+
         do {
             var command = try parseAsRoot(arguments)
             try command.run()
@@ -159,5 +161,4 @@ struct Folio: ParsableCommand {
     }
 }
 
-/// The `folio` binary's entry point.
 public func folioMain() { Folio.main() }

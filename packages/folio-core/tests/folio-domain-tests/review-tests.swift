@@ -140,6 +140,7 @@ struct ReviewSchedulerTests {
         var limited = settings
         limited.dailyLimit = 1
         let q = ReviewScheduler.queue(states, inputs: inputs, settings: limited, today: today)
+
         #expect(q.map(\.unitId) == [a, b])
         #expect(q[0].overdueDays == 2 && q[0].deferred == nil)
         #expect(q[1].deferred == .dailyLimit)
@@ -182,6 +183,7 @@ struct TodayTests {
         #expect(t.deadlines.map(\.assignment.title) == ["HW5", "HW6", "Project"])
         #expect(t.deadlines.first?.isToday == true && t.deadlines.last?.isToday == false)
         #expect(t.classesToday.map(\.session.date) == [at(22, 10)])
+
         // Today's class is over, so its note is due now; tomorrow's isn't.
         #expect(t.missingReviewNotes.map(\.session.date) == [at(22, 10)])
         file.course.schedule = [ClassTime(weekday: 4, startMinute: 10 * 60, endMinute: 11 * 60 + 15)]
@@ -194,11 +196,14 @@ struct TodayTests {
         var session = Session(device: device, at: now, week: 7, date: at(20, 10))
         session.reviewNoteId = UUID()
         session.reviewNoteUnfinished = true
+
         #expect(session.needsReviewNote(at: now))
+
         // Notes from before the flag, and imported ones, decode as written.
         let written = try JSONEncoder().encode({ var s = session; s.reviewNoteUnfinished = false; return s }())
         #expect(!String(decoding: written, as: UTF8.self).contains("reviewNoteDraft"))
         #expect(try !JSONDecoder().decode(Session.self, from: written).needsReviewNote(at: now))
+
         var file = CourseFile(course: Course(device: device, at: now, title: "컴파일러"))
         file.sessions = [session]
         file.forgetNote(session.reviewNoteId!)
@@ -215,12 +220,14 @@ struct TodayTests {
             TodaySummary.build(courses: [file], now: at, settings: Settings(), calendar: calendar).hint(for: id, now: at)
         }
         file.exams = [Exam(device: device, at: now, title: "Midterm", start: at(31, 19))]
+
         #expect(hint() == nil)  // eight days out
         file.exams[0].start = at(30, 19)
         #expect(hint() == .exam(days: 7))
         file.sessions = [Session(device: device, at: now, week: 7, date: at(23, 10)), Session(device: device, at: now, week: 7, date: at(23, 15))]
         #expect(hint() == .nextClass(at(23, 15)))  // the morning class is over
         #expect(hint(at(23, 16)) == .exam(days: 7))
+
         let hw = Assignment(device: device, at: now, title: "HW5", due: at(23, 23, 59))
         file.assignments = [hw]
         #expect(hint() == .dueToday(hw))
@@ -265,6 +272,7 @@ struct TodayTests {
         }
         let (a, b) = (course("그래프 이론", unit: "매칭"), course("선형대수학", unit: "고윳값"))
         let q = ReviewScheduler.queue(courses: [(a, []), (b, [])], settings: Settings(), calendar: calendar, now: now)
+
         #expect(Set(q.map(\.unitTitle)) == ["매칭", "고윳값"])
         #expect(q.first { $0.unitTitle == "매칭" }?.courseId == a.course.id)
     }
@@ -276,6 +284,7 @@ struct TodayTests {
         let sessions = (0..<6).map { Session(device: device, at: now, week: 1, date: at(1 + $0, 9)) }
         file.sessions = sessions
         file.attendance = sessions.prefix(4).map { Attendance(device: device, at: now, sessionId: $0.id, state: .absent) }
+
         #expect(file.capOneAway(at: now) == nil)
         file.attendance.append(Attendance(device: device, at: now, sessionId: sessions[4].id, state: .absent))
         #expect(file.capOneAway(at: now)?.absences == 5)
@@ -291,10 +300,12 @@ struct TodayTests {
         let ahead = Session(device: device, at: now, week: 9, date: at(24, 10))
         file.sessions = [held, grading, ahead]
         file.units = [Unit(device: device, at: now, title: "고윳값", order: 1)]
+
         #expect(file.sessions.filter { file.needsUnits($0, at: now) }.map(\.id) == [held.id])
         file.toggle(session: held.id, unit: file.units[0].id)
         #expect(!file.needsUnits(file.sessions[0], at: now))
         #expect(file.units(of: file.sessions[0]).map(\.title) == ["고윳값"])
+
         var chapter = Unit(device: device, at: now, title: "5장", order: 0)
         file.units[0].parentId = chapter.id
         chapter.sessionIds = [held.id]

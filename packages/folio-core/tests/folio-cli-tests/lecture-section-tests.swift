@@ -55,6 +55,7 @@ struct LectureSectionCommandTests {
         let gist = try Harness.fixtureCopy()
         for line in [Self.track, Self.addKonig] { _ = h.cli(line, gist: gist) }
         #expect(h.cli(["material", "split", "EC4207/05_Matchings.pdf", "5-8"], gist: gist).code == Exit.usage.rawValue)
+
         // A backward cut is refused before anything is written, the new unit included.
         #expect(h.cli(["material", "split", "EC4207/05_Matchings.pdf", "1-4:매칭", "9-5:König"], gist: gist).code != 0)
         #expect(try h.file(GISTStore(url: gist)).units.map(\.title) == ["König"])

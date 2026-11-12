@@ -9,12 +9,10 @@ enum LectureSource: Equatable, Sendable {
     case outline, titles, claude
 }
 
-/// A lecture's proposed split, or why there is none.
 enum LectureFinding: Equatable, Sendable {
     case found(LectureSplit, LectureSource)
     /// Read, but nothing said where the units begin: the user splits by hand from one section.
     case nothing(pageCount: Int)
-    /// Not a PDF Folio can read.
     case unreadable
     /// Claude was asked and gave no split: the line saying why. The user splits by hand or asks again.
     case failed(String, pageCount: Int)
@@ -75,6 +73,7 @@ enum LectureReader {
         let report: @Sendable (Int, Int) -> Void = { done, total in Task { @MainActor in progress(done, total) } }
         let everyPage = claude != nil
         guard let read = await Task.detached(operation: { read(url, everyPage: everyPage, progress: report) }).value else { return .unreadable }
+
         if let claude {
             // A failed or empty answer is not passed on to the titles: their guess would then look like Claude's.
             let finding = await ask(claude, read: read, url: url, units: units)

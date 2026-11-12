@@ -59,7 +59,6 @@ public struct LecturePage: Sendable, Equatable {
     /// The long side of a page's picture, in pixels: enough to read a slide's heading and see what its figure is.
     public static let thumbnail: CGFloat = 512
 
-    /// How much of each page's body a deck of `pages` gets.
     public static func excerptLength(pages: Int) -> Int {
         guard pages > 0 else { return excerpt }
         return max(min(excerpt, budget / pages), 60)
@@ -114,9 +113,7 @@ public struct LecturePage: Sendable, Equatable {
 }
 
 extension ClaudeClient {
-    /// Claude reads each page's title, the start of its text and, for a page with little text, its picture, with the
-    /// course's units, and says where each section starts and which unit it belongs to. The add sheet asks when the
-    /// outline and slide titles say nothing, and both screens ask when the user presses "Claude로 나누기". Nil when the
+    /// The add sheet asks when the outline and slide titles say nothing, and both screens ask when the user presses "Claude로 나누기". Nil when the
     /// answer leaves nothing usable.
     public func lectureSections(file: String, pages: [LecturePage], units: [FolioDomain.Unit]) async throws -> LectureSplit? {
         let system: [ContentBlock] = [.text("""
@@ -158,6 +155,7 @@ extension ClaudeClient {
         \(lines.joined(separator: "\n"))
         </pages>
         """)]
+
         for (i, page) in pages.enumerated() {
             guard let image = page.image else { continue }
             blocks.append(.text("Page \(i + 1):"))
@@ -184,6 +182,7 @@ extension ClaudeClient {
                 split.makeNew(i)
             }
         }
+
         for i in split.sections.indices.dropFirst().reversed() {
             let (a, b) = (split.sections[i - 1], split.sections[i])
             if a.unit == b.unit, !a.isNew, !b.isNew { split.merge(after: i - 1) }

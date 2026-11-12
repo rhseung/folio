@@ -1,8 +1,8 @@
 import FolioDomain
 import SwiftUI
 
-/// A plain-text editor for `.tex`, code and text files: monospaced, colored by the note's code highlighter. The note
-/// editor's markdown styling and shortcuts would misread these files, so this is a separate, plain text view.
+/// The note editor's markdown styling and shortcuts would misread `.tex`, code and text files, so this is a separate,
+/// plain text view.
 struct SourceFileEditor {
     @Binding var text: String
     /// The highlighter's language name; nil leaves the text uncolored.
@@ -94,6 +94,7 @@ extension SourceFileEditor: NSViewRepresentable {
         view.typingAttributes = [.font: Self.font, .foregroundColor: NoteLook.text]
         view.string = text
         if let storage = view.textStorage { Self.color(storage, language: language) }
+
         let gutter = LineNumberGutter(textView: view)
         scroll.verticalRulerView = gutter
         scroll.hasVerticalRuler = true

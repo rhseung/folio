@@ -32,7 +32,7 @@ public struct Catalog: Codable, Sendable, Equatable {
         id.flatMap { id in letterGrades.first { $0.id == id } }
     }
 
-    /// Only the categories that apply to these programs. A child of a hidden category is hidden too.
+    /// A child of a hidden category is hidden too.
     public func scoped(to programs: [StudentProgram]) -> Catalog {
         let declared = Set(programs.map(\.codeId))
         func applies(_ c: Category, depth: Int = 0) -> Bool {
@@ -58,7 +58,6 @@ public struct Catalog: Codable, Sendable, Equatable {
         return nil
     }
 
-    /// The grades a course in this mode can get, best first.
     public func grades(for mode: GradingMode) -> [LetterGrade] {
         letterGrades.filter { $0.applies(to: mode) }.sorted { ($0.points ?? -1) > ($1.points ?? -1) }
     }

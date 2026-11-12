@@ -3,7 +3,6 @@ import Foundation
 /// The color names `course.json` stores and the order an unset color falls back through. The app's Theme and the
 /// folio command both read this, so a course shows the same color in the app and in the terminal.
 public enum CourseColor {
-    /// The order an unset color falls back through.
     public static let cycle = ["violet", "blue", "orange", "green", "pink", "olive", "teal", "red"]
     /// Offered for a course that should stay quiet (a colloquium), but never picked for one left without a color: a
     /// course would turn gray without being asked.

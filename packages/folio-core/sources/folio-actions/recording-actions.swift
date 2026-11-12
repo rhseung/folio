@@ -2,8 +2,7 @@ import FolioDomain
 import FolioStorage
 import Foundation
 
-/// A finished semester's lecture audio to the Trash, where it can still be put back. Transcripts and bookmarks stay,
-/// and a recording with no transcript keeps its audio (`RecordingRetention`).
+/// Bookmarks stay with the transcripts, and a recording with no transcript keeps its audio (`RecordingRetention`).
 @Action("recording trim", "지난 학기 녹음의 오디오를 휴지통으로 옮기고 받아쓰기는 남기기",
         discussion: "받아쓰기가 없는 녹음은 오디오를 남긴다. 휴지통에서 되살릴 수 있다.", effect: .removes,
         confirm: "{semester}의 녹음 오디오를 휴지통으로 옮깁니다. 받아쓰기는 남습니다.", done: "{semester}의 녹음 오디오를 휴지통으로 옮겼습니다",
@@ -18,6 +17,7 @@ public struct RecordingTrim {
         guard s.isOver(on: LocalDate(ctx.now, in: ctx.calendar), among: semesters) else {
             throw ActionError.rule(String(localized: .errorRecordingSemesterNotOver))
         }
+
         for store in try ctx.gist.courseStores() {
             let file = try store.load().model
             guard file.course.semesterId == semester else { continue }
@@ -33,6 +33,7 @@ public struct RecordingTrim {
                     f.recordings[i].touch(by: ctx.device, at: ctx.now)
                 }
             }
+
             for r in trimmed {
                 ctx.record(Change(.removed, try ctx.relative(course, r.file)))
                 if !ctx.dryRun { try store.trashAudio(of: r) }
@@ -80,6 +81,7 @@ public struct RecordingRetitleLegacy {
                 }
             }
         }
+
         guard !moves.isEmpty else { return }
         for move in moves { ctx.record(Change(.moved, move.from, to: move.to)) }
         let batch = ctx.dryRun ? nil : try MoveJournal.apply(moves, in: ctx.gist.url, device: ctx.device, now: ctx.now)

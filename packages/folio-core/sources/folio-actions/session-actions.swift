@@ -134,7 +134,6 @@ extension CourseFile {
     }
 }
 
-/// The session's rough or review note, created from its template the first time.
 /// A new review note starts unfinished: making it is not writing it.
 @Action("session note", "회차의 러프 노트와 복습 노트. 없으면 템플릿으로 만든다", effect: .creates, done: "회차 '{session}'의 노트",
         examples: ["folio session note EC4207/10-26 review"], phrases: ["수업 노트", "강의 필기", "러프 노트", "복습 노트 열기"])
@@ -155,6 +154,7 @@ public struct SessionNote {
             ctx.made(id)
             return
         }
+
         let settings = try ctx.settings()
         let title = file.noteTitle(for: s, kind: kind, calendar: ctx.calendar)
         let body = NoteTemplate.body(for: kind, title: title, sections: settings.noteSections(for: kind))
@@ -216,7 +216,6 @@ public struct UnitAdd {
     }
 }
 
-/// Everything linked to the unit lets go of it; children move up a level. Notes and quiz files stay.
 @Action("unit rm", "단원 지우기. 하위 단원은 한 단계 올라간다. 회차, 시험 범위, 자료, 노트, 문제의 연결은 풀리고, 노트와 퀴즈 파일은 남는다", effect: .removes,
         confirm: "단원 '{unit}'을(를) 지우고 회차, 시험 범위, 자료, 노트, 문제의 연결을 풉니다.", done: "단원 '{unit}'을(를) 지웠습니다",
         examples: ["folio unit rm EC4207/트리 --dry-run"], phrases: ["단원 삭제"])
@@ -280,7 +279,7 @@ public struct UnitMove {
     }
 }
 
-/// Links or unlinks sessions, keeping `Unit.sessionIds` and `Session.unitIds` in step.
+/// Keeps `Unit.sessionIds` and `Session.unitIds` in step.
 @Action("unit link", "단원에 회차 연결하기, --off면 풀기", done: "단원 '{unit}'의 회차 연결을 바꿨습니다",
         examples: ["folio unit link EC4207/트리 10-26 10-28", "folio unit link EC4207/트리 10-28 --off --dry-run"],
         phrases: ["단원과 수업 연결", "이 수업에서 배운 단원"])
@@ -338,7 +337,6 @@ public struct UnitPagesAdd {
     }
 }
 
-/// One range in place of every range the unit has in the file.
 @Action("unit pages set", "단원의 렉처 쪽 구간 고치기. 그 파일에서 단원이 가진 구간을 이 구간 하나로 바꾼다",
         done: "단원 '{unit}'의 {material} 쪽 구간을 고쳤습니다",
         examples: ["folio unit pages set EC4207/매칭 05_Matchings.pdf --first 1 --last 6"],
@@ -422,7 +420,7 @@ public struct MaterialSplit {
     }
 }
 
-/// Puts a unit, with the units under it, into an exam's scope or takes it out.
+/// The units under the unit go in or out with it.
 @Action("exam scope", "시험 범위에 단원 넣기, --off면 빼기", done: "시험 '{exam}'의 범위를 바꿨습니다",
         cli: .manual(reason: "--unit마다 액션을 한 번씩 같은 맥락에서 돌려 결과를 하나로 보이고, --taught면 exam scope --taught를 돌린다"))
 public struct ExamScope {
@@ -512,6 +510,7 @@ public struct SessionWrapUp {
             _ = try index(session, in: f.sessions, .valueSession)
             try f.set(session: session, date: date, end: end, link: link, kind: kind, skipsReview: skipsReview, reviewUnfinished: reviewUnfinished,
                       termStart: start, calendar: ctx.calendar)
+
             let i = try index(session, in: f.sessions, .valueSession)
             // Before the ranges: a file both given and unlinked ends up linked with the pages given.
             for material in unlinked {
@@ -522,16 +521,19 @@ public struct SessionWrapUp {
                 _ = try index(range.materialId, in: f.materials, .valueMaterial)
                 f.linkMaterial(range.materialId, session: session, firstPage: range.firstPage, lastPage: range.lastPage)
             }
+
             if case .set(let units) = units {
                 for unit in units { _ = try index(unit, in: f.units, .valueUnit) }
                 for unit in Set(f.sessions[i].unitIds).symmetricDifference(units) { f.toggle(session: session, unit: unit) }
             }
+
             // The sheet always passes the class's attendance, so an entry already in that state keeps its time and device.
             let had = f.attendance.first { $0.sessionId == session }?.state ?? .present
             if case .set(let state) = attendance, had != state {
                 f.attendance.removeAll { $0.sessionId == session }
                 if state != .present { f.attendance.append(Attendance(device: ctx.device, at: ctx.now, sessionId: session, state: state)) }
             }
+
             let s = f.sessions[i]
             // Again after the attendance above: a class that didn't happen has none to count.
             if s.isCancelled { f.attendance.removeAll { $0.sessionId == session } }
@@ -540,8 +542,8 @@ public struct SessionWrapUp {
     }
 }
 
-/// Called by the app when a recording ends. Only files the session has no link to are linked: a range the user set
-/// stays, and a lecture that returned to an earlier file would otherwise shrink its range to what this class saw.
+/// Only files the session has no link to are linked: a range the user set stays, and a lecture that returned to an
+/// earlier file would otherwise shrink its range to what this class saw.
 @Action("session link-viewed", "녹음 중 본 강의 페이지를 회차에 연결하기. 연결이 없는 자료만 더하고 있는 연결은 그대로 둔다",
         discussion: "앱 안의 PDF 보기에서 20초 이상 머문 페이지의 처음부터 끝까지가 범위다. 녹음이 끝나면 앱이 부른다.",
         done: "회차 '{session}'에 녹음 중 본 페이지를 연결했습니다",

@@ -4,10 +4,9 @@ import FolioMarkdown
 import SwiftUI
 import WebKit
 
-/// The card a block reference (`[[노트#^블록]]`) shows in the edit view while the pointer rests on it, as the preview's
-/// card (#284) does: the block drawn by the preview's renderer and stylesheet in a small page, so math and pictures look
-/// the same in both. It floats over the text on glass and takes no clicks; it's a glance, like the math bubble, and the
-/// preview's card is the one whose links are clicked.
+/// The block is drawn by the preview's renderer and stylesheet in a small page, so math and pictures look the same as
+/// in the preview's card (#284). It takes no clicks: it's a glance, like the math bubble, and the preview's card is the
+/// one whose links are clicked.
 @MainActor final class ReferenceCardPage: NSObject, WKNavigationDelegate {
     let host: ReferenceCardHost
     private let files = LocalFileScheme()
@@ -73,7 +72,6 @@ import WebKit
         + "html.cut{-webkit-mask-image:linear-gradient(to bottom,#000 calc(100% - \(Int(Theme.Space.xl))px),transparent)}"
 }
 
-/// The card over the editor: glass behind the page, as the completion menu floats (`floatingGlass()`).
 final class ReferenceCardHost: NSView {
     let web: WKWebView
     private let glass = NSHostingView(rootView: ReferenceCardGlass())

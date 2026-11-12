@@ -2,7 +2,6 @@ import FolioActions
 import FolioDomain
 import SwiftUI
 
-/// The parts every class card shares: the date tile, the frame, and the ⋯ button.
 enum ClassCard {
     static let tile: CGFloat = 44
     static let menu: CGFloat = 28

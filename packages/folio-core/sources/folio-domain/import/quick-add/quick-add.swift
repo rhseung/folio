@@ -34,12 +34,10 @@ public struct QuickAdd: Equatable, Sendable {
         public var field: Field
     }
 
-    /// Where the words read as the deadline sit in the line.
     public var dueRanges: [Range<String.Index>] {
         spans.compactMap { s -> Range<String.Index>? in s.field == .due ? s.range : nil }
     }
 
-    /// Where the words naming the course sit, when the line names one.
     public var courseRanges: [Range<String.Index>] {
         spans.compactMap { s -> Range<String.Index>? in
             if case .course = s.field { return s.range }
@@ -74,6 +72,7 @@ public struct QuickAdd: Equatable, Sendable {
             courseSpan = Span(range: named.range, field: .course(named.id))
         }
         if course == nil { course = defaultCourse }
+
         let today = LocalDate(now, in: calendar)
         let year = calendar.component(.year, from: now)
         var words = found.map { Word($0.0, range: $0.1, today: today, year: year) }

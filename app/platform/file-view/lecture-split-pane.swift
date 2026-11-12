@@ -2,10 +2,7 @@ import FolioDomain
 import PDFKit
 import SwiftUI
 
-/// The split screen (#321): a lecture's pages down the left in its sections, the page itself in the middle, and the
-/// section bar with a row per section on the right. The column heads each section as the page strip heads a class's
-/// progress, and changes its pages the same way; a gap between two thumbnails cuts a section there, or joins two. The
-/// rows say which unit each section goes to. Saving writes the whole split in one `material split`.
+/// The split screen (#321). Saving writes the whole split in one `material split`.
 struct LectureSplitPane: View {
     let controller: PDFController
     @Binding var split: LectureSplit
@@ -88,8 +85,6 @@ struct LectureSplitPane: View {
     }
 }
 
-/// Every page small, in its section under the section's header; between two pages, a press cuts there, and between
-/// two sections joins them.
 private struct SplitThumbnails: View {
     let controller: PDFController
     @Binding var split: LectureSplit
@@ -226,7 +221,7 @@ private struct Gap: View {
 
 /// "Claude로 다시 나누기" on the split screen and in the add sheet (#450), shown only after Claude gave no split: past
 /// that the user adjusts the split by hand, and asking Claude the same question again would only repeat its answer.
-/// Its split replaces what is shown, still unsaved. While it reads, a spinner takes the sparkle's place.
+/// Its split replaces what is shown, still unsaved.
 struct ClaudeSplitButton: View {
     let asking: Bool
     let retry: () -> Void

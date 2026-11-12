@@ -68,6 +68,7 @@ struct SessionTimelineTests {
             Exam(device: device, at: .now, title: "끝난 뒤", start: date("2026-11-02 14:15")),
         ]
         let file = CourseFile(course: Course(device: device, at: .now, title: ""), sessions: [held, cancelled], exams: exams)
+
         #expect(kinds(SessionTimeline.items(file, planned: [planned], classMinutes: 75, calendar: calendar), in: file)
             == ["week9+m", "s10-26+퀴즈1", "s10-28", "퀴즈2", "week10+m", "p10+퀴즈3", "끝난 뒤"])
     }
@@ -87,9 +88,12 @@ struct SessionTimelineTests {
         skipped.skipsReview = true
         let ahead = session(9, "2026-10-28 13:00")
         var file = CourseFile(course: Course(device: device, at: .now, title: ""), sessions: [reviewed, owing, skipped, ahead])
+
         #expect(file.missingReviewNotes(at: now) == 1)
+
         // Nothing to link to yet, so nothing is flagged.
         #expect(file.sessionsNeedingUnits(at: now).isEmpty)
+
         var unit = Unit(device: device, at: .now, title: "그래프", order: 1)
         unit.sessionIds = [reviewed.id]
         file.units = [unit]
@@ -108,6 +112,7 @@ struct SessionTimelineTests {
         let makeup = session(10, "2026-11-03 18:00")
         let file = CourseFile(course: Course(device: device, at: .now, title: ""), sessions: [past, absent, cancelled, makeup])
         let planned = [session(10, "2026-11-04 13:00"), session(11, "2026-11-09 13:00")]
+
         #expect(file.remainingClasses(after: now, planned: planned) == 4)
         #expect(file.remainingClasses(after: now, planned: []) == 2)
     }

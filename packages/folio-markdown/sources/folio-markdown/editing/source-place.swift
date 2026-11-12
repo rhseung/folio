@@ -13,7 +13,6 @@ public enum SourcePlace: Equatable, Sendable {
     case math(display: Bool, content: NSRange, fence: MathFence.Syntax? = nil)
 
     public var isMath: Bool { if case .math = self { true } else { false } }
-    /// The syntax a math fence chose for the formula here, or nil where the note's applies.
     public var fence: MathFence.Syntax? { if case .math(_, _, let fence) = self { fence } else { nil } }
     public var isCode: Bool {
         switch self {
@@ -31,6 +30,7 @@ public enum SourcePlace: Equatable, Sendable {
         var fenceBody = 0
         var mathStart: Int?
         var at = 0
+
         while true {
             let line = text.lineRange(for: NSRange(location: at, length: 0))
             let content = SourceLines.content(line, in: text)
@@ -92,6 +92,7 @@ public enum SourcePlace: Equatable, Sendable {
         let chars = Array(line.utf16)
         let stop = caret - offset
         let dollar: UInt16 = 0x24, tick: UInt16 = 0x60, space: UInt16 = 0x20
+
         var k = 0
         while k < min(stop, chars.count) {
             let c = chars[k]
@@ -160,14 +161,12 @@ struct Fence {
         self.info = info
     }
 
-    /// Whether this line closes the block `open` opened.
     func closes(_ open: Fence) -> Bool {
         char == open.char && count >= open.count && info.isEmpty
     }
 }
 
 enum SourceLines {
-    /// The line without its line break.
     static func content(_ line: NSRange, in text: NSString) -> NSRange {
         var length = line.length
         if length > 0, text.character(at: line.location + length - 1) == 0x0A { length -= 1 }

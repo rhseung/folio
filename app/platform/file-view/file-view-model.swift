@@ -14,8 +14,6 @@ import PDFKit
 import QuickLookThumbnailing
 import UniformTypeIdentifiers
 
-/// One file in a pane, whatever opened it: a course's material, a note shown as a source in review, or a file outside
-/// any course (a semester's `_Admin`). Picks the renderer from the file's format and loads what that renderer needs.
 @MainActor @Observable
 final class FileViewModel {
     enum Subject {
@@ -152,7 +150,7 @@ final class FileViewModel {
 
     var canRetryClaude: Bool { claudeFailed && splitting != nil && !readingSplit && !askingClaude }
 
-    /// Claude's reading again, after it gave none. It is still only a proposal: nothing is written until "저장".
+    /// Still only a proposal: nothing is written until "저장".
     func retryClaude() async {
         guard canRetryClaude, let claude = lectureClaude else { return }
         splitRead += 1
@@ -330,7 +328,7 @@ final class FileViewModel {
         material.map { AppLink(.material, $0.id, anchor: .page(page + 1)) }
     }
 
-    /// The page's text and picture for the Claude panel. Nil off a course material: the panel belongs to a course.
+    /// Nil off a course material: the panel belongs to a course.
     func pageContext(_ page: Int, in controller: PDFController) -> ContextItem? {
         guard let m = material, let pdfPage = controller.view.document?.page(at: page) else { return nil }
         let name = "\((m.path as NSString).lastPathComponent) p\(page + 1).jpg"

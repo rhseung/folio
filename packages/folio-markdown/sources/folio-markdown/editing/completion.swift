@@ -52,7 +52,6 @@ public struct CompletionQuery: Equatable, Sendable {
 /// The link being written around the caret, `[[target#fragment|alias]]`, as the text has it.
 public struct LinkQuery: Equatable, Sendable {
     public enum Part: Equatable, Sendable {
-        /// What the link points at, being typed.
         case target
         /// After `#`: a heading of the note.
         case heading
@@ -154,7 +153,6 @@ public struct CompletionCatalog: Sendable {
 }
 
 public enum Completion {
-    /// The completion the text calls for at the caret, or nil.
     public static func query(in text: NSString, caret: Int, catalog: CompletionCatalog) -> CompletionQuery? {
         let place = SourcePlace.at(caret, in: text)
         let catalog = catalog.at(place)
@@ -163,6 +161,7 @@ public enum Completion {
         let prefix = text.substring(with: NSRange(location: content.location, length: caret - content.location))
         let rest = text.substring(with: NSRange(location: caret, length: NSMaxRange(content) - caret))
         let next: UInt16? = caret < text.length ? text.character(at: caret) : nil
+
         func make(_ kind: CompletionQuery.Kind, _ typed: Substring, extra: Int = 0) -> CompletionQuery {
             let n = typed.utf16.count
             return CompletionQuery(kind: kind, text: String(typed), range: NSRange(location: caret - n, length: n + extra), place: place)
@@ -265,6 +264,7 @@ public enum Completion {
         func make(_ part: LinkQuery.Part, target: String, typed: Substring) -> CompletionQuery {
             CompletionQuery(kind: .link(LinkQuery(part: part, embed: embed, target: target, alias: alias)), text: String(typed), range: range, place: place)
         }
+
         guard let hash = inner.firstIndex(of: "#") else { return make(.target, target: "", typed: inner) }
         let target = inner[..<hash].trimmingCharacters(in: .whitespaces)
         let after = inner[inner.index(after: hash)...]
@@ -297,7 +297,6 @@ public enum Completion {
             .map(\.0)
     }
 
-    /// The edit that puts `item` in place of what `query` covers.
     public static func edit(accepting item: CompletionItem, for query: CompletionQuery, in text: NSString) -> SourceEditing.Edit {
         if let caret = item.caret {
             return SourceEditing.Edit(range: query.range, text: item.body, caret: query.range.location + caret)

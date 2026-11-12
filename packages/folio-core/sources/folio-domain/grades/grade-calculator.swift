@@ -163,17 +163,14 @@ public enum GradeCalculator {
         return absent + attendance.filter { $0.state == .late }.count / n
     }
 
-    /// The strictest cap reached so far, if any.
     public static func attendanceCap(absences: Int, policy: GradePolicy) -> AttendanceCap? {
         policy.attendanceCap.filter { absences >= $0.absences }.max { $0.absences < $1.absences }
     }
 
-    /// The cap that one or more further absences would bring. Nil when no further cap exists.
     public static func nextCap(absences: Int, policy: GradePolicy) -> AttendanceCap? {
         policy.attendanceCap.filter { $0.absences > absences }.min { $0.absences < $1.absences }
     }
 
-    /// Absences left before the next cap applies. Nil when no further cap exists.
     public static func absencesUntilNextCap(absences: Int, policy: GradePolicy) -> Int? {
         nextCap(absences: absences, policy: policy).map { $0.absences - absences }
     }

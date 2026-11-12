@@ -43,12 +43,14 @@ struct RecordingPlayerModelTests {
         #expect(model.player.time == 30 && model.player.duration == 60)
         #expect(model.viewedLink == link.with(.time(30)))
         #expect(model.seekedTo == 30 && model.seekedTo.flatMap(model.lineIndex) == 1)
+
         model.player.seek(42)
         model.follow(link.with(.time(30)))
         #expect(model.player.time == 30)
         model.player.seek(42)
         model.follow(model.viewedLink)
         #expect(model.player.time == 42)
+
         // Another recording's moment is not this one's.
         model.follow(AppLink(.recording, UUID(), anchor: .time(5)))
         #expect(model.player.time == 42)
@@ -155,6 +157,7 @@ struct RecordingPlayerModelTests {
         let heard = Recording(device: f.workspace.device, at: .now, sessionId: nil, file: "Recordings/a.m4a")
         try f.course.store.saveTranscript(LectureTranscript(locale: "ko-KR", lines: [.init(start: 0, end: 5, text: "그래프 정의")]), of: heard)
         #expect(RecordingPlayerModel(workspace: f.workspace, courseId: f.courseId, store: f.course.store, recording: heard).hasLines)
+
         let silent = Recording(device: f.workspace.device, at: .now, sessionId: nil, file: "Recordings/b.m4a")
         #expect(!RecordingPlayerModel(workspace: f.workspace, courseId: f.courseId, store: f.course.store, recording: silent).hasLines)
     }
@@ -263,7 +266,6 @@ struct RecordingBarModelTests {
     }
 }
 
-/// A class of graph theory with the matchings slides tracked, and a recording of it with a transcript.
 @MainActor
 struct TranscriptionContextModelTests {
     let workspace: Workspace
@@ -312,6 +314,7 @@ struct TranscriptionContextModelTests {
     @Test func noSlidesSaysWhatWasUsedInsteadWithoutAWarning() throws {
         let bare = try player(context: try current())
         #expect(bare.contextSummary == String(localized: .recordingContextNothing))
+
         let unit = try #require(workspace.run(UnitAdd(course: graphTheory, title: "매칭"))?.made)
         workspace.run(UnitLink(course: graphTheory, unit: unit, sessions: [session]))
         let withUnit = try player(context: try current())
@@ -343,6 +346,7 @@ struct TranscriptionContextModelTests {
         workspace.showing(page: 3, of: slides, course: graphTheory)
         workspace.showing(page: 3, of: slides, course: graphTheory)
         workspace.showing(page: 4, of: slides, course: graphTheory)
+
         // Another course's file, and a file that isn't a lecture, are not this class's slides.
         workspace.showing(page: 1, of: slides, course: linearAlgebraID)
         var syllabus = slides
@@ -387,10 +391,12 @@ struct TranscriptionQueueTests {
             while ContinuousClock.now < until { await Task.yield() }
             await overlap.leave()
         }
+
         queue.run(id, failed: { _ in }, work)
         try await Task.sleep(for: .milliseconds(50))
         queue.cancel(id)
         #expect(queue.phase(of: id) == nil)
+
         queue.run(id, failed: { _ in }, work)
         #expect(queue.phase(of: id) == .waiting)
         let deadline = ContinuousClock.now + .seconds(5)

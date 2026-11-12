@@ -202,10 +202,12 @@ private func withOffscreenWindows<T>(_ jobs: [RenderJob], _ body: ([(RenderJob, 
         window.orderFrontRegardless()
         return (job, window, host)
     }
+
     // Detached, not only closed: a view left alive keeps following the app-wide state the next batches set, and the
     // main actor slows with every one of them.
     defer { open.forEach { $0.1.contentView = nil; $0.1.close() } }
     try await settle()
+
     // Pages scroll, so a window grows by what its main scroll view hides to draw all of it. Content that loads late (the
     // study chart) lengthens the page after the first grow, so it repeats until nothing is hidden.
     for _ in 0..<4 {
@@ -221,6 +223,7 @@ private func withOffscreenWindows<T>(_ jobs: [RenderJob], _ body: ([(RenderJob, 
         guard grew else { break }
         try await settle()
     }
+
     // Back to the job's width, once the content has settled: a window grows to fit its view's minimum at every
     // moment, a first pass before its data loaded included, and doesn't shrink back by itself.
     var narrowed = false

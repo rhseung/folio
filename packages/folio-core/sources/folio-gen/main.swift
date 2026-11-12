@@ -52,6 +52,7 @@ enum CommandSource {
         // `<과목>/<항목>`: a course argument followed by an argument for an item inside it are typed as one. A course
         // that may be left out (every course) stays its own argument.
         let folded = course.flatMap { c in c.optional ? nil : fields.first { $0.role == .argument && $0.ref.map(scoped.contains) == true && $0.name != c.name } }
+
         var discussion = spec.discussion.isEmpty ? [] : spec.discussion.components(separatedBy: "\n") + [""]
         if spec.effect == .removes || spec.effect == .moves { discussion += ["실행하기 전에 확인을 받는다.", ""] }
         if !spec.examples.isEmpty { discussion += ["예시:"] + spec.examples.map { "  " + $0 } }
@@ -81,6 +82,7 @@ enum CommandSource {
 
         out.append("")
         out.append("    func run() throws {")
+
         let patches = fields.filter { $0.patch && $0.role != .hidden }
         // A command that only changes what it is given has nothing to do without one; the items it points at don't count.
         if !patches.isEmpty, patches.count == fields.filter({ !($0.role == .argument && $0.ref != nil) && $0.role != .hidden }).count {
@@ -88,6 +90,7 @@ enum CommandSource {
             let flags = patches.map { "--" + flag($0) }.joined(separator: ", ")
             out.append("        guard \(given) else { throw CLIError(exit: .usage, message: \(q("바꿀 것을 하나 이상 주세요: \(flags)"))) }")
         }
+
         out.append("        let ctx = try CLI.context(g)")
         if course != nil || fields.contains(where: { $0.ref != nil && $0.role != .new && $0.role != .hidden || $0.parsed != nil }) {
             out.append("        let r = Resolver(ctx)")
@@ -102,6 +105,7 @@ enum CommandSource {
                 out.append("        let c = try r.course(\(course.name))")
             }
         }
+
         let scope = course == nil ? "nil" : "c"
         var exprs: [String: String] = [:]
         for f in fields where parent(f, in: fields) == nil {
@@ -113,6 +117,7 @@ enum CommandSource {
             else { exprs[f.name] = value(f, scope: scope) }
         }
         for f in fields { if let p = parent(f, in: fields) { exprs[f.name] = value(f, scope: scope, parent: exprs[p.name]) } }
+
         let values = fields.map { "            \($0.name): \(exprs[$0.name]!)" }
         out.append("        let action = FolioActions.\(name)(")
         out += values.enumerated().map { $0.offset == values.count - 1 ? $0.element : $0.element + "," }

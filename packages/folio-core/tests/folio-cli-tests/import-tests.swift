@@ -31,6 +31,7 @@ struct ImportCommandTests {
              "courses": [{"id": "\(UUID())", "title": "콜로퀴움", "number": "9331-01", "credits": 0, "mode": "S/U",
                           "semesterId": "\(fall)", "codeIds": ["\(ec)"]}]}
             """)
+
         // The fixture already has transcript.json, which the import must never overwrite.
         let (a, b) = (try Harness.fixtureCopy(), try Harness.fixtureCopy())
         #expect(h.cli(["import", "notion", path], gist: a).code == Exit.rule.rawValue)
@@ -122,6 +123,7 @@ struct ImportCommandTests {
         let req = try payload("requirements.json", Self.requirements)
         let path = try payload("handbook.json", #"{"year": 2026, "source": "2026 학사편람", "areas": {"EC4207": "전공선택"}}"#)
         let setup = [["import", "requirements", req], ["import", "handbook", path]]
+
         // The fixture's courses carry no codes, and the handbook finds a course by its code.
         let coded: (URL) throws -> Void = { url in
             let at = Date(timeIntervalSince1970: 1_790_000_000)
@@ -132,6 +134,7 @@ struct ImportCommandTests {
             try ctx.edit(Harness.graphTheory) { $0.course.codes = [ec.id]; $0.course.number = "4207" }
         }
         try h.expectSame(["requirement", "accept", "EC4207"], setup: setup, prepare: coded) { _ in RequirementAccept(courses: [Harness.graphTheory]) }
+
         // Without a handbook row there is nothing to take, and nothing is written.
         let gist = try Harness.fixtureCopy()
         try coded(gist)

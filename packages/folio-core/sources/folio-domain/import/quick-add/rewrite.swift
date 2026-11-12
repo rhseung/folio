@@ -45,6 +45,7 @@ extension QuickAdd {
             var value = value
             // The line holds minutes; a picked date's seconds would never read back.
             if case let .due(date?) = value, let minute = calendar.dateInterval(of: .minute, for: date)?.start { value = .due(minute) }
+
             let before = read(line)
             let tries: [String]
             switch value {
@@ -117,6 +118,7 @@ extension QuickAdd {
                 let word = "\(kind.rawValue)\(number)"
                 tries = [before.kindRange.map { line.splicing([($0, word)]) } ?? line.appending(word: word)]
             }
+
             return tries.first { holds(value, read($0), over: before) } ?? line
         }
 
