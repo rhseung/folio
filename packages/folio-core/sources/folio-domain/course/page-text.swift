@@ -97,10 +97,12 @@ public enum ReadingLimit {
 extension LectureTranscript {
     /// The lines said between `from` and `to` (seconds, either open), cut at a line once `budget` characters are
     /// used; the first line always goes. `next` is where to start the next read when the cut came before `to`. A line
-    /// still being spoken at `from` is in, so a moment from a link starts mid-sentence rather than after it.
+    /// still being spoken at `from` is in, so a moment from a link starts mid-sentence rather than after it. It has to
+    /// run on a second past `from`: `next` is written in whole seconds, and a line that ended within the second before
+    /// the cut would otherwise come back at the start of the next read, and a long one again and again.
     public func window(from: TimeInterval?, to: TimeInterval?, budget: Int = ReadingLimit.transcript) -> (lines: [Line], next: TimeInterval?) {
         let inside = lines.filter { line in
-            (from.map { line.end > $0 || line.start >= $0 } ?? true) && (to.map { line.start < $0 } ?? true)
+            (from.map { line.start >= $0 || line.end >= $0 + 1 } ?? true) && (to.map { line.start < $0 } ?? true)
         }
         var used = 0
         for (i, line) in inside.enumerated() {

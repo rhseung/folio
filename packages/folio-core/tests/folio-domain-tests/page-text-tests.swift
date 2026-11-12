@@ -111,4 +111,15 @@ struct TranscriptWindowTests {
         #expect(rest.lines.first?.start == 5)
         #expect(transcript.window(from: nil, to: nil, budget: 1).lines.count == 1)
     }
+
+    @Test func readingOnFromAWholeSecondDoesNotRepeatTheLineBefore() {
+        let said = LectureTranscript(locale: "ko-KR", lines: [
+            .init(start: 120, end: 125.6, text: String(repeating: "가", count: 30)),
+            .init(start: 125.7, end: 130, text: "다음 줄"),
+        ])
+        let cut = said.window(from: nil, to: nil, budget: 31)
+        #expect(cut.lines.map(\.start) == [120] && cut.next == 125.7)
+        // `next` goes out as 2:05, so the next read starts at 125 s.
+        #expect(said.window(from: 125, to: nil).lines.map(\.start) == [125.7])
+    }
 }
