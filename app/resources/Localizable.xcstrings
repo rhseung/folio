@@ -21648,28 +21648,6 @@
           }
         }
       }
-    },
-    "claude.proposal.figure-light": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "라이트"
-          }
-        }
-      }
-    },
-    "claude.proposal.figure-dark": {
-      "extractionState": "manual",
-      "localizations": {
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "다크"
-          }
-        }
-      }
     }
   },
   "version": "1.0"

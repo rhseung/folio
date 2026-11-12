@@ -535,10 +535,8 @@ final class ClaudeModel {
     .diff .skip, .diff .label { color: var(--text-3); font-family: -apple-system, sans-serif; }
     .diff .gap { height: 8px; }
     .apply-all { margin-top: 8px; font-size: 13px; text-align: right; }
-    .figure { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; margin-top: 8px; }
-    .figure figure { margin: 0; padding: 8px; border-radius: 8px; box-shadow: inset 0 0 0 1px var(--line-soft); }
+    .figure { margin-top: 8px; padding: 8px; border-radius: 8px; background: var(--card); box-shadow: inset 0 0 0 1px var(--line-soft); }
     .figure img { display: block; max-width: 100%; max-height: 240px; margin: 0 auto; }
-    .figure figcaption { margin-top: 4px; font-size: 11px; text-align: center; }
     """
 
     /// What a note proposal changes, folded shut so the answer stays readable; opened, the user approves what they
@@ -581,18 +579,11 @@ final class ClaudeModel {
         return #"<details class="change"><summary>\#(String(localized: .claudeProposalChanges(added, removed)))</summary><div class="diff">\#(rows.joined())</div></details>"#
     }
 
-    /// The picture as a note would show it in each appearance, side by side whatever the panel's own: a dark rule that
-    /// leaves black lines on the dark card is what this is for. Each sits on the note's card color of that appearance,
-    /// and `forced` turns the figure's `prefers-color-scheme` queries to that appearance. In an `<img>`, the SVG runs no
-    /// script and loads nothing.
+    /// The picture as the note would show it, on the note's card. An SVG in an `<img>` follows the page's appearance,
+    /// so its dark rule shows when the panel is dark; it runs no script and loads nothing there.
     static func figureHTML(_ svg: String) -> String {
-        let panes = [(false, Swatch.card.light, Swatch.text.light, String(localized: .claudeProposalFigureLight)),
-                     (true, Swatch.card.dark, Swatch.text.dark, String(localized: .claudeProposalFigureDark))].map { dark, card, text, label in
-            let data = Data(NoteFigure.forced(svg, dark: dark).utf8).base64EncodedString()
-            return String(format: #"<figure style="background:#%06X;color:#%06X"><img src="data:image/svg+xml;base64,%@" alt=""><figcaption>%@</figcaption></figure>"#,
-                          card, text, data, escape(label))
-        }
-        return #"<details class="change" open><summary>\#(String(localized: .claudeProposalFigure))</summary><div class="figure">\#(panes.joined())</div></details>"#
+        let data = Data(svg.utf8).base64EncodedString()
+        return #"<details class="change" open><summary>\#(String(localized: .claudeProposalFigure))</summary><div class="figure"><img src="data:image/svg+xml;base64,\#(data)" alt=""></div></details>"#
     }
 
     static func escape(_ text: String) -> String {

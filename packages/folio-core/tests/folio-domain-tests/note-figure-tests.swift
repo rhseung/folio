@@ -61,12 +61,6 @@ struct NoteFigureTests {
         #expect(NoteFigure.problems(#"<html><style>@media (prefers-color-scheme: dark){}</style></html>"#) == [.notSVG(root: "html")])
     }
 
-    @Test func forcedPicksOneAppearance() {
-        let svg = "@media (prefers-color-scheme: dark){a} @media (prefers-color-scheme:light){b}"
-        #expect(NoteFigure.forced(svg, dark: true) == "@media (min-width:0px){a} @media (max-width:0px){b}")
-        #expect(NoteFigure.forced(svg, dark: false) == "@media (max-width:0px){a} @media (min-width:0px){b}")
-    }
-
     @Test func widgetsLoadNothingFromOutside() {
         #expect(NoteWidget.problems(" \n") == [.empty])
         #expect(NoteWidget.problems(#"<div><a href="https://example.com">링크</a></div><script>let x = 1</script>"#).isEmpty)

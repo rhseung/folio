@@ -150,9 +150,8 @@ struct ClaudeModelTests {
         #expect(workspace.course(graphTheory)?.file.exams.isEmpty == true)
     }
 
-    /// A figure is approved on what it looks like, so its card shows it in both appearances, each with its dark rule
-    /// turned to that appearance, before anything is written.
-    @Test func aProposedFigureShowsInLightAndDark() throws {
+    /// A figure is approved on what it looks like, so its card shows it as the note would, before anything is written.
+    @Test func aProposedFigureShowsBeforeItIsWritten() throws {
         let workspace = try fixtureWorkspace()
         let model = ClaudeModel(workspace: workspace)
         let course = try #require(workspace.course(graphTheory))
@@ -164,7 +163,7 @@ struct ClaudeModelTests {
         #expect(line.change == .figure(svg))
         let html = ClaudeModel.figureHTML(svg)
         let images = html.matches(of: /data:image\/svg\+xml;base64,([A-Za-z0-9+\/=]+)/).compactMap { Data(base64Encoded: String($0.1)) }
-        #expect(images.map { String(decoding: $0, as: UTF8.self) } == [NoteFigure.forced(svg, dark: false), NoteFigure.forced(svg, dark: true)])
+        #expect(images.map { String(decoding: $0, as: UTF8.self) } == [svg])
         #expect(html.contains("<details class=\"change\" open>"))
         #expect(!FileManager.default.fileExists(atPath: course.store.fileURL(NoteFigure.path("graph.svg")).path))
         let bad = ActionProposal(command: NoteFigureAdd.command, input: try JSONValue(NoteFigureAdd(course: graphTheory, name: "g", svg: "<svg/>")))

@@ -25,15 +25,6 @@ public enum NoteFigure {
     /// Course-relative.
     public static func path(_ fileName: String) -> String { folder + "/" + fileName }
 
-    /// The picture as it draws in light or dark whatever the viewer's appearance, for showing both side by side: its
-    /// own `prefers-color-scheme` queries made always or never true. A width query stands in, since an image has a
-    /// width above zero.
-    public static func forced(_ svg: String, dark: Bool) -> String {
-        svg.replacing(/prefers-color-scheme\s*:\s*(dark|light)/.ignoresCase()) { m in
-            (m.1.lowercased() == "dark") == dark ? "min-width:0px" : "max-width:0px"
-        }
-    }
-
     public enum Problem: Hashable, Sendable {
         case notXML(line: Int, reason: String)
         case notSVG(root: String)
