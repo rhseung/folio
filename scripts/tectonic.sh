@@ -2,7 +2,7 @@
 # Puts FolioTectonic.xcframework (Tectonic as a static library, #41) where packages/folio-core's binary target expects
 # it. The library is built by .github/workflows/tectonic.yml from tectonic/ and scripts/tectonic-build.sh and published
 # as a release asset; tectonic/pin.json names that asset and its sha256, so the repository holds no binaries and a
-# build needs no Rust. After changing tectonic/ or the build script, wait for that workflow and copy the pin it prints.
+# build needs no Rust. After changing tectonic/, the build script or that workflow, wait for it and copy the pin it prints.
 set -euo pipefail
 cd "$(dirname "$0")/.."
 pin=tectonic/pin.json

@@ -22,9 +22,11 @@ FREETYPE="https://downloads.sourceforge.net/project/freetype/freetype2/2.14.3/fr
 GRAPHITE2="https://github.com/silnrsi/graphite/releases/download/1.3.15/graphite2-1.3.15.tgz c6bc8b4252724665297f7cad0c55897285c673f9b8e6db3522ace833593fe0b1"
 ICU="https://github.com/unicode-org/icu/releases/download/release-79.1/icu4c-79.1-sources.tgz 06fa63ecb521048f8082f12ad988f6b678d90cbd88aafce24cbc94902b191d99"
 
+# The workflow is an input too: it pins Rust, Xcode, CMake, Ninja and pkg-config, and a new tool with the same name would
+# find the old release and skip the build.
 inputs() {
   (cd "$root" && cat scripts/tectonic-build.sh tectonic/bridge/Cargo.toml tectonic/bridge/src/*.rs tectonic/bridge/include/* \
-    tectonic/patches/*.patch) | shasum -a 256 | cut -c1-12
+    tectonic/patches/*.patch .github/workflows/tectonic.yml) | shasum -a 256 | cut -c1-12
 }
 if [ "${1:-}" = "--inputs" ]; then inputs; exit 0; fi
 
