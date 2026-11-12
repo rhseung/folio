@@ -72,11 +72,10 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
 
     /// The preset filled with `links` for each role. A role in one slot takes all of its links there, sharing the
     /// slot's width (a class's lectures when it starts, #391, 2026-11-09 사용자), unless `spreads` is off; a role in
-    /// several slots gives each the next link, the last slot taking the rest. Every slot given a link keeps one pane
-    /// before a slot gets a second, so past `limit` a third lecture gives way, not the note, and a slot gives way from
-    /// the end, `focus`'s last (an iPad's two panes of "복습" are the lecture and the review note). Focused on
-    /// `focus`'s first pane, else the first pane. Nil without a link.
-    public func layout(_ links: [Role: [AppLink]], focus: Role? = nil, limit: Int, spreads: Bool = true) -> PaneLayout? {
+    /// several slots gives each the next link, the last slot taking the rest. Nothing gives way for the device: a
+    /// narrow window or an iPad folds the panes it has no room for (2026-11-12 사용자). Focused on `focus`'s first
+    /// pane, else the first pane. Nil without a link.
+    public func layout(_ links: [Role: [AppLink]], focus: Role? = nil, spreads: Bool = true) -> PaneLayout? {
         var taken: [Role: Int] = [:]
         let filled: [[AppLink]] = slots.enumerated().map { i, slot in
             switch slot {
@@ -90,25 +89,17 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
                 return last && spreads ? Array(all[k...]) : [all[k]]
             }
         }
-        var counts = filled.map { $0.isEmpty ? 0 : 1 }
-        while counts.reduce(0, +) > max(1, limit),
-              let last = counts.indices.last(where: { counts[$0] > 0 && (focus == nil || slots[$0].role != focus) }) ?? counts.lastIndex(where: { $0 > 0 }) {
-            counts[last] = 0
-        }
-        for i in filled.indices {
-            while counts[i] > 0, counts[i] < filled[i].count, counts.reduce(0, +) < limit { counts[i] += 1 }
-        }
         var chosen: [AppLink] = []
         var widths: [Double] = []
         var focused: Int?
-        for (i, (slot, share)) in zip(slots, shares).enumerated() where counts[i] > 0 {
+        for (slot, (links, share)) in zip(slots, zip(filled, shares)) where !links.isEmpty {
             if let focus, slot.role == focus, focused == nil { focused = chosen.count }
-            for link in filled[i].prefix(counts[i]) {
+            for link in links {
                 chosen.append(link)
-                widths.append(share / Double(counts[i]))
+                widths.append(share / Double(links.count))
             }
         }
-        guard var layout = PaneLayout(links: chosen, shares: widths, limit: limit) else { return nil }
+        guard var layout = PaneLayout(links: chosen, shares: widths) else { return nil }
         if let focused { layout.press(focused) }
         return layout
     }
@@ -116,38 +107,38 @@ public struct PanePreset: Hashable, Sendable, Identifiable {
     /// The preset filled for a class's start, focused on its note. Nil when none of the class's own lectures or note
     /// made it in: "개념 다지기" for a class with no lecture would open a tab of the quiz alone, and the note just made
     /// for the class would open nowhere. The class then opens the plain way.
-    public func startLayout(_ links: [Role: [AppLink]], limit: Int) -> PaneLayout? {
-        guard let layout = layout(links, focus: .classNote, limit: limit) else { return nil }
+    public func startLayout(_ links: [Role: [AppLink]]) -> PaneLayout? {
+        guard let layout = layout(links, focus: .classNote) else { return nil }
         let own = (links[.lecture] ?? []) + (links[.classNote] ?? [])
         return layout.links.contains(where: own.contains) ? layout : nil
     }
 
     /// The preset filled in for a session, a pane to a slot, without the slots it has nothing for. Nil when it has
     /// none, and for a preset with a role and no session.
-    public func layout(session: Session?, course: UUID?, limit: Int) -> PaneLayout? {
+    public func layout(session: Session?, course: UUID?) -> PaneLayout? {
         let links = if let session, let course { Self.links(session: session, course: course) } else { [Role: [AppLink]]() }
         if needsClass, links.isEmpty { return nil }
-        return layout(links, focus: focus, limit: limit, spreads: false)
+        return layout(links, focus: focus, spreads: false)
     }
 
     /// Whether `layout` is this preset filled in for the session, so a tab can go by the preset's name. Pages and
     /// blocks don't count, nor widths: a lecture read further on is still the same layout.
-    public func matches(_ layout: PaneLayout, session: Session?, course: UUID?, limit: Int) -> Bool {
-        guard let filled = self.layout(session: session, course: course, limit: limit) else { return false }
+    public func matches(_ layout: PaneLayout, session: Session?, course: UUID?) -> Bool {
+        guard let filled = self.layout(session: session, course: course) else { return false }
         return filled.links.map(\.withoutAnchor) == layout.links.map(\.withoutAnchor)
     }
 
     /// The first of `presets` the layout is, for any of `file`'s classes (or none, for a preset of addresses only).
-    public static func matching(_ layout: PaneLayout, among presets: [PanePreset], in file: CourseFile?, limit: Int) -> PanePreset? {
+    public static func matching(_ layout: PaneLayout, among presets: [PanePreset], in file: CourseFile?) -> PanePreset? {
         presets.first { preset in
-            guard preset.needsClass else { return preset.matches(layout, session: nil, course: nil, limit: limit) }
+            guard preset.needsClass else { return preset.matches(layout, session: nil, course: nil) }
             guard let file else { return false }
-            return file.sessions.contains { preset.matches(layout, session: $0, course: file.course.id, limit: limit) }
+            return file.sessions.contains { preset.matches(layout, session: $0, course: file.course.id) }
         }
     }
 
-    public static func matching(_ layout: PaneLayout, session: Session, course: UUID, limit: Int) -> PanePreset? {
-        builtIn.first { $0.matches(layout, session: session, course: course, limit: limit) }
+    public static func matching(_ layout: PaneLayout, session: Session, course: UUID) -> PanePreset? {
+        builtIn.first { $0.matches(layout, session: session, course: course) }
     }
 
     /// "지금 배치 저장…" (2026-11-11 사용자): each pane that is one of the class's own pages is kept as that role, so

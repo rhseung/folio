@@ -73,10 +73,11 @@ struct PaneRow: View {
         #if DEBUG && os(macOS)
         .onChange(of: SnapshotDriver.shared.claudePanel, initial: true) { _, new in claude = new }
         #endif
-        .onGeometryChange(for: [Int].self) { proxy in
-            [2, 3].map { PaneLayout.openCount($0, room: proxy.size.width, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: Self.gap) }
-        } action: { if panes.room != $0 { panes.room = $0 } }
-        .onGeometryChange(for: CGFloat.self, of: \.size.width) { sizes.row = $0 }
+        // The tab turns the width into how many panes stay open, and is watched only when that changes.
+        .onGeometryChange(for: CGFloat.self, of: \.size.width) { width in
+            sizes.row = width
+            panes.measure(width)
+        }
         // Pressing a strip opens it as another folds, together; a new or closed pane slides the others over. A pane
         // folding because the window narrowed comes at once: it comes mid-resize, where a moving pane trails the edge.
         .animation(reduceMotion ? nil : .smooth(duration: 0.34), value: panes.focus)

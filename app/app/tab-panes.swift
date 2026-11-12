@@ -24,38 +24,30 @@ final class TabPanes {
     private(set) var collapsed: Set<Int> = []
     /// How each pane shows its note, which only what remembers the layout reads.
     private(set) var noteModes: [NoteViewMode?] = [nil]
-    /// How many panes the row has room to keep open with two panes and with three (`PaneLayout.openCount`). The row
-    /// sets it only where its width crosses a count, so a live resize sets it a few times, not every frame.
-    var room = [2, 3]
+    /// The row's width, which the row sets every frame of a resize; read only through `open`.
+    @ObservationIgnored private var width: Double?
+    /// How many panes the row has room to keep open (`PaneLayout.openCount`), from its width alone (2026-11-12 사용자).
+    /// Set only where the width crosses a count, or the count changes, so a live resize sets it a few times, not
+    /// every frame.
+    private(set) var open = 1
     /// The panes' widths moving (`PaneGlide`), which the panes' stack and the screens' widths alone read.
     private(set) var glide: PaneGlide?
-    let limit: Int
-
-    static var limit: Int {
-        #if os(macOS)
-        PaneLayout.Device.mac.maxPanes
-        #else
-        PaneLayout.Device.pad.maxPanes
-        #endif
-    }
 
     /// `columns`: a pane moved out to a tab of its own keeps them; a new tab starts from the last choice.
-    init(_ navigator: Navigator, columns: ColumnPrefs? = nil, limit: Int = TabPanes.limit, memory: ColumnMemory = .shared) {
+    init(_ navigator: Navigator, columns: ColumnPrefs? = nil, memory: ColumnMemory = .shared) {
         layout = PaneLayout(navigator.current.link)
         ids = [UUID()]
         navigators = [navigator]
         trails = [CrumbTrail()]
         self.columns = [columns ?? memory.newPane()]
         self.memory = memory
-        self.limit = limit
     }
 
     /// A tab moved to a window of its own: its panes go on from where they were, back and forward included, and with
     /// the columns each had hidden (`WindowRequest.columns`; nil for panes opened anew). Nil without a history.
     init?(histories: [LinkHistory<Navigator.Entry>], shares: [Double]?, focus: Int, columns: [[String]]? = nil,
-          limit: Int = TabPanes.limit, memory: ColumnMemory = .shared) {
-        let histories = Array(histories.prefix(max(1, limit)))
-        guard var layout = PaneLayout(links: histories.map(\.current.link), shares: shares, limit: limit) else { return nil }
+          memory: ColumnMemory = .shared) {
+        guard var layout = PaneLayout(links: histories.map(\.current.link), shares: shares) else { return nil }
         layout.press(min(max(focus, 0), histories.count - 1))
         self.layout = layout
         ids = histories.map { _ in UUID() }
@@ -63,21 +55,19 @@ final class TabPanes {
         trails = histories.map { _ in CrumbTrail() }
         self.columns = histories.indices.map { i in memory.pane(columns.flatMap { $0.indices.contains(i) ? $0[i] : nil }) }
         self.memory = memory
-        self.limit = limit
         publish()
     }
 
     /// A tab laid out as `layout` was left, note modes and folds included (a class's layout, #62), each pane a history
     /// of its own at `entries`, which go with the layout's panes. Nil when they don't.
-    init?(layout: PaneLayout, entries: [Navigator.Entry], limit: Int = TabPanes.limit, memory: ColumnMemory = .shared) {
-        guard entries.count == layout.panes.count, layout.panes.count <= max(1, limit) else { return nil }
+    init?(layout: PaneLayout, entries: [Navigator.Entry], memory: ColumnMemory = .shared) {
+        guard entries.count == layout.panes.count else { return nil }
         self.layout = layout
         ids = entries.map { _ in UUID() }
         navigators = entries.map { Navigator($0) }
         trails = entries.map { _ in CrumbTrail() }
         columns = entries.map { _ in memory.newPane() }
         self.memory = memory
-        self.limit = limit
         publish()
     }
 
@@ -96,7 +86,7 @@ final class TabPanes {
     @discardableResult
     func restore(_ saved: PaneLayout, entries: [Navigator.Entry?]) -> Bool {
         guard count == 1, entries.count == saved.panes.count, let entry = entries[saved.focus],
-              let kept = saved.keeping({ entries[$0] != nil }), kept.panes.count > 1, kept.panes.count <= limit else { return false }
+              let kept = saved.keeping({ entries[$0] != nil }), kept.panes.count > 1 else { return false }
         let found = entries.compactMap { $0 }
         let at = kept.focus
         let navigator = navigators[0], id = ids[0], trail = trails[0], column = columns[0]
@@ -113,10 +103,10 @@ final class TabPanes {
     /// A layout chosen from "배치 ▸" (#62, 2026-11-11 사용자): the tab becomes it, each pane from `entries` (a nil is
     /// an item gone, its pane left out). A pane already showing one of the addresses keeps its history, screen and
     /// columns there, and the pane in focus stays in focus if it is kept. False, and nothing changed, when no pane is
-    /// left or there are more than the tab holds.
+    /// left.
     @discardableResult
     func lay(_ new: PaneLayout, entries: [Navigator.Entry?]) -> Bool {
-        guard entries.count == new.panes.count, var kept = new.keeping({ entries[$0] != nil }), kept.panes.count <= limit else { return false }
+        guard entries.count == new.panes.count, var kept = new.keeping({ entries[$0] != nil }) else { return false }
         follow()
         let focused = navigators[focus]
         var free = Array(navigators.indices)
@@ -163,7 +153,19 @@ final class TabPanes {
     var folded: Set<Int> {
         // The layout isn't watched: what it is published as is, so a reader redraws when a press or a fold moves it.
         _ = (focus, collapsed)
-        return count > 1 ? layout.folded(open: room[min(count, 3) - 2]) : []
+        return count > 1 ? layout.folded(open: open) : []
+    }
+
+    /// The row's width, as it is laid out.
+    func measure(_ width: Double) {
+        self.width = width
+        recount()
+    }
+
+    // Before the row is first measured every pane counts as open, as a tab moved to a new window was drawn.
+    private func recount() {
+        let open = width.map { PaneLayout.openCount(count, room: $0, minWidth: Theme.Size.paneMin, strip: Theme.Size.paneStrip, gap: PaneRow.gap) } ?? count
+        if self.open != open { self.open = open }
     }
 
     func canCollapse(_ i: Int) -> Bool { layout.canCollapse(i) }
@@ -180,13 +182,13 @@ final class TabPanes {
         moving { layout.press(i) }
     }
 
-    /// "옆 칸에 열기" from the pane showing `navigator` (the focused one without it): a new pane right of it while
-    /// there is room for one, else the pane used longest ago, or the pane already showing it (`PaneLayout.openBeside`).
+    /// "옆 칸에 열기" from the pane showing `navigator` (the focused one without it): a new pane right of it, or the
+    /// pane already showing it (`PaneLayout.openBeside`).
     func openBeside(_ entry: Navigator.Entry, from navigator: Navigator? = nil) {
         if let navigator, let i = index(of: navigator) { press(i) }
         follow()
         let before = layout.panes.count
-        layout.openBeside(entry.link, limit: limit)
+        layout.openBeside(entry.link)
         if layout.panes.count > before {
             let i = layout.focus
             ids.insert(UUID(), at: i)
@@ -199,10 +201,8 @@ final class TabPanes {
         publish()
     }
 
-    func canMerge(_ other: TabPanes) -> Bool { other !== self && layout.canMerge(other.layout, limit: limit) }
-
     /// "옆 칸으로 합치기": another tab's panes join these before pane `index` (`PaneLayout.merge`), each with its
-    /// history, so back and forward go on in it as they did there. False, and nothing taken, past the limit. The
+    /// history, so back and forward go on in it as they did there. Any tab joins, however many panes either has. The
     /// other tab is left as it was, for its window to close.
     @discardableResult
     func merge(_ other: TabPanes, at index: Int) -> Bool {
@@ -210,7 +210,7 @@ final class TabPanes {
         follow()
         other.follow()
         let at = min(max(index, 0), count)
-        guard layout.merge(other.layout, at: at, limit: limit) else { return false }
+        layout.merge(other.layout, at: at)
         // New IDs and trails: the panes' screens are drawn anew in this tab, and a playing pane's old screen says it
         // stopped by its old ID as it goes.
         ids.insert(contentsOf: other.ids.map { _ in UUID() }, at: at)
@@ -295,6 +295,7 @@ final class TabPanes {
     }
 
     private func publish() {
+        recount()
         if focus != layout.focus { focus = layout.focus }
         if shares != layout.shares { shares = layout.shares }
         if collapsed != layout.collapsed { collapsed = layout.collapsed }
@@ -341,7 +342,7 @@ extension Workspace {
     func preset(of panes: TabPanes) -> PanePreset? {
         guard panes.count > 1 else { return nil }
         let course = lesson(of: panes)?.course ?? panes.navigators.lazy.compactMap(\.current.course).first
-        return PanePreset.matching(panes.current, among: settings.presets, in: course.flatMap { self.course($0) }?.file, limit: panes.limit)
+        return PanePreset.matching(panes.current, among: settings.presets, in: course.flatMap { self.course($0) }?.file)
     }
 
     func presetName(of panes: TabPanes) -> String? { preset(of: panes)?.title }
@@ -350,7 +351,7 @@ extension Workspace {
     /// it has nothing to show there (a layout with a role, in a tab of no class).
     func layout(_ preset: PanePreset, for panes: TabPanes) -> PaneLayout? {
         let lesson = lesson(of: panes)
-        return preset.layout(session: lesson?.session, course: lesson?.course, limit: panes.limit)
+        return preset.layout(session: lesson?.session, course: lesson?.course)
     }
 
     func apply(_ preset: PanePreset, to panes: TabPanes) {

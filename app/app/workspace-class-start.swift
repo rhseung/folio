@@ -90,7 +90,7 @@ extension Workspace {
             var links = PanePreset.links(session: session, course: loaded.id)
             links[.lecture] = pages.lectures
             links[.classNote] = pages.note.map { [$0] } ?? []
-            if setting.openIn == .splitTab, let split = settings.classStartPreset.startLayout(links, limit: TabPanes.limit) {
+            if setting.openIn == .splitTab, let split = settings.classStartPreset.startLayout(links) {
                 step.ask.split = split
             } else {
                 step.ask.opens = classStartOpenings(pages, session: session)
@@ -223,7 +223,7 @@ struct ClassStartPrompt: ViewModifier {
         for opening in workspace.classStartOpenings(ask, showing: shown) { open(opening) }
         // The class laid out as it was last left on this device, if it was, in place of the preset (#62).
         if let split = workspace.classStartSplit(ask, showing: shown) {
-            openSplit(paneMemory?.memory.layout(session: ask.session, limit: TabPanes.limit) ?? split, ask.course)
+            openSplit(paneMemory?.memory.starting(session: ask.session) ?? split, ask.course)
         }
         if ask.front { bringForward() }
         if ask.asksRecording { asking = ask }

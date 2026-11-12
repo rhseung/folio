@@ -107,7 +107,7 @@ struct RootView: View {
     func restoresSession(_ entry: Navigator.Entry, in tab: TabPanes) -> Bool {
         guard tab.count == 1, let paneMemory, let file = entry.course.flatMap({ workspace.course($0) })?.file,
               let session = file.session(holding: entry.link),
-              let saved = paneMemory.memory.restoring(entry.link, session: session, limit: tab.limit) else { return false }
+              let saved = paneMemory.memory.restoring(entry.link, session: session) else { return false }
         let entries = saved.panes.indices.map { i in i == saved.focus ? entry : workspace.entry(for: saved.panes[i].link, hint: entry.course) }
         return tab.restore(saved, entries: entries)
     }
