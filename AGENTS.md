@@ -31,6 +31,7 @@ folio/
     folio-core/       # 모델, 저장소, 파일 추적, 성적과 GPA 계산, 복습 스케줄러. UI 코드 없음
     folio-markdown/   # 마크다운 파서와 확장 문법(콜아웃, 위키링크, 블록 참조, 각주, `[TOC]`, cb-table, cb-widget), 편집 보기의 입력 보조와 표 편집 변환(`editing/`)
     folio-ai/         # Claude 연동 계층. 프로바이더 추상화, 맥락 구성, 작업별 요청과 응답 스키마
+    folio-lint/       # AGENTS.md 규칙 검사기(`mise run check-code`). swift-syntax로 코드를 읽고 기준선(baseline.txt)을 둔다. 앱과 다른 패키지에 링크되지 않는다
   app/                # 멀티플랫폼 앱 타깃(macOS, iPadOS)
   app-tests/          # 화면 모델 테스트와 노트 보기 회귀 검사(`mise run test-app`), iPad 테스트는 ipad/(`mise run test-ipad`)
   web/                # 노트 미리보기와 Claude 패널의 페이지(KaTeX 수식, 코드 하이라이팅, mermaid 그림, 노트 CSS, 미리보기의 그림 크게 보기), 편집 보기가 JavaScriptCore로 부르는 코드 하이라이팅. 편집 보기의 수식 말풍선과 자동 완성 미리보기도 미리보기와 같은 KaTeX와 노트 CSS로, 숨은 페이지에서 그린다(`NoteMath`). 번들은 app/resources/web
@@ -120,7 +121,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
     - 목록 열과 본문이 나란한 화면은 `ColumnSplit`으로 둔다. 본문이 `ColumnSplit.pageRoom`보다 좁아지거나 사용자가 손으로 접으면, 열은 본문 왼쪽 위의 열 버튼 뒤로 접히고, 버튼을 누르면 같은 열이 본문 위에 유리 판으로 뜬다(자리가 있으면 다시 붙는다). 칸이 하나든 여럿이든 같다. 항목이 늘어나는 목록(사람, 퀴즈 범위, 과목의 노트 목록)은 자리가 없고 본문에 보일 것이 없으면 목록이 본문이 된다(`.list(showingPage:)`). 고르기는 링크를 가진 것이면 `\.openLink`로 가서 창의 기록에 남는다(과목의 구역과 노트, 설정의 탭 `folio://settings/<탭>`, 사람). 주소가 그대로인 고르기(퀴즈 시작, 이미 고른 행)는 `ColumnPick`으로 떠 있는 열을 닫는다. 탭 없는 `folio://settings`(사이드바, ⌘,)는 `Workspace.entry(for:)`가 마지막으로 고른 탭으로 채우므로, 기록의 모든 칸이 탭을 가진다.
     - `ScreenFitTests`(`mise run test-app`)가 모든 화면을 세 폭으로 그려 넘치는지 본다. `ColumnSplit`의 본문은 평소 0까지 줄어들어 넘친 것을 자르는데, 검사는 `\.revealsOverflow`로 이를 풀어 넘친 본문이 창을 밀어내게 해서 본다. 바뀐 화면은 `FOLIO_RENDER_SIZES=1440x900,720,390 mise run render`로 그려 눈으로 본다.
 - 모델 테스트는 `app-tests/<화면>-model-tests.swift`에 Swift Testing으로 쓰고, `fixtureWorkspace()`로 가짜 GIST 폴더를 연다.
-- `mise run check-code`(`mise run test`에 포함)가 이 절의 규칙 중 패턴으로 보이는 것을 잡는다. `app/features`의 뷰(`View`, `ViewModifier`와 그 확장)에서 `workspace.<메서드>(` 호출, `some View`를 돌려주는 멤버(`body`와 그 조각) 안의 `filter`, `reduce`, `sorted`, `count(where:)`, `min(by:)`, `max(by:)`, `partition`, `Dictionary(grouping:)`가 걸린다. 리비전 값(`workspace.notesRevision`)이나 `liveNow`를 읽는 것은 걸리지 않는다. 검사가 생기기 전부터 있던 곳은 `scripts/check-code-baseline.txt`에 있어 통과하고, 새로 생긴 곳은 실패한다. 고친 곳이 목록에 남아 있어도 실패하므로 `scripts/check-code.py --update`로 목록을 줄인다. 새 위반을 목록에 넣어 통과시키지 않는다.
+- `mise run check-code`(`mise run test`에 포함)가 이 절의 규칙 중 구문 트리로 보이는 것을 잡는다. 검사기는 swift-syntax로 짠 `packages/folio-lint`이고 규칙마다 단위 테스트가 있다. `app/features`의 뷰(`View`, `ViewModifier`와 그 확장)에서 `workspace.<메서드>(` 호출, `some View`를 돌려주는 멤버(`body`와 그 조각) 안의 `filter`, `reduce`, `sorted`, `count(where:)`, `min(by:)`, `max(by:)`, `partition`, `Dictionary(grouping:)`가 걸린다. 리비전 값(`workspace.notesRevision`)이나 `liveNow`를 읽는 것은 걸리지 않는다. 검사가 생기기 전부터 있던 곳은 `packages/folio-lint/baseline.txt`에 있어 통과하고, 새로 생긴 곳은 실패한다. 고친 곳이 목록에 남아 있어도 실패하므로 `mise run check-code -- --update`로 목록을 줄인다. 새 위반을 목록에 넣어 통과시키지 않는다.
 
 ### 문자열 키
 

@@ -46,8 +46,11 @@ run = [
   "swift test --package-path packages/folio-ai",
   "swift run --skip-build -q --package-path packages/folio-core folio actions --check",
   "swift run --skip-build -q --package-path packages/folio-core folio-gen --check",
+  # Release: debug swift-syntax takes some 20 seconds to parse the codebase, release two.
+  "swift build -q -c release --build-tests --package-path packages/folio-lint",
+  "swift test -c release --skip-build --package-path packages/folio-lint",
+  "swift run -q -c release --skip-build --package-path packages/folio-lint folio-lint",
   "scripts/check-design.sh",
-  "scripts/check-code.py",
   "scripts/check-local-folders.sh",
 ]
 
@@ -56,8 +59,12 @@ description = "Fail on type sizes, colors or radii in screens that skip Theme"
 run = "scripts/check-design.sh"
 
 [tasks.check-code]
-description = "Fail on screen, string, layer and comment rules a pattern can see, past the places listed in the baseline"
-run = "scripts/check-code.py"
+description = "Fail on screen, string, layer and comment rules a syntax tree can see, past the places in packages/folio-lint/baseline.txt; -- --update rewrites it"
+# Built with its tests, as in `test`, so the two tasks share one build.
+run = [
+  "swift build -q -c release --build-tests --package-path packages/folio-lint",
+  "swift run -q -c release --skip-build --package-path packages/folio-lint folio-lint",
+]
 
 [tasks.check-local-folders]
 description = "Fail on Application Support paths the app takes without LocalFolders"
