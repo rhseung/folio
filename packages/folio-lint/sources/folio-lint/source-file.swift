@@ -60,7 +60,7 @@ public final class Codebase {
 
     public convenience init(root: String) throws {
         var files: [String: String] = [:]
-        for folder in ["app", "packages"] {
+        for folder in ["app", "app-tests", "packages"] {
             let base = (root as NSString).appendingPathComponent(folder)
             guard let walker = FileManager.default.enumerator(atPath: base) else { continue }
             while let path = walker.nextObject() as? String {

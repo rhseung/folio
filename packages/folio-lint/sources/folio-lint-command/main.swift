@@ -15,28 +15,35 @@ let code: Codebase
 do { code = try Codebase(root: root) } catch { fail("folio-lint: \(error)") }
 
 let rules = Rules.all
-let hits = rules.flatMap { $0.hits(in: code) }
+let found = rules.map { (rule: $0, hits: $0.hits(in: code)) }
+let strict = found.filter(\.rule.strict).flatMap(\.hits)
+let baselined = found.filter { !$0.rule.strict }.flatMap(\.hits)
 
+var new = strict
+var gone: [String] = []
 if update {
-    do { try Baseline.render(hits).write(toFile: baselinePath, atomically: true, encoding: .utf8) } catch {
+    do { try Baseline.render(baselined).write(toFile: baselinePath, atomically: true, encoding: .utf8) } catch {
         fail("folio-lint: \(error)")
     }
-    print("wrote \(hits.count) entries to packages/folio-lint/baseline.txt")
-    exit(0)
+    print("wrote \(baselined.count) entries to packages/folio-lint/baseline.txt")
+} else {
+    let known = (try? String(contentsOfFile: baselinePath, encoding: .utf8)).map(Baseline.entries) ?? []
+    let report = Baseline.compare(baselined, with: known)
+    new += report.new
+    gone = report.gone
 }
 
-let known = (try? String(contentsOfFile: baselinePath, encoding: .utf8)).map(Baseline.entries) ?? []
-let report = Baseline.compare(hits, with: known)
+new.sort { ($0.path, $0.line) < ($1.path, $1.line) }
 var lines: [String] = []
 for rule in rules {
-    let found = report.new.filter { $0.check == rule.name }
-    guard !found.isEmpty else { continue }
+    let hits = new.filter { $0.check == rule.name }
+    guard !hits.isEmpty else { continue }
     lines.append("\(rule.name): \(rule.advice)")
-    lines += found.map { "  \($0.path):\($0.line): \($0.key)" }
+    lines += hits.map { "  \($0.path):\($0.line): \($0.key)" }
 }
-if !report.gone.isEmpty {
+if !gone.isEmpty {
     lines.append("Fixed or moved since packages/folio-lint/baseline.txt was written; run `mise run check-code -- --update` "
         + "to drop them (and check it adds nothing):")
-    lines += report.gone.map { "  " + $0.replacingOccurrences(of: "\t", with: "  ") }
+    lines += gone.map { "  " + $0.replacingOccurrences(of: "\t", with: "  ") }
 }
-if !report.passed { fail(lines.joined(separator: "\n")) }
+if !lines.isEmpty { fail(lines.joined(separator: "\n")) }

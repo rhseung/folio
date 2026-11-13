@@ -32,7 +32,7 @@ description = "Tag origin/main as v<version> and push the tag, which drafts its 
 run = "scripts/version.sh tag"
 
 [tasks.test]
-description = "Run package tests, the design token, code rule and Application Support checks"
+description = "Run package tests and the code, design and Application Support rules of folio-lint"
 depends = ["tectonic"]
 # fixtures and expectations are in Korean time, and Apple's date detector reads phrases like 내일 7시 in the
 # machine's zone, not the test calendar's; a UTC machine (CI) would fail them.
@@ -50,25 +50,15 @@ run = [
   "swift build -q -c release --build-tests --package-path packages/folio-lint",
   "swift test -c release --skip-build --package-path packages/folio-lint",
   "swift run -q -c release --skip-build --package-path packages/folio-lint folio-lint",
-  "scripts/check-design.sh",
-  "scripts/check-local-folders.sh",
 ]
 
-[tasks.check-design]
-description = "Fail on type sizes, colors or radii in screens that skip Theme"
-run = "scripts/check-design.sh"
-
 [tasks.check-code]
-description = "Fail on screen, string, layer and comment rules a syntax tree can see, past the places in packages/folio-lint/baseline.txt; -- --update rewrites it"
+description = "Fail on the screen, string, layer, comment, design and Application Support rules a syntax tree can see, past the places in packages/folio-lint/baseline.txt; -- --update rewrites it"
 # Built with its tests, as in `test`, so the two tasks share one build.
 run = [
   "swift build -q -c release --build-tests --package-path packages/folio-lint",
   "swift run -q -c release --skip-build --package-path packages/folio-lint folio-lint",
 ]
-
-[tasks.check-local-folders]
-description = "Fail on Application Support paths the app takes without LocalFolders"
-run = "scripts/check-local-folders.sh"
 
 [tasks.gen-cli]
 description = "Write the CLI commands of the actions declared with @Action (sources/folio-cli/generated)"

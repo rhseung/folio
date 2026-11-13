@@ -121,7 +121,7 @@ FolioGen  ->  FolioActions   (생성한 CLI 명령을 folio-cli/generated에 쓴
     - 목록 열과 본문이 나란한 화면은 `ColumnSplit`으로 둔다. 본문이 `ColumnSplit.pageRoom`보다 좁아지거나 사용자가 손으로 접으면, 열은 본문 왼쪽 위의 열 버튼 뒤로 접히고, 버튼을 누르면 같은 열이 본문 위에 유리 판으로 뜬다(자리가 있으면 다시 붙는다). 칸이 하나든 여럿이든 같다. 항목이 늘어나는 목록(사람, 퀴즈 범위, 과목의 노트 목록)은 자리가 없고 본문에 보일 것이 없으면 목록이 본문이 된다(`.list(showingPage:)`). 고르기는 링크를 가진 것이면 `\.openLink`로 가서 창의 기록에 남는다(과목의 구역과 노트, 설정의 탭 `folio://settings/<탭>`, 사람). 주소가 그대로인 고르기(퀴즈 시작, 이미 고른 행)는 `ColumnPick`으로 떠 있는 열을 닫는다. 탭 없는 `folio://settings`(사이드바, ⌘,)는 `Workspace.entry(for:)`가 마지막으로 고른 탭으로 채우므로, 기록의 모든 칸이 탭을 가진다.
     - `ScreenFitTests`(`mise run test-app`)가 모든 화면을 세 폭으로 그려 넘치는지 본다. `ColumnSplit`의 본문은 평소 0까지 줄어들어 넘친 것을 자르는데, 검사는 `\.revealsOverflow`로 이를 풀어 넘친 본문이 창을 밀어내게 해서 본다. 바뀐 화면은 `FOLIO_RENDER_SIZES=1440x900,720,390 mise run render`로 그려 눈으로 본다.
 - 모델 테스트는 `app-tests/<화면>-model-tests.swift`에 Swift Testing으로 쓰고, `fixtureWorkspace()`로 가짜 GIST 폴더를 연다.
-- `mise run check-code`(`mise run test`에 포함)가 이 절의 규칙 중 구문 트리로 보이는 것을 잡는다. 검사기는 swift-syntax로 짠 `packages/folio-lint`이고 규칙마다 단위 테스트가 있다. `app/features`의 뷰(`View`, `ViewModifier`와 그 확장)에서 `workspace.<메서드>(` 호출, `some View`를 돌려주는 멤버(`body`와 그 조각) 안의 `filter`, `reduce`, `sorted`, `count(where:)`, `min(by:)`, `max(by:)`, `partition`, `Dictionary(grouping:)`가 걸린다. 리비전 값(`workspace.notesRevision`)이나 `liveNow`를 읽는 것은 걸리지 않는다. 검사가 생기기 전부터 있던 곳은 `packages/folio-lint/baseline.txt`에 있어 통과하고, 새로 생긴 곳은 실패한다. 고친 곳이 목록에 남아 있어도 실패하므로 `mise run check-code -- --update`로 목록을 줄인다. 새 위반을 목록에 넣어 통과시키지 않는다.
+- `mise run check-code`(`mise run test`에 포함)가 이 절의 규칙 중 구문 트리로 보이는 것을 잡는다. 검사기는 swift-syntax로 짠 `packages/folio-lint`이고 규칙마다 단위 테스트가 있다. `app/features`의 뷰(`View`, `ViewModifier`와 그 확장)에서 `workspace.<메서드>(` 호출, `some View`를 돌려주는 멤버(`body`와 그 조각) 안의 `filter`, `reduce`, `sorted`, `count(where:)`, `min(by:)`, `max(by:)`, `partition`, `Dictionary(grouping:)`가 걸린다. 리비전 값(`workspace.notesRevision`)이나 `liveNow`를 읽는 것은 걸리지 않는다. 검사가 생기기 전부터 있던 곳은 `packages/folio-lint/baseline.txt`에 있어 통과하고, 새로 생긴 곳은 실패한다. 고친 곳이 목록에 남아 있어도 실패하므로 `mise run check-code -- --update`로 목록을 줄인다. 새 위반을 목록에 넣어 통과시키지 않는다. 디자인 값(`docs/DESIGN.md` "검사")과 `Application Support` 경로(아래 "테스트 기준")의 규칙도 이 검사기에 있는데, 처음부터 위반이 없어 기준선이 없고 걸리면 `--update`로도 통과하지 않는다.
 
 ### 문자열 키
 
@@ -249,7 +249,7 @@ Me/GIST/
     - 검사는 보기를 `NoteBench`(`app-tests/note-bench.swift`)로만 다룬다. 그린 픽셀, 히트한 뷰, 캐럿 위치, 스크롤 범위만 보고 TextKit이나 웹 페이지의 내부는 보지 않는다. 미리보기는 `WKWebView`라서 스냅숏을 웹 프로세스에서 받는다. 편집 보기의 구현을 바꿀 때(#267처럼)는 이 파일과 기준 이미지만 바꾸고, 배치, 클릭, 한글 검사는 그대로 통과해야 한다.
     - 미리보기의 동작(블록 단위 갱신, 할 일 체크, 콜아웃 접기 유지, 편집 보기 따라가기, 위젯 iframe의 격리와 높이, 임베드와 블록 참조 카드, 깨진 링크, 그림 크게 보기)은 `NotePreviewTests`, `NoteWidgetTests`, `NoteEmbedPreviewTests`가 페이지에 스크립트를 돌려 본다. 편집 보기의 블록 참조 카드는 `NoteReferenceCardTests`가 본다.
 - 노트 보기 기준 이미지(`app-tests/references/notes`)는 CI 러너가 그린 것만 커밋한다. 글꼴 렌더가 macOS마다 달라서 비교는 이미지를 그린 macOS(`machine.txt`)에서만 하고, 다른 Mac에서는 건너뛴다. CI는 `FOLIO_NOTE_SCREENS_STRICT`를 켜서 러너의 macOS가 바뀌면 건너뛰지 않고 실패한다. 기준 이미지를 바꾸는 PR은 본문에 이전과 이후 이미지를 붙인다.
-- 테스트, 미리보기, 화면 밖 렌더는 이 Mac의 `Application Support/Folio`(녹음 복구, Whisper 모델)를 쓰지 않는다. 그 폴더는 앱의 `LocalFolders`로만 얻고 패키지는 쓰지 않으며(`mise run check-local-folders`가 `app`, `app-tests`, `packages`를 검사한다), 테스트와 미리보기에서 얻으려 하면 실행이 멈춘다. 화면 모델 테스트는 `fixtureWorkspace()`, 미리보기와 렌더는 `Workspace.scenario`가 임시 폴더를 준다. `FOLIO_GIST`로 가짜 폴더를 연 앱 실행(창 스냅숏 포함)은 녹음 폴더를 그 GIST 폴더마다 따로 임시 폴더에 둔다.
+- 테스트, 미리보기, 화면 밖 렌더는 이 Mac의 `Application Support/Folio`(녹음 복구, Whisper 모델)를 쓰지 않는다. 그 폴더는 앱의 `LocalFolders`로만 얻고 패키지는 쓰지 않으며(`mise run check-code`가 `app`, `app-tests`, `packages`를 검사한다), 테스트와 미리보기에서 얻으려 하면 실행이 멈춘다. 화면 모델 테스트는 `fixtureWorkspace()`, 미리보기와 렌더는 `Workspace.scenario`가 임시 폴더를 준다. `FOLIO_GIST`로 가짜 폴더를 연 앱 실행(창 스냅숏 포함)은 녹음 폴더를 그 GIST 폴더마다 따로 임시 폴더에 둔다.
 
 ## 빌드와 실행
 
@@ -341,7 +341,7 @@ Me/GIST/
 
 - 화면을 만들거나 고치기 전에 `docs/DESIGN.md`를 읽는다. 원칙, 토큰과 구성 요소를 언제 쓰는지, 패턴, 새 토큰을 만드는 규칙이 있다.
 - 디자인은 시안 C(밝은 종이 질감, 사이드바·과목 열·본문의 3단)에 리퀴드 글라스를 더한 방향이다. Mac 창은 시안 D처럼 반투명 창 재질 위에 사이드바와 툴바가 평평하게 놓이고 본문이 둥근 패널로 들어간다. 디자인 시스템: https://claude.ai/artifact/NQsFWSkuyHUDETivg5K5bA. 시안 캔버스 "Folio 시안": https://claude.ai/artifact/FT5gk3v1afr7pEsBFd6MLy. 새 시안은 이 캔버스의 영역 페이지에 디자인 시스템으로 그리고, 따로 Artifact를 만들지 않는다.
-- 색, 간격, 모서리, 글꼴은 `app/design/theme.swift`에서만 정의하고 모든 화면이 그 토큰만 쓴다. 라이트와 다크 값을 함께 둔다. 공용 구성 요소는 `app/design/`에 역할별 파일(`Layout`, `Containers`, `Indicators`, `Inputs`, `Interaction`)로 있다. `mise run check-design`이 화면 코드의 글꼴 크기, 색, 모서리 숫자를 잡는다.
+- 색, 간격, 모서리, 글꼴은 `app/design/theme.swift`에서만 정의하고 모든 화면이 그 토큰만 쓴다. 라이트와 다크 값을 함께 둔다. 공용 구성 요소는 `app/design/`에 역할별 파일(`Layout`, `Containers`, `Indicators`, `Inputs`, `Interaction`)로 있다. `mise run check-code`가 화면 코드의 글꼴 크기, 색, 모서리 숫자를 잡는다.
 - 리퀴드 글라스는 창 틀(사이드바, 툴바)과 떠 있는 요소(빠른 추가, 팝오버, Claude 패널)에만 쓴다. 본문은 종이 색으로 둔다. 창 구조와 유리 위 구성 요소의 규칙은 `docs/DESIGN.md`의 "창 구조" 절에 있다.
 - 과목 강조색은 `course.json`의 `color`(프리셋 이름)를 `CourseAccent`로 읽고, 비어 있으면 학기 안 순서로 프리셋을 고른다(무채색 `graphite`는 고르지 않는다). 예전에 고른 `#RRGGBB`는 파일을 바꾸지 않고 가장 가까운 프리셋으로 읽는다. 색은 프리셋 견본에서만 고른다. 과목 화면은 `\.accent` 환경값으로 색을 주입받는다. 프리셋 이름과 고르는 순서는 `FolioDomain`의 `CourseColor`가 정하고 앱과 CLI가 함께 쓴다. 색 값은 `theme.swift`에 둔다.
 

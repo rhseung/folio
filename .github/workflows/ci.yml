@@ -48,7 +48,7 @@ jobs:
           none='^docs/|^[^/]+\.md$|^\.github/.+\.md$|^web/|^pr-renders/|^tectonic/(bridge|patches)/|^scripts/tectonic-build\.sh$|^\.github/workflows/tectonic\.yml$'
           # Scripts these checks never run. Any other script counts: `mise run generate` runs scripts/version.sh before every
           # build, and a script it starts to run later is covered without a change here.
-          checks='^scripts/(check-design|check-local-folders|note-screens|release-notes|install-release)\.sh$|^packages/folio-lint/'
+          checks='^scripts/(note-screens|release-notes|install-release)\.sh$|^packages/folio-lint/'
           # build-ipad builds the app target alone. test-app builds the same target and resources for the Mac, so a
           # resource that breaks the bundle fails there.
           build_ipad="$none|^app-tests/|$checks|^\.claude/|^app/resources/web/"

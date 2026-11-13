@@ -189,3 +189,73 @@ private let view = "app/features/demo/demo-view.swift"
         #expect(Baseline.compare(hits, with: Baseline.entries(in: Baseline.render(hits))).passed)
     }
 }
+
+@Suite struct DesignValueTests {
+    @Test func rawSizesColoursAndRadiiInScreens() {
+        let source = """
+            struct DemoView: View {
+                var body: some View {
+                    Text(.commonSave).font(.system(size: 13)).foregroundStyle(.red)
+                    RoundedRectangle(cornerRadius: 8).fill(Color.blue.opacity(0.2))
+                    Rectangle().fill(Color(red: 0.2, green: 0.3, blue: 0.4)).tint(isOn ? .green : .gray)
+                    Text(.commonSave).shadow(color: .black, radius: 4).shadow(color: .black.opacity(0.1), radius: 2)
+                    Text(.commonSave).font(.system(size: 40)) // design: one-off, the timer's digits
+                    // .foregroundStyle(.red) once lived here
+                    Text(verbatim: ".red")
+                }
+                let tone = 0xFF8800
+            }
+            """
+        #expect(found([view: source], "design-value") == [
+            ".gray", ".green", ".red", ".system(size:", "0xFF8800", "Color(red:", "Color.blue", "cornerRadius: 8",
+        ])
+        #expect(found(["app/design/theme.swift": "let tone = Color.red"], "design-value").isEmpty)
+    }
+}
+
+@Suite struct DesignGridTests {
+    @Test func oddAndFractionalSpacingSizesAndRadii() {
+        let source = """
+            struct DemoView: View {
+                let gap: CGFloat = 6
+                let room: CGFloat = 7
+                var body: some View {
+                    VStack(spacing: 3) {
+                        Text(.commonSave).padding(5).padding(.horizontal, 2.5).padding(.top, 8)
+                        Rectangle().frame(width: 1, height: 12).offset(x: 3)
+                        CourseDot(color: .accentColor, size: 9)
+                        Divider().frame(height: 1).padding(.leading, -3)
+                        Text(.commonSave).frame(width: 17) // design: one-off, the column of digits
+                    }
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(lineWidth: 1.5))
+                }
+            }
+            """
+        #expect(found([view: source], "design-grid") == [
+            "CGFloat = 7", "padding(-3)", "padding(2.5)", "padding(5)", "size: 9", "spacing: 3",
+        ])
+    }
+}
+
+@Suite struct CourseAccentTests {
+    @Test func theAccentAloneOutsideTheDesignFolder() {
+        let line = "Text(.commonSave).environment(\\.accent, accent).environment(\\.locale, locale)"
+        #expect(found(["app/features/demo/demo-view.swift": line], "course-accent") == ["environment(\\.accent"])
+        #expect(found(["app/design/course-accent.swift": line, "app-tests/note-bench.swift": line], "course-accent").isEmpty)
+    }
+}
+
+@Suite struct LocalFoldersTests {
+    @Test func applicationSupportOutsideLocalFolders() {
+        let files = [
+            "app/features/demo/demo-model.swift": "let folder = URL.applicationSupportDirectory",
+            "app-tests/demo-tests.swift": "let folder = home + \"/Library/Application Support/Folio\"",
+            "packages/folio-ai/sources/folio-ai/cache.swift": "let paths = NSSearchPathForDirectoriesInDomains(.a, .b, true)",
+            "app/app/local-folders.swift": "let folder = URL.applicationSupportDirectory",
+            "app/features/demo/demo-note.swift": "// not URL.applicationSupportDirectory",
+        ]
+        #expect(found(files, "local-folders") == [
+            "\"Library/Application Support\"", "NSSearchPathForDirectoriesInDomains", "applicationSupportDirectory",
+        ])
+    }
+}

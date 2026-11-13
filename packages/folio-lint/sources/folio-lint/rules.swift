@@ -20,14 +20,26 @@ public struct Hit: Hashable, Sendable {
 public struct Rule {
     public let name: String
     public let advice: String
+    // A strict rule has no baseline: every place passed it when it was written, so any hit fails, `--update` or not.
+    public let strict: Bool
     let find: (Codebase) -> [Hit]
+
+    init(name: String, strict: Bool = false, advice: String, find: @escaping (Codebase) -> [Hit]) {
+        self.name = name
+        self.strict = strict
+        self.advice = advice
+        self.find = find
+    }
 
     public func hits(in code: Codebase) -> [Hit] { find(code) }
 }
 
 public enum Rules {
     public static var all: [Rule] {
-        [viewWorkspaceCall, viewBodyLogic, uiString, layoutName, layer, restatingComment]
+        [
+            viewWorkspaceCall, viewBodyLogic, uiString, layoutName, layer, restatingComment, designValue, designGrid,
+            courseAccent, localFolders,
+        ]
     }
 }
 

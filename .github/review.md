@@ -12,7 +12,7 @@ claude-review-plugin이 PR을 검토할 때 `AGENTS.md`와 함께 읽는 파일�
     - 승인 화면 없이 파일을 옮기거나 이름을 바꾸거나 지우는 코드, `moves.jsonl`에 남기지 않는 이동
     - `schemaVersion`을 올리면서 마이그레이션을 빠뜨렸거나, 읽을 때 모르는 필드를 버리는 디코딩
     - 경로나 제목으로 항목을 식별하는 코드(ID로 식별해야 한다)
-    - 개발이나 테스트 중에 실제 GIST 폴더나 이 Mac의 `Application Support/Folio`에 쓸 수 있는 경로. 경로를 직접 얻는 코드는 `check-local-folders`가 잡으니, 그 밖의 길(환경 변수나 설정에서 읽은 경로, 테스트에서 덮어쓰지 않은 기본값)을 본다
+    - 개발이나 테스트 중에 실제 GIST 폴더나 이 Mac의 `Application Support/Folio`에 쓸 수 있는 경로. 경로를 직접 얻는 코드는 `check-code`가 잡으니, 그 밖의 길(환경 변수나 설정에서 읽은 경로, 테스트에서 덮어쓰지 않은 기본값)을 본다
 - **공개 저장소.** 실제 성적, GPA, 학업 데이터(노션 내보내기, 캘린더, 학사편람 파일)가 테스트, 픽스처, 문서에 들어간 경우
 - **화면의 모델과 뷰.** `check-code`는 뷰의 `workspace.<메서드>(` 호출과 `some View` 멤버 안의 `filter`, `reduce`, `sorted`, `count(where:)`, `min(by:)`, `max(by:)`, `partition`, `Dictionary(grouping:)`만 잡는다. 바뀐 화면마다 아래를 하나씩 본다.
     - 뷰가 `some View`가 아닌 도우미(`private func`, 계산 프로퍼티)로 묶기, 거르기, 세기, 정렬을 옮겨 놓고 `body`에서 부르는 경우. `first(where:)`, `contains(where:)`, `compactMap`으로 거르기, `.count`를 조건에 쓰는 것도 같다
@@ -37,5 +37,5 @@ claude-review-plugin이 PR을 검토할 때 `AGENTS.md`와 함께 읽는 파일�
 아래는 CI가 이미 잡습니다. 코멘트하지 않습니다.
 
 - 컴파일러: 모듈 경계를 거스르는 import, strict concurrency, 없는 문자열 키, `@Action`의 `{필드}`와 `confirm:` 누락
-- `mise run test`: 액션의 CLI 명령과 테스트 누락(`folio actions --check`), 낡은 생성 CLI 명령(`folio-gen --check`), 화면 코드의 글꼴 크기, 색, 모서리, 4pt 격자를 벗어난 치수(`check-design`), `LocalFolders`를 거치지 않고 Application Support 경로를 얻는 코드(`check-local-folders`), 뷰의 `workspace.<메서드>(` 호출과 `some View` 멤버 안의 거르기, 정렬, 묶기, `app/`의 한글 문자열과 화면 문구 자리의 영어 문자열, 표준 구조 폴더 이름의 문자열, 패키지의 `import SwiftUI`, Domain과 Markdown의 디스크 접근, 이름만 되풀이하는 한 줄 주석(`check-code`)
+- `mise run test`: 액션의 CLI 명령과 테스트 누락(`folio actions --check`), 낡은 생성 CLI 명령(`folio-gen --check`), `check-code`: 화면 코드의 글꼴 크기, 색, 모서리, 4pt 격자를 벗어난 치수, `.courseAccent` 없이 넣은 과목 색, `LocalFolders`를 거치지 않고 Application Support 경로를 얻는 코드, 뷰의 `workspace.<메서드>(` 호출과 `some View` 멤버 안의 거르기, 정렬, 묶기, `app/`의 한글 문자열과 화면 문구 자리의 영어 문자열, 표준 구조 폴더 이름의 문자열, 패키지의 `import SwiftUI`, Domain과 Markdown의 디스크 접근, 이름만 되풀이하는 한 줄 주석
 - macOS 앱 빌드와 화면 모델 테스트, iPad 빌드
