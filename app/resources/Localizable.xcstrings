@@ -14158,6 +14158,17 @@
         }
       }
     },
+    "root.more": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "더 보기"
+          }
+        }
+      }
+    },
     "root.nav.codes": {
       "extractionState": "manual",
       "localizations": {
@@ -14165,6 +14176,17 @@
           "stringUnit": {
             "state": "translated",
             "value": "강의 코드"
+          }
+        }
+      }
+    },
+    "root.nav.courses": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "과목"
           }
         }
       }

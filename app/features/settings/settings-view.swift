@@ -233,7 +233,7 @@ private struct PaneLayoutSettings: View {
             Button(String(localized: .settingsPaneLayoutsDelete), role: .destructive) { model.delete(preset.id) }
         } label: {
             Image(systemName: "ellipsis").foregroundStyle(Theme.Palette.textSecondary)
-                .frame(width: Theme.Size.toolbarButton, height: Theme.Size.toolbarButton).contentShape(.rect)
+                .frame(width: Theme.Size.toolbarButton, height: Theme.Size.toolbarButton).contentShape(TouchTarget())
         }
         .menuStyle(.button).menuIndicator(.hidden).buttonStyle(.borderless).pointingHand().fixedSize()
         .help(Text(.settingsPaneLayoutsMore))

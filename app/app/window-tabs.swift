@@ -199,15 +199,18 @@ struct TabScreens: View {
     #if os(iOS)
     @Environment(\.openWindow) private var openWindow
     @Environment(\.supportsMultipleWindows) private var multipleWindows
+    @Environment(\.horizontalSizeClass) private var sizeClass
     #endif
 
-    /// "새 탭으로 옮기기" from a pane's menu: a tab of its own, its history with it. The iPad's tabs are its windows,
-    /// so there it goes to a window of its own, and nowhere where the system allows only one; a tab there would be one
-    /// with no bar to find it by.
+    /// "새 탭으로 옮기기" from a pane's menu: a tab of its own, its history with it. The iPhone's frame has no tab
+    /// strip, so there it goes to a window of its own, and nowhere where the system allows only one; a tab there would
+    /// be one with no bar to find it by.
     var newTab: ((Navigator, ColumnPrefs) -> Void)? {
+        let here: (Navigator, ColumnPrefs) -> Void = { [tabs] navigator, columns in tabs.open(navigator, columns: columns, fromLink: true) }
         #if os(macOS)
-        return { [tabs] navigator, columns in tabs.open(navigator, columns: columns, fromLink: true) }
+        return here
         #else
+        if sizeClass == .regular { return here }
         guard multipleWindows else { return nil }
         return { [openWindow] navigator, columns in
             var request = WindowRequest(link: navigator.current.link, course: navigator.current.course, history: navigator.history)
@@ -245,14 +248,11 @@ struct TabScreens: View {
             }
         }
         .onChange(of: tabs.alive) { _, alive in sizes.keep(alive) }
-        #if os(macOS)
         .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { tabs.contentFrame = $0 }
         .overlay { MergeMark(tabs: tabs) }
-        #endif
     }
 }
 
-#if os(macOS)
 /// Where a tab dragged onto the panes' edge would join them: the room its panes would take, in the accent, as the
 /// focused pane's ring is. Only the iPad lacks it, having no tabs to drag.
 private struct MergeMark: View {
@@ -275,14 +275,12 @@ private struct MergeMark: View {
         .animation(.snappy(duration: 0.2), value: drop)
     }
 }
-#endif
 
 extension EnvironmentValues {
     /// Where a screen says it is playing a recording, so its tab is kept and its pane marked behind the front one.
     @Entry var tabPlaying: @MainActor ((@MainActor () -> Void)?) -> Void = { _ in }
 }
 
-#if os(macOS)
 /// The tabs at each width they can take, as `TabBar` measures them. Not observed: nothing draws from them, they only
 /// feed `ToolbarRow`.
 @MainActor final class TabSizes {
@@ -308,7 +306,6 @@ extension EnvironmentValues {
 
     func keep(_ ids: Set<UUID>) { others = others.filter { ids.contains($0.key) } }
 }
-#endif
 
 /// The size each kept screen was last laid out at. Not observed: it changes every frame of a resize, which would redraw
 /// the stack each frame; it is read only when a screen goes behind.
@@ -387,7 +384,6 @@ extension Workspace {
     }
 }
 
-#if os(macOS)
 /// The window's tabs in its toolbar row: the tab in front is the breadcrumb of where its focused pane is, with a close
 /// button; a tab of several panes is one capsule with a segment for each (B2 in #62). The others are their icons and a
 /// short name, then icons alone, then a menu, as the row runs out (`TabFit`). A + at the end opens Today in a new tab.
@@ -422,6 +418,20 @@ struct TabBar: View {
     static let plusInk = inkWidth(of: plus, size: Theme.Glyph.toolbarSize)
 
     static func inkWidth(of symbol: String, size: CGFloat) -> CGFloat {
+        #if os(iOS)
+        // The symbol drawn into a bitmap of its own and the inked columns counted, as on the Mac.
+        guard let image = UIImage(systemName: symbol, withConfiguration: UIImage.SymbolConfiguration(pointSize: size, weight: .regular)),
+              let cg = image.cgImage else { return size }
+        let width = cg.width, height = cg.height
+        var pixels = [UInt8](repeating: 0, count: width * height * 4)
+        guard let context = CGContext(data: &pixels, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                                      space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+        else { return size }
+        context.draw(cg, in: CGRect(x: 0, y: 0, width: width, height: height))
+        let inked = (0..<width).filter { x in (0..<height).contains { pixels[($0 * width + x) * 4 + 3] > 127 } }
+        guard let first = inked.first, let last = inked.last else { return size }
+        return CGFloat(last + 1 - first) / image.scale
+        #else
         guard let image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?
             .withSymbolConfiguration(.init(pointSize: size, weight: .regular)) else { return size }
         let scale = 4
@@ -439,6 +449,7 @@ struct TabBar: View {
         }
         guard let first = inked.first, let last = inked.last else { return size }
         return CGFloat(last + 1 - first) / CGFloat(scale)
+        #endif
     }
 
     var body: some View {
@@ -468,7 +479,7 @@ struct TabBar: View {
                         tab(id, form: TabForm(fit)).fixedSize()
                     }
                 }
-                #if DEBUG || RESIZE_PROBE
+                #if os(macOS) && (DEBUG || RESIZE_PROBE)
                 .background { if id == row.first { ResizeMarker(name: "firstTab") } }
                 #endif
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { frames[id] = $0 }
@@ -486,7 +497,7 @@ struct TabBar: View {
                 .buttonStyle(.toolbar)
                 .help(Text(.tabsNewHelp))
                 .padding(.leading, placement.newTabSpacing - Self.gap)
-                #if DEBUG || RESIZE_PROBE
+                #if os(macOS) && (DEBUG || RESIZE_PROBE)
                 .background { ResizeMarker(name: "newTab") }
                 #endif
         }
@@ -1044,4 +1055,3 @@ private extension View {
             .overlay { Capsule().strokeBorder(Theme.Palette.text.opacity(Theme.Opacity.edge)) }
     }
 }
-#endif

@@ -27,13 +27,8 @@ struct PaneRow: View {
     @State private var inserts = PaneInserts()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    #if os(macOS)
     /// Between two panels: the same as between a panel and the window's edge.
     static let gap = Theme.Size.panelInset
-    #else
-    /// A rule between two panes of the split view's detail, which has no panels.
-    static let gap: CGFloat = 1
-    #endif
     static let space = "panes"
 
     /// Opens the tab's Claude with an item added to it; nil while no pane is in a course, where it has none.
@@ -605,19 +600,29 @@ private extension View {
     /// On the Mac each pane is a paper panel of its own on the frame, the focused one's edge a step stronger; the
     /// iPad's split view detail is the paper already.
     /// `ring`: the focused pane's hairline, when the tab has several.
-    @ViewBuilder func panePanel(ring: Color?) -> some View {
-        #if os(macOS)
-        let shape = RoundedRectangle(cornerRadius: Theme.Radius.floating)
-        background(Theme.Palette.page, in: shape)
+    /// A rounded panel on the frame, on the Mac and the iPad alike; the iPhone's screen is the page itself, edge to edge
+    /// (`barePanes`).
+    func panePanel(ring: Color?) -> some View { modifier(PanePanel(ring: ring)) }
+}
+
+private struct PanePanel: ViewModifier {
+    let ring: Color?
+    @Environment(\.barePanes) private var bare
+
+    func body(content: Content) -> some View {
+        let shape = RoundedRectangle(cornerRadius: bare ? 0 : Theme.Radius.floating)
+        content
+            .background(Theme.Palette.page, in: shape)
             .clipShape(shape)
-            .overlay { shape.strokeBorder(Theme.Palette.lineSoft) }
+            .overlay { if !bare { shape.strokeBorder(Theme.Palette.lineSoft) } }
             // A hairline in the accent says which pane the toolbar and the keys act on, without dimming the others.
             .overlay { if let ring { shape.strokeBorder(ring, lineWidth: 1) } }
-        #else
-        background(Theme.Palette.page)
-            .overlay { if let ring { Rectangle().strokeBorder(ring, lineWidth: 1) } }
-        #endif
     }
+}
+
+extension EnvironmentValues {
+    /// Panes drawn without their panel: the iPhone, whose screen is one page from edge to edge (#134).
+    @Entry var barePanes = false
 }
 
 #if os(macOS)

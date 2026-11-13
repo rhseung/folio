@@ -89,7 +89,8 @@ struct SearchPalette: View {
                 if !flat.isEmpty { footer }
             }
         }
-        .frame(width: 680)
+        // At most: on an iPhone or a narrow iPad window, the screen less its margins.
+        .frame(maxWidth: 680)
         // Opaque: the page behind must not read through the results. Rounder than other floating cards, and
         // concentric with the selected row inside it (radius minus the results' inset).
         .background(Theme.Palette.card, in: .rect(cornerRadius: Self.radius))
