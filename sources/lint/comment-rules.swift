@@ -107,3 +107,68 @@ extension SourceFile {
         return String(decoding: rest, as: UTF8.self)
     }
 }
+
+extension Rules {
+    static var docComment: Rule {
+        Rule(
+            name: "doc-comment", strict: true,
+            advice: "`///` is only for an @Action field's CLI help; drop the comment, or keep why the code must be this way as `//`"
+        ) { code in
+            var hits: [Hit] = []
+            for file in code.files(under: "sources", "tests") {
+                for token in file.tokens {
+                    for comment in docComments(around: token) where !(comment.leading && isActionField(token)) {
+                        hits.append(Hit("doc-comment", file, file.line(of: comment.position), comment.text))
+                    }
+                }
+            }
+            return hits
+        }
+    }
+
+    struct DocComment {
+        let text: String
+        let position: AbsolutePosition
+        let leading: Bool
+    }
+
+    static func docComments(around token: TokenSyntax) -> [DocComment] {
+        var found: [DocComment] = []
+        for leading in [true, false] {
+            var offset = leading ? token.position : token.endPositionBeforeTrailingTrivia
+            for piece in leading ? token.leadingTrivia.pieces : token.trailingTrivia.pieces {
+                if let text = piece.docText { found.append(DocComment(text: text, position: offset, leading: leading)) }
+                offset = offset.advanced(by: piece.sourceLength.utf8Length)
+            }
+        }
+        return found
+    }
+
+    // 매크로는 `@Action` 타입 바로 안에 선언한 stored property의 leading trivia를 읽는다.
+    static func isActionField(_ token: TokenSyntax) -> Bool {
+        guard let field = token.parent?.ancestorOrSelf(VariableDeclSyntax.self), field.firstToken(viewMode: .sourceAccurate) == token,
+            let group = field.parent?.parent?.parent?.parent?.asProtocol(DeclGroupSyntax.self)
+        else { return false }
+        return group.attributes.contains { $0.as(AttributeSyntax.self)?.attributeName.trimmedDescription == "Action" }
+    }
+}
+
+extension TriviaPiece {
+    var docText: String? {
+        switch self {
+        case .docLineComment(let text), .docBlockComment(let text): text
+        default: nil
+        }
+    }
+}
+
+extension Syntax {
+    func ancestorOrSelf<Node: SyntaxProtocol>(_ type: Node.Type) -> Node? {
+        var current: Syntax? = self
+        while let node = current {
+            if let found = node.as(type) { return found }
+            current = node.parent
+        }
+        return nil
+    }
+}

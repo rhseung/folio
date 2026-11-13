@@ -178,6 +178,49 @@ private let view = "sources/app/features/demo/demo-view.swift"
     }
 }
 
+@Suite struct DocCommentTests {
+    @Test func onlyActionFieldsKeepDocComments() {
+        let source = """
+            /// Adds a note.
+            @Action("note add", "노트 만들기", done: "{title}")
+            struct AddNote {
+                /// The note's title.
+                @Arg var title: String
+                /// Where it goes.
+                var folder: String?
+                // A plain comment stays.
+                var hidden: Bool
+                /** A block. */
+                func perform() {}
+                struct Inner {
+                    /// Not a field of the action.
+                    var name: String
+                }
+            }
+            struct Plain {
+                /// Due today.
+                var due: Date
+                var name: String /// trailing
+            }
+            """
+        #expect(
+            found(["sources/actions/note.swift": source], "doc-comment") == [
+                "/** A block. */", "/// Adds a note.", "/// Due today.", "/// Not a field of the action.", "/// trailing",
+            ])
+    }
+
+    @Test func codeInStringsIsNotAComment() {
+        let source = "let example = \"/// a doc comment\"\nlet block = \"\"\"\n    /// inside\n    \"\"\"\n"
+        #expect(found(["tests/unit/macros/action-tests.swift": source], "doc-comment").isEmpty)
+    }
+
+    @Test func linesPointAtTheComment() {
+        let code = Codebase(files: ["sources/app/a.swift": "let a = 1\n\n/// Two.\n/// Lines.\nlet b = 2"])
+        let lines = Rules.all.filter { $0.name == "doc-comment" }.flatMap { $0.hits(in: code) }.map(\.line)
+        #expect(lines == [3, 4])
+    }
+}
+
 @Suite struct BaselineTests {
     @Test func newPlacesAndGonePlaces() {
         let code = Codebase(files: ["sources/app/features/demo/demo.swift": "let a = \"가\"\nlet b = \"가\"\nlet c = \"나\""])

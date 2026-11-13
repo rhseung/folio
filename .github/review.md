@@ -29,7 +29,7 @@ claude-review-plugin이 PR을 검토할 때 `AGENTS.md`와 함께 읽는 파일�
 - **의존성.** Swift Package Manager가 아닌 방법으로 넣은 의존성. 잘 관리되는 라이브러리가 있는데 직접 구현했고 그 이유를 주석에 남기지 않은 경우
 - **패치 노트.** 사용자에게 보이는 변화가 있는데 PR 본문에 `## 패치 노트` 절이 없거나, 줄이 `- feat: …`, `- fix: …`, `- change: …` 꼴이 아니거나(종류는 영어 그대로), 링크가 앱의 자리나 설정 탭이 아닌 경우(AGENTS.md "PR 전 점검"). `fix`를 `feat`로 적으면 업데이트 뒤 시트가 뜨니 종류도 본다
 - **이슈.** 관련 이슈에 없는 기능을 더했거나 이슈와 다르게 구현한 경우. 맞는 구조 축(AGENTS.md "구조 축")이 있는데 화면마다 따로 구현한 경우
-- **주석.** 코드가 이미 말하는 내용을 되풀이하는 주석, 이름을 풀어 쓴 설명형 문서 주석, 지난 동작이나 바꾼 이력을 적은 주석, 주석으로 막아 둔 코드. 주석은 왜 이 방식이어야 하는지, 다르게 짜면 무엇이 깨지는지를 적는다. `check-code`는 한 줄 주석의 낱말이 아래 선언 이름에 다 들어 있는 경우만 잡는다. `@Action` 필드의 `///` 주석은 CLI 도움말이라 예외다
+- **주석.** 코드가 이미 말하는 내용을 되풀이하는 주석, 이름을 풀어 쓴 설명형 문서 주석, 지난 동작이나 바꾼 이력을 적은 주석, 주석으로 막아 둔 코드. 주석은 정말 필요한 것(다르게 짜면 깨지는 이유, 바깥 제약, 숫자의 근거)만 `//`로, 한국어로 적는다(AGENTS.md "이름과 주석"). `check-code`는 `@Action` 필드 밖의 `///`와 한 줄 주석의 낱말이 아래 선언 이름에 다 들어 있는 경우를 잡는다. `@Action` 필드의 `///`는 CLI 도움말이라 데이터다
 - 로직 오류, 빠진 경계 사례, 함께 바뀌지 않은 호출부와 문서, 구현이 하나뿐인 프로토콜이나 전달만 하는 래퍼
 
 ## 보지 않을 것
@@ -37,5 +37,5 @@ claude-review-plugin이 PR을 검토할 때 `AGENTS.md`와 함께 읽는 파일�
 아래는 CI가 이미 잡습니다. 코멘트하지 않습니다.
 
 - 컴파일러: 모듈 경계를 거스르는 import, strict concurrency, 없는 문자열 키, `@Action`의 `{필드}`와 `confirm:` 누락
-- `mise run test`: 액션의 CLI 명령과 테스트 누락(`folio actions --check`), 낡은 생성 CLI 명령(`folio-gen --check`), `check-code`: 화면 코드의 글꼴 크기, 색, 모서리, 4pt 격자를 벗어난 치수, `.courseAccent` 없이 넣은 과목 색, `LocalFolders`를 거치지 않고 Application Support 경로를 얻는 코드, 뷰의 `workspace.<메서드>(` 호출과 `some View` 멤버 안의 거르기, 정렬, 묶기, `sources/app`의 한글 문자열과 화면 문구 자리의 영어 문자열, 표준 구조 폴더 이름의 문자열, 패키지의 `import SwiftUI`, Domain과 Markdown의 디스크 접근, 이름만 되풀이하는 한 줄 주석, `app/design`·`app/platform`이 쓰는 기능 타입과 다른 기능의 Model, `AppLink.Kind` `switch`의 `default:`, 분 단위 `TimelineView`, 화면의 `.toolbar`, 실행 설정 밖의 환경 변수 읽기, 케밥 케이스가 아닌 이름, 20개 넘는 폴더. SwiftLint(`.swiftlint.yml`): 강제 언래핑, 이미지의 접근성 라벨, `first(where:)`·`isEmpty` 같은 컬렉션 관용구, 긴 함수와 타입
+- `mise run test`: 액션의 CLI 명령과 테스트 누락(`folio actions --check`), 낡은 생성 CLI 명령(`folio-gen --check`), `check-code`: 화면 코드의 글꼴 크기, 색, 모서리, 4pt 격자를 벗어난 치수, `.courseAccent` 없이 넣은 과목 색, `LocalFolders`를 거치지 않고 Application Support 경로를 얻는 코드, 뷰의 `workspace.<메서드>(` 호출과 `some View` 멤버 안의 거르기, 정렬, 묶기, `sources/app`의 한글 문자열과 화면 문구 자리의 영어 문자열, 표준 구조 폴더 이름의 문자열, 패키지의 `import SwiftUI`, Domain과 Markdown의 디스크 접근, `@Action` 필드 밖의 `///`, 이름만 되풀이하는 한 줄 주석, `app/design`·`app/platform`이 쓰는 기능 타입과 다른 기능의 Model, `AppLink.Kind` `switch`의 `default:`, 분 단위 `TimelineView`, 화면의 `.toolbar`, 실행 설정 밖의 환경 변수 읽기, 케밥 케이스가 아닌 이름, 20개 넘는 폴더. SwiftLint(`.swiftlint.yml`): 강제 언래핑, 이미지의 접근성 라벨, `first(where:)`·`isEmpty` 같은 컬렉션 관용구, 긴 함수와 타입
 - macOS 앱 빌드와 화면 모델 테스트, iPad 빌드

@@ -41,7 +41,7 @@ public struct Rule {
 public enum Rules {
     public static var all: [Rule] {
         [
-            viewWorkspaceCall, viewBodyLogic, uiString, layoutName, layer, restatingComment, designValue, designGrid,
+            viewWorkspaceCall, viewBodyLogic, uiString, layoutName, layer, restatingComment, docComment, designValue, designGrid,
             courseAccent, localFolders, appDirection, kindDefault, minuteTimeline, screenToolbar, launchEnvironment,
             kebabNames, folderSize,
         ]
