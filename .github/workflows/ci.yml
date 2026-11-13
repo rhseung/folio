@@ -54,7 +54,7 @@ jobs:
           build_ipad="$none|^app-tests/|$checks|^\.claude/|^app/resources/web/"
           test_app="$none|$checks|^\.claude/"
           # FolioPadTests compiles app-tests/ipad only.
-          test_ipad="$none|$checks|^\.claude/|^app-tests/[^/]+$|^app-tests/(references|fixtures)/"
+          test_ipad="$none|$checks|^\.claude/|^app-tests/[^/]+$|^app-tests/(support|note-view|window|screens|models|references|fixtures)/"
           needs() { if grep -qvE "$1" <<< "$files"; then echo true; else echo false; fi; }
           # test reads app/ and app-tests/ only for their Swift files (folio-lint, SwiftLint and the action checks), which a
           # pattern can't say without lookahead.
@@ -246,7 +246,7 @@ jobs:
             Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
             ~/Library/Caches/org.swift.swiftpm/manifests
           key: ${{ steps.cache.outputs.cache-primary-key }}
-      # Sheets of pictures a test lays out for a PR (app-tests/note-render.swift), passing or not; not references.
+      # Sheets of pictures a test lays out for a PR (app-tests/support/note-render.swift), passing or not; not references.
       # NoteSourceTests lays them out, in the rest half; two uploads under one name would fail.
       - if: ${{ !cancelled() && env.RUN == 'true' && matrix.task == 'test-app-rest' }}
         uses: actions/upload-artifact@v7

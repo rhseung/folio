@@ -8,7 +8,7 @@ extension Rules {
     static var localFolders: Rule {
         Rule(name: "local-folders", strict: true,
              advice: "reach Application Support through LocalFolders.applicationSupport; packages don't use it") { code in
-            let exempt: Set = ["app/app/local-folders.swift", "app-tests/local-folders-tests.swift"]
+            let exempt: Set = ["app/app/services/local-folders.swift", "app-tests/support/local-folders-tests.swift"]
             var hits: [Hit] = []
             // This package names the paths it looks for.
             for file in code.files(under: "app", "app-tests", "packages")

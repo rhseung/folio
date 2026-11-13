@@ -95,7 +95,7 @@ import WebKit
     // MARK: Notes
 
     static func fixture(_ name: String) -> String {
-        let url = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "fixtures/\(name).md")
+        let url = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(path: "fixtures/\(name).md")
         return Frontmatter.split((try? String(contentsOf: url, encoding: .utf8)) ?? "").body
     }
 
@@ -105,7 +105,7 @@ import WebKit
 
     /// A course's `Notes` folder holding the fixtures' pictures and the widgets the notes name, so they're drawn.
     static let notes: URL = {
-        let fixtures = URL(filePath: #filePath).deletingLastPathComponent().appending(path: "fixtures")
+        let fixtures = URL(filePath: #filePath).deletingLastPathComponent().deletingLastPathComponent().appending(path: "fixtures")
         let notes = FileManager.default.temporaryDirectory.appending(path: "note-bench-\(UUID().uuidString)")
             .appending(path: "EC4207 그래프 이론").appending(path: CourseFolder.notes.rawValue)
         let assets = notes.appending(path: "assets")

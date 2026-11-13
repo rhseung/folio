@@ -18,31 +18,21 @@ app-direction	app/platform/note-preview.swift	NoteEmbedSource from features/cour
 app-direction	app/platform/note-preview.swift	NoteEmbedSource from features/course
 app-direction	app/platform/note-text/source-view.swift	NoteEmbedSource from features/course
 app-direction	app/platform/note-text/source-view.swift	NoteEmbedSource from features/course
-folder-size	app-tests	more than 20 files
-folder-size	app/app	more than 20 files
-folder-size	app/design	more than 20 files
-folder-size	app/features/course	more than 20 files
-folder-size	packages/folio-core/sources/folio-cli/commands	more than 20 files
-folder-size	packages/folio-core/sources/folio-domain/course	more than 20 files
-folder-size	packages/folio-core/sources/folio-domain/shared	more than 20 files
-folder-size	packages/folio-core/sources/folio-storage	more than 20 files
-folder-size	packages/folio-core/tests/folio-domain-tests	more than 20 files
-folder-size	packages/folio-core/tests/folio-storage-tests	more than 20 files
-launch-environment	app/app/pane-memory-store.swift	ProcessInfo.processInfo.environment
-launch-environment	app/app/workspace-services.swift	ProcessInfo.processInfo.environment
+launch-environment	app/app/window/pane-memory-store.swift	ProcessInfo.processInfo.environment
+launch-environment	app/app/workspace/workspace-services.swift	ProcessInfo.processInfo.environment
 launch-environment	packages/folio-core/sources/folio-cli/core/output.swift	ProcessInfo.processInfo.environment
 launch-environment	packages/folio-core/sources/folio-cli/core/output.swift	ProcessInfo.processInfo.environment
 launch-environment	packages/folio-core/sources/folio-cli/core/resolve.swift	ProcessInfo.processInfo.environment
 launch-environment	packages/folio-core/sources/folio-cli/core/resolve.swift	ProcessInfo.processInfo.environment
-layer	app/features/course/assignment-menu.swift	FileManager in a screen
-layer	app/features/course/text-file-model.swift	FileManager in a screen
-layout-name	app/app/workspace.swift	"catalog.json"
-layout-name	app/app/workspace.swift	"settings.json"
-layout-name	app/app/workspace.swift	"transcript.json"
+layer	app/features/course/materials/text-file-model.swift	FileManager in a screen
+layer	app/features/course/work/assignment-menu.swift	FileManager in a screen
+layout-name	app/app/workspace/workspace.swift	"catalog.json"
+layout-name	app/app/workspace/workspace.swift	"settings.json"
+layout-name	app/app/workspace/workspace.swift	"transcript.json"
 minute-timeline	app/features/today/today-view.swift	TimelineView(.periodic)
 screen-toolbar	app/features/review/review-view.swift	.toolbar
 screen-toolbar	app/features/semester/semester-view.swift	.toolbar
-ui-string	app/features/course/suggested-session.swift	"오후 12:00"
+ui-string	app/features/course/sessions/suggested-session.swift	"오후 12:00"
 ui-string	app/features/grades/grades-model.swift	"학기"
 ui-string	app/features/quiz/quiz-cards-model.swift	"노트 "
 view-body-logic	app/features/course/course-sections.swift	body: .sorted
@@ -63,16 +53,16 @@ view-workspace-call	app/features/claude/window-claude.swift	workspace.accent(
 view-workspace-call	app/features/claude/window-claude.swift	workspace.course(
 view-workspace-call	app/features/claude/window-claude.swift	workspace.course(
 view-workspace-call	app/features/claude/window-claude.swift	workspace.paneMark(
-view-workspace-call	app/features/course/assignment-menu.swift	workspace.course(
-view-workspace-call	app/features/course/class-card.swift	workspace.isStudyToday(
 view-workspace-call	app/features/course/course-sections.swift	workspace.accent(
-view-workspace-call	app/features/course/exam-menu.swift	workspace.course(
-view-workspace-call	app/features/course/material-menu.swift	workspace.course(
-view-workspace-call	app/features/course/session-menu.swift	workspace.course(
-view-workspace-call	app/features/course/suggested-session.swift	workspace.course(
-view-workspace-call	app/features/course/suggested-session.swift	workspace.isStudyToday(
-view-workspace-call	app/features/course/unit-menu.swift	workspace.course(
-view-workspace-call	app/features/course/units-view.swift	workspace.course(
+view-workspace-call	app/features/course/materials/material-menu.swift	workspace.course(
+view-workspace-call	app/features/course/sessions/class-card.swift	workspace.isStudyToday(
+view-workspace-call	app/features/course/sessions/session-menu.swift	workspace.course(
+view-workspace-call	app/features/course/sessions/suggested-session.swift	workspace.course(
+view-workspace-call	app/features/course/sessions/suggested-session.swift	workspace.isStudyToday(
+view-workspace-call	app/features/course/units/unit-menu.swift	workspace.course(
+view-workspace-call	app/features/course/units/units-view.swift	workspace.course(
+view-workspace-call	app/features/course/work/assignment-menu.swift	workspace.course(
+view-workspace-call	app/features/course/work/exam-menu.swift	workspace.course(
 view-workspace-call	app/features/quiz/quiz-view.swift	workspace.course(
 view-workspace-call	app/features/review/review-view.swift	workspace.accent(
 view-workspace-call	app/features/search/search-palette.swift	workspace.accent(

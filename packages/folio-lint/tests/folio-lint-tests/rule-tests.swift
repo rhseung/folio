@@ -251,7 +251,7 @@ private let view = "app/features/demo/demo-view.swift"
             "app/features/demo/demo-model.swift": "let folder = URL.applicationSupportDirectory",
             "app-tests/demo-tests.swift": "let folder = home + \"/Library/Application Support/Folio\"",
             "packages/folio-ai/sources/folio-ai/cache.swift": "let paths = NSSearchPathForDirectoriesInDomains(.a, .b, true)",
-            "app/app/local-folders.swift": "let folder = URL.applicationSupportDirectory",
+            "app/app/services/local-folders.swift": "let folder = URL.applicationSupportDirectory",
             "app/features/demo/demo-note.swift": "// not URL.applicationSupportDirectory",
         ]
         #expect(found(files, "local-folders") == [
@@ -326,8 +326,8 @@ private let view = "app/features/demo/demo-view.swift"
         let read = "let env = ProcessInfo.processInfo.environment"
         let files = [
             "app/platform/pdf-view.swift": read,
-            "app/app/workspace.swift": read,
-            "app/app/debug-snapshots.swift": read,
+            "app/app/workspace/workspace.swift": read,
+            "app/app/debug/debug-snapshots.swift": read,
             "app-tests/render-tests.swift": read,
             "packages/folio-core/tests/folio-cli-tests/env.swift": read,
             "app/features/demo/demo-model.swift": "#if DEBUG\n\(read)\n#endif",
