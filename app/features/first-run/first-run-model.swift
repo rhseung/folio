@@ -208,6 +208,8 @@ final class FirstRunModel {
         chosenSemester.flatMap { id in semesters.first { $0.id == id } } ?? workspace.currentSemester ?? semesters.first
     }
 
+    func accent(_ id: UUID) -> CourseAccent { workspace.accent(id) }
+
     struct CourseLine: Identifiable {
         let id: UUID
         let title: String

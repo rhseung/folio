@@ -285,6 +285,7 @@ extension SettingsTab {
         case .review: String(localized: .settingsTabReview)
         case .notifications: String(localized: .settingsTabNotifications)
         case .claude: "Claude"
+        case .lms: "LMS"
         case .backup: String(localized: .settingsTabBackup)
         case .about: String(localized: .settingsTabAbout)
         }
@@ -299,6 +300,7 @@ extension SettingsTab {
         case .review: .review
         case .notifications: .notifications
         case .claude: .claude
+        case .lms: .lms
         case .backup: .backup
         case .about: .about
         }
@@ -313,13 +315,14 @@ extension SettingsTab {
         case .review: .review
         case .notifications: .notifications
         case .claude: .claude
+        case .lms: .lms
         case .backup: .backup
         case .about: .about
         }
     }
 
     /// Tabs were stored by their Korean names before #416; a tab picked then still opens, or the one that took it over.
-    static let formerNames: [String: SettingsTab] = [
+    static let formerNames: [String: SettingsTab] = [ // strings: data, read back from settings
         "내 정보": .record, "평어": .record, "녹음": .classes, "일반": .general, "알림": .notifications, "백업": .backup,
         "노트": .notes, "Claude": .claude, "앱 정보": .about,
     ]

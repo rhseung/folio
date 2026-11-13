@@ -8,6 +8,9 @@ FOLIO_DERIVED_DATA = "{{config_root}}/.build/DerivedData"
 
 [tools]
 xcodegen = "2.46.0"
+swiftlint = "0.65.1"
+lefthook = "2.2.2"
+periphery = "3.8.0"
 
 [tasks.generate]
 description = "Generate Folio.xcodeproj from project.yml, with the version and build number"
@@ -32,7 +35,7 @@ description = "Tag origin/main as v<version> and push the tag, which drafts its 
 run = "scripts/version.sh tag"
 
 [tasks.test]
-description = "Run package tests, the design token check and the Application Support check"
+description = "Run package tests, folio-lint (code, design and Application Support rules) and SwiftLint"
 depends = ["tectonic"]
 # fixtures and expectations are in Korean time, and Apple's date detector reads phrases like 내일 7시 in the
 # machine's zone, not the test calendar's; a UTC machine (CI) would fail them.
@@ -46,17 +49,52 @@ run = [
   "swift test --package-path packages/folio-ai",
   "swift run --skip-build -q --package-path packages/folio-core folio actions --check",
   "swift run --skip-build -q --package-path packages/folio-core folio-gen --check",
-  "scripts/check-design.sh",
-  "scripts/check-local-folders.sh",
+  # Release: debug swift-syntax takes some 20 seconds to parse the codebase, release two.
+  "swift build -q -c release --build-tests --package-path packages/folio-lint",
+  "swift test -c release --skip-build --package-path packages/folio-lint",
+  "swift run -q -c release --skip-build --package-path packages/folio-lint folio-lint",
+  "swiftlint lint --quiet --strict --baseline .swiftlint-baseline.json",
 ]
 
-[tasks.check-design]
-description = "Fail on type sizes, colors or radii in screens that skip Theme"
-run = "scripts/check-design.sh"
+[tasks.check-code]
+description = "Fail on the screen, string, layer, comment, design and Application Support rules a syntax tree can see, past the places in packages/folio-lint/baseline.txt; -- --update rewrites it"
+# Built with its tests, as in `test`, so the two tasks share one build.
+run = [
+  "swift build -q -c release --build-tests --package-path packages/folio-lint",
+  "swift run -q -c release --skip-build --package-path packages/folio-lint folio-lint",
+]
 
-[tasks.check-local-folders]
-description = "Fail on Application Support paths the app takes without LocalFolders"
-run = "scripts/check-local-folders.sh"
+[tasks.swiftlint]
+description = "Run SwiftLint (.swiftlint.yml) past the places in .swiftlint-baseline.json"
+run = "swiftlint lint --quiet --strict --baseline .swiftlint-baseline.json"
+
+[tasks.swiftlint-baseline]
+description = "Rewrite .swiftlint-baseline.json from what SwiftLint finds now: only to drop fixed places or follow moved ones"
+# SwiftLint exits non-zero when it finds anything, which is what a baseline is written from.
+run = "swiftlint lint --quiet --write-baseline .swiftlint-baseline.json > /dev/null || true"
+
+[tasks.lint]
+description = "Run folio-lint and SwiftLint"
+depends = ["check-code", "swiftlint"]
+
+[tasks.analyze]
+description = "Run SwiftLint's analyzer rules (unused imports and declarations) on a clean Mac build's compiler log"
+depends = ["generate"]
+# The analyzer reads the compiler's command for each file, so an incremental build would leave unchanged files out.
+run = [
+  "mkdir -p .build",
+  "xcodebuild -scheme Folio -destination 'platform=macOS' clean build -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation > .build/xcodebuild.log",
+  "swiftlint analyze --quiet --compiler-log-path .build/xcodebuild.log",
+]
+
+[tasks.periphery]
+description = "List code nothing uses, from a Mac build (.periphery.yml)"
+depends = ["generate"]
+run = "periphery scan --quiet"
+
+[tasks.hooks]
+description = "Install the git hooks in lefthook.yml (SwiftLint and folio-lint before each commit)"
+run = "lefthook install"
 
 [tasks.gen-cli]
 description = "Write the CLI commands of the actions declared with @Action (sources/folio-cli/generated)"

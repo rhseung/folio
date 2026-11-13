@@ -337,7 +337,7 @@ struct FirstRunView: View {
                         }
                         ForEach(model.courses) { course in
                             CardRow {
-                                CourseDot(color: model.workspace.accent(course.id).color).frame(width: Theme.Size.tile)
+                                CourseDot(color: model.accent(course.id).color).frame(width: Theme.Size.tile)
                                 Text(course.title).font(Theme.Typeface.bodyStrong).lineLimit(1)
                                 Spacer(minLength: Theme.Space.s)
                                 Text(course.days).foregroundStyle(Theme.Palette.textSecondary)
