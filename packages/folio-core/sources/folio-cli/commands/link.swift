@@ -32,7 +32,7 @@ struct LinkTarget: ParsableArguments {
         // No default: one sent every kind it didn't name to the note lookup, which then printed a link of the new kind
         // carrying a note's ID.
         switch kind {
-        case .today, .grades, .requirements, .people, .codes, .whatsNew:
+        case .today, .grades, .requirements, .people, .codes, .whatsNew, .proposals:
             return done(.place(kind), title: kind.rawValue)
         case .settings:
             return done(.settings(try page(AppLink.SettingsPage.self)), title: section ?? kind.rawValue)

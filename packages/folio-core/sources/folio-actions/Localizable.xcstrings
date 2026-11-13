@@ -1628,6 +1628,61 @@
           }
         }
       }
+    },
+    "error.lms.no-classrooms": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "강의실 번호를 하나 이상 주세요"
+          }
+        }
+      }
+    },
+    "error.lms.key": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "LMS 항목이 아닙니다: %@. assignment:139941, file:139109, notice:23464 꼴로 씁니다"
+          }
+        }
+      }
+    },
+    "error.lms.no-keys": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "처리할 LMS 항목을 하나 이상 주세요"
+          }
+        }
+      }
+    },
+    "error.lms.assignment-added": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이 LMS 과제는 이미 과제 '%@'(으)로 들어 있습니다"
+          }
+        }
+      }
+    },
+    "error.lms.file-missing": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%@: 받은 파일이 없습니다. LMS 뷰어에서만 볼 수 있는 자료는 LMS에서 열거나 무시합니다"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

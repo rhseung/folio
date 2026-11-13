@@ -7634,6 +7634,17 @@
           }
         }
       }
+    },
+    "lms.abstract": {
+      "extractionState": "manual",
+      "localizations": {
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GIST LMS 제안함의 본 강의실과 숨긴 항목"
+          }
+        }
+      }
     }
   },
   "version": "1.0"

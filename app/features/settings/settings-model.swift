@@ -285,6 +285,7 @@ extension SettingsTab {
         case .review: String(localized: .settingsTabReview)
         case .notifications: String(localized: .settingsTabNotifications)
         case .claude: "Claude"
+        case .lms: "LMS"
         case .backup: String(localized: .settingsTabBackup)
         case .about: String(localized: .settingsTabAbout)
         }
@@ -299,6 +300,7 @@ extension SettingsTab {
         case .review: .review
         case .notifications: .notifications
         case .claude: .claude
+        case .lms: .lms
         case .backup: .backup
         case .about: .about
         }
@@ -313,6 +315,7 @@ extension SettingsTab {
         case .review: .review
         case .notifications: .notifications
         case .claude: .claude
+        case .lms: .lms
         case .backup: .backup
         case .about: .about
         }
