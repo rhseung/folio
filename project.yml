@@ -102,6 +102,25 @@ targets:
         # XcodeGen points a multiplatform app's host at the iOS layout; the Mac app keeps its binary in Contents/MacOS.
         TEST_HOST: $(BUILT_PRODUCTS_DIR)/Folio.app/Contents/MacOS/Folio
         BUNDLE_LOADER: $(TEST_HOST)
+  # The accessibility audit of the main screens (#471, mise run test-a11y). A UI test drives the app from a runner
+  # process of its own, so it links the fixtures it writes the app's folder with; nothing loads them twice.
+  FolioUITests:
+    type: bundle.ui-testing
+    supportedDestinations: [macOS]
+    sources: [app-ui-tests]
+    dependencies:
+      - target: Folio
+      - package: FolioCore
+        product: FolioFixtures
+      - package: FolioCore
+        product: FolioStorage
+      - package: FolioCore
+        product: FolioDomain
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        CODE_SIGN_IDENTITY: "-"
+        TEST_TARGET_NAME: Folio
   # Hangul typed into the iPad's edit view, run inside the app on an iPad simulator (mise run test-ipad). The Mac's
   # note-view checks are in FolioTests, which builds these files to nothing (#if os(iOS)).
   FolioPadTests:
@@ -125,3 +144,12 @@ schemes:
         FolioPadTests: [test]
     test:
       targets: [FolioPadTests]
+  # Its own scheme, apart from Folio's: a UI test takes the screen and keyboard, so ⌘U and mise run test-app must not
+  # start it on a Mac someone is using. CI runs it.
+  FolioUITests:
+    build:
+      targets:
+        Folio: all
+        FolioUITests: [test]
+    test:
+      targets: [FolioUITests]

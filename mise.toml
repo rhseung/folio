@@ -164,6 +164,21 @@ fi
 exit "$status"
 """
 
+[tasks.test-a11y]
+description = "Audit the main screens with performAccessibilityAudit: UI tests that take the screen and keyboard, so CI runs them"
+depends = ["generate"]
+# The summary is printed whether the run passed or not: each finding is a failure message there, and a passing run
+# shows that the screens were visited.
+run = """
+rm -rf .build/test-a11y.xcresult
+status=0
+xcodebuild -scheme FolioUITests -destination 'platform=macOS' -resultBundlePath .build/test-a11y.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation -testLanguage ko -testRegion KR $FOLIO_XCODEBUILD_FLAGS || status=$?
+if [ -d .build/test-a11y.xcresult ]; then
+  xcrun xcresulttool get test-results summary --path .build/test-a11y.xcresult --compact
+fi
+exit "$status"
+"""
+
 [tasks.test-ipad]
 description = "Run the iPad tests (Hangul in the edit view) on the first available iPad simulator"
 depends = ["generate"]
