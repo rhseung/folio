@@ -501,7 +501,7 @@ private struct ClaudeSettings: View {
                 } else {
                     FormRow(label: String(localized: .settingsApiKey),
                             detail: model.keyMissing(subscription: subscription) ? String(localized: .settingsApiKeyMissing) : nil, warns: true, last: true) {
-                        SecureField("sk-ant-…", text: $model.apiKey).pill(width: 180).onSubmit(model.saveKey)
+                        SecureField("sk-ant-…", text: $model.apiKey).pill(width: 180).onSubmit(model.saveKey) // strings: data, the key's form
                         Button(.commonSave, action: model.saveKey).disabled(model.apiKey.isEmpty)
                     }
                 }

@@ -1,0 +1,64 @@
+# Places that broke a rule of scripts/check-code.py before the check existed. Fix one and delete its line.
+# check	file	what
+layer	app/features/course/assignment-menu.swift	FileManager in a screen
+layer	app/features/course/text-file-model.swift	FileManager in a screen
+layout-name	app/app/workspace.swift	"catalog.json"
+layout-name	app/app/workspace.swift	"settings.json"
+layout-name	app/app/workspace.swift	"transcript.json"
+ui-string	app/features/course/suggested-session.swift	"오후 12:00"
+ui-string	app/features/grades/grades-model.swift	"학기"
+ui-string	app/features/quiz/quiz-cards-model.swift	"노트 "
+view-body-logic	app/features/course/course-sections.swift	body: .sorted
+view-body-logic	app/features/course/course-view.swift	body: .reduce
+view-body-logic	app/features/course/course-view.swift	body: .sorted
+view-body-logic	app/features/course/notes-view.swift	body: .filter
+view-body-logic	app/features/course/notes-view.swift	body: .filter
+view-body-logic	app/features/grades/grades-view.swift	trend: .filter
+view-body-logic	app/features/grades/grades-view.swift	trend: .filter
+view-body-logic	app/features/grades/grades-view.swift	trend: .filter
+view-body-logic	app/features/grades/requirements.swift	groupCard: .filter
+view-body-logic	app/features/semester/semester-view.swift	body: .filter
+view-body-logic	app/features/settings/settings-view.swift	body: .filter
+view-body-logic	app/features/today/study-time-block.swift	totals: .filter
+view-workspace-call	app/features/catalog/codes-view.swift	workspace.accent(
+view-workspace-call	app/features/catalog/codes-view.swift	workspace.semester(
+view-workspace-call	app/features/catalog/people-view.swift	workspace.mailURL(
+view-workspace-call	app/features/catalog/people-view.swift	workspace.mailURL(
+view-workspace-call	app/features/claude/window-claude.swift	workspace.accent(
+view-workspace-call	app/features/claude/window-claude.swift	workspace.course(
+view-workspace-call	app/features/claude/window-claude.swift	workspace.course(
+view-workspace-call	app/features/claude/window-claude.swift	workspace.paneMark(
+view-workspace-call	app/features/course/assignment-menu.swift	workspace.course(
+view-workspace-call	app/features/course/class-card.swift	workspace.isStudyToday(
+view-workspace-call	app/features/course/course-sections.swift	workspace.accent(
+view-workspace-call	app/features/course/exam-menu.swift	workspace.course(
+view-workspace-call	app/features/course/material-menu.swift	workspace.course(
+view-workspace-call	app/features/course/session-menu.swift	workspace.course(
+view-workspace-call	app/features/course/suggested-session.swift	workspace.course(
+view-workspace-call	app/features/course/suggested-session.swift	workspace.isStudyToday(
+view-workspace-call	app/features/course/unit-menu.swift	workspace.course(
+view-workspace-call	app/features/course/units-view.swift	workspace.course(
+view-workspace-call	app/features/quiz/quiz-view.swift	workspace.course(
+view-workspace-call	app/features/review/review-view.swift	workspace.accent(
+view-workspace-call	app/features/search/search-palette.swift	workspace.accent(
+view-workspace-call	app/features/search/search-palette.swift	workspace.course(
+view-workspace-call	app/features/search/search-palette.swift	workspace.course(
+view-workspace-call	app/features/semester/semester-view.swift	workspace.accent(
+view-workspace-call	app/features/semester/semester-view.swift	workspace.accent(
+view-workspace-call	app/features/semester/semester-view.swift	workspace.days(
+view-workspace-call	app/features/settings/catalog-editor.swift	workspace.saveCatalog(
+view-workspace-call	app/features/settings/catalog-editor.swift	workspace.saveCatalog(
+view-workspace-call	app/features/settings/settings-view.swift	workspace.open(
+view-workspace-call	app/features/today/exam-plan-today-block.swift	workspace.accent(
+view-workspace-call	app/features/today/study-time-block.swift	workspace.accent(
+view-workspace-call	app/features/today/study-time-block.swift	workspace.accent(
+view-workspace-call	app/features/today/study-time-block.swift	workspace.accent(
+view-workspace-call	app/features/today/today-header.swift	workspace.accent(
+view-workspace-call	app/features/today/today-ribbon.swift	workspace.accent(
+view-workspace-call	app/features/today/today-ribbon.swift	workspace.accent(
+view-workspace-call	app/features/today/today-ribbon.swift	workspace.accent(
+view-workspace-call	app/features/today/today-view.swift	workspace.accent(
+view-workspace-call	app/features/today/today-view.swift	workspace.accent(
+view-workspace-call	app/features/today/today-view.swift	workspace.accent(
+view-workspace-call	app/features/today/today-wash.swift	workspace.accent(
+view-workspace-call	app/features/today/today-wash.swift	workspace.accent(

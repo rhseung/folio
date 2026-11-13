@@ -153,7 +153,7 @@ actor WhisperTranscriber {
         return fillers.contains(bare)
     }
 
-    private static let fillers: Set<String> = [
+    private static let fillers: Set<String> = [ // strings: data, matched against transcripts
         "감사합니다", "시청해주셔서감사합니다", "시청해주셔서고맙습니다", "구독과좋아요부탁드립니다", "구독과좋아요알림설정부탁드립니다",
         "thankyou", "thanksforwatching", "thankyouforwatching", "pleasesubscribe",
     ]

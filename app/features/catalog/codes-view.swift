@@ -131,7 +131,7 @@ struct CodeEditor: View {
             }
             Grid(alignment: .leading, horizontalSpacing: Theme.Space.m, verticalSpacing: Theme.Space.s) {
                 // Each field is as wide as what goes in it: a prefix is two or three letters, a department name is long.
-                GridRow { Text(.codesFieldPrefix); TextField("EC", text: $code.prefix).pill(width: 64, alignment: .leading) }
+                GridRow { Text(.codesFieldPrefix); TextField("EC", text: $code.prefix).pill(width: 64, alignment: .leading) } // strings: data, a code prefix
                 GridRow {
                     Text(.codesFieldDepartment)
                     TextField(String(localized: .codesFieldDepartmentExample), text: $code.department).pill(width: nil, alignment: .leading)
