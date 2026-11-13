@@ -11,7 +11,7 @@ settings:
     SWIFT_VERSION: "6.0"
     SWIFT_STRICT_CONCURRENCY: complete
     # FolioTectonic.xcframework's macOS slice is arm64 only, so a universal Release build fails to link Tectonic.
-    # Intel Macs wait for an x86_64 slice (#41).
+    # Folio runs on Apple silicon Macs only (#41).
     "ARCHS[sdk=macosx*]": arm64
 packages:
   FolioCore:
