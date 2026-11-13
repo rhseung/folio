@@ -10,7 +10,7 @@ Folio가 아닌 앱에서 같은 느낌을 만들 때도 이 문서를 쓴다. "
 
 1. **본문은 종이, 유리는 창 틀과 떠 있는 것에만.** 본문 배경은 `Palette.page`, 내용은 흰 `Card` 위에 둔다. 리퀴드 글라스는 창 틀(사이드바, 툴바)과 떠 있는 요소(빠른 추가, 팝오버, Claude 패널과 그 버튼, `floatingGlass()`)에만 쓴다. 유리 위에 놓이는 구성 요소는 불투명하게 채우지 않고 글자색을 옅게 깐다(아래 "창 구조").
 2. **색은 뜻이 있을 때만 쓴다.** 글자는 `text`, `textSecondary`, `textTertiary` 세 단계의 회색으로 위계를 만든다. 색은 두 가지 뜻으로만 쓴다.
-   - 과목: `\.accent` 환경값의 `CourseAccent`. 과목 색은 `.courseAccent(_:)` 하나로 준다. 이 수식어가 `\.accent`와 고스트 버튼이 읽는 `tint`(과목 `ink`)를 함께 넣고, 과목 밖(`.gray`)이면 `tint`를 시스템 강조색에 둔다. `\.accent`만 따로 넣으면 주 버튼과 고스트 버튼의 색이 어긋나서, `check-design`이 `environment(\.accent`를 막는다. 점과 막대에는 `color`, 연한 배경에는 `tint`, 그 배경 위의 글자에는 `ink`, 흰 글자를 얹는 채움(주 버튼)에는 `fill`을 쓴다. 과목 화면에서도 강조 요소에만 쓰고 본문을 물들이지 않는다. 예외는 오늘 화면 위쪽의 과목 노을 하나다(아래 "오늘 화면의 노을").
+   - 과목: `\.accent` 환경값의 `CourseAccent`. 과목 색은 `.courseAccent(_:)` 하나로 준다. 이 수식어가 `\.accent`와 고스트 버튼이 읽는 `tint`(과목 `ink`)를 함께 넣고, 과목 밖(`.gray`)이면 `tint`를 시스템 강조색에 둔다. `\.accent`만 따로 넣으면 주 버튼과 고스트 버튼의 색이 어긋나서, `check-code`가 `environment(\.accent`를 막는다. 점과 막대에는 `color`, 연한 배경에는 `tint`, 그 배경 위의 글자에는 `ink`, 흰 글자를 얹는 채움(주 버튼)에는 `fill`을 쓴다. 과목 화면에서도 강조 요소에만 쓰고 본문을 물들이지 않는다. 예외는 오늘 화면 위쪽의 과목 노을 하나다(아래 "오늘 화면의 노을").
    - 상태: `Tone`(`warning`, `danger`, `success`, `info`). 글자는 `tone.foreground`, 배경은 `tone.fill`. `success`의 배경은 글자색을 `Opacity.tint`로 옅게 깐 초록이고, `info`(파랑)는 좋지도 경고도 아닌 소식(패치 노트의 `feat`)에 쓴다.
 3. **위계는 `Page` > `Block` > `Card` > `CardRow` 하나로 만든다.** 화면마다 새 상자 모양을 만들지 않는다.
 4. **결정은 알린 자리에서 한다.** 사용자가 판단해야 하는 알림은 배너와 그 대상 행을 한 카드에 묶은 `NoticeCard`로 보여 준다. 배너만 띄우고 행동 버튼을 페이지 아래쪽에 두지 않는다.
@@ -334,7 +334,7 @@ Folio는 포인터(Mac, 트랙패드나 마우스를 붙인 iPad)와 터치(iPad
 2. **세 번 반복되면 토큰으로 만든다.** 같은 역할의 값이 세 곳 이상에서 쓰이면 `Theme`에 이름 있는 토큰으로 올리고 이 문서의 토큰 표를 고친다. 한두 곳의 미세 조정(`Theme.Space.s + 2`)은 그대로 둔다.
 3. **한 화면에만 있는 값에는 이유를 단다.** 그 화면의 얼굴 같은 요소(녹음 재생 버튼, 강의 코드 타일의 접두어)는 글자 크기나 모서리를 직접 적을 수 있다. 그 줄 끝에 `// design: one-off, <이유>`를 붙인다.
 4. **두 화면이 쓰면 `app/design/`으로 옮긴다.** 화면 파일 안에 만든 구성 요소를 다른 화면이 쓰기 시작하면 `app/design/`의 맞는 파일로 옮긴다.
-5. **검사.** `mise run check-design`(`mise run test`에 포함)은 `app/features`와 `app/app`에서 `.system(size:)` 글꼴, 숫자 `cornerRadius`, 직접 만든 색과 이름 붙은 시스템 색을 찾아 실패한다. `// design: one-off`가 붙은 줄과 그림자의 검정은 통과한다. `app/` 전체(`app/design/`과 `theme.swift` 포함)에서 간격, 크기, 모서리, 여백에 적힌 홀수나 소수점 숫자도 실패한다. 덧셈(`Theme.Space.s + 2`)과 계산식은 검사하지 못하므로 결과가 격자에 맞는지 리뷰에서 본다.
+5. **검사.** `mise run check-code`(`mise run test`에 포함)는 `app/features`와 `app/app`에서 `.system(size:)` 글꼴, 숫자 `cornerRadius`, 직접 만든 색과 이름 붙은 시스템 색을 찾아 실패한다. `// design: one-off`가 붙은 줄과 그림자의 검정은 통과한다. `app/` 전체(`app/design/`과 `theme.swift` 포함)에서 간격, 크기, 모서리, 여백에 적힌 홀수나 소수점 숫자도 실패한다. 덧셈(`Theme.Space.s + 2`)과 계산식은 검사하지 못하므로 결과가 격자에 맞는지 리뷰에서 본다.
 
 ## 다른 앱으로 옮기기
 
@@ -344,7 +344,7 @@ Folio는 포인터(Mac, 트랙패드나 마우스를 붙인 iPad)와 터치(iPad
 2. **구성 요소.** `Layout`, `Containers`, `Indicators`, `Inputs`, `GhostButton`, `Interaction`, `StepToggle`, `ScrubField`를 가져온다. 두고 갈 것은 `GradeLock`(`.sensitive`), `GradeSteps`, `DdayChip`, `NoteStyle`처럼 Folio의 데이터에 묶인 것들이다. `DateChip`과 `MonthCalendar`는 `Workspace.calendar`를 읽으니 `Calendar` 환경값으로 바꾼다.
 3. **창 틀.** Mac이면 "창 구조" 절대로 창 재질, 본문 패널, 툴바 줄부터 만든다. 위치 표시가 필요 없으면 `Crumb` 관련 부분은 빼도 된다. iPad와 iPhone은 "창 구조 (iPad와 iPhone)" 절을 따른다.
 4. **화면.** `Page { PageHeader; Block { Card { CardRow… } } }`로 쌓고, 폼은 "폼" 절을 따른다.
-5. **검사.** `mise.toml`의 `check-design`이 부르는 스크립트를 가져와 화면 코드의 글꼴 크기, 색, 모서리, 격자 밖 숫자를 잡는다. 규칙을 문서로만 두면 화면이 늘어날수록 금방 흐트러진다.
+5. **검사.** `packages/folio-lint`의 디자인 규칙(`design-rules.swift`)을 가져와 화면 코드의 글꼴 크기, 색, 모서리, 격자 밖 숫자를 잡는다. 규칙을 문서로만 두면 화면이 늘어날수록 금방 흐트러진다.
 
 옮긴 뒤 화면을 이렇게 점검한다.
 

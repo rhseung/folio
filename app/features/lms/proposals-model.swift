@@ -65,7 +65,7 @@ final class ProposalsModel {
         guard case .assignment(let a) = p.item, let due = a.due else { return nil }
         let calendar = workspace.calendar
         let days = workspace.settings.studyDays(from: workspace.now, until: due, calendar: calendar)
-        return (TodayModel.dueText(due, studyDays: days), DueUrgency(studyDays: days))
+        return (DueUrgency.text(due, studyDays: days), DueUrgency(studyDays: days))
     }
 
     /// What a row is: the name it gets in `Lectures`, a notice's date and author.

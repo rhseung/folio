@@ -48,7 +48,7 @@ struct CourseIconPanel: View {
     #endif
 
     // SF Symbols has no public catalog or Korean search terms, so the subject subset and its words live here.
-    static let groups = [
+    static let groups = [ // strings: data, matched against what the user types
         Subject(title: String(localized: .iconPickerFieldBasic), symbols: [(CourseMark.defaultIcon, "기본 책")]),
         Subject(title: String(localized: .iconPickerFieldMath), symbols: [
             ("function", "함수 수학 미적분"), ("sum", "합 시그마 급수 수열"), ("x.squareroot", "루트 제곱근 대수"),

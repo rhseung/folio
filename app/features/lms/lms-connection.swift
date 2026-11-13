@@ -49,9 +49,9 @@ struct LiveLMS: LMSSource {
 struct FixedLMS: LMSSource {
     var snapshot: LMSSnapshot
 
-    func verify(_ login: LMSCredentials) async throws {}
-    func read() async throws -> LMSSnapshot { snapshot }
-    func download(_ file: LMSFile, into folder: URL) async throws -> URL? { nil }
+    func verify(_ login: LMSCredentials) throws {}
+    func read() throws -> LMSSnapshot { snapshot }
+    func download(_ file: LMSFile, into folder: URL) throws -> URL? { nil }
 }
 
 /// The LMS as this device last read it. App-wide like `ReleaseNotes`: one sync however many windows are open. What
@@ -128,17 +128,12 @@ final class LMSConnection {
     /// The file downloaded into a folder of its own under the name `Lectures` gives it, or nil when the LMS shows it
     /// only in its viewer.
     func download(_ file: LMSFile) async throws -> URL? {
-        let folder = URL.temporaryDirectory.appending(path: "Folio-LMS/\(UUID().uuidString)", directoryHint: .isDirectory)
-        // folio:not-an-action a temporary folder; `lms accept` imports from it
-        try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
+        let folder = try LMSDownloads.folder()
         guard let got = try await source.download(file, into: folder) else {
             viewerOnly.insert(file.id)
             return nil
         }
-        let named = folder.appending(path: file.lectureName(got.lastPathComponent))
-        // folio:not-an-action renamed inside the temporary folder
-        if named != got { try FileManager.default.moveItem(at: got, to: named) }
-        return named
+        return try LMSDownloads.rename(got, to: file.lectureName(got.lastPathComponent))
     }
 
     private static func live(_ logins: any LMSLogins) -> LiveLMS {

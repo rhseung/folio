@@ -1,0 +1,65 @@
+# General Swift rules. Folio's own rules (layers, screens, strings, design tokens) are folio-lint's
+# (packages/folio-lint); layout is swift-format's, so the rules on layout are off here. Places that broke a rule before it
+# was turned on are in .swiftlint-baseline.json, which only shrinks (`mise run lint -- --update` rewrites it).
+included:
+  - app
+  - app-tests
+  - app-ui-tests
+  - packages/folio-core/sources
+  - packages/folio-core/tests
+  - packages/folio-markdown/sources
+  - packages/folio-markdown/tests
+  - packages/folio-ai/sources
+  - packages/folio-ai/tests
+  - packages/folio-lint/sources
+  - packages/folio-lint/tests
+excluded:
+  - packages/folio-core/sources/folio-cli/generated
+  - "**/.build"
+
+disabled_rules:
+  - line_length
+  - trailing_comma
+  - opening_brace
+  - vertical_whitespace
+  - trailing_whitespace
+  - trailing_newline
+  - statement_position
+  - switch_case_alignment
+  - vertical_parameter_alignment
+  # These five put the current count in their message (`currently spans 632 lines`), which is what the baseline
+  # matches on, so one line added to or taken from a long file made it new. Long files are split when work touches them.
+  - file_length
+  - type_body_length
+  - function_body_length
+  - cyclomatic_complexity
+  - function_parameter_count
+
+opt_in_rules:
+  - private_swiftui_state
+  - accessibility_label_for_image
+  - accessibility_trait_for_button
+  - contains_over_filter_count
+  - first_where
+  - last_where
+  - sorted_first_last
+  - reduce_into
+  - empty_count
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - unhandled_throwing_task
+  - async_without_await
+
+# Need a compiler log: `mise run analyze`, which the quality workflow runs on macOS.
+analyzer_rules:
+  - unused_import
+  - unused_declaration
+
+# `id`, `x`, `a` and `b` in a comparator say what they are.
+identifier_name:
+  min_length: 1
+  max_length: 60
+# A one-letter alias in a test (`typealias V = …`) stands for the type under test.
+type_name:
+  min_length: 1
+  max_length: 60

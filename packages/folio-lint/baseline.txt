@@ -1,0 +1,99 @@
+# Places that broke a rule of packages/folio-lint before the rule existed. Fix one and delete its line. Rewrite
+# the list with `mise run check-code -- --update` only to drop fixed places or follow a moved one, never to
+# let a new one in.
+# check	file	what
+app-direction	app/features/first-run/first-run-model.swift	SettingsModel from features/settings
+app-direction	app/features/first-run/first-run-model.swift	SettingsModel from features/settings
+app-direction	app/platform/file-view/file-view-model.swift	NoteEmbedSource from features/course
+app-direction	app/platform/file-view/file-view-model.swift	NoteEmbedSource from features/course
+app-direction	app/platform/file-view/file-view-model.swift	NoteEmbedSource from features/course
+app-direction	app/platform/file-view/file-view.swift	MaterialMenu from features/course
+app-direction	app/platform/file-view/file-view.swift	TextFileView from features/course
+app-direction	app/platform/file-view/file-view.swift	TextFileView from features/course
+app-direction	app/platform/file-view/media-panes.swift	AudioPlayback from features/recording
+app-direction	app/platform/file-view/media-panes.swift	RecordingTime from features/recording
+app-direction	app/platform/file-view/media-panes.swift	RecordingTime from features/recording
+app-direction	app/platform/lecture-reader.swift	ClaudeModel from features/claude
+app-direction	app/platform/note-preview.swift	NoteEmbedSource from features/course
+app-direction	app/platform/note-preview.swift	NoteEmbedSource from features/course
+app-direction	app/platform/note-text/source-view.swift	NoteEmbedSource from features/course
+app-direction	app/platform/note-text/source-view.swift	NoteEmbedSource from features/course
+folder-size	app-tests	more than 20 files
+folder-size	app/app	more than 20 files
+folder-size	app/design	more than 20 files
+folder-size	app/features/course	more than 20 files
+folder-size	packages/folio-core/sources/folio-cli/commands	more than 20 files
+folder-size	packages/folio-core/sources/folio-domain/course	more than 20 files
+folder-size	packages/folio-core/sources/folio-domain/shared	more than 20 files
+folder-size	packages/folio-core/sources/folio-storage	more than 20 files
+folder-size	packages/folio-core/tests/folio-domain-tests	more than 20 files
+folder-size	packages/folio-core/tests/folio-storage-tests	more than 20 files
+launch-environment	app/app/pane-memory-store.swift	ProcessInfo.processInfo.environment
+launch-environment	app/app/workspace-services.swift	ProcessInfo.processInfo.environment
+launch-environment	packages/folio-core/sources/folio-cli/core/output.swift	ProcessInfo.processInfo.environment
+launch-environment	packages/folio-core/sources/folio-cli/core/output.swift	ProcessInfo.processInfo.environment
+launch-environment	packages/folio-core/sources/folio-cli/core/resolve.swift	ProcessInfo.processInfo.environment
+launch-environment	packages/folio-core/sources/folio-cli/core/resolve.swift	ProcessInfo.processInfo.environment
+layer	app/features/course/assignment-menu.swift	FileManager in a screen
+layer	app/features/course/text-file-model.swift	FileManager in a screen
+layout-name	app/app/workspace.swift	"catalog.json"
+layout-name	app/app/workspace.swift	"settings.json"
+layout-name	app/app/workspace.swift	"transcript.json"
+minute-timeline	app/features/today/today-view.swift	TimelineView(.periodic)
+screen-toolbar	app/features/review/review-view.swift	.toolbar
+screen-toolbar	app/features/semester/semester-view.swift	.toolbar
+ui-string	app/features/course/suggested-session.swift	"오후 12:00"
+ui-string	app/features/grades/grades-model.swift	"학기"
+ui-string	app/features/quiz/quiz-cards-model.swift	"노트 "
+view-body-logic	app/features/course/course-sections.swift	body: .sorted
+view-body-logic	app/features/course/course-view.swift	body: .reduce
+view-body-logic	app/features/course/course-view.swift	body: .sorted
+view-body-logic	app/features/grades/grades-view.swift	trend: .filter
+view-body-logic	app/features/grades/grades-view.swift	trend: .filter
+view-body-logic	app/features/grades/grades-view.swift	trend: .filter
+view-body-logic	app/features/grades/requirements.swift	groupCard: .filter
+view-body-logic	app/features/semester/semester-view.swift	body: .filter
+view-body-logic	app/features/settings/settings-view.swift	body: .filter
+view-body-logic	app/features/today/study-time-block.swift	totals: .filter
+view-workspace-call	app/features/catalog/codes-view.swift	workspace.accent(
+view-workspace-call	app/features/catalog/codes-view.swift	workspace.semester(
+view-workspace-call	app/features/catalog/people-view.swift	workspace.mailURL(
+view-workspace-call	app/features/catalog/people-view.swift	workspace.mailURL(
+view-workspace-call	app/features/claude/window-claude.swift	workspace.accent(
+view-workspace-call	app/features/claude/window-claude.swift	workspace.course(
+view-workspace-call	app/features/claude/window-claude.swift	workspace.course(
+view-workspace-call	app/features/claude/window-claude.swift	workspace.paneMark(
+view-workspace-call	app/features/course/assignment-menu.swift	workspace.course(
+view-workspace-call	app/features/course/class-card.swift	workspace.isStudyToday(
+view-workspace-call	app/features/course/course-sections.swift	workspace.accent(
+view-workspace-call	app/features/course/exam-menu.swift	workspace.course(
+view-workspace-call	app/features/course/material-menu.swift	workspace.course(
+view-workspace-call	app/features/course/session-menu.swift	workspace.course(
+view-workspace-call	app/features/course/suggested-session.swift	workspace.course(
+view-workspace-call	app/features/course/suggested-session.swift	workspace.isStudyToday(
+view-workspace-call	app/features/course/unit-menu.swift	workspace.course(
+view-workspace-call	app/features/course/units-view.swift	workspace.course(
+view-workspace-call	app/features/quiz/quiz-view.swift	workspace.course(
+view-workspace-call	app/features/review/review-view.swift	workspace.accent(
+view-workspace-call	app/features/search/search-palette.swift	workspace.accent(
+view-workspace-call	app/features/search/search-palette.swift	workspace.course(
+view-workspace-call	app/features/search/search-palette.swift	workspace.course(
+view-workspace-call	app/features/semester/semester-view.swift	workspace.accent(
+view-workspace-call	app/features/semester/semester-view.swift	workspace.accent(
+view-workspace-call	app/features/semester/semester-view.swift	workspace.days(
+view-workspace-call	app/features/settings/catalog-editor.swift	workspace.saveCatalog(
+view-workspace-call	app/features/settings/catalog-editor.swift	workspace.saveCatalog(
+view-workspace-call	app/features/settings/settings-view.swift	workspace.open(
+view-workspace-call	app/features/today/exam-plan-today-block.swift	workspace.accent(
+view-workspace-call	app/features/today/study-time-block.swift	workspace.accent(
+view-workspace-call	app/features/today/study-time-block.swift	workspace.accent(
+view-workspace-call	app/features/today/study-time-block.swift	workspace.accent(
+view-workspace-call	app/features/today/today-header.swift	workspace.accent(
+view-workspace-call	app/features/today/today-ribbon.swift	workspace.accent(
+view-workspace-call	app/features/today/today-ribbon.swift	workspace.accent(
+view-workspace-call	app/features/today/today-ribbon.swift	workspace.accent(
+view-workspace-call	app/features/today/today-view.swift	workspace.accent(
+view-workspace-call	app/features/today/today-view.swift	workspace.accent(
+view-workspace-call	app/features/today/today-view.swift	workspace.accent(
+view-workspace-call	app/features/today/today-wash.swift	workspace.accent(
+view-workspace-call	app/features/today/today-wash.swift	workspace.accent(

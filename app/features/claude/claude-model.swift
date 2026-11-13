@@ -496,8 +496,7 @@ final class ClaudeModel {
         return String(localized: .claudeToolReading(tool.replacing("_", with: " ")))
     }
 
-    /// Kept out of the string catalog: it is written into the note file as its title.
-    static let answerTitle = "Claude 답변"
+    static let answerTitle = "Claude 답변" // strings: data, written into the note file as its title
 
     /// The answer's first `# heading`, which names the note better than the question it answered.
     static func noteTitle(_ markdown: String) -> String? {
