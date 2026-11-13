@@ -70,6 +70,9 @@ extension Workspace {
         }
     }
 
+    /// No folder is open yet, or the first run was asked for again from settings.
+    var isInFirstRun: Bool { gist == nil || showsFirstRun }
+
     func finishFirstRun() {
         showsFirstRun = false
     }

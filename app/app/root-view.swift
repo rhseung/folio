@@ -195,7 +195,7 @@ struct RootView: View {
 
     var body: some View {
         Group {
-            if workspace.gist == nil || workspace.showsFirstRun {
+            if workspace.isInFirstRun {
                 FirstRunView(workspace: workspace)
             } else {
                 shell {

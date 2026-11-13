@@ -41,11 +41,8 @@ enum FirstRunDebug {
         #if os(macOS)
         guard walks, let directory = SnapshotDriver.directory else { return }
         // folio:not-an-action debug screenshots, outside the GIST folder
+        // The window keeps the first run's own size (`MainWindowFrame`), not the snapshot size the other walks set.
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        if let window = NSApp.windows.first(where: { $0.isVisible }) {
-            window.setContentSize(NSSize(width: SnapshotDriver.width, height: SnapshotDriver.height))
-            window.center()
-        }
         for name in names {
             show(name, in: model)
             try? await Task.sleep(for: .seconds(1.5))

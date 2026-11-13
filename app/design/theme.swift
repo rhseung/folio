@@ -219,6 +219,8 @@ enum Theme {
         static let firstRunColumn: CGFloat = 560
         /// Below this the first run drops its step list for one column with dots, as on an iPhone.
         static let firstRunNarrow: CGFloat = 640
+        /// The Mac window while the first run shows: a small landing window of its own, not the app's large one.
+        static let firstRunWindow = CGSize(width: 960, height: 600)
         /// The icon square of a choice card (the folder step's 새로 시작 and 기존 폴더).
         static let optionTile: CGFloat = 40
         static let radio: CGFloat = 20
