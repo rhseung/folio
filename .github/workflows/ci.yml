@@ -38,30 +38,31 @@ jobs:
           tasks="test test-app build-ipad test-ipad test-a11y"
           run_all() { for t in $tasks; do echo "$t=true" >> "$GITHUB_OUTPUT"; done; exit 0; }
           [ "$EVENT" = pull_request ] || run_all
-          # A rename's old path counts too: moving a file out of app/ changes what app/ builds.
+          # A rename's old path counts too: moving a file out of sources/app changes what it builds.
           files=$(gh api --paginate "repos/$GITHUB_REPOSITORY/pulls/$PR/files" \
             --jq '.[] | .filename, (.previous_filename // empty)') || run_all
           # The API lists at most 3000 files; a longer list may be missing the one that matters.
           [ -n "$files" ] && [ "$(wc -l <<< "$files")" -lt 3000 ] || run_all
           printf '%s\n' "$files"
-          # Prose, the web bundle's sources (the app ships the built copy in app/resources/web), PR pictures, and what
-          # goes into the Tectonic library: the app builds take the published one that tectonic/pin.json names.
-          none='^docs/|^[^/]+\.md$|^\.github/.+\.md$|^web/|^pr-renders/|^tectonic/(bridge|patches)/|^scripts/tectonic-build\.sh$|^\.github/workflows/tectonic\.yml$'
+          # Prose, the web bundle's sources (the app ships the built copy in sources/app/resources/web), and what goes into
+          # the Tectonic library: the app builds take the published one that sources/tectonic/pin.json names.
+          none='^docs/|^[^/]+\.md$|^\.github/.+\.md$|^sources/web/|^sources/tectonic/(bridge|patches)/|^sources/tectonic/build\.sh$|^\.github/workflows/tectonic\.yml$'
           # Scripts these checks never run. Any other script counts: `mise run generate` runs scripts/version.sh before every
-          # build, and a script it starts to run later is covered without a change here.
-          checks='^scripts/(note-screens|release-notes|install-release|swift-format)\.sh$|^packages/folio-lint/|^\.swiftlint(\.yml|-baseline\.json)$|^\.swift-format$|^\.periphery\.yml$|^lefthook\.yml$|^\.github/workflows/quality\.yml$'
+          # build, and a script it starts to run later is covered without a change here. folio-lint is in Package.swift but
+          # linked into nothing the app builds.
+          checks='^scripts/(note-screens|release-notes|install-release|swift-format)\.sh$|^sources/lint(-command)?/|^tests/unit/lint/|^\.folio-lint-baseline\.txt$|^\.swiftlint(\.yml|-baseline\.json)$|^\.swift-format$|^\.periphery\.yml$|^lefthook\.yml$|^\.github/workflows/quality\.yml$'
           # build-ipad builds the app target alone. test-app builds the same target and resources for the Mac, so a
           # resource that breaks the bundle fails there.
-          build_ipad="$none|^app-tests/|^app-ui-tests/|$checks|^\.claude/|^app/resources/web/"
-          test_app="$none|^app-ui-tests/|$checks|^\.claude/"
-          # FolioPadTests compiles app-tests/ipad only.
-          test_ipad="$none|^app-ui-tests/|$checks|^\.claude/|^app-tests/[^/]+$|^app-tests/(support|note-view|window|screens|models|references|fixtures)/"
-          # The accessibility audit launches the Mac app; app-tests is another target's.
-          test_a11y="$none|^app-tests/|$checks|^\.claude/"
+          build_ipad="$none|^tests/unit/app/|^tests/e2e/app/|$checks|^\.claude/|^sources/app/resources/web/"
+          test_app="$none|^tests/e2e/app/|$checks|^\.claude/"
+          # On the iPad, FolioTests compiles tests/unit/app/ipad only.
+          test_ipad="$none|^tests/e2e/app/|$checks|^\.claude/|^tests/unit/app/[^/]+$|^tests/unit/app/(support|note-view|window|screens|models|references|fixtures)/"
+          # The accessibility audit launches the Mac app; tests/unit/app is another target's.
+          test_a11y="$none|^tests/unit/app/|$checks|^\.claude/"
           needs() { if grep -qvE "$1" <<< "$files"; then echo true; else echo false; fi; }
-          # test reads app/, app-tests/ and app-ui-tests/ only for their Swift files (folio-lint, SwiftLint and the action
-          # checks), which a pattern can't say without lookahead.
-          if [ -n "$(grep -vE "$none|^(app|app-tests|app-ui-tests)/" <<< "$files" || true)" ] || grep -qE '^(app|app-tests|app-ui-tests)/.*\.swift$' <<< "$files"
+          # test reads sources/app, tests/unit/app and tests/e2e/app only for their Swift files (folio-lint, SwiftLint and the
+          # action checks), which a pattern can't say without lookahead.
+          if [ -n "$(grep -vE "$none|^(sources/app|tests/unit/app|tests/e2e/app)/" <<< "$files" || true)" ] || grep -qE '^(sources/app|tests/unit/app|tests/e2e/app)/.*\.swift$' <<< "$files"
           then test=true; else test=false; fi
           {
             echo "test=$test"
@@ -91,27 +92,28 @@ jobs:
       - run: defaults write -g AppleLanguages -array ko-KR en-US && defaults write -g AppleLocale ko_KR
       - id: xcode
         run: echo "version=$(DEVELOPER_DIR="$XCODE/Contents/Developer" xcodebuild -version | tr -s ' \n' '-' | sed 's/-$//')" >> "$GITHUB_OUTPUT"
-      # Each package's build folder, saved the way the Xcode builds below are.
+      # The package's build folder, saved the way the Xcode builds below are. The Tectonic download has its own cache.
       - id: cache
         uses: actions/cache/restore@v6
         with:
           path: |
-            packages/*/.build
+            .build
+            !.build/tectonic
             ~/Library/Caches/org.swift.swiftpm/manifests
-          key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved') }}-${{ github.sha }}
+          key: swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('Package.resolved') }}-${{ github.sha }}
           restore-keys: |
-            swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('packages/*/Package.resolved') }}-
+            swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-${{ hashFiles('Package.resolved') }}-
             swiftpm-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}-
-      # Tectonic as a library, which `mise run tectonic` fetches by tectonic/pin.json, and the TeX packages and format
+      # Tectonic as a library, which `mise run tectonic` fetches by sources/tectonic/pin.json, and the TeX packages and format
       # its builds fetch into Caches. The second is saved once per pin: a package it lacks is fetched in the run.
       - uses: actions/cache@v6
         with:
-          path: packages/folio-core/vendor
-          key: tectonic-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tectonic/pin.json') }}
+          path: sources/tectonic/vendor
+          key: tectonic-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('sources/tectonic/pin.json') }}
       - uses: actions/cache@v6
         with:
           path: ~/Library/Caches/Tectonic
-          key: tectonic-tex-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tectonic/pin.json') }}
+          key: tectonic-tex-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('sources/tectonic/pin.json') }}
           restore-keys: tectonic-tex-${{ runner.os }}-${{ runner.arch }}-
       - uses: jdx/mise-action@v5
       - id: run
@@ -121,7 +123,8 @@ jobs:
         uses: actions/cache/save@v6
         with:
           path: |
-            packages/*/.build
+            .build
+            !.build/tectonic
             ~/Library/Caches/org.swift.swiftpm/manifests
           key: ${{ steps.cache.outputs.cache-primary-key }}
 
@@ -179,7 +182,7 @@ jobs:
         id: key
         run: |
           echo "base=derived-data-$CACHE_TASK-${{ runner.os }}-${{ runner.arch }}-${{ steps.xcode.outputs.version }}" >> "$GITHUB_OUTPUT"
-          echo "deps=${{ hashFiles('packages/*/Package.resolved', 'project.yml') }}" >> "$GITHUB_OUTPUT"
+          echo "deps=${{ hashFiles('Package.resolved', 'project.yml') }}" >> "$GITHUB_OUTPUT"
       # One cache per task: each builds another platform or configuration into its own DerivedData. The index, logs
       # and test results are rebuilt by every run and aren't worth the download. Each push to main saves a new cache,
       # which PRs start from; a PR saves only when it found none, so its pushes don't push main's out of the 10 GB.
@@ -220,18 +223,18 @@ jobs:
         run: |
           rm -rf .build/DerivedData/Build/Products/*/*.app .build/DerivedData/Build/Products/*/*.xctest .build/DerivedData/Build/Products/*/*.bundle
           defaults write com.apple.dt.SWBBuildService IgnoreFileSystemDeviceInodeChanges -bool YES
-      # Tectonic as a library, which `mise run tectonic` fetches by tectonic/pin.json, and the TeX packages and format
+      # Tectonic as a library, which `mise run tectonic` fetches by sources/tectonic/pin.json, and the TeX packages and format
       # its builds fetch into Caches. The second is saved once per pin: a package it lacks is fetched in the run.
       - if: env.RUN == 'true'
         uses: actions/cache@v6
         with:
-          path: packages/folio-core/vendor
-          key: tectonic-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tectonic/pin.json') }}
+          path: sources/tectonic/vendor
+          key: tectonic-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('sources/tectonic/pin.json') }}
       - if: env.RUN == 'true'
         uses: actions/cache@v6
         with:
           path: ~/Library/Caches/Tectonic
-          key: tectonic-tex-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tectonic/pin.json') }}
+          key: tectonic-tex-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('sources/tectonic/pin.json') }}
           restore-keys: tectonic-tex-${{ runner.os }}-${{ runner.arch }}-
       - if: env.RUN == 'true'
         uses: jdx/mise-action@v5
@@ -254,7 +257,7 @@ jobs:
             Folio.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/Package.resolved
             ~/Library/Caches/org.swift.swiftpm/manifests
           key: ${{ steps.cache.outputs.cache-primary-key }}
-      # Sheets of pictures a test lays out for a PR (app-tests/support/note-render.swift), passing or not; not references.
+      # Sheets of pictures a test lays out for a PR (tests/unit/app/support/note-render.swift), passing or not; not references.
       # NoteSourceTests lays them out, in the rest half; two uploads under one name would fail.
       - if: ${{ !cancelled() && env.RUN == 'true' && matrix.task == 'test-app-rest' }}
         uses: actions/upload-artifact@v7

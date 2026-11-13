@@ -17,10 +17,11 @@ description = "Generate Folio.xcodeproj from project.yml, with the version and b
 depends = ["tectonic"]
 run = ["scripts/version.sh xcconfig", "xcodegen generate"]
 
-# Every build of packages/folio-core links Tectonic, so every task that builds it depends on this one.
+# Every build of FolioStorage links Tectonic, so every task that builds it depends on this one. folio-lint needs no Tectonic,
+# but SwiftPM reads the binary target's folder whenever it loads Package.swift.
 [tasks.tectonic]
-description = "Fetch Tectonic as a static library (FolioTectonic.xcframework) pinned in tectonic/pin.json, checked by sha256"
-run = "scripts/tectonic.sh"
+description = "Fetch Tectonic as a static library (FolioTectonic.xcframework) pinned in sources/tectonic/pin.json, checked by sha256"
+run = "sources/tectonic/fetch.sh"
 
 [tasks.version-bump]
 description = "Raise the version in FolioVersion: mise run version-bump -- major|minor|patch"
@@ -40,29 +41,27 @@ depends = ["tectonic"]
 # fixtures and expectations are in Korean time, and Apple's date detector reads phrases like 내일 7시 in the
 # machine's zone, not the test calendar's; a UTC machine (CI) would fail them.
 env = { TZ = "Asia/Seoul" }
-# folio-core is built once with its tests: `swift run` alone builds without testability and so compiles every module
+# The package is built once with its tests: `swift run` alone builds without testability and so compiles every module
 # again for the checks.
 run = [
-  "swift test --package-path packages/folio-markdown",
-  "swift build --build-tests --package-path packages/folio-core",
-  "swift test --skip-build --package-path packages/folio-core",
-  "swift test --package-path packages/folio-ai",
-  "swift run --skip-build -q --package-path packages/folio-core folio actions --check",
-  "swift run --skip-build -q --package-path packages/folio-core folio-gen --check",
-  # Release: debug swift-syntax takes some 20 seconds to parse the codebase, release two.
-  "swift build -q -c release --build-tests --package-path packages/folio-lint",
-  "swift test -c release --skip-build --package-path packages/folio-lint",
-  "swift run -q -c release --skip-build --package-path packages/folio-lint folio-lint",
+  "swift build --build-tests",
+  "swift test --skip-build",
+  "swift run --skip-build -q folio actions --check",
+  "swift run --skip-build -q folio-gen --check",
+  # Release: debug swift-syntax takes some 20 seconds to parse the codebase, release two. Only folio-lint is built
+  # (as in check-code, so the two share it): every module in release would compile the codebase again.
+  "swift build -q -c release --product folio-lint",
+  "swift run -q -c release --skip-build folio-lint",
   "swiftlint lint --quiet --strict --baseline .swiftlint-baseline.json",
   "scripts/swift-format.sh lint",
 ]
 
 [tasks.check-code]
-description = "Fail on the screen, string, layer, comment, design and Application Support rules a syntax tree can see, past the places in packages/folio-lint/baseline.txt; -- --update rewrites it"
-# Built with its tests, as in `test`, so the two tasks share one build.
+description = "Fail on the screen, string, layer, comment, design and Application Support rules a syntax tree can see, past the places in .folio-lint-baseline.txt; -- --update rewrites it"
+depends = ["tectonic"]
 run = [
-  "swift build -q -c release --build-tests --package-path packages/folio-lint",
-  "swift run -q -c release --skip-build --package-path packages/folio-lint folio-lint",
+  "swift build -q -c release --product folio-lint",
+  "swift run -q -c release --skip-build folio-lint",
 ]
 
 [tasks.swiftlint]
@@ -81,7 +80,7 @@ depends = ["check-code", "swiftlint", "format-check"]
 # The swift-format in Xcode's toolchain (DEVELOPER_DIR above), so it needs no install. .swift-format turns off the
 # rules that would undo how Folio writes code: several statements or declarations on one line (`{ a(); b() }`,
 # `let x = 1, y = 2`, `case a, b`), `private extension`, `case let (a?, b?)`, `return x += 1`, `.forEach`, more than one
-# trailing closure, and uppercase DSL functions (folio-domain's model.swift). Doc comments aren't required or checked,
+# trailing closure, and uppercase DSL functions (sources/domain's model.swift). Doc comments aren't required or checked,
 # as Folio writes few.
 [tasks.format]
 description = "Format the Swift sources in place with swift-format (.swift-format)"
@@ -111,29 +110,29 @@ description = "Install the git hooks in lefthook.yml (swift-format, SwiftLint an
 run = "lefthook install"
 
 [tasks.gen-cli]
-description = "Write the CLI commands of the actions declared with @Action (sources/folio-cli/generated)"
+description = "Write the CLI commands of the actions declared with @Action (sources/cli/generated)"
 depends = ["tectonic"]
-run = "swift run -q --package-path packages/folio-core folio-gen"
+run = "swift run -q folio-gen"
 
 [tasks.fixture]
 description = "Write a fake GIST folder to run the app or the CLI on: mise run fixture -- <folder> [standard|legacy|busyDay|manyExams|quietDay|empty]"
 depends = ["tectonic"]
-run = "swift run -q --package-path packages/folio-core folio-fixture"
+run = "swift run -q folio-fixture"
 
 [tasks.cli]
 description = "Run the folio CLI"
 depends = ["tectonic"]
-run = "swift run --package-path packages/folio-core folio"
+run = "swift run folio"
 
 [tasks.install-cli]
 description = "Build folio in release mode into ~/.local/lib/folio, linked from ~/.local/bin, with its zsh completion"
 depends = ["tectonic"]
 run = [
-  "swift build -c release --package-path packages/folio-core --product folio",
+  "swift build -c release --product folio",
   # The string catalogs ship as resource bundles that must sit beside the binary, so both go in their own folder.
   "rm -rf ~/.local/lib/folio && mkdir -p ~/.local/lib/folio ~/.local/bin",
-  "install -m 755 packages/folio-core/.build/release/folio ~/.local/lib/folio/folio",
-  "cp -R packages/folio-core/.build/release/*.bundle ~/.local/lib/folio/",
+  "install -m 755 .build/release/folio ~/.local/lib/folio/folio",
+  "cp -R .build/release/*.bundle ~/.local/lib/folio/",
   "ln -sf ~/.local/lib/folio/folio ~/.local/bin/folio",
   # zsh picks completions up from this fpath folder; other shells: folio completion bash|fish
   "mkdir -p ~/.local/share/zsh/site-functions",
@@ -186,7 +185,7 @@ depends = ["generate"]
 run = """
 rm -rf .build/test-a11y.xcresult
 status=0
-xcodebuild -scheme FolioUITests -destination 'platform=macOS' -resultBundlePath .build/test-a11y.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation -testLanguage ko -testRegion KR $FOLIO_XCODEBUILD_FLAGS || status=$?
+xcodebuild -scheme FolioE2ETests -destination 'platform=macOS' -resultBundlePath .build/test-a11y.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation -testLanguage ko -testRegion KR $FOLIO_XCODEBUILD_FLAGS || status=$?
 if [ -d .build/test-a11y.xcresult ]; then
   xcrun xcresulttool get test-results summary --path .build/test-a11y.xcresult --compact
 fi
@@ -200,7 +199,7 @@ run = """
 id=$(xcrun simctl list devices available | grep -m1 -E '^ +iPad' | grep -oE '[0-9A-F-]{36}')
 [ -n "$id" ] || { echo "no available iPad simulator" >&2; exit 1; }
 rm -rf .build/test-ipad.xcresult
-xcodebuild -scheme FolioPad -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation $FOLIO_XCODEBUILD_FLAGS
+xcodebuild -scheme Folio -destination "platform=iOS Simulator,id=$id" -resultBundlePath .build/test-ipad.xcresult test -quiet -derivedDataPath "$FOLIO_DERIVED_DATA" -skipMacroValidation $FOLIO_XCODEBUILD_FLAGS
 # -quiet leaves out the tests themselves; the count shows they ran.
 xcrun xcresulttool get test-results summary --path .build/test-ipad.xcresult --compact
 """
@@ -257,6 +256,6 @@ depends = ["generate"]
 run = "xcodebuild -scheme Folio -configuration \"${FOLIO_CONFIGURATION:-Debug}\" -destination 'generic/platform=iOS Simulator' ARCHS=arm64 build -quiet -derivedDataPath \"$FOLIO_DERIVED_DATA\" -skipMacroValidation $FOLIO_XCODEBUILD_FLAGS"
 
 [tasks.build-web]
-description = "Bundle the note page (KaTeX math, code highlighting, diagrams, note CSS) and the edit view's code highlighting into app/resources/web"
-dir = "web"
+description = "Bundle the note page (KaTeX math, code highlighting, diagrams, note CSS) and the edit view's code highlighting into sources/app/resources/web"
+dir = "sources/web"
 run = ["npm ci --ignore-scripts --no-audit --no-fund", "npm run build"]

@@ -1,20 +1,13 @@
 # General Swift rules. Folio's own rules (layers, screens, strings, design tokens) are folio-lint's
-# (packages/folio-lint); layout is swift-format's, so the rules on layout are off here. Places that broke a rule before it
+# (sources/lint); layout is swift-format's, so the rules on layout are off here. Places that broke a rule before it
 # was turned on are in .swiftlint-baseline.json, which only shrinks (`mise run lint -- --update` rewrites it).
 included:
-  - app
-  - app-tests
-  - app-ui-tests
-  - packages/folio-core/sources
-  - packages/folio-core/tests
-  - packages/folio-markdown/sources
-  - packages/folio-markdown/tests
-  - packages/folio-ai/sources
-  - packages/folio-ai/tests
-  - packages/folio-lint/sources
-  - packages/folio-lint/tests
+  - sources
+  - tests
 excluded:
-  - packages/folio-core/sources/folio-cli/generated
+  - sources/cli/generated
+  - sources/web
+  - sources/tectonic
   - "**/.build"
 
 disabled_rules:

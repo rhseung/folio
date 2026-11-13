@@ -2,7 +2,7 @@ name: Folio
 options:
   bundleIdPrefix: com.rhseung
   developmentLanguage: ko
-  # Keep in sync with platforms in every packages/*/Package.swift.
+  # Keep in sync with platforms in Package.swift.
   deploymentTarget:
     macOS: "26.0"
     iOS: "26.0"
@@ -14,12 +14,9 @@ settings:
     # Folio runs on Apple silicon Macs only (#41).
     "ARCHS[sdk=macosx*]": arm64
 packages:
-  FolioCore:
-    path: packages/folio-core
-  FolioMarkdown:
-    path: packages/folio-markdown
-  FolioAI:
-    path: packages/folio-ai
+  # Every Folio module, in the Package.swift beside this file.
+  Folio:
+    path: .
   swift-algorithms:
     url: https://github.com/apple/swift-algorithms
     from: 1.2.0
@@ -34,28 +31,30 @@ targets:
     scheme:
       testTargets: [FolioTests]
     sources:
-      - path: app
+      - path: sources/app
         excludes: ["resources/AppIcon.icon", "resources/info.plist"]
       # An Icon Composer document; XcodeGen doesn't know the type, so it's named here or it lands as a plain folder.
-      - path: app/resources/AppIcon.icon
+      - path: sources/app/resources/AppIcon.icon
         type: file
         buildPhase: resources
     dependencies:
-      - package: FolioCore
+      - package: Folio
         product: FolioDomain
-      - package: FolioCore
+      - package: Folio
         product: FolioStorage
-      - package: FolioCore
+      - package: Folio
         product: FolioActions
-      - package: FolioCore
+      - package: Folio
         product: FolioIndex
-      - package: FolioCore
+      - package: Folio
         product: FolioLMS
       # Only the #if DEBUG previews use it (Workspace.scenario).
-      - package: FolioCore
+      - package: Folio
         product: FolioFixtures
-      - package: FolioMarkdown
-      - package: FolioAI
+      - package: Folio
+        product: FolioMarkdown
+      - package: Folio
+        product: FolioAI
       - package: swift-algorithms
         product: Algorithms
       - package: ArgmaxOSS
@@ -75,7 +74,7 @@ targets:
         CODE_SIGN_STYLE: Automatic
         GENERATE_INFOPLIST_FILE: YES
         # The keys the build settings can't hold (the folio:// scheme), merged into the generated Info.plist.
-        INFOPLIST_FILE: app/resources/info.plist
+        INFOPLIST_FILE: sources/app/resources/info.plist
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         INFOPLIST_KEY_CFBundleDisplayName: Folio
         INFOPLIST_KEY_NSFaceIDUsageDescription: 성적을 보기 전에 본인인지 확인합니다.
@@ -89,11 +88,18 @@ targets:
         SWIFT_EMIT_LOC_STRINGS: YES
         # Keys added to Localizable.xcstrings by hand become `.key` symbols (Text(.peopleTitle)), checked at compile time.
         STRING_CATALOG_GENERATE_SYMBOLS: YES
-  # Screen models, run inside the app on macOS (mise run test-app). Workspace skips the saved folder under tests.
+  # Screen models and the note views on macOS (mise run test-app), and the iPad's edit view on an iPad simulator
+  # (mise run test-ipad), run inside the app. Workspace skips the saved folder under tests. The Mac's files use AppKit and
+  # the iPad's UIKit, so each folder builds for its own platform only.
   FolioTests:
     type: bundle.unit-test
-    supportedDestinations: [macOS]
-    sources: [app-tests]
+    supportedDestinations: [macOS, iOS]
+    sources:
+      - path: tests/unit/app
+        excludes: ["ipad"]
+        destinationFilters: [macOS]
+      - path: tests/unit/app/ipad
+        destinationFilters: [iOS]
     dependencies:
       # FolioFixtures comes through the app it is hosted in; linking it here too would load a second copy.
       - target: Folio
@@ -101,57 +107,37 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGN_IDENTITY: "-"
+        TARGETED_DEVICE_FAMILY: "2"
         # XcodeGen points a multiplatform app's host at the iOS layout; the Mac app keeps its binary in Contents/MacOS.
-        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Folio.app/Contents/MacOS/Folio
+        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Folio.app/Folio
+        "TEST_HOST[sdk=macosx*]": $(BUILT_PRODUCTS_DIR)/Folio.app/Contents/MacOS/Folio
         BUNDLE_LOADER: $(TEST_HOST)
   # The accessibility audit of the main screens (#471, mise run test-a11y). A UI test drives the app from a runner
   # process of its own, so it links the fixtures it writes the app's folder with; nothing loads them twice.
-  FolioUITests:
+  FolioE2ETests:
     type: bundle.ui-testing
     supportedDestinations: [macOS]
-    sources: [app-ui-tests]
+    sources: [tests/e2e/app]
     dependencies:
       - target: Folio
-      - package: FolioCore
+      - package: Folio
         product: FolioFixtures
-      - package: FolioCore
+      - package: Folio
         product: FolioStorage
-      - package: FolioCore
+      - package: Folio
         product: FolioDomain
     settings:
       base:
         GENERATE_INFOPLIST_FILE: YES
         CODE_SIGN_IDENTITY: "-"
         TEST_TARGET_NAME: Folio
-  # Hangul typed into the iPad's edit view, run inside the app on an iPad simulator (mise run test-ipad). The Mac's
-  # note-view checks are in FolioTests, which builds these files to nothing (#if os(iOS)).
-  FolioPadTests:
-    type: bundle.unit-test
-    supportedDestinations: [iOS]
-    sources: [app-tests/ipad]
-    dependencies:
-      - target: Folio
-    settings:
-      base:
-        GENERATE_INFOPLIST_FILE: YES
-        TARGETED_DEVICE_FAMILY: "2"
-        TEST_HOST: $(BUILT_PRODUCTS_DIR)/Folio.app/Folio
-        BUNDLE_LOADER: $(TEST_HOST)
 schemes:
-  # Its own scheme: in Folio's, a Mac test run would also try to run these iOS-only tests.
-  FolioPad:
-    build:
-      targets:
-        Folio: all
-        FolioPadTests: [test]
-    test:
-      targets: [FolioPadTests]
   # Its own scheme, apart from Folio's: a UI test takes the screen and keyboard, so ⌘U and mise run test-app must not
   # start it on a Mac someone is using. CI runs it.
-  FolioUITests:
+  FolioE2ETests:
     build:
       targets:
         Folio: all
-        FolioUITests: [test]
+        FolioE2ETests: [test]
     test:
-      targets: [FolioUITests]
+      targets: [FolioE2ETests]

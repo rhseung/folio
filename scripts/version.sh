@@ -8,7 +8,7 @@
 #   version.sh tag                      tags origin/main as v<version> and pushes the tag
 set -euo pipefail
 cd "$(dirname "$0")/.."
-source=packages/folio-core/sources/folio-domain/shared/app/version.swift
+source=sources/domain/shared/app/version.swift
 
 read_version() { sed -nE 's/.*static let marketing = "([0-9]+\.[0-9]+\.[0-9]+)".*/\1/p' | head -1; }
 

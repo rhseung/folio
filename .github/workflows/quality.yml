@@ -33,8 +33,8 @@ jobs:
       - run: sudo ln -sfn "$XCODE" /Applications/Xcode.app
       - uses: actions/cache@v6
         with:
-          path: packages/folio-core/vendor
-          key: tectonic-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('tectonic/pin.json') }}
+          path: sources/tectonic/vendor
+          key: tectonic-${{ runner.os }}-${{ runner.arch }}-${{ hashFiles('sources/tectonic/pin.json') }}
       - uses: jdx/mise-action@v5
       - name: Periphery
         continue-on-error: true
