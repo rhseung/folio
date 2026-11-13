@@ -37,5 +37,5 @@ claude-review-plugin이 PR을 검토할 때 `AGENTS.md`와 함께 읽는 파일�
 아래는 CI가 이미 잡습니다. 코멘트하지 않습니다.
 
 - 컴파일러: 모듈 경계를 거스르는 import, strict concurrency, 없는 문자열 키, `@Action`의 `{필드}`와 `confirm:` 누락
-- `mise run test`: 액션의 CLI 명령과 테스트 누락(`folio actions --check`), 낡은 생성 CLI 명령(`folio-gen --check`), `check-code`: 화면 코드의 글꼴 크기, 색, 모서리, 4pt 격자를 벗어난 치수, `.courseAccent` 없이 넣은 과목 색, `LocalFolders`를 거치지 않고 Application Support 경로를 얻는 코드, 뷰의 `workspace.<메서드>(` 호출과 `some View` 멤버 안의 거르기, 정렬, 묶기, `app/`의 한글 문자열과 화면 문구 자리의 영어 문자열, 표준 구조 폴더 이름의 문자열, 패키지의 `import SwiftUI`, Domain과 Markdown의 디스크 접근, 이름만 되풀이하는 한 줄 주석
+- `mise run test`: 액션의 CLI 명령과 테스트 누락(`folio actions --check`), 낡은 생성 CLI 명령(`folio-gen --check`), `check-code`: 화면 코드의 글꼴 크기, 색, 모서리, 4pt 격자를 벗어난 치수, `.courseAccent` 없이 넣은 과목 색, `LocalFolders`를 거치지 않고 Application Support 경로를 얻는 코드, 뷰의 `workspace.<메서드>(` 호출과 `some View` 멤버 안의 거르기, 정렬, 묶기, `app/`의 한글 문자열과 화면 문구 자리의 영어 문자열, 표준 구조 폴더 이름의 문자열, 패키지의 `import SwiftUI`, Domain과 Markdown의 디스크 접근, 이름만 되풀이하는 한 줄 주석, `app/design`·`app/platform`이 쓰는 기능 타입과 다른 기능의 Model, `AppLink.Kind` `switch`의 `default:`, 분 단위 `TimelineView`, 화면의 `.toolbar`, 실행 설정 밖의 환경 변수 읽기, 케밥 케이스가 아닌 이름, 20개 넘는 폴더. SwiftLint(`.swiftlint.yml`): 강제 언래핑, 이미지의 접근성 라벨, `first(where:)`·`isEmpty` 같은 컬렉션 관용구, 긴 함수와 타입
 - macOS 앱 빌드와 화면 모델 테스트, iPad 빌드

@@ -1,0 +1,14 @@
+project: Folio.xcodeproj
+schemes:
+  - Folio
+# SwiftUI reaches previews, Codable reaches coding keys and properties, and the Objective-C runtime reaches @objc
+# members (menu actions, KVO) by name, so none of them is unused for having no caller in Swift.
+retain_swift_ui_previews: true
+retain_codable_properties: true
+retain_objc_accessible: true
+build_arguments:
+  - -destination
+  - platform=macOS
+  - -derivedDataPath
+  - .build/DerivedData
+  - -skipMacroValidation

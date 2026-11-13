@@ -48,7 +48,7 @@ jobs:
           none='^docs/|^[^/]+\.md$|^\.github/.+\.md$|^web/|^pr-renders/|^tectonic/(bridge|patches)/|^scripts/tectonic-build\.sh$|^\.github/workflows/tectonic\.yml$'
           # Scripts these checks never run. Any other script counts: `mise run generate` runs scripts/version.sh before every
           # build, and a script it starts to run later is covered without a change here.
-          checks='^scripts/(note-screens|release-notes|install-release)\.sh$|^packages/folio-lint/'
+          checks='^scripts/(note-screens|release-notes|install-release)\.sh$|^packages/folio-lint/|^\.swiftlint(\.yml|-baseline\.json)$|^\.periphery\.yml$|^lefthook\.yml$|^\.github/workflows/quality\.yml$'
           # build-ipad builds the app target alone. test-app builds the same target and resources for the Mac, so a
           # resource that breaks the bundle fails there.
           build_ipad="$none|^app-tests/|$checks|^\.claude/|^app/resources/web/"
@@ -56,8 +56,8 @@ jobs:
           # FolioPadTests compiles app-tests/ipad only.
           test_ipad="$none|$checks|^\.claude/|^app-tests/[^/]+$|^app-tests/(references|fixtures)/"
           needs() { if grep -qvE "$1" <<< "$files"; then echo true; else echo false; fi; }
-          # test reads app/ and app-tests/ only for their Swift files (the design, Application Support and action
-          # checks), which a pattern can't say without lookahead.
+          # test reads app/ and app-tests/ only for their Swift files (folio-lint, SwiftLint and the action checks), which a
+          # pattern can't say without lookahead.
           if [ -n "$(grep -vE "$none|^(app|app-tests)/" <<< "$files" || true)" ] || grep -qE '^(app|app-tests)/.*\.swift$' <<< "$files"
           then test=true; else test=false; fi
           {
