@@ -115,6 +115,44 @@ struct FirstRunModelTests {
         #expect(model.step == .term)
     }
 
+    /// Opening a folder whose files are still in iCloud would read an empty term that the term step then saves over
+    /// the real one.
+    @Test func aPickedFolderStillInICloudOpensOnlyOnceItIsHere() async throws {
+        let workspace = bareWorkspace()
+        let model = FirstRunModel(workspace: workspace, step: .folder)
+        let url = try Fixture.standard.copyToTemp()
+        let course = try #require(try GISTStore(url: url).courseStores().first).url.appending(path: ".folio")
+        let real = course.appending(path: "course.json"), stub = course.appending(path: ".course.json.icloud")
+        try FileManager.default.moveItem(at: real, to: stub)
+        model.choose(url)
+        #expect(model.canContinue)
+        model.proceed()
+        #expect(workspace.gist == nil)
+        #expect(model.step == .folder)
+        guard case .downloading = model.trouble else { Issue.record("no download shown"); return }
+
+        try FileManager.default.moveItem(at: stub, to: real)
+        for _ in 0..<50 where workspace.gist == nil { try await Task.sleep(for: .milliseconds(100)) }
+        #expect(workspace.gist?.url.standardizedFileURL == url.standardizedFileURL)
+        #expect(model.trouble == nil)
+        model.proceed()
+        #expect(model.step == .term)
+    }
+
+    @Test func pickingAnotherFolderStopsWaitingForTheFirst() throws {
+        let workspace = bareWorkspace()
+        let model = FirstRunModel(workspace: workspace, step: .folder)
+        let url = try Fixture.standard.copyToTemp()
+        let course = try #require(try GISTStore(url: url).courseStores().first).url.appending(path: ".folio")
+        try FileManager.default.moveItem(at: course.appending(path: "course.json"), to: course.appending(path: ".course.json.icloud"))
+        model.choose(url)
+        model.proceed()
+        #expect(model.trouble != nil)
+        model.choose(try emptyFolder())
+        #expect(model.trouble == nil)
+        #expect(workspace.folderTrouble == nil)
+    }
+
     /// The test host is the app itself, so `UserDefaults.standard` is the real app's: a folder remembered here would
     /// have the next real launch open a fixture.
     @Test func theFirstRunNeverTouchesTheRememberedFolder() throws {

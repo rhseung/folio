@@ -406,12 +406,12 @@ struct FirstRunView: View {
         }
     }
 
-    /// The remembered folder can't be opened: where it was, and the two ways on.
+    /// The remembered folder, or the one just picked, can't be opened yet: where it is, and the two ways on.
     private func reconnect(_ trouble: FolderTrouble) -> some View {
         VStack(alignment: .leading, spacing: Theme.Space.xl) {
             switch trouble {
             case .missing(let path):
-                header(.firstRunReconnectTitle, .firstRunMissingSubtitle)
+                header(model.waiting ? .firstRunStepFolder : .firstRunReconnectTitle, .firstRunMissingSubtitle)
                 NoticeCard(title: String(localized: .firstRunMissingBanner), systemImage: "exclamationmark.triangle.fill") {
                     Button(.firstRunFindAgain) { model.findAgain() }
                 } rows: {
@@ -419,7 +419,7 @@ struct FirstRunView: View {
                 }
             case .downloading(let path, let done, let total):
                 let fraction = FolderAvailability.downloading(done: done, total: total).fraction
-                header(.firstRunReconnectTitle, .firstRunDownloadingSubtitle)
+                header(model.waiting ? .firstRunStepFolder : .firstRunReconnectTitle, .firstRunDownloadingSubtitle)
                 NoticeCard(title: String(localized: .firstRunDownloadingBanner), systemImage: "icloud.and.arrow.down", informs: true) {
                     Text(fraction, format: .percent.precision(.fractionLength(0))).monospacedDigit().foregroundStyle(Theme.Palette.info)
                 } rows: {

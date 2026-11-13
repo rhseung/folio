@@ -17,6 +17,8 @@ final class FirstRunModel {
     /// The semester the term step lists courses of; nil follows the workspace's current one.
     var chosenSemester: UUID?
     private(set) var permissions: [SystemPermission: SystemPermission.State] = [:]
+    /// The picked folder is still coming down from iCloud: the folder step shows its download in place of the choice.
+    private(set) var waiting = false
     #if DEBUG
     /// Shown in place of the workspace's own trouble by the debug walk (`FirstRunDebug`), which has a folder open.
     /// Nothing is picked yet then, as when the remembered folder is really gone.
@@ -55,6 +57,7 @@ final class FirstRunModel {
         #if DEBUG
         if let debugTrouble { return debugTrouble }
         #endif
+        if waiting, let picked = workspace.folderTrouble { return picked }
         return workspace.gist == nil ? workspace.folderTrouble : nil
     }
 
@@ -89,9 +92,9 @@ final class FirstRunModel {
     func proceed() {
         if step == .folder {
             guard canContinue, let picked else { return }
-            let wasLost = trouble != nil
+            let wasLost = trouble != nil && !waiting
             if picked.url != workspace.gist?.url {
-                workspace.open(picked.url)
+                guard workspace.openWhenHere(picked.url) else { waiting = true; return }
                 settings.load()
             }
             // A lost folder reconnected is the whole job; an empty one picked instead still needs its term.
@@ -128,6 +131,10 @@ final class FirstRunModel {
     // MARK: Folder
 
     func choose(_ url: URL) {
+        if waiting {
+            workspace.stopWaiting()
+            waiting = false
+        }
         _ = url.startAccessingSecurityScopedResource()
         let kind = try? FolderKind(FolderProbe.outline(of: url))
         picked = Picked(url: url, kind: kind)
