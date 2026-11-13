@@ -1,0 +1,128 @@
+diff --git a/crates/bridge_core/src/lib.rs b/crates/bridge_core/src/lib.rs
+index 1248153..fb28ac1 100644
+--- a/crates/bridge_core/src/lib.rs
++++ b/crates/bridge_core/src/lib.rs
+@@ -596,7 +596,12 @@ impl<'a> CoreBridgeState<'a> {
+     /// Close the provided output, flushing it and performing any necessary handling.
+     pub fn output_close(&mut self, id: OutputId) -> bool {
+         let mut rv = false;
+-        let mut oh = self.output_handles[id.idx()].take().unwrap();
++        // Folio: a handle this state never opened (or already closed) is an error, not a panic, which would abort the
++        // process from inside the engine's C code.
++        let Some(mut oh) = self.output_handles.get_mut(id.idx()).and_then(Option::take) else {
++            tt_warning!(self.status, "closing an output that is not open");
++            return true;
++        };
+         if let Err(e) = oh.flush() {
+             tt_warning!(self.status, "error when closing output {}", oh.name(); e.into());
+             rv = true;
+@@ -709,7 +714,11 @@ impl<'a> CoreBridgeState<'a> {
+ 
+     /// Close the provided output, performing any necessary handling.
+     pub fn input_close(&mut self, id: InputId) -> bool {
+-        let mut ih = self.input_handles[id.idx()].take().unwrap();
++        // Folio: as in `output_close`.
++        let Some(mut ih) = self.input_handles.get_mut(id.idx()).and_then(Option::take) else {
++            tt_warning!(self.status, "closing an input that is not open");
++            return true;
++        };
+         let mut rv = false;
+ 
+         if let Err(e) = ih.scan_remainder() {
+diff --git a/crates/pdf_io/pdf_io/dpx-cmap.c b/crates/pdf_io/pdf_io/dpx-cmap.c
+index f3950ea..1cdae61 100644
+--- a/crates/pdf_io/pdf_io/dpx-cmap.c
++++ b/crates/pdf_io/pdf_io/dpx-cmap.c
+@@ -845,8 +845,9 @@ CMap_cache_init (void)
+     static unsigned char range_min[2] = {0x00, 0x00};
+     static unsigned char range_max[2] = {0xff, 0xff};
+ 
+-    if (__cache)
+-        _tt_abort("%s: Already initialized.", CMAP_DEBUG_STR);
++    /* Folio: a cache still here is left from a run that aborted (see pdf_obj_reset_global_state). Its CMaps may be
++     * half built, so it is dropped, not released. */
++    __cache = NULL;
+ 
+     __cache = NEW(1, struct CMap_cache);
+ 
+diff --git a/crates/pdf_io/pdf_io/dpx-dvi.c b/crates/pdf_io/pdf_io/dpx-dvi.c
+index def6364..7693163 100644
+--- a/crates/pdf_io/pdf_io/dpx-dvi.c
++++ b/crates/pdf_io/pdf_io/dpx-dvi.c
+@@ -2864,4 +2864,33 @@ dvi_reset_global_state(void)
+     link_annot = 1;
+     num_loaded_fonts = 0;
+     max_loaded_fonts = 0;
++
++    /* Folio: the rest as a new process has them. A run that aborted mid-page left them set ("Got a bop in the middle of
++     * a page!"), and its DVI handle belonged to that run's bridge state (see pdf_obj_reset_global_state). */
++    dvi_handle = INVALID_HANDLE;
++    linear = 0;
++    page_loc = NULL;
++    num_pages = 0;
++    dvi_file_size = 0;
++    dev_origin_x = 72.0;
++    dev_origin_y = 770.0;
++    memset(&lr_state, 0, sizeof(lr_state));
++    lr_mode = 0;
++    lr_width = 0;
++    lr_width_stack_depth = 0;
++    catch_phantom = 0;
++    phantom_height = 0.0;
++    phantom_depth = 0.0;
++    dvi_page_buf_index = 0;
++    pre_id_byte = post_id_byte = is_ptex = has_ptex = 0;
++    dvi2pts = 1.52018;
++    total_mag = 1.0;
++    memset(&dvi_state, 0, sizeof(dvi_state));
++    dvi_stack_depth = 0;
++    current_font = -1;
++    processing_page = 0;
++    marked_depth = 0;
++    tagged_depth = -1;
++    num_saved_fonts = 0;
++    compensation.x = compensation.y = 0;
+ }
+diff --git a/crates/pdf_io/pdf_io/dpx-pdfdoc.c b/crates/pdf_io/pdf_io/dpx-pdfdoc.c
+index f9a6620..6ed2bf2 100644
+--- a/crates/pdf_io/pdf_io/dpx-pdfdoc.c
++++ b/crates/pdf_io/pdf_io/dpx-pdfdoc.c
+@@ -2448,6 +2448,9 @@ pdf_open_document (const char *filename,
+ {
+   pdf_doc *p = &pdoc;
+ 
++  /* Folio: a run that aborted left its document here (pending forms, pages, names), which would end up in this one. */
++  memset(p, 0, sizeof(pdf_doc));
++
+   pdf_out_init(filename, id1, id2,
+               settings.ver_major, settings.ver_minor,
+               settings.object.compression_level,
+diff --git a/crates/pdf_io/pdf_io/dpx-pdffont.c b/crates/pdf_io/pdf_io/dpx-pdffont.c
+index 1bf4e8d..ebf4529 100644
+--- a/crates/pdf_io/pdf_io/dpx-pdffont.c
++++ b/crates/pdf_io/pdf_io/dpx-pdffont.c
+@@ -264,7 +264,7 @@ static struct {
+ void
+ pdf_init_fonts (void)
+ {
+-  assert(font_cache.fonts == NULL);
++  /* Folio: fonts still cached here are left from a run that aborted (see pdf_obj_reset_global_state); dropped. */
+ 
+   agl_init_map();
+ 
+diff --git a/crates/pdf_io/pdf_io/dpx-pdfobj.c b/crates/pdf_io/pdf_io/dpx-pdfobj.c
+index 7755fe3..0cada0b 100644
+--- a/crates/pdf_io/pdf_io/dpx-pdfobj.c
++++ b/crates/pdf_io/pdf_io/dpx-pdfobj.c
+@@ -4390,9 +4390,8 @@ pdf_obj_reset_global_state(void)
+ {
+     pdf_out *p = current_output();
+ 
+-    if (p->output.handle != INVALID_HANDLE) {
+-        ttstub_output_close(p->output.handle);
+-    }
++    /* Folio: a handle still set here is left from a run that aborted. It belongs to that run's bridge state, which is
++     * gone, so closing it looks it up in this run's handles and panics where Rust can't unwind, aborting the process. */
+     p->output.handle = INVALID_HANDLE;
+     p->output.file_position = 0;
+     p->output.line_position = 0;

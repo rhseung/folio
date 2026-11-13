@@ -3,7 +3,7 @@
 use std::ffi::{c_char, CStr, CString};
 use std::fmt::{Arguments, Write as _};
 use std::path::PathBuf;
-use std::sync::Mutex;
+use std::sync::{Mutex, Once};
 
 use tectonic::config::PersistentConfig;
 use tectonic::driver::{OutputFormat, ProcessingSessionBuilder};
@@ -14,6 +14,24 @@ use tectonic::unstable_opts::UnstableOptions;
 // xdvipdfmx reads SOURCE_DATE_EPOCH from the environment for the PDF's dates, so a build sets it process-wide; two
 // builds at once would stamp each other's PDFs.
 static ONE_BUILD: Mutex<()> = Mutex::new(());
+
+// A panic inside one of the engine's `extern "C"` callbacks can't unwind into C, so Rust aborts the app before
+// `catch_unwind` sees it, and the default hook's stderr line is all that is left. Keeping the message lets a panic that
+// does unwind name itself in the build log.
+static LAST_PANIC: Mutex<Option<String>> = Mutex::new(None);
+static HOOK: Once = Once::new();
+
+fn record_panics() {
+    HOOK.call_once(|| {
+        let default = std::panic::take_hook();
+        std::panic::set_hook(Box::new(move |info| {
+            if let Ok(mut last) = LAST_PANIC.lock() {
+                *last = Some(info.to_string());
+            }
+            default(info);
+        }));
+    });
+}
 
 #[derive(Default)]
 struct Collect(String);
@@ -99,6 +117,7 @@ unsafe fn path(p: *const c_char) -> PathBuf {
 pub unsafe extern "C" fn folio_tectonic_compile(input: *const c_char, outdir: *const c_char, cache: *const c_char, only_cached: i32, epoch: i64, out_log: *mut *mut c_char) -> i32 {
     let (input, outdir, cache) = (path(input), path(outdir), path(cache));
     let mut out = Collect::default();
+    record_panics();
     let guard = ONE_BUILD.lock().unwrap_or_else(|poisoned| poisoned.into_inner());
     let code = match std::panic::catch_unwind(std::panic::AssertUnwindSafe(|| compile(input, outdir, cache, only_cached != 0, epoch, &mut out))) {
         Ok(Ok(())) => 0,
@@ -107,7 +126,8 @@ pub unsafe extern "C" fn folio_tectonic_compile(input: *const c_char, outdir: *c
             1
         }
         Err(_) => {
-            out.0.push_str("error: Tectonic panicked\n");
+            let message = LAST_PANIC.lock().ok().and_then(|mut last| last.take()).unwrap_or_default();
+            let _ = writeln!(out.0, "error: Tectonic panicked: {message}");
             2
         }
     };
