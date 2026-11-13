@@ -5,15 +5,12 @@ import SwiftUI
 struct PDFPane: View {
     let controller: PDFController
     var thumbnails = true
-    let workspace: Workspace
-    /// The course and material the file is, for the strip's progress; nil for a file no course tracks.
-    var course: UUID?
-    var material: UUID?
+    let strip: PageStripModel
 
     var body: some View {
         HStack(spacing: 0) {
             if thumbnails {
-                PageStrip(controller: controller, workspace: workspace, course: course, material: material)
+                PageStrip(controller: controller, model: strip)
                 Theme.Palette.lineSoft.frame(width: 1)
             }
             PDFKitView(controller: controller)

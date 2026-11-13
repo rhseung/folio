@@ -233,10 +233,10 @@ struct PDFContent: View {
                              save: model.saveSplit, cancel: model.cancelSplit)
                 .courseAccent(model.accent(course))
         } else if let course = model.course {
-            PDFPane(controller: controller, thumbnails: thumbnails, workspace: model.workspace, course: course.id, material: model.material?.id)
+            PDFPane(controller: controller, thumbnails: thumbnails, strip: model.pageStrip(pageCount: controller.pageCount))
                 .courseAccent(model.accent(course))
         } else {
-            PDFPane(controller: controller, thumbnails: thumbnails, workspace: model.workspace)
+            PDFPane(controller: controller, thumbnails: thumbnails, strip: model.pageStrip(pageCount: controller.pageCount))
         }
     }
 }
