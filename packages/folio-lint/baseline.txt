@@ -35,9 +35,9 @@ screen-toolbar	app/features/semester/semester-view.swift	.toolbar
 ui-string	app/features/course/sessions/suggested-session.swift	"오후 12:00"
 ui-string	app/features/grades/grades-model.swift	"학기"
 ui-string	app/features/quiz/quiz-cards-model.swift	"노트 "
-view-body-logic	app/features/course/course-sections.swift	body: .sorted
 view-body-logic	app/features/course/course-view.swift	body: .reduce
 view-body-logic	app/features/course/course-view.swift	body: .sorted
+view-body-logic	app/features/course/edit-course-view.swift	body: .sorted
 view-body-logic	app/features/grades/grades-view.swift	trend: .filter
 view-body-logic	app/features/grades/grades-view.swift	trend: .filter
 view-body-logic	app/features/grades/grades-view.swift	trend: .filter
@@ -53,7 +53,7 @@ view-workspace-call	app/features/claude/window-claude.swift	workspace.accent(
 view-workspace-call	app/features/claude/window-claude.swift	workspace.course(
 view-workspace-call	app/features/claude/window-claude.swift	workspace.course(
 view-workspace-call	app/features/claude/window-claude.swift	workspace.paneMark(
-view-workspace-call	app/features/course/course-sections.swift	workspace.accent(
+view-workspace-call	app/features/course/edit-course-view.swift	workspace.accent(
 view-workspace-call	app/features/course/materials/material-menu.swift	workspace.course(
 view-workspace-call	app/features/course/sessions/class-card.swift	workspace.isStudyToday(
 view-workspace-call	app/features/course/sessions/session-menu.swift	workspace.course(

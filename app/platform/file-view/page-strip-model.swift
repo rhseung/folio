@@ -86,9 +86,11 @@ final class PageStripModel {
 
     /// Unfolded until folded by hand: the two latest sections, where the lecture is now and the class before it.
     /// Earlier ones fold, so a long file opens on its recent pages rather than a wall of finished ones.
-    func isOpen(_ section: Section) -> Bool {
+    func isOpen(_ section: Section) -> Bool { isOpen(section, among: sections) }
+
+    /// `sections` reads the course's sessions again, so a pass over the column hands in the ones it read.
+    private func isOpen(_ section: Section, among all: [Section]) -> Bool {
         if let set = folds[section.id] { return set }
-        let all = sections
         guard let i = all.firstIndex(where: { $0.id == section.id }) else { return true }
         return i >= all.count - 2
     }
@@ -108,13 +110,14 @@ final class PageStripModel {
     /// The column top to bottom: plain pages, each section's header with its pages when unfolded, and the row a range
     /// is saved from just above the pages it holds.
     var items: [Item] {
-        var shown = sections
+        let all = sections
+        var shown = all
         if let editing, let selection, let i = shown.firstIndex(where: { $0.id == editing }) {
             shown[i] = Section(id: editing, pages: selection, title: shown[i].title)
         }
         return Item.column(
             pageCount: pageCount, sections: shown, editing: editing, draft: editing == nil ? selection : nil,
-            draftBelow: draftBelow, isOpen: isOpen)
+            draftBelow: draftBelow, isOpen: { self.isOpen($0, among: all) })
     }
 
     /// A new range's row stands at the end it was picked out to, so it is saved where ⇧ (or the next tap) ended it:
@@ -133,7 +136,8 @@ final class PageStripModel {
 
     /// Where the column scrolls for the PDF's page: the page, or the header of the folded section holding it.
     func itemID(showing page: Int) -> ItemID {
-        if let s = sections.first(where: { $0.pages.contains(page) && $0.id != editing && !isOpen($0) }) { return .folded(s.id) }
+        let all = sections
+        if let s = all.first(where: { $0.pages.contains(page) && $0.id != editing && !isOpen($0, among: all) }) { return .folded(s.id) }
         return .page(page)
     }
 

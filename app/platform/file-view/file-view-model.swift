@@ -309,6 +309,11 @@ final class FileViewModel {
 
     // MARK: PDF
 
+    /// The strip cuts a lecture's pages into its classes' progress; a file no course tracks has none.
+    func pageStrip(pageCount: Int) -> PageStripModel {
+        PageStripModel(workspace: workspace, course: course?.id, material: material?.id, pageCount: pageCount)
+    }
+
     /// The page this file was last left at, on any device.
     private func lastPage() -> Int? {
         guard let m = material, let course else { return nil }

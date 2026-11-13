@@ -6,13 +6,11 @@ struct ExamsView: View {
     @State private var model: ExamsModel
     @Environment(\.accent) private var accent
     @Environment(\.openLink) private var openLink
-    let openNote: (UUID) -> Void
 
     static let dateColumn: CGFloat = 104
 
-    init(workspace: Workspace, course: LoadedCourse, openNote: @escaping (UUID) -> Void) {
+    init(workspace: Workspace, course: LoadedCourse) {
         _model = State(initialValue: ExamsModel(workspace: workspace, course: course))
-        self.openNote = openNote
     }
 
     var body: some View {
@@ -200,7 +198,7 @@ struct ExamsView: View {
     }
 
     func openSummary(_ exam: Exam) {
-        if let id = model.openSummary(exam) { openNote(id) }
+        if let id = model.openSummary(exam) { openLink(AppLink(.note, id), course: model.course.id) }
     }
 
     /// The ⋯ menu and the right-click menu: the exam's one menu (#403), told the summary the page has read.

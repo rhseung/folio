@@ -26,6 +26,7 @@ final class NoteListModel {
     }
 
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
+    var notesRevision: Int { workspace.notesRevision }
 
     struct Row: Identifiable {
         let note: NoteFile
@@ -119,16 +120,10 @@ final class NotesModel {
     var course: LoadedCourse { workspace.course(initial.id) ?? initial }
 
     func note(_ id: UUID?) -> NoteFile? { id.flatMap { try? course.store.note(id: $0) } }
-
-    /// A note moved in from an old folder gets its ID here too, as when opened from the list: the preview draws its link
-    /// whole, so the link must open it.
-    func noteId(titled title: String) -> UUID? {
-        ((try? course.store.notes()) ?? []).linked(title).flatMap { workspace.noteId(of: $0, in: course) }
-    }
 }
 
 /// The notes a note's preview draws in its embeds and block references' previews and names in its links: by title in
-/// its course, or by ID in any course (`[[note:<ID>]]`). A title is found as `NotesModel.noteId(titled:)` opens it.
+/// its course, or by ID in any course (`[[note:<ID>]]`). A title is found as `Workspace.noteId(titled:in:)` opens it.
 /// Read once for each `revision` (the workspace's `notesRevision`), not on every keystroke the preview redraws for.
 final class NoteEmbedSource {
     private let store: CourseStore
@@ -246,6 +241,11 @@ final class NoteEditorModel {
     var store: CourseStore { course.store }
     var dirty: Bool { body != saved }
     var baseURL: URL { note.url.deletingLastPathComponent() }
+    var notesRevision: Int { workspace.notesRevision }
+    var assist: NoteAssist { NoteAssist(settings: workspace.settings, links: links) }
+
+    /// The note a `[[제목]]` in this one names, as a link the window opens.
+    func link(titled title: String) -> AppLink? { workspace.noteId(titled: title, in: course).map { AppLink(.note, $0) } }
 
     func load() {
         onDisk = (try? store.read(note)) ?? ""
